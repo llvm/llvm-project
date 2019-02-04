@@ -90,10 +90,8 @@ define i32 @test_sext_i8(i8 %val) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl $24, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
 ; X64-NEXT:    movl $24, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
 ; X64-NEXT:    sarl %cl, %eax
 ; X64-NEXT:    retq
 ;
@@ -110,10 +108,8 @@ define i32 @test_sext_i16(i16 %val) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    movl $16, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
 ; X64-NEXT:    movl $16, %ecx
-; X64-NEXT:    # kill: def $cl killed $ecx
 ; X64-NEXT:    sarl %cl, %eax
 ; X64-NEXT:    retq
 ;

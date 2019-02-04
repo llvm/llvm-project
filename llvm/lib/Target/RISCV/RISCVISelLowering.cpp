@@ -1,9 +1,8 @@
 //===-- RISCVISelLowering.cpp - RISCV DAG Lowering Implementation  --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -80,6 +79,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   for (auto VT : {MVT::i1, MVT::i8, MVT::i16})
     setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
 
+  if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::SHL, MVT::i32, Custom);
+    setOperationAction(ISD::SRA, MVT::i32, Custom);
+    setOperationAction(ISD::SRL, MVT::i32, Custom);
+  }
+
   if (!Subtarget.hasStdExtM()) {
     setOperationAction(ISD::MUL, XLenVT, Expand);
     setOperationAction(ISD::MULHS, XLenVT, Expand);
@@ -88,6 +93,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIV, XLenVT, Expand);
     setOperationAction(ISD::SREM, XLenVT, Expand);
     setOperationAction(ISD::UREM, XLenVT, Expand);
+  }
+
+  if (Subtarget.is64Bit() && Subtarget.hasStdExtM()) {
+    setOperationAction(ISD::SDIV, MVT::i32, Custom);
+    setOperationAction(ISD::UDIV, MVT::i32, Custom);
+    setOperationAction(ISD::UREM, MVT::i32, Custom);
   }
 
   setOperationAction(ISD::SDIVREM, XLenVT, Expand);
@@ -125,6 +136,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     for (auto Op : FPOpToExtend)
       setOperationAction(Op, MVT::f32, Expand);
   }
+
+  if (Subtarget.hasStdExtF() && Subtarget.is64Bit())
+    setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtD()) {
     setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
@@ -327,6 +341,17 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
     return lowerRETURNADDR(Op, DAG);
+  case ISD::BITCAST: {
+    assert(Subtarget.is64Bit() && Subtarget.hasStdExtF() &&
+           "Unexpected custom legalisation");
+    SDLoc DL(Op);
+    SDValue Op0 = Op.getOperand(0);
+    if (Op.getValueType() != MVT::f32 || Op0.getValueType() != MVT::i32)
+      return SDValue();
+    SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
+    SDValue FPConv = DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
+    return FPConv;
+  }
   }
 }
 
@@ -506,22 +531,190 @@ SDValue RISCVTargetLowering::lowerRETURNADDR(SDValue Op,
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, XLenVT);
 }
 
+// Returns the opcode of the target-specific SDNode that implements the 32-bit
+// form of the given Opcode.
+static RISCVISD::NodeType getRISCVWOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case ISD::SHL:
+    return RISCVISD::SLLW;
+  case ISD::SRA:
+    return RISCVISD::SRAW;
+  case ISD::SRL:
+    return RISCVISD::SRLW;
+  case ISD::SDIV:
+    return RISCVISD::DIVW;
+  case ISD::UDIV:
+    return RISCVISD::DIVUW;
+  case ISD::UREM:
+    return RISCVISD::REMUW;
+  }
+}
+
+// Converts the given 32-bit operation to a target-specific SelectionDAG node.
+// Because i32 isn't a legal type for RV64, these operations would otherwise
+// be promoted to i64, making it difficult to select the SLLW/DIVUW/.../*W
+// later one because the fact the operation was originally of type i32 is
+// lost.
+static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  RISCVISD::NodeType WOpcode = getRISCVWOpcode(N->getOpcode());
+  SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
+  // ReplaceNodeResults requires we maintain the same type for the return value.
+  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewRes);
+}
+
+void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
+                                             SmallVectorImpl<SDValue> &Results,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  switch (N->getOpcode()) {
+  default:
+    llvm_unreachable("Don't know how to custom type legalize this operation!");
+  case ISD::SHL:
+  case ISD::SRA:
+  case ISD::SRL:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    if (N->getOperand(1).getOpcode() == ISD::Constant)
+      return;
+    Results.push_back(customLegalizeToWOp(N, DAG));
+    break;
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::UREM:
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           Subtarget.hasStdExtM() && "Unexpected custom legalisation");
+    if (N->getOperand(0).getOpcode() == ISD::Constant ||
+        N->getOperand(1).getOpcode() == ISD::Constant)
+      return;
+    Results.push_back(customLegalizeToWOp(N, DAG));
+    break;
+  case ISD::BITCAST: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           Subtarget.hasStdExtF() && "Unexpected custom legalisation");
+    SDLoc DL(N);
+    SDValue Op0 = N->getOperand(0);
+    if (Op0.getValueType() != MVT::f32)
+      return;
+    SDValue FPConv =
+        DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
+    break;
+  }
+  }
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+
   switch (N->getOpcode()) {
   default:
     break;
   case RISCVISD::SplitF64: {
+    SDValue Op0 = N->getOperand(0);
     // If the input to SplitF64 is just BuildPairF64 then the operation is
     // redundant. Instead, use BuildPairF64's operands directly.
-    SDValue Op0 = N->getOperand(0);
-    if (Op0->getOpcode() != RISCVISD::BuildPairF64)
+    if (Op0->getOpcode() == RISCVISD::BuildPairF64)
+      return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
+
+    SDLoc DL(N);
+    // This is a target-specific version of a DAGCombine performed in
+    // DAGCombiner::visitBITCAST. It performs the equivalent of:
+    // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
+    // fold (bitconvert (fabs x)) -> (and (bitconvert x), (not signbit))
+    if (!(Op0.getOpcode() == ISD::FNEG || Op0.getOpcode() == ISD::FABS) ||
+        !Op0.getNode()->hasOneUse())
       break;
-    return DCI.CombineTo(N, Op0.getOperand(0), Op0.getOperand(1));
+    SDValue NewSplitF64 =
+        DAG.getNode(RISCVISD::SplitF64, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                    Op0.getOperand(0));
+    SDValue Lo = NewSplitF64.getValue(0);
+    SDValue Hi = NewSplitF64.getValue(1);
+    APInt SignBit = APInt::getSignMask(32);
+    if (Op0.getOpcode() == ISD::FNEG) {
+      SDValue NewHi = DAG.getNode(ISD::XOR, DL, MVT::i32, Hi,
+                                  DAG.getConstant(SignBit, DL, MVT::i32));
+      return DCI.CombineTo(N, Lo, NewHi);
+    }
+    assert(Op0.getOpcode() == ISD::FABS);
+    SDValue NewHi = DAG.getNode(ISD::AND, DL, MVT::i32, Hi,
+                                DAG.getConstant(~SignBit, DL, MVT::i32));
+    return DCI.CombineTo(N, Lo, NewHi);
+  }
+  case RISCVISD::SLLW:
+  case RISCVISD::SRAW:
+  case RISCVISD::SRLW: {
+    // Only the lower 32 bits of LHS and lower 5 bits of RHS are read.
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    APInt LHSMask = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 32);
+    APInt RHSMask = APInt::getLowBitsSet(RHS.getValueSizeInBits(), 5);
+    if ((SimplifyDemandedBits(N->getOperand(0), LHSMask, DCI)) ||
+        (SimplifyDemandedBits(N->getOperand(1), RHSMask, DCI)))
+      return SDValue();
+    break;
+  }
+  case RISCVISD::FMV_X_ANYEXTW_RV64: {
+    SDLoc DL(N);
+    SDValue Op0 = N->getOperand(0);
+    // If the input to FMV_X_ANYEXTW_RV64 is just FMV_W_X_RV64 then the
+    // conversion is unnecessary and can be replaced with an ANY_EXTEND
+    // of the FMV_W_X_RV64 operand.
+    if (Op0->getOpcode() == RISCVISD::FMV_W_X_RV64) {
+      SDValue AExtOp =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0.getOperand(0));
+      return DCI.CombineTo(N, AExtOp);
+    }
+
+    // This is a target-specific version of a DAGCombine performed in
+    // DAGCombiner::visitBITCAST. It performs the equivalent of:
+    // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
+    // fold (bitconvert (fabs x)) -> (and (bitconvert x), (not signbit))
+    if (!(Op0.getOpcode() == ISD::FNEG || Op0.getOpcode() == ISD::FABS) ||
+        !Op0.getNode()->hasOneUse())
+      break;
+    SDValue NewFMV = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64,
+                                 Op0.getOperand(0));
+    APInt SignBit = APInt::getSignMask(32).sext(64);
+    if (Op0.getOpcode() == ISD::FNEG) {
+      return DCI.CombineTo(N,
+                           DAG.getNode(ISD::XOR, DL, MVT::i64, NewFMV,
+                                       DAG.getConstant(SignBit, DL, MVT::i64)));
+    }
+    assert(Op0.getOpcode() == ISD::FABS);
+    return DCI.CombineTo(N,
+                         DAG.getNode(ISD::AND, DL, MVT::i64, NewFMV,
+                                     DAG.getConstant(~SignBit, DL, MVT::i64)));
   }
   }
 
   return SDValue();
+}
+
+unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  switch (Op.getOpcode()) {
+  default:
+    break;
+  case RISCVISD::SLLW:
+  case RISCVISD::SRAW:
+  case RISCVISD::SRLW:
+  case RISCVISD::DIVW:
+  case RISCVISD::DIVUW:
+  case RISCVISD::REMUW:
+    // TODO: As the result is sign-extended, this is conservatively correct. A
+    // more precise answer could be calculated for SRAW depending on known
+    // bits in the shift amount.
+    return 33;
+  }
+
+  return 1;
 }
 
 static MachineBasicBlock *emitSplitF64Pseudo(MachineInstr &MI,
@@ -739,7 +932,11 @@ static bool CC_RISCV(const DataLayout &DL, unsigned ValNo, MVT ValVT, MVT LocVT,
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
   if (ValVT == MVT::f32) {
-    LocVT = MVT::i32;
+    LocVT = XLenVT;
+    LocInfo = CCValAssign::BCvt;
+  }
+  if (XLen == 64 && ValVT == MVT::f64) {
+    LocVT = MVT::i64;
     LocInfo = CCValAssign::BCvt;
   }
 
@@ -849,8 +1046,9 @@ static bool CC_RISCV(const DataLayout &DL, unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  if (ValVT == MVT::f32) {
-    LocVT = MVT::f32;
+  // When an f32 or f64 is passed on the stack, no bit-conversion is needed.
+  if (ValVT == MVT::f32 || ValVT == MVT::f64) {
+    LocVT = ValVT;
     LocInfo = CCValAssign::Full;
   }
   State.addLoc(CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
@@ -912,6 +1110,10 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
   case CCValAssign::Full:
     break;
   case CCValAssign::BCvt:
+    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) {
+      Val = DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Val);
+      break;
+    }
     Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
     break;
   }
@@ -947,6 +1149,10 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
   case CCValAssign::Full:
     break;
   case CCValAssign::BCvt:
+    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) {
+      Val = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Val);
+      break;
+    }
     Val = DAG.getNode(ISD::BITCAST, DL, LocVT, Val);
     break;
   }
@@ -973,6 +1179,7 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
     llvm_unreachable("Unexpected CCValAssign::LocInfo");
   case CCValAssign::Full:
   case CCValAssign::Indirect:
+  case CCValAssign::BCvt:
     ExtType = ISD::NON_EXTLOAD;
     break;
   }
@@ -1612,6 +1819,22 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "RISCVISD::SplitF64";
   case RISCVISD::TAIL:
     return "RISCVISD::TAIL";
+  case RISCVISD::SLLW:
+    return "RISCVISD::SLLW";
+  case RISCVISD::SRAW:
+    return "RISCVISD::SRAW";
+  case RISCVISD::SRLW:
+    return "RISCVISD::SRLW";
+  case RISCVISD::DIVW:
+    return "RISCVISD::DIVW";
+  case RISCVISD::DIVUW:
+    return "RISCVISD::DIVUW";
+  case RISCVISD::REMUW:
+    return "RISCVISD::REMUW";
+  case RISCVISD::FMV_W_X_RV64:
+    return "RISCVISD::FMV_W_X_RV64";
+  case RISCVISD::FMV_X_ANYEXTW_RV64:
+    return "RISCVISD::FMV_X_ANYEXTW_RV64";
   }
   return nullptr;
 }
@@ -1654,6 +1877,12 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
 
 TargetLowering::AtomicExpansionKind
 RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
+  // point operations can't be used in an lr/sc sequence without breaking the
+  // forward-progress guarantee.
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::CmpXChg;
+
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
@@ -1661,37 +1890,74 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 }
 
 static Intrinsic::ID
-getIntrinsicForMaskedAtomicRMWBinOp32(AtomicRMWInst::BinOp BinOp) {
-  switch (BinOp) {
-  default:
-    llvm_unreachable("Unexpected AtomicRMW BinOp");
-  case AtomicRMWInst::Xchg:
-    return Intrinsic::riscv_masked_atomicrmw_xchg_i32;
-  case AtomicRMWInst::Add:
-    return Intrinsic::riscv_masked_atomicrmw_add_i32;
-  case AtomicRMWInst::Sub:
-    return Intrinsic::riscv_masked_atomicrmw_sub_i32;
-  case AtomicRMWInst::Nand:
-    return Intrinsic::riscv_masked_atomicrmw_nand_i32;
-  case AtomicRMWInst::Max:
-    return Intrinsic::riscv_masked_atomicrmw_max_i32;
-  case AtomicRMWInst::Min:
-    return Intrinsic::riscv_masked_atomicrmw_min_i32;
-  case AtomicRMWInst::UMax:
-    return Intrinsic::riscv_masked_atomicrmw_umax_i32;
-  case AtomicRMWInst::UMin:
-    return Intrinsic::riscv_masked_atomicrmw_umin_i32;
+getIntrinsicForMaskedAtomicRMWBinOp(unsigned XLen, AtomicRMWInst::BinOp BinOp) {
+  if (XLen == 32) {
+    switch (BinOp) {
+    default:
+      llvm_unreachable("Unexpected AtomicRMW BinOp");
+    case AtomicRMWInst::Xchg:
+      return Intrinsic::riscv_masked_atomicrmw_xchg_i32;
+    case AtomicRMWInst::Add:
+      return Intrinsic::riscv_masked_atomicrmw_add_i32;
+    case AtomicRMWInst::Sub:
+      return Intrinsic::riscv_masked_atomicrmw_sub_i32;
+    case AtomicRMWInst::Nand:
+      return Intrinsic::riscv_masked_atomicrmw_nand_i32;
+    case AtomicRMWInst::Max:
+      return Intrinsic::riscv_masked_atomicrmw_max_i32;
+    case AtomicRMWInst::Min:
+      return Intrinsic::riscv_masked_atomicrmw_min_i32;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::riscv_masked_atomicrmw_umax_i32;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::riscv_masked_atomicrmw_umin_i32;
+    }
   }
+
+  if (XLen == 64) {
+    switch (BinOp) {
+    default:
+      llvm_unreachable("Unexpected AtomicRMW BinOp");
+    case AtomicRMWInst::Xchg:
+      return Intrinsic::riscv_masked_atomicrmw_xchg_i64;
+    case AtomicRMWInst::Add:
+      return Intrinsic::riscv_masked_atomicrmw_add_i64;
+    case AtomicRMWInst::Sub:
+      return Intrinsic::riscv_masked_atomicrmw_sub_i64;
+    case AtomicRMWInst::Nand:
+      return Intrinsic::riscv_masked_atomicrmw_nand_i64;
+    case AtomicRMWInst::Max:
+      return Intrinsic::riscv_masked_atomicrmw_max_i64;
+    case AtomicRMWInst::Min:
+      return Intrinsic::riscv_masked_atomicrmw_min_i64;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::riscv_masked_atomicrmw_umax_i64;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::riscv_masked_atomicrmw_umin_i64;
+    }
+  }
+
+  llvm_unreachable("Unexpected XLen\n");
 }
 
 Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
     IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
     Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
-  Value *Ordering = Builder.getInt32(static_cast<uint32_t>(AI->getOrdering()));
+  unsigned XLen = Subtarget.getXLen();
+  Value *Ordering =
+      Builder.getIntN(XLen, static_cast<uint64_t>(AI->getOrdering()));
   Type *Tys[] = {AlignedAddr->getType()};
   Function *LrwOpScwLoop = Intrinsic::getDeclaration(
       AI->getModule(),
-      getIntrinsicForMaskedAtomicRMWBinOp32(AI->getOperation()), Tys);
+      getIntrinsicForMaskedAtomicRMWBinOp(XLen, AI->getOperation()), Tys);
+
+  if (XLen == 64) {
+    Incr = Builder.CreateSExt(Incr, Builder.getInt64Ty());
+    Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+    ShiftAmt = Builder.CreateSExt(ShiftAmt, Builder.getInt64Ty());
+  }
+
+  Value *Result;
 
   // Must pass the shift amount needed to sign extend the loaded value prior
   // to performing a signed comparison for min/max. ShiftAmt is the number of
@@ -1703,13 +1969,18 @@ Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
     const DataLayout &DL = AI->getModule()->getDataLayout();
     unsigned ValWidth =
         DL.getTypeStoreSizeInBits(AI->getValOperand()->getType());
-    Value *SextShamt = Builder.CreateSub(
-        Builder.getInt32(Subtarget.getXLen() - ValWidth), ShiftAmt);
-    return Builder.CreateCall(LrwOpScwLoop,
-                              {AlignedAddr, Incr, Mask, SextShamt, Ordering});
+    Value *SextShamt =
+        Builder.CreateSub(Builder.getIntN(XLen, XLen - ValWidth), ShiftAmt);
+    Result = Builder.CreateCall(LrwOpScwLoop,
+                                {AlignedAddr, Incr, Mask, SextShamt, Ordering});
+  } else {
+    Result =
+        Builder.CreateCall(LrwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
   }
 
-  return Builder.CreateCall(LrwOpScwLoop, {AlignedAddr, Incr, Mask, Ordering});
+  if (XLen == 64)
+    Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  return Result;
 }
 
 TargetLowering::AtomicExpansionKind
@@ -1724,10 +1995,21 @@ RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilder<> &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
-  Value *Ordering = Builder.getInt32(static_cast<uint32_t>(Ord));
+  unsigned XLen = Subtarget.getXLen();
+  Value *Ordering = Builder.getIntN(XLen, static_cast<uint64_t>(Ord));
+  Intrinsic::ID CmpXchgIntrID = Intrinsic::riscv_masked_cmpxchg_i32;
+  if (XLen == 64) {
+    CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
+    NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
+    Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+    CmpXchgIntrID = Intrinsic::riscv_masked_cmpxchg_i64;
+  }
   Type *Tys[] = {AlignedAddr->getType()};
-  Function *MaskedCmpXchg = Intrinsic::getDeclaration(
-      CI->getModule(), Intrinsic::riscv_masked_cmpxchg_i32, Tys);
-  return Builder.CreateCall(MaskedCmpXchg,
-                            {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+  Function *MaskedCmpXchg =
+      Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
+  Value *Result = Builder.CreateCall(
+      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+  if (XLen == 64)
+    Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  return Result;
 }

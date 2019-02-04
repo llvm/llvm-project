@@ -9,7 +9,7 @@ matchers.
 
 .. raw:: html
 
-  <center><iframe width="560" height="315" src="http://www.youtube.com/embed/VqCkCDFLSsc?vq=hd720" frameborder="0" allowfullscreen></iframe></center>
+  <center><iframe width="560" height="315" src="https://www.youtube.com/embed/VqCkCDFLSsc?vq=hd720" frameborder="0" allowfullscreen></iframe></center>
 
 `Slides <https://llvm.org/devmtg/2013-04/klimek-slides.pdf>`_
 

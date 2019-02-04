@@ -1,9 +1,8 @@
 //===--- OpenBSD.cpp - OpenBSD ToolChain Implementations --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -189,11 +188,11 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lm");
     }
     if (NeedsSanitizerDeps) {
-      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins", false));
+      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
       linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
     }
     if (NeedsXRayDeps) {
-      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins", false));
+      CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
       linkXRayRuntimeDeps(ToolChain, CmdArgs);
     }
     // FIXME: For some reason GCC passes -lgcc before adding

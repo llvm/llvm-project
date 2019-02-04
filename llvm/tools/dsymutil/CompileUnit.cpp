@@ -1,9 +1,8 @@
 //===- tools/dsymutil/CompileUnit.h - Dwarf compile unit ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,7 +91,11 @@ void CompileUnit::addLabelLowPc(uint64_t LabelLowPc, int64_t PcOffset) {
 
 void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
                                    int64_t PcOffset) {
-  Ranges.insert(FuncLowPc, FuncHighPc, PcOffset);
+  //  Don't add empty ranges to the interval map.  They are a problem because
+  //  the interval map expects half open intervals. This is safe because they
+  //  are empty anyway.
+  if (FuncHighPc != FuncLowPc)
+    Ranges.insert(FuncLowPc, FuncHighPc, PcOffset);
   this->LowPc = std::min(LowPc, FuncLowPc + PcOffset);
   this->HighPc = std::max(HighPc, FuncHighPc + PcOffset);
 }

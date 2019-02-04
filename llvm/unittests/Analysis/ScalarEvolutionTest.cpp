@@ -1,9 +1,8 @@
 //===- ScalarEvolutionsTest.cpp - ScalarEvolution unit tests --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,7 +63,7 @@ protected:
 TEST_F(ScalarEvolutionsTest, SCEVUnknownRAUW) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context),
                                               std::vector<Type *>(), false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
   ReturnInst::Create(Context, nullptr, BB);
 
@@ -113,7 +112,7 @@ TEST_F(ScalarEvolutionsTest, SCEVUnknownRAUW) {
 TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context),
                                               std::vector<Type *>(), false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
@@ -147,7 +146,7 @@ TEST_F(ScalarEvolutionsTest, ExpandPtrTypeSCEV) {
   auto *I32PtrTy = Type::getInt32PtrTy(Context);
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
@@ -330,7 +329,7 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
 TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "bb1", F);
   BranchInst::Create(LoopBB, EntryBB);
@@ -400,7 +399,7 @@ TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {IntPtrTy, IntPtrTy}, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
 
   Value *X = &*F->arg_begin();
@@ -408,9 +407,11 @@ TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
 
   const int ValueDepth = 10;
   for (int i = 0; i < ValueDepth; i++) {
-    X = new LoadInst(new IntToPtrInst(X, IntPtrPtrTy, "", EntryBB), "",
+    X = new LoadInst(IntPtrTy, new IntToPtrInst(X, IntPtrPtrTy, "", EntryBB),
+                     "",
                      /*isVolatile*/ false, EntryBB);
-    Y = new LoadInst(new IntToPtrInst(Y, IntPtrPtrTy, "", EntryBB), "",
+    Y = new LoadInst(IntPtrTy, new IntToPtrInst(Y, IntPtrPtrTy, "", EntryBB),
+                     "",
                      /*isVolatile*/ false, EntryBB);
   }
 
@@ -436,7 +437,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), ArgTys, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
 
   Argument *A1 = &*F->arg_begin();
   Argument *A2 = &*(std::next(F->arg_begin()));
@@ -670,7 +671,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   //   ret void
   // }
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
 
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *CondBB = BasicBlock::Create(Context, "for.cond", F);
@@ -749,7 +750,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExprNonIntegral) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
-  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", NIM);
 
   Argument *Arg = &*F->arg_begin();
 
@@ -772,7 +773,8 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExprNonIntegral) {
   Phi->addIncoming(Add, L);
 
   Builder.SetInsertPoint(Post);
-  Value *GepBase = Builder.CreateGEP(Arg, ConstantInt::get(T_int64, 1));
+  Value *GepBase =
+      Builder.CreateGEP(T_int64, Arg, ConstantInt::get(T_int64, 1));
   Instruction *Ret = Builder.CreateRetVoid();
 
   ScalarEvolution SE = buildSE(*F);
@@ -822,7 +824,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
-  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", NIM);
 
   BasicBlock *Top = BasicBlock::Create(Context, "top", F);
   BasicBlock *LPh = BasicBlock::Create(Context, "L.ph", F);
@@ -920,7 +922,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
-  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", NIM);
 
   Argument *Arg = &*F->arg_begin();
 
@@ -980,7 +982,8 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
   // ix.
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
-  Function *F = cast<Function>(M.getOrInsertFunction("addrecphitest", FTy));
+  Function *F =
+      Function::Create(FTy, Function::ExternalLinkage, "addrecphitest", M);
 
   /*
     Create IR:
@@ -1036,7 +1039,8 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   SmallVector<Type *, 1> Types;
   Types.push_back(Int32Ty);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), Types, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("addrecphitest", FTy));
+  Function *F =
+      Function::Create(FTy, Function::ExternalLinkage, "addrecphitest", M);
 
   /*
     Create IR:
@@ -1090,7 +1094,7 @@ TEST_F(ScalarEvolutionsTest, SCEVFoldSumOfTruncs) {
   SmallVector<Type *, 1> Types;
   Types.push_back(ArgTy);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), Types, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
   ReturnInst::Create(Context, nullptr, BB);
 
@@ -1146,7 +1150,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExpanderIsSafeToExpandAt) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
-  Function *F = cast<Function>(NIM.getOrInsertFunction("foo", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", NIM);
 
   BasicBlock *Top = BasicBlock::Create(Context, "top", F);
   BasicBlock *LPh = BasicBlock::Create(Context, "L.ph", F);
@@ -1207,7 +1211,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExpanderNUW) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), { T_int64 }, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("func", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "func", M);
   Argument *Arg = &*F->arg_begin();
   ConstantInt *C = ConstantInt::get(Context, APInt(64, -1));
 
@@ -1259,7 +1263,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExpanderNSW) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), { T_int64 }, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("func", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "func", M);
   Argument *Arg = &*F->arg_begin();
   ConstantInt *C = ConstantInt::get(Context, APInt(64, -1));
 
@@ -1309,7 +1313,7 @@ TEST_F(ScalarEvolutionsTest, SCEVCacheNUW) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), { T_int64 }, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("func", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "func", M);
   Argument *Arg = &*F->arg_begin();
   ConstantInt *C = ConstantInt::get(Context, APInt(64, -1));
 
@@ -1360,7 +1364,7 @@ TEST_F(ScalarEvolutionsTest, SCEVCacheNSW) {
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), { T_int64 }, false);
-  Function *F = cast<Function>(M.getOrInsertFunction("func", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "func", M);
   Argument *Arg = &*F->arg_begin();
   ConstantInt *C = ConstantInt::get(Context, APInt(64, -1));
 
@@ -1388,6 +1392,56 @@ TEST_F(ScalarEvolutionsTest, SCEVCacheNSW) {
   SCEVExpander Exp(SE, M.getDataLayout(), "expander");
   auto *I = cast<Instruction>(Exp.expandCodeFor(SC1, nullptr, R));
   EXPECT_FALSE(I->hasNoSignedWrap());
+}
+
+// Check logic of SCEV expression size computation.
+TEST_F(ScalarEvolutionsTest, SCEVComputeExpressionSize) {
+  /*
+   * Create the following code:
+   * void func(i64 %a, i64 %b)
+   * entry:
+   *  %s1 = add i64 %a, 1
+   *  %s2 = udiv i64 %s1, %b
+   *  br label %exit
+   * exit:
+   *  ret
+   */
+
+  // Create a module.
+  Module M("SCEVComputeExpressionSize", Context);
+
+  Type *T_int64 = Type::getInt64Ty(Context);
+
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), { T_int64, T_int64 }, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "func", M);
+  Argument *A = &*F->arg_begin();
+  Argument *B = &*std::next(F->arg_begin());
+  ConstantInt *C = ConstantInt::get(Context, APInt(64, 1));
+
+  BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *Exit = BasicBlock::Create(Context, "exit", F);
+
+  IRBuilder<> Builder(Entry);
+  auto *S1 = cast<Instruction>(Builder.CreateAdd(A, C, "s1"));
+  auto *S2 = cast<Instruction>(Builder.CreateUDiv(S1, B, "s2"));
+  Builder.CreateBr(Exit);
+
+  Builder.SetInsertPoint(Exit);
+  Builder.CreateRetVoid();
+
+  ScalarEvolution SE = buildSE(*F);
+  // Get S2 first to move it to cache.
+  const SCEV *AS = SE.getSCEV(A);
+  const SCEV *BS = SE.getSCEV(B);
+  const SCEV *CS = SE.getSCEV(C);
+  const SCEV *S1S = SE.getSCEV(S1);
+  const SCEV *S2S = SE.getSCEV(S2);
+  EXPECT_EQ(AS->getExpressionSize(), 1u);
+  EXPECT_EQ(BS->getExpressionSize(), 1u);
+  EXPECT_EQ(CS->getExpressionSize(), 1u);
+  EXPECT_EQ(S1S->getExpressionSize(), 3u);
+  EXPECT_EQ(S2S->getExpressionSize(), 5u);
 }
 
 }  // end anonymous namespace

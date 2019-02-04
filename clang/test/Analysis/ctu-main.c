@@ -2,7 +2,7 @@
 // RUN: mkdir -p %t/ctudir2
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu \
 // RUN:   -emit-pch -o %t/ctudir2/ctu-other.c.ast %S/Inputs/ctu-other.c
-// RUN: cp %S/Inputs/ctu-other.c.externalFnMap.txt %t/ctudir2/externalFnMap.txt
+// RUN: cp %S/Inputs/ctu-other.c.externalDefMap.txt %t/ctudir2/externalDefMap.txt
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -std=c89 -analyze \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \

@@ -1,0 +1,7 @@
+REQUIRES: linux
+RUN: %cpp_compiler %S/LargeTest.cpp -o %t-LargeTest
+RUN: %run %t-LargeTest -runs=10000
+RUN: %env_asan_opts=handle_segv=0 %run %t-LargeTest -runs=10000 -lazy_counters=1 2>&1 | FileCheck %s
+RUN:                              %run %t-LargeTest -runs=10000 -lazy_counters=1 2>&1 | FileCheck %s
+
+CHECK: pages of counters where protected; libFuzzer's SEGV handler must be installed

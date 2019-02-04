@@ -87,7 +87,7 @@ define i8 @test_aaa(i8 %a0) optsize {
 ;
 ; BTVER2-LABEL: test_aaa:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
+; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    aaa # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -291,7 +291,7 @@ define void @test_aam(i8 %a0) optsize {
 ;
 ; BTVER2-LABEL: test_aam:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
+; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    aam # sched: [100:0.50]
 ; BTVER2-NEXT:    aam $16 # sched: [100:0.50]
@@ -385,7 +385,7 @@ define i8 @test_aas(i8 %a0) optsize {
 ;
 ; BTVER2-LABEL: test_aas:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
+; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    aas # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -487,7 +487,7 @@ define void @test_arpl(i16 %a0, i16 *%a1) optsize {
 ; BTVER2-LABEL: test_arpl:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    arpl %ax, (%ecx) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -665,14 +665,14 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; BTVER2-NEXT:    .cfi_def_cfa_offset 8
 ; BTVER2-NEXT:    .cfi_offset %esi, -8
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    bound %ax, (%esi) # sched: [100:0.50]
 ; BTVER2-NEXT:    bound %ecx, (%edx) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
-; BTVER2-NEXT:    popl %esi # sched: [5:1.00]
+; BTVER2-NEXT:    popl %esi # sched: [3:1.00]
 ; BTVER2-NEXT:    .cfi_def_cfa_offset 4
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
@@ -773,7 +773,7 @@ define i8 @test_daa(i8 %a0) optsize {
 ;
 ; BTVER2-LABEL: test_daa:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
+; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    daa # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -865,7 +865,7 @@ define i8 @test_das(i8 %a0) optsize {
 ;
 ; BTVER2-LABEL: test_das:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [5:1.00]
+; BTVER2-NEXT:    movb {{[0-9]+}}(%esp), %al # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    das # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
@@ -976,7 +976,7 @@ define void @test_dec16(i16 %a0, i16* %a1) optsize {
 ; BTVER2-LABEL: test_dec16:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    decw %ax # sched: [1:0.50]
 ; BTVER2-NEXT:    decw (%ecx) # sched: [5:1.00]
@@ -1088,8 +1088,8 @@ define void @test_dec32(i32 %a0, i32* %a1) optsize {
 ;
 ; BTVER2-LABEL: test_dec32:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    decl %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    decl (%ecx) # sched: [5:1.00]
@@ -1203,7 +1203,7 @@ define void @test_inc16(i16 %a0, i16* %a1) optsize {
 ; BTVER2-LABEL: test_inc16:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    incw %ax # sched: [1:0.50]
 ; BTVER2-NEXT:    incw (%ecx) # sched: [5:1.00]
@@ -1315,8 +1315,8 @@ define void @test_inc32(i32 %a0, i32* %a1) optsize {
 ;
 ; BTVER2-LABEL: test_inc32:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    incl %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    incl (%ecx) # sched: [5:1.00]
@@ -1935,12 +1935,12 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; BTVER2-LABEL: test_pop_push_16:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [4:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    popw %ax # sched: [5:1.00]
-; BTVER2-NEXT:    popw (%ecx) # sched: [6:1.00]
+; BTVER2-NEXT:    popw %ax # sched: [3:1.00]
+; BTVER2-NEXT:    popw (%ecx) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushw %ax # sched: [1:1.00]
-; BTVER2-NEXT:    pushw (%ecx) # sched: [6:1.00]
+; BTVER2-NEXT:    pushw (%ecx) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushw $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushw $7 # sched: [1:1.00]
@@ -2101,13 +2101,13 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ;
 ; BTVER2-LABEL: test_pop_push_32:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    popl %eax # sched: [5:1.00]
-; BTVER2-NEXT:    popl (%ecx) # sched: [6:1.00]
+; BTVER2-NEXT:    popl %eax # sched: [3:1.00]
+; BTVER2-NEXT:    popl (%ecx) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushl %eax # sched: [1:1.00]
-; BTVER2-NEXT:    pushl (%ecx) # sched: [6:1.00]
+; BTVER2-NEXT:    pushl (%ecx) # sched: [4:1.00]
 ; BTVER2-NEXT:    pushl $4095 # imm = 0xFFF
 ; BTVER2-NEXT:    # sched: [1:1.00]
 ; BTVER2-NEXT:    pushl $7 # sched: [1:1.00]
@@ -2226,8 +2226,8 @@ define void @test_popa_popf_pusha_pushf() optsize {
 ; BTVER2-LABEL: test_popa_popf_pusha_pushf:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    popal # sched: [5:1.00]
-; BTVER2-NEXT:    popfl # sched: [5:1.00]
+; BTVER2-NEXT:    popal # sched: [3:1.00]
+; BTVER2-NEXT:    popfl # sched: [3:1.00]
 ; BTVER2-NEXT:    pushal # sched: [1:1.00]
 ; BTVER2-NEXT:    pushfl # sched: [1:1.00]
 ; BTVER2-NEXT:    #NO_APP
@@ -2575,9 +2575,9 @@ define void @test_xchg_32(i32 %a0, i32 %a1, i32 *%a2) optsize {
 ;
 ; BTVER2-LABEL: test_xchg_32:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:1.00]
-; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
+; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
 ; BTVER2-NEXT:    xchgl %eax, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    xchgl %ecx, %eax # sched: [1:0.50]

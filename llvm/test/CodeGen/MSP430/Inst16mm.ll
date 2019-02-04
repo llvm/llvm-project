@@ -67,3 +67,22 @@ entry:
 ; CHECK-DAG:	mov	2(r1), 6(r1)
 ; CHECK-DAG:	mov	0(r1), 4(r1)
 }
+
+define void @cmp(i16* %g, i16* %i) {
+entry:
+; CHECK-LABEL: cmp:
+; CHECK: cmp 8(r12), 4(r13)
+  %add.ptr = getelementptr inbounds i16, i16* %g, i16 4
+  %0 = load i16, i16* %add.ptr, align 2
+  %add.ptr1 = getelementptr inbounds i16, i16* %i, i16 2
+  %1 = load i16, i16* %add.ptr1, align 2
+  %cmp = icmp sgt i16 %0, %1
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  store i16 0, i16* %g, align 2
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret void
+}

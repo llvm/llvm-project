@@ -1,9 +1,8 @@
 //== RetainCountDiagnostics.h - Checks for leaks and other issues -*- C++ -*--//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,53 +14,67 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_RETAINCOUNTCHECKER_DIAGNOSTICS_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_RETAINCOUNTCHECKER_DIAGNOSTICS_H
 
+#include "clang/Analysis/RetainSummaryManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
-#include "clang/StaticAnalyzer/Core/RetainSummaryManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 
 namespace clang {
 namespace ento {
 namespace retaincountchecker {
 
-class CFRefBug : public BugType {
-protected:
-  CFRefBug(const CheckerBase *checker, StringRef name)
-      : BugType(checker, name, categories::MemoryCoreFoundationObjectiveC) {}
-
+class RefCountBug : public BugType {
 public:
+  enum RefCountBugType {
+    UseAfterRelease,
+    ReleaseNotOwned,
+    DeallocNotOwned,
+    FreeNotOwned,
+    OverAutorelease,
+    ReturnNotOwnedForOwned,
+    LeakWithinFunction,
+    LeakAtReturn,
+  };
+  RefCountBug(const CheckerBase *checker, RefCountBugType BT);
+  StringRef getDescription() const;
 
-  // FIXME: Eventually remove.
-  virtual const char *getDescription() const = 0;
+  RefCountBugType getBugType() const {
+    return BT;
+  }
 
-  virtual bool isLeak() const { return false; }
+  const CheckerBase *getChecker() const {
+    return Checker;
+  }
+
+private:
+  RefCountBugType BT;
+  const CheckerBase *Checker;
+  static StringRef bugTypeToName(RefCountBugType BT);
 };
 
-typedef ::llvm::DenseMap<const ExplodedNode *, const RetainSummary *>
-  SummaryLogTy;
-
-class CFRefReport : public BugReport {
+class RefCountReport : public BugReport {
 protected:
   SymbolRef Sym;
+  bool isLeak = false;
 
 public:
-  CFRefReport(CFRefBug &D, const LangOptions &LOpts,
-              const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
-              bool registerVisitor = true);
+  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
+              ExplodedNode *n, SymbolRef sym,
+              bool isLeak=false);
 
-  CFRefReport(CFRefBug &D, const LangOptions &LOpts,
-              const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
+  RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
+              ExplodedNode *n, SymbolRef sym,
               StringRef endText);
 
   llvm::iterator_range<ranges_iterator> getRanges() override {
-    const CFRefBug& BugTy = static_cast<CFRefBug&>(getBugType());
-    if (!BugTy.isLeak())
+    if (!isLeak)
       return BugReport::getRanges();
     return llvm::make_range(ranges_iterator(), ranges_iterator());
   }
 };
 
-class CFRefLeakReport : public CFRefReport {
+class RefLeakReport : public RefCountReport {
   const MemRegion* AllocBinding;
   const Stmt *AllocStmt;
 
@@ -74,9 +87,8 @@ class CFRefLeakReport : public CFRefReport {
   void createDescription(CheckerContext &Ctx);
 
 public:
-  CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
-                  const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
-                  CheckerContext &Ctx);
+  RefLeakReport(const RefCountBug &D, const LangOptions &LOpts, ExplodedNode *n,
+                SymbolRef sym, CheckerContext &Ctx);
 
   PathDiagnosticLocation getLocation(const SourceManager &SM) const override {
     assert(Location.isValid());

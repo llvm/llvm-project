@@ -1,4 +1,4 @@
-; RUN: llvm-rc /dry-run /FO %t %p/Inputs/empty.rc 2>&1 | FileCheck %s --allow-empty --check-prefix=FO
-; RUN: llvm-rc /dry-run /FO%t %p/Inputs/empty.rc 2>&1 | FileCheck %s --allow-empty --check-prefix=FO
+; RUN: llvm-rc /dry-run /FO %t -- %p/Inputs/empty.rc 2>&1 | FileCheck %s --allow-empty --check-prefix=FO
+; RUN: llvm-rc /dry-run /FO%t -- %p/Inputs/empty.rc 2>&1 | FileCheck %s --allow-empty --check-prefix=FO
 
 ; FO-NOT: Exactly one input file should be provided.

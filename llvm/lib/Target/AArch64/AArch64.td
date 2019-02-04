@@ -1,9 +1,8 @@
 //=- AArch64.td - Describe the AArch64 Target Machine --------*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -188,13 +187,17 @@ def FeatureFuseAES : SubtargetFeature<
     "fuse-aes", "HasFuseAES", "true",
     "CPU fuses AES crypto operations">;
 
-def FeatureFuseCryptoEOR : SubtargetFeature<
-    "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
-    "CPU fuses AES/PMULL and EOR operations">;
+def FeatureFuseArithmeticLogic : SubtargetFeature<
+    "fuse-arith-logic", "HasFuseArithmeticLogic", "true",
+    "CPU fuses arithmetic and logic operations">;
 
 def FeatureFuseCCSelect : SubtargetFeature<
     "fuse-csel", "HasFuseCCSelect", "true",
     "CPU fuses conditional select operations">;
+
+def FeatureFuseCryptoEOR : SubtargetFeature<
+    "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
+    "CPU fuses AES/PMULL and EOR operations">;
 
 def FeatureFuseLiterals : SubtargetFeature<
     "fuse-literals", "HasFuseLiterals", "true",
@@ -306,14 +309,14 @@ def FeatureFRInt3264 : SubtargetFeature<"fptoint", "HasFRInt3264", "true",
 def FeatureSpecRestrict : SubtargetFeature<"specrestrict", "HasSpecRestrict",
   "true", "Enable architectural speculation restriction" >;
 
+def FeatureSB : SubtargetFeature<"sb", "HasSB",
+  "true", "Enable v8.5 Speculation Barrier" >;
+
 def FeatureSSBS : SubtargetFeature<"ssbs", "HasSSBS",
   "true", "Enable Speculative Store Bypass Safe bit" >;
 
-def FeatureSpecCtrl : SubtargetFeature<"specctrl", "HasSpecCtrl", "true",
-  "Enable speculation control barrier" >;
-
-def FeaturePredCtrl : SubtargetFeature<"predctrl", "HasPredCtrl", "true",
-  "Enable execution and data prediction invalidation instructions" >;
+def FeaturePredRes : SubtargetFeature<"predres", "HasPredRes", "true",
+  "Enable v8.5a execution and data prediction invalidation instructions" >;
 
 def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
     "true", "Enable v8.5 Cache Clean to Point of Deep Persistence" >;
@@ -352,7 +355,7 @@ def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
 def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
-   FeatureSSBS, FeatureSpecCtrl, FeaturePredCtrl, FeatureCacheDeepPersist,
+   FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
    FeatureBranchTargetId]
 >;
 
@@ -391,6 +394,7 @@ include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
 include "AArch64SchedExynosM1.td"
 include "AArch64SchedExynosM3.td"
+include "AArch64SchedExynosM4.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
 
@@ -540,6 +544,26 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeaturePredictableSelectIsExpensive,
                                      FeatureZCZeroingFP]>;
 
+def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
+                                    "Samsung Exynos-M4 processors",
+                                    [HasV8_2aOps,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureCrypto,
+                                     FeatureDotProd,
+                                     FeatureExynosCheapAsMoveHandling,
+                                     FeatureForce32BitJumpTables,
+                                     FeatureFP16FML,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseLiterals,
+                                     FeatureLSLFast,
+                                     FeaturePerfMon,
+                                     FeaturePostRAScheduler,
+                                     FeatureZCZeroing]>;
+
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [
                                    FeatureCRC,
@@ -677,7 +701,7 @@ def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
-def : ProcessorModel<"exynos-m4", ExynosM3Model, [ProcExynosM3]>;
+def : ProcessorModel<"exynos-m4", ExynosM4Model, [ProcExynosM4]>;
 def : ProcessorModel<"falkor", FalkorModel, [ProcFalkor]>;
 def : ProcessorModel<"saphira", FalkorModel, [ProcSaphira]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;
@@ -690,6 +714,9 @@ def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
 def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
 // FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
 def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
+
+// Alias for the latest Apple processor model supported by LLVM.
+def : ProcessorModel<"apple-latest", CycloneModel, [ProcCyclone]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

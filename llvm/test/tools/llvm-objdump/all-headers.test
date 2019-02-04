@@ -1,0 +1,45 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump --all-headers %t | FileCheck %s
+
+## Check we print file format, architecture and start address before
+## anything else when using --all-headers.
+
+# CHECK:       file format ELF64-x86-64
+# CHECK-EMPTY:
+# CHECK-NEXT:  architecture: x86_64
+# CHECK-NEXT:  start address: 0x0000000000000000
+# CHECK-EMPTY:
+# CHECK-NEXT:  Sections:
+
+## Check how we dump the archives.
+## Check we dump the appropriate headers for each file in the archive.
+
+# RUN: cp %t %t2
+# RUN: rm -f %t.a
+# RUN: llvm-ar rcs %t.a %t %t2
+# RUN: llvm-objdump --all-headers %t.a | FileCheck %s --check-prefix=ARCHIVE
+
+# ARCHIVE: {{.*}}.a({{.*}}):   file format ELF64-x86-64
+# ARCHIVE: architecture: x86_64
+# ARCHIVE: start address: 0x0000000000000000
+# ARCHIVE: rw-r--r--
+# ARCHIVE: Sections:
+# ARCHIVE: SYMBOL TABLE:
+# ARCHIVE: Program Header:
+# ARCHIVE: Dynamic Section:
+# ARCHIVE: {{.*}}.a({{.*}}2):   file format ELF64-x86-64
+# ARCHIVE: architecture: x86_64
+# ARCHIVE: start address: 0x0000000000000000
+# ARCHIVE: rw-r--r--
+# ARCHIVE: Sections:
+# ARCHIVE: SYMBOL TABLE:
+# ARCHIVE: Program Header:
+# ARCHIVE: Dynamic Section:
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:

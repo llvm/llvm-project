@@ -1,9 +1,8 @@
 //===-- WinException.h - Windows Exception Handling ----------*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -68,7 +67,7 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
       const MachineFunction *MF, const WinEHFuncInfo &FuncInfo,
       SmallVectorImpl<std::pair<const MCExpr *, int>> &IPToStateTable);
 
-  /// Emits the label used with llvm.x86.seh.recoverfp, which is used by
+  /// Emits the label used with llvm.eh.recoverfp, which is used by
   /// outlined funclets.
   void emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
                                      StringRef FLinkageName);

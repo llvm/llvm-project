@@ -4,7 +4,7 @@
 // RUN:   -emit-pch -o %t/ctudir/ctu-other.cpp.ast %S/Inputs/ctu-other.cpp
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu \
 // RUN:   -emit-pch -o %t/ctudir/ctu-chain.cpp.ast %S/Inputs/ctu-chain.cpp
-// RUN: cp %S/Inputs/ctu-other.cpp.externalFnMap.txt %t/ctudir/externalFnMap.txt
+// RUN: cp %S/Inputs/ctu-other.cpp.externalDefMap.txt %t/ctudir/externalDefMap.txt
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
@@ -78,6 +78,6 @@ int main() {
   clang_analyzer_eval(fun_using_anon_struct(8) == 8); // expected-warning{{TRUE}}
 
   clang_analyzer_eval(other_macro_diag(1) == 1); // expected-warning{{TRUE}}
-  // expected-warning@Inputs/ctu-other.cpp:75{{REACHABLE}}
+  // expected-warning@Inputs/ctu-other.cpp:80{{REACHABLE}}
   MACRODIAG(); // expected-warning{{REACHABLE}}
 }

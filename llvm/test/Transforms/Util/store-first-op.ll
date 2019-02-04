@@ -24,7 +24,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257597)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "none", directory: ".")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(name: "getU", scope: !4, file: !1, line: 25, type: !5)

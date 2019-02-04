@@ -1,9 +1,8 @@
 //===--- CodeGenFunction.cpp - Emit LLVM Code from ASTs for a Function ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1156,7 +1155,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
     if (CXXABIThisValue) {
       SanitizerSet SkippedChecks;
       SkippedChecks.set(SanitizerKind::ObjectSize, true);
-      QualType ThisTy = MD->getThisType(getContext());
+      QualType ThisTy = MD->getThisType();
 
       // If this is the call operator of a lambda with no capture-default, it
       // may have a static invoker function, which may call this operator with
@@ -1256,7 +1255,7 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
   if (MD && MD->isInstance()) {
     if (CGM.getCXXABI().HasThisReturn(GD))
-      ResTy = MD->getThisType(getContext());
+      ResTy = MD->getThisType();
     else if (CGM.getCXXABI().hasMostDerivedReturn(GD))
       ResTy = CGM.getContext().VoidPtrTy;
     CGM.getCXXABI().buildThisParam(*this, Args);
@@ -2207,7 +2206,50 @@ void CodeGenFunction::unprotectFromPeepholes(PeepholeProtection protection) {
   protection.Inst->eraseFromParent();
 }
 
-llvm::Value *CodeGenFunction::EmitAnnotationCall(llvm::Value *AnnotationFn,
+void CodeGenFunction::EmitAlignmentAssumption(llvm::Value *PtrValue,
+                                              QualType Ty, SourceLocation Loc,
+                                              SourceLocation AssumptionLoc,
+                                              llvm::Value *Alignment,
+                                              llvm::Value *OffsetValue) {
+  llvm::Value *TheCheck;
+  llvm::Instruction *Assumption = Builder.CreateAlignmentAssumption(
+      CGM.getDataLayout(), PtrValue, Alignment, OffsetValue, &TheCheck);
+  if (SanOpts.has(SanitizerKind::Alignment)) {
+    EmitAlignmentAssumptionCheck(PtrValue, Ty, Loc, AssumptionLoc, Alignment,
+                                 OffsetValue, TheCheck, Assumption);
+  }
+}
+
+void CodeGenFunction::EmitAlignmentAssumption(llvm::Value *PtrValue,
+                                              QualType Ty, SourceLocation Loc,
+                                              SourceLocation AssumptionLoc,
+                                              unsigned Alignment,
+                                              llvm::Value *OffsetValue) {
+  llvm::Value *TheCheck;
+  llvm::Instruction *Assumption = Builder.CreateAlignmentAssumption(
+      CGM.getDataLayout(), PtrValue, Alignment, OffsetValue, &TheCheck);
+  if (SanOpts.has(SanitizerKind::Alignment)) {
+    llvm::Value *AlignmentVal = llvm::ConstantInt::get(IntPtrTy, Alignment);
+    EmitAlignmentAssumptionCheck(PtrValue, Ty, Loc, AssumptionLoc, AlignmentVal,
+                                 OffsetValue, TheCheck, Assumption);
+  }
+}
+
+void CodeGenFunction::EmitAlignmentAssumption(llvm::Value *PtrValue,
+                                              const Expr *E,
+                                              SourceLocation AssumptionLoc,
+                                              unsigned Alignment,
+                                              llvm::Value *OffsetValue) {
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    E = CE->getSubExprAsWritten();
+  QualType Ty = E->getType();
+  SourceLocation Loc = E->getExprLoc();
+
+  EmitAlignmentAssumption(PtrValue, Ty, Loc, AssumptionLoc, Alignment,
+                          OffsetValue);
+}
+
+llvm::Value *CodeGenFunction::EmitAnnotationCall(llvm::Function *AnnotationFn,
                                                  llvm::Value *AnnotatedVal,
                                                  StringRef AnnotationStr,
                                                  SourceLocation Location) {
@@ -2235,7 +2277,7 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
   assert(D->hasAttr<AnnotateAttr>() && "no annotate attribute");
   llvm::Value *V = Addr.getPointer();
   llvm::Type *VTy = V->getType();
-  llvm::Value *F = CGM.getIntrinsic(llvm::Intrinsic::ptr_annotation,
+  llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::ptr_annotation,
                                     CGM.Int8PtrTy);
 
   for (const auto *I : D->specific_attrs<AnnotateAttr>()) {
@@ -2457,6 +2499,61 @@ void CodeGenFunction::EmitMultiVersionResolver(
   TrapCall->setDoesNotThrow();
   Builder.CreateUnreachable();
   Builder.ClearInsertionPoint();
+}
+
+// Loc - where the diagnostic will point, where in the source code this
+//  alignment has failed.
+// SecondaryLoc - if present (will be present if sufficiently different from
+//  Loc), the diagnostic will additionally point a "Note:" to this location.
+//  It should be the location where the __attribute__((assume_aligned))
+//  was written e.g.
+void CodeGenFunction::EmitAlignmentAssumptionCheck(
+    llvm::Value *Ptr, QualType Ty, SourceLocation Loc,
+    SourceLocation SecondaryLoc, llvm::Value *Alignment,
+    llvm::Value *OffsetValue, llvm::Value *TheCheck,
+    llvm::Instruction *Assumption) {
+  assert(Assumption && isa<llvm::CallInst>(Assumption) &&
+         cast<llvm::CallInst>(Assumption)->getCalledValue() ==
+             llvm::Intrinsic::getDeclaration(
+                 Builder.GetInsertBlock()->getParent()->getParent(),
+                 llvm::Intrinsic::assume) &&
+         "Assumption should be a call to llvm.assume().");
+  assert(&(Builder.GetInsertBlock()->back()) == Assumption &&
+         "Assumption should be the last instruction of the basic block, "
+         "since the basic block is still being generated.");
+
+  if (!SanOpts.has(SanitizerKind::Alignment))
+    return;
+
+  // Don't check pointers to volatile data. The behavior here is implementation-
+  // defined.
+  if (Ty->getPointeeType().isVolatileQualified())
+    return;
+
+  // We need to temorairly remove the assumption so we can insert the
+  // sanitizer check before it, else the check will be dropped by optimizations.
+  Assumption->removeFromParent();
+
+  {
+    SanitizerScope SanScope(this);
+
+    if (!OffsetValue)
+      OffsetValue = Builder.getInt1(0); // no offset.
+
+    llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
+                                    EmitCheckSourceLocation(SecondaryLoc),
+                                    EmitCheckTypeDescriptor(Ty)};
+    llvm::Value *DynamicData[] = {EmitCheckValue(Ptr),
+                                  EmitCheckValue(Alignment),
+                                  EmitCheckValue(OffsetValue)};
+    EmitCheck({std::make_pair(TheCheck, SanitizerKind::Alignment)},
+              SanitizerHandler::AlignmentAssumption, StaticData, DynamicData);
+  }
+
+  // We are now in the (new, empty) "cont" basic block.
+  // Reintroduce the assumption.
+  Builder.Insert(Assumption);
+  // FIXME: Assumption still has it's original basic block as it's Parent.
 }
 
 llvm::DebugLoc CodeGenFunction::SourceLocToDebugLoc(SourceLocation Location) {

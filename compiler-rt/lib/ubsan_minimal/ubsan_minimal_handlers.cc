@@ -95,6 +95,7 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   HANDLER_NORECOVER(name, msg)
 
 HANDLER(type_mismatch, "type-mismatch")
+HANDLER(alignment_assumption, "alignment-assumption")
 HANDLER(add_overflow, "add-overflow")
 HANDLER(sub_overflow, "sub-overflow")
 HANDLER(mul_overflow, "mul-overflow")

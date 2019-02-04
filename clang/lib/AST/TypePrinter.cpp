@@ -1,9 +1,8 @@
 //===- TypePrinter.cpp - Pretty-Print Clang Types -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -258,11 +257,17 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::FunctionProto:
     case Type::FunctionNoProto:
     case Type::Paren:
-    case Type::Attributed:
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
       CanPrefixQualifiers = false;
       break;
+
+    case Type::Attributed: {
+      // We still want to print the address_space before the type if it is an
+      // address_space attribute.
+      const auto *AttrTy = cast<AttributedType>(T);
+      CanPrefixQualifiers = AttrTy->getAttrKind() == attr::AddressSpace;
+    }
   }
 
   return CanPrefixQualifiers;
@@ -810,8 +815,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   printFunctionAfter(Info, OS);
 
-  if (!T->getTypeQuals().empty())
-    OS << " " << T->getTypeQuals().getAsString();
+  if (!T->getMethodQuals().empty())
+    OS << " " << T->getMethodQuals().getAsString();
 
   switch (T->getRefQualifier()) {
   case RQ_None:
@@ -1378,7 +1383,10 @@ void TypePrinter::printAttributedBefore(const AttributedType *T,
   if (T->getAttrKind() == attr::ObjCKindOf)
     OS << "__kindof ";
 
-  printBefore(T->getModifiedType(), OS);
+  if (T->getAttrKind() == attr::AddressSpace)
+    printBefore(T->getEquivalentType(), OS);
+  else
+    printBefore(T->getModifiedType(), OS);
 
   if (T->isMSTypeSpec()) {
     switch (T->getAttrKind()) {

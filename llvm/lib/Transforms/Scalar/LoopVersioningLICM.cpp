@@ -1,9 +1,8 @@
 //===- LoopVersioningLICM.cpp - LICM Loop Versioning ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -360,10 +359,11 @@ bool LoopVersioningLICM::legalLoopMemoryAccesses() {
 bool LoopVersioningLICM::instructionSafeForVersioning(Instruction *I) {
   assert(I != nullptr && "Null instruction found!");
   // Check function call safety
-  if (isa<CallInst>(I) && !AA->doesNotAccessMemory(CallSite(I))) {
-    LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
-    return false;
-  }
+  if (auto *Call = dyn_cast<CallBase>(I))
+    if (!AA->doesNotAccessMemory(Call)) {
+      LLVM_DEBUG(dbgs() << "    Unsafe call site found.\n");
+      return false;
+    }
   // Avoid loops with possiblity of throw
   if (I->mayThrow()) {
     LLVM_DEBUG(dbgs() << "    May throw instruction found in loop body\n");

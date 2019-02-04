@@ -1,9 +1,8 @@
 //===-- sanitizer_allocator_size_class_map.h --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -237,3 +236,6 @@ typedef SizeClassMap<2, 5, 9, 16, 64, 14> VeryCompactSizeClassMap;
 // allowing for denser per-class arrays, smaller memory footprint and usually
 // better performances in threaded environments.
 typedef SizeClassMap<3, 4, 8, 17, 8, 10> DenseSizeClassMap;
+// Similar to VeryCompact map above, this one has a small number of different
+// size classes, and also reduced thread-local caches.
+typedef SizeClassMap<2, 5, 9, 16, 8, 10> VeryDenseSizeClassMap;

@@ -1,9 +1,8 @@
 //===-- tsan_debugging.cc -------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,31 +19,37 @@
 using namespace __tsan;
 
 static const char *ReportTypeDescription(ReportType typ) {
-  if (typ == ReportTypeRace) return "data-race";
-  if (typ == ReportTypeVptrRace) return "data-race-vptr";
-  if (typ == ReportTypeUseAfterFree) return "heap-use-after-free";
-  if (typ == ReportTypeVptrUseAfterFree) return "heap-use-after-free-vptr";
-  if (typ == ReportTypeExternalRace) return "external-race";
-  if (typ == ReportTypeThreadLeak) return "thread-leak";
-  if (typ == ReportTypeMutexDestroyLocked) return "locked-mutex-destroy";
-  if (typ == ReportTypeMutexDoubleLock) return "mutex-double-lock";
-  if (typ == ReportTypeMutexInvalidAccess) return "mutex-invalid-access";
-  if (typ == ReportTypeMutexBadUnlock) return "mutex-bad-unlock";
-  if (typ == ReportTypeMutexBadReadLock) return "mutex-bad-read-lock";
-  if (typ == ReportTypeMutexBadReadUnlock) return "mutex-bad-read-unlock";
-  if (typ == ReportTypeSignalUnsafe) return "signal-unsafe-call";
-  if (typ == ReportTypeErrnoInSignal) return "errno-in-signal-handler";
-  if (typ == ReportTypeDeadlock) return "lock-order-inversion";
-  return "";
+  switch (typ) {
+    case ReportTypeRace: return "data-race";
+    case ReportTypeVptrRace: return "data-race-vptr";
+    case ReportTypeUseAfterFree: return "heap-use-after-free";
+    case ReportTypeVptrUseAfterFree: return "heap-use-after-free-vptr";
+    case ReportTypeExternalRace: return "external-race";
+    case ReportTypeThreadLeak: return "thread-leak";
+    case ReportTypeMutexDestroyLocked: return "locked-mutex-destroy";
+    case ReportTypeMutexDoubleLock: return "mutex-double-lock";
+    case ReportTypeMutexInvalidAccess: return "mutex-invalid-access";
+    case ReportTypeMutexBadUnlock: return "mutex-bad-unlock";
+    case ReportTypeMutexBadReadLock: return "mutex-bad-read-lock";
+    case ReportTypeMutexBadReadUnlock: return "mutex-bad-read-unlock";
+    case ReportTypeSignalUnsafe: return "signal-unsafe-call";
+    case ReportTypeErrnoInSignal: return "errno-in-signal-handler";
+    case ReportTypeDeadlock: return "lock-order-inversion";
+    // No default case so compiler warns us if we miss one
+  }
+  UNREACHABLE("missing case");
 }
 
 static const char *ReportLocationTypeDescription(ReportLocationType typ) {
-  if (typ == ReportLocationGlobal) return "global";
-  if (typ == ReportLocationHeap) return "heap";
-  if (typ == ReportLocationStack) return "stack";
-  if (typ == ReportLocationTLS) return "tls";
-  if (typ == ReportLocationFD) return "fd";
-  return "";
+  switch (typ) {
+    case ReportLocationGlobal: return "global";
+    case ReportLocationHeap: return "heap";
+    case ReportLocationStack: return "stack";
+    case ReportLocationTLS: return "tls";
+    case ReportLocationFD: return "fd";
+    // No default case so compiler warns us if we miss one
+  }
+  UNREACHABLE("missing case");
 }
 
 static void CopyTrace(SymbolizedStack *first_frame, void **trace,

@@ -1,9 +1,8 @@
 //===--- RuntimeDyldCOFFI386.h --- COFF/X86_64 specific code ---*- C++ --*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -34,10 +33,10 @@ public:
 
   unsigned getStubAlignment() override { return 1; }
 
-  Expected<relocation_iterator>
+  Expected<object::relocation_iterator>
   processRelocationRef(unsigned SectionID,
-                       relocation_iterator RelI,
-                       const ObjectFile &Obj,
+                       object::relocation_iterator RelI,
+                       const object::ObjectFile &Obj,
                        ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) override {
 

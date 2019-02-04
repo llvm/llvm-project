@@ -1,9 +1,8 @@
 //===-- DWARFDIE.h ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -90,7 +89,10 @@ public:
 
   void GetDWARFDeclContext(DWARFDeclContext &dwarf_decl_ctx) const;
 
-  void GetDWOContext(std::vector<lldb_private::CompilerContext> &context) const;
+  /// Return this DIE's decl context as it is needed to look up types
+  /// in Clang's -gmodules debug info format.
+  void
+  GetDeclContext(std::vector<lldb_private::CompilerContext> &context) const;
 
   //----------------------------------------------------------------------
   // Getting attribute values from the DIE.

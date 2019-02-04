@@ -1,9 +1,8 @@
 //===-- sanitizer_platform_limits_posix.cc --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -45,6 +44,7 @@
 #include <termios.h>
 #include <time.h>
 #include <wchar.h>
+#include <regex.h>
 #if !SANITIZER_MAC
 #include <utmp.h>
 #endif
@@ -54,6 +54,7 @@
 #endif
 
 #if !SANITIZER_ANDROID
+#include <fstab.h>
 #include <sys/mount.h>
 #include <sys/timeb.h>
 #include <utmpx.h>
@@ -114,8 +115,6 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <netrom/netrom.h>
 #if HAVE_RPC_XDR_H
 # include <rpc/xdr.h>
-#elif HAVE_TIRPC_RPC_XDR_H
-# include <tirpc/rpc/xdr.h>
 #endif
 #include <scsi/scsi.h>
 #include <sys/mtio.h>
@@ -189,13 +188,15 @@ namespace __sanitizer {
   unsigned struct_tms_sz = sizeof(struct tms);
   unsigned struct_sigevent_sz = sizeof(struct sigevent);
   unsigned struct_sched_param_sz = sizeof(struct sched_param);
-
+  unsigned struct_regex_sz = sizeof(regex_t);
+  unsigned struct_regmatch_sz = sizeof(regmatch_t);
 
 #if SANITIZER_MAC && !SANITIZER_IOS
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
 #endif // SANITIZER_MAC && !SANITIZER_IOS
 
 #if !SANITIZER_ANDROID
+  unsigned struct_fstab_sz = sizeof(struct fstab);
   unsigned struct_statfs_sz = sizeof(struct statfs);
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
   unsigned ucontext_t_sz = sizeof(ucontext_t);
@@ -1210,7 +1211,7 @@ CHECK_SIZE_AND_OFFSET(group, gr_passwd);
 CHECK_SIZE_AND_OFFSET(group, gr_gid);
 CHECK_SIZE_AND_OFFSET(group, gr_mem);
 
-#if HAVE_RPC_XDR_H || HAVE_TIRPC_RPC_XDR_H
+#if HAVE_RPC_XDR_H
 CHECK_TYPE_SIZE(XDR);
 CHECK_SIZE_AND_OFFSET(XDR, x_op);
 CHECK_SIZE_AND_OFFSET(XDR, x_ops);

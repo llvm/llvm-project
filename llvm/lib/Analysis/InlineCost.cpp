@@ -1,9 +1,8 @@
 //===- InlineCost.cpp - Cost analysis for inliner -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1731,6 +1730,13 @@ InlineResult CallAnalyzer::analyzeCall(CallSite CS) {
   // Update the threshold based on callsite properties
   updateThreshold(CS, F);
 
+  // While Threshold depends on commandline options that can take negative
+  // values, we want to enforce the invariant that the computed threshold and
+  // bonuses are non-negative.
+  assert(Threshold >= 0);
+  assert(SingleBBBonus >= 0);
+  assert(VectorBonus >= 0);
+
   // Speculatively apply all possible bonuses to Threshold. If cost exceeds
   // this Threshold any time, and cost cannot decrease, we can stop processing
   // the rest of the function body.
@@ -2016,9 +2022,10 @@ InlineCost llvm::getInlineCost(
   // Calls to functions with always-inline attributes should be inlined
   // whenever possible.
   if (CS.hasFnAttr(Attribute::AlwaysInline)) {
-    if (isInlineViable(*Callee))
+    auto IsViable = isInlineViable(*Callee);
+    if (IsViable)
       return llvm::InlineCost::getAlways("always inline attribute");
-    return llvm::InlineCost::getNever("inapplicable always inline attribute");
+    return llvm::InlineCost::getNever(IsViable.message);
   }
 
   // Never inline functions with conflicting attributes (unless callee has
@@ -2066,13 +2073,16 @@ InlineCost llvm::getInlineCost(
   return llvm::InlineCost::get(CA.getCost(), CA.getThreshold());
 }
 
-bool llvm::isInlineViable(Function &F) {
+InlineResult llvm::isInlineViable(Function &F) {
   bool ReturnsTwice = F.hasFnAttribute(Attribute::ReturnsTwice);
   for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
     // Disallow inlining of functions which contain indirect branches or
     // blockaddresses.
-    if (isa<IndirectBrInst>(BI->getTerminator()) || BI->hasAddressTaken())
-      return false;
+    if (isa<IndirectBrInst>(BI->getTerminator()))
+      return "contains indirect branches";
+
+    if (BI->hasAddressTaken())
+      return "uses block address";
 
     for (auto &II : *BI) {
       CallSite CS(&II);
@@ -2081,13 +2091,13 @@ bool llvm::isInlineViable(Function &F) {
 
       // Disallow recursive calls.
       if (&F == CS.getCalledFunction())
-        return false;
+        return "recursive call";
 
       // Disallow calls which expose returns-twice to a function not previously
       // attributed as such.
       if (!ReturnsTwice && CS.isCall() &&
           cast<CallInst>(CS.getInstruction())->canReturnTwice())
-        return false;
+        return "exposes returns-twice attribute";
 
       if (CS.getCalledFunction())
         switch (CS.getCalledFunction()->getIntrinsicID()) {
@@ -2096,12 +2106,14 @@ bool llvm::isInlineViable(Function &F) {
         // Disallow inlining of @llvm.icall.branch.funnel because current
         // backend can't separate call targets from call arguments.
         case llvm::Intrinsic::icall_branch_funnel:
+          return "disallowed inlining of @llvm.icall.branch.funnel";
         // Disallow inlining functions that call @llvm.localescape. Doing this
         // correctly would require major changes to the inliner.
         case llvm::Intrinsic::localescape:
+          return "disallowed inlining of @llvm.localescape";
         // Disallow inlining of functions that initialize VarArgs with va_start.
         case llvm::Intrinsic::vastart:
-          return false;
+          return "contains VarArgs initialized with va_start";
         }
     }
   }

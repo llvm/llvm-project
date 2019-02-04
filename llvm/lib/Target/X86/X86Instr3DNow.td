@@ -1,9 +1,8 @@
 //===-- X86Instr3DNow.td - The 3DNow! Instruction Set ------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -74,7 +73,9 @@ defm PFSUBR   : I3DNow_binop_rm_int<0xAA, "pfsubr", WriteFAdd, 1>;
 defm PI2FD    : I3DNow_conv_rm_int<0x0D, "pi2fd", WriteCvtI2PS>;
 defm PMULHRW  : I3DNow_binop_rm_int<0xB7, "pmulhrw", SchedWriteVecIMul.MMX, 1>;
 
-let SchedRW = [WriteEMMS] in
+let SchedRW = [WriteEMMS],
+    Defs = [MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
+            ST0, ST1, ST2, ST3, ST4, ST5, ST6, ST7] in
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
                    [(int_x86_mmx_femms)]>, TB;
 

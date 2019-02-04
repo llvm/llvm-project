@@ -1,9 +1,8 @@
 //===-- ModuleList.h --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -417,9 +416,9 @@ public:
   //------------------------------------------------------------------
   /// Find types by name.
   ///
-  /// @param[in] sc
-  ///     A symbol context that scopes where to extract a type list
-  ///     from.
+  /// @param[in] search_first
+  ///     If non-null, this module will be searched before any other
+  ///     modules.
   ///
   /// @param[in] name
   ///     The name of the type we are looking for.
@@ -447,7 +446,7 @@ public:
   /// @return
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
-  size_t FindTypes(const SymbolContext &sc, const ConstString &name,
+  size_t FindTypes(Module *search_first, const ConstString &name,
                    bool name_is_fully_qualified, size_t max_matches,
                    llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                    TypeList &types) const;

@@ -1,9 +1,8 @@
 //===- unittests/libclang/LibclangTest.cpp --- libclang tests -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -459,6 +458,48 @@ TEST_F(LibclangParseTest, AllSkippedRanges) {
   EXPECT_EQ(4U, line);
 
   clang_disposeSourceRangeList(Ranges);
+}
+
+TEST_F(LibclangParseTest, EvaluateChildExpression) {
+  std::string Main = "main.m";
+  WriteFile(Main, "#define kFOO @\"foo\"\n"
+                  "void foobar(void) {\n"
+                  " {kFOO;}\n"
+                  "}\n");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXCursor C = clang_getTranslationUnitCursor(ClangTU);
+  clang_visitChildren(
+      C,
+      [](CXCursor cursor, CXCursor parent,
+         CXClientData client_data) -> CXChildVisitResult {
+        if (clang_getCursorKind(cursor) == CXCursor_FunctionDecl) {
+          int numberedStmt = 0;
+          clang_visitChildren(
+              cursor,
+              [](CXCursor cursor, CXCursor parent,
+                 CXClientData client_data) -> CXChildVisitResult {
+                int &numberedStmt = *((int *)client_data);
+                if (clang_getCursorKind(cursor) == CXCursor_CompoundStmt) {
+                  if (numberedStmt) {
+                    CXEvalResult RE = clang_Cursor_Evaluate(cursor);
+                    EXPECT_NE(RE, nullptr);
+                    EXPECT_EQ(clang_EvalResult_getKind(RE),
+                              CXEval_ObjCStrLiteral);
+                    clang_EvalResult_dispose(RE);
+                    return CXChildVisit_Break;
+                  }
+                  numberedStmt++;
+                }
+                return CXChildVisit_Recurse;
+              },
+              &numberedStmt);
+          EXPECT_EQ(numberedStmt, 1);
+        }
+        return CXChildVisit_Continue;
+      },
+      nullptr);
 }
 
 class LibclangReparseTest : public LibclangParseTest {

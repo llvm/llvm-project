@@ -116,23 +116,23 @@ T tmain(T argc) {
   foo();
 #pragma omp target reduction(^ : T) // expected-error {{'T' does not refer to a value}}
   foo();
-#pragma omp target reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified list item cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
+#pragma omp target reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
   foo();
-#pragma omp target reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp target reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   foo();
-#pragma omp target reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(+ : ba) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp target reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp target reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}} expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}} expected-error {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp target reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
 #pragma omp target reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   foo();
-#pragma omp target reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp target reduction(+ : h, k) // expected-error {{threadprivate or thread local variable cannot be reduction}}
   foo();
@@ -145,7 +145,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target reduction(+ : p), reduction(+ : p) // expected-error 2 {{variable can appear only once in OpenMP 'reduction' clause}} expected-note 2 {{previously referenced here}}
   foo();
-#pragma omp target reduction(+ : r) // expected-error 2 {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(+ : r) // expected-error 2 {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp parallel shared(i)
 #pragma omp target reduction(min : i)
@@ -211,23 +211,23 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target reduction(^ : S1) // expected-error {{'S1' does not refer to a value}}
   foo();
-#pragma omp target reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified list item cannot be reduction}} expected-error {{'operator+' is a private member of 'S2'}}
+#pragma omp target reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified variable cannot be reduction}} expected-error {{'operator+' is a private member of 'S2'}}
   foo();
-#pragma omp target reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp target reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   foo();
-#pragma omp target reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(+ : ba) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp target reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp target reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp target reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   foo();
 #pragma omp target reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   foo();
-#pragma omp target reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp target reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{nvalid operands to binary expression ('S4' and 'S4')}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
   foo();
@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target reduction(+ : p), reduction(+ : p) // expected-error {{variable can appear only once in OpenMP 'reduction' clause}} expected-note {{previously referenced here}}
   foo();
-#pragma omp target reduction(+ : r) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp target reduction(+ : r) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
 #pragma omp parallel shared(i)
 #pragma omp target reduction(min : i)

@@ -1,9 +1,8 @@
 //==---- CodeGenABITypes.h - Convert Clang types to LLVM types for ABI -----==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -55,8 +54,7 @@ const CGFunctionInfo &arrangeObjCMessageSendSignature(CodeGenModule &CGM,
                                                       QualType receiverType);
 
 const CGFunctionInfo &arrangeFreeFunctionType(CodeGenModule &CGM,
-                                              CanQual<FunctionProtoType> Ty,
-                                              const FunctionDecl *FD);
+                                              CanQual<FunctionProtoType> Ty);
 
 const CGFunctionInfo &arrangeFreeFunctionType(CodeGenModule &CGM,
                                               CanQual<FunctionNoProtoType> Ty);

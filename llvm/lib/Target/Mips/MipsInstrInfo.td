@@ -1,9 +1,8 @@
 //===- MipsInstrInfo.td - Target Description for Mips Target -*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -221,6 +220,8 @@ def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
 def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
+def UseAbs :          Predicate<"Subtarget->inAbs2008Mode() ||"
+                                "TM.Options.NoNaNsFPMath">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
                       AssemblerPredicate<"!FeatureMips16">;
 def NotDSP :          Predicate<"!Subtarget->hasDSP()">;
@@ -1623,11 +1624,15 @@ let isCall=1, hasDelaySlot=1, isCTI=1, Defs = [RA] in {
   class JumpLinkRegPseudo<RegisterOperand RO, Instruction JALRInst,
                           Register RetReg, RegisterOperand ResRO = RO>:
     PseudoSE<(outs), (ins RO:$rs), [(MipsJmpLink RO:$rs)], II_JALR>,
-    PseudoInstExpansion<(JALRInst RetReg, ResRO:$rs)>;
+    PseudoInstExpansion<(JALRInst RetReg, ResRO:$rs)> {
+    let hasPostISelHook = 1;
+  }
 
   class JumpLinkReg<string opstr, RegisterOperand RO>:
     InstSE<(outs RO:$rd), (ins RO:$rs), !strconcat(opstr, "\t$rd, $rs"),
-           [], II_JALR, FrmR, opstr>;
+           [], II_JALR, FrmR, opstr> {
+    let hasPostISelHook = 1;
+  }
 
   class BGEZAL_FT<string opstr, DAGOperand opnd,
                   RegisterOperand RO> :
@@ -1646,7 +1651,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, hasDelaySlot = 1,
 
   class TailCallReg<Instruction JumpInst, RegisterOperand RO> :
     PseudoSE<(outs), (ins RO:$rs), [(MipsTailCall RO:$rs)], II_JR>,
-    PseudoInstExpansion<(JumpInst RO:$rs)>;
+    PseudoInstExpansion<(JumpInst RO:$rs)> {
+    let hasPostISelHook = 1;
+  }
 }
 
 class BAL_BR_Pseudo<Instruction RealInst, DAGOperand opnd> :

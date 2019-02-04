@@ -32,7 +32,7 @@ Sections:
         Body:            200008808080800041000B
   - Type:            CUSTOM
     Name:            linking
-    Version:         1
+    Version:         2
     SymbolTable:
       - Index:           0
         Kind:            FUNCTION
@@ -78,7 +78,7 @@ Sections:
 # CHECK-NEXT:         Body:            200008808080800041000B
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            linking
-# CHECK-NEXT:     Version:         1
+# CHECK-NEXT:     Version:         2
 # CHECK-NEXT:     SymbolTable:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Kind:            FUNCTION

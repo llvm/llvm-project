@@ -1,4 +1,4 @@
-; RUN: opt -hotcoldsplit -S < %s | FileCheck %s
+; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -16,8 +16,6 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry
   call void @llvm.dbg.value(metadata i32 %arg1, metadata !9, metadata !DIExpression()), !dbg !11
-  call void @sink()
-  call void @sink()
   call void @sink()
   ret void
 }

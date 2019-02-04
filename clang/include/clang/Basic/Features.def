@@ -1,9 +1,8 @@
 //===--- Features.def - Features and Extensions database --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -17,6 +16,12 @@
 //
 // The Predicate field dictates the conditions under which the feature or
 // extension will be made available.
+//
+// FEATURE(...) should be used to advertise support for standard language
+// features, whereas EXTENSION(...) should be used for clang extensions. Note
+// that many of the identifiers in this file don't follow this rule for backward
+// compatibility reasons.
+//
 //===----------------------------------------------------------------------===//
 
 #if !defined(FEATURE) && !defined(EXTENSION)
@@ -90,7 +95,7 @@ FEATURE(objc_arc, LangOpts.ObjCAutoRefCount)
 FEATURE(objc_arc_fields, true)
 FEATURE(objc_arc_weak, LangOpts.ObjCWeak)
 FEATURE(objc_default_synthesize_properties, LangOpts.ObjC)
-FEATURE(objc_fixed_enum, true)
+FEATURE(objc_fixed_enum, LangOpts.ObjC)
 FEATURE(objc_instancetype, LangOpts.ObjC)
 FEATURE(objc_kindof, LangOpts.ObjC)
 FEATURE(objc_modules, LangOpts.ObjC && LangOpts.Modules)
@@ -240,6 +245,7 @@ EXTENSION(cxx_init_captures, LangOpts.CPlusPlus11)
 EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
 // Miscellaneous language extensions
 EXTENSION(overloadable_unmarked, true)
+EXTENSION(pragma_clang_attribute_namespaces, true)
 
 #undef EXTENSION
 #undef FEATURE

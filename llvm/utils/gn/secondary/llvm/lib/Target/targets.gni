@@ -6,30 +6,64 @@ declare_args() {
 }
 
 if (llvm_targets_to_build == "host") {
-  if (host_cpu == "x86" || host_cpu == "x64") {
+  if (host_cpu == "arm64") {
+    llvm_targets_to_build = [ "AArch64" ]
+  } else if (host_cpu == "arm") {
+    llvm_targets_to_build = [ "ARM" ]
+  } else if (host_cpu == "pcc" || host_cpu == "pcc64") {
+    llvm_targets_to_build = [ "PowerPC" ]
+  } else if (host_cpu == "x86" || host_cpu == "x64") {
     llvm_targets_to_build = [ "X86" ]
   } else {
     assert(false, "add your host_cpu above")
   }
 } else if (llvm_targets_to_build == "all") {
   # FIXME: Port the remaining targets.
-  llvm_targets_to_build = [ "X86" ]
+  llvm_targets_to_build = [
+    "AArch64",
+    "ARM",
+    "BPF",
+    "PowerPC",
+    "WebAssembly",
+    "X86",
+  ]
 }
 
 # Validate that llvm_targets_to_build is set to a list of valid targets,
 # and remember which targets are built.
+llvm_build_AArch64 = false
+llvm_build_ARM = false
+llvm_build_BPF = false
+llvm_build_PowerPC = false
+llvm_build_WebAssembly = false
 llvm_build_X86 = false
 foreach(target, llvm_targets_to_build) {
-  if (target == "X86") {
+  if (target == "AArch64") {
+    llvm_build_AArch64 = true
+  } else if (target == "ARM") {
+    llvm_build_ARM = true
+  } else if (target == "BPF") {
+    llvm_build_BPF = true
+  } else if (target == "PowerPC") {
+    llvm_build_PowerPC = true
+  } else if (target == "WebAssembly") {
+    llvm_build_WebAssembly = true
+  } else if (target == "X86") {
     llvm_build_X86 = true
   } else {
-    #FIXME : Port the remaining targets.
+    # FIXME: Port the remaining targets.
     assert(false, "Unknown target '$target'.")
   }
 }
 
 # FIXME: This should be based off target_cpu once cross compiles work.
-if (host_cpu == "x86" || host_cpu == "x64") {
+if (host_cpu == "arm64") {
+  native_target = "AArch64"
+} else if (host_cpu == "arm") {
+  native_target = "ARM"
+} else if (host_cpu == "pcc" || host_cpu == "pcc64") {
+  native_target = [ "PowerPC" ]
+} else if (host_cpu == "x86" || host_cpu == "x64") {
   native_target = "X86"
 } else {
   assert(false, "Unsuppored host_cpu '$host_cpu'.")

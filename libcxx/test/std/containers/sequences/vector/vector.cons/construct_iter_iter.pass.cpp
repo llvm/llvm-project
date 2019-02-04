@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -146,9 +145,40 @@ void test_ctor_under_alloc() {
 #endif
 }
 
+// Initialize a vector with a different value type.
+void test_ctor_with_different_value_type() {
+  {
+    // Make sure initialization is performed with each element value, not with
+    // a memory blob.
+    float array[3] = {0.0f, 1.0f, 2.0f};
+    std::vector<int> v(array, array + 3);
+    assert(v[0] == 0);
+    assert(v[1] == 1);
+    assert(v[2] == 2);
+  }
+  struct X { int x; };
+  struct Y { int y; };
+  struct Z : X, Y { int z; };
+  {
+    Z z;
+    Z *array[1] = { &z };
+    // Though the types Z* and Y* are very similar, initialization still cannot
+    // be done with `memcpy`.
+    std::vector<Y*> v(array, array + 1);
+    assert(v[0] == &z);
+  }
+  {
+    // Though the types are different, initialization can be done with `memcpy`.
+    int32_t array[1] = { -1 };
+    std::vector<uint32_t> v(array, array + 1);
+    assert(v[0] == 4294967295);
+  }
+}
+
 
 int main() {
   basic_test_cases();
   emplaceable_concept_tests(); // See PR34898
   test_ctor_under_alloc();
+  test_ctor_with_different_value_type();
 }

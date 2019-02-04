@@ -1,9 +1,8 @@
 //===----- CGOpenMPRuntime.cpp - Interface to OpenMP Runtimes -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,7 +21,6 @@
 #include "clang/Basic/BitmaskEnum.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
@@ -432,7 +430,7 @@ public:
 
 /// Values for bit flags used in the ident_t to describe the fields.
 /// All enumeric elements are named and described in accordance with the code
-/// from http://llvm.org/svn/llvm-project/openmp/trunk/runtime/src/kmp.h
+/// from https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp.h
 enum OpenMPLocationFlags : unsigned {
   /// Use trampoline for internal microtask.
   OMP_IDENT_IMD = 0x01,
@@ -461,7 +459,7 @@ enum OpenMPLocationFlags : unsigned {
 
 /// Describes ident structure that describes a source location.
 /// All descriptions are taken from
-/// http://llvm.org/svn/llvm-project/openmp/trunk/runtime/src/kmp.h
+/// https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp.h
 /// Original structure:
 /// typedef struct ident {
 ///    kmp_int32 reserved_1;   /**<  might be used in Fortran;
@@ -673,6 +671,9 @@ enum OpenMPRTLFunction {
   //
   // Offloading related calls
   //
+  // Call to void __kmpc_push_target_tripcount(int64_t device_id, kmp_uint64
+  // size);
+  OMPRTL__kmpc_push_target_tripcount,
   // Call to int32_t __tgt_target(int64_t device_id, void *host_ptr, int32_t
   // arg_num, void** args_base, void **args, size_t *arg_sizes, int64_t
   // *arg_types);
@@ -1475,7 +1476,7 @@ Address CGOpenMPRuntime::getOrCreateDefaultLocation(unsigned Flags) {
       // Initialize default location for psource field of ident_t structure of
       // all ident_t objects. Format is ";file;function;line;column;;".
       // Taken from
-      // http://llvm.org/svn/llvm-project/openmp/trunk/runtime/src/kmp_str.c
+      // https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp_str.cpp
       DefaultOpenMPPSource =
           CGM.GetAddrOfConstantCString(";unknown;unknown;0;0;;").getPointer();
       DefaultOpenMPPSource =
@@ -1674,6 +1675,22 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ true);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_fork_call");
+    if (auto *F = dyn_cast<llvm::Function>(RTLFn)) {
+      if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
+        llvm::LLVMContext &Ctx = F->getContext();
+        llvm::MDBuilder MDB(Ctx);
+        // Annotate the callback behavior of the __kmpc_fork_call:
+        //  - The callback callee is argument number 2 (microtask).
+        //  - The first two arguments of the callback callee are unknown (-1).
+        //  - All variadic arguments to the __kmpc_fork_call are passed to the
+        //    callback callee.
+        F->addMetadata(
+            llvm::LLVMContext::MD_callback,
+            *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                        2, {-1, -1},
+                                        /* VarArgsArePassed */ true)}));
+      }
+    }
     break;
   }
   case OMPRTL__kmpc_global_thread_num: {
@@ -2081,6 +2098,22 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ true);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_fork_teams");
+    if (auto *F = dyn_cast<llvm::Function>(RTLFn)) {
+      if (!F->hasMetadata(llvm::LLVMContext::MD_callback)) {
+        llvm::LLVMContext &Ctx = F->getContext();
+        llvm::MDBuilder MDB(Ctx);
+        // Annotate the callback behavior of the __kmpc_fork_teams:
+        //  - The callback callee is argument number 2 (microtask).
+        //  - The first two arguments of the callback callee are unknown (-1).
+        //  - All variadic arguments to the __kmpc_fork_teams are passed to the
+        //    callback callee.
+        F->addMetadata(
+            llvm::LLVMContext::MD_callback,
+            *llvm::MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                        2, {-1, -1},
+                                        /* VarArgsArePassed */ true)}));
+      }
+    }
     break;
   }
   case OMPRTL__kmpc_taskloop: {
@@ -2161,6 +2194,15 @@ CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
         llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(
         FnTy, /*Name=*/"__kmpc_task_reduction_get_th_data");
+    break;
+  }
+  case OMPRTL__kmpc_push_target_tripcount: {
+    // Build void __kmpc_push_target_tripcount(int64_t device_id, kmp_uint64
+    // size);
+    llvm::Type *TypeParams[] = {CGM.Int64Ty, CGM.Int64Ty};
+    llvm::FunctionType *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_push_target_tripcount");
     break;
   }
   case OMPRTL__tgt_target: {
@@ -4922,7 +4964,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // kmp_int32 flags, size_t sizeof_kmp_task_t, size_t sizeof_shareds,
   // kmp_routine_entry_t *task_entry);
   // Task flags. Format is taken from
-  // http://llvm.org/svn/llvm-project/openmp/trunk/runtime/src/kmp.h,
+  // https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp.h,
   // description of kmp_tasking_flags struct.
   enum {
     TiedFlag = 0x1,
@@ -5045,7 +5087,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
   unsigned NumDependencies = Data.Dependences.size();
   if (NumDependencies) {
     // Dependence kind for RTL.
-    enum RTLDependenceKindTy { DepIn = 0x01, DepInOut = 0x3 };
+    enum RTLDependenceKindTy { DepIn = 0x01, DepInOut = 0x3, DepMutexInOutSet = 0x4 };
     enum RTLDependInfoFieldsTy { BaseAddr, Len, Flags };
     RecordDecl *KmpDependInfoRD;
     QualType FlagsTy =
@@ -5111,6 +5153,9 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
       case OMPC_DEPEND_out:
       case OMPC_DEPEND_inout:
         DepKind = DepInOut;
+        break;
+      case OMPC_DEPEND_mutexinoutset:
+        DepKind = DepMutexInOutSet;
         break;
       case OMPC_DEPEND_source:
       case OMPC_DEPEND_sink:
@@ -6992,15 +7037,22 @@ private:
     // components.
     bool IsExpressionFirstInfo = true;
     Address BP = Address::invalid();
+    const Expr *AssocExpr = I->getAssociatedExpression();
+    const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
+    const auto *OASE = dyn_cast<OMPArraySectionExpr>(AssocExpr);
 
-    if (isa<MemberExpr>(I->getAssociatedExpression())) {
+    if (isa<MemberExpr>(AssocExpr)) {
       // The base is the 'this' pointer. The content of the pointer is going
       // to be the base of the field being mapped.
       BP = CGF.LoadCXXThisAddress();
+    } else if ((AE && isa<CXXThisExpr>(AE->getBase()->IgnoreParenImpCasts())) ||
+               (OASE &&
+                isa<CXXThisExpr>(OASE->getBase()->IgnoreParenImpCasts()))) {
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
     } else {
       // The base is the reference to the variable.
       // BP = &Var.
-      BP = CGF.EmitOMPSharedLValue(I->getAssociatedExpression()).getAddress();
+      BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress();
       if (const auto *VD =
               dyn_cast_or_null<VarDecl>(I->getAssociatedDeclaration())) {
         if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
@@ -8046,6 +8098,184 @@ static void emitOffloadingArraysArgument(
   }
 }
 
+/// Checks if the expression is constant or does not have non-trivial function
+/// calls.
+static bool isTrivial(ASTContext &Ctx, const Expr * E) {
+  // We can skip constant expressions.
+  // We can skip expressions with trivial calls or simple expressions.
+  return (E->isEvaluatable(Ctx, Expr::SE_AllowUndefinedBehavior) ||
+          !E->hasNonTrivialCall(Ctx)) &&
+         !E->HasSideEffects(Ctx, /*IncludePossibleEffects=*/true);
+}
+
+/// Checks if the \p Body is the \a CompoundStmt and returns its child statement
+/// iff there is only one that is not evaluatable at the compile time.
+static const Stmt *getSingleCompoundChild(ASTContext &Ctx, const Stmt *Body) {
+  if (const auto *C = dyn_cast<CompoundStmt>(Body)) {
+    const Stmt *Child = nullptr;
+    for (const Stmt *S : C->body()) {
+      if (const auto *E = dyn_cast<Expr>(S)) {
+        if (isTrivial(Ctx, E))
+          continue;
+      }
+      // Some of the statements can be ignored.
+      if (isa<AsmStmt>(S) || isa<NullStmt>(S) || isa<OMPFlushDirective>(S) ||
+          isa<OMPBarrierDirective>(S) || isa<OMPTaskyieldDirective>(S))
+        continue;
+      // Analyze declarations.
+      if (const auto *DS = dyn_cast<DeclStmt>(S)) {
+        if (llvm::all_of(DS->decls(), [&Ctx](const Decl *D) {
+              if (isa<EmptyDecl>(D) || isa<DeclContext>(D) ||
+                  isa<TypeDecl>(D) || isa<PragmaCommentDecl>(D) ||
+                  isa<PragmaDetectMismatchDecl>(D) || isa<UsingDecl>(D) ||
+                  isa<UsingDirectiveDecl>(D) ||
+                  isa<OMPDeclareReductionDecl>(D) ||
+                  isa<OMPThreadPrivateDecl>(D))
+                return true;
+              const auto *VD = dyn_cast<VarDecl>(D);
+              if (!VD)
+                return false;
+              return VD->isConstexpr() ||
+                     ((VD->getType().isTrivialType(Ctx) ||
+                       VD->getType()->isReferenceType()) &&
+                      (!VD->hasInit() || isTrivial(Ctx, VD->getInit())));
+            }))
+          continue;
+      }
+      // Found multiple children - cannot get the one child only.
+      if (Child)
+        return Body;
+      Child = S;
+    }
+    if (Child)
+      return Child;
+  }
+  return Body;
+}
+
+/// Check for inner distribute directive.
+static const OMPExecutableDirective *
+getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
+  const auto *CS = D.getInnermostCapturedStmt();
+  const auto *Body =
+      CS->getCapturedStmt()->IgnoreContainers(/*IgnoreCaptured=*/true);
+  const Stmt *ChildStmt = getSingleCompoundChild(Ctx, Body);
+
+  if (const auto *NestedDir = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+    OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
+    switch (D.getDirectiveKind()) {
+    case OMPD_target:
+      if (isOpenMPDistributeDirective(DKind))
+        return NestedDir;
+      if (DKind == OMPD_teams) {
+        Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
+            /*IgnoreCaptured=*/true);
+        if (!Body)
+          return nullptr;
+        ChildStmt = getSingleCompoundChild(Ctx, Body);
+        if (const auto *NND = dyn_cast<OMPExecutableDirective>(ChildStmt)) {
+          DKind = NND->getDirectiveKind();
+          if (isOpenMPDistributeDirective(DKind))
+            return NND;
+        }
+      }
+      return nullptr;
+    case OMPD_target_teams:
+      if (isOpenMPDistributeDirective(DKind))
+        return NestedDir;
+      return nullptr;
+    case OMPD_target_parallel:
+    case OMPD_target_simd:
+    case OMPD_target_parallel_for:
+    case OMPD_target_parallel_for_simd:
+      return nullptr;
+    case OMPD_target_teams_distribute:
+    case OMPD_target_teams_distribute_simd:
+    case OMPD_target_teams_distribute_parallel_for:
+    case OMPD_target_teams_distribute_parallel_for_simd:
+    case OMPD_parallel:
+    case OMPD_for:
+    case OMPD_parallel_for:
+    case OMPD_parallel_sections:
+    case OMPD_for_simd:
+    case OMPD_parallel_for_simd:
+    case OMPD_cancel:
+    case OMPD_cancellation_point:
+    case OMPD_ordered:
+    case OMPD_threadprivate:
+    case OMPD_task:
+    case OMPD_simd:
+    case OMPD_sections:
+    case OMPD_section:
+    case OMPD_single:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_taskyield:
+    case OMPD_barrier:
+    case OMPD_taskwait:
+    case OMPD_taskgroup:
+    case OMPD_atomic:
+    case OMPD_flush:
+    case OMPD_teams:
+    case OMPD_target_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_enter_data:
+    case OMPD_distribute:
+    case OMPD_distribute_simd:
+    case OMPD_distribute_parallel_for:
+    case OMPD_distribute_parallel_for_simd:
+    case OMPD_teams_distribute:
+    case OMPD_teams_distribute_simd:
+    case OMPD_teams_distribute_parallel_for:
+    case OMPD_teams_distribute_parallel_for_simd:
+    case OMPD_target_update:
+    case OMPD_declare_simd:
+    case OMPD_declare_target:
+    case OMPD_end_declare_target:
+    case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
+    case OMPD_taskloop:
+    case OMPD_taskloop_simd:
+    case OMPD_requires:
+    case OMPD_unknown:
+      llvm_unreachable("Unexpected directive.");
+    }
+  }
+
+  return nullptr;
+}
+
+void CGOpenMPRuntime::emitTargetNumIterationsCall(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D, const Expr *Device,
+    const llvm::function_ref<llvm::Value *(
+        CodeGenFunction &CGF, const OMPLoopDirective &D)> &SizeEmitter) {
+  OpenMPDirectiveKind Kind = D.getDirectiveKind();
+  const OMPExecutableDirective *TD = &D;
+  // Get nested teams distribute kind directive, if any.
+  if (!isOpenMPDistributeDirective(Kind) || !isOpenMPTeamsDirective(Kind))
+    TD = getNestedDistributeDirective(CGM.getContext(), D);
+  if (!TD)
+    return;
+  const auto *LD = cast<OMPLoopDirective>(TD);
+  auto &&CodeGen = [LD, &Device, &SizeEmitter, this](CodeGenFunction &CGF,
+                                                     PrePostActionTy &) {
+    llvm::Value *NumIterations = SizeEmitter(CGF, *LD);
+
+    // Emit device ID if any.
+    llvm::Value *DeviceID;
+    if (Device)
+      DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
+                                           CGF.Int64Ty, /*isSigned=*/true);
+    else
+      DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
+
+    llvm::Value *Args[] = {DeviceID, NumIterations};
+    CGF.EmitRuntimeCall(
+        createRuntimeFunction(OMPRTL__kmpc_push_target_tripcount), Args);
+  };
+  emitInlinedDirective(CGF, OMPD_unknown, CodeGen);
+}
+
 void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
                                      const OMPExecutableDirective &D,
                                      llvm::Value *OutlinedFn,
@@ -8426,6 +8656,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_requires:
@@ -8906,6 +9137,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_declare_reduction:
+    case OMPD_declare_mapper:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_target:
@@ -9661,4 +9893,3 @@ CGOpenMPSIMDRuntime::getParameterAddress(CodeGenFunction &CGF,
                                          const VarDecl *TargetParam) const {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
-

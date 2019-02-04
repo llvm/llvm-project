@@ -22,8 +22,8 @@
 ; X86_64-NEXT: .long    5
 ; X86_64-NEXT: .asciz   "GNU"
 ; X86_64-NEXT: .long    3221225474
-; X86_64-NEXT: .long    8
-; X86_64-NEXT: .quad    3
+; X86_64-NEXT: .long    4
+; X86_64-NEXT: .long    3
 ; X86_64-NEXT: .p2align 3
 
 !llvm.module.flags = !{!0, !1}

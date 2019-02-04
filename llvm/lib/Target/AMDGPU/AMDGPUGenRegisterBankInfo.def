@@ -1,9 +1,8 @@
 //===- AMDGPUGenRegisterBankInfo.def -----------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -16,27 +15,29 @@ namespace AMDGPU {
 
 enum PartialMappingIdx {
   None = - 1,
-  PM_SGPR1  = 1,
-  PM_SGPR16 = 5,
-  PM_SGPR32 = 6,
-  PM_SGPR64 = 7,
-  PM_SGPR128 = 8,
-  PM_SGPR256 = 9,
-  PM_SGPR512 = 10,
-  PM_VGPR1  = 11,
-  PM_VGPR16 = 15,
-  PM_VGPR32 = 16,
-  PM_VGPR64 = 17,
-  PM_VGPR128 = 18,
-  PM_VGPR256 = 19,
-  PM_VGPR512 = 20,
-  PM_SGPR96 = 21,
-  PM_VGPR96 = 22
+  PM_SGPR1  = 2,
+  PM_SGPR16 = 6,
+  PM_SGPR32 = 7,
+  PM_SGPR64 = 8,
+  PM_SGPR128 = 9,
+  PM_SGPR256 = 10,
+  PM_SGPR512 = 11,
+  PM_VGPR1  = 12,
+  PM_VGPR16 = 16,
+  PM_VGPR32 = 17,
+  PM_VGPR64 = 18,
+  PM_VGPR128 = 19,
+  PM_VGPR256 = 20,
+  PM_VGPR512 = 21,
+  PM_SGPR96 = 22,
+  PM_VGPR96 = 23
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[] {
   // StartIdx, Length, RegBank
   {0, 1,  SCCRegBank},
+  {0, 1,  VCCRegBank},
+
   {0, 1,  SGPRRegBank}, // SGPR begin
   {0, 16, SGPRRegBank},
   {0, 32, SGPRRegBank},
@@ -60,37 +61,62 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
   // SCC
   {&PartMappings[0], 1},
 
-  // SGPRs
+  // VCC
   {&PartMappings[1], 1},
+
+  // SGPRs
+  {&PartMappings[2], 1},
   {nullptr, 0}, // Illegal power of 2 sizes
   {nullptr, 0},
   {nullptr, 0},
-  {&PartMappings[2], 1},
   {&PartMappings[3], 1},
   {&PartMappings[4], 1},
   {&PartMappings[5], 1},
   {&PartMappings[6], 1},
   {&PartMappings[7], 1},
+  {&PartMappings[8], 1},
 
     // VGPRs
-  {&PartMappings[8], 1},
-  {nullptr, 0},
-  {nullptr, 0},
-  {nullptr, 0},
   {&PartMappings[9], 1},
+  {nullptr, 0},
+  {nullptr, 0},
+  {nullptr, 0},
   {&PartMappings[10], 1},
   {&PartMappings[11], 1},
   {&PartMappings[12], 1},
   {&PartMappings[13], 1},
   {&PartMappings[14], 1},
   {&PartMappings[15], 1},
-  {&PartMappings[16], 1}
+  {&PartMappings[16], 1},
+  {&PartMappings[17], 1}
+};
+
+const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {
+     /*32-bit op*/ {0, 32, SGPRRegBank},
+   /*2x32-bit op*/ {0, 32, SGPRRegBank},
+                   {32, 32, SGPRRegBank},
+/*<2x32-bit> op*/  {0, 64, SGPRRegBank},
+
+    /*32-bit op*/  {0, 32, VGPRRegBank},
+  /*2x32-bit op*/  {0, 32, VGPRRegBank},
+                   {32, 32, VGPRRegBank},
+};
+
+
+// For some instructions which can operate 64-bit only for the scalar version.
+const RegisterBankInfo::ValueMapping ValMappingsSGPR64OnlyVGPR32[] {
+  /*32-bit sgpr*/     {&SGPROnly64BreakDown[0], 1},
+  /*2 x 32-bit sgpr*/ {&SGPROnly64BreakDown[1], 2},
+  /*64-bit sgpr */    {&SGPROnly64BreakDown[3], 1},
+
+  /*32-bit vgpr*/     {&SGPROnly64BreakDown[4], 1},
+  /*2 x 32-bit vgpr*/ {&SGPROnly64BreakDown[5], 2}
 };
 
 enum ValueMappingIdx {
   SCCStartIdx = 0,
-  SGPRStartIdx = 1,
-  VGPRStartIdx = 11
+  SGPRStartIdx = 2,
+  VGPRStartIdx = 12
 };
 
 const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
@@ -100,12 +126,18 @@ const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
   case 1:
     if (BankID == AMDGPU::SCCRegBankID)
       return &ValMappings[0];
+    if (BankID == AMDGPU::VCCRegBankID)
+      return &ValMappings[1];
+
+    // 1-bit values not from a compare etc.
     Idx = BankID == AMDGPU::SGPRRegBankID ? PM_SGPR1 : PM_VGPR1;
     break;
   case 96:
+    assert(BankID != AMDGPU::VCCRegBankID);
     Idx = BankID == AMDGPU::SGPRRegBankID ? PM_SGPR96 : PM_VGPR96;
     break;
   default:
+    assert(BankID != AMDGPU::VCCRegBankID);
     Idx = BankID == AMDGPU::VGPRRegBankID ? VGPRStartIdx : SGPRStartIdx;
     Idx += Log2_32_Ceil(Size);
     break;
@@ -115,6 +147,17 @@ const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
   assert(BankID == ValMappings[Idx].BreakDown->RegBank->getID());
 
   return &ValMappings[Idx];
+}
+
+const RegisterBankInfo::ValueMapping *getValueMappingSGPR64Only(unsigned BankID,
+                                                                unsigned Size) {
+  assert(Size == 64);
+
+  if (BankID == AMDGPU::VGPRRegBankID)
+    return &ValMappingsSGPR64OnlyVGPR32[4];
+
+  assert(BankID == AMDGPU::SGPRRegBankID);
+  return &ValMappingsSGPR64OnlyVGPR32[2];
 }
 
 } // End AMDGPU namespace.

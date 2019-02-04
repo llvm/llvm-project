@@ -1,9 +1,8 @@
 //===-- llvm/CodeGen/MachineModuleInfo.cpp ----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -206,7 +205,7 @@ MachineModuleInfo::~MachineModuleInfo() = default;
 bool MachineModuleInfo::doInitialization(Module &M) {
   ObjFileMMI = nullptr;
   CurCallSite = 0;
-  UsesVAFloatArgument = UsesMorestackAddr = false;
+  UsesMSVCFloatingPoint = UsesMorestackAddr = false;
   HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;
   TheModule = &M;
@@ -327,23 +326,4 @@ char FreeMachineFunction::ID;
 
 FunctionPass *llvm::createFreeMachineFunctionPass() {
   return new FreeMachineFunction();
-}
-
-//===- MMI building helpers -----------------------------------------------===//
-
-void llvm::computeUsesVAFloatArgument(const CallInst &I,
-                                      MachineModuleInfo &MMI) {
-  FunctionType *FT =
-      cast<FunctionType>(I.getCalledValue()->getType()->getContainedType(0));
-  if (FT->isVarArg() && !MMI.usesVAFloatArgument()) {
-    for (unsigned i = 0, e = I.getNumArgOperands(); i != e; ++i) {
-      Type *T = I.getArgOperand(i)->getType();
-      for (auto i : post_order(T)) {
-        if (i->isFloatingPointTy()) {
-          MMI.setUsesVAFloatArgument(true);
-          return;
-        }
-      }
-    }
-  }
 }

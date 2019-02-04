@@ -1,9 +1,8 @@
 //===--- ParseCXXInlineMethods.cpp - C++ class inline methods parsing------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -416,7 +415,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       Method = cast<CXXMethodDecl>(LM.Method);
 
     Sema::CXXThisScopeRAII ThisScope(Actions, Method->getParent(),
-                                     Method->getTypeQualifiers(),
+                                     Method->getMethodQualifiers(),
                                      getLangOpts().CPlusPlus11);
 
     // Parse the exception-specification.

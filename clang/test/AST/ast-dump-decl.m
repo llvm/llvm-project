@@ -28,20 +28,18 @@
 @interface testObjCMethodDecl : A {
 }
 - (int) TestObjCMethodDecl: (int)i, ...;
-// CHECK:      ObjCMethodDecl{{.*}} - TestObjCMethodDecl: 'int'
+// CHECK:      ObjCMethodDecl{{.*}} - TestObjCMethodDecl: 'int' variadic
 // CHECK-NEXT:   ParmVarDecl{{.*}} i 'int'
-// CHECK-NEXT:   ...
 @end
 
 @implementation testObjCMethodDecl
 - (int) TestObjCMethodDecl: (int)i, ... {
   return 0;
 }
-// CHECK:      ObjCMethodDecl{{.*}} - TestObjCMethodDecl: 'int'
+// CHECK:      ObjCMethodDecl{{.*}} - TestObjCMethodDecl: 'int' variadic
 // CHECK-NEXT:   ImplicitParamDecl{{.*}} self
 // CHECK-NEXT:   ImplicitParamDecl{{.*}} _cmd
 // CHECK-NEXT:   ParmVarDecl{{.*}} i 'int'
-// CHECK-NEXT:   ...
 // CHECK-NEXT:   CompoundStmt
 @end
 
@@ -85,9 +83,9 @@
 }
 @end
 // CHECK:      ObjCInterfaceDecl{{.*}} TestGenericInterface
-// CHECK-NEXT:   -ObjCTypeParamDecl {{.+}} <col:33> col:33 T 'id':'id'
 // CHECK-NEXT:   -super ObjCInterface {{.+}} 'A'
 // CHECK-NEXT:   -ObjCProtocol {{.+}} 'P'
+// CHECK-NEXT:   -ObjCTypeParamDecl {{.+}} <col:33> col:33 T 'id':'id'
 
 @implementation TestObjCClass (TestObjCCategoryDecl)
 - (void) bar {
@@ -137,9 +135,8 @@ void TestBlockDecl(int x) {
   ^(int y, ...){ x; };
 }
 // CHECK:      FunctionDecl{{.*}}TestBlockDecl
-// CHECK:      BlockDecl
+// CHECK:      BlockDecl {{.+}} <col:3, col:21> col:3 variadic
 // CHECK-NEXT:   ParmVarDecl{{.*}} y 'int'
-// CHECK-NEXT:   ...
 // CHECK-NEXT:   capture ParmVar{{.*}} 'x' 'int'
 // CHECK-NEXT:   CompoundStmt
 

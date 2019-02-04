@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoCodeView
   DebugInfoDWARF
+  Demangle
   Object
   BinaryFormat
   Support

@@ -1,9 +1,8 @@
 //===-- ObjectFileJIT.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -153,8 +152,7 @@ void ObjectFileJIT::Dump(Stream *s) {
     s->Indent();
     s->PutCString("ObjectFileJIT");
 
-    ArchSpec arch;
-    if (GetArchitecture(arch))
+    if (ArchSpec arch = GetArchitecture())
       *s << ", arch = " << arch.GetArchitectureName();
 
     s->EOL();
@@ -190,11 +188,10 @@ ObjectFile::Type ObjectFileJIT::CalculateType() { return eTypeJIT; }
 
 ObjectFile::Strata ObjectFileJIT::CalculateStrata() { return eStrataJIT; }
 
-bool ObjectFileJIT::GetArchitecture(ArchSpec &arch) {
-  ObjectFileJITDelegateSP delegate_sp(m_delegate_wp.lock());
-  if (delegate_sp)
-    return delegate_sp->GetArchitecture(arch);
-  return false;
+ArchSpec ObjectFileJIT::GetArchitecture() {
+  if (ObjectFileJITDelegateSP delegate_sp = m_delegate_wp.lock())
+    return delegate_sp->GetArchitecture();
+  return ArchSpec();
 }
 
 //------------------------------------------------------------------

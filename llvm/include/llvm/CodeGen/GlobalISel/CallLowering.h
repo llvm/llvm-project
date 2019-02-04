@@ -1,9 +1,8 @@
 //===- llvm/CodeGen/GlobalISel/CallLowering.h - Call lowering ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -40,6 +39,7 @@ class Value;
 class CallLowering {
   const TargetLowering *TLI;
 
+  virtual void anchor();
 public:
   struct ArgInfo {
     unsigned Reg;
@@ -108,6 +108,9 @@ public:
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
     CCAssignFn *AssignFn;
+
+  private:
+    virtual void anchor();
   };
 
 protected:

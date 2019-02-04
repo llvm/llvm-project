@@ -1,20 +1,17 @@
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
+import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 
 config("compiler_defaults") {
   defines = []
-
-  # FIXME: Don't define this globally here.
-  if (host_os != "win") {
-    defines += [ "LLVM_ON_UNIX" ]
-  }
 
   if (!llvm_enable_assertions) {
     defines += [ "NDEBUG" ]
   }
 
-  cflags = []
+  cflags = target_flags + target_cflags
+  ldflags = target_flags + target_ldflags
 
   if (host_os == "mac" && clang_base_path != "") {
     cflags += [
@@ -33,7 +30,6 @@ config("compiler_defaults") {
     cflags_cc = [
       "-std=c++11",
       "-fno-exceptions",
-      "-fno-rtti",
       "-fvisibility-inlines-hidden",
     ]
   } else {
@@ -57,10 +53,7 @@ config("compiler_defaults") {
       "_UNICODE",
       "UNICODE",
     ]
-    cflags += [
-      "/EHs-c-",
-      "/GR-",
-    ]
+    cflags += [ "/EHs-c-" ]
 
     # The MSVC default value (1 MB) is not enough for parsing recursive C++
     # templates in Clang.
@@ -100,18 +93,54 @@ config("compiler_defaults") {
         "-Wextra",
       ]
     }
-    cflags += [
-      "-Wno-unused-parameter",
-      "-Wstring-conversion",
-    ]
+    cflags += [ "-Wno-unused-parameter" ]
     if (is_clang) {
-      cflags += [ "-Wdelete-non-virtual-dtor" ]
+      cflags += [
+        "-Wdelete-non-virtual-dtor",
+        "-Wstring-conversion",
+      ]
+    } else {
+      cflags += [
+        # GCC's -Wcomment complains about // comments ending with '\' if the
+        # next line is also a // comment.
+        "-Wno-comment",
+
+        # Disable gcc's potentially uninitialized use analysis as it presents
+        # lots of false positives.
+        "-Wno-maybe-uninitialized",
+      ]
+      cflags_cc += [
+        # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not
+        # useful.
+        "-Wno-noexcept-type",
+      ]
     }
     if (is_clang && use_goma) {
       # goma converts all paths to lowercase on the server, breaking this
       # warning.
       cflags += [ "-Wno-nonportable-include-path" ]
     }
+  }
+
+  # On Windows, the linker is not invoked through the compiler driver.
+  if (use_lld && host_os != "win") {
+    ldflags += [ "-fuse-ld=lld" ]
+  }
+}
+
+config("no_rtti") {
+  if (current_os == "win") {
+    cflags_cc = [ "/GR-" ]
+  } else {
+    cflags_cc = [ "-fno-rtti" ]
+  }
+}
+
+# To make an archive that can be distributed, you need to remove this config and
+# set complete_static_lib.
+config("thin_archive") {
+  if (current_os != "win" && current_os != "mac") {
+    arflags = [ "-T" ]
   }
 }
 
@@ -130,9 +159,21 @@ config("lld_code") {
 }
 
 config("clang_code") {
+  if (host_os != "win") {
+    cflags = [ "-fno-strict-aliasing" ]
+  }
   include_dirs = [
     "//clang/include",
     "$root_gen_dir/clang/include",
+  ]
+}
+
+config("crt_code") {
+  include_dirs = [ "//compiler-rt/lib" ]
+  cflags = [
+    "-fPIC",
+    "-funwind-tables",
+    "-gline-tables-only",
   ]
 }
 

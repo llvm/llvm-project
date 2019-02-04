@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -59,7 +58,7 @@ void checkLongLongTypes() {
   static_assert((0 != ATOMIC_LLONG_LOCK_FREE) == ExpectLockFree, "");
 }
 
-int main()
+void run()
 {
 // structs and unions can't be defined in the template invocation.
 // Work around this with a typedef.
@@ -134,3 +133,5 @@ int main()
     static_assert(std::atomic<void*>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE));
     static_assert(std::atomic<std::nullptr_t>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE));
 }
+
+int main() { run(); }

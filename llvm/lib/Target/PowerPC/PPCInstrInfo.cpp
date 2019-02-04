@@ -1,9 +1,8 @@
 //===-- PPCInstrInfo.cpp - PowerPC Instruction Information ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2248,6 +2247,35 @@ static unsigned selectReg(int64_t Imm1, int64_t Imm2, unsigned CompareOpc,
   return PPC::NoRegister;
 }
 
+void PPCInstrInfo::replaceInstrOperandWithImm(MachineInstr &MI,
+                                              unsigned OpNo,
+                                              int64_t Imm) const {
+  assert(MI.getOperand(OpNo).isReg() && "Operand must be a REG");
+  // Replace the REG with the Immediate.
+  unsigned InUseReg = MI.getOperand(OpNo).getReg();
+  MI.getOperand(OpNo).ChangeToImmediate(Imm);
+
+  if (empty(MI.implicit_operands()))
+    return;
+
+  // We need to make sure that the MI didn't have any implicit use
+  // of this REG any more.
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  int UseOpIdx = MI.findRegisterUseOperandIdx(InUseReg, false, TRI);
+  if (UseOpIdx >= 0) {
+    MachineOperand &MO = MI.getOperand(UseOpIdx);
+    if (MO.isImplicit())
+      // The operands must always be in the following order:
+      // - explicit reg defs,
+      // - other explicit operands (reg uses, immediates, etc.),
+      // - implicit reg defs
+      // - implicit reg uses
+      // Therefore, removing the implicit operand won't change the explicit
+      // operands layout.
+      MI.RemoveOperand(UseOpIdx);
+  }
+}
+
 // Replace an instruction with one that materializes a constant (and sets
 // CR0 if the original instruction was a record-form instruction).
 void PPCInstrInfo::replaceInstrWithLI(MachineInstr &MI,
@@ -2329,13 +2357,6 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
         MachineBasicBlock::reverse_iterator E = MI.getParent()->rend(), It = MI;
         It++;
         unsigned Reg = MI.getOperand(i).getReg();
-        // MachineInstr::readsRegister only returns true if the machine
-        // instruction reads the exact register or its super-register. It
-        // does not consider uses of sub-registers which seems like strange
-        // behaviour. Nonetheless, if we end up with a 64-bit register here,
-        // get the corresponding 32-bit register to check.
-        if (PPC::G8RCRegClass.contains(Reg))
-          Reg = Reg - PPC::X0 + PPC::R0;
 
         // Is this register defined by some form of add-immediate (including
         // load-immediate) within this basic block?
@@ -2481,7 +2502,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       // Can't use PPC::COPY to copy PPC::ZERO[8]. Convert it to LI[8] 0.
       if (RegToCopy == PPC::ZERO || RegToCopy == PPC::ZERO8) {
         CompareUseMI.setDesc(get(UseOpc == PPC::ISEL8 ? PPC::LI8 : PPC::LI));
-        CompareUseMI.getOperand(1).ChangeToImmediate(0);
+        replaceInstrOperandWithImm(CompareUseMI, 1, 0);
         CompareUseMI.RemoveOperand(3);
         CompareUseMI.RemoveOperand(2);
         continue;
@@ -3155,14 +3176,7 @@ bool PPCInstrInfo::isRegElgibleForForwarding(const MachineOperand &RegMO,
   if (MRI.isSSA())
     return false;
 
-  // MachineInstr::readsRegister only returns true if the machine
-  // instruction reads the exact register or its super-register. It
-  // does not consider uses of sub-registers which seems like strange
-  // behaviour. Nonetheless, if we end up with a 64-bit register here,
-  // get the corresponding 32-bit register to check.
   unsigned Reg = RegMO.getReg();
-  if (PPC::G8RCRegClass.contains(Reg))
-    Reg = Reg - PPC::X0 + PPC::R0;
 
   // Walking the inst in reverse(MI-->DefMI) to get the last DEF of the Reg.
   MachineBasicBlock::const_reverse_iterator It = MI;
@@ -3177,9 +3191,9 @@ bool PPCInstrInfo::isRegElgibleForForwarding(const MachineOperand &RegMO,
   }
   assert((&*It) == &DefMI && "DefMI is missing");
 
-  // If DefMI also uses the register to be forwarded, we can only forward it
+  // If DefMI also defines the register to be forwarded, we can only forward it
   // if DefMI is being erased.
-  if (DefMI.readsRegister(Reg, &getRegisterInfo()))
+  if (DefMI.modifiesRegister(Reg, &getRegisterInfo()))
     return KillDefMI;
 
   return true;
@@ -3292,7 +3306,7 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(MachineInstr &MI,
   if (ImmMO->isImm()) {
     // If the ImmMO is Imm, change the operand that has ZERO to that Imm
     // directly.
-    MI.getOperand(III.ZeroIsSpecialOrig).ChangeToImmediate(Imm);
+    replaceInstrOperandWithImm(MI, III.ZeroIsSpecialOrig, Imm);
   }
   else {
     // Otherwise, it is Constant Pool Index(CPI) or Global,
@@ -3411,24 +3425,24 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
           uint64_t SH = RightShift ? 32 - ShAmt : ShAmt;
           uint64_t MB = RightShift ? ShAmt : 0;
           uint64_t ME = RightShift ? 31 : 31 - ShAmt;
-          MI.getOperand(III.OpNoForForwarding).ChangeToImmediate(SH);
+          replaceInstrOperandWithImm(MI, III.OpNoForForwarding, SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(MB)
             .addImm(ME);
         } else {
           // Left shifts use (N, 63-N), right shifts use (64-N, N).
           uint64_t SH = RightShift ? 64 - ShAmt : ShAmt;
           uint64_t ME = RightShift ? ShAmt : 63 - ShAmt;
-          MI.getOperand(III.OpNoForForwarding).ChangeToImmediate(SH);
+          replaceInstrOperandWithImm(MI, III.OpNoForForwarding, SH);
           MachineInstrBuilder(*MI.getParent()->getParent(), MI).addImm(ME);
         }
       }
     } else
-      MI.getOperand(ConstantOpNo).ChangeToImmediate(Imm);
+      replaceInstrOperandWithImm(MI, ConstantOpNo, Imm);
   }
   // Convert commutative instructions (switch the operands and convert the
   // desired one to an immediate.
   else if (III.IsCommutative) {
-    MI.getOperand(ConstantOpNo).ChangeToImmediate(Imm);
+    replaceInstrOperandWithImm(MI, ConstantOpNo, Imm);
     swapMIOperands(MI, ConstantOpNo, III.OpNoForForwarding);
   } else
     llvm_unreachable("Should have exited early!");
@@ -3438,15 +3452,20 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
   if (III.OpNoForForwarding != III.ImmOpNo)
     swapMIOperands(MI, III.OpNoForForwarding, III.ImmOpNo);
 
-  // If the R0/X0 register is special for the original instruction and not for
-  // the new instruction (or vice versa), we need to fix up the register class.
+  // If the special R0/X0 register index are different for original instruction
+  // and new instruction, we need to fix up the register class in new
+  // instruction.
   if (!PostRA && III.ZeroIsSpecialOrig != III.ZeroIsSpecialNew) {
-    if (!III.ZeroIsSpecialOrig) {
+    if (III.ZeroIsSpecialNew) {
+      // If operand at III.ZeroIsSpecialNew is physical reg(eg: ZERO/ZERO8), no
+      // need to fix up register class.
       unsigned RegToModify = MI.getOperand(III.ZeroIsSpecialNew).getReg();
-      const TargetRegisterClass *NewRC =
-        MRI.getRegClass(RegToModify)->hasSuperClassEq(&PPC::GPRCRegClass) ?
-        &PPC::GPRC_and_GPRC_NOR0RegClass : &PPC::G8RC_and_G8RC_NOX0RegClass;
-      MRI.setRegClass(RegToModify, NewRC);
+      if (TargetRegisterInfo::isVirtualRegister(RegToModify)) {
+        const TargetRegisterClass *NewRC =
+          MRI.getRegClass(RegToModify)->hasSuperClassEq(&PPC::GPRCRegClass) ?
+          &PPC::GPRC_and_GPRC_NOR0RegClass : &PPC::G8RC_and_G8RC_NOX0RegClass;
+        MRI.setRegClass(RegToModify, NewRC);
+      }
     }
   }
   return true;

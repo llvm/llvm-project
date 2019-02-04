@@ -184,15 +184,7 @@ define i32 @v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX512F-LABEL: v32i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm1
-; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k0
-; AVX512F-NEXT:    kmovw %k0, %ecx
-; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    shll $16, %eax
-; AVX512F-NEXT:    orl %ecx, %eax
+; AVX512F-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;

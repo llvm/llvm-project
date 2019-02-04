@@ -29,7 +29,7 @@ catch.start:                                      ; preds = %catch.dispatch
   br i1 %matches, label %catch, label %rethrow
 ; CHECK: catch.start:
 ; CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad
-; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.catch(i32 0)
+; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.extract.exception()
 ; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(token %[[CATCHPAD]], i32 0)
 ; CHECK-NEXT:   store i32 0, i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)
 ; CHECK-NEXT:   %[[LSDA:.*]] = call i8* @llvm.wasm.lsda()
@@ -76,7 +76,6 @@ catch.start:                                      ; preds = %catch.dispatch
   catchret from %1 to label %try.cont
 ; CHECK: catch.start:
 ; CHECK-NEXT:   catchpad within %0 [i8* null]
-; CHECK-NEXT:   call i8* @llvm.wasm.catch(i32 0)
 ; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   store {{.*}} @__wasm_lpad_context
 ; CHECK-NOT:   call i8* @llvm.wasm.lsda()
@@ -178,7 +177,6 @@ ehcleanup:                                        ; preds = %rethrow5, %catch.di
   cleanupret from %12 unwind to caller
 ; CHECK: ehcleanup:
 ; CHECK-NEXT:   cleanuppad
-; CHECK-NOT:   call i8* @llvm.wasm.catch(i32 0)
 ; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   store {{.*}} @__wasm_lpad_context
 ; CHECK-NOT:   call i8* @llvm.wasm.lsda()
@@ -191,7 +189,7 @@ unreachable:                                      ; preds = %rethrow5
 
 ; A cleanuppad with a call to __clang_call_terminate().
 ; A call to wasm.catch() should be generated after the cleanuppad.
-define hidden void @test3() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test3() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 ; CHECK-LABEL: @test3
 entry:
   invoke void @foo()
@@ -230,14 +228,14 @@ terminate:                                        ; preds = %ehcleanup
   unreachable
 ; CHECK: terminate:
 ; CHECK-NEXT: cleanuppad
-; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.catch(i32 0)
+; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.extract.exception
 ; CHECK-NEXT:   call void @__clang_call_terminate(i8* %[[EXN]])
 }
 
 ; PHI demotion test. Only the phi before catchswitch should be demoted; the phi
 ; before cleanuppad should NOT.
-define void @test5() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
-; CHECK-LABEL: @test5
+define void @test4() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK-LABEL: @test4
 entry:
   %c = alloca %struct.Cleanup, align 1
   invoke void @foo()
@@ -301,8 +299,8 @@ try.cont10:                                       ; preds = %invoke.cont3, %catc
 ; Tests if instructions after a call to @llvm.wasm.throw are deleted and the
 ; BB's dead children are deleted.
 
-; CHECK-LABEL: @test6
-define i32 @test6(i1 %b, i8* %p) {
+; CHECK-LABEL: @test5
+define i32 @test5(i1 %b, i8* %p) {
 entry:
   br i1 %b, label %bb.true, label %bb.false
 
@@ -326,6 +324,34 @@ merge:                                            ; preds = %bb.true.0, %bb.fals
   ret i32 0
 }
 
+; Tests if instructions after a call to @llvm.wasm.rethrow are deleted and the
+; BB's dead children are deleted.
+
+; CHECK-LABEL: @test6
+define i32 @test6(i1 %b, i8* %p) {
+entry:
+  br i1 %b, label %bb.true, label %bb.false
+
+; CHECK:      bb.true:
+; CHECK-NEXT:   call void @llvm.wasm.rethrow()
+; CHECK-NEXT:   unreachable
+bb.true:                                          ; preds = %entry
+  call void @llvm.wasm.rethrow()
+  br label %bb.true.0
+
+; CHECK-NOT:  bb.true.0
+bb.true.0:                                        ; preds = %bb.true
+  br label %merge
+
+; CHECK:      bb.false
+bb.false:                                         ; preds = %entry
+  br label %merge
+
+; CHECK:      merge
+merge:                                            ; preds = %bb.true.0, %bb.false
+  ret i32 0
+}
+
 declare void @foo()
 declare void @func(i32)
 declare %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* returned)
@@ -334,12 +360,12 @@ declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
 declare i32 @llvm.eh.typeid.for(i8*)
 declare void @llvm.wasm.throw(i32, i8*)
+declare void @llvm.wasm.rethrow()
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
 
-; CHECK-DAG: declare i8* @llvm.wasm.catch(i32)
 ; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32)
 ; CHECK-DAG: declare i8* @llvm.wasm.lsda()
 ; CHECK-DAG: declare i32 @_Unwind_CallPersonality(i8*)

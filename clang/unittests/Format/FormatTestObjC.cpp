@@ -1,9 +1,8 @@
 //===- unittest/Format/FormatTestObjC.cpp - Formatting unit tests----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -164,6 +163,20 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   Style = getStyle("{}", "a.h", "none", "NSSet *Foo();\n");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+}
+
+TEST(FormatTestObjCStyle, AvoidDetectingDesignatedInitializersAsObjCInHeaders) {
+  auto Style = getStyle("LLVM", "a.h", "none",
+                        "static const char *names[] = {[0] = \"foo\",\n"
+                        "[kBar] = \"bar\"};");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style = getStyle("LLVM", "a.h", "none",
+                   "static const char *names[] = {[0] EQ \"foo\",\n"
+                   "[kBar] EQ \"bar\"};");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
 }
 
 TEST_F(FormatTestObjC, FormatObjCTryCatch) {

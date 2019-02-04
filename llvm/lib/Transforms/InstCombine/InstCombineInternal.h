@@ -1,9 +1,8 @@
 //===- InstCombineInternal.h - InstCombine pass internals -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -53,7 +52,6 @@ namespace llvm {
 
 class APInt;
 class AssumptionCache;
-class CallSite;
 class DataLayout;
 class DominatorTree;
 class GEPOperator;
@@ -468,11 +466,11 @@ private:
                              Instruction &CtxI, Value *&OperationResult,
                              Constant *&OverflowResult);
 
-  Instruction *visitCallSite(CallSite CS);
+  Instruction *visitCallBase(CallBase &Call);
   Instruction *tryOptimizeCall(CallInst *CI);
-  bool transformConstExprCastCall(CallSite CS);
-  Instruction *transformCallThroughTrampoline(CallSite CS,
-                                              IntrinsicInst *Tramp);
+  bool transformConstExprCastCall(CallBase &Call);
+  Instruction *transformCallThroughTrampoline(CallBase &Call,
+                                              IntrinsicInst &Tramp);
 
   /// Transform (zext icmp) to bitwise / integer operations in order to
   /// eliminate it.
@@ -802,7 +800,8 @@ private:
 
   Value *simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
                                                APInt DemandedElts,
-                                               int DmaskIdx = -1);
+                                               int DmaskIdx = -1,
+                                               int TFCIdx = -1);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                     APInt &UndefElts, unsigned Depth = 0);
@@ -903,7 +902,10 @@ private:
   Instruction *foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
                                                  BinaryOperator *BO,
                                                  const APInt &C);
-  Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI, const APInt &C);
+  Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI, IntrinsicInst *II,
+                                             const APInt &C);
+  Instruction *foldICmpEqIntrinsicWithConstant(ICmpInst &ICI, IntrinsicInst *II,
+                                               const APInt &C);
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectExtConst(SelectInst &Sel);

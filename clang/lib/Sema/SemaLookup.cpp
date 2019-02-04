@@ -1,9 +1,8 @@
 //===--------------------- SemaLookup.cpp - Name Lookup  ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -277,6 +276,10 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind,
 
   case Sema::LookupOMPReductionName:
     IDNS = Decl::IDNS_OMPReduction;
+    break;
+
+  case Sema::LookupOMPMapperName:
+    IDNS = Decl::IDNS_OMPMapper;
     break;
 
   case Sema::LookupAnyName:
@@ -2104,6 +2107,10 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
       BaseCallback = &CXXRecordDecl::FindOMPReductionMember;
       break;
 
+    case LookupOMPMapperName:
+      BaseCallback = &CXXRecordDecl::FindOMPMapperMember;
+      break;
+
     case LookupUsingDeclName:
       // This lookup is for redeclarations only.
 
@@ -2417,10 +2424,18 @@ namespace {
         InstantiationLoc(InstantiationLoc) {
     }
 
+    bool addClassTransitive(CXXRecordDecl *RD) {
+      Classes.insert(RD);
+      return ClassesTransitive.insert(RD);
+    }
+
     Sema &S;
     Sema::AssociatedNamespaceSet &Namespaces;
     Sema::AssociatedClassSet &Classes;
     SourceLocation InstantiationLoc;
+
+  private:
+    Sema::AssociatedClassSet ClassesTransitive;
   };
 } // end anonymous namespace
 
@@ -2521,15 +2536,6 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
   // Add the associated namespace for this class.
   CollectEnclosingNamespace(Result.Namespaces, Ctx);
 
-  // Add the class itself. If we've already seen this class, we don't
-  // need to visit base classes.
-  //
-  // FIXME: That's not correct, we may have added this class only because it
-  // was the enclosing class of another class, and in that case we won't have
-  // added its base classes yet.
-  if (!Result.Classes.insert(Class))
-    return;
-
   // -- If T is a template-id, its associated namespaces and classes are
   //    the namespace in which the template is defined; for member
   //    templates, the member template's class; the namespaces and classes
@@ -2551,6 +2557,11 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
       addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
   }
+
+  // Add the class itself. If we've already transitively visited this class,
+  // we don't need to visit base classes.
+  if (!Result.addClassTransitive(Class))
+    return;
 
   // Only recurse into base classes for complete types.
   if (!Result.S.isCompleteType(Result.InstantiationLoc,
@@ -2577,7 +2588,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
       if (!BaseType)
         continue;
       CXXRecordDecl *BaseDecl = cast<CXXRecordDecl>(BaseType->getDecl());
-      if (Result.Classes.insert(BaseDecl)) {
+      if (Result.addClassTransitive(BaseDecl)) {
         // Find the associated namespace for this base class.
         DeclContext *BaseCtx = BaseDecl->getDeclContext();
         CollectEnclosingNamespace(Result.Namespaces, BaseCtx);
@@ -2793,15 +2804,9 @@ void Sema::FindAssociatedClassesAndNamespaces(
     // in which the function or function template is defined and the
     // classes and namespaces associated with its (non-dependent)
     // parameter types and return type.
-    Arg = Arg->IgnoreParens();
-    if (UnaryOperator *unaryOp = dyn_cast<UnaryOperator>(Arg))
-      if (unaryOp->getOpcode() == UO_AddrOf)
-        Arg = unaryOp->getSubExpr();
+    OverloadExpr *OE = OverloadExpr::find(Arg).Expression;
 
-    UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(Arg);
-    if (!ULE) continue;
-
-    for (const auto *D : ULE->decls()) {
+    for (const NamedDecl *D : OE->decls()) {
       // Look through any using declarations to find the underlying function.
       const FunctionDecl *FDecl = D->getUnderlyingDecl()->getAsFunction();
 
@@ -3337,38 +3342,29 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
           !isa<FunctionTemplateDecl>(Underlying))
         continue;
 
-      if (!isVisible(D)) {
-        D = findAcceptableDecl(
-            *this, D, (Decl::IDNS_Ordinary | Decl::IDNS_OrdinaryFriend));
-        if (!D)
-          continue;
-        if (auto *USD = dyn_cast<UsingShadowDecl>(D))
-          Underlying = USD->getTargetDecl();
-      }
-
-      // If the only declaration here is an ordinary friend, consider
-      // it only if it was declared in an associated classes.
-      if ((D->getIdentifierNamespace() & Decl::IDNS_Ordinary) == 0) {
-        // If it's neither ordinarily visible nor a friend, we can't find it.
-        if ((D->getIdentifierNamespace() & Decl::IDNS_OrdinaryFriend) == 0)
-          continue;
-
-        bool DeclaredInAssociatedClass = false;
-        for (Decl *DI = D; DI; DI = DI->getPreviousDecl()) {
-          DeclContext *LexDC = DI->getLexicalDeclContext();
-          if (isa<CXXRecordDecl>(LexDC) &&
-              AssociatedClasses.count(cast<CXXRecordDecl>(LexDC)) &&
-              isVisible(cast<NamedDecl>(DI))) {
-            DeclaredInAssociatedClass = true;
+      // The declaration is visible to argument-dependent lookup if either
+      // it's ordinarily visible or declared as a friend in an associated
+      // class.
+      bool Visible = false;
+      for (D = D->getMostRecentDecl(); D;
+           D = cast_or_null<NamedDecl>(D->getPreviousDecl())) {
+        if (D->getIdentifierNamespace() & Decl::IDNS_Ordinary) {
+          if (isVisible(D)) {
+            Visible = true;
+            break;
+          }
+        } else if (D->getFriendObjectKind()) {
+          auto *RD = cast<CXXRecordDecl>(D->getLexicalDeclContext());
+          if (AssociatedClasses.count(RD) && isVisible(D)) {
+            Visible = true;
             break;
           }
         }
-        if (!DeclaredInAssociatedClass)
-          continue;
       }
 
       // FIXME: Preserve D as the FoundDecl.
-      Result.insert(Underlying);
+      if (Visible)
+        Result.insert(Underlying);
     }
   }
 }

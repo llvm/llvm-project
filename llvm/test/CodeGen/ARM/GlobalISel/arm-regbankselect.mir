@@ -474,7 +474,7 @@ fixedStack:
 body:             |
   bb.0:
     %0(p0) = G_FRAME_INDEX %fixed-stack.0
-    %1(s32) = G_LOAD %0(p0) :: (load 4 from %fixed-stack.0, align 0)
+    %1(s32) = G_LOAD %0(p0) :: (load 4 from %fixed-stack.0, align 4)
 
     %2(p0) = COPY $sp
     %3(s32) = G_CONSTANT i32 8

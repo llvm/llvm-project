@@ -709,28 +709,67 @@
 // RUN: %clang -target x86_64-unknown-cloudabi -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-CLOUDABI
 // SAFESTACK-CLOUDABI: "-fsanitize=safe-stack"
 
+
+
+// * NetBSD; please keep ordered as in Sanitizers.def *
+
 // RUN: %clang -target i386--netbsd -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=ADDRESS-NETBSD
 // RUN: %clang -target x86_64--netbsd -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=ADDRESS-NETBSD
 // ADDRESS-NETBSD: "-fsanitize=address"
 
-// RUN: %clang -target i386--netbsd -fsanitize=vptr %s -### 2>&1 | FileCheck %s -check-prefix=VPTR-NETBSD
-// RUN: %clang -target x86_64--netbsd -fsanitize=vptr %s -### 2>&1 | FileCheck %s -check-prefix=VPTR-NETBSD
-// VPTR-NETBSD: "-fsanitize=vptr"
+// RUN: %clang -target x86_64--netbsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-NETBSD
+// KERNEL-ADDRESS-NETBSD: "-fsanitize=kernel-address"
 
-// RUN: %clang -target i386--netbsd -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-NETBSD
-// RUN: %clang -target x86_64--netbsd -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-NETBSD
-// SAFESTACK-NETBSD: "-fsanitize=safe-stack"
+// RUN: %clang -target x86_64--netbsd -fsanitize=hwaddress %s -### 2>&1 | FileCheck %s -check-prefix=HWADDRESS-NETBSD
+// HWADDRESS-NETBSD: "-fsanitize=hwaddress"
 
-// RUN: %clang -target i386--netbsd -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-NETBSD
-// RUN: %clang -target x86_64--netbsd -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-NETBSD
-// FUNCTION-NETBSD: "-fsanitize=function"
+// RUN: %clang -target x86_64--netbsd -fsanitize=kernel-hwaddress %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-HWADDRESS-NETBSD
+// KERNEL-HWADDRESS-NETBSD: "-fsanitize=kernel-hwaddress"
+
+// RUN: %clang -target x86_64--netbsd -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=MEMORY-NETBSD
+// MEMORY-NETBSD: "-fsanitize=memory"
+
+// RUN: %clang -target x86_64--netbsd -fsanitize=kernel-memory %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-MEMORY-NETBSD
+// KERNEL-MEMORY-NETBSD: "-fsanitize=kernel-memory"
+
+// RUN: %clang -target x86_64--netbsd -fsanitize=thread %s -### 2>&1 | FileCheck %s -check-prefix=THREAD-NETBSD
+// THREAD-NETBSD: "-fsanitize=thread"
 
 // RUN: %clang -target i386--netbsd -fsanitize=leak %s -### 2>&1 | FileCheck %s -check-prefix=LEAK-NETBSD
 // RUN: %clang -target x86_64--netbsd -fsanitize=leak %s -### 2>&1 | FileCheck %s -check-prefix=LEAK-NETBSD
 // LEAK-NETBSD: "-fsanitize=leak"
 
-// RUN: %clang -target x86_64--netbsd -fsanitize=thread %s -### 2>&1 | FileCheck %s -check-prefix=THREAD-NETBSD
-// THREAD-NETBSD: "-fsanitize=thread"
+// RUN: %clang -target i386--netbsd -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-NETBSD
+// RUN: %clang -target x86_64--netbsd -fsanitize=function %s -### 2>&1 | FileCheck %s -check-prefix=FUNCTION-NETBSD
+// FUNCTION-NETBSD: "-fsanitize=function"
+
+// RUN: %clang -target i386--netbsd -fsanitize=vptr %s -### 2>&1 | FileCheck %s -check-prefix=VPTR-NETBSD
+// RUN: %clang -target x86_64--netbsd -fsanitize=vptr %s -### 2>&1 | FileCheck %s -check-prefix=VPTR-NETBSD
+// VPTR-NETBSD: "-fsanitize=vptr"
+
+// RUN: %clang -target x86_64--netbsd -fsanitize=dataflow %s -### 2>&1 | FileCheck %s -check-prefix=DATAFLOW-NETBSD
+// DATAFLOW-NETBSD: "-fsanitize=dataflow"
+
+// RUN: %clang -target i386--netbsd -fsanitize=cfi %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
+// RUN: %clang -target x86_64--netbsd -fsanitize=cfi %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
+// CFI-NETBSD: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
+
+// RUN: %clang -target i386--netbsd -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-NETBSD
+// RUN: %clang -target x86_64--netbsd -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-NETBSD
+// SAFESTACK-NETBSD: "-fsanitize=safe-stack"
+
+// RUN: %clang -target x86_64--netbsd -fsanitize=shadow-call-stack %s -### 2>&1 | FileCheck %s -check-prefix=SHADOW-CALL-STACK-NETBSD
+// SHADOW-CALL-STACK-NETBSD: "-fsanitize=shadow-call-stack"
+
+// RUN: %clang -target i386--netbsd -fsanitize=undefined %s -### 2>&1 | FileCheck %s -check-prefix=UNDEFINED-NETBSD
+// RUN: %clang -target x86_64--netbsd -fsanitize=undefined %s -### 2>&1 | FileCheck %s -check-prefix=UNDEFINED-NETBSD
+// UNDEFINED-NETBSD: "-fsanitize={{.*}}
+
+// RUN: %clang -target i386--netbsd -fsanitize=scudo %s -### 2>&1 | FileCheck %s -check-prefix=SCUDO-NETBSD
+// RUN: %clang -target x86_64--netbsd -fsanitize=scudo %s -### 2>&1 | FileCheck %s -check-prefix=SCUDO-NETBSD
+// SCUDO-NETBSD: "-fsanitize=scudo"
+
+
 
 // RUN: %clang -target x86_64-scei-ps4 -fsanitize=function -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-FSAN-UBSAN-PS4
 // CHECK-FSAN-UBSAN-PS4: unsupported option '-fsanitize=function' for target 'x86_64-scei-ps4'
@@ -837,3 +876,11 @@
 //
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=scudo,kernel-memory  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-KMSAN
 // CHECK-SCUDO-KMSAN: error: invalid argument '-fsanitize=kernel-memory' not allowed with '-fsanitize=scudo'
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-INTERCEPTOR-ABI
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=interceptor %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-INTERCEPTOR-ABI
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=platform %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-PLATFORM-ABI
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-hwaddress-abi=foo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-FOO-ABI
+// CHECK-HWASAN-INTERCEPTOR-ABI: "-default-function-attr" "hwasan-abi=interceptor"
+// CHECK-HWASAN-PLATFORM-ABI: "-default-function-attr" "hwasan-abi=platform"
+// CHECK-HWASAN-FOO-ABI: error: invalid value 'foo' in '-fsanitize-hwaddress-abi=foo'

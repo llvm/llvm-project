@@ -1,9 +1,8 @@
 //===-- InstrProfiling.cpp - Frontend instrumentation based profiling -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -196,6 +195,7 @@ public:
       // block.
       Value *LiveInValue = SSA.GetValueInMiddleOfBlock(ExitBlock);
       Value *Addr = cast<StoreInst>(Store)->getPointerOperand();
+      Type *Ty = LiveInValue->getType();
       IRBuilder<> Builder(InsertPos);
       if (AtomicCounterUpdatePromoted)
         // automic update currently can only be promoted across the current
@@ -203,7 +203,7 @@ public:
         Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
                                 AtomicOrdering::SequentiallyConsistent);
       else {
-        LoadInst *OldVal = Builder.CreateLoad(Addr, "pgocount.promoted");
+        LoadInst *OldVal = Builder.CreateLoad(Ty, Addr, "pgocount.promoted");
         auto *NewVal = Builder.CreateAdd(OldVal, LiveInValue);
         auto *NewStore = Builder.CreateStore(NewVal, Addr);
 
@@ -509,13 +509,16 @@ bool InstrProfiling::run(Module &M, const TargetLibraryInfo &TLI) {
   return true;
 }
 
-static Constant *getOrInsertValueProfilingCall(Module &M,
-                                               const TargetLibraryInfo &TLI,
-                                               bool IsRange = false) {
+static FunctionCallee
+getOrInsertValueProfilingCall(Module &M, const TargetLibraryInfo &TLI,
+                              bool IsRange = false) {
   LLVMContext &Ctx = M.getContext();
   auto *ReturnTy = Type::getVoidTy(M.getContext());
 
-  Constant *Res;
+  AttributeList AL;
+  if (auto AK = TLI.getExtAttrForI32Param(false))
+    AL = AL.addParamAttribute(M.getContext(), 2, AK);
+
   if (!IsRange) {
     Type *ParamTypes[] = {
 #define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
@@ -523,8 +526,8 @@ static Constant *getOrInsertValueProfilingCall(Module &M,
     };
     auto *ValueProfilingCallTy =
         FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
-    Res = M.getOrInsertFunction(getInstrProfValueProfFuncName(),
-                                ValueProfilingCallTy);
+    return M.getOrInsertFunction(getInstrProfValueProfFuncName(),
+                                 ValueProfilingCallTy, AL);
   } else {
     Type *RangeParamTypes[] = {
 #define VALUE_RANGE_PROF 1
@@ -534,15 +537,9 @@ static Constant *getOrInsertValueProfilingCall(Module &M,
     };
     auto *ValueRangeProfilingCallTy =
         FunctionType::get(ReturnTy, makeArrayRef(RangeParamTypes), false);
-    Res = M.getOrInsertFunction(getInstrProfValueRangeProfFuncName(),
-                                ValueRangeProfilingCallTy);
+    return M.getOrInsertFunction(getInstrProfValueRangeProfFuncName(),
+                                 ValueRangeProfilingCallTy, AL);
   }
-
-  if (Function *FunRes = dyn_cast<Function>(Res)) {
-    if (auto AK = TLI.getExtAttrForI32Param(false))
-      FunRes->addParamAttr(2, AK);
-  }
-  return Res;
 }
 
 void InstrProfiling::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {
@@ -601,13 +598,15 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
 
   IRBuilder<> Builder(Inc);
   uint64_t Index = Inc->getIndex()->getZExtValue();
-  Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters, 0, Index);
+  Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(),
+                                                   Counters, 0, Index);
 
   if (Options.Atomic || AtomicCounterUpdateAll) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             AtomicOrdering::Monotonic);
   } else {
-    Value *Load = Builder.CreateLoad(Addr, "pgocount");
+    Value *IncStep = Inc->getStep();
+    Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
     auto *Count = Builder.CreateAdd(Load, Inc->getStep());
     auto *Store = Builder.CreateStore(Count, Addr);
     if (isCounterPromotionEnabled())
@@ -954,7 +953,7 @@ bool InstrProfiling::emitRuntimeHook() {
     User->setComdat(M->getOrInsertComdat(User->getName()));
 
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", User));
-  auto *Load = IRB.CreateLoad(Var);
+  auto *Load = IRB.CreateLoad(Int32Ty, Var);
   IRB.CreateRet(Load);
 
   // Mark the user variable as used so that it isn't stripped out.
@@ -984,7 +983,7 @@ void InstrProfiling::emitInitialization() {
     }
   }
 
-  Constant *RegisterF = M->getFunction(getInstrProfRegFuncsName());
+  Function *RegisterF = M->getFunction(getInstrProfRegFuncsName());
   if (!RegisterF)
     return;
 
@@ -1000,8 +999,7 @@ void InstrProfiling::emitInitialization() {
 
   // Add the basic block and the necessary calls.
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", F));
-  if (RegisterF)
-    IRB.CreateCall(RegisterF, {});
+  IRB.CreateCall(RegisterF, {});
   IRB.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);

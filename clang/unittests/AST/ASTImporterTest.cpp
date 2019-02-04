@@ -1,9 +1,8 @@
 //===- unittest/AST/ASTImporterTest.cpp - AST node import test ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2231,6 +2230,191 @@ TEST_P(ImportFunctions,
             DeclCounterWithPredicate<FunctionDecl>([](const FunctionDecl *FD) {
               return FD->doesThisDeclarationHaveABody();
             }).match(ToTU, functionDecl()));
+}
+
+TEST_P(ImportFunctions, ImportOverriddenMethodTwice) {
+  auto Code =
+      R"(
+      struct B { virtual void f(); };
+      struct D:B { void f(); };
+      )";
+  auto BFP =
+      cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("B"))));
+  auto DFP =
+      cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("D"))));
+
+  Decl *FromTU0 = getTuDecl(Code, Lang_CXX);
+  auto *DF = FirstDeclMatcher<CXXMethodDecl>().match(FromTU0, DFP);
+  Import(DF, Lang_CXX);
+
+  Decl *FromTU1 = getTuDecl(Code, Lang_CXX, "input1.cc");
+  auto *BF = FirstDeclMatcher<CXXMethodDecl>().match(FromTU1, BFP);
+  Import(BF, Lang_CXX);
+
+  auto *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, BFP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, DFP), 1u);
+}
+
+TEST_P(ImportFunctions, ImportOverriddenMethodTwiceDefinitionFirst) {
+  auto CodeWithoutDef =
+      R"(
+      struct B { virtual void f(); };
+      struct D:B { void f(); };
+      )";
+  auto CodeWithDef =
+      R"(
+    struct B { virtual void f(){}; };
+    struct D:B { void f(){}; };
+  )";
+  auto BFP =
+      cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("B"))));
+  auto DFP =
+      cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("D"))));
+  auto BFDefP = cxxMethodDecl(
+      hasName("f"), hasParent(cxxRecordDecl(hasName("B"))), isDefinition());
+  auto DFDefP = cxxMethodDecl(
+      hasName("f"), hasParent(cxxRecordDecl(hasName("D"))), isDefinition());
+  auto FDefAllP = cxxMethodDecl(hasName("f"), isDefinition());
+
+  {
+    Decl *FromTU = getTuDecl(CodeWithDef, Lang_CXX, "input0.cc");
+    auto *FromD = FirstDeclMatcher<CXXMethodDecl>().match(FromTU, DFP);
+    Import(FromD, Lang_CXX);
+  }
+  {
+    Decl *FromTU = getTuDecl(CodeWithoutDef, Lang_CXX, "input1.cc");
+    auto *FromB = FirstDeclMatcher<CXXMethodDecl>().match(FromTU, BFP);
+    Import(FromB, Lang_CXX);
+  }
+
+  auto *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, BFP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, DFP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, BFDefP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, DFDefP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, FDefAllP), 2u);
+}
+
+TEST_P(ImportFunctions, ImportOverriddenMethodTwiceOutOfClassDef) {
+  auto Code =
+      R"(
+      struct B { virtual void f(); };
+      struct D:B { void f(); };
+      void B::f(){};
+      )";
+
+  auto BFP =
+      cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("B"))));
+  auto BFDefP = cxxMethodDecl(
+      hasName("f"), hasParent(cxxRecordDecl(hasName("B"))), isDefinition());
+  auto DFP = cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("D"))),
+                           unless(isDefinition()));
+
+  Decl *FromTU0 = getTuDecl(Code, Lang_CXX);
+  auto *D = FirstDeclMatcher<CXXMethodDecl>().match(FromTU0, DFP);
+  Import(D, Lang_CXX);
+
+  Decl *FromTU1 = getTuDecl(Code, Lang_CXX, "input1.cc");
+  auto *B = FirstDeclMatcher<CXXMethodDecl>().match(FromTU1, BFP);
+  Import(B, Lang_CXX);
+
+  auto *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, BFP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, BFDefP), 0u);
+
+  auto *ToB = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("B")));
+  auto *ToBFInClass = FirstDeclMatcher<CXXMethodDecl>().match(ToTU, BFP);
+  auto *ToBFOutOfClass = FirstDeclMatcher<CXXMethodDecl>().match(
+      ToTU, cxxMethodDecl(hasName("f"), isDefinition()));
+
+  // The definition should be out-of-class.
+  EXPECT_NE(ToBFInClass, ToBFOutOfClass);
+  EXPECT_NE(ToBFInClass->getLexicalDeclContext(),
+            ToBFOutOfClass->getLexicalDeclContext());
+  EXPECT_EQ(ToBFOutOfClass->getDeclContext(), ToB);
+  EXPECT_EQ(ToBFOutOfClass->getLexicalDeclContext(), ToTU);
+
+  // Check that the redecl chain is intact.
+  EXPECT_EQ(ToBFOutOfClass->getPreviousDecl(), ToBFInClass);
+}
+
+TEST_P(ImportFunctions,
+       ImportOverriddenMethodTwiceOutOfClassDefInSeparateCode) {
+  auto CodeTU0 =
+      R"(
+      struct B { virtual void f(); };
+      struct D:B { void f(); };
+      )";
+  auto CodeTU1 =
+      R"(
+      struct B { virtual void f(); };
+      struct D:B { void f(); };
+      void B::f(){}
+      void D::f(){}
+      void foo(B &b, D &d) { b.f(); d.f(); }
+      )";
+
+  auto BFP =
+      cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("B"))));
+  auto BFDefP = cxxMethodDecl(
+      hasName("f"), hasParent(cxxRecordDecl(hasName("B"))), isDefinition());
+  auto DFP =
+      cxxMethodDecl(hasName("f"), hasParent(cxxRecordDecl(hasName("D"))));
+  auto DFDefP = cxxMethodDecl(
+      hasName("f"), hasParent(cxxRecordDecl(hasName("D"))), isDefinition());
+  auto FooDef = functionDecl(hasName("foo"));
+
+  {
+    Decl *FromTU0 = getTuDecl(CodeTU0, Lang_CXX, "input0.cc");
+    auto *D = FirstDeclMatcher<CXXMethodDecl>().match(FromTU0, DFP);
+    Import(D, Lang_CXX);
+  }
+
+  {
+    Decl *FromTU1 = getTuDecl(CodeTU1, Lang_CXX, "input1.cc");
+    auto *Foo = FirstDeclMatcher<FunctionDecl>().match(FromTU1, FooDef);
+    Import(Foo, Lang_CXX);
+  }
+
+  auto *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, BFP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, DFP), 1u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, BFDefP), 0u);
+  EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, DFDefP), 0u);
+
+  auto *ToB = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("B")));
+  auto *ToD = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("D")));
+  auto *ToBFInClass = FirstDeclMatcher<CXXMethodDecl>().match(ToTU, BFP);
+  auto *ToBFOutOfClass = FirstDeclMatcher<CXXMethodDecl>().match(
+      ToTU, cxxMethodDecl(hasName("f"), isDefinition()));
+  auto *ToDFInClass = FirstDeclMatcher<CXXMethodDecl>().match(ToTU, DFP);
+  auto *ToDFOutOfClass = LastDeclMatcher<CXXMethodDecl>().match(
+      ToTU, cxxMethodDecl(hasName("f"), isDefinition()));
+
+  // The definition should be out-of-class.
+  EXPECT_NE(ToBFInClass, ToBFOutOfClass);
+  EXPECT_NE(ToBFInClass->getLexicalDeclContext(),
+            ToBFOutOfClass->getLexicalDeclContext());
+  EXPECT_EQ(ToBFOutOfClass->getDeclContext(), ToB);
+  EXPECT_EQ(ToBFOutOfClass->getLexicalDeclContext(), ToTU);
+
+  EXPECT_NE(ToDFInClass, ToDFOutOfClass);
+  EXPECT_NE(ToDFInClass->getLexicalDeclContext(),
+            ToDFOutOfClass->getLexicalDeclContext());
+  EXPECT_EQ(ToDFOutOfClass->getDeclContext(), ToD);
+  EXPECT_EQ(ToDFOutOfClass->getLexicalDeclContext(), ToTU);
+
+  // Check that the redecl chain is intact.
+  EXPECT_EQ(ToBFOutOfClass->getPreviousDecl(), ToBFInClass);
+  EXPECT_EQ(ToDFOutOfClass->getPreviousDecl(), ToDFInClass);
 }
 
 struct ImportFriendFunctions : ImportFunctions {};

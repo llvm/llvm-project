@@ -1,9 +1,8 @@
 //===- CodeCompleteConsumer.h - Code Completion Interface -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -381,6 +380,7 @@ public:
   /// if the expression is a variable initializer or a function argument, the
   /// type of the corresponding variable or function parameter.
   QualType getPreferredType() const { return PreferredType; }
+  void setPreferredType(QualType T) { PreferredType = T; }
 
   /// Retrieve the type of the base object in a member-access
   /// expression.
@@ -655,14 +655,6 @@ public:
 };
 
 } // namespace clang
-
-namespace llvm {
-
-template <> struct isPodLike<clang::CodeCompletionString::Chunk> {
-  static const bool value = true;
-};
-
-} // namespace llvm
 
 namespace clang {
 

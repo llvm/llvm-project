@@ -1,9 +1,8 @@
 //===- llvm/unittest/IR/VerifierTest.cpp - Verifier unit tests --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,7 +26,7 @@ TEST(VerifierTest, Branch_i1) {
   LLVMContext C;
   Module M("M", C);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
-  Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
   BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
   BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
   ReturnInst::Create(C, Exit);
@@ -50,7 +49,7 @@ TEST(VerifierTest, InvalidRetAttribute) {
   LLVMContext C;
   Module M("M", C);
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), /*isVarArg=*/false);
-  Function *F = cast<Function>(M.getOrInsertFunction("foo", FTy));
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
   AttributeList AS = F->getAttributes();
   F->setAttributes(
       AS.addAttribute(C, AttributeList::ReturnIndex, Attribute::UWTable));
@@ -68,9 +67,9 @@ TEST(VerifierTest, CrossModuleRef) {
   Module M2("M2", C);
   Module M3("M3", C);
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), /*isVarArg=*/false);
-  Function *F1 = cast<Function>(M1.getOrInsertFunction("foo1", FTy));
-  Function *F2 = cast<Function>(M2.getOrInsertFunction("foo2", FTy));
-  Function *F3 = cast<Function>(M3.getOrInsertFunction("foo3", FTy));
+  Function *F1 = Function::Create(FTy, Function::ExternalLinkage, "foo1", M1);
+  Function *F2 = Function::Create(FTy, Function::ExternalLinkage, "foo2", M2);
+  Function *F3 = Function::Create(FTy, Function::ExternalLinkage, "foo3", M3);
 
   BasicBlock *Entry1 = BasicBlock::Create(C, "entry", F1);
   BasicBlock *Entry3 = BasicBlock::Create(C, "entry", F3);
@@ -174,8 +173,8 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     new GlobalVariable(M, Type::getInt8Ty(C), false,
                        GlobalValue::ExternalLinkage, nullptr, "g");
 
-    auto *F = cast<Function>(M.getOrInsertFunction(
-        "f", FunctionType::get(Type::getVoidTy(C), false)));
+    auto *F = Function::Create(FunctionType::get(Type::getVoidTy(C), false),
+                               Function::ExternalLinkage, "f", M);
     IRBuilder<> Builder(BasicBlock::Create(C, "", F));
     Builder.CreateUnreachable();
     F->setSubprogram(DIB.createFunction(

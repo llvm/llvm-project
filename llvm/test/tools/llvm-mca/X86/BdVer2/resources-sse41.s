@@ -191,11 +191,11 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  2      13    1.00           *            pextrw	$1, %xmm0, (%rax)
 # CHECK-NEXT:  2      4     1.00                        phminposuw	%xmm0, %xmm2
 # CHECK-NEXT:  2      9     1.00    *                   phminposuw	(%rax), %xmm2
-# CHECK-NEXT:  2      2     0.50                        pinsrb	$1, %eax, %xmm1
+# CHECK-NEXT:  2      12    0.50                        pinsrb	$1, %eax, %xmm1
 # CHECK-NEXT:  2      6     0.50    *                   pinsrb	$1, (%rax), %xmm1
-# CHECK-NEXT:  2      2     0.50                        pinsrd	$1, %eax, %xmm1
+# CHECK-NEXT:  2      12    0.50                        pinsrd	$1, %eax, %xmm1
 # CHECK-NEXT:  2      6     0.50    *                   pinsrd	$1, (%rax), %xmm1
-# CHECK-NEXT:  2      2     0.50                        pinsrq	$1, %rax, %xmm1
+# CHECK-NEXT:  2      12    0.50                        pinsrq	$1, %rax, %xmm1
 # CHECK-NEXT:  2      6     0.50    *                   pinsrq	$1, (%rax), %xmm1
 # CHECK-NEXT:  1      2     0.50                        pmaxsb	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   pmaxsb	(%rax), %xmm2

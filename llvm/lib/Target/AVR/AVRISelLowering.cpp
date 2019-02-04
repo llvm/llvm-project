@@ -1,9 +1,8 @@
 //===-- AVRISelLowering.cpp - AVR DAG Lowering Implementation -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,19 +25,21 @@
 
 #include "AVR.h"
 #include "AVRMachineFunctionInfo.h"
+#include "AVRSubtarget.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 namespace llvm {
 
-AVRTargetLowering::AVRTargetLowering(AVRTargetMachine &tm)
-    : TargetLowering(tm) {
+AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
+                                     const AVRSubtarget &STI)
+    : TargetLowering(TM), Subtarget(STI) {
   // Set up the register classes.
   addRegisterClass(MVT::i8, &AVR::GPR8RegClass);
   addRegisterClass(MVT::i16, &AVR::DREGSRegClass);
 
   // Compute derived properties from the register classes.
-  computeRegisterProperties(tm.getSubtargetImpl()->getRegisterInfo());
+  computeRegisterProperties(Subtarget.getRegisterInfo());
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent);
@@ -162,6 +163,13 @@ AVRTargetLowering::AVRTargetLowering(AVRTargetMachine &tm)
   // Expand 16 bit multiplications.
   setOperationAction(ISD::SMUL_LOHI, MVT::i16, Expand);
   setOperationAction(ISD::UMUL_LOHI, MVT::i16, Expand);
+
+  // Expand multiplications to libcalls when there is
+  // no hardware MUL.
+  if (!Subtarget.supportsMultiplication()) {
+    setOperationAction(ISD::SMUL_LOHI, MVT::i8, Expand);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i8, Expand);
+  }
 
   for (MVT VT : MVT::integer_valuetypes()) {
     setOperationAction(ISD::MULHS, VT, Expand);
@@ -1270,8 +1278,7 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   // Add a register mask operand representing the call-preserved registers.
-  const AVRTargetMachine &TM = (const AVRTargetMachine &)getTargetMachine();
-  const TargetRegisterInfo *TRI = TM.getSubtargetImpl()->getRegisterInfo();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   const uint32_t *Mask =
       TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
@@ -1433,8 +1440,7 @@ MachineBasicBlock *AVRTargetLowering::insertShift(MachineInstr &MI,
   bool HasRepeatedOperand = false;
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
-  const AVRTargetMachine &TM = (const AVRTargetMachine &)getTargetMachine();
-  const TargetInstrInfo &TII = *TM.getSubtargetImpl()->getInstrInfo();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
@@ -1574,8 +1580,7 @@ static bool isCopyMulResult(MachineBasicBlock::iterator const &I) {
 // it, but it works for now.
 MachineBasicBlock *AVRTargetLowering::insertMul(MachineInstr &MI,
                                                 MachineBasicBlock *BB) const {
-  const AVRTargetMachine &TM = (const AVRTargetMachine &)getTargetMachine();
-  const TargetInstrInfo &TII = *TM.getSubtargetImpl()->getInstrInfo();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   MachineBasicBlock::iterator I(MI);
   ++I; // in any case insert *after* the mul instruction
   if (isCopyMulResult(I))
@@ -1629,6 +1634,15 @@ AVRTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   MachineFunction *MF = MBB->getParent();
   const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineBasicBlock *FallThrough = MBB->getFallThrough();
+
+  // If the current basic block falls through to another basic block,
+  // we must insert an unconditional branch to the fallthrough destination
+  // if we are to insert basic blocks at the prior fallthrough point.
+  if (FallThrough != nullptr) {
+    BuildMI(MBB, dl, TII.get(AVR::RJMPk)).addMBB(FallThrough);
+  }
+
   MachineBasicBlock *trueMBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *falseMBB = MF->CreateMachineBasicBlock(LLVM_BB);
 
@@ -1838,9 +1852,6 @@ std::pair<unsigned, const TargetRegisterClass *>
 AVRTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                 StringRef Constraint,
                                                 MVT VT) const {
-  auto STI = static_cast<const AVRTargetMachine &>(this->getTargetMachine())
-                 .getSubtargetImpl();
-
   // We only support i8 and i16.
   //
   //:FIXME: remove this assert for now since it gets sometimes executed
@@ -1884,8 +1895,8 @@ AVRTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   }
 
-  return TargetLowering::getRegForInlineAsmConstraint(STI->getRegisterInfo(),
-                                                      Constraint, VT);
+  return TargetLowering::getRegForInlineAsmConstraint(
+      Subtarget.getRegisterInfo(), Constraint, VT);
 }
 
 void AVRTargetLowering::LowerAsmOperandForConstraint(SDValue Op,

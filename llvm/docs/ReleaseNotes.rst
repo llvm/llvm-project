@@ -1,12 +1,12 @@
 ========================
-LLVM 8.0.0 Release Notes
+LLVM 9.0.0 Release Notes
 ========================
 
 .. contents::
     :local:
 
 .. warning::
-   These are in-progress notes for the upcoming LLVM 8 release.
+   These are in-progress notes for the upcoming LLVM 9 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -15,7 +15,7 @@ Introduction
 ============
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
-release 8.0.0.  Here we describe the status of LLVM, including major improvements
+release 9.0.0.  Here we describe the status of LLVM, including major improvements
 from the previous release, improvements in various subprojects of LLVM, and
 some of the current users of the code.  All LLVM releases may be downloaded
 from the `LLVM releases web site <https://llvm.org/releases/>`_.
@@ -39,14 +39,6 @@ Non-comprehensive list of changes in this release
    point (e.g. maybe you would like to give an example of the
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
-
-* The **llvm-cov** tool can now export lcov trace files using the
-  `-format=lcov` option of the `export` command.
-
-* The add_llvm_loadable_module CMake macro has been removed.  The
-  add_llvm_library macro with the MODULE argument now provides the same
-  functionality.  See `Writing an LLVM Pass
-  <WritingAnLLVMPass.html#setting-up-the-build-environment>`_.
 
 .. NOTE
    If you would like to document a larger change, then you can add a
@@ -82,8 +74,7 @@ Changes to the PowerPC Target
 Changes to the X86 Target
 -------------------------
 
-* Machine model for AMD bdver2 (Piledriver) CPU was added. It is used to support
-  instruction scheduling and other instruction cost heuristics.
+ During this release ...
 
 Changes to the AMDGPU Target
 -----------------------------
@@ -94,6 +85,12 @@ Changes to the AVR Target
 -----------------------------
 
  During this release ...
+
+Changes to the WebAssembly Target
+---------------------------------
+
+ During this release ...
+
 
 Changes to the OCaml bindings
 -----------------------------
@@ -107,7 +104,7 @@ Changes to the C API
 Changes to the DAG infrastructure
 ---------------------------------
 
-External Open Source Projects Using LLVM 8
+External Open Source Projects Using LLVM 9
 ==========================================
 
 * A project...

@@ -444,13 +444,10 @@ define signext i32 @subw(i32 signext %a, i32 signext %b) {
   ret i32 %1
 }
 
-; TODO: should select sllw for RV64.
-
 define signext i32 @sllw(i32 signext %a, i32 zeroext %b) {
 ; RV64I-LABEL: sllw:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sll a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    sllw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: sllw:
@@ -461,15 +458,10 @@ define signext i32 @sllw(i32 signext %a, i32 zeroext %b) {
   ret i32 %1
 }
 
-; TODO: should select srlw for RV64.
-
 define signext i32 @srlw(i32 signext %a, i32 zeroext %b) {
 ; RV64I-LABEL: srlw:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    srl a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    srlw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: srlw:
@@ -480,13 +472,10 @@ define signext i32 @srlw(i32 signext %a, i32 zeroext %b) {
   ret i32 %1
 }
 
-; TODO: should select sraw for RV64.
-
 define signext i32 @sraw(i64 %a, i32 zeroext %b) {
 ; RV64I-LABEL: sraw:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    sra a0, a0, a1
+; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32I-LABEL: sraw:

@@ -255,7 +255,7 @@ if (untrusted_size_from_caller < sizeof(local_buffer)) {
   memcpy(local_buffer, untrusted_data_from_caller,
          untrusted_size_from_caller);
   // The stack has now been smashed, writing an attacker-controlled
-  // address over the return adress.
+  // address over the return address.
   minor_processing(local_buffer);
   return;
   // Control will speculate to the attacker-written address.

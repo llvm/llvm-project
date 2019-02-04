@@ -1,9 +1,8 @@
 //==- llvm/CodeGen/GlobalISel/RegBankSelect.cpp - RegBankSelect --*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -115,7 +114,7 @@ bool RegBankSelect::assignmentMatch(
   // By default we assume we will have to repair something.
   OnlyAssign = false;
   // Each part of a break down needs to end up in a different register.
-  // In other word, Reg assignement does not match.
+  // In other word, Reg assignment does not match.
   if (ValMapping.NumBreakDowns != 1)
     return false;
 
@@ -136,33 +135,78 @@ bool RegBankSelect::repairReg(
     MachineOperand &MO, const RegisterBankInfo::ValueMapping &ValMapping,
     RegBankSelect::RepairingPlacement &RepairPt,
     const iterator_range<SmallVectorImpl<unsigned>::const_iterator> &NewVRegs) {
-  if (ValMapping.NumBreakDowns != 1 && !TPC->isGlobalISelAbortEnabled())
-    return false;
-  assert(ValMapping.NumBreakDowns == 1 && "Not yet implemented");
+
+  assert(ValMapping.NumBreakDowns == size(NewVRegs) && "need new vreg for each breakdown");
+
   // An empty range of new register means no repairing.
   assert(!empty(NewVRegs) && "We should not have to repair");
 
-  // Assume we are repairing a use and thus, the original reg will be
-  // the source of the repairing.
-  unsigned Src = MO.getReg();
-  unsigned Dst = *NewVRegs.begin();
+  MachineInstr *MI;
+  if (ValMapping.NumBreakDowns == 1) {
+    // Assume we are repairing a use and thus, the original reg will be
+    // the source of the repairing.
+    unsigned Src = MO.getReg();
+    unsigned Dst = *NewVRegs.begin();
 
-  // If we repair a definition, swap the source and destination for
-  // the repairing.
-  if (MO.isDef())
-    std::swap(Src, Dst);
+    // If we repair a definition, swap the source and destination for
+    // the repairing.
+    if (MO.isDef())
+      std::swap(Src, Dst);
 
-  assert((RepairPt.getNumInsertPoints() == 1 ||
-          TargetRegisterInfo::isPhysicalRegister(Dst)) &&
-         "We are about to create several defs for Dst");
+    assert((RepairPt.getNumInsertPoints() == 1 ||
+            TargetRegisterInfo::isPhysicalRegister(Dst)) &&
+           "We are about to create several defs for Dst");
 
-  // Build the instruction used to repair, then clone it at the right
-  // places. Avoiding buildCopy bypasses the check that Src and Dst have the
-  // same types because the type is a placeholder when this function is called.
-  MachineInstr *MI =
-      MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY).addDef(Dst).addUse(Src);
-  LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
-                    << '\n');
+    // Build the instruction used to repair, then clone it at the right
+    // places. Avoiding buildCopy bypasses the check that Src and Dst have the
+    // same types because the type is a placeholder when this function is called.
+    MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
+      .addDef(Dst)
+      .addUse(Src);
+    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
+               << '\n');
+  } else {
+    // TODO: Support with G_IMPLICIT_DEF + G_INSERT sequence or G_EXTRACT
+    // sequence.
+    assert(ValMapping.partsAllUniform() && "irregular breakdowns not supported");
+
+    LLT RegTy = MRI->getType(MO.getReg());
+    assert(!RegTy.isPointer() && "not implemented");
+
+    // FIXME: We could handle split vectors with concat_vectors easily, but this
+    // would require an agreement on the type of registers with the
+    // target. Currently createVRegs just uses scalar types, and expects the
+    // target code to replace this type (which we won't know about here)
+    assert((RegTy.isScalar() ||
+            RegTy.getNumElements() == ValMapping.NumBreakDowns) &&
+           "only basic vector breakdowns currently supported");
+
+    if (MO.isDef()) {
+      unsigned MergeOp = RegTy.isScalar() ?
+        TargetOpcode::G_MERGE_VALUES : TargetOpcode::G_BUILD_VECTOR;
+
+      auto MergeBuilder =
+        MIRBuilder.buildInstrNoInsert(MergeOp)
+        .addDef(MO.getReg());
+
+      for (unsigned SrcReg : NewVRegs)
+        MergeBuilder.addUse(SrcReg);
+
+      MI = MergeBuilder;
+    } else {
+      MachineInstrBuilder UnMergeBuilder =
+        MIRBuilder.buildInstrNoInsert(TargetOpcode::G_UNMERGE_VALUES);
+      for (unsigned DefReg : NewVRegs)
+        UnMergeBuilder.addDef(DefReg);
+
+      UnMergeBuilder.addUse(MO.getReg());
+      MI = UnMergeBuilder;
+    }
+  }
+
+  if (RepairPt.getNumInsertPoints() != 1)
+    report_fatal_error("need testcase to support multiple insertion points");
+
   // TODO:
   // Check if MI is legal. if not, we need to legalize all the
   // instructions we are going to insert.
@@ -195,7 +239,8 @@ uint64_t RegBankSelect::getRepairCost(
   const RegisterBank *CurRegBank = RBI->getRegBank(MO.getReg(), *MRI, *TRI);
   // If MO does not have a register bank, we should have just been
   // able to set one unless we have to break the value down.
-  assert((!IsSameNumOfValues || CurRegBank) && "We should not have to repair");
+  assert(CurRegBank || MO.isDef());
+
   // Def: Val <- NewDefs
   //     Same number of values: copy
   //     Different number: Val = build_sequence Defs1, Defs2, ...
@@ -205,6 +250,9 @@ uint64_t RegBankSelect::getRepairCost(
   //           extract_value Val, Src1Begin, Src1Len, Src2Begin, Src2Len, ...
   // We should remember that this value is available somewhere else to
   // coalesce the value.
+
+  if (ValMapping.NumBreakDowns != 1)
+    return RBI->getBreakDownCost(ValMapping, CurRegBank);
 
   if (IsSameNumOfValues) {
     const RegisterBank *DesiredRegBrank = ValMapping.BreakDown[0].RegBank;
@@ -528,7 +576,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
 bool RegBankSelect::applyMapping(
     MachineInstr &MI, const RegisterBankInfo::InstructionMapping &InstrMapping,
     SmallVectorImpl<RegBankSelect::RepairingPlacement> &RepairPts) {
-  // OpdMapper will hold all the information needed for the rewritting.
+  // OpdMapper will hold all the information needed for the rewriting.
   RegisterBankInfo::OperandsMapper OpdMapper(MI, InstrMapping, *MRI);
 
   // First, place the repairing code.
@@ -714,18 +762,23 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
     // - Terminators must be the last instructions:
     //   * Before, move the insert point before the first terminator.
     //   * After, we have to split the outcoming edges.
-    unsigned Reg = MO.getReg();
     if (Before) {
       // Check whether Reg is defined by any terminator.
-      MachineBasicBlock::iterator It = MI;
-      for (auto Begin = MI.getParent()->begin();
-           --It != Begin && It->isTerminator();)
-        if (It->modifiesRegister(Reg, &TRI)) {
-          // Insert the repairing code right after the definition.
-          addInsertPoint(*It, /*Before*/ false);
-          return;
-        }
-      addInsertPoint(*It, /*Before*/ true);
+      MachineBasicBlock::reverse_iterator It = MI;
+      auto REnd = MI.getParent()->rend();
+
+      for (; It != REnd && It->isTerminator(); ++It) {
+        assert(!It->modifiesRegister(MO.getReg(), &TRI) &&
+               "copy insertion in middle of terminators not handled");
+      }
+
+      if (It == REnd) {
+        addInsertPoint(*MI.getParent()->begin(), true);
+        return;
+      }
+
+      // We are sure to be right before the first terminator.
+      addInsertPoint(*It, /*Before*/ false);
       return;
     }
     // Make sure Reg is not redefined by other terminators, otherwise
@@ -733,7 +786,8 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
     for (MachineBasicBlock::iterator It = MI, End = MI.getParent()->end();
          ++It != End;)
       // The machine verifier should reject this kind of code.
-      assert(It->modifiesRegister(Reg, &TRI) && "Do not know where to split");
+      assert(It->modifiesRegister(MO.getReg(), &TRI) &&
+             "Do not know where to split");
     // Split each outcoming edges.
     MachineBasicBlock &Src = *MI.getParent();
     for (auto &Succ : Src.successors())

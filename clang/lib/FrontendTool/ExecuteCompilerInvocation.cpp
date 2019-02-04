@@ -1,9 +1,8 @@
 //===--- ExecuteCompilerInvocation.cpp ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -238,8 +237,11 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -analyzer-checker-help.
   // This should happen AFTER plugins have been loaded!
   if (Clang->getAnalyzerOpts()->ShowCheckerHelp) {
-    ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins,
-                           Clang->getDiagnostics());
+    ento::printCheckerHelp(llvm::outs(),
+                           Clang->getFrontendOpts().Plugins,
+                           *Clang->getAnalyzerOpts(),
+                           Clang->getDiagnostics(),
+                           Clang->getLangOpts());
     return true;
   }
 
@@ -248,7 +250,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     ento::printEnabledCheckerList(llvm::outs(),
                                   Clang->getFrontendOpts().Plugins,
                                   *Clang->getAnalyzerOpts(),
-                                  Clang->getDiagnostics());
+                                  Clang->getDiagnostics(),
+                                  Clang->getLangOpts());
   }
 
   // Honor -analyzer-config-help.

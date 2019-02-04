@@ -10,6 +10,11 @@ add_custom_target(check-clang-python
 set(RUN_PYTHON_TESTS TRUE)
 set_target_properties(check-clang-python PROPERTIES FOLDER "Clang tests")
 
+# Tests require libclang.so which is only built with LLVM_ENABLE_PIC=ON
+if(NOT LLVM_ENABLE_PIC)
+  set(RUN_PYTHON_TESTS FALSE)
+endif()
+
 # Do not try to run if libclang was built with ASan because
 # the sanitizer library will likely be loaded too late to perform
 # interception and will then fail.

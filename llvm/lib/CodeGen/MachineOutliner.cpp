@@ -1,9 +1,8 @@
 //===---- MachineOutliner.cpp - Outline instructions -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -1105,9 +1104,9 @@ MachineOutliner::createOutlinedFunction(Module &M, OutlinedFunction &OF,
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
-  Function *F = dyn_cast<Function>(
-      M.getOrInsertFunction(NameStream.str(), Type::getVoidTy(C)));
-  assert(F && "Function was null!");
+  Function *F =
+      Function::Create(FunctionType::get(Type::getVoidTy(C), false),
+                       Function::ExternalLinkage, NameStream.str(), M);
 
   // NOTE: If this is linkonceodr, then we can take advantage of linker deduping
   // which gives us better results when we outline from linkonceodr functions.

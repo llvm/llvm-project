@@ -1,9 +1,8 @@
 //===- MIRParser.cpp - MIR serialization format parser implementation -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -271,8 +270,9 @@ bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
 /// Create an empty function with the given name.
 static Function *createDummyFunction(StringRef Name, Module &M) {
   auto &Context = M.getContext();
-  Function *F = cast<Function>(M.getOrInsertFunction(
-      Name, FunctionType::get(Type::getVoidTy(Context), false)));
+  Function *F =
+      Function::Create(FunctionType::get(Type::getVoidTy(Context), false),
+                       Function::ExternalLinkage, Name, M);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
   new UnreachableInst(Context, BB);
   return F;

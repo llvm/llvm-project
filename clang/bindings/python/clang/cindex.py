@@ -1,9 +1,8 @@
 #===- cindex.py - Python Indexing Library Bindings -----------*- python -*--===#
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===------------------------------------------------------------------------===#
 
@@ -64,7 +63,6 @@ from __future__ import absolute_import, division, print_function
 # o implement additional SourceLocation, SourceRange, and File methods.
 
 from ctypes import *
-import collections
 
 import clang.enumerations
 
@@ -122,6 +120,14 @@ elif sys.version_info[0] == 2:
 
     def b(x):
         return x
+
+# Importing ABC-s directly from collections is deprecated since Python 3.7,
+# will stop working in Python 3.8.
+# See: https://docs.python.org/dev/whatsnew/3.7.html#id3
+if sys.version_info[:2] >= (3, 7):
+    from collections import abc as collections_abc
+else:
+    import collections as collections_abc
 
 # We only support PathLike objects on Python version with os.fspath present
 # to be consistent with the Python standard library. On older Python versions
@@ -2181,7 +2187,7 @@ class Type(Structure):
         The returned object is iterable and indexable. Each item in the
         container is a Type instance.
         """
-        class ArgumentsIterator(collections.Sequence):
+        class ArgumentsIterator(collections_abc.Sequence):
             def __init__(self, parent):
                 self.parent = parent
                 self.length = None
@@ -2808,9 +2814,9 @@ class TranslationUnit(ClangObject):
             for i, (name, contents) in enumerate(unsaved_files):
                 if hasattr(contents, "read"):
                     contents = contents.read()
-
+                contents = b(contents)
                 unsaved_array[i].name = b(fspath(name))
-                unsaved_array[i].contents = b(contents)
+                unsaved_array[i].contents = contents
                 unsaved_array[i].length = len(contents)
 
         ptr = conf.lib.clang_parseTranslationUnit(index,
@@ -2987,17 +2993,13 @@ class TranslationUnit(ClangObject):
         unsaved_files_array = 0
         if len(unsaved_files):
             unsaved_files_array = (_CXUnsavedFile * len(unsaved_files))()
-            for i,(name,value) in enumerate(unsaved_files):
-                if not isinstance(value, str):
-                    # FIXME: It would be great to support an efficient version
-                    # of this, one day.
-                    value = value.read()
-                    print(value)
-                if not isinstance(value, str):
-                    raise TypeError('Unexpected unsaved file contents.')
-                unsaved_files_array[i].name = fspath(name)
-                unsaved_files_array[i].contents = value
-                unsaved_files_array[i].length = len(value)
+            for i,(name,contents) in enumerate(unsaved_files):
+                if hasattr(contents, "read"):
+                    contents = contents.read()
+                contents = b(contents)
+                unsaved_files_array[i].name = b(fspath(name))
+                unsaved_files_array[i].contents = contents
+                unsaved_files_array[i].length = len(contents)
         ptr = conf.lib.clang_reparseTranslationUnit(self, len(unsaved_files),
                 unsaved_files_array, options)
 
@@ -3051,17 +3053,13 @@ class TranslationUnit(ClangObject):
         unsaved_files_array = 0
         if len(unsaved_files):
             unsaved_files_array = (_CXUnsavedFile * len(unsaved_files))()
-            for i,(name,value) in enumerate(unsaved_files):
-                if not isinstance(value, str):
-                    # FIXME: It would be great to support an efficient version
-                    # of this, one day.
-                    value = value.read()
-                    print(value)
-                if not isinstance(value, str):
-                    raise TypeError('Unexpected unsaved file contents.')
+            for i,(name,contents) in enumerate(unsaved_files):
+                if hasattr(contents, "read"):
+                    contents = contents.read()
+                contents = b(contents)
                 unsaved_files_array[i].name = b(fspath(name))
-                unsaved_files_array[i].contents = b(value)
-                unsaved_files_array[i].length = len(value)
+                unsaved_files_array[i].contents = contents
+                unsaved_files_array[i].length = len(contents)
         ptr = conf.lib.clang_codeCompleteAt(self, fspath(path), line, column,
                 unsaved_files_array, len(unsaved_files), options)
         if ptr:

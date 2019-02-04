@@ -101,5 +101,4 @@ Quick Links
 * `LLVM Bugzilla <https://bugs.llvm.org/>`_
 * `cfe-commits Mailing List`_
 * `cfe-dev Mailing List`_
-* `Browse libunwind -- SVN <http://llvm.org/svn/llvm-project/libunwind/trunk/>`_
-* `Browse libunwind -- ViewVC <http://llvm.org/viewvc/llvm-project/libunwind/trunk/>`_
+* `Browse libunwind Sources <https://github.com/llvm/llvm-project/blob/master/libunwind/>`_

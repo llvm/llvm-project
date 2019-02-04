@@ -1,9 +1,8 @@
 //===- AArch64InstrFormats.td - AArch64 Instruction Formats --*- tblgen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -1818,6 +1817,14 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
 
   def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (sext GPR32:$Rm)))),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, GPR32:$Rm)>;
+
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (sext GPR32:$Rm)))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG (i32 0), GPR32:$Rm, sub_32))>;
+
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext GPR32:$Rm)))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG (i32 0), GPR32:$Rm, sub_32))>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>

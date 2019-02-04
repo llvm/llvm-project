@@ -1,9 +1,8 @@
 //===-- DraftStoreTests.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,29 +12,28 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 
 struct IncrementalTestStep {
-  StringRef Src;
-  StringRef Contents;
+  llvm::StringRef Src;
+  llvm::StringRef Contents;
 };
 
-int rangeLength(StringRef Code, const Range &Rng) {
-  Expected<size_t> Start = positionToOffset(Code, Rng.start);
-  Expected<size_t> End = positionToOffset(Code, Rng.end);
+int rangeLength(llvm::StringRef Code, const Range &Rng) {
+  llvm::Expected<size_t> Start = positionToOffset(Code, Rng.start);
+  llvm::Expected<size_t> End = positionToOffset(Code, Rng.end);
   assert(Start);
   assert(End);
   return *End - *Start;
 }
 
 /// Send the changes one by one to updateDraft, verify the intermediate results.
-void stepByStep(ArrayRef<IncrementalTestStep> Steps) {
+void stepByStep(llvm::ArrayRef<IncrementalTestStep> Steps) {
   DraftStore DS;
   Annotations InitialSrc(Steps.front().Src);
-  constexpr StringLiteral Path("/hello.cpp");
+  constexpr llvm::StringLiteral Path("/hello.cpp");
 
   // Set the initial content.
   DS.addDraft(Path, InitialSrc.code());
@@ -43,14 +41,14 @@ void stepByStep(ArrayRef<IncrementalTestStep> Steps) {
   for (size_t i = 1; i < Steps.size(); i++) {
     Annotations SrcBefore(Steps[i - 1].Src);
     Annotations SrcAfter(Steps[i].Src);
-    StringRef Contents = Steps[i - 1].Contents;
+    llvm::StringRef Contents = Steps[i - 1].Contents;
     TextDocumentContentChangeEvent Event{
         SrcBefore.range(),
         rangeLength(SrcBefore.code(), SrcBefore.range()),
         Contents.str(),
     };
 
-    Expected<std::string> Result = DS.updateDraft(Path, {Event});
+    llvm::Expected<std::string> Result = DS.updateDraft(Path, {Event});
     ASSERT_TRUE(!!Result);
     EXPECT_EQ(*Result, SrcAfter.code());
     EXPECT_EQ(*DS.getDraft(Path), SrcAfter.code());
@@ -58,16 +56,16 @@ void stepByStep(ArrayRef<IncrementalTestStep> Steps) {
 }
 
 /// Send all the changes at once to updateDraft, check only the final result.
-void allAtOnce(ArrayRef<IncrementalTestStep> Steps) {
+void allAtOnce(llvm::ArrayRef<IncrementalTestStep> Steps) {
   DraftStore DS;
   Annotations InitialSrc(Steps.front().Src);
   Annotations FinalSrc(Steps.back().Src);
-  constexpr StringLiteral Path("/hello.cpp");
+  constexpr llvm::StringLiteral Path("/hello.cpp");
   std::vector<TextDocumentContentChangeEvent> Changes;
 
   for (size_t i = 0; i < Steps.size() - 1; i++) {
     Annotations Src(Steps[i].Src);
-    StringRef Contents = Steps[i].Contents;
+    llvm::StringRef Contents = Steps[i].Contents;
 
     Changes.push_back({
         Src.range(),
@@ -79,9 +77,9 @@ void allAtOnce(ArrayRef<IncrementalTestStep> Steps) {
   // Set the initial content.
   DS.addDraft(Path, InitialSrc.code());
 
-  Expected<std::string> Result = DS.updateDraft(Path, Changes);
+  llvm::Expected<std::string> Result = DS.updateDraft(Path, Changes);
 
-  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_TRUE(!!Result) << llvm::toString(Result.takeError());
   EXPECT_EQ(*Result, FinalSrc.code());
   EXPECT_EQ(*DS.getDraft(Path), FinalSrc.code());
 }

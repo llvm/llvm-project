@@ -1,9 +1,8 @@
 //===- WasmObjectFile.h - Wasm object file implementation -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -130,6 +129,7 @@ public:
   static bool classof(const Binary *v) { return v->isWasm(); }
 
   const wasm::WasmDylinkInfo &dylinkInfo() const { return DylinkInfo; }
+  const wasm::WasmProducerInfo &getProducerInfo() const { return ProducerInfo; }
   ArrayRef<wasm::WasmSignature> types() const { return Signatures; }
   ArrayRef<uint32_t> functionTypes() const { return FunctionTypes; }
   ArrayRef<wasm::WasmImport> imports() const { return Imports; }
@@ -149,7 +149,6 @@ public:
   uint32_t getNumImportedGlobals() const { return NumImportedGlobals; }
   uint32_t getNumImportedFunctions() const { return NumImportedFunctions; }
   uint32_t getNumImportedEvents() const { return NumImportedEvents; }
-
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
@@ -222,6 +221,7 @@ private:
   bool isValidDataSymbol(uint32_t Index) const;
   bool isValidSectionSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
+  const wasm::WasmFunction &getDefinedFunction(uint32_t Index) const;
   wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
   wasm::WasmEvent &getDefinedEvent(uint32_t Index);
 
@@ -252,11 +252,13 @@ private:
   Error parseLinkingSection(ReadContext &Ctx);
   Error parseLinkingSectionSymtab(ReadContext &Ctx);
   Error parseLinkingSectionComdat(ReadContext &Ctx);
+  Error parseProducersSection(ReadContext &Ctx);
   Error parseRelocSection(StringRef Name, ReadContext &Ctx);
 
   wasm::WasmObjectHeader Header;
   std::vector<WasmSection> Sections;
   wasm::WasmDylinkInfo DylinkInfo;
+  wasm::WasmProducerInfo ProducerInfo;
   std::vector<wasm::WasmSignature> Signatures;
   std::vector<uint32_t> FunctionTypes;
   std::vector<wasm::WasmTable> Tables;

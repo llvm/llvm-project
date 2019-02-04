@@ -75,7 +75,6 @@ pr41935.c
 920501-3.c
 920728-1.c
 pr28865.c
-widechar-2.c
 attr-alias-1.C
 attr-alias-2.C
 attr-ifunc-1.C

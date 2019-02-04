@@ -1,9 +1,8 @@
 //===-- PlatformNetBSD.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -287,8 +286,8 @@ PlatformNetBSD::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   // Now create the gdb-remote process.
   LLDB_LOG(log, "having target create process with gdb-remote plugin");
-  process_sp = target->CreateProcess(
-      launch_info.GetListenerForProcess(debugger), "gdb-remote", nullptr);
+  process_sp =
+      target->CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr);
 
   if (!process_sp) {
     error.SetErrorString("CreateProcess() failed for gdb-remote process");

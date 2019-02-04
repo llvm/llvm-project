@@ -9,6 +9,162 @@ main_body:
   ret <4 x float> %v
 }
 
+; GCN-LABEL: {{^}}sample_1d_tfe:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v2, v0
+; GCN: v_mov_b32_e32 v3, v0
+; GCN: v_mov_b32_e32 v4, v0
+; GCN: image_sample v[0:7], v5, s[0:7], s[8:11] dmask:0xf tfe{{$}}
+define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %v.vec = extractvalue {<4 x float>, i32} %v, 0
+  %v.err = extractvalue {<4 x float>, i32} %v, 1
+  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  ret <4 x float> %v.vec
+}
+
+; GCN-LABEL: {{^}}sample_1d_tfe_adjust_writemask_1:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: image_sample v[0:1], v2, s[0:7], s[8:11] dmask:0x1 tfe{{$}}
+define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %res.vec = extractvalue {<4 x float>,i32} %v, 0
+  %res.f = extractelement <4 x float> %res.vec, i32 0
+  %res.err = extractvalue {<4 x float>,i32} %v, 1
+  %res.errf = bitcast i32 %res.err to float
+  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
+  ret <2 x float> %res
+}
+
+; GCN-LABEL: {{^}}sample_1d_tfe_adjust_writemask_2:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: image_sample v[0:1], v2, s[0:7], s[8:11] dmask:0x2 tfe{{$}}
+define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %res.vec = extractvalue {<4 x float>,i32} %v, 0
+  %res.f = extractelement <4 x float> %res.vec, i32 1
+  %res.err = extractvalue {<4 x float>,i32} %v, 1
+  %res.errf = bitcast i32 %res.err to float
+  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
+  ret <2 x float> %res
+}
+
+; GCN-LABEL: {{^}}sample_1d_tfe_adjust_writemask_3:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: image_sample v[0:1], v2, s[0:7], s[8:11] dmask:0x4 tfe{{$}}
+define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_3(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %res.vec = extractvalue {<4 x float>,i32} %v, 0
+  %res.f = extractelement <4 x float> %res.vec, i32 2
+  %res.err = extractvalue {<4 x float>,i32} %v, 1
+  %res.errf = bitcast i32 %res.err to float
+  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
+  ret <2 x float> %res
+}
+
+; GCN-LABEL: {{^}}sample_1d_tfe_adjust_writemask_4:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: image_sample v[0:1], v2, s[0:7], s[8:11] dmask:0x8 tfe{{$}}
+define amdgpu_ps <2 x float> @sample_1d_tfe_adjust_writemask_4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %res.vec = extractvalue {<4 x float>,i32} %v, 0
+  %res.f = extractelement <4 x float> %res.vec, i32 3
+  %res.err = extractvalue {<4 x float>,i32} %v, 1
+  %res.errf = bitcast i32 %res.err to float
+  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
+  ret <2 x float> %res
+}
+
+; GCN-LABEL: {{^}}sample_1d_tfe_adjust_writemask_12:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v2, v0
+; GCN: image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0x3 tfe{{$}}
+define amdgpu_ps <4 x float> @sample_1d_tfe_adjust_writemask_12(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %res.vec = extractvalue {<4 x float>,i32} %v, 0
+  %res.f1 = extractelement <4 x float> %res.vec, i32 0
+  %res.f2 = extractelement <4 x float> %res.vec, i32 1
+  %res.err = extractvalue {<4 x float>,i32} %v, 1
+  %res.errf = bitcast i32 %res.err to float
+  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
+  %res = insertelement <4 x float> %res.tmp2, float %res.errf, i32 2
+  ret <4 x float> %res
+}
+
+; GCN-LABEL: {{^}}sample_1d_tfe_adjust_writemask_24:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v2, v0
+; GCN: image_sample v[0:2], v3, s[0:7], s[8:11] dmask:0xa tfe{{$}}
+define amdgpu_ps <4 x float> @sample_1d_tfe_adjust_writemask_24(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %res.vec = extractvalue {<4 x float>,i32} %v, 0
+  %res.f1 = extractelement <4 x float> %res.vec, i32 1
+  %res.f2 = extractelement <4 x float> %res.vec, i32 3
+  %res.err = extractvalue {<4 x float>,i32} %v, 1
+  %res.errf = bitcast i32 %res.err to float
+  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
+  %res = insertelement <4 x float> %res.tmp2, float %res.errf, i32 2
+  ret <4 x float> %res
+}
+
+; GCN-LABEL: {{^}}sample_1d_tfe_adjust_writemask_134:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v2, v0
+; GCN: v_mov_b32_e32 v3, v0
+; GCN: image_sample v[0:3], v4, s[0:7], s[8:11] dmask:0xd tfe{{$}}
+define amdgpu_ps <4 x float> @sample_1d_tfe_adjust_writemask_134(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %res.vec = extractvalue {<4 x float>,i32} %v, 0
+  %res.f1 = extractelement <4 x float> %res.vec, i32 0
+  %res.f2 = extractelement <4 x float> %res.vec, i32 2
+  %res.f3 = extractelement <4 x float> %res.vec, i32 3
+  %res.err = extractvalue {<4 x float>,i32} %v, 1
+  %res.errf = bitcast i32 %res.err to float
+  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
+  %res.tmp3 = insertelement <4 x float> %res.tmp2, float %res.f3, i32 2
+  %res = insertelement <4 x float> %res.tmp3, float %res.errf, i32 3
+  ret <4 x float> %res
+}
+
+; GCN-LABEL: {{^}}sample_1d_lwe:
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v2, v0
+; GCN: v_mov_b32_e32 v3, v0
+; GCN: v_mov_b32_e32 v4, v0
+; GCN: image_sample v[0:7], v5, s[0:7], s[8:11] dmask:0xf lwe{{$}}
+define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
+main_body:
+  %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 2, i32 0)
+  %v.vec = extractvalue {<4 x float>, i32} %v, 0
+  %v.err = extractvalue {<4 x float>, i32} %v, 1
+  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  ret <4 x float> %v.vec
+}
+
 ; GCN-LABEL: {{^}}sample_2d:
 ; GCN: image_sample v[0:3], v[0:1], s[0:7], s[8:11] dmask:0xf{{$}}
 define amdgpu_ps <4 x float> @sample_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
@@ -361,12 +517,39 @@ main_body:
   ret float %v
 }
 
+; GCN-LABEL: {{^}}sample_c_d_o_2darray_V1_tfe:
+; GCN: image_sample_c_d_o v[9:10], v[0:15], s[0:7], s[8:11] dmask:0x4 tfe da{{$}}
+define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, i32 addrspace(1)* inreg %out) {
+main_body:
+  %v = call {float,i32} @llvm.amdgcn.image.sample.c.d.o.2darray.f32i32.f32.f32(i32 4, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %v.vec = extractvalue {float, i32} %v, 0
+  %v.err = extractvalue {float, i32} %v, 1
+  store i32 %v.err, i32 addrspace(1)* %out, align 4
+  ret float %v.vec
+}
+
 ; GCN-LABEL: {{^}}sample_c_d_o_2darray_V2:
 ; GCN: image_sample_c_d_o v[0:1], v[0:15], s[0:7], s[8:11] dmask:0x6 da{{$}}
 define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice) {
 main_body:
   %v = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32 6, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <2 x float> %v
+}
+
+; GCN-LABEL: {{^}}sample_c_d_o_2darray_V2_tfe:
+; GCN: image_sample_c_d_o v[9:12], v[0:15], s[0:7], s[8:11] dmask:0x6 tfe da{{$}}
+define amdgpu_ps <4 x float> @sample_c_d_o_2darray_V2_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice) {
+main_body:
+  %v = call {<2 x float>, i32} @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32i32.f32.f32(i32 6, i32 %offset, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
+  %v.vec = extractvalue {<2 x float>, i32} %v, 0
+  %v.f1 = extractelement <2 x float> %v.vec, i32 0
+  %v.f2 = extractelement <2 x float> %v.vec, i32 1
+  %v.err = extractvalue {<2 x float>, i32} %v, 1
+  %v.errf = bitcast i32 %v.err to float
+  %res.0 = insertelement <4 x float> undef, float %v.f1, i32 0
+  %res.1 = insertelement <4 x float> %res.0, float %v.f2, i32 1
+  %res.2 = insertelement <4 x float> %res.1, float %v.errf, i32 2
+  ret <4 x float> %res.2
 }
 
 ; GCN-LABEL: {{^}}sample_1d_unorm:
@@ -491,6 +674,7 @@ main_body:
 }
 
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
@@ -542,7 +726,9 @@ declare <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32(i32, float, floa
 declare <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare {float, i32} @llvm.amdgcn.image.sample.c.d.o.2darray.f32i32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare {<2 x float>, i32} @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32i32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

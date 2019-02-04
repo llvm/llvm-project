@@ -34,6 +34,10 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
+#if check(impl_destroying_delete, 201806, 201806, 201806, 201806, 201806)
+#error "wrong value for __cpp_impl_destroying_delete"
+#endif
+
 // --- C++17 features ---
 
 #if check(hex_float, 0, 0, 0, 201603, 201603)

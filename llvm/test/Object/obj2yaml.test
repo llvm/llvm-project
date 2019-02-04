@@ -364,6 +364,7 @@ ELF-MIPSEL-NEXT:   - Name:            .rel.text
 ELF-MIPSEL-NEXT:     Type:            SHT_REL
 ELF-MIPSEL-NEXT:     Link:            .symtab
 ELF-MIPSEL-NEXT:     AddressAlign:    0x0000000000000004
+ELF-MIPSEL-NEXT:     EntSize:         0x0000000000000008
 ELF-MIPSEL-NEXT:     Info:            .text
 ELF-MIPSEL-NEXT:     Relocations:
 ELF-MIPSEL-NEXT:       - Offset:          0x0000000000000000
@@ -402,6 +403,7 @@ ELF-MIPSEL-NEXT:   - Name:            .rodata.str1.1
 ELF-MIPSEL-NEXT:     Type:            SHT_PROGBITS
 ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
 ELF-MIPSEL-NEXT:     AddressAlign:    0x0000000000000001
+ELF-MIPSEL-NEXT:     EntSize:         0x0000000000000001
 ELF-MIPSEL-NEXT:     Content:         48656C6C6F20576F726C640A00
 ELF-MIPSEL-NEXT:   - Name:            .reginfo
 ELF-MIPSEL-NEXT:     Type:            SHT_MIPS_REGINFO
@@ -481,6 +483,7 @@ ELF-MIPS64EL-NEXT:   - Name:            .rela.data
 ELF-MIPS64EL-NEXT:     Type:            SHT_RELA
 ELF-MIPS64EL-NEXT:     Link:            .symtab
 ELF-MIPS64EL-NEXT:     AddressAlign:    0x0000000000000008
+ELF-MIPS64EL-NEXT:     EntSize:         0x0000000000000018
 ELF-MIPS64EL-NEXT:     Info:            .data
 ELF-MIPS64EL-NEXT:     Relocations:
 ELF-MIPS64EL-NEXT:       - Offset:          0
@@ -494,6 +497,7 @@ ELF-MIPS64EL-NEXT:   - Name:            .MIPS.options
 ELF-MIPS64EL-NEXT:     Type:            SHT_MIPS_OPTIONS
 ELF-MIPS64EL-NEXT:     Flags:           [ SHF_ALLOC, SHF_MIPS_NOSTRIP ]
 ELF-MIPS64EL-NEXT:     AddressAlign:    0x0000000000000008
+ELF-MIPS64EL-NEXT:     EntSize:         0x0000000000000001
 ELF-MIPS64EL-NEXT:     Content:         '01280000000000000000000000000000000000000000000000000000000000000000000000000000'
 ELF-MIPS64EL-NEXT:   - Name:            .pdr
 ELF-MIPS64EL-NEXT:     Type:            SHT_PROGBITS
@@ -549,6 +553,7 @@ ELF-X86-64-NEXT:     Type:            SHT_RELA
 ELF-X86-64-NEXT:     Address:         0x0000000000000038
 ELF-X86-64-NEXT:     Link:            .symtab
 ELF-X86-64-NEXT:     AddressAlign:    0x0000000000000008
+ELF-X86-64-NEXT:     EntSize:         0x0000000000000018
 ELF-X86-64-NEXT:     Info:            .text
 ELF-X86-64-NEXT:     Relocations:
 ELF-X86-64-NEXT:       - Offset:          0x000000000000000D
@@ -651,7 +656,7 @@ WASM-NEXT: FileHeader:
 WASM-NEXT:   Version:         0x00000001
 WASM:        - Type:            CUSTOM
 WASM-NEXT:     Name:            linking
-WASM-NEXT:     Version:         1
+WASM-NEXT:     Version:         2
 WASM-NEXT:     SymbolTable:
 WASM-NEXT:       - Index:           0
 WASM-NEXT:         Kind:            FUNCTION
@@ -675,7 +680,7 @@ WASM:              Name:            var
 WASM:          SegmentInfo:
 WASM-NEXT:       - Index:           0
 WASM-NEXT:         Name:            .rodata..L.str
-WASM-NEXT:         Alignment:       1
+WASM-NEXT:         Alignment:       0
 WASM-NEXT:         Flags:           [  ]
 WASM-NEXT:       - Index:           1
 WASM:      ...

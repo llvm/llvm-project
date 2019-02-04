@@ -1,9 +1,8 @@
 //===- FuzzerSHA1.h - Private copy of the SHA1 implementation ---*- C++ -* ===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // This code is taken from public domain
@@ -32,7 +31,8 @@ namespace {  // Added for LibFuzzer
 
 #ifdef __BIG_ENDIAN__
 # define SHA_BIG_ENDIAN
-#elif defined __LITTLE_ENDIAN__
+// Windows is always little endian and MSVC doesn't have <endian.h>
+#elif defined __LITTLE_ENDIAN__ || LIBFUZZER_WINDOWS
 /* override */
 #elif defined __BYTE_ORDER
 # if __BYTE_ORDER__ ==  __ORDER_BIG_ENDIAN__

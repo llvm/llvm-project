@@ -1,0 +1,17 @@
+source_set("sources") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  deps = [
+    "//compiler-rt/lib/sanitizer_common:sources",
+  ]
+  sources = [
+    "interception.h",
+    "interception_linux.cc",
+    "interception_linux.h",
+    "interception_mac.cc",
+    "interception_mac.h",
+    "interception_type_test.cc",
+    "interception_win.cc",
+    "interception_win.h",
+  ]
+}

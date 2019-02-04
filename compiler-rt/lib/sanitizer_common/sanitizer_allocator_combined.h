@@ -1,9 +1,8 @@
 //===-- sanitizer_allocator_combined.h --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -34,15 +33,15 @@ class CombinedAllocator {
                 "SecondaryAllocator is using wrong AddressSpaceView");
 
   void InitLinkerInitialized(s32 release_to_os_interval_ms) {
+    stats_.InitLinkerInitialized();
     primary_.Init(release_to_os_interval_ms);
     secondary_.InitLinkerInitialized();
-    stats_.InitLinkerInitialized();
   }
 
   void Init(s32 release_to_os_interval_ms) {
+    stats_.Init();
     primary_.Init(release_to_os_interval_ms);
     secondary_.Init();
-    stats_.Init();
   }
 
   void *Allocate(AllocatorCache *cache, uptr size, uptr alignment) {

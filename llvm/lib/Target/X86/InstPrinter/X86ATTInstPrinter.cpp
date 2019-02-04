@@ -1,9 +1,8 @@
 //===-- X86ATTInstPrinter.cpp - AT&T assembly instruction printing --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -199,4 +198,15 @@ void X86ATTInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
 
   O << markup("<imm:") << '$' << formatImm(MI->getOperand(Op).getImm() & 0xff)
     << markup(">");
+}
+
+void X86ATTInstPrinter::printSTiRegOperand(const MCInst *MI, unsigned OpNo,
+                                           raw_ostream &OS) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  unsigned Reg = Op.getReg();
+  // Override the default printing to print st(0) instead st.
+  if (Reg == X86::ST0)
+    OS << markup("<reg:") << "%st(0)" << markup(">");
+  else
+    printRegName(OS, Reg);
 }

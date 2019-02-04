@@ -1,9 +1,8 @@
 //===- LazyEmittingLayerTest.cpp - Unit tests for the lazy emitting layer -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +18,10 @@ namespace {
 TEST(IndirectionUtilsTest, MakeStub) {
   LLVMContext Context;
   ModuleBuilder MB(Context, "x86_64-apple-macosx10.10", "");
-  Function *F = MB.createFunctionDecl<void(DummyStruct, DummyStruct)>("");
+  FunctionType *FTy = FunctionType::get(
+      Type::getVoidTy(Context),
+      {getDummyStructTy(Context), getDummyStructTy(Context)}, false);
+  Function *F = MB.createFunctionDecl(FTy, "");
   AttributeSet FnAttrs = AttributeSet::get(
       Context, AttrBuilder().addAttribute(Attribute::NoUnwind));
   AttributeSet RetAttrs; // None

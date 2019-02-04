@@ -1,9 +1,8 @@
 //===-- CommandObjectReproducer.cpp -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -68,12 +67,11 @@ protected:
     }
 
     auto &r = repro::Reproducer::Instance();
-    if (auto generator = r.GetGenerator()) {
+    if (r.GetGenerator()) {
       result.GetOutputStream() << "Reproducer is in capture mode.\n";
-    } else if (auto generator = r.GetLoader()) {
+    } else if (r.GetLoader()) {
       result.GetOutputStream() << "Reproducer is in replay mode.\n";
     } else {
-
       result.GetOutputStream() << "Reproducer is off.\n";
     }
 

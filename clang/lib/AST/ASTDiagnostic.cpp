@@ -1,9 +1,8 @@
 //===--- ASTDiagnostic.cpp - Diagnostic Printing Hooks for AST Nodes ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -334,6 +333,20 @@ void clang::FormatASTNodeDiagnosticArgument(
 
   switch (Kind) {
     default: llvm_unreachable("unknown ArgumentKind");
+    case DiagnosticsEngine::ak_qual: {
+      assert(Modifier.empty() && Argument.empty() &&
+             "Invalid modifier for Qualfiers argument");
+
+      Qualifiers Q(Qualifiers::fromOpaqueValue(Val));
+      auto S = Q.getAsString();
+      if (S.empty()) {
+        OS << "unqualified";
+        NeedQuotes = false;
+      } else {
+        OS << Q.getAsString();
+      }
+      break;
+    }
     case DiagnosticsEngine::ak_qualtype_pair: {
       TemplateDiffTypes &TDT = *reinterpret_cast<TemplateDiffTypes*>(Val);
       QualType FromType =

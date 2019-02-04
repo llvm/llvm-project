@@ -1,9 +1,8 @@
 //===------- SemaTemplateVariadic.cpp - C++ Variadic Templates ------------===/
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===/
 //
 //  This file implements semantic analysis for C++0x variadic templates.
@@ -164,7 +163,7 @@ namespace {
       // A function parameter pack is a pack expansion, so cannot contain
       // an unexpanded parameter pack. Likewise for a template parameter
       // pack that contains any references to other packs.
-      if (D->isParameterPack())
+      if (D && D->isParameterPack())
         return true;
 
       return inherited::TraverseDecl(D);

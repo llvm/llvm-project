@@ -1,9 +1,8 @@
 //===- Consumed.cpp -------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -463,7 +462,6 @@ class ConsumedStmtVisitor : public ConstStmtVisitor<ConsumedStmtVisitor> {
   using InfoEntry = MapType::iterator;
   using ConstInfoEntry = MapType::const_iterator;
 
-  AnalysisDeclContext &AC;
   ConsumedAnalyzer &Analyzer;
   ConsumedStateMap *StateMap;
   MapType PropagationMap;
@@ -515,9 +513,8 @@ public:
   void VisitUnaryOperator(const UnaryOperator *UOp);
   void VisitVarDecl(const VarDecl *Var);
 
-  ConsumedStmtVisitor(AnalysisDeclContext &AC, ConsumedAnalyzer &Analyzer,
-                      ConsumedStateMap *StateMap)
-      : AC(AC), Analyzer(Analyzer), StateMap(StateMap) {}
+  ConsumedStmtVisitor(ConsumedAnalyzer &Analyzer, ConsumedStateMap *StateMap)
+      : Analyzer(Analyzer), StateMap(StateMap) {}
 
   PropagationInfo getInfo(const Expr *StmtNode) const {
     ConstInfoEntry Entry = findInfo(StmtNode);
@@ -774,8 +771,7 @@ void ConsumedStmtVisitor::VisitCXXBindTemporaryExpr(
 void ConsumedStmtVisitor::VisitCXXConstructExpr(const CXXConstructExpr *Call) {
   CXXConstructorDecl *Constructor = Call->getConstructor();
 
-  ASTContext &CurrContext = AC.getASTContext();
-  QualType ThisType = Constructor->getThisType(CurrContext)->getPointeeType();
+  QualType ThisType = Constructor->getThisType()->getPointeeType();
 
   if (!isConsumableType(ThisType))
     return;
@@ -793,7 +789,7 @@ void ConsumedStmtVisitor::VisitCXXConstructExpr(const CXXConstructExpr *Call) {
   } else if (Constructor->isCopyConstructor()) {
     // Copy state from arg.  If setStateOnRead then set arg to CS_Unknown.
     ConsumedState NS =
-      isSetOnReadPtrType(Constructor->getThisType(CurrContext)) ?
+      isSetOnReadPtrType(Constructor->getThisType()) ?
       CS_Unknown : CS_None;
     copyInfo(Call->getArg(0), Call, NS);
   } else {
@@ -1203,8 +1199,7 @@ void ConsumedAnalyzer::determineExpectedReturnState(AnalysisDeclContext &AC,
                                                     const FunctionDecl *D) {
   QualType ReturnType;
   if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
-    ASTContext &CurrContext = AC.getASTContext();
-    ReturnType = Constructor->getThisType(CurrContext)->getPointeeType();
+    ReturnType = Constructor->getThisType()->getPointeeType();
   } else
     ReturnType = D->getCallResultType();
 
@@ -1323,7 +1318,7 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
   BlockInfo = ConsumedBlockInfo(CFGraph->getNumBlockIDs(), SortedGraph);
 
   CurrStates = llvm::make_unique<ConsumedStateMap>();
-  ConsumedStmtVisitor Visitor(AC, *this, CurrStates.get());
+  ConsumedStmtVisitor Visitor(*this, CurrStates.get());
 
   // Add all trackable parameters to the state map.
   for (const auto *PI : D->parameters())

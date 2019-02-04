@@ -1,9 +1,8 @@
 //===- NonRelocatableStringpool.cpp - A simple stringpool  ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,6 +15,8 @@ DwarfStringPoolEntryRef NonRelocatableStringpool::getEntry(StringRef S) {
   if (S.empty() && !Strings.empty())
     return EmptyString;
 
+  if (Translator)
+    S = Translator(S);
   auto I = Strings.insert({S, DwarfStringPoolEntry()});
   auto &Entry = I.first->second;
   if (I.second || !Entry.isIndexed()) {
@@ -29,6 +30,10 @@ DwarfStringPoolEntryRef NonRelocatableStringpool::getEntry(StringRef S) {
 
 StringRef NonRelocatableStringpool::internString(StringRef S) {
   DwarfStringPoolEntry Entry{nullptr, 0, DwarfStringPoolEntry::NotIndexed};
+
+  if (Translator)
+    S = Translator(S);
+
   auto InsertResult = Strings.insert({S, Entry});
   return InsertResult.first->getKey();
 }

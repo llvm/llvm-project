@@ -1,9 +1,8 @@
 //===- Function.cpp - Implement the Global object classes -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -24,7 +23,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -950,10 +948,9 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::SameVecWidthArgument: {
     Type *EltTy = DecodeFixedType(Infos, Tys, Context);
     Type *Ty = Tys[D.getArgumentNumber()];
-    if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
+    if (auto *VTy = dyn_cast<VectorType>(Ty))
       return VectorType::get(EltTy, VTy->getNumElements());
-    }
-    llvm_unreachable("unhandled");
+    return EltTy;
   }
   case IITDescriptor::PtrToArgument: {
     Type *Ty = Tys[D.getArgumentNumber()];
@@ -1021,9 +1018,10 @@ bool Intrinsic::isLeaf(ID id) {
 Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
-  return
-    cast<Function>(M->getOrInsertFunction(getName(id, Tys),
-                                          getType(M->getContext(), id, Tys)));
+  return cast<Function>(
+      M->getOrInsertFunction(getName(id, Tys),
+                             getType(M->getContext(), id, Tys))
+          .getCallee());
 }
 
 // This defines the "Intrinsic::getIntrinsicForGCCBuiltin()" method.
@@ -1084,19 +1082,19 @@ bool Intrinsic::matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> 
       if (D.getArgumentNumber() < ArgTys.size())
         return Ty != ArgTys[D.getArgumentNumber()];
 
-          // Otherwise, if this is the first instance of an argument, record it and
-          // verify the "Any" kind.
-          assert(D.getArgumentNumber() == ArgTys.size() && "Table consistency error");
-          ArgTys.push_back(Ty);
+      // Otherwise, if this is the first instance of an argument, record it and
+      // verify the "Any" kind.
+      assert(D.getArgumentNumber() == ArgTys.size() && "Table consistency error");
+      ArgTys.push_back(Ty);
 
-          switch (D.getArgumentKind()) {
-            case IITDescriptor::AK_Any:        return false; // Success
-            case IITDescriptor::AK_AnyInteger: return !Ty->isIntOrIntVectorTy();
-            case IITDescriptor::AK_AnyFloat:   return !Ty->isFPOrFPVectorTy();
-            case IITDescriptor::AK_AnyVector:  return !isa<VectorType>(Ty);
-            case IITDescriptor::AK_AnyPointer: return !isa<PointerType>(Ty);
-          }
-          llvm_unreachable("all argument kinds not covered");
+      switch (D.getArgumentKind()) {
+        case IITDescriptor::AK_Any:        return false; // Success
+        case IITDescriptor::AK_AnyInteger: return !Ty->isIntOrIntVectorTy();
+        case IITDescriptor::AK_AnyFloat:   return !Ty->isFPOrFPVectorTy();
+        case IITDescriptor::AK_AnyVector:  return !isa<VectorType>(Ty);
+        case IITDescriptor::AK_AnyPointer: return !isa<PointerType>(Ty);
+      }
+      llvm_unreachable("all argument kinds not covered");
 
     case IITDescriptor::ExtendArgument: {
       // This may only be used when referring to a previous vector argument.
@@ -1137,15 +1135,19 @@ bool Intrinsic::matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> 
     case IITDescriptor::SameVecWidthArgument: {
       if (D.getArgumentNumber() >= ArgTys.size())
         return true;
-      VectorType * ReferenceType =
-        dyn_cast<VectorType>(ArgTys[D.getArgumentNumber()]);
-      VectorType *ThisArgType = dyn_cast<VectorType>(Ty);
-      if (!ThisArgType || !ReferenceType ||
-          (ReferenceType->getVectorNumElements() !=
-           ThisArgType->getVectorNumElements()))
+      auto *ReferenceType = dyn_cast<VectorType>(ArgTys[D.getArgumentNumber()]);
+      auto *ThisArgType = dyn_cast<VectorType>(Ty);
+      // Both must be vectors of the same number of elements or neither.
+      if ((ReferenceType != nullptr) != (ThisArgType != nullptr))
         return true;
-      return matchIntrinsicType(ThisArgType->getVectorElementType(),
-                                Infos, ArgTys);
+      Type *EltTy = Ty;
+      if (ThisArgType) {
+        if (ReferenceType->getVectorNumElements() !=
+            ThisArgType->getVectorNumElements())
+          return true;
+        EltTy = ThisArgType->getVectorElementType();
+      }
+      return matchIntrinsicType(EltTy, Infos, ArgTys);
     }
     case IITDescriptor::PtrToArgument: {
       if (D.getArgumentNumber() >= ArgTys.size())
@@ -1257,13 +1259,13 @@ bool Function::hasAddressTaken(const User* *PutOffender) const {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
       continue;
-    if (!isa<CallInst>(FU) && !isa<InvokeInst>(FU)) {
+    const auto *Call = dyn_cast<CallBase>(FU);
+    if (!Call) {
       if (PutOffender)
         *PutOffender = FU;
       return true;
     }
-    ImmutableCallSite CS(cast<Instruction>(FU));
-    if (!CS.isCallee(&U)) {
+    if (!Call->isCallee(&U)) {
       if (PutOffender)
         *PutOffender = FU;
       return true;
@@ -1289,12 +1291,10 @@ bool Function::isDefTriviallyDead() const {
 /// callsFunctionThatReturnsTwice - Return true if the function has a call to
 /// setjmp or other function that gcc recognizes as "returning twice".
 bool Function::callsFunctionThatReturnsTwice() const {
-  for (const_inst_iterator
-         I = inst_begin(this), E = inst_end(this); I != E; ++I) {
-    ImmutableCallSite CS(&*I);
-    if (CS && CS.hasFnAttr(Attribute::ReturnsTwice))
-      return true;
-  }
+  for (const Instruction &I : instructions(this))
+    if (const auto *Call = dyn_cast<CallBase>(&I))
+      if (Call->hasFnAttr(Attribute::ReturnsTwice))
+        return true;
 
   return false;
 }

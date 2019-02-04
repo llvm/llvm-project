@@ -20,6 +20,7 @@ limitations:
 
 """
 
+from __future__ import print_function
 import os
 
 code_owners = {}
@@ -97,7 +98,7 @@ def find_owners(fpath):
 import sys
 
 if len(sys.argv) < 2:
-	print "usage " + sys.argv[0] + " file_or_folder"  
+	print("usage " + sys.argv[0] + " file_or_folder")
 	exit(-1)
 	
 # the path we are checking
@@ -105,13 +106,13 @@ path = str(sys.argv[1])
 
 # check if this is real path
 if not os.path.exists(path):
-	print "path (" + path + ") does not exist"
+	print("path (" + path + ") does not exist")
 	exit(-1)
 	
 owners_name = find_owners(path)
 
 # be grammatically correct
-print "The owner(s) of the (" + path + ") is(are) : " + str(owners_name)
+print("The owner(s) of the (" + path + ") is(are) : " + str(owners_name))
 
 exit(0)
 
@@ -119,7 +120,7 @@ exit(0)
 # not yet used 
 root = "."
 for dir,subdirList,fileList in os.walk( root , topdown=False ) :
-   print "dir :" , dir
+   print("dir :" , dir)
    for fname in fileList :
-      print "-" , fname
-   print
+      print("-" , fname)
+   print()

@@ -5,6 +5,11 @@
 ; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=1 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
 ; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=0 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 
+; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=1 -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
+; Enable run below when adding promotion. e.g. "store i32 %phi, i32* %p" is promoted to phi.lcssa.
+; opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=0 -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
+
+
 ; CHECK-LABEL: @triangle_phi
 define void @triangle_phi(i32 %x, i32* %p) {
 ; CHECK-LABEL: entry:
@@ -1344,6 +1349,170 @@ if.end2:
 if.then3:
   %e = getelementptr inbounds i32, i32* %g, i64 %phi2
   store i32 1, i32* %e, align 4
+  br label %loop.backedge
+
+loop.backedge:
+  br label %loop
+}
+
+; The order that we hoist instructions from the loop is different to the textual
+; order in the function. Check that we can rehoist this correctly.
+; CHECK-LABEL: @rehoist_wrong_order_1
+define void @rehoist_wrong_order_1(i32* %ptr) {
+; CHECK-LABEL: entry
+; CHECK-DAG: %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
+; CHECK-DAG: %gep3 = getelementptr inbounds i32, i32* %ptr, i64 3
+; CHECK-DAG: %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+; CHECK-ENABLED: br i1 undef, label %[[IF1_LICM:.*]], label %[[ELSE1_LICM:.*]]
+entry:
+  br label %loop
+
+; CHECK-ENABLED: [[IF1_LICM]]:
+; CHECK-ENABLED: br label %[[LOOP_BACKEDGE_LICM:.*]]
+
+; CHECK-ENABLED: [[ELSE1_LICM]]:
+; CHECK-ENABLED: br label %[[LOOP_BACKEDGE_LICM]]
+
+; CHECK-ENABLED: [[LOOP_BACKEDGE_LICM]]:
+; CHECK-ENABLED: br i1 undef, label %[[IF3_LICM:.*]], label %[[END_LICM:.*]]
+
+; CHECK-ENABLED: [[IF3_LICM]]:
+; CHECK-ENABLED: br label %[[END_LICM]]
+
+; CHECK-ENABLED: [[END_LICM]]:
+; CHECK: br label %loop
+
+loop:
+  br i1 undef, label %if1, label %else1
+
+if1:
+  %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+  store i32 0, i32* %gep1, align 4
+  br label %loop.backedge
+
+else1:
+  %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
+  store i32 0, i32* %gep2, align 4
+  br i1 undef, label %if2, label %loop.backedge
+
+if2:
+  br i1 undef, label %if3, label %end
+
+if3:
+  %gep3 = getelementptr inbounds i32, i32* %ptr, i64 3
+  store i32 0, i32* %gep3, align 4
+  br label %end
+
+end:
+  br label %loop.backedge
+
+loop.backedge:
+  br label %loop
+
+}
+
+; CHECK-LABEL: @rehoist_wrong_order_2
+define void @rehoist_wrong_order_2(i32* %ptr) {
+; CHECK-LABEL: entry
+; CHECK-DAG: %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
+; CHECK-DAG: %gep3 = getelementptr inbounds i32, i32* %gep2, i64 3
+; CHECK-DAG: %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+; CHECK-ENABLED: br i1 undef, label %[[IF1_LICM:.*]], label %[[ELSE1_LICM:.*]]
+entry:
+  br label %loop
+
+; CHECK-ENABLED: [[IF1_LICM]]:
+; CHECK-ENABLED: br label %[[LOOP_BACKEDGE_LICM:.*]]
+
+; CHECK-ENABLED: [[ELSE1_LICM]]:
+; CHECK-ENABLED: br label %[[LOOP_BACKEDGE_LICM]]
+
+; CHECK-ENABLED: [[LOOP_BACKEDGE_LICM]]:
+; CHECK-ENABLED: br i1 undef, label %[[IF3_LICM:.*]], label %[[END_LICM:.*]]
+
+; CHECK-ENABLED: [[IF3_LICM]]:
+; CHECK-ENABLED: br label %[[END_LICM]]
+
+; CHECK-ENABLED: [[END_LICM]]:
+; CHECK: br label %loop
+
+loop:
+  br i1 undef, label %if1, label %else1
+
+if1:
+  %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+  store i32 0, i32* %gep1, align 4
+  br label %loop.backedge
+
+else1:
+  %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
+  store i32 0, i32* %gep2, align 4
+  br i1 undef, label %if2, label %loop.backedge
+
+if2:
+  br i1 undef, label %if3, label %end
+
+if3:
+  %gep3 = getelementptr inbounds i32, i32* %gep2, i64 3
+  store i32 0, i32* %gep3, align 4
+  br label %end
+
+end:
+  br label %loop.backedge
+
+loop.backedge:
+  br label %loop
+}
+
+; CHECK-LABEL: @rehoist_wrong_order_3
+define void @rehoist_wrong_order_3(i32* %ptr) {
+; CHECK-LABEL: entry
+; CHECK-DAG: %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
+; CHECK-DAG: %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+; CHECK-ENABLED: br i1 undef, label %[[IF1_LICM:.*]], label %[[ELSE1_LICM:.*]]
+entry:
+  br label %loop
+
+; CHECK-ENABLED: [[IF1_LICM]]:
+; CHECK-ENABLED: br label %[[IF2_LICM:.*]]
+
+; CHECK-ENABLED: [[ELSE1_LICM]]:
+; CHECK-ENABLED: br label %[[IF2_LICM]]
+
+; CHECK-ENABLED: [[IF2_LICM]]:
+; CHECK-ENABLED: %phi = phi i32* [ %gep1, %[[IF1_LICM]] ], [ %gep2, %[[ELSE1_LICM]] ]
+; CHECK-ENABLED: %gep3 = getelementptr inbounds i32, i32* %phi, i64 3
+; CHECK-ENABLED: br i1 undef, label %[[IF3_LICM:.*]], label %[[END_LICM:.*]]
+
+; CHECK-ENABLED: [[IF3_LICM]]:
+; CHECK-ENABLED: br label %[[END_LICM]]
+
+; CHECK-ENABLED: [[END_LICM]]:
+; CHECK: br label %loop
+
+loop:
+  br i1 undef, label %if1, label %else1
+
+if1:
+  %gep1 = getelementptr inbounds i32, i32* %ptr, i64 1
+  store i32 0, i32* %gep1, align 4
+  br label %if2
+
+else1:
+  %gep2 = getelementptr inbounds i32, i32* %ptr, i64 2
+  store i32 0, i32* %gep2, align 4
+  br i1 undef, label %if2, label %loop.backedge
+
+if2:
+  %phi = phi i32* [ %gep1, %if1 ], [ %gep2, %else1 ]
+  br i1 undef, label %if3, label %end
+
+if3:
+  %gep3 = getelementptr inbounds i32, i32* %phi, i64 3
+  store i32 0, i32* %gep3, align 4
+  br label %end
+
+end:
   br label %loop.backedge
 
 loop.backedge:

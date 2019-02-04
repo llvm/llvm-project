@@ -1,9 +1,8 @@
 //===-- sanitizer_win.cc --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -487,8 +486,14 @@ bool IsPathSeparator(const char c) {
   return c == '\\' || c == '/';
 }
 
+static bool IsAlpha(char c) {
+  c = ToLower(c);
+  return c >= 'a' && c <= 'z';
+}
+
 bool IsAbsolutePath(const char *path) {
-  UNIMPLEMENTED();
+  return path != nullptr && IsAlpha(path[0]) && path[1] == ':' &&
+         IsPathSeparator(path[2]);
 }
 
 void SleepForSeconds(int seconds) {

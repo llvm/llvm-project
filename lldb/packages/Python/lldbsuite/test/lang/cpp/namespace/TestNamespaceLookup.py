@@ -183,6 +183,7 @@ class NamespaceLookupTestCase(TestBase):
         self.expect("expr -- foo()", startstr="(int) $2 = 42")
 
     @unittest2.expectedFailure("lldb file scope lookup bugs")
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_file_scope_lookup_with_run_command(self):
         """Test file scope lookup in lldb."""
         self.build()

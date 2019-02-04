@@ -1,9 +1,8 @@
 //===- ASTMatchers.h - Structural query framework ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -3512,6 +3511,19 @@ AST_POLYMORPHIC_MATCHER_P2(hasArgument,
   return (N < Node.getNumArgs() &&
           InnerMatcher.matches(
               *Node.getArg(N)->IgnoreParenImpCasts(), Finder, Builder));
+}
+
+/// Matches the n'th item of an initializer list expression.
+///
+/// Example matches y.
+///     (matcher = initListExpr(hasInit(0, expr())))
+/// \code
+///   int x{y}.
+/// \endcode
+AST_MATCHER_P2(InitListExpr, hasInit, unsigned, N,
+               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+  return N < Node.getNumInits() &&
+          InnerMatcher.matches(*Node.getInit(N), Finder, Builder);
 }
 
 /// Matches declaration statements that contain a specific number of

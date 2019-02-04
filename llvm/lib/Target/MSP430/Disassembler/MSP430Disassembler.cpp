@@ -1,9 +1,8 @@
 //===-- MSP430Disassembler.cpp - Disassembler for MSP430 ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -249,6 +248,10 @@ DecodeStatus MSP430Disassembler::getInstructionI(MCInst &MI, uint64_t &Size,
   case amSymbolic:
   case amImmediate:
   case amAbsolute:
+    if (Bytes.size() < (Words + 1) * 2) {
+      Size = 2;
+      return DecodeStatus::Fail;
+    }
     Insn |= (uint64_t)support::endian::read16le(Bytes.data() + 2) << 16;
     ++Words;
     break;
@@ -259,6 +262,10 @@ DecodeStatus MSP430Disassembler::getInstructionI(MCInst &MI, uint64_t &Size,
   case amIndexed:
   case amSymbolic:
   case amAbsolute:
+    if (Bytes.size() < (Words + 1) * 2) {
+      Size = 2;
+      return DecodeStatus::Fail;
+    }
     Insn |= (uint64_t)support::endian::read16le(Bytes.data() + Words * 2)
         << (Words * 16);
     ++Words;
@@ -296,6 +303,10 @@ DecodeStatus MSP430Disassembler::getInstructionII(MCInst &MI, uint64_t &Size,
   case amSymbolic:
   case amImmediate:
   case amAbsolute:
+    if (Bytes.size() < (Words + 1) * 2) {
+      Size = 2;
+      return DecodeStatus::Fail;
+    }
     Insn |= (uint64_t)support::endian::read16le(Bytes.data() + 2) << 16;
     ++Words;
     break;

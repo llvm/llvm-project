@@ -1,9 +1,8 @@
 //===--- Targets.cpp - Implement target feature support -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,7 +25,6 @@
 #include "Targets/MSP430.h"
 #include "Targets/Mips.h"
 #include "Targets/NVPTX.h"
-#include "Targets/Nios2.h"
 #include "Targets/OSTargets.h"
 #include "Targets/PNaCl.h"
 #include "Targets/PPC.h"
@@ -246,9 +244,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::msp430:
     return new MSP430TargetInfo(Triple, Opts);
-
-  case llvm::Triple::nios2:
-    return new LinuxTargetInfo<Nios2TargetInfo>(Triple, Opts);
 
   case llvm::Triple::mips:
     switch (os) {
@@ -572,19 +567,29 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::wasm32:
     if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
         Triple.getVendor() != llvm::Triple::UnknownVendor ||
-        Triple.getOS() != llvm::Triple::UnknownOS ||
-        Triple.getEnvironment() != llvm::Triple::UnknownEnvironment ||
-        !(Triple.isOSBinFormatELF() || Triple.isOSBinFormatWasm()))
+        !Triple.isOSBinFormatWasm())
       return nullptr;
-    return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
+    switch (Triple.getOS()) {
+      case llvm::Triple::WASI:
+        return new WASITargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
+      case llvm::Triple::UnknownOS:
+        return new WebAssemblyOSTargetInfo<WebAssembly32TargetInfo>(Triple, Opts);
+      default:
+        return nullptr;
+    }
   case llvm::Triple::wasm64:
     if (Triple.getSubArch() != llvm::Triple::NoSubArch ||
         Triple.getVendor() != llvm::Triple::UnknownVendor ||
-        Triple.getOS() != llvm::Triple::UnknownOS ||
-        Triple.getEnvironment() != llvm::Triple::UnknownEnvironment ||
-        !(Triple.isOSBinFormatELF() || Triple.isOSBinFormatWasm()))
+        !Triple.isOSBinFormatWasm())
       return nullptr;
-    return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+    switch (Triple.getOS()) {
+      case llvm::Triple::WASI:
+        return new WASITargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+      case llvm::Triple::UnknownOS:
+        return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+      default:
+        return nullptr;
+    }
 
   case llvm::Triple::renderscript32:
     return new LinuxTargetInfo<RenderScript32TargetInfo>(Triple, Opts);

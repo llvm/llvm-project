@@ -1,9 +1,8 @@
 //===-- ARMSubtarget.h - Define Subtarget for the ARM ----------*- C++ -*--===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -417,7 +416,7 @@ protected:
   bool UseSjLjEH = false;
 
   /// Has speculation barrier
-  bool HasSpecCtrl = false;
+  bool HasSB = false;
 
   /// Implicitly convert an instruction to a different one if its immediates
   /// cannot be encoded. For example, ADD r0, r1, #FFFFFFFF -> SUB r0, r1, #1.
@@ -628,7 +627,7 @@ public:
   bool hasDSP() const { return HasDSP; }
   bool useNaClTrap() const { return UseNaClTrap; }
   bool useSjLjEH() const { return UseSjLjEH; }
-  bool hasSpecCtrl() const { return HasSpecCtrl; }
+  bool hasSB() const { return HasSB; }
   bool genLongCalls() const { return GenLongCalls; }
   bool genExecuteOnly() const { return GenExecuteOnly; }
 

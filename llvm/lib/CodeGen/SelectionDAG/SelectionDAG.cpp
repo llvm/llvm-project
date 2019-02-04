@@ -1,9 +1,8 @@
 //===- SelectionDAG.cpp - Implement the SelectionDAG data structures ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -86,6 +85,8 @@ static SDVTList makeVTList(const EVT *VTs, unsigned NumVTs) {
 // Default null implementations of the callbacks.
 void SelectionDAG::DAGUpdateListener::NodeDeleted(SDNode*, SDNode*) {}
 void SelectionDAG::DAGUpdateListener::NodeUpdated(SDNode*) {}
+
+void SelectionDAG::DAGNodeDeletedListener::anchor() {}
 
 #define DEBUG_TYPE "selectiondag"
 
@@ -2825,7 +2826,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known.Zero.setBitsFrom(InVT.getScalarSizeInBits());
     break;
   }
-  // TODO ISD::SIGN_EXTEND_VECTOR_INREG
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    EVT InVT = Op.getOperand(0).getValueType();
+    APInt InDemandedElts = DemandedElts.zextOrSelf(InVT.getVectorNumElements());
+    Known = computeKnownBits(Op.getOperand(0), InDemandedElts, Depth + 1);
+    // If the sign bit is known to be zero or one, then sext will extend
+    // it to the top bits, else it will just zext.
+    Known = Known.sext(BitWidth);
+    break;
+  }
   case ISD::SIGN_EXTEND: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If the sign bit is known to be zero or one, then sext will extend
@@ -3683,7 +3692,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
     return ComputeNumSignBits(Src, Depth + 1);
   }
-  case ISD::CONCAT_VECTORS:
+  case ISD::CONCAT_VECTORS: {
     // Determine the minimum number of sign bits across all demanded
     // elts of the input vectors. Early out if the result is already 1.
     Tmp = std::numeric_limits<unsigned>::max();
@@ -3700,6 +3709,40 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
     return Tmp;
+  }
+  case ISD::INSERT_SUBVECTOR: {
+    // If we know the element index, demand any elements from the subvector and
+    // the remainder from the src its inserted into, otherwise demand them all.
+    SDValue Src = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
+    auto *SubIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    if (SubIdx && SubIdx->getAPIntValue().ule(NumElts - NumSubElts)) {
+      Tmp = std::numeric_limits<unsigned>::max();
+      uint64_t Idx = SubIdx->getZExtValue();
+      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+      if (!!DemandedSubElts) {
+        Tmp = ComputeNumSignBits(Sub, DemandedSubElts, Depth + 1);
+        if (Tmp == 1) return 1; // early-out
+      }
+      APInt SubMask = APInt::getBitsSet(NumElts, Idx, Idx + NumSubElts);
+      APInt DemandedSrcElts = DemandedElts & ~SubMask;
+      if (!!DemandedSrcElts) {
+        Tmp2 = ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
+        Tmp = std::min(Tmp, Tmp2);
+      }
+      assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
+      return Tmp;
+    }
+
+    // Not able to determine the index so just assume worst case.
+    Tmp = ComputeNumSignBits(Sub, Depth + 1);
+    if (Tmp == 1) return 1; // early-out
+    Tmp2 = ComputeNumSignBits(Src, Depth + 1);
+    Tmp = std::min(Tmp, Tmp2);
+    assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
+    return Tmp;
+  }
   }
 
   // If we are looking at the loaded value of the SDNode.
@@ -4444,6 +4487,10 @@ static std::pair<APInt, bool> FoldValue(unsigned Opcode, const APInt &C1,
   case ISD::SMAX: return std::make_pair(C1.sge(C2) ? C1 : C2, true);
   case ISD::UMIN: return std::make_pair(C1.ule(C2) ? C1 : C2, true);
   case ISD::UMAX: return std::make_pair(C1.uge(C2) ? C1 : C2, true);
+  case ISD::SADDSAT: return std::make_pair(C1.sadd_sat(C2), true);
+  case ISD::UADDSAT: return std::make_pair(C1.uadd_sat(C2), true);
+  case ISD::SSUBSAT: return std::make_pair(C1.ssub_sat(C2), true);
+  case ISD::USUBSAT: return std::make_pair(C1.usub_sat(C2), true);
   case ISD::UDIV:
     if (!C2.getBoolValue())
       break;
@@ -4465,13 +4512,13 @@ static std::pair<APInt, bool> FoldValue(unsigned Opcode, const APInt &C1,
 }
 
 SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
-                                             EVT VT, const ConstantSDNode *Cst1,
-                                             const ConstantSDNode *Cst2) {
-  if (Cst1->isOpaque() || Cst2->isOpaque())
+                                             EVT VT, const ConstantSDNode *C1,
+                                             const ConstantSDNode *C2) {
+  if (C1->isOpaque() || C2->isOpaque())
     return SDValue();
 
-  std::pair<APInt, bool> Folded = FoldValue(Opcode, Cst1->getAPIntValue(),
-                                            Cst2->getAPIntValue());
+  std::pair<APInt, bool> Folded = FoldValue(Opcode, C1->getAPIntValue(),
+                                            C2->getAPIntValue());
   if (!Folded.second)
     return SDValue();
   return getConstant(Folded.first, DL, VT);
@@ -4484,16 +4531,16 @@ SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
     return SDValue();
   if (!TLI->isOffsetFoldingLegal(GA))
     return SDValue();
-  const ConstantSDNode *Cst2 = dyn_cast<ConstantSDNode>(N2);
-  if (!Cst2)
+  auto *C2 = dyn_cast<ConstantSDNode>(N2);
+  if (!C2)
     return SDValue();
-  int64_t Offset = Cst2->getSExtValue();
+  int64_t Offset = C2->getSExtValue();
   switch (Opcode) {
   case ISD::ADD: break;
   case ISD::SUB: Offset = -uint64_t(Offset); break;
   default: return SDValue();
   }
-  return getGlobalAddress(GA->getGlobal(), SDLoc(Cst2), VT,
+  return getGlobalAddress(GA->getGlobal(), SDLoc(C2), VT,
                           GA->getOffset() + uint64_t(Offset));
 }
 
@@ -4523,21 +4570,20 @@ bool SelectionDAG::isUndef(unsigned Opcode, ArrayRef<SDValue> Ops) {
 }
 
 SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
-                                             EVT VT, SDNode *Cst1,
-                                             SDNode *Cst2) {
+                                             EVT VT, SDNode *N1, SDNode *N2) {
   // If the opcode is a target-specific ISD node, there's nothing we can
   // do here and the operand rules may not line up with the below, so
   // bail early.
   if (Opcode >= ISD::BUILTIN_OP_END)
     return SDValue();
 
-  if (isUndef(Opcode, {SDValue(Cst1, 0), SDValue(Cst2, 0)}))
+  if (isUndef(Opcode, {SDValue(N1, 0), SDValue(N2, 0)}))
     return getUNDEF(VT);
 
   // Handle the case of two scalars.
-  if (const ConstantSDNode *Scalar1 = dyn_cast<ConstantSDNode>(Cst1)) {
-    if (const ConstantSDNode *Scalar2 = dyn_cast<ConstantSDNode>(Cst2)) {
-      SDValue Folded = FoldConstantArithmetic(Opcode, DL, VT, Scalar1, Scalar2);
+  if (auto *C1 = dyn_cast<ConstantSDNode>(N1)) {
+    if (auto *C2 = dyn_cast<ConstantSDNode>(N2)) {
+      SDValue Folded = FoldConstantArithmetic(Opcode, DL, VT, C1, C2);
       assert((!Folded || !VT.isVector()) &&
              "Can't fold vectors ops with scalar operands");
       return Folded;
@@ -4545,19 +4591,19 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   }
 
   // fold (add Sym, c) -> Sym+c
-  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Cst1))
-    return FoldSymbolOffset(Opcode, VT, GA, Cst2);
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N1))
+    return FoldSymbolOffset(Opcode, VT, GA, N2);
   if (TLI->isCommutativeBinOp(Opcode))
-    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Cst2))
-      return FoldSymbolOffset(Opcode, VT, GA, Cst1);
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N2))
+      return FoldSymbolOffset(Opcode, VT, GA, N1);
 
   // For vectors, extract each constant element and fold them individually.
   // Either input may be an undef value.
-  auto *BV1 = dyn_cast<BuildVectorSDNode>(Cst1);
-  if (!BV1 && !Cst1->isUndef())
+  auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
+  if (!BV1 && !N1->isUndef())
     return SDValue();
-  auto *BV2 = dyn_cast<BuildVectorSDNode>(Cst2);
-  if (!BV2 && !Cst2->isUndef())
+  auto *BV2 = dyn_cast<BuildVectorSDNode>(N2);
+  if (!BV2 && !N2->isUndef())
     return SDValue();
   // If both operands are undef, that's handled the same way as scalars.
   if (!BV1 && !BV2)
@@ -4783,6 +4829,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::UADDSAT:
+  case ISD::USUBSAT:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
@@ -5130,6 +5180,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::SDIV:
       case ISD::UREM:
       case ISD::SREM:
+      case ISD::SSUBSAT:
+      case ISD::USUBSAT:
         return getConstant(0, DL, VT);    // fold op(undef, arg2) -> 0
       }
     }
@@ -5153,8 +5205,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getUNDEF(VT);       // fold op(arg1, undef) -> undef
     case ISD::MUL:
     case ISD::AND:
+    case ISD::SSUBSAT:
+    case ISD::USUBSAT:
       return getConstant(0, DL, VT);  // fold op(arg1, undef) -> 0
     case ISD::OR:
+    case ISD::SADDSAT:
+    case ISD::UADDSAT:
       return getAllOnesConstant(DL, VT);
     }
   }
@@ -6407,6 +6463,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_MAX ||
           Opcode == ISD::ATOMIC_LOAD_UMIN ||
           Opcode == ISD::ATOMIC_LOAD_UMAX ||
+          Opcode == ISD::ATOMIC_LOAD_FADD ||
+          Opcode == ISD::ATOMIC_LOAD_FSUB ||
           Opcode == ISD::ATOMIC_SWAP ||
           Opcode == ISD::ATOMIC_STORE) &&
          "Invalid Atomic Op");
@@ -8464,6 +8522,32 @@ SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
   return TokenFactor;
 }
 
+SDValue SelectionDAG::getSymbolFunctionGlobalAddress(SDValue Op,
+                                                     Function **OutFunction) {
+  assert(isa<ExternalSymbolSDNode>(Op) && "Node should be an ExternalSymbol");
+
+  auto *Symbol = cast<ExternalSymbolSDNode>(Op)->getSymbol();
+  auto *Module = MF->getFunction().getParent();
+  auto *Function = Module->getFunction(Symbol);
+
+  if (OutFunction != nullptr)
+      *OutFunction = Function;
+
+  if (Function != nullptr) {
+    auto PtrTy = TLI->getPointerTy(getDataLayout(), Function->getAddressSpace());
+    return getGlobalAddress(Function, SDLoc(Op), PtrTy);
+  }
+
+  std::string ErrorStr;
+  raw_string_ostream ErrorFormatter(ErrorStr);
+
+  ErrorFormatter << "Undefined external symbol ";
+  ErrorFormatter << '"' << Symbol << '"';
+  ErrorFormatter.flush();
+
+  report_fatal_error(ErrorStr);
+}
+
 //===----------------------------------------------------------------------===//
 //                              SDNode Class
 //===----------------------------------------------------------------------===//
@@ -9182,8 +9266,7 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) {
 
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   assert(!Node->OperandList && "Node already has operands");
-  assert(std::numeric_limits<decltype(SDNode::NumOperands)>::max() >
-             Vals.size() &&
+  assert(SDNode::getMaxNumOperands() >= Vals.size() &&
          "too many operands to fit into SDNode");
   SDUse *Ops = OperandRecycler.allocate(
       ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
@@ -9201,6 +9284,19 @@ void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   if (!TLI->isSDNodeAlwaysUniform(Node))
     Node->SDNodeBits.IsDivergent = IsDivergent;
   checkForCycles(Node);
+}
+
+SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
+                                     SmallVectorImpl<SDValue> &Vals) {
+  size_t Limit = SDNode::getMaxNumOperands();
+  while (Vals.size() > Limit) {
+    unsigned SliceIdx = Vals.size() - Limit;
+    auto ExtractedTFs = ArrayRef<SDValue>(Vals).slice(SliceIdx, Limit);
+    SDValue NewTF = getNode(ISD::TokenFactor, DL, MVT::Other, ExtractedTFs);
+    Vals.erase(Vals.begin() + SliceIdx, Vals.end());
+    Vals.emplace_back(NewTF);
+  }
+  return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
 }
 
 #ifndef NDEBUG

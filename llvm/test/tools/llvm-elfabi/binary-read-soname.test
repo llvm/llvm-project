@@ -1,0 +1,51 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-elfabi --elf %t --emit-tbe=- | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+#                     \0 b a z\0 s o m e l i b . s o\0 f o o\0
+    Content:         "0062617a00736f6d656c69622e736f00666f6f00"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1018
+    AddressAlign:    8
+    Content:         "0e0000000000000005000000000000000a000000000000001400000000000000050000000000000000100000000000000600000000000000001000000000000000000000000000000000000000000000"
+      # DT_SONAME     5 (0x05)
+      # DT_STRSZ      20 (0x14)
+      # DT_STRTAB     0x1000
+      # DT_SYMTAB     0x1000
+      # DT_NULL       0x0
+    Size:            80
+    Link:            .dynstr
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Align: 8
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x1018
+    PAddr: 0x1018
+    Sections:
+      - Section: .dynamic
+
+# CHECK:      --- !tapi-tbe
+# CHECK-NEXT: TbeVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
+# CHECK-NEXT: SoName: somelib.so{{$}}
+# CHECK-NEXT: Arch: x86_64
+# CHECK-NEXT: Symbols: {}
+# CHECK-NEXT: ...

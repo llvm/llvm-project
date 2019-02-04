@@ -1,9 +1,8 @@
 //===- ThreadSafety.cpp ---------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -874,7 +873,7 @@ public:
   void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
                   ThreadSafetyHandler &Handler,
                   StringRef DiagKind) const override {
-    Handler.handleDoubleLock(DiagKind, entry.toString(), entry.loc());
+    Handler.handleDoubleLock(DiagKind, entry.toString(), loc(), entry.loc());
   }
 
   void handleUnlock(FactSet &FSet, FactManager &FactMan,
@@ -982,12 +981,13 @@ private:
   void lock(FactSet &FSet, FactManager &FactMan, const CapabilityExpr &Cp,
             LockKind kind, SourceLocation loc, ThreadSafetyHandler *Handler,
             StringRef DiagKind) const {
-    if (!FSet.findLock(FactMan, Cp)) {
+    if (const FactEntry *Fact = FSet.findLock(FactMan, Cp)) {
+      if (Handler)
+        Handler->handleDoubleLock(DiagKind, Cp.toString(), Fact->loc(), loc);
+    } else {
       FSet.removeLock(FactMan, !Cp);
       FSet.addLock(FactMan,
                    llvm::make_unique<LockableFactEntry>(Cp, kind, loc));
-    } else if (Handler) {
-      Handler->handleDoubleLock(DiagKind, Cp.toString(), loc);
     }
   }
 

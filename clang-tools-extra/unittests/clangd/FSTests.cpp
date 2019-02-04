@@ -1,9 +1,8 @@
 //===-- FSTests.cpp - File system related tests -----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,13 +11,12 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 
 TEST(FSTests, PreambleStatusCache) {
-  StringMap<std::string> Files;
+  llvm::StringMap<std::string> Files;
   Files["x"] = "";
   Files["y"] = "";
   Files["main"] = "";
@@ -36,9 +34,10 @@ TEST(FSTests, PreambleStatusCache) {
   // Main file is not cached.
   EXPECT_FALSE(StatCache.lookup(testPath("main")).hasValue());
 
-  vfs::Status S("fake", sys::fs::UniqueID(0, 0),
-                std::chrono::system_clock::now(), 0, 0, 1024,
-                sys::fs::file_type::regular_file, sys::fs::all_all);
+  llvm::vfs::Status S("fake", llvm::sys::fs::UniqueID(0, 0),
+                      std::chrono::system_clock::now(), 0, 0, 1024,
+                      llvm::sys::fs::file_type::regular_file,
+                      llvm::sys::fs::all_all);
   StatCache.update(*FS, S);
   auto ConsumeFS = StatCache.getConsumingFS(FS);
   auto Cached = ConsumeFS->status(testPath("fake"));

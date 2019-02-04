@@ -1,9 +1,8 @@
 //===--- ReadabilityTidyModule.cpp - clang-tidy ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,6 +30,7 @@
 #include "RedundantDeclarationCheck.h"
 #include "RedundantFunctionPtrDereferenceCheck.h"
 #include "RedundantMemberInitCheck.h"
+#include "RedundantPreprocessorCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
@@ -83,6 +83,8 @@ public:
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
+    CheckFactories.registerCheck<RedundantPreprocessorCheck>(
+        "readability-redundant-preprocessor");
     CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
         "readability-simplify-subscript-expr");
     CheckFactories.registerCheck<StaticAccessedThroughInstanceCheck>(

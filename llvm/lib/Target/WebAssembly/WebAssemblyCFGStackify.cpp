@@ -1,9 +1,8 @@
 //===-- WebAssemblyCFGStackify.cpp - CFG Stackification -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -38,6 +37,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstring>
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-cfg-stackify"
@@ -111,11 +111,9 @@ FunctionPass *llvm::createWebAssemblyCFGStackify() {
 static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred,
                                  MachineBasicBlock *MBB) {
   for (MachineInstr &MI : Pred->terminators())
-    // Even if a rethrow takes a BB argument, it is not a branch
-    if (!WebAssembly::isRethrow(MI))
-      for (MachineOperand &MO : MI.explicit_operands())
-        if (MO.isMBB() && MO.getMBB() == MBB)
-          return true;
+    for (MachineOperand &MO : MI.explicit_operands())
+      if (MO.isMBB() && MO.getMBB() == MBB)
+        return true;
   return false;
 }
 
@@ -218,12 +216,20 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   // which reduces overall stack height.
   MachineBasicBlock *Header = nullptr;
   bool IsBranchedTo = false;
+  bool IsBrOnExn = false;
+  MachineInstr *BrOnExn = nullptr;
   int MBBNumber = MBB.getNumber();
   for (MachineBasicBlock *Pred : MBB.predecessors()) {
     if (Pred->getNumber() < MBBNumber) {
       Header = Header ? MDT.findNearestCommonDominator(Header, Pred) : Pred;
-      if (ExplicitlyBranchesTo(Pred, &MBB))
+      if (ExplicitlyBranchesTo(Pred, &MBB)) {
         IsBranchedTo = true;
+        if (Pred->getFirstTerminator()->getOpcode() == WebAssembly::BR_ON_EXN) {
+          IsBrOnExn = true;
+          assert(!BrOnExn && "There should be only one br_on_exn per block");
+          BrOnExn = &*Pred->getFirstTerminator();
+        }
+      }
     }
   }
   if (!Header)
@@ -300,11 +306,27 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   }
 
   // Add the BLOCK.
+
+  // 'br_on_exn' extracts except_ref object and pushes variable number of values
+  // depending on its tag. For C++ exception, its a single i32 value, and the
+  // generated code will be in the form of:
+  // block i32
+  //   br_on_exn 0, $__cpp_exception
+  //   rethrow
+  // end_block
+  WebAssembly::ExprType ReturnType = WebAssembly::ExprType::Void;
+  if (IsBrOnExn) {
+    const char *TagName = BrOnExn->getOperand(1).getSymbolName();
+    if (std::strcmp(TagName, "__cpp_exception") != 0)
+      llvm_unreachable("Only C++ exception is supported");
+    ReturnType = WebAssembly::ExprType::I32;
+  }
+
   auto InsertPos = GetLatestInsertPos(Header, BeforeSet, AfterSet);
   MachineInstr *Begin =
       BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
               TII.get(WebAssembly::BLOCK))
-          .addImm(int64_t(WebAssembly::ExprType::Void));
+          .addImm(int64_t(ReturnType));
 
   // Decide where in Header to put the END_BLOCK.
   BeforeSet.clear();
@@ -417,11 +439,6 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   if (!MBB.isEHPad())
     return;
 
-  // catch_all terminate pad is grouped together with catch terminate pad and
-  // does not need a separate TRY and END_TRY marker.
-  if (WebAssembly::isCatchAllTerminatePad(MBB))
-    return;
-
   MachineFunction &MF = *MBB.getParent();
   auto &MDT = getAnalysis<MachineDominatorTree>();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -530,7 +547,8 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   // throw.
   if (MBB.isPredecessor(Header)) {
     auto TermPos = Header->getFirstTerminator();
-    if (TermPos == Header->end() || !WebAssembly::isRethrow(*TermPos)) {
+    if (TermPos == Header->end() ||
+        TermPos->getOpcode() != WebAssembly::RETHROW) {
       for (const auto &MI : reverse(*Header)) {
         if (MI.isCall()) {
           AfterSet.insert(&MI);
@@ -675,7 +693,6 @@ static void AppendEndToFunction(MachineFunction &MF,
 
 /// Insert LOOP/TRY/BLOCK markers at appropriate places.
 void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
-  const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
   // We allocate one more than the number of blocks in the function to
   // accommodate for the possible fake block we may insert at the end.
   ScopeTops.resize(MF.getNumBlockIDs() + 1);
@@ -683,6 +700,7 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
   for (auto &MBB : MF)
     placeLoopMarker(MBB);
   // Place the TRY for MBB if MBB is the EH pad of an exception.
+  const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
   if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
       MF.getFunction().hasPersonalityFn())
     for (auto &MBB : MF)
@@ -693,12 +711,8 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
 }
 
 void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
-  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   // Now rewrite references to basic blocks to be depth immediates.
-  // We need two stacks: one for normal scopes and the other for EH pad scopes.
-  // EH pad stack is used to rewrite depths in rethrow instructions.
   SmallVector<const MachineBasicBlock *, 8> Stack;
-  SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   for (auto &MBB : reverse(MF)) {
     for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
       MachineInstr &MI = *I;
@@ -715,26 +729,6 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
                    MBB.getNumber() &&
                "Block/try marker should be balanced");
         Stack.pop_back();
-        EHPadStack.pop_back();
-        break;
-
-      case WebAssembly::CATCH_I32:
-      case WebAssembly::CATCH_I64:
-      case WebAssembly::CATCH_ALL:
-        // Currently the only case there are more than one catch for a try is
-        // for catch terminate pad, in the form of
-        //   try
-        //   catch
-        //     call @__clang_call_terminate
-        //     unreachable
-        //   catch_all
-        //     call @std::terminate
-        //     unreachable
-        //   end
-        // So we shouldn't push the current BB for the second catch_all block
-        // here.
-        if (!WebAssembly::isCatchAllTerminatePad(MBB))
-          EHPadStack.push_back(&MBB);
         break;
 
       case WebAssembly::LOOP:
@@ -750,23 +744,6 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
       case WebAssembly::END_LOOP:
         Stack.push_back(EndToBegin[&MI]->getParent());
         break;
-
-      case WebAssembly::RETHROW: {
-        // Rewrite MBB operands to be depth immediates.
-        unsigned EHPadDepth = GetDepth(EHPadStack, MI.getOperand(0).getMBB());
-        MI.RemoveOperand(0);
-        MI.addOperand(MF, MachineOperand::CreateImm(EHPadDepth));
-        break;
-      }
-
-      case WebAssembly::RETHROW_TO_CALLER: {
-        MachineInstr *Rethrow =
-            BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(WebAssembly::RETHROW))
-                .addImm(EHPadStack.size());
-        MI.eraseFromParent();
-        I = MachineBasicBlock::reverse_iterator(Rethrow);
-        break;
-      }
 
       default:
         if (MI.isTerminator()) {

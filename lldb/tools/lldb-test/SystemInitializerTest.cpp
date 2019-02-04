@@ -1,9 +1,8 @@
 //===-- SystemInitializerTest.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -70,6 +69,7 @@
 #include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
 #include "Plugins/Process/minidump/ProcessMinidump.h"
 #include "Plugins/ScriptInterpreter/None/ScriptInterpreterNone.h"
+#include "Plugins/SymbolFile/Breakpad/SymbolFileBreakpad.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDebugMap.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
@@ -176,6 +176,7 @@ SystemInitializerTest::Initialize(const InitializerOptions &options) {
   MainThreadCheckerRuntime::Initialize();
 
   SymbolVendorELF::Initialize();
+  breakpad::SymbolFileBreakpad::Initialize();
   SymbolFileDWARF::Initialize();
   SymbolFilePDB::Initialize();
   SymbolFileSymtab::Initialize();
@@ -274,6 +275,7 @@ void SystemInitializerTest::Terminate() {
   UndefinedBehaviorSanitizerRuntime::Terminate();
   MainThreadCheckerRuntime::Terminate();
   SymbolVendorELF::Terminate();
+  breakpad::SymbolFileBreakpad::Terminate();
   SymbolFileDWARF::Terminate();
   SymbolFilePDB::Terminate();
   SymbolFileSymtab::Terminate();

@@ -1,9 +1,8 @@
 //===-- PythonDataObjectsTests.cpp ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -366,10 +365,9 @@ TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
-  EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString("Class"), nullptr, false, 0,
+  EXPECT_EQ(1u, symfile->FindTypes(ConstString("Class"), nullptr, false, 0,
                                    searched_files, results));
   EXPECT_EQ(1u, results.GetSize());
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
@@ -389,7 +387,6 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
@@ -397,7 +394,7 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
       symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus));
   EXPECT_NE(nullptr, clang_ast_ctx);
 
-  EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString("Class"), nullptr, false, 0,
+  EXPECT_EQ(1u, symfile->FindTypes(ConstString("Class"), nullptr, false, 0,
                                    searched_files, results));
   EXPECT_EQ(1u, results.GetSize());
 
@@ -416,7 +413,7 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   // compiler type for both, but `FindTypes` may return more than one type
   // (with the same compiler type) because the symbols have different IDs.
   auto ClassCompilerDeclCtx = CompilerDeclContext(clang_ast_ctx, ClassDeclCtx);
-  EXPECT_LE(1u, symfile->FindTypes(sc, ConstString("NestedClass"),
+  EXPECT_LE(1u, symfile->FindTypes(ConstString("NestedClass"),
                                    &ClassCompilerDeclCtx, false, 0,
                                    searched_files, results));
   EXPECT_LE(1u, results.GetSize());
@@ -440,7 +437,6 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
@@ -457,11 +453,11 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   symfile->ParseDeclsForContext(CompilerDeclContext(
       clang_ast_ctx, static_cast<clang::DeclContext *>(tu)));
 
-  auto ns_namespace = symfile->FindNamespace(sc, ConstString("NS"), nullptr);
+  auto ns_namespace = symfile->FindNamespace(ConstString("NS"), nullptr);
   EXPECT_TRUE(ns_namespace.IsValid());
 
-  EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString("NSClass"), &ns_namespace,
-                                   false, 0, searched_files, results));
+  EXPECT_EQ(1u, symfile->FindTypes(ConstString("NSClass"), &ns_namespace, false,
+                                   0, searched_files, results));
   EXPECT_EQ(1u, results.GetSize());
 
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
@@ -483,12 +479,11 @@ TEST_F(SymbolFilePDBTests, TestEnumTypes) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   const char *EnumsToCheck[] = {"Enum", "ShortEnum"};
   for (auto Enum : EnumsToCheck) {
     TypeMap results;
-    EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString(Enum), nullptr, false, 0,
+    EXPECT_EQ(1u, symfile->FindTypes(ConstString(Enum), nullptr, false, 0,
                                      searched_files, results));
     EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP enum_type = results.GetTypeAtIndex(0);
@@ -530,7 +525,6 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
   llvm::pdb::IPDBSession &session = symfile->GetPDBSession();
-  SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
 
@@ -539,8 +533,8 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
                                    "VariadicFuncPointerTypedef"};
   for (auto Typedef : TypedefsToCheck) {
     TypeMap results;
-    EXPECT_EQ(1u, symfile->FindTypes(sc, ConstString(Typedef), nullptr, false,
-                                     0, searched_files, results));
+    EXPECT_EQ(1u, symfile->FindTypes(ConstString(Typedef), nullptr, false, 0,
+                                     searched_files, results));
     EXPECT_EQ(1u, results.GetSize());
     lldb::TypeSP typedef_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Typedef), typedef_type->GetName());
@@ -584,12 +578,11 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
   const ConstString name("ClassTypedef");
   uint32_t num_results =
-      symfile->FindTypes(sc, name, nullptr, false, 0, searched_files, results);
+      symfile->FindTypes(name, nullptr, false, 0, searched_files, results);
   // Try to limit ourselves from 1 to 10 results, otherwise we could be doing
   // this thousands of times.
   // The idea is just to make sure that for a variety of values, the number of
@@ -597,8 +590,8 @@ TEST_F(SymbolFilePDBTests, TestMaxMatches) {
   // comes out to the number we are expecting.
   uint32_t iterations = std::min(num_results, 10u);
   for (uint32_t i = 1; i <= iterations; ++i) {
-    uint32_t num_limited_results = symfile->FindTypes(
-        sc, name, nullptr, false, i, searched_files, results);
+    uint32_t num_limited_results =
+        symfile->FindTypes(name, nullptr, false, i, searched_files, results);
     EXPECT_EQ(i, num_limited_results);
     EXPECT_EQ(num_limited_results, results.GetSize());
   }
@@ -612,11 +605,10 @@ TEST_F(SymbolFilePDBTests, TestNullName) {
   SymbolVendor *plugin = module->GetSymbolVendor();
   SymbolFilePDB *symfile =
       static_cast<SymbolFilePDB *>(plugin->GetSymbolFile());
-  SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
-  uint32_t num_results = symfile->FindTypes(sc, ConstString(), nullptr, false,
-                                            0, searched_files, results);
+  uint32_t num_results = symfile->FindTypes(ConstString(), nullptr, false, 0,
+                                            searched_files, results);
   EXPECT_EQ(0u, num_results);
   EXPECT_EQ(0u, results.GetSize());
 }

@@ -9,8 +9,8 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: add:
 ; CHECK-NEXT: .functype add (i32, i32) -> (i32){{$}}
-; CHECK-NEXT: get_local	$push2=, 0{{$}}
-; CHECK-NEXT: get_local	$push1=, 1{{$}}
+; CHECK-NEXT: local.get	$push2=, 0{{$}}
+; CHECK-NEXT: local.get	$push1=, 1{{$}}
 ; CHECK-NEXT: i32.add 	$push0=, $pop2, $pop1{{$}}
 ; CHECK-NEXT: end_function
 define i24 @add(i24 %x, i24 %y) {

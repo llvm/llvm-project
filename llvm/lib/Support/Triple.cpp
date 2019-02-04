@@ -1,9 +1,8 @@
 //===--- Triple.cpp - Target triple helper class --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,7 +34,6 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case mips64:         return "mips64";
   case mips64el:       return "mips64el";
   case msp430:         return "msp430";
-  case nios2:          return "nios2";
   case ppc64:          return "powerpc64";
   case ppc64le:        return "powerpc64le";
   case ppc:            return "powerpc";
@@ -101,8 +99,6 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case mipsel:
   case mips64:
   case mips64el:    return "mips";
-
-  case nios2:       return "nios2";
 
   case hexagon:     return "hexagon";
 
@@ -211,6 +207,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case AMDPAL: return "amdpal";
   case HermitCore: return "hermit";
   case Hurd: return "hurd";
+  case WASI: return "wasi";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -273,7 +270,6 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("mips64", mips64)
     .Case("mips64el", mips64el)
     .Case("msp430", msp430)
-    .Case("nios2", nios2)
     .Case("ppc64", ppc64)
     .Case("ppc32", ppc)
     .Case("ppc", ppc)
@@ -408,7 +404,6 @@ static Triple::ArchType parseArch(StringRef ArchName) {
            "mips64r6", "mipsn32r6", Triple::mips64)
     .Cases("mips64el", "mipsn32el", "mipsisa64r6el", "mips64r6el",
            "mipsn32r6el", Triple::mips64el)
-    .Case("nios2", Triple::nios2)
     .Case("r600", Triple::r600)
     .Case("amdgcn", Triple::amdgcn)
     .Case("riscv32", Triple::riscv32)
@@ -510,6 +505,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("amdpal", Triple::AMDPAL)
     .StartsWith("hermit", Triple::HermitCore)
     .StartsWith("hurd", Triple::Hurd)
+    .StartsWith("wasi", Triple::WASI)
     .Default(Triple::UnknownOS);
 }
 
@@ -665,7 +661,6 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::mips64el:
   case Triple::mipsel:
   case Triple::msp430:
-  case Triple::nios2:
   case Triple::nvptx:
   case Triple::nvptx64:
   case Triple::ppc64le:
@@ -1223,7 +1218,6 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::le32:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
-  case llvm::Triple::nios2:
   case llvm::Triple::nvptx:
   case llvm::Triple::ppc:
   case llvm::Triple::r600:
@@ -1308,7 +1302,6 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::le32:
   case Triple::mips:
   case Triple::mipsel:
-  case Triple::nios2:
   case Triple::nvptx:
   case Triple::ppc:
   case Triple::r600:
@@ -1357,7 +1350,6 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::kalimba:
   case Triple::lanai:
   case Triple::msp430:
-  case Triple::nios2:
   case Triple::r600:
   case Triple::tce:
   case Triple::tcele:
@@ -1429,7 +1421,6 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::le32:
   case Triple::le64:
   case Triple::msp430:
-  case Triple::nios2:
   case Triple::nvptx64:
   case Triple::nvptx:
   case Triple::r600:
@@ -1516,7 +1507,6 @@ bool Triple::isLittleEndian() const {
   case Triple::mips64el:
   case Triple::mipsel:
   case Triple::msp430:
-  case Triple::nios2:
   case Triple::nvptx64:
   case Triple::nvptx:
   case Triple::ppc64le:

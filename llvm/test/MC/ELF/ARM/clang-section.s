@@ -220,7 +220,7 @@ p:
 	.size	p, 4
 
 
-	.ident	"clang version 5.0.0 (http://llvm.org/git/clang.git 254242a3ad440307fb451093a429c71ea9a8c888) (http://llvm.org/git/llvm.git 3c8daefbe3d1672ac1dae775b211f881f0063038)"
+	.ident	"clang version 5.0.0"
 	.section	".note.GNU-stack","",%progbits
 	.eabi_attribute	30, 1	@ Tag_ABI_optimization_goals
 

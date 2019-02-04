@@ -1,9 +1,8 @@
 //===- SyntheticSections.cpp ----------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1513,8 +1512,10 @@ void RelocationBaseSection::finalizeContents() {
   else
     getParent()->Link = 0;
 
-  if (In.RelaIplt == this || In.RelaPlt == this)
+  if (In.RelaPlt == this)
     getParent()->Info = In.GotPlt->getParent()->SectionIndex;
+  if (In.RelaIplt == this)
+    getParent()->Info = In.IgotPlt->getParent()->SectionIndex;
 }
 
 RelrBaseSection::RelrBaseSection()
@@ -1803,7 +1804,7 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize() {
   std::vector<uint64_t> Offsets;
   for (const RelativeReloc &Rel : Relocs)
     Offsets.push_back(Rel.getOffset());
-  llvm::sort(Offsets.begin(), Offsets.end());
+  llvm::sort(Offsets);
 
   // For each leading relocation, find following ones that can be folded
   // as a bitmap and fold them.
@@ -2408,15 +2409,17 @@ static std::vector<GdbIndexSection::CuEntry> readCuList(DWARFContext &Dwarf) {
   return Ret;
 }
 
-static Expected<std::vector<GdbIndexSection::AddressEntry>>
+static std::vector<GdbIndexSection::AddressEntry>
 readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
   std::vector<GdbIndexSection::AddressEntry> Ret;
 
   uint32_t CuIdx = 0;
   for (std::unique_ptr<DWARFUnit> &Cu : Dwarf.compile_units()) {
     Expected<DWARFAddressRangesVector> Ranges = Cu->collectAddressRanges();
-    if (!Ranges)
-      return Ranges.takeError();
+    if (!Ranges) {
+      error(toString(Sec) + ": " + toString(Ranges.takeError()));
+      return {};
+    }
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
     for (DWARFAddressRange &R : *Ranges) {
@@ -2433,7 +2436,7 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
     ++CuIdx;
   }
 
-  return std::move(Ret);
+  return Ret;
 }
 
 template <class ELFT>
@@ -2565,17 +2568,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
 
     Chunks[I].Sec = Sections[I];
     Chunks[I].CompilationUnits = readCuList(Dwarf);
-    Expected<std::vector<GdbIndexSection::AddressEntry>> AddressAreas =
-        readAddressAreas(Dwarf, Sections[I]);
-    if (!AddressAreas) {
-      std::string Msg = File->getName();
-      Msg += ": ";
-      if (!File->ArchiveName.empty())
-        Msg += "in archive " + File->ArchiveName + ": ";
-      Msg += toString(AddressAreas.takeError());
-      fatal(Msg);
-    }
-    Chunks[I].AddressAreas = *AddressAreas;
+    Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
     NameAttrs[I] = readPubNamesAndTypes<ELFT>(
         static_cast<const LLDDwarfObj<ELFT> &>(Dwarf.getDWARFObj()),
         Chunks[I].CompilationUnits);

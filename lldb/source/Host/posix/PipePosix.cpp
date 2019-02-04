@@ -1,9 +1,8 @@
 //===-- PipePosix.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,12 +60,13 @@ bool SetCloexecFlag(int fd) {
 std::chrono::time_point<std::chrono::steady_clock> Now() {
   return std::chrono::steady_clock::now();
 }
-}
+} // namespace
 
 PipePosix::PipePosix()
     : m_fds{PipePosix::kInvalidDescriptor, PipePosix::kInvalidDescriptor} {}
 
-PipePosix::PipePosix(int read_fd, int write_fd) : m_fds{read_fd, write_fd} {}
+PipePosix::PipePosix(lldb::pipe_t read, lldb::pipe_t write)
+    : m_fds{read, write} {}
 
 PipePosix::PipePosix(PipePosix &&pipe_posix)
     : PipeBase{std::move(pipe_posix)},

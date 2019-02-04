@@ -1,9 +1,8 @@
 //===-- AMDGPUCodeGenPrepare.cpp ------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -807,7 +806,7 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
     Type *I32Ty = Builder.getInt32Ty();
     Type *PT = PointerType::get(I32Ty, I.getPointerAddressSpace());
     Value *BitCast= Builder.CreateBitCast(I.getPointerOperand(), PT);
-    LoadInst *WidenLoad = Builder.CreateLoad(BitCast);
+    LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, BitCast);
     WidenLoad->copyMetadata(I);
 
     // If we have range metadata, we need to convert the type, and not make

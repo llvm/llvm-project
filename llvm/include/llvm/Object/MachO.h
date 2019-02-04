@@ -1,9 +1,8 @@
 //===- MachO.h - MachO object file implementation ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -356,7 +355,7 @@ public:
   basic_symbol_iterator symbol_end() const override;
 
   // MachO specific.
-  basic_symbol_iterator getSymbolByIndex(unsigned Index) const;
+  symbol_iterator getSymbolByIndex(unsigned Index) const;
   uint64_t getSymbolIndex(DataRefImpl Symb) const;
 
   section_iterator section_begin() const override;

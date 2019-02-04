@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -254,9 +253,6 @@ int main()
     // Use alignof(std::max_align_t) below to find the max alignment instead of
     // hardcoding it, because it's different on different platforms.
     // (For example 8 on arm and 16 on x86.)
-#if TEST_STD_VER < 11
-#define alignof __alignof__
-#endif
     {
     typedef std::aligned_storage<16>::type T1;
 #if TEST_STD_VER > 11
@@ -264,7 +260,7 @@ int main()
 #endif
     static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
-    static_assert(std::alignment_of<T1>::value == alignof(std::max_align_t),
+    static_assert(std::alignment_of<T1>::value == TEST_ALIGNOF(std::max_align_t),
                   "");
     static_assert(sizeof(T1) == 16, "");
     }
@@ -275,9 +271,9 @@ int main()
 #endif
     static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
-    static_assert(std::alignment_of<T1>::value == alignof(std::max_align_t),
+    static_assert(std::alignment_of<T1>::value == TEST_ALIGNOF(std::max_align_t),
                   "");
-    static_assert(sizeof(T1) == 16 + alignof(std::max_align_t), "");
+    static_assert(sizeof(T1) == 16 + TEST_ALIGNOF(std::max_align_t), "");
     }
     {
     typedef std::aligned_storage<10>::type T1;

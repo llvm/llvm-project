@@ -2,10 +2,9 @@
 //-*-===//
 
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -190,12 +189,20 @@ void VerifyEncodingAndBitSize(clang::ASTContext *context,
     return;
 
   EXPECT_TRUE(type_ptr->isBuiltinType());
-  if (encoding == eEncodingSint)
+  switch (encoding) {
+  case eEncodingSint:
     EXPECT_TRUE(type_ptr->isSignedIntegerType());
-  else if (encoding == eEncodingUint)
+    break;
+  case eEncodingUint:
     EXPECT_TRUE(type_ptr->isUnsignedIntegerType());
-  else if (encoding == eEncodingIEEE754)
+    break;
+  case eEncodingIEEE754:
     EXPECT_TRUE(type_ptr->isFloatingType());
+    break;
+  default:
+    FAIL() << "Unexpected encoding";
+    break;
+  }
 }
 
 TEST_F(TestClangASTContext, TestBuiltinTypeForEncodingAndBitSize) {

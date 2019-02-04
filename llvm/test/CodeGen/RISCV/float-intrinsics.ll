@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck -check-prefix=RV32IF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IF %s
+; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64IF %s
+; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64IF %s
 
 declare float @llvm.sqrt.f32(float)
 
@@ -13,6 +17,13 @@ define float @sqrt_f32(float %a) nounwind {
 ; RV32IF-NEXT:    fsqrt.s ft0, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: sqrt_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a0
+; RV64IF-NEXT:    fsqrt.s ft0, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.sqrt.f32(float %a)
   ret float %1
 }
@@ -28,6 +39,16 @@ define float @powi_f32(float %a, i32 %b) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: powi_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    sext.w a1, a1
+; RV64IF-NEXT:    call __powisf2
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.powi.f32(float %a, i32 %b)
   ret float %1
 }
@@ -43,6 +64,15 @@ define float @sin_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: sin_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call sinf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.sin.f32(float %a)
   ret float %1
 }
@@ -58,6 +88,15 @@ define float @cos_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: cos_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call cosf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.cos.f32(float %a)
   ret float %1
 }
@@ -84,6 +123,27 @@ define float @sincos_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: sincos_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -32
+; RV64IF-NEXT:    sd ra, 24(sp)
+; RV64IF-NEXT:    sd s1, 16(sp)
+; RV64IF-NEXT:    sd s2, 8(sp)
+; RV64IF-NEXT:    mv s1, a0
+; RV64IF-NEXT:    call sinf
+; RV64IF-NEXT:    mv s2, a0
+; RV64IF-NEXT:    mv a0, s1
+; RV64IF-NEXT:    call cosf
+; RV64IF-NEXT:    fmv.w.x ft0, a0
+; RV64IF-NEXT:    fmv.w.x ft1, s2
+; RV64IF-NEXT:    fadd.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ld s2, 8(sp)
+; RV64IF-NEXT:    ld s1, 16(sp)
+; RV64IF-NEXT:    ld ra, 24(sp)
+; RV64IF-NEXT:    addi sp, sp, 32
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.sin.f32(float %a)
   %2 = call float @llvm.cos.f32(float %a)
   %3 = fadd float %1, %2
@@ -101,6 +161,15 @@ define float @pow_f32(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: pow_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call powf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.pow.f32(float %a, float %b)
   ret float %1
 }
@@ -116,6 +185,15 @@ define float @exp_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: exp_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call expf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.exp.f32(float %a)
   ret float %1
 }
@@ -131,6 +209,15 @@ define float @exp2_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: exp2_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call exp2f
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.exp2.f32(float %a)
   ret float %1
 }
@@ -146,6 +233,15 @@ define float @log_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: log_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call logf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.log.f32(float %a)
   ret float %1
 }
@@ -161,6 +257,15 @@ define float @log10_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: log10_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call log10f
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.log10.f32(float %a)
   ret float %1
 }
@@ -176,6 +281,15 @@ define float @log2_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: log2_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call log2f
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.log2.f32(float %a)
   ret float %1
 }
@@ -191,6 +305,15 @@ define float @fma_f32(float %a, float %b, float %c) nounwind {
 ; RV32IF-NEXT:    fmadd.s ft0, ft2, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fma_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a2
+; RV64IF-NEXT:    fmv.w.x ft1, a1
+; RV64IF-NEXT:    fmv.w.x ft2, a0
+; RV64IF-NEXT:    fmadd.s ft0, ft2, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.fma.f32(float %a, float %b, float %c)
   ret float %1
 }
@@ -208,6 +331,16 @@ define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
 ; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fmuladd_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a1
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fmul.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmv.w.x ft1, a2
+; RV64IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
   ret float %1
 }
@@ -221,6 +354,13 @@ define float @fabs_f32(float %a) nounwind {
 ; RV32IF-NEXT:    addi a1, a1, -1
 ; RV32IF-NEXT:    and a0, a0, a1
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: fabs_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    lui a1, 524288
+; RV64IF-NEXT:    addiw a1, a1, -1
+; RV64IF-NEXT:    and a0, a0, a1
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.fabs.f32(float %a)
   ret float %1
 }
@@ -235,6 +375,14 @@ define float @minnum_f32(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmin.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: minnum_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a1
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fmin.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.minnum.f32(float %a, float %b)
   ret float %1
 }
@@ -249,6 +397,14 @@ define float @maxnum_f32(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fmax.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: maxnum_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a1
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fmax.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.maxnum.f32(float %a, float %b)
   ret float %1
 }
@@ -280,6 +436,14 @@ define float @copysign_f32(float %a, float %b) nounwind {
 ; RV32IF-NEXT:    fsgnj.s ft0, ft1, ft0
 ; RV32IF-NEXT:    fmv.x.w a0, ft0
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: copysign_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmv.w.x ft0, a1
+; RV64IF-NEXT:    fmv.w.x ft1, a0
+; RV64IF-NEXT:    fsgnj.s ft0, ft1, ft0
+; RV64IF-NEXT:    fmv.x.w a0, ft0
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.copysign.f32(float %a, float %b)
   ret float %1
 }
@@ -295,6 +459,15 @@ define float @floor_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: floor_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call floorf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.floor.f32(float %a)
   ret float %1
 }
@@ -310,6 +483,15 @@ define float @ceil_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: ceil_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call ceilf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.ceil.f32(float %a)
   ret float %1
 }
@@ -325,6 +507,15 @@ define float @trunc_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: trunc_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call truncf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.trunc.f32(float %a)
   ret float %1
 }
@@ -340,6 +531,15 @@ define float @rint_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: rint_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call rintf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.rint.f32(float %a)
   ret float %1
 }
@@ -355,6 +555,15 @@ define float @nearbyint_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: nearbyint_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call nearbyintf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.nearbyint.f32(float %a)
   ret float %1
 }
@@ -370,6 +579,15 @@ define float @round_f32(float %a) nounwind {
 ; RV32IF-NEXT:    lw ra, 12(sp)
 ; RV32IF-NEXT:    addi sp, sp, 16
 ; RV32IF-NEXT:    ret
+;
+; RV64IF-LABEL: round_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    addi sp, sp, -16
+; RV64IF-NEXT:    sd ra, 8(sp)
+; RV64IF-NEXT:    call roundf
+; RV64IF-NEXT:    ld ra, 8(sp)
+; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    ret
   %1 = call float @llvm.round.f32(float %a)
   ret float %1
 }

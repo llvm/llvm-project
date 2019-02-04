@@ -14,14 +14,14 @@ the test suite creates temporary files during execution.
 
 To run the test suite, you need to use the following steps:
 
-#. ``cd`` into the ``llvm/projects`` directory in your source tree.
 #. Check out the ``test-suite`` module with:
 
    .. code-block:: bash
 
-       % svn co http://llvm.org/svn/llvm-project/test-suite/trunk test-suite
+       % git clone https://github.com/llvm/llvm-test-suite.git test-suite
 
-   This will get the test suite into ``llvm/projects/test-suite``.
+#. FIXME: these directions are outdated and won't work. Figure out
+   what the correct thing to do is, and write it down here.
 
 #. Configure and build ``llvm``.
 

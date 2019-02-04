@@ -1,9 +1,8 @@
 //===- PPCCallingConv.td - Calling Conventions for PowerPC -*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -46,6 +45,7 @@ def RetCC_PPC64_AnyReg : CallingConv<[
 ]>;
 
 // Return-value convention for PowerPC coldcc.
+let Entry = 1 in
 def RetCC_PPC_Cold : CallingConv<[
   // Use the same return registers as RetCC_PPC, but limited to only
   // one return value. The remaining return values will be saved to
@@ -70,6 +70,7 @@ def RetCC_PPC_Cold : CallingConv<[
 ]>;
 
 // Return-value convention for PowerPC
+let Entry = 1 in
 def RetCC_PPC : CallingConv<[
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_PPC64_AnyReg>>,
 
@@ -126,6 +127,7 @@ def CC_PPC64_AnyReg : CallingConv<[
 // Simple calling convention for 64-bit ELF PowerPC fast isel.
 // Only handle ints and floats.  All ints are promoted to i64.
 // Vector types and quadword ints are not handled.
+let Entry = 1 in
 def CC_PPC64_ELF_FIS : CallingConv<[
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<CC_PPC64_AnyReg>>,
 
@@ -141,6 +143,7 @@ def CC_PPC64_ELF_FIS : CallingConv<[
 // All small ints are promoted to i64.  Vector types, quadword ints,
 // and multiple register returns are "supported" to avoid compile
 // errors, but none are handled by the fast selector.
+let Entry = 1 in
 def RetCC_PPC64_ELF_FIS : CallingConv<[
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_PPC64_AnyReg>>,
 
@@ -228,12 +231,14 @@ def CC_PPC32_SVR4_Common : CallingConv<[
 // This calling convention puts vector arguments always on the stack. It is used
 // to assign vector arguments which belong to the variable portion of the
 // parameter list of a variable argument function.
+let Entry = 1 in
 def CC_PPC32_SVR4_VarArg : CallingConv<[
   CCDelegateTo<CC_PPC32_SVR4_Common>
 ]>;
 
 // In contrast to CC_PPC32_SVR4_VarArg, this calling convention first tries to
 // put vector arguments in vector registers before putting them on the stack.
+let Entry = 1 in
 def CC_PPC32_SVR4 : CallingConv<[
   // QPX vectors mirror the scalar FP convention.
   CCIfType<[v4f64, v4f32, v4i1], CCIfSubtarget<"hasQPX()",
@@ -265,6 +270,7 @@ def CC_PPC32_SVR4 : CallingConv<[
 // The only purpose of CC_PPC32_SVR4_Custom_Dummy is to skip arguments which are
 // not passed by value.
  
+let Entry = 1 in
 def CC_PPC32_SVR4_ByVal : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
   

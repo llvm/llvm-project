@@ -1,9 +1,8 @@
 //===--- APValue.h - Union class for APFloat/APSInt/Complex -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_APVALUE_H
 #define LLVM_CLANG_AST_APVALUE_H
 
+#include "clang/Basic/FixedPoint.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
@@ -43,6 +43,7 @@ public:
     Uninitialized,
     Int,
     Float,
+    FixedPoint,
     ComplexInt,
     ComplexFloat,
     LValue,
@@ -175,6 +176,9 @@ public:
   explicit APValue(APFloat F) : Kind(Uninitialized) {
     MakeFloat(); setFloat(std::move(F));
   }
+  explicit APValue(APFixedPoint FX) : Kind(Uninitialized) {
+    MakeFixedPoint(std::move(FX));
+  }
   explicit APValue(const APValue *E, unsigned N) : Kind(Uninitialized) {
     MakeVector(); setVector(E, N);
   }
@@ -233,6 +237,7 @@ public:
   bool isUninit() const { return Kind == Uninitialized; }
   bool isInt() const { return Kind == Int; }
   bool isFloat() const { return Kind == Float; }
+  bool isFixedPoint() const { return Kind == FixedPoint; }
   bool isComplexInt() const { return Kind == ComplexInt; }
   bool isComplexFloat() const { return Kind == ComplexFloat; }
   bool isLValue() const { return Kind == LValue; }
@@ -263,6 +268,14 @@ public:
   }
   const APFloat &getFloat() const {
     return const_cast<APValue*>(this)->getFloat();
+  }
+
+  APFixedPoint &getFixedPoint() {
+    assert(isFixedPoint() && "Invalid accessor");
+    return *(APFixedPoint *)(char *)Data.buffer;
+  }
+  const APFixedPoint &getFixedPoint() const {
+    return const_cast<APValue *>(this)->getFixedPoint();
   }
 
   APSInt &getComplexIntReal() {
@@ -406,6 +419,10 @@ public:
     assert(isFloat() && "Invalid accessor");
     *(APFloat *)(char *)Data.buffer = std::move(F);
   }
+  void setFixedPoint(APFixedPoint FX) {
+    assert(isFixedPoint() && "Invalid accessor");
+    *(APFixedPoint *)(char *)Data.buffer = std::move(FX);
+  }
   void setVector(const APValue *E, unsigned N) {
     assert(isVector() && "Invalid accessor");
     ((Vec*)(char*)Data.buffer)->Elts = new APValue[N];
@@ -464,6 +481,11 @@ private:
     assert(isUninit() && "Bad state change");
     new ((void*)(char*)Data.buffer) APFloat(0.0);
     Kind = Float;
+  }
+  void MakeFixedPoint(APFixedPoint &&FX) {
+    assert(isUninit() && "Bad state change");
+    new ((void *)(char *)Data.buffer) APFixedPoint(std::move(FX));
+    Kind = FixedPoint;
   }
   void MakeVector() {
     assert(isUninit() && "Bad state change");

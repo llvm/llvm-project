@@ -1,0 +1,29 @@
+static_library("MCA") {
+  output_name = "LLVMMCA"
+  deps = [
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ "../include" ]
+  sources = [
+    "Context.cpp",
+    "HWEventListener.cpp",
+    "HardwareUnits/HardwareUnit.cpp",
+    "HardwareUnits/LSUnit.cpp",
+    "HardwareUnits/RegisterFile.cpp",
+    "HardwareUnits/ResourceManager.cpp",
+    "HardwareUnits/RetireControlUnit.cpp",
+    "HardwareUnits/Scheduler.cpp",
+    "InstrBuilder.cpp",
+    "Instruction.cpp",
+    "Pipeline.cpp",
+    "Stages/DispatchStage.cpp",
+    "Stages/EntryStage.cpp",
+    "Stages/ExecuteStage.cpp",
+    "Stages/InstructionTables.cpp",
+    "Stages/RetireStage.cpp",
+    "Stages/Stage.cpp",
+    "Support.cpp",
+  ]
+}

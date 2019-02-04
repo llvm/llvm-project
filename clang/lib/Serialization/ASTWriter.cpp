@@ -1,9 +1,8 @@
 //===- ASTWriter.cpp - AST File Writer ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -310,7 +309,7 @@ void ASTTypeWriter::VisitFunctionProtoType(const FunctionProtoType *T) {
 
   Record.push_back(T->isVariadic());
   Record.push_back(T->hasTrailingReturn());
-  Record.push_back(T->getTypeQuals().getAsOpaqueValue());
+  Record.push_back(T->getMethodQuals().getAsOpaqueValue());
   Record.push_back(static_cast<unsigned>(T->getRefQualifier()));
   addExceptionSpec(T, Record);
 
@@ -323,7 +322,7 @@ void ASTTypeWriter::VisitFunctionProtoType(const FunctionProtoType *T) {
       Record.push_back(T->getExtParameterInfo(I).getOpaqueValue());
   }
 
-  if (T->isVariadic() || T->hasTrailingReturn() || T->getTypeQuals() ||
+  if (T->isVariadic() || T->hasTrailingReturn() || T->getMethodQuals() ||
       T->getRefQualifier() || T->getExceptionSpecType() != EST_None ||
       T->hasExtParameterInfos())
     AbbrevToUse = 0;

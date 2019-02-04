@@ -1,9 +1,8 @@
 //===---- QueryParser.cpp - clang-query command parser --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,29 +26,22 @@ namespace query {
 // is found before End, return StringRef().  Begin is adjusted to exclude the
 // lexed region.
 StringRef QueryParser::lexWord() {
-  while (true) {
-    if (Begin == End)
-      return StringRef(Begin, 0);
+  Line = Line.ltrim();
 
-    if (!isWhitespace(*Begin))
-      break;
+  if (Line.empty())
+    // Even though the Line is empty, it contains a pointer and
+    // a (zero) length. The pointer is used in the LexOrCompleteWord
+    // code completion.
+    return Line;
 
-    ++Begin;
-  }
-
-  if (*Begin == '#') {
-    End = Begin;
+  if (Line.front() == '#') {
+    Line = {};
     return StringRef();
   }
 
-  const char *WordBegin = Begin;
-
-  while (true) {
-    ++Begin;
-
-    if (Begin == End || isWhitespace(*Begin))
-      return StringRef(WordBegin, Begin - WordBegin);
-  }
+  StringRef Word = Line.take_until(isWhitespace);
+  Line = Line.drop_front(Word.size());
+  return Word;
 }
 
 // This is the StringSwitch-alike used by lexOrCompleteWord below. See that
@@ -133,10 +125,9 @@ template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
 }
 
 QueryRef QueryParser::endQuery(QueryRef Q) {
-  const char *Extra = Begin;
+  const StringRef Extra = Line;
   if (!lexWord().empty())
-    return new InvalidQuery("unexpected extra input: '" +
-                            StringRef(Extra, End - Extra) + "'");
+    return new InvalidQuery("unexpected extra input: '" + Extra + "'");
   return Q;
 }
 
@@ -174,8 +165,7 @@ QueryRef makeInvalidQueryFromDiagnostics(const Diagnostics &Diag) {
 
 QueryRef QueryParser::completeMatcherExpression() {
   std::vector<MatcherCompletion> Comps = Parser::completeExpression(
-      StringRef(Begin, End - Begin), CompletionPos - Begin, nullptr,
-      &QS.NamedValues);
+      Line, CompletionPos - Line.begin(), nullptr, &QS.NamedValues);
   for (auto I = Comps.begin(), E = Comps.end(); I != E; ++I) {
     Completions.push_back(LineEditor::Completion(I->TypedText, I->MatcherDecl));
   }
@@ -222,8 +212,8 @@ QueryRef QueryParser::doParse() {
 
     Diagnostics Diag;
     ast_matchers::dynamic::VariantValue Value;
-    if (!Parser::parseExpression(StringRef(Begin, End - Begin), nullptr,
-                                 &QS.NamedValues, &Value, &Diag)) {
+    if (!Parser::parseExpression(Line, nullptr, &QS.NamedValues, &Value,
+                                 &Diag)) {
       return makeInvalidQueryFromDiagnostics(Diag);
     }
 
@@ -235,7 +225,7 @@ QueryRef QueryParser::doParse() {
       return completeMatcherExpression();
 
     Diagnostics Diag;
-    auto MatcherSource = StringRef(Begin, End - Begin).trim();
+    auto MatcherSource = Line.trim();
     Optional<DynTypedMatcher> Matcher = Parser::parseMatcherExpression(
         MatcherSource, nullptr, &QS.NamedValues, &Diag);
     if (!Matcher) {

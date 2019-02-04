@@ -1,9 +1,8 @@
 //===-- MinidumpParser.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -107,11 +106,15 @@ llvm::ArrayRef<MinidumpThread> MinidumpParser::GetThreads() {
 }
 
 llvm::ArrayRef<uint8_t>
-MinidumpParser::GetThreadContext(const MinidumpThread &td) {
-  if (td.thread_context.rva + td.thread_context.data_size > GetData().size())
+MinidumpParser::GetThreadContext(const MinidumpLocationDescriptor &location) {
+  if (location.rva + location.data_size > GetData().size())
     return {};
+  return GetData().slice(location.rva, location.data_size);
+}
 
-  return GetData().slice(td.thread_context.rva, td.thread_context.data_size);
+llvm::ArrayRef<uint8_t>
+MinidumpParser::GetThreadContext(const MinidumpThread &td) {
+  return GetThreadContext(td.thread_context);
 }
 
 llvm::ArrayRef<uint8_t>
@@ -555,7 +558,7 @@ const MemoryRegionInfos &MinidumpParser::GetMemoryRegions() {
       if (!CreateRegionsCacheFromMemoryInfoList(*this, m_regions))
         if (!CreateRegionsCacheFromMemoryList(*this, m_regions))
           CreateRegionsCacheFromMemory64List(*this, m_regions);
-    std::sort(m_regions.begin(), m_regions.end());
+    llvm::sort(m_regions.begin(), m_regions.end());
   }
   return m_regions;
 }
@@ -642,10 +645,10 @@ Status MinidumpParser::Initialize() {
   }
 
   // Sort the file map ranges by start offset
-  std::sort(minidump_map.begin(), minidump_map.end(),
-            [](const FileRange &a, const FileRange &b) {
-              return a.offset < b.offset;
-            });
+  llvm::sort(minidump_map.begin(), minidump_map.end(),
+             [](const FileRange &a, const FileRange &b) {
+               return a.offset < b.offset;
+             });
 
   // Check for overlapping streams/data structures
   for (size_t i = 1; i < minidump_map.size(); ++i) {

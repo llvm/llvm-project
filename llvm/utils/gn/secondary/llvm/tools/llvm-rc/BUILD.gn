@@ -1,0 +1,22 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-rc" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+executable("llvm-rc") {
+  deps = [
+    ":Opts",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "ResourceFileWriter.cpp",
+    "ResourceScriptCppFilter.cpp",
+    "ResourceScriptParser.cpp",
+    "ResourceScriptStmt.cpp",
+    "ResourceScriptToken.cpp",
+    "llvm-rc.cpp",
+  ]
+}

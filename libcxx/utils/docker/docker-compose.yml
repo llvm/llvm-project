@@ -1,0 +1,14 @@
+version: '3.4'
+services:
+  buildbot:
+    build:
+      context: .
+      dockerfile: debian9/Dockerfile
+      target: buildbot
+    image: ericwf/libcxx-buildbot-base:latest
+  compiler-zoo:
+    build:
+      context: .
+      dockerfile: debian9/Dockerfile
+      target: compiler-zoo
+    image: ericwf/compiler-zoo:latest

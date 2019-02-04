@@ -1,9 +1,8 @@
 //===- SymbolTable.h --------------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -59,8 +58,8 @@ public:
   Symbol *addDefinedEvent(StringRef Name, uint32_t Flags, InputFile *File,
                           InputEvent *E);
 
-  Symbol *addUndefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
-                               const WasmSignature *Signature);
+  Symbol *addUndefinedFunction(StringRef Name, StringRef Module, uint32_t Flags,
+                               InputFile *File, const WasmSignature *Signature);
   Symbol *addUndefinedData(StringRef Name, uint32_t Flags, InputFile *File);
   Symbol *addUndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
                              const WasmGlobalType *Type);

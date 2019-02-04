@@ -1,9 +1,8 @@
 //===-- llvm-nm.cpp - Symbol table dumping utility for llvm ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -91,6 +90,8 @@ cl::opt<bool> BSDFormat("B", cl::desc("Alias for --format=bsd"),
                         cl::Grouping);
 cl::opt<bool> POSIXFormat("P", cl::desc("Alias for --format=posix"),
                           cl::Grouping);
+cl::alias Portability("portability", cl::desc("Alias for --format=posix"),
+                      cl::aliasopt(POSIXFormat), cl::NotHidden);
 cl::opt<bool> DarwinFormat("m", cl::desc("Alias for --format=darwin"),
                            cl::Grouping);
 
@@ -553,6 +554,11 @@ static void darwinPrintSymbol(SymbolicFile &Obj, SymbolListT::iterator I,
       (NDesc & MachO::N_ALT_ENTRY) == MachO::N_ALT_ENTRY)
     outs() << "[alt entry] ";
 
+  if (Filetype == MachO::MH_OBJECT &&
+      ((NType & MachO::N_TYPE) != MachO::N_UNDF) &&
+      (NDesc & MachO::N_COLD_FUNC) == MachO::N_COLD_FUNC)
+    outs() << "[cold func] ";
+
   if ((NDesc & MachO::N_ARM_THUMB_DEF) == MachO::N_ARM_THUMB_DEF)
     outs() << "[Thumb] ";
 
@@ -796,8 +802,7 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     bool Global = SymFlags & SymbolRef::SF_Global;
     bool Weak = SymFlags & SymbolRef::SF_Weak;
     if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
-        (!Global && ExternalOnly) || (SizeSort && !PrintAddress) ||
-        (Weak && NoWeakSymbols))
+        (!Global && ExternalOnly) || (Weak && NoWeakSymbols))
       continue;
     if (PrintFileName)
       writeFileName(outs());
@@ -930,6 +935,7 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
     return StringSwitch<char>(*Name)
         .StartsWith(".debug", 'N')
         .StartsWith(".note", 'n')
+        .StartsWith(".comment", 'n')
         .Default('?');
   }
 
@@ -1184,10 +1190,8 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       NMSymbol S = {};
       S.Size = 0;
       S.Address = 0;
-      if (PrintSize) {
-        if (isa<ELFObjectFileBase>(&Obj))
-          S.Size = ELFSymbolRef(Sym).getSize();
-      }
+      if (isa<ELFObjectFileBase>(&Obj))
+        S.Size = ELFSymbolRef(Sym).getSize();
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
         Expected<uint64_t> AddressOrErr = SymRef.getAddress();

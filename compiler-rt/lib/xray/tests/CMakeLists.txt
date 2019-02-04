@@ -71,13 +71,14 @@ if (NOT APPLE)
     endforeach()
 
     # We also add the actual libraries to link as dependencies.
-    list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMXRay -lLLVMSupport -lLLVMTestingSupport)
+    list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMXRay -lLLVMSupport -lLLVMDemangle -lLLVMTestingSupport)
   endif()
 
   append_list_if(COMPILER_RT_HAS_LIBM -lm XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBDL -ldl XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread XRAY_UNITTEST_LINK_FLAGS)
+  append_list_if(COMPILER_RT_HAS_LIBEXECINFO -lexecinfo XRAY_UNITTEST_LINK_FLAGS)
 endif()
 
 macro(add_xray_unittest testname)

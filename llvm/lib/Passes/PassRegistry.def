@@ -1,9 +1,8 @@
 //===- PassRegistry.def - Registry of passes --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -42,6 +41,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #endif
 MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
+MODULE_PASS("canonicalize-aliases", CanonicalizeAliasesPass())
 MODULE_PASS("cg-profile", CGProfilePass())
 MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
@@ -177,6 +177,7 @@ FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
 FUNCTION_PASS("loweratomic", LowerAtomicPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
 FUNCTION_PASS("lower-guard-intrinsic", LowerGuardIntrinsicPass())
+FUNCTION_PASS("lower-widenable-condition", LowerWidenableConditionPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn", GVN())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
@@ -200,6 +201,7 @@ FUNCTION_PASS("print", PrintFunctionPass(dbgs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(dbgs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(dbgs()))
+FUNCTION_PASS("print<da>", DependenceAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<domtree>", DominatorTreePrinterPass(dbgs()))
 FUNCTION_PASS("print<postdomtree>", PostDominatorTreePrinterPass(dbgs()))
 FUNCTION_PASS("print<demanded-bits>", DemandedBitsPrinterPass(dbgs()))
@@ -221,8 +223,6 @@ FUNCTION_PASS("spec-phis", SpeculateAroundPHIsPass())
 FUNCTION_PASS("sroa", SROA())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass())
-FUNCTION_PASS("unroll", LoopUnrollPass())
-FUNCTION_PASS("unroll<peeling;no-runtime>",LoopUnrollPass(LoopUnrollOptions().setPeeling(true).setRuntime(false)))
 FUNCTION_PASS("verify", VerifierPass())
 FUNCTION_PASS("verify<domtree>", DominatorTreeVerifierPass())
 FUNCTION_PASS("verify<loops>", LoopVerifierPass())
@@ -231,7 +231,17 @@ FUNCTION_PASS("verify<regions>", RegionInfoVerifierPass())
 FUNCTION_PASS("view-cfg", CFGViewerPass())
 FUNCTION_PASS("view-cfg-only", CFGOnlyViewerPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
+FUNCTION_PASS("msan", MemorySanitizerPass())
+FUNCTION_PASS("tsan", ThreadSanitizerPass())
 #undef FUNCTION_PASS
+
+#ifndef FUNCTION_PASS_WITH_PARAMS
+#define FUNCTION_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)
+#endif
+FUNCTION_PASS_WITH_PARAMS("unroll",
+			  [](LoopUnrollOptions Opts) { return LoopUnrollPass(Opts); },
+			  parseLoopUnrollOptions)
+#undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)

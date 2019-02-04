@@ -1,9 +1,8 @@
 //===- llvm/MC/MCAsmBackend.h - MC Asm Backend ------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -85,6 +84,22 @@ public:
   virtual bool shouldForceRelocation(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
                                      const MCValue &Target) {
+    return false;
+  }
+
+  /// Hook to check if extra nop bytes must be inserted for alignment directive.
+  /// For some targets this may be necessary in order to support linker
+  /// relaxation. The number of bytes to insert are returned in Size.
+  virtual bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
+                                                     unsigned &Size) {
+    return false;
+  }
+
+  /// Hook which indicates if the target requires a fixup to be generated when
+  /// handling an align directive in an executable section
+  virtual bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
+                                             const MCAsmLayout &Layout,
+                                             MCAlignFragment &AF) {
     return false;
   }
 

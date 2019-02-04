@@ -1,9 +1,8 @@
 //===-- RISCVAsmBackend.cpp - RISCV Assembler Backend ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +16,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -285,6 +285,57 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   for (unsigned i = 0; i != NumBytes; ++i) {
     Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
+}
+
+// Linker relaxation may change code size. We have to insert Nops
+// for .align directive when linker relaxation enabled. So then Linker
+// could satisfy alignment by removing Nops.
+// The function return the total Nops Size we need to insert.
+bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
+    const MCAlignFragment &AF, unsigned &Size) {
+  // Calculate Nops Size only when linker relaxation enabled.
+  if (!STI.getFeatureBits()[RISCV::FeatureRelax])
+    return false;
+
+  bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];
+  unsigned MinNopLen = HasStdExtC ? 2 : 4;
+
+  Size = AF.getAlignment() - MinNopLen;
+  return true;
+}
+
+// We need to insert R_RISCV_ALIGN relocation type to indicate the
+// position of Nops and the total bytes of the Nops have been inserted
+// when linker relaxation enabled.
+// The function insert fixup_riscv_align fixup which eventually will
+// transfer to R_RISCV_ALIGN relocation type.
+bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
+                                                    const MCAsmLayout &Layout,
+                                                    MCAlignFragment &AF) {
+  // Insert the fixup only when linker relaxation enabled.
+  if (!STI.getFeatureBits()[RISCV::FeatureRelax])
+    return false;
+
+  // Calculate total Nops we need to insert.
+  unsigned Count;
+  shouldInsertExtraNopBytesForCodeAlign(AF, Count);
+  // No Nop need to insert, simply return.
+  if (Count == 0)
+    return false;
+
+  MCContext &Ctx = Asm.getContext();
+  const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
+  // Create fixup_riscv_align fixup.
+  MCFixup Fixup =
+      MCFixup::create(0, Dummy, MCFixupKind(RISCV::fixup_riscv_align), SMLoc());
+
+  uint64_t FixedValue = 0;
+  MCValue NopBytes = MCValue::get(Count);
+
+  Asm.getWriter().recordRelocation(Asm, Layout, &AF, Fixup, NopBytes,
+                                   FixedValue);
+
+  return true;
 }
 
 std::unique_ptr<MCObjectTargetWriter>

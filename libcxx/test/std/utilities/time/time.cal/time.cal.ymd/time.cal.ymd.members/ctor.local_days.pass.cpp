@@ -1,13 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
-// XFAIL: *
 
 // <chrono>
 // class year_month_day;
@@ -34,11 +32,53 @@
 int main()
 {
     using year           = std::chrono::year;
-    using month          = std::chrono::month;
     using day            = std::chrono::day;
-//  using local_days     = std::chrono::local_days;
+    using local_days     = std::chrono::local_days;
+    using days           = std::chrono::days;
     using year_month_day = std::chrono::year_month_day;
 
-//  ASSERT_NOEXCEPT(year_month_day{std::declval<const local_days>()});
-    assert(false);
+    ASSERT_NOEXCEPT(year_month_day{std::declval<local_days>()});
+
+    {
+    constexpr local_days sd{};
+    constexpr year_month_day ymd{sd};
+
+    static_assert( ymd.ok(),                            "");
+    static_assert( ymd.year()  == year{1970},           "");
+    static_assert( ymd.month() == std::chrono::January, "");
+    static_assert( ymd.day()   == day{1},               "");
+    }
+
+    {
+    constexpr local_days sd{days{10957+32}};
+    constexpr year_month_day ymd{sd};
+
+    static_assert( ymd.ok(),                             "");
+    static_assert( ymd.year()  == year{2000},            "");
+    static_assert( ymd.month() == std::chrono::February, "");
+    static_assert( ymd.day()   == day{2},                "");
+    }
+
+
+//  There's one more leap day between 1/1/40 and 1/1/70
+//  when compared to 1/1/70 -> 1/1/2000
+    {
+    constexpr local_days sd{days{-10957}};
+    constexpr year_month_day ymd{sd};
+
+    static_assert( ymd.ok(),                            "");
+    static_assert( ymd.year()  == year{1940},           "");
+    static_assert( ymd.month() == std::chrono::January, "");
+    static_assert( ymd.day()   == day{2},               "");
+    }
+
+    {
+    local_days sd{days{-(10957+34)}};
+    year_month_day ymd{sd};
+
+    assert( ymd.ok());
+    assert( ymd.year()  == year{1939});
+    assert( ymd.month() == std::chrono::November);
+    assert( ymd.day()   == day{29});
+    }
 }

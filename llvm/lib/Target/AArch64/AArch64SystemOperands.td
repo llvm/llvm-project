@@ -1,9 +1,8 @@
 //===- AArch64SystemOperands.td ----------------------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -501,7 +500,7 @@ class PRCTX<string name, bits<4> crm> : SearchableTable {
   code Requires = [{ {} }];
 }
 
-let Requires = [{ {AArch64::FeaturePredCtrl} }] in {
+let Requires = [{ {AArch64::FeaturePredRes} }] in {
 def : PRCTX<"RCTX", 0b0011>;
 }
 

@@ -386,12 +386,12 @@ Value *getLoadValueForLoad(LoadInst *SrcVal, unsigned Offset, Type *LoadTy,
     // memdep queries will find the new load.  We can't easily remove the old
     // load completely because it is already in the value numbering table.
     IRBuilder<> Builder(SrcVal->getParent(), ++BasicBlock::iterator(SrcVal));
-    Type *DestPTy = IntegerType::get(LoadTy->getContext(), NewLoadSize * 8);
-    DestPTy =
-        PointerType::get(DestPTy, PtrVal->getType()->getPointerAddressSpace());
+    Type *DestTy = IntegerType::get(LoadTy->getContext(), NewLoadSize * 8);
+    Type *DestPTy =
+        PointerType::get(DestTy, PtrVal->getType()->getPointerAddressSpace());
     Builder.SetCurrentDebugLocation(SrcVal->getDebugLoc());
     PtrVal = Builder.CreateBitCast(PtrVal, DestPTy);
-    LoadInst *NewLoad = Builder.CreateLoad(PtrVal);
+    LoadInst *NewLoad = Builder.CreateLoad(DestTy, PtrVal);
     NewLoad->takeName(SrcVal);
     NewLoad->setAlignment(SrcVal->getAlignment());
 

@@ -1,9 +1,8 @@
 //===--- DeclSpec.cpp - Declaration Specifier Semantic Analysis -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -156,14 +155,8 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
                                              unsigned NumParams,
                                              SourceLocation EllipsisLoc,
                                              SourceLocation RParenLoc,
-                                             unsigned TypeQuals,
                                              bool RefQualifierIsLvalueRef,
                                              SourceLocation RefQualifierLoc,
-                                             SourceLocation ConstQualifierLoc,
-                                             SourceLocation
-                                                 VolatileQualifierLoc,
-                                             SourceLocation
-                                                 RestrictQualifierLoc,
                                              SourceLocation MutableLoc,
                                              ExceptionSpecificationType
                                                  ESpecType,
@@ -178,8 +171,9 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
                                              SourceLocation LocalRangeBegin,
                                              SourceLocation LocalRangeEnd,
                                              Declarator &TheDeclarator,
-                                             TypeResult TrailingReturnType) {
-  assert(!(TypeQuals & DeclSpec::TQ_atomic) &&
+                                             TypeResult TrailingReturnType,
+                                             DeclSpec *MethodQualifiers) {
+  assert(!(MethodQualifiers && MethodQualifiers->getTypeQualifiers() & DeclSpec::TQ_atomic) &&
          "function cannot have _Atomic qualifier");
 
   DeclaratorChunk I;
@@ -193,14 +187,10 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   I.Fun.EllipsisLoc             = EllipsisLoc.getRawEncoding();
   I.Fun.RParenLoc               = RParenLoc.getRawEncoding();
   I.Fun.DeleteParams            = false;
-  I.Fun.TypeQuals               = TypeQuals;
   I.Fun.NumParams               = NumParams;
   I.Fun.Params                  = nullptr;
   I.Fun.RefQualifierIsLValueRef = RefQualifierIsLvalueRef;
   I.Fun.RefQualifierLoc         = RefQualifierLoc.getRawEncoding();
-  I.Fun.ConstQualifierLoc       = ConstQualifierLoc.getRawEncoding();
-  I.Fun.VolatileQualifierLoc    = VolatileQualifierLoc.getRawEncoding();
-  I.Fun.RestrictQualifierLoc    = RestrictQualifierLoc.getRawEncoding();
   I.Fun.MutableLoc              = MutableLoc.getRawEncoding();
   I.Fun.ExceptionSpecType       = ESpecType;
   I.Fun.ExceptionSpecLocBeg     = ESpecRange.getBegin().getRawEncoding();
@@ -211,8 +201,21 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   I.Fun.HasTrailingReturnType   = TrailingReturnType.isUsable() ||
                                   TrailingReturnType.isInvalid();
   I.Fun.TrailingReturnType      = TrailingReturnType.get();
+  I.Fun.MethodQualifiers        = nullptr;
+  I.Fun.QualAttrFactory         = nullptr;
 
-  assert(I.Fun.TypeQuals == TypeQuals && "bitfield overflow");
+  if (MethodQualifiers && (MethodQualifiers->getTypeQualifiers() ||
+                           MethodQualifiers->getAttributes().size())) {
+    auto &attrs = MethodQualifiers->getAttributes();
+    I.Fun.MethodQualifiers = new DeclSpec(attrs.getPool().getFactory());
+    MethodQualifiers->forEachCVRUQualifier(
+        [&](DeclSpec::TQ TypeQual, StringRef PrintName, SourceLocation SL) {
+          I.Fun.MethodQualifiers->SetTypeQual(TypeQual, SL);
+        });
+    I.Fun.MethodQualifiers->getAttributes().takeAllFrom(attrs);
+    I.Fun.MethodQualifiers->getAttributePool().takeAllFrom(attrs.getPool());
+  }
+
   assert(I.Fun.ExceptionSpecType == ESpecType && "bitfield overflow");
 
   // new[] a parameter array if needed.
@@ -401,6 +404,24 @@ bool Declarator::isStaticMember() {
 bool Declarator::isCtorOrDtor() {
   return (getName().getKind() == UnqualifiedIdKind::IK_ConstructorName) ||
          (getName().getKind() == UnqualifiedIdKind::IK_DestructorName);
+}
+
+void DeclSpec::forEachCVRUQualifier(
+    llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle) {
+  if (TypeQualifiers & TQ_const)
+    Handle(TQ_const, "const", TQ_constLoc);
+  if (TypeQualifiers & TQ_volatile)
+    Handle(TQ_volatile, "volatile", TQ_volatileLoc);
+  if (TypeQualifiers & TQ_restrict)
+    Handle(TQ_restrict, "restrict", TQ_restrictLoc);
+  if (TypeQualifiers & TQ_unaligned)
+    Handle(TQ_unaligned, "unaligned", TQ_unalignedLoc);
+}
+
+void DeclSpec::forEachQualifier(
+    llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle) {
+  forEachCVRUQualifier(Handle);
+  // FIXME: Add code below to iterate through the attributes and call Handle.
 }
 
 bool DeclSpec::hasTagDefinition() const {
@@ -862,6 +883,11 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
       IsExtension = false;
     return BadSpecifier(T, T, PrevSpec, DiagID, IsExtension);
   }
+
+  return SetTypeQual(T, Loc);
+}
+
+bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   TypeQualifiers |= T;
 
   switch (T) {

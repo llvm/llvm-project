@@ -1,9 +1,8 @@
 //===- Inliner.cpp - Code common to all inliners --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -311,6 +310,11 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
   // For now we only handle local or inline functions.
   if (!Caller->hasLocalLinkage() && !Caller->hasLinkOnceODRLinkage())
     return false;
+  // If the cost of inlining CS is non-positive, it is not going to prevent the
+  // caller from being inlined into its callers and hence we don't need to
+  // defer.
+  if (IC.getCost() <= 0)
+    return false;
   // Try to detect the case where the current inlining candidate caller (call
   // it B) is a static or linkonce-ODR function and is an inlining candidate
   // elsewhere, and the current candidate callee (call it C) is large enough
@@ -330,25 +334,31 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
   TotalSecondaryCost = 0;
   // The candidate cost to be imposed upon the current function.
   int CandidateCost = IC.getCost() - 1;
-  // This bool tracks what happens if we do NOT inline C into B.
-  bool callerWillBeRemoved = Caller->hasLocalLinkage();
+  // If the caller has local linkage and can be inlined to all its callers, we
+  // can apply a huge negative bonus to TotalSecondaryCost.
+  bool ApplyLastCallBonus = Caller->hasLocalLinkage() && !Caller->hasOneUse();
   // This bool tracks what happens if we DO inline C into B.
   bool inliningPreventsSomeOuterInline = false;
   for (User *U : Caller->users()) {
+    // If the caller will not be removed (either because it does not have a
+    // local linkage or because the LastCallToStaticBonus has been already
+    // applied), then we can exit the loop early.
+    if (!ApplyLastCallBonus && TotalSecondaryCost >= IC.getCost())
+      return false;
     CallSite CS2(U);
 
     // If this isn't a call to Caller (it could be some other sort
     // of reference) skip it.  Such references will prevent the caller
     // from being removed.
     if (!CS2 || CS2.getCalledFunction() != Caller) {
-      callerWillBeRemoved = false;
+      ApplyLastCallBonus = false;
       continue;
     }
 
     InlineCost IC2 = GetInlineCost(CS2);
     ++NumCallerCallersAnalyzed;
     if (!IC2) {
-      callerWillBeRemoved = false;
+      ApplyLastCallBonus = false;
       continue;
     }
     if (IC2.isAlways())
@@ -366,7 +376,7 @@ shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
   // one is set very low by getInlineCost, in anticipation that Caller will
   // be removed entirely.  We did not account for this above unless there
   // is only one caller of Caller.
-  if (callerWillBeRemoved && !Caller->hasOneUse())
+  if (ApplyLastCallBonus)
     TotalSecondaryCost -= InlineConstants::LastCallToStaticBonus;
 
   if (inliningPreventsSomeOuterInline && TotalSecondaryCost < IC.getCost())

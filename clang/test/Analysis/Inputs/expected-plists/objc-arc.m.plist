@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
  <key>clang_version</key>
-<string>clang version 8.0.0 </string>
  <key>diagnostics</key>
  <array>
   <dict>
@@ -223,9 +222,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -311,11 +310,11 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;date&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCount</string>
+   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>61d185b2522d15fb327f6784e0217adf</string>
+   <key>issue_hash_content_of_line_in_context</key><string>7bd4a6e187407677b2d9e717576818bf</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_cf_leak</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -739,9 +738,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type CFTypeRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateSomething&apos; returns a Core Foundation object of type &apos;CFTypeRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -842,11 +841,11 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;obj5&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCount</string>
+   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>5baa7d5f38420d0a035aa61607675f3e</string>
+   <key>issue_hash_content_of_line_in_context</key><string>0aed4f65cb3dba7331f9319fd1ceb003</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>from_cf</string>
   <key>issue_hash_function_offset</key><string>7</string>
@@ -934,9 +933,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -988,11 +987,11 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;obj6&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCount</string>
+   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>4665e04694fd55e7c4ed7a67860b3b74</string>
+   <key>issue_hash_content_of_line_in_context</key><string>0851961d40a4c8331ebe713f4a3e05f4</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>from_cf</string>
   <key>issue_hash_function_offset</key><string>8</string>
@@ -1353,9 +1352,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type CFDateRef with a +1 retain count</string>
+     <string>Call to function &apos;CFDateCreate&apos; returns a Core Foundation object of type &apos;CFDateRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1422,11 +1421,11 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;date&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCount</string>
+   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>798e65f80df0526369f9bb240e3d91fd</string>
+   <key>issue_hash_content_of_line_in_context</key><string>00045bff3b7c26fe7cb80a71f512575c</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_objc_unretainedObject</string>
   <key>issue_hash_function_offset</key><string>2</string>
@@ -1679,9 +1678,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
      <key>message</key>
-     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type CFStringRef with a +1 retain count</string>
+     <string>Call to function &apos;CFCreateString&apos; returns a Core Foundation object of type &apos;CFStringRef&apos; with a +1 retain count</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -1727,17 +1726,17 @@
      </dict>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type CFStringRef is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type &apos;CFStringRef&apos; is not referenced later in this execution path and has a retain count of +1</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type CFStringRef is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type &apos;CFStringRef&apos; is not referenced later in this execution path and has a retain count of +1</string>
     </dict>
    </array>
-   <key>description</key><string>Potential leak of an object of type CFStringRef</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>description</key><string>Potential leak of an object of type &apos;CFStringRef&apos;</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCount</string>
+   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>e1fbcc142b678b3c2c43737ee35b64d9</string>
+   <key>issue_hash_content_of_line_in_context</key><string>9f258122568ea8763047e98db8a52647</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>test_objc_arrays</string>
   <key>issue_hash_function_offset</key><string>24</string>
@@ -1927,11 +1926,11 @@
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;o&apos;</string>
-   <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
+   <key>category</key><string>Memory (Core Foundation/Objective-C/OSObject)</string>
    <key>type</key><string>Leak</string>
-   <key>check_name</key><string>osx.cocoa.RetainCount</string>
+   <key>check_name</key><string>osx.cocoa.RetainCountBase</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>e300a279615a384d2b310329651d3978</string>
+   <key>issue_hash_content_of_line_in_context</key><string>8187b0ba5cadd42594120fe05d871502</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>rdar11059275_positive</string>
   <key>issue_hash_function_offset</key><string>1</string>
@@ -2083,7 +2082,6 @@
  </array>
  <key>files</key>
  <array>
-   <string>/clang/test/Analysis/objc-arc.m</string>
  </array>
 </dict>
 </plist>

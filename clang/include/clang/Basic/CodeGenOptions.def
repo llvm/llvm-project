@@ -1,9 +1,8 @@
 //===--- CodeGenOptions.def - Code generation option database ----- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -116,6 +115,10 @@ CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(LTOUnit, 1, 0) ///< Emit IR to support LTO unit features (CFI, whole
                           ///< program vtable opt).
+CODEGENOPT(EnableSplitLTOUnit, 1, 0) ///< Enable LTO unit splitting to support
+				     /// CFI and traditional whole program
+				     /// devirtualization that require whole
+				     /// program IR support.
 CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
                                               ///< be used with an incremental
                                               ///< linker.

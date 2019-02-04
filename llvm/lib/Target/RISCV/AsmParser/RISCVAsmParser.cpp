@@ -1,9 +1,8 @@
 //===-- RISCVAsmParser.cpp - Parse RISCV assembly to MCInst instructions --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -310,12 +309,14 @@ public:
     return RISCVFPRndMode::stringToRoundingMode(Str) != RISCVFPRndMode::Invalid;
   }
 
-  bool isImmXLen() const {
+  bool isImmXLenLI() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    if (VK == RISCVMCExpr::VK_RISCV_LO || VK == RISCVMCExpr::VK_RISCV_PCREL_LO)
+      return true;
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
     bool IsInRange = isRV64() ? true : isInt<32>(Imm) || isUInt<32>(Imm);
@@ -782,7 +783,7 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch(Result) {
   default:
     break;
-  case Match_InvalidImmXLen:
+  case Match_InvalidImmXLenLI:
     if (isRV64()) {
       SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
       return Error(ErrorLoc, "operand must be a constant 64-bit integer");
@@ -1031,17 +1032,10 @@ OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
   case AsmToken::Plus:
   case AsmToken::Integer:
   case AsmToken::String:
+  case AsmToken::Identifier:
     if (getParser().parseExpression(Res))
       return MatchOperand_ParseFail;
     break;
-  case AsmToken::Identifier: {
-    StringRef Identifier;
-    if (getParser().parseIdentifier(Identifier))
-      return MatchOperand_ParseFail;
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
-    break;
-  }
   case AsmToken::Percent:
     return parseOperandWithModifier(Operands);
   }
@@ -1449,7 +1443,17 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   Inst.setLoc(IDLoc);
 
   if (Inst.getOpcode() == RISCV::PseudoLI) {
-    auto Reg = Inst.getOperand(0).getReg();
+    unsigned Reg = Inst.getOperand(0).getReg();
+    const MCOperand &Op1 = Inst.getOperand(1);
+    if (Op1.isExpr()) {
+      // We must have li reg, %lo(sym) or li reg, %pcrel_lo(sym) or similar.
+      // Just convert to an addi. This allows compatibility with gas.
+      emitToStreamer(Out, MCInstBuilder(RISCV::ADDI)
+                              .addReg(Reg)
+                              .addReg(RISCV::X0)
+                              .addExpr(Op1.getExpr()));
+      return false;
+    }
     int64_t Imm = Inst.getOperand(1).getImm();
     // On RV32 the immediate here can either be a signed or an unsigned
     // 32-bit number. Sign extension has to be performed to ensure that Imm

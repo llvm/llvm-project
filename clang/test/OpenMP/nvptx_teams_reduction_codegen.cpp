@@ -137,7 +137,7 @@ int bar(int n){
   //
   // CHECK: call void @__kmpc_spmd_kernel_init(
   // CHECK: call void @__kmpc_data_sharing_init_stack_spmd()
-  // CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY:%.+]], %{{.+}} addrspace(3)* [[KERNEL_RD:@.+]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} {{8|16}}, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR:@.+]] to i8**))
+  // CHECK: call void @__kmpc_get_team_static_memory(i16 1, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY:%.+]], %{{.+}} addrspace(3)* [[KERNEL_RD:@.+]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} {{8|16}}, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR:@.+]] to i8**))
   // CHECK: [[PTR:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
   // CHECK: [[GLOBAL_REC:%.+]] = bitcast i8* [[PTR]] to [[GLOB_REC_TY:%.+]]*
   // CHECK-DAG: [[A_ADDR:%.+]] = getelementptr inbounds [[GLOB_REC_TY]], [[GLOB_REC_TY]]* [[GLOBAL_REC]], i32 0, i32 0
@@ -176,7 +176,7 @@ int bar(int n){
   // CHECK: br label %[[EXIT]]
   //
   // CHECK: [[EXIT]]
-  // call void @__kmpc_restore_team_static_memory(i16 1)
+  // CHECK: call void @__kmpc_restore_team_static_memory(i16 1, i16 1)
   // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
 
   // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.+}}, i16* dereferenceable{{.+}})
@@ -210,7 +210,7 @@ int bar(int n){
   // CHECK: [[B_CAST:%.+]] = bitcast i16* [[B]] to i8*
   // CHECK: store i8* [[B_CAST]], i8** [[PTR2]], align
   // CHECK: [[ARG_RL:%.+]] = bitcast [[RLT]]* [[RL]] to i8*
-  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait(i32 {{.+}}, i32 2, i[[SZ]] {{8|16}}, i8* [[ARG_RL]], void (i8*, i16, i16, i16)* [[PAR_SHUFFLE_REDUCE_FN:@.+]], void (i8*, i32)* [[PAR_WARP_COPY_FN:@.+]])
+  // CHECK: [[RET:%.+]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* [[LOC]], i32 {{.+}}, i32 2, i[[SZ]] {{8|16}}, i8* [[ARG_RL]], void (i8*, i16, i16, i16)* [[PAR_SHUFFLE_REDUCE_FN:@.+]], void (i8*, i32)* [[PAR_WARP_COPY_FN:@.+]])
   // CHECK: [[COND:%.+]] = icmp eq i32 [[RET]], 1
   // CHECK: br i1 [[COND]], label {{%?}}[[IFLABEL:.+]], label {{%?}}[[EXIT:.+]]
   //
@@ -473,7 +473,6 @@ int bar(int n){
   // CHECK: br label {{%?}}[[READ_CONT]]
   //
   // CHECK: [[READ_CONT]]
-  // CHECK: call void @__kmpc_barrier(%struct.ident_t* @
   // CHECK: ret
 
 #endif

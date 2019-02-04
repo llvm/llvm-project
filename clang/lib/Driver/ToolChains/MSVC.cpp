@@ -1,9 +1,8 @@
 //===--- ToolChains.cpp - ToolChain Implementations -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -378,7 +377,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Args.hasArg(options::OPT_shared))
       CmdArgs.push_back(
           Args.MakeArgString(std::string("-wholearchive:") +
-                             TC.getCompilerRTArgString(Args, "fuzzer", false)));
+                             TC.getCompilerRTArgString(Args, "fuzzer")));
     CmdArgs.push_back(Args.MakeArgString("-debug"));
     // Prevent the linker from padding sections we use for instrumentation
     // arrays.

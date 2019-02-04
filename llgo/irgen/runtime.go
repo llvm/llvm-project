@@ -1,9 +1,8 @@
 //===- runtime.go - IR generation for runtime calls -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -518,7 +517,6 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 			llvm.PointerType(llvm.Int8Type(), 0),
 			llvm.Int8Type(),
 			tm.target.IntPtrType(),
-			llvm.Int32Type(),
 			llvm.Int1Type(),
 		},
 		false,
@@ -531,8 +529,7 @@ func newRuntimeInterface(module llvm.Module, tm *llvmTypeMap) (*runtimeInterface
 		[]llvm.Type{
 			llvm.PointerType(llvm.Int8Type(), 0),
 			llvm.PointerType(llvm.Int8Type(), 0),
-			tm.target.IntPtrType(),
-			llvm.Int32Type(),
+			llvm.Int64Type(),
 			llvm.Int1Type(),
 		},
 		false,
@@ -590,9 +587,8 @@ func (fr *frame) memsetZero(ptr llvm.Value, size llvm.Value) {
 	ptr = fr.builder.CreateBitCast(ptr, llvm.PointerType(llvm.Int8Type(), 0), "")
 	fill := llvm.ConstNull(llvm.Int8Type())
 	size = fr.createZExtOrTrunc(size, fr.target.IntPtrType(), "")
-	align := llvm.ConstInt(llvm.Int32Type(), 1, false)
 	isvolatile := llvm.ConstNull(llvm.Int1Type())
-	fr.builder.CreateCall(memset, []llvm.Value{ptr, fill, size, align, isvolatile}, "")
+	fr.builder.CreateCall(memset, []llvm.Value{ptr, fill, size, isvolatile}, "")
 }
 
 func (fr *frame) memcpy(dest llvm.Value, src llvm.Value, size llvm.Value) {
@@ -600,9 +596,8 @@ func (fr *frame) memcpy(dest llvm.Value, src llvm.Value, size llvm.Value) {
 	dest = fr.builder.CreateBitCast(dest, llvm.PointerType(llvm.Int8Type(), 0), "")
 	src = fr.builder.CreateBitCast(src, llvm.PointerType(llvm.Int8Type(), 0), "")
 	size = fr.createZExtOrTrunc(size, fr.target.IntPtrType(), "")
-	align := llvm.ConstInt(llvm.Int32Type(), 1, false)
 	isvolatile := llvm.ConstNull(llvm.Int1Type())
-	fr.builder.CreateCall(memcpy, []llvm.Value{dest, src, size, align, isvolatile}, "")
+	fr.builder.CreateCall(memcpy, []llvm.Value{dest, src, size, isvolatile}, "")
 }
 
 func (fr *frame) returnAddress(level uint64) llvm.Value {

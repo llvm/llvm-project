@@ -1,9 +1,8 @@
 //===--- FindSymbols.cpp ------------------------------------*- C++-*------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "FindSymbols.h"
@@ -25,7 +24,6 @@
 
 #define DEBUG_TYPE "FindSymbols"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -100,9 +98,9 @@ struct ScoredSymbolGreater {
 
 } // namespace
 
-Expected<std::vector<SymbolInformation>>
-getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
-                    StringRef HintPath) {
+llvm::Expected<std::vector<SymbolInformation>>
+getWorkspaceSymbols(llvm::StringRef Query, int Limit,
+                    const SymbolIndex *const Index, llvm::StringRef HintPath) {
   std::vector<SymbolInformation> Result;
   if (Query.empty() || !Index)
     return Result;
@@ -153,7 +151,7 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
     L.range = {Start, End};
     SymbolKind SK = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
     std::string Scope = Sym.Scope;
-    StringRef ScopeRef = Scope;
+    llvm::StringRef ScopeRef = Scope;
     ScopeRef.consume_back("::");
     SymbolInformation Info = {Sym.Name, SK, L, ScopeRef};
 
@@ -190,7 +188,7 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   // sourceLocToPosition won't switch files, so we call getSpellingLoc on top of
   // that to make sure it does not switch files.
   // FIXME: sourceLocToPosition should not switch files!
-  SourceLocation BeginLoc =  SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
+  SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
   SourceLocation EndLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getEndLoc()));
   if (NameLoc.isInvalid() || BeginLoc.isInvalid() || EndLoc.isInvalid())
     return llvm::None;

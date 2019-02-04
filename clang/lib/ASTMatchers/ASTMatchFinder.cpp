@@ -1,9 +1,8 @@
 //===--- ASTMatchFinder.cpp - Structural query framework ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -676,13 +675,17 @@ private:
       //  c) there is a bug in the AST, and the node is not reachable
       // Usually the traversal scope is the whole AST, which precludes b.
       // Bugs are common enough that it's worthwhile asserting when we can.
-      assert((Node.get<TranslationUnitDecl>() ||
-              /* Traversal scope is limited if none of the bounds are the TU */
-              llvm::none_of(ActiveASTContext->getTraversalScope(),
-                            [](Decl *D) {
-                              return D->getKind() == Decl::TranslationUnit;
-                            })) &&
-             "Found node that is not in the complete parent map!");
+#ifndef NDEBUG
+      if (!Node.get<TranslationUnitDecl>() &&
+          /* Traversal scope is full AST if any of the bounds are the TU */
+          llvm::any_of(ActiveASTContext->getTraversalScope(), [](Decl *D) {
+            return D->getKind() == Decl::TranslationUnit;
+          })) {
+        llvm::errs() << "Tried to match orphan node:\n";
+        Node.dump(llvm::errs(), ActiveASTContext->getSourceManager());
+        llvm_unreachable("Parent map should be complete!");
+      }
+#endif
       return false;
     }
     if (Parents.size() == 1) {

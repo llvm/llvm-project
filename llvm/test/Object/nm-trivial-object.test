@@ -18,6 +18,8 @@ RUN: llvm-nm %p/Inputs/weak.elf-x86-64 \
 RUN:         | FileCheck %s -check-prefix WEAK-ELF64
 RUN: llvm-nm %p/Inputs/absolute.elf-x86-64 \
 RUN:         | FileCheck %s -check-prefix ABSOLUTE-ELF64
+RUN: llvm-nm -a %p/Inputs/IsNAN.o \
+RUN:         | FileCheck %s -check-prefix ELF64-DEBUG-SYMS
 RUN: llvm-nm %p/Inputs/trivial-object-test.macho-i386 \
 RUN:         | FileCheck %s -check-prefix macho
 RUN: llvm-nm -U %p/Inputs/trivial-object-test.macho-i386 \
@@ -61,9 +63,9 @@ COFF32-NEXT:          U _puts
 
 
 WASM:      00000000 d .L.str
-WASM-NEXT: 00000003 t .LSomeOtherFunction_bitcast
+WASM-NEXT: 00000019 t .LSomeOtherFunction_bitcast
 WASM-NEXT:          U SomeOtherFunction
-WASM-NEXT: 00000002 T main
+WASM-NEXT: 00000001 T main
 WASM-NEXT:          U puts
 WASM-NEXT: 00000010 D var
 
@@ -112,6 +114,23 @@ WEAK-ELF64: 0000000000000000 V x2
 
 ABSOLUTE-ELF64: 0000000000000123 a a1
 ABSOLUTE-ELF64: 0000000000000123 A a2
+
+ELF64-DEBUG-SYMS: 00000000 b .bss
+ELF64-DEBUG-SYMS-NEXT: 00000000 n .comment
+ELF64-DEBUG-SYMS-NEXT: 00000000 d .data
+ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_abbrev
+ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_aranges
+ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_frame
+ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_info
+ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_line
+ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_pubnames
+ELF64-DEBUG-SYMS-NEXT: 00000000 n .note.GNU-stack
+ELF64-DEBUG-SYMS-NEXT: 00000000 t .text
+ELF64-DEBUG-SYMS-NEXT: 00000000 a IsNAN.cpp
+ELF64-DEBUG-SYMS-NEXT: 00000014 T _ZN4llvm5IsNANEd
+ELF64-DEBUG-SYMS-NEXT: 00000000 T _ZN4llvm5IsNANEf
+ELF64-DEBUG-SYMS-NEXT:          U __isnan
+ELF64-DEBUG-SYMS-NEXT:          U __isnanf
 
 macho:          U _SomeOtherFunction
 macho: 00000000 T _main
@@ -166,11 +185,11 @@ macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000048 S _t.eh
 macho-pa: 0000000000000000 - 00 0000    SO /Volumes/SandBox/
 macho-pa: 0000000000000000 - 00 0000    SO hello.c
 macho-pa: 0000000053c8408d - 03 0001   OSO /Volumes/SandBox/hello.o
-macho-pa: 0000000100000f30 - 01 0000 BNSYM 
+macho-pa: 0000000100000f30 - 01 0000 BNSYM
 macho-pa: 0000000100000f30 - 01 0000   FUN _main
-macho-pa: 000000000000003b - 00 0000   FUN 
-macho-pa: 000000000000003b - 01 0000 ENSYM 
-macho-pa: 0000000000000000 - 01 0000    SO 
+macho-pa: 000000000000003b - 00 0000   FUN
+macho-pa: 000000000000003b - 01 0000 ENSYM
+macho-pa: 0000000000000000 - 01 0000    SO
 macho-pa: 0000000100000000 T __mh_execute_header
 macho-pa: 0000000100000f30 T _main
 macho-pa:                  U _printf

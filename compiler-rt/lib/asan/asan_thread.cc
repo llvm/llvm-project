@@ -1,9 +1,8 @@
 //===-- asan_thread.cc ----------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -223,9 +222,11 @@ void AsanThread::Init(const InitOptions *options) {
   atomic_store(&stack_switching_, false, memory_order_release);
   CHECK_EQ(this->stack_size(), 0U);
   SetThreadStackAndTls(options);
-  CHECK_GT(this->stack_size(), 0U);
-  CHECK(AddrIsInMem(stack_bottom_));
-  CHECK(AddrIsInMem(stack_top_ - 1));
+  if (stack_top_ != stack_bottom_) {
+    CHECK_GT(this->stack_size(), 0U);
+    CHECK(AddrIsInMem(stack_bottom_));
+    CHECK(AddrIsInMem(stack_top_ - 1));
+  }
   ClearShadowForThreadStackAndTLS();
   fake_stack_ = nullptr;
   if (__asan_option_detect_stack_use_after_return)
@@ -295,14 +296,17 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   tls_end_ = tls_begin_ + tls_size;
   dtls_ = DTLS_Get();
 
-  int local;
-  CHECK(AddrIsInStack((uptr)&local));
+  if (stack_top_ != stack_bottom_) {
+    int local;
+    CHECK(AddrIsInStack((uptr)&local));
+  }
 }
 
 #endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
 void AsanThread::ClearShadowForThreadStackAndTLS() {
-  PoisonShadow(stack_bottom_, stack_top_ - stack_bottom_, 0);
+  if (stack_top_ != stack_bottom_)
+    PoisonShadow(stack_bottom_, stack_top_ - stack_bottom_, 0);
   if (tls_begin_ != tls_end_) {
     uptr tls_begin_aligned = RoundDownTo(tls_begin_, SHADOW_GRANULARITY);
     uptr tls_end_aligned = RoundUpTo(tls_end_, SHADOW_GRANULARITY);
@@ -314,6 +318,9 @@ void AsanThread::ClearShadowForThreadStackAndTLS() {
 
 bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
                                            StackFrameAccess *access) {
+  if (stack_top_ == stack_bottom_)
+    return false;
+
   uptr bottom = 0;
   if (AddrIsInStack(addr)) {
     bottom = stack_bottom();

@@ -1,9 +1,8 @@
 //===--- NetBSD.cpp - NetBSD ToolChain Implementations ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -256,6 +255,13 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
+  if (SanArgs.needsSharedRt()) {
+    CmdArgs.push_back("-rpath");
+    CmdArgs.push_back(Args.MakeArgString(
+        ToolChain.getCompilerRTPath().c_str()));
+  }
+
   unsigned Major, Minor, Micro;
   ToolChain.getTriple().getOSVersion(Major, Minor, Micro);
   bool useLibgcc = true;
@@ -448,10 +454,14 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
     Res |= SanitizerKind::Vptr;
   }
   if (IsX86_64) {
+    Res |= SanitizerKind::DataFlow;
     Res |= SanitizerKind::Efficiency;
     Res |= SanitizerKind::Fuzzer;
     Res |= SanitizerKind::FuzzerNoLink;
+    Res |= SanitizerKind::HWAddress;
     Res |= SanitizerKind::KernelAddress;
+    Res |= SanitizerKind::KernelHWAddress;
+    Res |= SanitizerKind::KernelMemory;
     Res |= SanitizerKind::Memory;
     Res |= SanitizerKind::Thread;
   }

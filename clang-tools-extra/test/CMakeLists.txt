@@ -16,7 +16,8 @@ endif ()
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
 llvm_canonicalize_cmake_booleans(
-  CLANG_ENABLE_STATIC_ANALYZER)
+  CLANG_ENABLE_STATIC_ANALYZER
+  CLANGD_BUILD_XPC_SUPPORT)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
@@ -61,7 +62,11 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-headers
 
   clang-tidy
-  )
+)
+
+if(CLANGD_BUILD_XPC_SUPPORT)
+  list(APPEND CLANG_TOOLS_TEST_DEPS clangd-xpc-test-client)
+endif()
 
 set(CLANGD_TEST_DEPS
   clangd

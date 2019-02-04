@@ -1,9 +1,8 @@
 //===-- X86AsmPrinter.cpp - Convert X86 LLVM code to AT&T assembly --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -572,9 +571,9 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
 
       // Emitting an Elf_Prop for the CET properties.
       OutStreamer->EmitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
-      OutStreamer->EmitIntValue(WordSize, 4);               // data size
-      OutStreamer->EmitIntValue(FeatureFlagsAnd, WordSize); // data
-      EmitAlignment(WordSize == 4 ? 2 : 3);                 // padding
+      OutStreamer->EmitIntValue(4, 4);               // data size
+      OutStreamer->EmitIntValue(FeatureFlagsAnd, 4); // data
+      EmitAlignment(WordSize == 4 ? 2 : 3);          // padding
 
       OutStreamer->endSection(Nt);
       OutStreamer->SwitchSection(Cur);
@@ -683,26 +682,31 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // stripping. Since LLVM never generates code that does this, it is always
     // safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
-    return;
-  }
-
-  if (TT.isKnownWindowsMSVCEnvironment() && MMI->usesVAFloatArgument()) {
-    StringRef SymbolName =
-        (TT.getArch() == Triple::x86_64) ? "_fltused" : "__fltused";
-    MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
-    OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
-    return;
-  }
-
-  if (TT.isOSBinFormatCOFF()) {
+  } else if (TT.isOSBinFormatCOFF()) {
+    if (MMI->usesMSVCFloatingPoint()) {
+      // In Windows' libcmt.lib, there is a file which is linked in only if the
+      // symbol _fltused is referenced. Linking this in causes some
+      // side-effects:
+      //
+      // 1. For x86-32, it will set the x87 rounding mode to 53-bit instead of
+      // 64-bit mantissas at program start.
+      //
+      // 2. It links in support routines for floating-point in scanf and printf.
+      //
+      // MSVC emits an undefined reference to _fltused when there are any
+      // floating point operations in the program (including calls). A program
+      // that only has: `scanf("%f", &global_float);` may fail to trigger this,
+      // but oh well...that's a documented issue.
+      StringRef SymbolName =
+          (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
+      MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
+      OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+      return;
+    }
     emitStackMaps(SM);
-    return;
-  }
-
-  if (TT.isOSBinFormatELF()) {
+  } else if (TT.isOSBinFormatELF()) {
     emitStackMaps(SM);
     FM.serializeToFaultMapSection();
-    return;
   }
 }
 

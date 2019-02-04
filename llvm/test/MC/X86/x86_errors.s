@@ -118,3 +118,43 @@ mov (%rax,%eiz), %ebx
 // 32: error: register %riz is only available in 64-bit mode
 // 64: error: base register is 32-bit, but index register is not
 mov (%eax,%riz), %ebx
+
+
+// Parse errors from assembler parsing. 
+
+v_ecx = %ecx
+v_eax = %eax
+v_gs  = %gs
+v_imm = 4
+$test = %ebx
+
+// 32: 7: error: expected register here
+// 64: 7: error: expected register here
+mov 4(4), %eax	
+
+// 32: 7: error: expected register here
+// 64: 7: error: expected register here
+mov 5(v_imm), %eax		
+	
+// 32: 7: error: invalid register name
+// 64: 7: error: invalid register name
+mov 6(%v_imm), %eax		
+	
+// 32: 8: warning: scale factor without index register is ignored
+// 64: 8: warning: scale factor without index register is ignored
+mov 7(,v_imm), %eax		
+
+// 64: 6: error: expected immediate expression
+mov $%eax, %ecx
+
+// 32: 6: error: expected immediate expression
+// 64: 6: error: expected immediate expression
+mov $v_eax, %ecx
+
+// 32: error: unexpected token in argument list
+// 64: error: unexpected token in argument list
+mov v_ecx(%eax), %ecx	
+
+// 32: 7: error: invalid operand for instruction
+// 64: 7: error: invalid operand for instruction
+addb (%dx), %al

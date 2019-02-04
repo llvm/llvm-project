@@ -1,9 +1,8 @@
 //===- ExprObjC.h - Classes for representing ObjC expressions ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -255,12 +254,6 @@ struct ObjCDictionaryElement {
 };
 
 } // namespace clang
-
-namespace llvm {
-
-template <> struct isPodLike<clang::ObjCDictionaryElement> : std::true_type {};
-
-} // namespace llvm
 
 namespace clang {
 
@@ -1187,6 +1180,13 @@ public:
   /// sent to.
   ReceiverKind getReceiverKind() const { return (ReceiverKind)Kind; }
 
+  /// \return the return type of the message being sent.
+  /// This is not always the type of the message expression itself because
+  /// of references (the expression would not have a reference type).
+  /// It is also not always the declared return type of the method because
+  /// of `instancetype` (in that case it's an expression type).
+  QualType getCallReturnType(ASTContext &Ctx) const;
+
   /// Source range of the receiver.
   SourceRange getReceiverRange() const;
 
@@ -1574,8 +1574,7 @@ public:
 /// \endcode
 class ObjCBridgedCastExpr final
     : public ExplicitCastExpr,
-      private llvm::TrailingObjects<
-          ObjCBridgedCastExpr, CastExpr::BasePathSizeTy, CXXBaseSpecifier *> {
+      private llvm::TrailingObjects<ObjCBridgedCastExpr, CXXBaseSpecifier *> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend class CastExpr;
@@ -1584,10 +1583,6 @@ class ObjCBridgedCastExpr final
   SourceLocation LParenLoc;
   SourceLocation BridgeKeywordLoc;
   unsigned Kind : 2;
-
-  size_t numTrailingObjects(OverloadToken<CastExpr::BasePathSizeTy>) const {
-    return path_empty() ? 0 : 1;
-  }
 
 public:
   ObjCBridgedCastExpr(SourceLocation LParenLoc, ObjCBridgeCastKind Kind,

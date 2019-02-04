@@ -1,9 +1,8 @@
 //===-- DynamicLoaderHexagonDYLD.cpp ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -453,7 +452,7 @@ DynamicLoaderHexagonDYLD::GetStepThroughTrampolinePlan(Thread &thread,
     AddressVector::iterator start = addrs.begin();
     AddressVector::iterator end = addrs.end();
 
-    std::sort(start, end);
+    llvm::sort(start, end);
     addrs.erase(std::unique(start, end), end);
     thread_plan_sp.reset(new ThreadPlanRunToAddress(thread, addrs, stop));
   }

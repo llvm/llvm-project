@@ -1,9 +1,8 @@
 //===- AArch64InstrInfo.cpp - AArch64 Instruction Information -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -965,6 +964,11 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
     return true;
   switch (MI.getOpcode()) {
+  case AArch64::HINT:
+    // CSDB hints are scheduling barriers.
+    if (MI.getOperand(0).getImm() == 0x14)
+      return true;
+    break;
   case AArch64::DSB:
   case AArch64::ISB:
     // DSB and ISB also are scheduling barriers.
@@ -4746,7 +4750,8 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char *> TargetFlags[] = {
       {MO_COFFSTUB, "aarch64-coffstub"},
       {MO_GOT, "aarch64-got"},   {MO_NC, "aarch64-nc"},
-      {MO_TLS, "aarch64-tls"},   {MO_DLLIMPORT, "aarch64-dllimport"}};
+      {MO_S, "aarch64-s"},       {MO_TLS, "aarch64-tls"},
+      {MO_DLLIMPORT, "aarch64-dllimport"}};
   return makeArrayRef(TargetFlags);
 }
 

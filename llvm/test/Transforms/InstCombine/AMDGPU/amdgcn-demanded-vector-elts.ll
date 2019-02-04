@@ -1288,6 +1288,28 @@ define amdgpu_ps float @extract_elt0_image_sample_1d_v4f32_f32(float %vaddr, <8 
   ret float %elt0
 }
 
+; Check that the intrinsic remains unchanged in the presence of TFE or LWE
+; CHECK-LABEL: @extract_elt0_image_sample_1d_v4f32_f32_tfe(
+; CHECK-NEXT: %data = call { <4 x float>, i32 } @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 1, i32 0)
+; CHECK: ret float %elt0
+define amdgpu_ps float @extract_elt0_image_sample_1d_v4f32_f32_tfe(float %vaddr, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 1, i32 0)
+  %data.vec = extractvalue {<4 x float>,i32} %data, 0
+  %elt0 = extractelement <4 x float> %data.vec, i32 0
+  ret float %elt0
+}
+
+; Check that the intrinsic remains unchanged in the presence of TFE or LWE
+; CHECK-LABEL: @extract_elt0_image_sample_1d_v4f32_f32_lwe(
+; CHECK-NEXT: %data = call { <4 x float>, i32 } @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 2, i32 0)
+; CHECK: ret float %elt0
+define amdgpu_ps float @extract_elt0_image_sample_1d_v4f32_f32_lwe(float %vaddr, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
+  %data = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 2, i32 0)
+  %data.vec = extractvalue {<4 x float>,i32} %data, 0
+  %elt0 = extractelement <4 x float> %data.vec, i32 0
+  ret float %elt0
+}
+
 ; CHECK-LABEL: @extract_elt0_image_sample_2d_v4f32_f32(
 ; CHECK-NEXT: %data = call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float %s, float %t, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
 ; CHECK-NEXT: ret float %data
@@ -1466,6 +1488,7 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_1111_image_sample_1d_
 }
 
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
@@ -2372,7 +2395,14 @@ define amdgpu_ps float @extract_elt0_image_getresinfo_1d_v4f32_i32(i32 %mip, <8 
   ret float %elt0
 }
 
+; Verify that we don't creash on non-constant operand.
+define protected <4 x half> @__llvm_amdgcn_image_sample_d_1darray_v4f16_f32_f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1 zeroext, i32, i32) local_unnamed_addr {
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.d.1darray.v4f16.f32.f32(i32 %0, float %1, float %2, float %3, float %4, <8 x i32> %5, <4 x i32> %6, i1 zeroext %7, i32 %8, i32 %9) #1
+  ret <4 x half> %tmp
+}
+
 declare <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x half> @llvm.amdgcn.image.sample.d.1darray.v4f16.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

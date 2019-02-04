@@ -1,6 +1,19 @@
+# Configure the Features.inc file.
+llvm_canonicalize_cmake_booleans(
+  CLANGD_BUILD_XPC)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Features.inc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Features.inc
+)
+
 set(LLVM_LINK_COMPONENTS
   Support
   )
+
+if(CLANG_BUILT_STANDALONE)
+  # needed to get HAVE_CXX_ATOMICS64_WITHOUT_LIB defined
+  include(CheckAtomic)
+endif()
 
 set(CLANGD_ATOMIC_LIB "")
 if(NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
@@ -27,11 +40,13 @@ add_clang_library(clangDaemon
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   Headers.cpp
+  IncludeFixer.cpp
   JSONTransport.cpp
   Logger.cpp
   Protocol.cpp
   Quality.cpp
   RIFF.cpp
+  Selection.cpp
   SourceCode.cpp
   Threading.cpp
   Trace.cpp
@@ -56,6 +71,8 @@ add_clang_library(clangDaemon
   index/dex/Iterator.cpp
   index/dex/PostingList.cpp
   index/dex/Trigram.cpp
+
+  refactor/Tweak.cpp
 
   LINK_LIBS
   clangAST
@@ -94,6 +111,7 @@ add_clang_library(clangDaemon
   ${CLANGD_ATOMIC_LIB}
   )
 
+add_subdirectory(refactor/tweaks)
 if( LLVM_LIB_FUZZING_ENGINE OR LLVM_USE_SANITIZE_COVERAGE )
   add_subdirectory(fuzzer)
 endif()
@@ -104,3 +122,6 @@ add_subdirectory(index/dex/dexp)
 if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
 endif()
+if ( CLANGD_BUILD_XPC )
+  add_subdirectory(xpc)
+endif ()

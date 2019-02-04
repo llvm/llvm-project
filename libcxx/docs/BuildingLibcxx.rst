@@ -18,33 +18,10 @@ Xcode 4.2 or later.  However if you want to install tip-of-trunk from here
 
 The basic steps needed to build libc++ are:
 
-#. Checkout LLVM:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``
-
-#. Checkout libc++:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/projects``
-   * ``svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx``
-
-#. Checkout libc++abi:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/projects``
-   * ``svn co http://llvm.org/svn/llvm-project/libcxxabi/trunk libcxxabi``
-
-#. Configure and build libc++ with libc++abi:
-
-   CMake is the only supported configuration system.
-
-   Clang is the preferred compiler when building and using libc++.
-
-   * ``cd where you want to build llvm``
-   * ``mkdir build``
-   * ``cd build``
-   * ``cmake -G <generator> [options] <path to llvm sources>``
+#. Checkout and configure LLVM (including libc++ and libc++abi), according to the `LLVM
+   getting started <https://llvm.org/docs/GettingStarted.html>`_ documentation. Make sure
+   to include ``libcxx`` and ``libcxxabi`` in the ``LLVM_ENABLE_PROJECTS`` option passed
+   to CMake.
 
    For more information about configuring libc++ see :ref:`CMake Options`.
 
@@ -71,23 +48,21 @@ The instructions are for building libc++ on
 FreeBSD, Linux, or Mac using `libc++abi`_ as the C++ ABI library.
 On Linux, it is also possible to use :ref:`libsupc++ <libsupcxx>` or libcxxrt.
 
-It is sometimes beneficial to build outside of the LLVM tree. An out-of-tree
-build would look like this:
+It is sometimes beneficial to build separately from the full LLVM build. An
+out-of-tree build would look like this:
 
 .. code-block:: bash
 
   $ cd where-you-want-libcxx-to-live
-  $ # Check out llvm, libc++ and libc++abi.
-  $ ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``
-  $ ``svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx``
-  $ ``svn co http://llvm.org/svn/llvm-project/libcxxabi/trunk libcxxabi``
+  $ # Check out the sources (includes everything, but we'll only use libcxx)
+  $ ``git clone https://github.com/llvm/llvm-project.git``
   $ cd where-you-want-to-build
   $ mkdir build && cd build
   $ export CC=clang CXX=clang++
-  $ cmake -DLLVM_PATH=path/to/llvm \
+  $ cmake -DLLVM_PATH=path/to/separate/llvm \
           -DLIBCXX_CXX_ABI=libcxxabi \
-          -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxabi/include \
-          path/to/libcxx
+          -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/separate/libcxxabi/include \
+          path/to/llvm-project/libcxx
   $ make
   $ make check-libcxx # optional
 
@@ -221,6 +196,15 @@ libc++ specific options
   **Default**: ``""``
 
   Define libc++ destination prefix.
+
+.. option:: LIBCXX_HERMETIC_STATIC_LIBRARY:BOOL
+
+  **Default**: ``OFF``
+
+  Do not export any symbols from the static libc++ library. This is useful when
+  This is useful when the static libc++ library is being linked into shared
+  libraries that may be used in with other shared libraries that use different
+  C++ library. We want to avoid avoid exporting any libc++ symbols in that case.
 
 .. _libc++experimental options:
 

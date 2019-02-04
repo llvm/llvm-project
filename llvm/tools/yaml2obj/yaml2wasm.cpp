@@ -1,9 +1,8 @@
 //===- yaml2wasm - Convert YAML to a Wasm object file --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -49,6 +48,7 @@ private:
   int writeSectionContent(raw_ostream &OS, WasmYAML::DylinkSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
+  int writeSectionContent(raw_ostream &OS, WasmYAML::ProducersSection &Section);
   WasmYAML::Object &Obj;
   uint32_t NumImportedFunctions = 0;
   uint32_t NumImportedGlobals = 0;
@@ -105,7 +105,7 @@ static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
   case wasm::WASM_OPCODE_F64_CONST:
     writeUint64(OS, InitExpr.Value.Float64);
     break;
-  case wasm::WASM_OPCODE_GET_GLOBAL:
+  case wasm::WASM_OPCODE_GLOBAL_GET:
     encodeULEB128(InitExpr.Value.Global, OS);
     break;
   default:
@@ -256,6 +256,29 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 }
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
+                                    WasmYAML::ProducersSection &Section) {
+  writeStringRef(Section.Name, OS);
+  int Fields = int(!Section.Languages.empty()) + int(!Section.Tools.empty()) +
+               int(!Section.SDKs.empty());
+  if (Fields == 0)
+    return 0;
+  encodeULEB128(Fields, OS);
+  for (auto &Field : {std::make_pair(StringRef("language"), &Section.Languages),
+                      std::make_pair(StringRef("processed-by"), &Section.Tools),
+                      std::make_pair(StringRef("sdk"), &Section.SDKs)}) {
+    if (Field.second->empty())
+      continue;
+    writeStringRef(Field.first, OS);
+    encodeULEB128(Field.second->size(), OS);
+    for (auto &Entry : *Field.second) {
+      writeStringRef(Entry.Name, OS);
+      writeStringRef(Entry.Version, OS);
+    }
+  }
+  return 0;
+}
+
+int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::CustomSection &Section) {
   if (auto S = dyn_cast<WasmYAML::DylinkSection>(&Section)) {
     if (auto Err = writeSectionContent(OS, *S))
@@ -264,6 +287,9 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     if (auto Err = writeSectionContent(OS, *S))
       return Err;
   } else if (auto S = dyn_cast<WasmYAML::LinkingSection>(&Section)) {
+    if (auto Err = writeSectionContent(OS, *S))
+      return Err;
+  } else if (auto S = dyn_cast<WasmYAML::ProducersSection>(&Section)) {
     if (auto Err = writeSectionContent(OS, *S))
       return Err;
   } else {

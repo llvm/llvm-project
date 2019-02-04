@@ -588,3 +588,47 @@ cond.end:
   store i8 %cond, i8* @a, align 1
   ret void
 }
+
+; CHECK-LABEL: dont_replace_trunc_1
+; CHECK: cmp
+; CHECK: uxtb
+define void @dont_replace_trunc_1(i8* %a, i16* %b, i16* %c, i32* %d, i8* %e, i32* %f) {
+entry:
+  %0 = load i16, i16* %c, align 2
+  %1 = load i16, i16* %b, align 2
+  %conv = sext i16 %1 to i32
+  store i32 %conv, i32* %f, align 4
+  %2 = trunc i16 %1 to i8
+  %conv1 = and i8 %2, 1
+  store i8 %conv1, i8* %e, align 1
+  %3 = load i8, i8* %a, align 1
+  %narrow = mul nuw i8 %3, %conv1
+  %mul = zext i8 %narrow to i32
+  store i32 %mul, i32* %d, align 4
+  %4 = zext i8 %narrow to i16
+  %conv5 = or i16 %0, %4
+  %tobool = icmp eq i16 %conv5, 0
+  br i1 %tobool, label %if.end, label %for.cond
+
+for.cond:                                         ; preds = %entry, %for.cond
+  br label %for.cond
+
+if.end:                                           ; preds = %entry
+  ret void
+}
+
+; CHECK-LABEL: dont_replace_trunc_2
+; CHECK: cmp
+; CHECK: uxtb
+define i32 @dont_replace_trunc_2(i16* %a, i8* %b) {
+entry:
+  %0 = load i16, i16* %a, align 2
+  %cmp = icmp ugt i16 %0, 8
+  %narrow = select i1 %cmp, i16 %0, i16 0
+  %cond = trunc i16 %narrow to i8
+  %1 = load i8, i8* %b, align 1
+  %or = or i8 %1, %cond
+  store i8 %or, i8* %b, align 1
+  %conv5 = zext i8 %or to i32
+  ret i32 %conv5
+}

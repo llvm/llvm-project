@@ -1,9 +1,8 @@
 //===-- VOP3PInstructions.td - Vector Instruction Defintions --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -250,7 +249,7 @@ class SDot2Pat<Instruction Inst> : GCNPat <
   (Inst (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))
 >;
 
-let SubtargetPredicate = HasDLInsts in {
+let SubtargetPredicate = HasDotInsts in {
 
 def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>>;
 def V_DOT2_I32_I16 : VOP3PInst<"v_dot2_i32_i16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>>;
@@ -302,7 +301,7 @@ foreach Type = ["U", "I"] in
                       (NonACAdd_oneuse lhs, (!cast<PatFrag>("Mul"#Type#y#"_4bit") i32:$src0, i32:$src1)))),
     (!cast<VOP3PInst>("V_DOT8_"#Type#"32_"#Type#4) (i32 8), $src0, (i32 8), $src1, (i32 8), $src2, (i1 0))>;
 
-} // End SubtargetPredicate = HasDLInsts
+} // End SubtargetPredicate = HasDotInsts
 
 multiclass VOP3P_Real_vi<bits<10> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
@@ -352,7 +351,7 @@ defm V_FMA_MIXHI_F16 : VOP3P_Real_vi <0x3a2>;
 }
 
 
-let SubtargetPredicate = HasDLInsts in {
+let SubtargetPredicate = HasDotInsts in {
 
 defm V_DOT2_F32_F16 : VOP3P_Real_vi <0x3a3>;
 defm V_DOT2_I32_I16 : VOP3P_Real_vi <0x3a6>;
@@ -362,4 +361,4 @@ defm V_DOT4_U32_U8  : VOP3P_Real_vi <0x3a9>;
 defm V_DOT8_I32_I4  : VOP3P_Real_vi <0x3aa>;
 defm V_DOT8_U32_U4  : VOP3P_Real_vi <0x3ab>;
 
-} // End SubtargetPredicate = HasDLInsts
+} // End SubtargetPredicate = HasDotInsts

@@ -1,15 +1,15 @@
 //===-- ClangdTests.cpp - Clangd unit tests ---------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
+#include "GlobalCompilationDatabase.h"
 #include "Matchers.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
@@ -30,7 +30,6 @@
 #include <thread>
 #include <vector>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -44,8 +43,9 @@ using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-MATCHER_P2(FileRange, File, Range, "") {
-  return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
+MATCHER_P2(DeclAt, File, Range, "") {
+  return arg.PreferredDeclaration ==
+         Location{URIForFile::canonicalize(File, testRoot()), Range};
 }
 
 bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
@@ -109,14 +109,14 @@ public:
 
 private:
   mutable std::mutex Mutex;
-  StringMap<bool> LastDiagsHadError;
+  llvm::StringMap<bool> LastDiagsHadError;
 };
 
 /// Replaces all patterns of the form 0x123abc with spaces
 std::string replacePtrsInDump(std::string const &Dump) {
-  Regex RE("0x[0-9a-fA-F]+");
-  SmallVector<StringRef, 1> Matches;
-  StringRef Pending = Dump;
+  llvm::Regex RE("0x[0-9a-fA-F]+");
+  llvm::SmallVector<llvm::StringRef, 1> Matches;
+  llvm::StringRef Pending = Dump;
 
   std::string Result;
   while (RE.match(Pending, &Matches)) {
@@ -139,8 +139,8 @@ std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
 class ClangdVFSTest : public ::testing::Test {
 protected:
   std::string parseSourceAndDumpAST(
-      PathRef SourceFileRelPath, StringRef SourceContents,
-      std::vector<std::pair<PathRef, StringRef>> ExtraFiles = {},
+      PathRef SourceFileRelPath, llvm::StringRef SourceContents,
+      std::vector<std::pair<PathRef, llvm::StringRef>> ExtraFiles = {},
       bool ExpectErrors = false) {
     MockFSProvider FS;
     ErrorCheckingDiagConsumer DiagConsumer;
@@ -269,7 +269,7 @@ int b = a;
 TEST_F(ClangdVFSTest, PropagatesContexts) {
   static Key<int> Secret;
   struct FSProvider : public FileSystemProvider {
-    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
       Got = Context::current().getExisting(Secret);
       return buildTestFS({});
     }
@@ -313,19 +313,19 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
 
   // A lib dir for gcc installation
   SmallString<64> LibDir("/randomusr/lib/gcc/x86_64-linux-gnu");
-  sys::path::append(LibDir, Version);
+  llvm::sys::path::append(LibDir, Version);
 
   // Put crtbegin.o into LibDir/64 to trick clang into thinking there's a gcc
   // installation there.
   SmallString<64> DummyLibFile;
-  sys::path::append(DummyLibFile, LibDir, "64", "crtbegin.o");
+  llvm::sys::path::append(DummyLibFile, LibDir, "64", "crtbegin.o");
   FS.Files[DummyLibFile] = "";
 
   SmallString<64> IncludeDir("/randomusr/include/c++");
-  sys::path::append(IncludeDir, Version);
+  llvm::sys::path::append(IncludeDir, Version);
 
   SmallString<64> StringPath;
-  sys::path::append(StringPath, IncludeDir, "string");
+  llvm::sys::path::append(StringPath, IncludeDir, "string");
   FS.Files[StringPath] = "class mock_string {};";
 
   auto FooCpp = testPath("foo.cpp");
@@ -459,10 +459,9 @@ int hello;
               UnorderedElementsAre(Pair(FooCpp, false), Pair(BarCpp, true),
                                    Pair(BazCpp, false)));
 
-  auto Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
+  auto Locations = runLocateSymbolAt(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations,
-              ElementsAre(FileRange(FooCpp, FooSource.range("one"))));
+  EXPECT_THAT(*Locations, ElementsAre(DeclAt(FooCpp, FooSource.range("one"))));
 
   // Undefine MACRO, close baz.cpp.
   CDB.ExtraClangFlags.clear();
@@ -475,10 +474,9 @@ int hello;
   EXPECT_THAT(DiagConsumer.filesWithDiags(),
               UnorderedElementsAre(Pair(FooCpp, false), Pair(BarCpp, false)));
 
-  Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
+  Locations = runLocateSymbolAt(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations, ElementsAre(FileRange(FooCpp,
-                                                FooSource.range("two"))));
+  EXPECT_THAT(*Locations, ElementsAre(DeclAt(FooCpp, FooSource.range("two"))));
 }
 
 TEST_F(ClangdVFSTest, MemoryUsage) {
@@ -533,7 +531,7 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   runAddDocument(Server, FooCpp, "int main() {}");
 
   EXPECT_EQ(runDumpAST(Server, FooCpp), "<no-ast>");
-  EXPECT_ERROR(runFindDefinitions(Server, FooCpp, Position()));
+  EXPECT_ERROR(runLocateSymbolAt(Server, FooCpp, Position()));
   EXPECT_ERROR(runFindDocumentHighlights(Server, FooCpp, Position()));
   EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name"));
   // FIXME: codeComplete and signatureHelp should also return errors when they
@@ -598,7 +596,7 @@ int d;
 
     void onDiagnosticsReady(PathRef File,
                             std::vector<Diag> Diagnostics) override {
-      StringRef FileIndexStr = sys::path::stem(File);
+      StringRef FileIndexStr = llvm::sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
 
       unsigned long FileIndex = std::stoul(FileIndexStr.str());
@@ -718,7 +716,7 @@ int d;
                                clangd::CodeCompleteOptions()));
     };
 
-    auto FindDefinitionsRequest = [&]() {
+    auto LocateSymbolRequest = [&]() {
       unsigned FileIndex = FileIndexDist(RandGen);
       // Make sure we don't violate the ClangdServer's contract.
       if (ReqStats[FileIndex].FileIsRemoved)
@@ -728,13 +726,13 @@ int d;
       Pos.line = LineDist(RandGen);
       Pos.character = ColumnDist(RandGen);
 
-      ASSERT_TRUE(!!runFindDefinitions(Server, FilePaths[FileIndex], Pos));
+      ASSERT_TRUE(!!runLocateSymbolAt(Server, FilePaths[FileIndex], Pos));
     };
 
     std::vector<std::function<void()>> AsyncRequests = {
         AddDocumentRequest, ForceReparseRequest, RemoveDocumentRequest};
     std::vector<std::function<void()>> BlockingRequests = {
-        CodeCompletionRequest, FindDefinitionsRequest};
+        CodeCompletionRequest, LocateSymbolRequest};
 
     // Bash requests to ClangdServer in a loop.
     std::uniform_int_distribution<int> AsyncRequestIndexDist(
@@ -976,28 +974,28 @@ TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
 TEST(ClangdTests, PreambleVFSStatCache) {
   class ListenStatsFSProvider : public FileSystemProvider {
   public:
-    ListenStatsFSProvider(StringMap<unsigned> &CountStats)
+    ListenStatsFSProvider(llvm::StringMap<unsigned> &CountStats)
         : CountStats(CountStats) {}
 
-    IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() const override {
-      class ListenStatVFS : public vfs::ProxyFileSystem {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> getFileSystem() const override {
+      class ListenStatVFS : public llvm::vfs::ProxyFileSystem {
       public:
-        ListenStatVFS(IntrusiveRefCntPtr<vfs::FileSystem> FS,
-                      StringMap<unsigned> &CountStats)
+        ListenStatVFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                      llvm::StringMap<unsigned> &CountStats)
             : ProxyFileSystem(std::move(FS)), CountStats(CountStats) {}
 
-        ErrorOr<std::unique_ptr<vfs::File>>
+        llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
         openFileForRead(const Twine &Path) override {
-          ++CountStats[sys::path::filename(Path.str())];
+          ++CountStats[llvm::sys::path::filename(Path.str())];
           return ProxyFileSystem::openFileForRead(Path);
         }
-        ErrorOr<vfs::Status> status(const Twine &Path) override {
-          ++CountStats[sys::path::filename(Path.str())];
+        llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
+          ++CountStats[llvm::sys::path::filename(Path.str())];
           return ProxyFileSystem::status(Path);
         }
 
       private:
-        StringMap<unsigned> &CountStats;
+        llvm::StringMap<unsigned> &CountStats;
       };
 
       return IntrusiveRefCntPtr<ListenStatVFS>(
@@ -1005,11 +1003,11 @@ TEST(ClangdTests, PreambleVFSStatCache) {
     }
 
     // If relative paths are used, they are resolved with testPath().
-    StringMap<std::string> Files;
-    StringMap<unsigned> &CountStats;
+    llvm::StringMap<std::string> Files;
+    llvm::StringMap<unsigned> &CountStats;
   };
 
-  StringMap<unsigned> CountStats;
+  llvm::StringMap<unsigned> CountStats;
   ListenStatsFSProvider FS(CountStats);
   ErrorCheckingDiagConsumer DiagConsumer;
   MockCompilationDatabase CDB;
@@ -1037,6 +1035,28 @@ TEST(ClangdTests, PreambleVFSStatCache) {
               ElementsAre(Field(&CodeCompletion::Name, "TestSym")));
 }
 #endif
+
+TEST_F(ClangdVFSTest, FlagsWithPlugins) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {
+      "-Xclang",
+      "-add-plugin",
+      "-Xclang",
+      "random-plugin",
+  };
+  OverlayCDB OCDB(&CDB);
+  ClangdServer Server(OCDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto FooCpp = testPath("foo.cpp");
+  const auto SourceContents = "int main() { return 0; }";
+  FS.Files[FooCpp] = FooCpp;
+  Server.addDocument(FooCpp, SourceContents);
+  auto Result = dumpASTWithoutMemoryLocs(Server, FooCpp);
+  EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for diagnostics";
+  EXPECT_NE(Result, "<no-ast>");
+}
 
 } // namespace
 } // namespace clangd

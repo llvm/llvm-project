@@ -8,6 +8,12 @@ include(CheckCXXSourceCompiles)
 
 check_include_file(unwind.h HAVE_UNWIND_H)
 
+# Used by sanitizer_common and tests.
+check_include_file(rpc/xdr.h HAVE_RPC_XDR_H)
+if (NOT HAVE_RPC_XDR_H)
+  set(HAVE_RPC_XDR_H 0)
+endif()
+
 # Top level target used to build all compiler-rt libraries.
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)

@@ -1,4 +1,4 @@
-; RUN: llvm-rc /FO %t %p/Inputs/tag-dialog.rc
+; RUN: llvm-rc /FO %t -- %p/Inputs/tag-dialog.rc
 ; RUN: llvm-readobj %t | FileCheck %s --check-prefix=DIALOG
 
 ; DIALOG: Resource type (int): 5

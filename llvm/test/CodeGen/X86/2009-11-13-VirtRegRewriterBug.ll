@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -disable-fp-elim
+; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -frame-pointer=all
 ; rdar://7394770
 
 %struct.JVTLib_100487 = type <{ i8 }>

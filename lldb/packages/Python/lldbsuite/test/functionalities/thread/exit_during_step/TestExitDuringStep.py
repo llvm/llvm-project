@@ -18,6 +18,7 @@ class ExitDuringStepTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test(self):
         """Test thread exit during step handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -37,6 +38,7 @@ class ExitDuringStepTestCase(TestBase):
             False)
 
     @skipIfFreeBSD  # llvm.org/pr21411: test is hanging
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build(dictionary=self.getBuildFlags())

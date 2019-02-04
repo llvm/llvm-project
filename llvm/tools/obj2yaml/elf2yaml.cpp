@@ -1,9 +1,8 @@
 //===------ utils/elf2yaml.cpp - obj2yaml conversion tool -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -52,8 +51,7 @@ class ELFDumper {
   std::error_code dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
                                  ELFYAML::Relocation &R);
 
-  ErrorOr<ELFYAML::RelocationSection *> dumpRelSection(const Elf_Shdr *Shdr);
-  ErrorOr<ELFYAML::RelocationSection *> dumpRelaSection(const Elf_Shdr *Shdr);
+  ErrorOr<ELFYAML::RelocationSection *> dumpRelocSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
@@ -148,15 +146,9 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       ShndxTable = *TableOrErr;
       break;
     }
+    case ELF::SHT_REL:
     case ELF::SHT_RELA: {
-      ErrorOr<ELFYAML::RelocationSection *> S = dumpRelaSection(&Sec);
-      if (std::error_code EC = S.getError())
-        return EC;
-      Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
-      break;
-    }
-    case ELF::SHT_REL: {
-      ErrorOr<ELFYAML::RelocationSection *> S = dumpRelSection(&Sec);
+      ErrorOr<ELFYAML::RelocationSection *> S = dumpRelocSection(&Sec);
       if (std::error_code EC = S.getError())
         return EC;
       Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
@@ -318,6 +310,8 @@ std::error_code ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
   S.Flags = Shdr->sh_flags;
   S.Address = Shdr->sh_addr;
   S.AddressAlign = Shdr->sh_addralign;
+  if (Shdr->sh_entsize)
+    S.EntSize = static_cast<llvm::yaml::Hex64>(Shdr->sh_entsize);
 
   auto NameOrErr = getUniquedSectionName(Shdr);
   if (!NameOrErr)
@@ -358,10 +352,8 @@ ELFDumper<ELFT>::dumpCommonRelocationSection(const Elf_Shdr *Shdr,
 
 template <class ELFT>
 ErrorOr<ELFYAML::RelocationSection *>
-ELFDumper<ELFT>::dumpRelSection(const Elf_Shdr *Shdr) {
-  assert(Shdr->sh_type == ELF::SHT_REL && "Section type is not SHT_REL");
+ELFDumper<ELFT>::dumpRelocSection(const Elf_Shdr *Shdr) {
   auto S = make_unique<ELFYAML::RelocationSection>();
-
   if (std::error_code EC = dumpCommonRelocationSection(Shdr, *S))
     return EC;
 
@@ -370,42 +362,27 @@ ELFDumper<ELFT>::dumpRelSection(const Elf_Shdr *Shdr) {
     return errorToErrorCode(SymTabOrErr.takeError());
   const Elf_Shdr *SymTab = *SymTabOrErr;
 
-  auto Rels = Obj.rels(Shdr);
-  if (!Rels)
-    return errorToErrorCode(Rels.takeError());
-  for (const Elf_Rel &Rel : *Rels) {
-    ELFYAML::Relocation R;
-    if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
-      return EC;
-    S->Relocations.push_back(R);
-  }
-
-  return S.release();
-}
-
-template <class ELFT>
-ErrorOr<ELFYAML::RelocationSection *>
-ELFDumper<ELFT>::dumpRelaSection(const Elf_Shdr *Shdr) {
-  assert(Shdr->sh_type == ELF::SHT_RELA && "Section type is not SHT_RELA");
-  auto S = make_unique<ELFYAML::RelocationSection>();
-
-  if (std::error_code EC = dumpCommonRelocationSection(Shdr, *S))
-    return EC;
-
-  auto SymTabOrErr = Obj.getSection(Shdr->sh_link);
-  if (!SymTabOrErr)
-    return errorToErrorCode(SymTabOrErr.takeError());
-  const Elf_Shdr *SymTab = *SymTabOrErr;
-
-  auto Rels = Obj.relas(Shdr);
-  if (!Rels)
-    return errorToErrorCode(Rels.takeError());
-  for (const Elf_Rela &Rel : *Rels) {
-    ELFYAML::Relocation R;
-    if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
-      return EC;
-    R.Addend = Rel.r_addend;
-    S->Relocations.push_back(R);
+  if (Shdr->sh_type == ELF::SHT_REL) {
+    auto Rels = Obj.rels(Shdr);
+    if (!Rels)
+      return errorToErrorCode(Rels.takeError());
+    for (const Elf_Rel &Rel : *Rels) {
+      ELFYAML::Relocation R;
+      if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
+        return EC;
+      S->Relocations.push_back(R);
+    }
+  } else {
+    auto Rels = Obj.relas(Shdr);
+    if (!Rels)
+      return errorToErrorCode(Rels.takeError());
+    for (const Elf_Rela &Rel : *Rels) {
+      ELFYAML::Relocation R;
+      if (std::error_code EC = dumpRelocation(&Rel, SymTab, R))
+        return EC;
+      R.Addend = Rel.r_addend;
+      S->Relocations.push_back(R);
+    }
   }
 
   return S.release();

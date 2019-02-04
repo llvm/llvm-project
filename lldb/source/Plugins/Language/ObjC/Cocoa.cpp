@@ -1,9 +1,8 @@
 //===-- Cocoa.cpp -----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -755,7 +754,7 @@ typedef union {
     uint64_t fraction:52;  // unsigned
     uint64_t exponent:11;  // signed
     uint64_t sign:1;
-  };
+  } repr;
   uint64_t i;
   double d;
 } DoubleBits;
@@ -765,7 +764,7 @@ typedef union {
     uint64_t exponent:7;   // signed
     uint64_t sign:1;
     uint64_t unused:4;  // placeholder for pointer tag bits
-  };
+  } repr;
   uint64_t i;
 } TaggedDoubleBits;
 
@@ -787,10 +786,10 @@ static uint64_t decodeTaggedTimeInterval(uint64_t encodedTimeInterval) {
 
   // Sign and fraction are represented exactly.
   // Exponent is encoded.
-  assert(encodedBits.unused == 0);
-  decodedBits.sign = encodedBits.sign;
-  decodedBits.fraction = encodedBits.fraction;
-  decodedBits.exponent = decodeExponent(encodedBits.exponent);
+  assert(encodedBits.repr.unused == 0);
+  decodedBits.repr.sign = encodedBits.repr.sign;
+  decodedBits.repr.fraction = encodedBits.repr.fraction;
+  decodedBits.repr.exponent = decodeExponent(encodedBits.repr.exponent);
 
   return decodedBits.d;
 }

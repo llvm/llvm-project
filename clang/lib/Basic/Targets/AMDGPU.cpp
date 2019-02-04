@@ -1,9 +1,8 @@
 //===--- AMDGPU.cpp - Implement AMDGPU target feature support -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -137,6 +136,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
     case GK_GFX906:
       Features["dl-insts"] = true;
+      Features["dot-insts"] = true;
       LLVM_FALLTHROUGH;
     case GK_GFX909:
     case GK_GFX904:
@@ -304,4 +304,19 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HAS_FP64__");
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
+}
+
+void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {
+  assert(HalfFormat == Aux->HalfFormat);
+  assert(FloatFormat == Aux->FloatFormat);
+  assert(DoubleFormat == Aux->DoubleFormat);
+
+  // On x86_64 long double is 80-bit extended precision format, which is
+  // not supported by AMDGPU. 128-bit floating point format is also not
+  // supported by AMDGPU. Therefore keep its own format for these two types.
+  auto SaveLongDoubleFormat = LongDoubleFormat;
+  auto SaveFloat128Format = Float128Format;
+  copyAuxTarget(Aux);
+  LongDoubleFormat = SaveLongDoubleFormat;
+  Float128Format = SaveFloat128Format;
 }

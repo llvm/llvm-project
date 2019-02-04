@@ -17,7 +17,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i32.trunc_s/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_f32_s $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_s_f32(float %x) {
   %a = fptosi float %x to i32
@@ -37,7 +37,7 @@ define i32 @i32_trunc_s_f32(float %x) {
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i32.trunc_u/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_f32_u $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_u_f32(float %x) {
   %a = fptoui float %x to i32
@@ -55,7 +55,7 @@ define i32 @i32_trunc_u_f32(float %x) {
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i32.trunc_s/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_f64_s $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_s_f64(double %x) {
   %a = fptosi double %x to i32
@@ -75,7 +75,7 @@ define i32 @i32_trunc_s_f64(double %x) {
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i32.trunc_u/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i32.trunc_f64_u $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @i32_trunc_u_f64(double %x) {
   %a = fptoui double %x to i32
@@ -93,7 +93,7 @@ define i32 @i32_trunc_u_f64(double %x) {
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i64.trunc_s/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_f32_s $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_s_f32(float %x) {
   %a = fptosi float %x to i64
@@ -113,7 +113,7 @@ define i64 @i64_trunc_s_f32(float %x) {
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i64.trunc_u/f32 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_f32_u $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_u_f32(float %x) {
   %a = fptoui float %x to i64
@@ -131,7 +131,7 @@ define i64 @i64_trunc_u_f32(float %x) {
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i64.trunc_s/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_f64_s $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_s_f64(double %x) {
   %a = fptosi double %x to i64
@@ -151,7 +151,7 @@ define i64 @i64_trunc_s_f64(double %x) {
 ; CHECK-NEXT: return $pop[[ALT]]{{$}}
 ; CHECK-NEXT: BB
 ; CHECK-NEXT: end_block
-; CHECK-NEXT: i64.trunc_u/f64 $push[[NUM:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: i64.trunc_f64_u $push[[NUM:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @i64_trunc_u_f64(double %x) {
   %a = fptoui double %x to i64

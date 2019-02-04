@@ -1,9 +1,8 @@
 //===-- WebAssemblyAddMissingPrototypes.cpp - Fix prototypeless functions -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -60,7 +59,7 @@ ModulePass *llvm::createWebAssemblyAddMissingPrototypes() {
 }
 
 bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
-  LLVM_DEBUG(dbgs() << "runnning AddMissingPrototypes\n");
+  LLVM_DEBUG(dbgs() << "********** Add Missing Prototypes **********\n");
 
   std::vector<std::pair<Function *, Function *>> Replacements;
 
@@ -96,9 +95,10 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
           if (!NewType) {
             // Create a new function with the correct type
             NewType = DestType;
-            NewF = Function::Create(NewType, F.getLinkage(), F.getName());
+            NewF = Function::Create(NewType, F.getLinkage(), F.getName() + ".fixed_sig");
             NewF->setAttributes(F.getAttributes());
             NewF->removeFnAttr("no-prototype");
+            Replacements.emplace_back(&F, NewF);
           } else {
             if (NewType != DestType) {
               report_fatal_error("Prototypeless function used with "
@@ -116,45 +116,17 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
                         F.getName() + "\n");
       continue;
     }
-
-    SmallVector<Instruction *, 4> DeadInsts;
-
-    for (Use &US : F.uses()) {
-      User *U = US.getUser();
-      if (auto *BC = dyn_cast<BitCastOperator>(U)) {
-        if (auto *Inst = dyn_cast<BitCastInst>(U)) {
-          // Replace with a new bitcast
-          IRBuilder<> Builder(Inst);
-          Value *NewCast = Builder.CreatePointerCast(NewF, BC->getDestTy());
-          Inst->replaceAllUsesWith(NewCast);
-          DeadInsts.push_back(Inst);
-        } else if (auto *Const = dyn_cast<ConstantExpr>(U)) {
-          Constant *NewConst =
-              ConstantExpr::getPointerCast(NewF, BC->getDestTy());
-          Const->replaceAllUsesWith(NewConst);
-        } else {
-          dbgs() << *U->getType() << "\n";
-#ifndef NDEBUG
-          U->dump();
-#endif
-          report_fatal_error("unexpected use of prototypeless function: " +
-                             F.getName() + "\n");
-        }
-      }
-    }
-
-    for (auto I : DeadInsts)
-      I->eraseFromParent();
-    Replacements.emplace_back(&F, NewF);
   }
 
-
-  // Finally replace the old function declarations with the new ones
   for (auto &Pair : Replacements) {
-    Function *Old = Pair.first;
-    Function *New = Pair.second;
-    Old->eraseFromParent();
-    M.getFunctionList().push_back(New);
+    Function *OldF = Pair.first;
+    Function *NewF = Pair.second;
+    std::string Name = OldF->getName();
+    M.getFunctionList().push_back(NewF);
+    OldF->replaceAllUsesWith(
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(NewF, OldF->getType()));
+    OldF->eraseFromParent();
+    NewF->setName(Name);
   }
 
   return !Replacements.empty();

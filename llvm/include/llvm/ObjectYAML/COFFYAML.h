@@ -1,9 +1,8 @@
 //===- COFFYAML.h - COFF YAMLIO implementation ------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -58,7 +57,13 @@ LLVM_YAML_STRONG_TYPEDEF(uint8_t, AuxSymbolType)
 struct Relocation {
   uint32_t VirtualAddress;
   uint16_t Type;
+
+  // Normally a Relocation can refer to the symbol via its name.
+  // It can also use a direct symbol table index instead (with no name
+  // specified), allowing disambiguating between multiple symbols with the
+  // same name or crafting intentionally broken files for testing.
   StringRef SymbolName;
+  Optional<uint32_t> SymbolTableIndex;
 };
 
 struct Section {

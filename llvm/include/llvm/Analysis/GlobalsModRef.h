@@ -1,9 +1,8 @@
 //===- GlobalsModRef.h - Simple Mod/Ref AA for Globals ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -88,7 +87,7 @@ public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
 
   using AAResultBase::getModRefInfo;
-  ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc);
+  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc);
 
   /// getModRefBehavior - Return the behavior of the specified function if
   /// called from the specified call site.  The call site may be null in which
@@ -98,7 +97,7 @@ public:
   /// getModRefBehavior - Return the behavior of the specified function if
   /// called from the specified call site.  The call site may be null in which
   /// case the most generic behavior of this function should be returned.
-  FunctionModRefBehavior getModRefBehavior(ImmutableCallSite CS);
+  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
 
 private:
   FunctionInfo *getFunctionInfo(const Function *F);
@@ -113,7 +112,7 @@ private:
   void CollectSCCMembership(CallGraph &CG);
 
   bool isNonEscapingGlobalNoAlias(const GlobalValue *GV, const Value *V);
-  ModRefInfo getModRefInfoForArgument(ImmutableCallSite CS,
+  ModRefInfo getModRefInfoForArgument(const CallBase *Call,
                                       const GlobalValue *GV);
 };
 

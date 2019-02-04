@@ -1,9 +1,8 @@
 //===- OpenMPClause.cpp - Classes for OpenMP clauses ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,6 +30,7 @@ OMPClause::child_range OMPClause::children() {
 #define OPENMP_CLAUSE(Name, Class)                                             \
   case OMPC_##Name:                                                            \
     return static_cast<Class *>(this)->children();
+  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   }
   llvm_unreachable("unknown OMPClause");

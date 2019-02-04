@@ -1,9 +1,8 @@
 //===-- MipsInstrFPU.td - Mips FPU Instruction Information -*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -487,7 +486,7 @@ let isPseudo = 1, isCodeGenOnly = 1 in {
   def PseudoCVT_D64_L : ABSS_FT<"", FGR64Opnd, GPR64Opnd, II_CVT>;
 }
 
-let AdditionalPredicates = [NotInMicroMips] in {
+let AdditionalPredicates = [NotInMicroMips, UseAbs] in {
   def FABS_S : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS, fabs>,
                ABSS_FM<0x5, 16>, ISA_MIPS1;
   defm FABS : ABSS_M<"abs.d", II_ABS, fabs>, ABSS_FM<0x5, 17>, ISA_MIPS1;

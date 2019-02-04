@@ -4,13 +4,15 @@ set(INTERCEPTION_SOURCES
   interception_linux.cc
   interception_mac.cc
   interception_win.cc
-  interception_type_test.cc)
+  interception_type_test.cc
+  )
 
 set(INTERCEPTION_HEADERS
   interception.h
   interception_linux.h
   interception_mac.h
-  interception_win.h)
+  interception_win.h
+  )
 
 include_directories(..)
 

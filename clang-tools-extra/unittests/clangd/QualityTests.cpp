@@ -1,9 +1,8 @@
 //===-- SourceCodeTests.cpp  ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -30,7 +29,6 @@
 #include "gtest/gtest.h"
 #include <vector>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -180,6 +178,19 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   BaseMember.InBaseClass = true;
   Relevance.merge(BaseMember);
   EXPECT_TRUE(Relevance.InBaseClass);
+
+  auto Index = Test.index();
+  FuzzyFindRequest Req;
+  Req.Query = "X";
+  Req.AnyScope = true;
+  bool Matched = false;
+  Index->fuzzyFind(Req, [&](const Symbol &S) {
+    Matched = true;
+    Relevance = {};
+    Relevance.merge(S);
+    EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
+  });
+  EXPECT_TRUE(Matched);
 }
 
 // Do the signals move the scores in the direction we expect?
@@ -253,7 +264,7 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
 
   SymbolRelevanceSignals IndexProximate;
   IndexProximate.SymbolURI = "unittest:/foo/bar.h";
-  StringMap<SourceParams> ProxSources;
+  llvm::StringMap<SourceParams> ProxSources;
   ProxSources.try_emplace(testPath("foo/baz.h"));
   URIDistance Distance(ProxSources);
   IndexProximate.FileProximityMatch = &Distance;
@@ -266,7 +277,7 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
 
   SymbolRelevanceSignals Scoped;
   Scoped.Scope = SymbolRelevanceSignals::FileScope;
-  EXPECT_EQ(Scoped.evaluate(), Default.evaluate());
+  EXPECT_LT(Scoped.evaluate(), Default.evaluate());
   Scoped.Query = SymbolRelevanceSignals::CodeComplete;
   EXPECT_GT(Scoped.evaluate(), Default.evaluate());
 
@@ -371,7 +382,7 @@ TEST(QualityTests, IsInstanceMember) {
   Rel.merge(BarSym);
   EXPECT_TRUE(Rel.IsInstanceMember);
 
-  Rel.IsInstanceMember =false;
+  Rel.IsInstanceMember = false;
   const Symbol &TplSym = findSymbol(Symbols, "Foo::tpl");
   Rel.merge(TplSym);
   EXPECT_TRUE(Rel.IsInstanceMember);

@@ -1,9 +1,8 @@
 //===-- ClangASTContext.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -726,13 +725,16 @@ public:
   // Exploring the type
   //----------------------------------------------------------------------
 
-  uint64_t GetByteSize(lldb::opaque_compiler_type_t type,
+  llvm::Optional<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
                        ExecutionContextScope *exe_scope) {
-    return (GetBitSize(type, exe_scope) + 7) / 8;
+    if (llvm::Optional<uint64_t> bit_size = GetBitSize(type, exe_scope))
+      return (*bit_size + 7) / 8;
+    return llvm::None;
   }
 
-  uint64_t GetBitSize(lldb::opaque_compiler_type_t type,
-                      ExecutionContextScope *exe_scope) override;
+  llvm::Optional<uint64_t>
+  GetBitSize(lldb::opaque_compiler_type_t type,
+             ExecutionContextScope *exe_scope) override;
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;

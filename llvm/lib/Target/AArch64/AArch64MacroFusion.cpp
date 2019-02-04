@@ -1,9 +1,8 @@
 //===- AArch64MacroFusion.cpp - AArch64 Macro Fusion ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -270,7 +269,107 @@ static bool isCCSelectPair(const MachineInstr *FirstMI,
   return false;
 }
 
-/// Check if the instr pair, FirstMI and SecondMI, should be fused
+// Arithmetic and logic.
+static bool isArithmeticLogicPair(const MachineInstr *FirstMI,
+                                  const MachineInstr &SecondMI) {
+  if (AArch64InstrInfo::hasShiftedReg(SecondMI))
+    return false;
+
+  switch (SecondMI.getOpcode()) {
+  // Arithmetic
+  case AArch64::ADDWrr:
+  case AArch64::ADDXrr:
+  case AArch64::SUBWrr:
+  case AArch64::SUBXrr:
+  case AArch64::ADDWrs:
+  case AArch64::ADDXrs:
+  case AArch64::SUBWrs:
+  case AArch64::SUBXrs:
+  // Logic
+  case AArch64::ANDWrr:
+  case AArch64::ANDXrr:
+  case AArch64::BICWrr:
+  case AArch64::BICXrr:
+  case AArch64::EONWrr:
+  case AArch64::EONXrr:
+  case AArch64::EORWrr:
+  case AArch64::EORXrr:
+  case AArch64::ORNWrr:
+  case AArch64::ORNXrr:
+  case AArch64::ORRWrr:
+  case AArch64::ORRXrr:
+  case AArch64::ANDWrs:
+  case AArch64::ANDXrs:
+  case AArch64::BICWrs:
+  case AArch64::BICXrs:
+  case AArch64::EONWrs:
+  case AArch64::EONXrs:
+  case AArch64::EORWrs:
+  case AArch64::EORXrs:
+  case AArch64::ORNWrs:
+  case AArch64::ORNXrs:
+  case AArch64::ORRWrs:
+  case AArch64::ORRXrs:
+    // Assume the 1st instr to be a wildcard if it is unspecified.
+    if (FirstMI == nullptr)
+      return true;
+
+    // Arithmetic
+    switch (FirstMI->getOpcode()) {
+    case AArch64::ADDWrr:
+    case AArch64::ADDXrr:
+    case AArch64::ADDSWrr:
+    case AArch64::ADDSXrr:
+    case AArch64::SUBWrr:
+    case AArch64::SUBXrr:
+    case AArch64::SUBSWrr:
+    case AArch64::SUBSXrr:
+      return true;
+    case AArch64::ADDWrs:
+    case AArch64::ADDXrs:
+    case AArch64::ADDSWrs:
+    case AArch64::ADDSXrs:
+    case AArch64::SUBWrs:
+    case AArch64::SUBXrs:
+    case AArch64::SUBSWrs:
+    case AArch64::SUBSXrs:
+      return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
+    }
+    break;
+
+  // Arithmetic, setting flags.
+  case AArch64::ADDSWrr:
+  case AArch64::ADDSXrr:
+  case AArch64::SUBSWrr:
+  case AArch64::SUBSXrr:
+  case AArch64::ADDSWrs:
+  case AArch64::ADDSXrs:
+  case AArch64::SUBSWrs:
+  case AArch64::SUBSXrs:
+    // Assume the 1st instr to be a wildcard if it is unspecified.
+    if (FirstMI == nullptr)
+      return true;
+
+    // Arithmetic, not setting flags.
+    switch (FirstMI->getOpcode()) {
+    case AArch64::ADDWrr:
+    case AArch64::ADDXrr:
+    case AArch64::SUBWrr:
+    case AArch64::SUBXrr:
+      return true;
+    case AArch64::ADDWrs:
+    case AArch64::ADDXrs:
+    case AArch64::SUBWrs:
+    case AArch64::SUBXrs:
+      return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
+    }
+    break;
+  }
+
+  return false;
+}
+
+/// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
@@ -294,6 +393,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseCCSelect() && isCCSelectPair(FirstMI, SecondMI))
+    return true;
+  if (ST.hasFuseArithmeticLogic() && isArithmeticLogicPair(FirstMI, SecondMI))
     return true;
 
   return false;

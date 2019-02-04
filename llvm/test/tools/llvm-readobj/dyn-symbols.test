@@ -1,0 +1,163 @@
+RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 | FileCheck %s
+
+# Check the two-letter alias -dt is equivalent to the --dyn-symbols full flag
+# name.
+RUN: llvm-readobj -dt %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-alias
+RUN: llvm-readobj --dyn-symbols %p/Inputs/dynamic-table-so.x86 > %t.readobj-dt-no-alias
+RUN: diff %t.readobj-dt-alias %t.readobj-dt-no-alias
+
+# CHECK:      DynamicSymbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value: 0x618
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: Section
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .init
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Value: 0x200DC0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: Section
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .tbss
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _ITM_deregisterTMCloneTable{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Weak
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: puts@GLIBC_2.2.5{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __tls_get_addr@GLIBC_2.3{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __gmon_start__{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Weak
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _Jv_RegisterClasses{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Weak
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _ITM_registerTMCloneTable{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Weak
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __cxa_finalize@GLIBC_2.2.5{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Weak
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _edata{{ }}
+# CHECK-NEXT:     Value: 0x201030
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .data
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: foo{{ }}
+# CHECK-NEXT:     Value: 0x0
+# CHECK-NEXT:     Size: 4
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: TLS
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .tbss
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _end{{ }}
+# CHECK-NEXT:     Value: 0x201038
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .bss
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __bss_start{{ }}
+# CHECK-NEXT:     Value: 0x201030
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .bss
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: main{{ }}
+# CHECK-NEXT:     Value: 0x780
+# CHECK-NEXT:     Size: 59
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _init{{ }}
+# CHECK-NEXT:     Value: 0x618
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .init
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _fini{{ }}
+# CHECK-NEXT:     Value: 0x7BC
+# CHECK-NEXT:     Size: 0
+# CHECK-NEXT:     Binding: Global
+# CHECK-NEXT:     Type: Function
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .fini
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,6 +25,13 @@ _LIBCPP_PUSH_MACROS
 
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#if defined(__GNUC__) && !defined(__clang__) // gcc.gnu.org/PR37804
+template <class, class, class, class> class _LIBCPP_TEMPLATE_VIS map;
+template <class, class, class, class> class _LIBCPP_TEMPLATE_VIS multimap;
+template <class, class, class> class _LIBCPP_TEMPLATE_VIS set;
+template <class, class, class> class _LIBCPP_TEMPLATE_VIS multiset;
+#endif
 
 template <class _Tp, class _Compare, class _Allocator> class __tree;
 template <class _Tp, class _NodePtr, class _DiffType>

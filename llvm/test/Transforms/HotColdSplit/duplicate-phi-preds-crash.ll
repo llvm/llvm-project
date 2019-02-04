@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit < %s | FileCheck %s
+; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -15,7 +15,7 @@ declare void @sink() cold
 ; CHECK: call {{.*}}@sideeffect(
 ; CHECK: call {{.*}}@realloc(
 ; CHECK-LABEL: codeRepl:
-; CHECK-NEXT: call {{.*}}@realloc2.cold.1(i64 %size, i8* %ptr, i8** %retval.0.ce.loc)
+; CHECK: call {{.*}}@realloc2.cold.1(i64 %size, i8* %ptr, i8** %retval.0.ce.loc)
 ; CHECK-LABEL: cleanup:
 ; CHECK-NEXT: phi i8* [ null, %if.then ], [ %call, %if.end ], [ %retval.0.ce.reload, %codeRepl ]
 define i8* @realloc2(i8* %ptr, i64 %size) {

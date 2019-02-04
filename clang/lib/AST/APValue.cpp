@@ -1,9 +1,8 @@
 //===--- APValue.cpp - Union class for APFloat/APSInt/Complex -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -176,6 +175,11 @@ APValue::APValue(const APValue &RHS) : Kind(Uninitialized) {
     MakeFloat();
     setFloat(RHS.getFloat());
     break;
+  case FixedPoint: {
+    APFixedPoint FXCopy = RHS.getFixedPoint();
+    MakeFixedPoint(std::move(FXCopy));
+    break;
+  }
   case Vector:
     MakeVector();
     setVector(((const Vec *)(const char *)RHS.Data.buffer)->Elts,
@@ -233,6 +237,8 @@ void APValue::DestroyDataAndMakeUninit() {
     ((APSInt*)(char*)Data.buffer)->~APSInt();
   else if (Kind == Float)
     ((APFloat*)(char*)Data.buffer)->~APFloat();
+  else if (Kind == FixedPoint)
+    ((APFixedPoint *)(char *)Data.buffer)->~APFixedPoint();
   else if (Kind == Vector)
     ((Vec*)(char*)Data.buffer)->~Vec();
   else if (Kind == ComplexInt)
@@ -268,6 +274,8 @@ bool APValue::needsCleanup() const {
     return getInt().needsCleanup();
   case Float:
     return getFloat().needsCleanup();
+  case FixedPoint:
+    return getFixedPoint().getValue().needsCleanup();
   case ComplexFloat:
     assert(getComplexFloatImag().needsCleanup() ==
                getComplexFloatReal().needsCleanup() &&
@@ -320,6 +328,9 @@ void APValue::dump(raw_ostream &OS) const {
     return;
   case Float:
     OS << "Float: " << GetApproxValue(getFloat());
+    return;
+  case FixedPoint:
+    OS << "FixedPoint : " << getFixedPoint();
     return;
   case Vector:
     OS << "Vector: ";
@@ -396,6 +407,9 @@ void APValue::printPretty(raw_ostream &Out, ASTContext &Ctx, QualType Ty) const{
     return;
   case APValue::Float:
     Out << GetApproxValue(getFloat());
+    return;
+  case APValue::FixedPoint:
+    Out << getFixedPoint();
     return;
   case APValue::Vector: {
     Out << '{';

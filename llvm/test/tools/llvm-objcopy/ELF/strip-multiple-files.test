@@ -4,7 +4,7 @@
 # tests so we only have to run FileCheck on it once.
 # RUN: cp %t.o %t.1.o
 # RUN: llvm-strip --keep-symbol=foo %t.1.o -o %t.stripped.o
-# RUN: llvm-readobj -symbols %t.stripped.o | FileCheck %s
+# RUN: llvm-readobj --symbols %t.stripped.o | FileCheck %s
 
 # llvm-strip on two files:
 # RUN: cp %t.o %t.1.o

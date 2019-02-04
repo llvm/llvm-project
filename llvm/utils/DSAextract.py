@@ -25,14 +25,16 @@
 #currently the script prints the names it is searching for
 #to STDOUT, so you can check to see if they are what you intend
 
+from __future__ import print_function
+
 import re
 import string
 import sys
 
 
 if len(sys.argv) < 3:
-	print 'usage is ./DSAextract <dot_file_to_modify> \
-			<output_file> [list of nodes to extract]'
+	print('usage is ./DSAextract <dot_file_to_modify> \
+			<output_file> [list of nodes to extract]')
 
 #open the input file
 input = open(sys.argv[1], 'r')
@@ -73,7 +75,7 @@ while buffer != '':
 #test code
 #print '\n'
 
-print node_name_set
+print(node_name_set)
 
 #print node_set
 	

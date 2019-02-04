@@ -1,9 +1,8 @@
 //===-- IRExecutionUnit.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -1217,14 +1216,11 @@ void IRExecutionUnit::PopulateSectionList(
   }
 }
 
-bool IRExecutionUnit::GetArchitecture(lldb_private::ArchSpec &arch) {
+ArchSpec IRExecutionUnit::GetArchitecture() {
   ExecutionContext exe_ctx(GetBestExecutionContextScope());
-  Target *target = exe_ctx.GetTargetPtr();
-  if (target)
-    arch = target->GetArchitecture();
-  else
-    arch.Clear();
-  return arch.IsValid();
+  if(Target *target = exe_ctx.GetTargetPtr())
+    return target->GetArchitecture();
+  return ArchSpec();
 }
 
 lldb::ModuleSP IRExecutionUnit::GetJITModule() {

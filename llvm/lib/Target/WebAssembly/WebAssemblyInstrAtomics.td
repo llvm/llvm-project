@@ -1,9 +1,8 @@
 // WebAssemblyInstrAtomics.td-WebAssembly Atomic codegen support-*- tablegen -*-
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -114,7 +113,7 @@ def : LoadPatNoOffset<i32, atomic_load_8, ATOMIC_LOAD8_U_I32>;
 def : LoadPatNoOffset<i32, atomic_load_16, ATOMIC_LOAD16_U_I32>;
 def : LoadPatNoOffset<i64, sext_aload_8_64, ATOMIC_LOAD8_U_I64>;
 def : LoadPatNoOffset<i64, sext_aload_16_64, ATOMIC_LOAD16_U_I64>;
-// 32->64 sext load gets selected as i32.atomic.load, i64.extend_s/i32
+// 32->64 sext load gets selected as i32.atomic.load, i64.extend_i32_s
 
 // Zero-extending loads with constant offset
 def : LoadPatImmOff<i32, zext_aload_8_32, regPlusImm, ATOMIC_LOAD8_U_I32>;
@@ -344,82 +343,82 @@ multiclass WebAssemblyBinRMW<WebAssemblyRegClass rc, string Name, int Opcode> {
 defm ATOMIC_RMW_ADD_I32 : WebAssemblyBinRMW<I32, "i32.atomic.rmw.add", 0xfe1e>;
 defm ATOMIC_RMW_ADD_I64 : WebAssemblyBinRMW<I64, "i64.atomic.rmw.add", 0xfe1f>;
 defm ATOMIC_RMW8_U_ADD_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw8_u.add", 0xfe20>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw8.add_u", 0xfe20>;
 defm ATOMIC_RMW16_U_ADD_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw16_u.add", 0xfe21>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw16.add_u", 0xfe21>;
 defm ATOMIC_RMW8_U_ADD_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw8_u.add", 0xfe22>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw8.add_u", 0xfe22>;
 defm ATOMIC_RMW16_U_ADD_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw16_u.add", 0xfe23>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw16.add_u", 0xfe23>;
 defm ATOMIC_RMW32_U_ADD_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw32_u.add", 0xfe24>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw32.add_u", 0xfe24>;
 
 defm ATOMIC_RMW_SUB_I32 : WebAssemblyBinRMW<I32, "i32.atomic.rmw.sub", 0xfe25>;
 defm ATOMIC_RMW_SUB_I64 : WebAssemblyBinRMW<I64, "i64.atomic.rmw.sub", 0xfe26>;
 defm ATOMIC_RMW8_U_SUB_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw8_u.sub", 0xfe27>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw8.sub_u", 0xfe27>;
 defm ATOMIC_RMW16_U_SUB_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw16_u.sub", 0xfe28>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw16.sub_u", 0xfe28>;
 defm ATOMIC_RMW8_U_SUB_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw8_u.sub", 0xfe29>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw8.sub_u", 0xfe29>;
 defm ATOMIC_RMW16_U_SUB_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw16_u.sub", 0xfe2a>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw16.sub_u", 0xfe2a>;
 defm ATOMIC_RMW32_U_SUB_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw32_u.sub", 0xfe2b>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw32.sub_u", 0xfe2b>;
 
 defm ATOMIC_RMW_AND_I32 : WebAssemblyBinRMW<I32, "i32.atomic.rmw.and", 0xfe2c>;
 defm ATOMIC_RMW_AND_I64 : WebAssemblyBinRMW<I64, "i64.atomic.rmw.and", 0xfe2d>;
 defm ATOMIC_RMW8_U_AND_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw8_u.and", 0xfe2e>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw8.and_u", 0xfe2e>;
 defm ATOMIC_RMW16_U_AND_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw16_u.and", 0xfe2f>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw16.and_u", 0xfe2f>;
 defm ATOMIC_RMW8_U_AND_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw8_u.and", 0xfe30>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw8.and_u", 0xfe30>;
 defm ATOMIC_RMW16_U_AND_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw16_u.and", 0xfe31>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw16.and_u", 0xfe31>;
 defm ATOMIC_RMW32_U_AND_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw32_u.and", 0xfe32>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw32.and_u", 0xfe32>;
 
 defm ATOMIC_RMW_OR_I32 : WebAssemblyBinRMW<I32, "i32.atomic.rmw.or", 0xfe33>;
 defm ATOMIC_RMW_OR_I64 : WebAssemblyBinRMW<I64, "i64.atomic.rmw.or", 0xfe34>;
 defm ATOMIC_RMW8_U_OR_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw8_u.or", 0xfe35>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw8.or_u", 0xfe35>;
 defm ATOMIC_RMW16_U_OR_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw16_u.or", 0xfe36>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw16.or_u", 0xfe36>;
 defm ATOMIC_RMW8_U_OR_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw8_u.or", 0xfe37>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw8.or_u", 0xfe37>;
 defm ATOMIC_RMW16_U_OR_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw16_u.or", 0xfe38>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw16.or_u", 0xfe38>;
 defm ATOMIC_RMW32_U_OR_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw32_u.or", 0xfe39>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw32.or_u", 0xfe39>;
 
 defm ATOMIC_RMW_XOR_I32 : WebAssemblyBinRMW<I32, "i32.atomic.rmw.xor", 0xfe3a>;
 defm ATOMIC_RMW_XOR_I64 : WebAssemblyBinRMW<I64, "i64.atomic.rmw.xor", 0xfe3b>;
 defm ATOMIC_RMW8_U_XOR_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw8_u.xor", 0xfe3c>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw8.xor_u", 0xfe3c>;
 defm ATOMIC_RMW16_U_XOR_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw16_u.xor", 0xfe3d>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw16.xor_u", 0xfe3d>;
 defm ATOMIC_RMW8_U_XOR_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw8_u.xor", 0xfe3e>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw8.xor_u", 0xfe3e>;
 defm ATOMIC_RMW16_U_XOR_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw16_u.xor", 0xfe3f>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw16.xor_u", 0xfe3f>;
 defm ATOMIC_RMW32_U_XOR_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw32_u.xor", 0xfe40>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw32.xor_u", 0xfe40>;
 
 defm ATOMIC_RMW_XCHG_I32 :
   WebAssemblyBinRMW<I32, "i32.atomic.rmw.xchg", 0xfe41>;
 defm ATOMIC_RMW_XCHG_I64 :
   WebAssemblyBinRMW<I64, "i64.atomic.rmw.xchg", 0xfe42>;
 defm ATOMIC_RMW8_U_XCHG_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw8_u.xchg", 0xfe43>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw8.xchg_u", 0xfe43>;
 defm ATOMIC_RMW16_U_XCHG_I32 :
-  WebAssemblyBinRMW<I32, "i32.atomic.rmw16_u.xchg", 0xfe44>;
+  WebAssemblyBinRMW<I32, "i32.atomic.rmw16.xchg_u", 0xfe44>;
 defm ATOMIC_RMW8_U_XCHG_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw8_u.xchg", 0xfe45>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw8.xchg_u", 0xfe45>;
 defm ATOMIC_RMW16_U_XCHG_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw16_u.xchg", 0xfe46>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw16.xchg_u", 0xfe46>;
 defm ATOMIC_RMW32_U_XCHG_I64 :
-  WebAssemblyBinRMW<I64, "i64.atomic.rmw32_u.xchg", 0xfe47>;
+  WebAssemblyBinRMW<I64, "i64.atomic.rmw32.xchg_u", 0xfe47>;
 
 // Select binary RMWs with no constant offset.
 class BinRMWPatNoOffset<ValueType ty, PatFrag kind, NI inst> :
@@ -530,7 +529,7 @@ class sext_bin_rmw_8_64<PatFrag kind> :
   PatFrag<(ops node:$addr, node:$val),
           (anyext (i32 (kind node:$addr, (i32 (trunc (i64 node:$val))))))>;
 class sext_bin_rmw_16_64<PatFrag kind> : sext_bin_rmw_8_64<kind>;
-// 32->64 sext RMW gets selected as i32.atomic.rmw.***, i64.extend_s/i32
+// 32->64 sext RMW gets selected as i32.atomic.rmw.***, i64.extend_i32_s
 
 // Patterns for various addressing modes for truncating-extending binary RMWs.
 multiclass BinRMWTruncExtPattern<
@@ -677,15 +676,15 @@ defm ATOMIC_RMW_CMPXCHG_I32 :
 defm ATOMIC_RMW_CMPXCHG_I64 :
   WebAssemblyTerRMW<I64, "i64.atomic.rmw.cmpxchg", 0xfe49>;
 defm ATOMIC_RMW8_U_CMPXCHG_I32 :
-  WebAssemblyTerRMW<I32, "i32.atomic.rmw8_u.cmpxchg", 0xfe4a>;
+  WebAssemblyTerRMW<I32, "i32.atomic.rmw8.cmpxchg_u", 0xfe4a>;
 defm ATOMIC_RMW16_U_CMPXCHG_I32 :
-  WebAssemblyTerRMW<I32, "i32.atomic.rmw16_u.cmpxchg", 0xfe4b>;
+  WebAssemblyTerRMW<I32, "i32.atomic.rmw16.cmpxchg_u", 0xfe4b>;
 defm ATOMIC_RMW8_U_CMPXCHG_I64 :
-  WebAssemblyTerRMW<I64, "i64.atomic.rmw8_u.cmpxchg", 0xfe4c>;
+  WebAssemblyTerRMW<I64, "i64.atomic.rmw8.cmpxchg_u", 0xfe4c>;
 defm ATOMIC_RMW16_U_CMPXCHG_I64 :
-  WebAssemblyTerRMW<I64, "i64.atomic.rmw16_u.cmpxchg", 0xfe4d>;
+  WebAssemblyTerRMW<I64, "i64.atomic.rmw16.cmpxchg_u", 0xfe4d>;
 defm ATOMIC_RMW32_U_CMPXCHG_I64 :
-  WebAssemblyTerRMW<I64, "i64.atomic.rmw32_u.cmpxchg", 0xfe4e>;
+  WebAssemblyTerRMW<I64, "i64.atomic.rmw32.cmpxchg_u", 0xfe4e>;
 
 // Select ternary RMWs with no constant offset.
 class TerRMWPatNoOffset<ValueType ty, PatFrag kind, NI inst> :
@@ -790,7 +789,7 @@ class sext_ter_rmw_8_64<PatFrag kind> :
                   (i32 (trunc (i64 node:$exp))),
                   (i32 (trunc (i64 node:$new))))))))>;
 class sext_ter_rmw_16_64<PatFrag kind> : sext_ter_rmw_8_64<kind>;
-// 32->64 sext RMW gets selected as i32.atomic.rmw.***, i64.extend_s/i32
+// 32->64 sext RMW gets selected as i32.atomic.rmw.***, i64.extend_i32_s
 
 // Patterns for various addressing modes for truncating-extending ternary RMWs.
 multiclass TerRMWTruncExtPattern<

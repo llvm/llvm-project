@@ -1,9 +1,8 @@
 //===--- NonPrivateMemberVariablesInClassesCheck.cpp - clang-tidy ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,8 +22,8 @@ AST_MATCHER(CXXRecordDecl, hasMethods) {
   return std::distance(Node.method_begin(), Node.method_end()) != 0;
 }
 
-AST_MATCHER(CXXRecordDecl, hasNonStaticMethod) {
-  return hasMethod(unless(isStaticStorageClass()))
+AST_MATCHER(CXXRecordDecl, hasNonStaticNonImplicitMethod) {
+  return hasMethod(unless(anyOf(isStaticStorageClass(), isImplicit())))
       .matches(Node, Finder, Builder);
 }
 
@@ -67,10 +66,11 @@ void NonPrivateMemberVariablesInClassesCheck::registerMatchers(
       IgnorePublicMemberVariables ? isProtected() : unless(isPrivate()));
 
   // We only want the records that not only contain the mutable data (non-static
-  // member variables), but also have some logic (non-static member functions).
-  // We may optionally ignore records where all the member variables are public.
+  // member variables), but also have some logic (non-static, non-implicit
+  // member functions).  We may optionally ignore records where all the member
+  // variables are public.
   Finder->addMatcher(cxxRecordDecl(anyOf(isStruct(), isClass()), hasMethods(),
-                                   hasNonStaticMethod(),
+                                   hasNonStaticNonImplicitMethod(),
                                    unless(ShouldIgnoreRecord),
                                    forEach(InterestingField.bind("field")))
                          .bind("record"),

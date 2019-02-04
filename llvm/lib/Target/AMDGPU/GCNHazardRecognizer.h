@@ -1,9 +1,8 @@
 //===-- GCNHazardRecognizers.h - GCN Hazard Recognizers ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -31,6 +30,13 @@ class SIRegisterInfo;
 class GCNSubtarget;
 
 class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
+public:
+  typedef function_ref<bool(MachineInstr *)> IsHazardFn;
+
+private:
+  // Distinguish if we are called from scheduler or hazard recognizer
+  bool IsHazardRecognizerMode;
+
   // This variable stores the instruction that has been emitted this cycle. It
   // will be added to EmittedInstrs, when AdvanceCycle() or RecedeCycle() is
   // called.
@@ -54,11 +60,9 @@ class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
 
   void addClauseInst(const MachineInstr &MI);
 
-  int getWaitStatesSince(function_ref<bool(MachineInstr *)> IsHazard);
-  int getWaitStatesSinceDef(unsigned Reg,
-                            function_ref<bool(MachineInstr *)> IsHazardDef =
-                                [](MachineInstr *) { return true; });
-  int getWaitStatesSinceSetReg(function_ref<bool(MachineInstr *)> IsHazard);
+  int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
+  int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
+  int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
 
   int checkSoftClauseHazards(MachineInstr *SMEM);
   int checkSMRDHazards(MachineInstr *SMRD);
@@ -85,6 +89,7 @@ public:
   void EmitNoop() override;
   unsigned PreEmitNoops(SUnit *SU) override;
   unsigned PreEmitNoops(MachineInstr *) override;
+  unsigned PreEmitNoopsCommon(MachineInstr *);
   void AdvanceCycle() override;
   void RecedeCycle() override;
 };

@@ -1,9 +1,8 @@
 //===- llvm/InitializePasses.h - Initialize All Passes ----------*- C++ -*-===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -85,6 +84,7 @@ void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry&);
 void initializeBranchRelaxationPass(PassRegistry&);
 void initializeBreakCriticalEdgesPass(PassRegistry&);
 void initializeBreakFalseDepsPass(PassRegistry&);
+void initializeCanonicalizeAliasesLegacyPassPass(PassRegistry &);
 void initializeCFGOnlyPrinterLegacyPassPass(PassRegistry&);
 void initializeCFGOnlyViewerLegacyPassPass(PassRegistry&);
 void initializeCFGPrinterLegacyPassPass(PassRegistry&);
@@ -198,6 +198,7 @@ void initializeLegacyDivergenceAnalysisPass(PassRegistry&);
 void initializeLegacyLICMPassPass(PassRegistry&);
 void initializeLegacyLoopSinkPassPass(PassRegistry&);
 void initializeLegalizerPass(PassRegistry&);
+void initializeGISelCSEAnalysisWrapperPassPass(PassRegistry &);
 void initializeLibCallsShrinkWrapLegacyPassPass(PassRegistry&);
 void initializeLintPass(PassRegistry&);
 void initializeLiveDebugValuesPass(PassRegistry&);
@@ -239,6 +240,7 @@ void initializeLowerAtomicLegacyPassPass(PassRegistry&);
 void initializeLowerEmuTLSPass(PassRegistry&);
 void initializeLowerExpectIntrinsicPass(PassRegistry&);
 void initializeLowerGuardIntrinsicLegacyPassPass(PassRegistry&);
+void initializeLowerWidenableConditionLegacyPassPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokeLegacyPassPass(PassRegistry&);
 void initializeLowerSwitchPass(PassRegistry&);
@@ -273,7 +275,7 @@ void initializeMemDerefPrinterPass(PassRegistry&);
 void initializeMemoryDependenceWrapperPassPass(PassRegistry&);
 void initializeMemorySSAPrinterLegacyPassPass(PassRegistry&);
 void initializeMemorySSAWrapperPassPass(PassRegistry&);
-void initializeMemorySanitizerPass(PassRegistry&);
+void initializeMemorySanitizerLegacyPassPass(PassRegistry&);
 void initializeMergeFunctionsPass(PassRegistry&);
 void initializeMergeICmpsPass(PassRegistry&);
 void initializeMergedLoadStoreMotionLegacyPassPass(PassRegistry&);
@@ -390,7 +392,7 @@ void initializeTailDuplicatePass(PassRegistry&);
 void initializeTargetLibraryInfoWrapperPassPass(PassRegistry&);
 void initializeTargetPassConfigPass(PassRegistry&);
 void initializeTargetTransformInfoWrapperPassPass(PassRegistry&);
-void initializeThreadSanitizerPass(PassRegistry&);
+void initializeThreadSanitizerLegacyPassPass(PassRegistry&);
 void initializeTwoAddressInstructionPassPass(PassRegistry&);
 void initializeTypeBasedAAWrapperPassPass(PassRegistry&);
 void initializeUnifyFunctionExitNodesPass(PassRegistry&);

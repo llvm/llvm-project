@@ -4,18 +4,18 @@
 ; are properly generated or not.
 
 ; We have to check several cases:
-; (1) arm with -disable-fp-elim
-; (2) arm without -disable-fp-elim
-; (3) armv7 with -disable-fp-elim
-; (4) armv7 without -disable-fp-elim
-; (5) thumb with -disable-fp-elim
-; (6) thumb without -disable-fp-elim
-; (7) thumbv7 with -disable-fp-elim
-; (8) thumbv7 without -disable-fp-elim
+; (1) arm with -frame-pointer=all
+; (2) arm without -frame-pointer=all
+; (3) armv7 with -frame-pointer=all
+; (4) armv7 without -frame-pointer=all
+; (5) thumb with -frame-pointer=all
+; (6) thumb without -frame-pointer=all
+; (7) thumbv7 with -frame-pointer=all
+; (8) thumbv7 without -frame-pointer=all
 ; (9) thumbv7 with -no-integrated-as
 
 ; RUN: llc -mtriple arm-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP
 
 ; RUN: llc -mtriple arm-unknown-linux-gnueabi \
@@ -23,7 +23,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP-ELIM
 
 ; RUN: llc -mtriple armv7-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP
 
 ; RUN: llc -mtriple armv7-unknown-linux-gnueabi \
@@ -31,7 +31,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP-ELIM
 
 ; RUN: llc -mtriple thumbv5-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-FP
 
 ; RUN: llc -mtriple thumbv5-unknown-linux-gnueabi \
@@ -39,7 +39,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-FP-ELIM
 
 ; RUN: llc -mtriple thumbv7-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-V7-FP
 
 ; RUN: llc -mtriple thumbv7-unknown-linux-gnueabi \
@@ -47,7 +47,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-V7-FP-ELIM
 
 ; RUN: llc -mtriple thumbv7-unknown-linux-gnueabi \
-; RUN:     -disable-fp-elim -no-integrated-as -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -no-integrated-as -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-V7-FP-NOIAS
 
 ;-------------------------------------------------------------------------------

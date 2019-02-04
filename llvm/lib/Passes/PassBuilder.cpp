@@ -1,9 +1,8 @@
 //===- Parsing, selection, and construction of pass pipelines -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -88,11 +87,14 @@
 #include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
+#include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
@@ -131,6 +133,7 @@
 #include "llvm/Transforms/Scalar/LowerAtomic.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Scalar/LowerGuardIntrinsic.h"
+#include "llvm/Transforms/Scalar/LowerWidenableCondition.h"
 #include "llvm/Transforms/Scalar/MakeGuardsExplicit.h"
 #include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
@@ -151,6 +154,7 @@
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
+#include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
@@ -206,6 +210,8 @@ static cl::opt<bool>
               cl::desc("Enable control height reduction optimization (CHR)"));
 
 extern cl::opt<bool> EnableHotColdSplit;
+
+extern cl::opt<bool> FlattenedProfileUsed;
 
 static bool isOptimizingForSize(PassBuilder::OptimizationLevel Level) {
   switch (Level) {
@@ -611,9 +617,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (PGOOpt && !PGOOpt->SampleProfileFile.empty()) {
     // Annotate sample profile right after early FPM to ensure freshness of
     // the debug info.
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile,
-                                        PGOOpt->ProfileRemappingFile,
-                                        Phase == ThinLTOPhase::PreLink));
+    // In ThinLTO mode, when flattened profile is used, all the available
+    // profile information will be annotated in PreLink phase so there is
+    // no need to load the profile again in PostLink.
+    if (!(FlattenedProfileUsed && Phase == ThinLTOPhase::PostLink))
+      MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile,
+                                          PGOOpt->ProfileRemappingFile,
+                                          Phase == ThinLTOPhase::PreLink));
     // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
     // for the profile annotation to be accurate in the ThinLTO backend.
     if (Phase != ThinLTOPhase::PreLink)
@@ -648,6 +658,14 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Remove any dead arguments exposed by cleanups and constand folding
   // globals.
   MPM.addPass(DeadArgumentEliminationPass());
+
+  // Split out cold code. Splitting is done before inlining because 1) the most
+  // common kinds of cold regions can (a) be found before inlining and (b) do
+  // not grow after inlining, and 2) inhibiting inlining of cold code improves
+  // code size & compile time. Split after Mem2Reg to make code model estimates
+  // more accurate, but before InstCombine to allow it to clean things up.
+  if (EnableHotColdSplit && Phase != ThinLTOPhase::PostLink)
+    MPM.addPass(HotColdSplittingPass());
 
   // Create a small function pass pipeline to cleanup after all the global
   // optimizations.
@@ -713,11 +731,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
-
-  // We only want to do hot cold splitting once for ThinLTO, during the
-  // post-link ThinLTO.
-  if (EnableHotColdSplit && Phase != ThinLTOPhase::PreLink)
-    MPM.addPass(HotColdSplittingPass());
 
   for (auto &C : CGSCCOptimizerLateEPCallbacks)
     C(MainCGPipeline, Level);
@@ -1239,6 +1252,91 @@ static Optional<int> parseDevirtPassName(StringRef Name) {
   return Count;
 }
 
+static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
+  if (!Name.consume_front(PassName))
+    return false;
+  // normal pass name w/o parameters == default parameters
+  if (Name.empty())
+    return true;
+  return Name.startswith("<") && Name.endswith(">");
+}
+
+namespace {
+
+/// This performs customized parsing of pass name with parameters.
+///
+/// We do not need parametrization of passes in textual pipeline very often,
+/// yet on a rare occasion ability to specify parameters right there can be
+/// useful.
+///
+/// \p Name - parameterized specification of a pass from a textual pipeline
+/// is a string in a form of :
+///      PassName '<' parameter-list '>'
+///
+/// Parameter list is being parsed by the parser callable argument, \p Parser,
+/// It takes a string-ref of parameters and returns either StringError or a
+/// parameter list in a form of a custom parameters type, all wrapped into
+/// Expected<> template class.
+///
+template <typename ParametersParseCallableT>
+auto parsePassParameters(ParametersParseCallableT &&Parser, StringRef Name,
+                         StringRef PassName) -> decltype(Parser(StringRef{})) {
+  using ParametersT = typename decltype(Parser(StringRef{}))::value_type;
+
+  StringRef Params = Name;
+  if (!Params.consume_front(PassName)) {
+    assert(false &&
+           "unable to strip pass name from parametrized pass specification");
+  }
+  if (Params.empty())
+    return ParametersT{};
+  if (!Params.consume_front("<") || !Params.consume_back(">")) {
+    assert(false && "invalid format for parametrized pass name");
+  }
+
+  Expected<ParametersT> Result = Parser(Params);
+  assert((Result || Result.template errorIsA<StringError>()) &&
+         "Pass parameter parser can only return StringErrors.");
+  return std::move(Result);
+}
+
+/// Parser of parameters for LoopUnroll pass.
+Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
+  LoopUnrollOptions UnrollOpts;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+    int OptLevel = StringSwitch<int>(ParamName)
+                       .Case("O0", 0)
+                       .Case("O1", 1)
+                       .Case("O2", 2)
+                       .Case("O3", 3)
+                       .Default(-1);
+    if (OptLevel >= 0) {
+      UnrollOpts.setOptLevel(OptLevel);
+      continue;
+    }
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "partial") {
+      UnrollOpts.setPartial(Enable);
+    } else if (ParamName == "peeling") {
+      UnrollOpts.setPeeling(Enable);
+    } else if (ParamName == "runtime") {
+      UnrollOpts.setRuntime(Enable);
+    } else if (ParamName == "upperbound") {
+      UnrollOpts.setUpperBound(Enable);
+    } else {
+      return make_error<StringError>(
+          formatv("invalid LoopUnrollPass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return UnrollOpts;
+}
+
+} // namespace
+
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
 /// alias.
 static bool startsWithDefaultPipelineAliasPrefix(StringRef Name) {
@@ -1333,6 +1431,9 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
 
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME)                                                            \
+    return true;
+#define FUNCTION_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)                   \
+  if (checkParametrizedPassName(Name, NAME))                                   \
     return true;
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
@@ -1669,6 +1770,14 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
     FPM.addPass(CREATE_PASS);                                                  \
+    return Error::success();                                                   \
+  }
+#define FUNCTION_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)                   \
+  if (checkParametrizedPassName(Name, NAME)) {                                 \
+    auto Params = parsePassParameters(PARSER, Name, NAME);                     \
+    if (!Params)                                                               \
+      return Params.takeError();                                               \
+    FPM.addPass(CREATE_PASS(Params.get()));                                    \
     return Error::success();                                                   \
   }
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \

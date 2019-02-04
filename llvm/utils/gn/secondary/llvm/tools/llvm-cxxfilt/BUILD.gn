@@ -1,0 +1,32 @@
+import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+if (llvm_install_binutils_symlinks) {
+  symlink_or_copy("cxxfilt") {  # Can't have '+' in target name.
+    deps = [
+      ":llvm-cxxfilt",
+    ]
+    source = "llvm-cxxfilt"
+    output = "$root_out_dir/bin/c++filt"  # Note: c++filt, not cxxfilt
+  }
+}
+
+# //:llvm-cxxfilt depends on this symlink target, see comment in //BUILD.gn.
+group("symlinks") {
+  deps = [
+    ":llvm-cxxfilt",
+  ]
+  if (llvm_install_binutils_symlinks) {
+    deps += [ ":cxxfilt" ]
+  }
+}
+
+executable("llvm-cxxfilt") {
+  deps = [
+    "//llvm/lib/Demangle",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "llvm-cxxfilt.cpp",
+  ]
+}

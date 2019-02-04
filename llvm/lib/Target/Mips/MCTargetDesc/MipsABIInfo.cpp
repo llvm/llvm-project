@@ -1,9 +1,8 @@
 //===---- MipsABIInfo.cpp - Information about MIPS ABI's ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,6 +13,13 @@
 #include "llvm/MC/MCTargetOptions.h"
 
 using namespace llvm;
+
+// Note: this option is defined here to be visible from libLLVMMipsAsmParser
+//       and libLLVMMipsCodeGen
+cl::opt<bool>
+EmitJalrReloc("mips-jalr-reloc", cl::Hidden,
+              cl::desc("MIPS: Emit R_{MICRO}MIPS_JALR relocation with jalr"),
+              cl::init(true));
 
 namespace {
 static const MCPhysReg O32IntRegs[4] = {Mips::A0, Mips::A1, Mips::A2, Mips::A3};

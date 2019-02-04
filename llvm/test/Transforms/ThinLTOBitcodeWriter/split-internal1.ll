@@ -1,4 +1,4 @@
-; RUN: opt -thinlto-bc -o %t %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 0 -o %t0 %t
 ; RUN: llvm-modextract -b -n 1 -o %t1 %t
 ; RUN: not llvm-modextract -b -n 2 -o - %t 2>&1 | FileCheck --check-prefix=ERROR %s

@@ -1,0 +1,228 @@
+## Show that llvm-readelf + llvm-readobj demangle symbol names in symbol tables
+## (including dynamic symbols), relocations (including dynamic relocations), and groups.
+
+# RUN: yaml2obj %s > %t.so
+
+## Check LLVM output style.
+# RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --demangle %t.so > %t.llvm.long
+# RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              -C %t.so > %t.llvm.short
+# RUN: FileCheck %s --input-file %t.llvm.long --check-prefixes=LLVM-COMMON,LLVM-DEMANGLE
+# RUN: diff %t.llvm.long %t.llvm.short
+
+## Check that default is no demangling.
+# RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              %t.so > %t.llvm.default
+# RUN: llvm-readobj --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups --elf-cg-profile --addrsig         \
+# RUN:              --demangle=false %t.so > %t.llvm.nodemangle
+# RUN: FileCheck %s --input-file %t.llvm.default --check-prefixes=LLVM-COMMON,LLVM-MANGLED
+# RUN: diff %t.llvm.default %t.llvm.nodemangle
+
+# LLVM-COMMON:        Relocations [
+# LLVM-COMMON:          Section {{.*}} .rela.text.foo {
+# LLVM-DEMANGLE-NEXT:     {{ }}foo(char){{ }}
+# LLVM-MANGLED-NEXT:      {{ }}_Z3fooc{{ }}
+# LLVM-COMMON-NEXT:     }
+# LLVM-COMMON:        ]
+
+# LLVM-COMMON:        Dynamic Relocations {
+# LLVM-DEMANGLE-NEXT:   {{ }}foo(int){{ }}
+# LLVM-MANGLED-NEXT:    {{ }}_Z3fooi{{ }}
+# LLVM-COMMON-NEXT:   }
+
+# LLVM-COMMON:   Symbols [
+# LLVM-DEMANGLE:   Name: foo(char){{ }}
+# LLVM-DEMANGLE:   Name: blah(float){{ }}
+# LLVM-MANGLED:    Name: _Z3fooc{{ }}
+# LLVM-MANGLED:    Name: _Z4blahf{{ }}
+# LLVM-COMMON:   ]
+
+# LLVM-COMMON:   DynamicSymbols [
+# LLVM-DEMANGLE:   Name: foo(int){{ }}
+# LLVM-MANGLED:    Name: _Z3fooi{{ }}
+# LLVM-COMMON:   ]
+
+# LLVM-COMMON:   Groups {
+# LLVM-DEMANGLE:   Signature: foo(char){{$}}
+# LLVM-MANGLED:    Signature: _Z3fooc{{$}}
+# LLVM-COMMON:   }
+
+# LLVM-COMMON:   CGProfile [
+# LLVM-DEMANGLE:   From: foo(char){{ }}
+# LLVM-DEMANGLE:   To:   blah(float){{ }}
+# LLVM-MANGLED:    From: _Z3fooc{{ }}
+# LLVM-MANGLED:    To:   _Z4blahf{{ }}
+# LLVM-COMMON:   ]
+
+# LLVM-COMMON:        Addrsig [
+# LLVM-DEMANGLE-NEXT:   Sym: foo(char){{ }}
+# LLVM-DEMANGLE-NEXT:   Sym: blah(float){{ }}
+# LLVM-MANGLED-NEXT:    Sym: _Z3fooc{{ }}
+# LLVM-MANGLED-NEXT:    Sym: _Z4blahf{{ }}
+# LLVM-COMMON-NEXT:   ]
+
+## Check GNU output style.
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups --demangle %t.so > %t.gnu.long
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups -C %t.so > %t.gnu.short
+# RUN: FileCheck %s --input-file %t.gnu.long --check-prefixes=GNU-COMMON,GNU-DEMANGLE
+# RUN: diff %t.gnu.long %t.gnu.short
+
+## Check that default is no demangling.
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups %t.so > %t.gnu.default
+# RUN: llvm-readelf --symbols --relocations --dyn-symbols --dyn-relocations \
+# RUN:              --elf-section-groups --demangle=false %t.so > %t.gnu.nodemangle
+# RUN: FileCheck %s --input-file %t.gnu.default --check-prefixes=GNU-COMMON,GNU-MANGLED
+# RUN: diff %t.gnu.default %t.gnu.nodemangle
+
+# GNU-COMMON:        Relocation section '.rela.text.foo' at offset {{.*}} contains 1 entries:
+# GNU-COMMON-NEXT:     Offset Info Type Symbol's Value Symbol's Name + Addend
+# GNU-DEMANGLE-NEXT:     foo(char){{ }}
+# GNU-MANGLED-NEXT:      _Z3fooc{{ }}
+
+# GNU-COMMON:        'RELA' relocation section at offset {{.*}} contains 24 bytes:
+# GNU-COMMON-NEXT:     Offset Info Type Symbol's Value Symbol's Name + Addend
+# GNU-DEMANGLE-NEXT:     foo(int){{ }}
+# GNU-MANGLED-NEXT:      _Z3fooi{{ }}
+
+# GNU-COMMON:        Symbol table '.dynsym' contains 2 entries:
+# GNU-COMMON-NEXT:     Num: Value            Size Type   Bind  Vis     Ndx Name
+# GNU-COMMON-NEXT:       0: 0000000000000000    0 NOTYPE LOCAL DEFAULT UND
+# GNU-DEMANGLE-NEXT:       foo(int){{$}}
+# GNU-MANGLED-NEXT:        _Z3fooi{{$}}
+
+# GNU-COMMON:        Symbol table '.symtab' contains 3 entries:
+# GNU-COMMON-NEXT:     Num: Value            Size Type   Bind  Vis     Ndx Name
+# GNU-COMMON-NEXT:       0: 0000000000000000    0 NOTYPE LOCAL DEFAULT UND
+# GNU-DEMANGLE-NEXT:       foo(char){{$}}
+# GNU-DEMANGLE-NEXT:       blah(float){{$}}
+# GNU-MANGLED-NEXT:        _Z3fooc{{$}}
+# GNU-MANGLED-NEXT:        _Z4blahf{{$}}
+
+# GNU-COMMON:        COMDAT group section [{{.*}}] `.group'
+# GNU-DEMANGLE-SAME: [foo(char)]
+# GNU-MANGLED-SAME:  [_Z3fooc]
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  ## TODO:  Replace the raw section contents with more meaningful dynamic
+  ## tags/symbols/etc, once yaml2obj supports it.
+  ## FIXME: yaml2obj does not currently allow custom addresses for .dynstr and
+  ## .dynsym if DynamicSymbols are specified.
+  ## See https://bugs.llvm.org/show_bug.cgi?id=40339
+  - Name:         .dynstr
+    Type:         SHT_STRTAB
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 0x100
+    EntSize:      0x1
+    ## "\0_Z3fooi\0"
+    Content: "005f5a33666f6f6900"
+  - Name:         .dynsym
+    Type:         SHT_DYNSYM
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    Info:         1
+    Address:      0x100
+    AddressAlign: 0x100
+    EntSize:      0x18
+    ## Null symbol;
+    ## st_name: 1; st_info: Global | Func; st_other: 0;
+    ##   st_shndx: .text.foo; st_value: 0x2000; st_size: 0
+    Content: "000000000000000000000000000000000000000000000000010000001200050000200000000000000000000000000000"
+  - Name:         .rela.dyn
+    Type:         SHT_RELA
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynsym
+    Info:         .text.foo
+    Address:      0x200
+    AddressAlign: 0x100
+    EntSize:      0x18
+    Relocations:
+      - Offset: 0x10
+        ## FIXME: This should be a lookup in the corresponding symbol table, not necessarily the static symbol table.
+        ## See https://bugs.llvm.org/show_bug.cgi?id=40337.
+        Symbol: _Z3fooc
+        Type:   R_X86_64_PC32
+        Addend: 0x4
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    Address:      0x1000
+    AddressAlign: 0x1000
+    ## DT_STRTAB  - 0x0
+    ## DT_STRSZ   - 0x9
+    ## DT_SYMTAB  - 0x100
+    ## DT_SYMENT  - 0x18
+    ## DT_RELA    - 0x200
+    ## DT_RELASZ  - 0x18
+    ## DT_RELAENT - 0x18
+    ## DT_NULL    - 0x0
+    Content: "050000000000000000000000000000000a000000000000000900000000000000060000000000000000010000000000000b00000000000000180000000000000007000000000000000002000000000000080000000000000018000000000000000900000000000000180000000000000000000000000000000000000000000000"
+  - Name:  .text.foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+    Size:  0x40
+    Address: 0x2000
+    AddressAlign: 0x2000
+  - Name:  .group
+    Type:  SHT_GROUP
+    Link:  .symtab
+    Info:  _Z3fooc
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.foo
+  - Name: .rela.text.foo
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .text.foo
+    Relocations:
+      - Offset: 0x10
+        Symbol: _Z3fooc
+        Type:   R_X86_64_PC32
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Link: .symtab
+    EntSize: 16
+    Content: "01000000020000002000000000000000"
+  - Name: .llvm_addrsig
+    Type: SHT_LLVM_ADDRSIG
+    Link: .symtab
+    Content: "0102"
+Symbols:
+  Global:
+    - Name:    _Z3fooc
+      Type:    STT_FUNC
+      Section: .text.foo
+    - Name:    _Z4blahf
+      Type:    STT_FUNC
+      Section: .text.foo
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    VAddr: 0x0
+    PAddr: 0x0
+    Sections:
+      - Section: .dynsym
+      - Section: .dynstr
+      - Section: .rela.dyn
+      - Section: .dynamic
+      - Section: .text.foo
+  - Type:  PT_DYNAMIC
+    Flags: [ PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Sections:
+      - Section: .dynamic

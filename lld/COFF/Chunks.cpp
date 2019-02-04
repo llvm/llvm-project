@@ -1,9 +1,8 @@
 //===- Chunks.cpp ---------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -199,6 +198,7 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM_BLX23T:    applyBranch24T(Off, SX - P - 4); break;
   case IMAGE_REL_ARM_SECTION:   applySecIdx(Off, OS); break;
   case IMAGE_REL_ARM_SECREL:    applySecRel(this, Off, OS, S); break;
+  case IMAGE_REL_ARM_REL32:     add32(Off, SX - P - 4); break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));
@@ -310,6 +310,7 @@ void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM64_SECREL_HIGH12A: applySecRelHigh12A(this, Off, OS, S); break;
   case IMAGE_REL_ARM64_SECREL_LOW12L:  applySecRelLdr(this, Off, OS, S); break;
   case IMAGE_REL_ARM64_SECTION:        applySecIdx(Off, OS); break;
+  case IMAGE_REL_ARM64_REL32:          add32(Off, S - P - 4); break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));
@@ -669,16 +670,36 @@ const uint8_t ArmThunk[] = {
     0xe7, 0x44,             // L1: add  pc, ip
 };
 
-size_t RangeExtensionThunk::getSize() const {
+size_t RangeExtensionThunkARM::getSize() const {
   assert(Config->Machine == ARMNT);
   return sizeof(ArmThunk);
 }
 
-void RangeExtensionThunk::writeTo(uint8_t *Buf) const {
+void RangeExtensionThunkARM::writeTo(uint8_t *Buf) const {
   assert(Config->Machine == ARMNT);
   uint64_t Offset = Target->getRVA() - RVA - 12;
   memcpy(Buf + OutputSectionOff, ArmThunk, sizeof(ArmThunk));
   applyMOV32T(Buf + OutputSectionOff, uint32_t(Offset));
+}
+
+// A position independent ARM64 adrp+add thunk, with a maximum range of
+// +/- 4 GB, which is enough for any PE-COFF.
+const uint8_t Arm64Thunk[] = {
+    0x10, 0x00, 0x00, 0x90, // adrp x16, Dest
+    0x10, 0x02, 0x00, 0x91, // add  x16, x16, :lo12:Dest
+    0x00, 0x02, 0x1f, 0xd6, // br   x16
+};
+
+size_t RangeExtensionThunkARM64::getSize() const {
+  assert(Config->Machine == ARM64);
+  return sizeof(Arm64Thunk);
+}
+
+void RangeExtensionThunkARM64::writeTo(uint8_t *Buf) const {
+  assert(Config->Machine == ARM64);
+  memcpy(Buf + OutputSectionOff, Arm64Thunk, sizeof(Arm64Thunk));
+  applyArm64Addr(Buf + OutputSectionOff + 0, Target->getRVA(), RVA, 12);
+  applyArm64Imm(Buf + OutputSectionOff + 4, Target->getRVA() & 0xfff, 0);
 }
 
 void LocalImportChunk::getBaserels(std::vector<Baserel> *Res) {

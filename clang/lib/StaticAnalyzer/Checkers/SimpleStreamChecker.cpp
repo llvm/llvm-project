@@ -1,9 +1,8 @@
 //===-- SimpleStreamChecker.cpp -----------------------------------------*- C++ -*--//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -109,10 +108,10 @@ SimpleStreamChecker::SimpleStreamChecker()
   DoubleCloseBugType.reset(
       new BugType(this, "Double fclose", "Unix Stream API Error"));
 
-  LeakBugType.reset(
-      new BugType(this, "Resource Leak", "Unix Stream API Error"));
   // Sinks are higher importance bugs as well as calls to assert() or exit(0).
-  LeakBugType->setSuppressOnSink(true);
+  LeakBugType.reset(
+      new BugType(this, "Resource Leak", "Unix Stream API Error",
+                  /*SuppressOnSink=*/true));
 }
 
 void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
@@ -268,4 +267,9 @@ SimpleStreamChecker::checkPointerEscape(ProgramStateRef State,
 
 void ento::registerSimpleStreamChecker(CheckerManager &mgr) {
   mgr.registerChecker<SimpleStreamChecker>();
+}
+
+// This checker should be enabled regardless of how language options are set.
+bool ento::shouldRegisterSimpleStreamChecker(const LangOptions &LO) {
+  return true;
 }

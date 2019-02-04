@@ -1,0 +1,11 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("OptRemarksTests") {
+  deps = [
+    "//llvm/lib/OptRemarks",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "OptRemarksParsingTest.cpp",
+  ]
+}

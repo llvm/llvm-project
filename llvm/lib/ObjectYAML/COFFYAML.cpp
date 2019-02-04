@@ -1,9 +1,8 @@
 //===- COFFYAML.cpp - COFF YAMLIO implementation --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -188,6 +187,7 @@ void ScalarEnumerationTraits<COFF::RelocationTypesARM>::enumeration(
   ECase(IMAGE_REL_ARM_TOKEN);
   ECase(IMAGE_REL_ARM_BLX24);
   ECase(IMAGE_REL_ARM_BLX11);
+  ECase(IMAGE_REL_ARM_REL32);
   ECase(IMAGE_REL_ARM_SECTION);
   ECase(IMAGE_REL_ARM_SECREL);
   ECase(IMAGE_REL_ARM_MOV32A);
@@ -195,6 +195,7 @@ void ScalarEnumerationTraits<COFF::RelocationTypesARM>::enumeration(
   ECase(IMAGE_REL_ARM_BRANCH20T);
   ECase(IMAGE_REL_ARM_BRANCH24T);
   ECase(IMAGE_REL_ARM_BLX23T);
+  ECase(IMAGE_REL_ARM_PAIR);
 }
 
 void ScalarEnumerationTraits<COFF::RelocationTypesARM64>::enumeration(
@@ -216,6 +217,7 @@ void ScalarEnumerationTraits<COFF::RelocationTypesARM64>::enumeration(
   ECase(IMAGE_REL_ARM64_ADDR64);
   ECase(IMAGE_REL_ARM64_BRANCH19);
   ECase(IMAGE_REL_ARM64_BRANCH14);
+  ECase(IMAGE_REL_ARM64_REL32);
 }
 
 void ScalarEnumerationTraits<COFF::WindowsSubsystem>::enumeration(
@@ -407,7 +409,8 @@ struct NDLLCharacteristics {
 void MappingTraits<COFFYAML::Relocation>::mapping(IO &IO,
                                                   COFFYAML::Relocation &Rel) {
   IO.mapRequired("VirtualAddress", Rel.VirtualAddress);
-  IO.mapRequired("SymbolName", Rel.SymbolName);
+  IO.mapOptional("SymbolName", Rel.SymbolName, StringRef());
+  IO.mapOptional("SymbolTableIndex", Rel.SymbolTableIndex);
 
   COFF::header &H = *static_cast<COFF::header *>(IO.getContext());
   if (H.Machine == COFF::IMAGE_FILE_MACHINE_I386) {

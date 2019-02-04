@@ -1,9 +1,8 @@
 //===- MipsFastISel.cpp - Mips FastISel implementation --------------------===//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -56,6 +55,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -74,6 +74,8 @@
 #define DEBUG_TYPE "mips-fastisel"
 
 using namespace llvm;
+
+extern cl::opt<bool> EmitJalrReloc;
 
 namespace {
 
@@ -1550,6 +1552,16 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
   MIB.addRegMask(TRI.getCallPreservedMask(*FuncInfo.MF, CC));
 
   CLI.Call = MIB;
+
+  if (EmitJalrReloc && !Subtarget->inMips16Mode()) {
+    // Attach callee address to the instruction, let asm printer emit
+    // .reloc R_MIPS_JALR.
+    if (Symbol)
+      MIB.addSym(Symbol, MipsII::MO_JALR);
+    else
+      MIB.addSym(FuncInfo.MF->getContext().getOrCreateSymbol(
+	                   Addr.getGlobalValue()->getName()), MipsII::MO_JALR);
+  }
 
   // Finish off the call including any return values.
   return finishCall(CLI, RetVT, NumBytes);

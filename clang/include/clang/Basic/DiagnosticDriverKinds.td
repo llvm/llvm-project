@@ -1,9 +1,8 @@
 //==--- DiagnosticDriverKinds.td - libdriver diagnostics ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -413,5 +412,16 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
 def err_drv_trivial_auto_var_init_zero_disabled : Error<
   "-ftrivial-auto-var-init=zero hasn't been enabled. Enable it at your own peril for benchmarking purpose only with "
   "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">;
+
+def warn_drv_msp430_hwmult_unsupported : Warning<"the given MCU does not "
+  "support hardware multiply, but -mhwmult is set to %0.">,
+   InGroup<InvalidCommandLineArgument>;
+def warn_drv_msp430_hwmult_mismatch : Warning<"the given MCU supports %0 "
+  "hardware multiply, but -mhwmult is set to %1.">,
+   InGroup<InvalidCommandLineArgument>;
+def warn_drv_msp430_hwmult_no_device : Warning<"no MCU device specified, but "
+  "'-mhwmult' is set to 'auto', assuming no hardware multiply. Use -mmcu to "
+  "specify a MSP430 device, or -mhwmult to set hardware multiply type "
+  "explicitly.">, InGroup<InvalidCommandLineArgument>;
 
 }

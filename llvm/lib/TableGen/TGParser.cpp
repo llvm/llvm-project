@@ -1,9 +1,8 @@
 //===- TGParser.cpp - Parser for TableGen Files ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1445,6 +1444,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
   }
 
+  case tgtok::XCond:
+    return ParseOperationCond(CurRec, ItemType);
+
   case tgtok::XFoldl: {
     // Value ::= !foldl '(' Id ',' Id ',' Value ',' Value ',' Value ')'
     Lex.Lex(); // eat the operation
@@ -1603,6 +1605,91 @@ RecTy *TGParser::ParseOperatorType() {
   return Type;
 }
 
+Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
+  Lex.Lex();  // eat the operation 'cond'
+
+  if (Lex.getCode() != tgtok::l_paren) {
+     TokError("expected '(' after !cond operator");
+     return nullptr;
+  }
+  Lex.Lex();  // eat the '('
+
+  // Parse through '[Case: Val,]+'
+  SmallVector<Init *, 4> Case;
+  SmallVector<Init *, 4> Val;
+  while (true) {
+    if (Lex.getCode() == tgtok::r_paren) {
+      Lex.Lex(); // eat the ')'
+      break;
+    }
+
+    Init *V = ParseValue(CurRec);
+    if (!V)
+      return nullptr;
+    Case.push_back(V);
+
+    if (Lex.getCode() != tgtok::colon) {
+      TokError("expected ':'  following a condition in !cond operator");
+      return nullptr;
+    }
+    Lex.Lex(); // eat the ':'
+
+    V = ParseValue(CurRec, ItemType);
+    if (!V)
+      return nullptr;
+    Val.push_back(V);
+
+    if (Lex.getCode() == tgtok::r_paren) {
+      Lex.Lex(); // eat the ')'
+      break;
+    }
+
+    if (Lex.getCode() != tgtok::comma) {
+      TokError("expected ',' or ')' following a value in !cond operator");
+      return nullptr;
+    }
+    Lex.Lex();  // eat the ','
+  }
+
+  if (Case.size() < 1) {
+    TokError("there should be at least 1 'condition : value' in the !cond operator");
+    return nullptr;
+  }
+
+  // resolve type
+  RecTy *Type = nullptr;
+  for (Init *V : Val) {
+    RecTy *VTy = nullptr;
+    if (TypedInit *Vt = dyn_cast<TypedInit>(V))
+      VTy = Vt->getType();
+    if (BitsInit *Vbits = dyn_cast<BitsInit>(V))
+      VTy = BitsRecTy::get(Vbits->getNumBits());
+    if (isa<BitInit>(V))
+      VTy = BitRecTy::get();
+
+    if (Type == nullptr) {
+      if (!isa<UnsetInit>(V))
+        Type = VTy;
+    } else {
+      if (!isa<UnsetInit>(V)) {
+        RecTy *RType = resolveTypes(Type, VTy);
+        if (!RType) {
+          TokError(Twine("inconsistent types '") + Type->getAsString() +
+                         "' and '" + VTy->getAsString() + "' for !cond");
+          return nullptr;
+        }
+        Type = RType;
+      }
+    }
+  }
+
+  if (!Type) {
+    TokError("could not determine type for !cond from its arguments");
+    return nullptr;
+  }
+  return CondOpInit::get(Case, Val, Type)->Fold(CurRec);
+}
+
 /// ParseSimpleValue - Parse a tblgen value.  This returns null on error.
 ///
 ///   SimpleValue ::= IDValue
@@ -1621,6 +1708,7 @@ RecTy *TGParser::ParseOperatorType() {
 ///   SimpleValue ::= SRLTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= LISTCONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= STRCONCATTOK '(' Value ',' Value ')'
+///   SimpleValue ::= COND '(' [Value ':' Value,]+ ')'
 ///
 Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
                                  IDParseMode Mode) {
@@ -1933,6 +2021,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XListConcat:
   case tgtok::XStrConcat:   // Value ::= !binop '(' Value ',' Value ')'
   case tgtok::XIf:
+  case tgtok::XCond:
   case tgtok::XFoldl:
   case tgtok::XForEach:
   case tgtok::XSubst: {  // Value ::= !ternop '(' Value ',' Value ',' Value ')'

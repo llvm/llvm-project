@@ -1,9 +1,8 @@
 //===--- CGDecl.cpp - Emit LLVM Code for declarations ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -141,6 +140,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
 
   case Decl::OMPDeclareReduction:
     return CGM.EmitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(&D), this);
+
+  case Decl::OMPDeclareMapper:
+    return CGM.EmitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(&D), this);
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
@@ -535,7 +537,7 @@ namespace {
     CallStackRestore(Address Stack) : Stack(Stack) {}
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       llvm::Value *V = CGF.Builder.CreateLoad(Stack);
-      llvm::Value *F = CGF.CGM.getIntrinsic(llvm::Intrinsic::stackrestore);
+      llvm::Function *F = CGF.CGM.getIntrinsic(llvm::Intrinsic::stackrestore);
       CGF.Builder.CreateCall(F, V);
     }
   };
@@ -797,14 +799,20 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   case Qualifiers::OCL_None:
     llvm_unreachable("present but none");
 
+  case Qualifiers::OCL_Strong: {
+    if (!D || !isa<VarDecl>(D) || !cast<VarDecl>(D)->isARCPseudoStrong()) {
+      value = EmitARCRetainScalarExpr(init);
+      break;
+    }
+    // If D is pseudo-strong, treat it like __unsafe_unretained here. This means
+    // that we omit the retain, and causes non-autoreleased return values to be
+    // immediately released.
+    LLVM_FALLTHROUGH;
+  }
+
   case Qualifiers::OCL_ExplicitNone:
     value = EmitARCUnsafeUnretainedScalarExpr(init);
     break;
-
-  case Qualifiers::OCL_Strong: {
-    value = EmitARCRetainScalarExpr(init);
-    break;
-  }
 
   case Qualifiers::OCL_Weak: {
     // If it's not accessed by the initializer, try to emit the
@@ -1445,7 +1453,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       Address Stack =
         CreateTempAlloca(Int8PtrTy, getPointerAlign(), "saved_stack");
 
-      llvm::Value *F = CGM.getIntrinsic(llvm::Intrinsic::stacksave);
+      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::stacksave);
       llvm::Value *V = Builder.CreateCall(F);
       Builder.CreateStore(V, Stack);
 
@@ -2324,15 +2332,11 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       // cleanup to do the release at the end of the function.
       bool isConsumed = D.hasAttr<NSConsumedAttr>();
 
-      // 'self' is always formally __strong, but if this is not an
-      // init method then we don't want to retain it.
+      // If a parameter is pseudo-strong then we can omit the implicit retain.
       if (D.isARCPseudoStrong()) {
-        const ObjCMethodDecl *method = cast<ObjCMethodDecl>(CurCodeDecl);
-        assert(&D == method->getSelfDecl());
-        assert(lt == Qualifiers::OCL_Strong);
-        assert(qs.hasConst());
-        assert(method->getMethodFamily() != OMF_init);
-        (void) method;
+        assert(lt == Qualifiers::OCL_Strong &&
+               "pseudo-strong variable isn't strong?");
+        assert(qs.hasConst() && "pseudo-strong variable should be const!");
         lt = Qualifiers::OCL_ExplicitNone;
       }
 
@@ -2413,6 +2417,13 @@ void CodeGenModule::EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D,
   if (!LangOpts.OpenMP || (!LangOpts.EmitAllDecls && !D->isUsed()))
     return;
   getOpenMPRuntime().emitUserDefinedReduction(CGF, D);
+}
+
+void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
+                                            CodeGenFunction *CGF) {
+  if (!LangOpts.OpenMP || (!LangOpts.EmitAllDecls && !D->isUsed()))
+    return;
+  // FIXME: need to implement mapper code generation
 }
 
 void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {

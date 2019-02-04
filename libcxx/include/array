@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===---------------------------- array -----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -91,7 +90,7 @@ template <class T, size_t N>
 template <class T, size_t N >
   void swap(array<T,N>& x, array<T,N>& y) noexcept(noexcept(x.swap(y))); // C++17
 
-template <class T> class tuple_size;
+template <class T> struct tuple_size;
 template <size_t I, class T> class tuple_element;
 template <class T, size_t N> struct tuple_size<array<T, N>>;
 template <size_t I, class T, size_t N> struct tuple_element<I, array<T, N>>;
@@ -430,7 +429,7 @@ swap(array<_Tp, _Size>& __x, array<_Tp, _Size>& __y)
 }
 
 template <class _Tp, size_t _Size>
-class _LIBCPP_TEMPLATE_VIS tuple_size<array<_Tp, _Size> >
+struct _LIBCPP_TEMPLATE_VIS tuple_size<array<_Tp, _Size> >
     : public integral_constant<size_t, _Size> {};
 
 template <size_t _Ip, class _Tp, size_t _Size>

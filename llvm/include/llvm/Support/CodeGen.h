@@ -1,9 +1,8 @@
 //===-- llvm/Support/CodeGen.h - CodeGen Concepts ---------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -50,11 +49,16 @@ namespace llvm {
   // Code generation optimization level.
   namespace CodeGenOpt {
     enum Level {
-      None,        // -O0
-      Less,        // -O1
-      Default,     // -O2, -Os
-      Aggressive   // -O3
+      None = 0,      // -O0
+      Less = 1,      // -O1
+      Default = 2,   // -O2, -Os
+      Aggressive = 3 // -O3
     };
+  }
+
+  // Specify effect of frame pointer elimination optimization.
+  namespace FramePointer {
+    enum FP {All, NonLeaf, None};
   }
 
 }  // end llvm namespace

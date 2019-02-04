@@ -1,9 +1,8 @@
 //===--- Index.h -------------------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -185,19 +184,23 @@ struct Symbol {
   SymbolOrigin Origin = SymbolOrigin::Unknown;
   /// A brief description of the symbol that can be appended in the completion
   /// candidate list. For example, "(X x, Y y) const" is a function signature.
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef Signature;
   /// What to insert when completing this symbol, after the symbol name.
   /// This is in LSP snippet syntax (e.g. "({$0})" for a no-args function).
   /// (When snippets are disabled, the symbol name alone is used).
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef CompletionSnippetSuffix;
   /// Documentation including comment for the symbol declaration.
   llvm::StringRef Documentation;
   /// Type when this symbol is used in an expression. (Short display form).
   /// e.g. return type of a function, or type of a variable.
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef ReturnType;
 
   /// Raw representation of the OpaqueType of the symbol, used for scoring
   /// purposes.
+  /// Only set when the symbol is indexed for completion.
   llvm::StringRef Type;
 
   struct IncludeHeaderWithReferences {
@@ -223,17 +226,22 @@ struct Symbol {
   ///   - If we haven't seen a definition, this covers all declarations.
   ///   - If we have seen a definition, this covers declarations visible from
   ///   any definition.
+  /// Only set when the symbol is indexed for completion.
   llvm::SmallVector<IncludeHeaderWithReferences, 1> IncludeHeaders;
 
   enum SymbolFlag : uint8_t {
     None = 0,
     /// Whether or not this symbol is meant to be used for the code completion.
     /// See also isIndexedForCodeCompletion().
+    /// Note that we don't store completion information (signature, snippet,
+    /// type, inclues) if the symbol is not indexed for code completion.
     IndexedForCodeCompletion = 1 << 0,
     /// Indicates if the symbol is deprecated.
     Deprecated = 1 << 1,
     // Symbol is an implementation detail.
     ImplementationDetail = 1 << 2,
+    // Symbol is visible to other files (not e.g. a static helper function).
+    VisibleOutsideFile = 1 << 3,
   };
 
   SymbolFlag Flags = SymbolFlag::None;
@@ -467,6 +475,10 @@ struct LookupRequest {
 struct RefsRequest {
   llvm::DenseSet<SymbolID> IDs;
   RefKind Filter = RefKind::All;
+  /// If set, limit the number of refers returned from the index. The index may
+  /// choose to return less than this, e.g. it tries to avoid returning stale
+  /// results.
+  llvm::Optional<uint32_t> Limit;
 };
 
 /// Interface for symbol indexes that can be used for searching or

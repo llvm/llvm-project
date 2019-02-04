@@ -1,9 +1,8 @@
 //===------------------------ stdexcept.cpp -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,20 +43,6 @@ logic_error::operator=(const logic_error& le) _NOEXCEPT
     return *this;
 }
 
-#if !defined(_LIBCPPABI_VERSION) && !defined(LIBSTDCXX)
-
-logic_error::~logic_error() _NOEXCEPT
-{
-}
-
-const char*
-logic_error::what() const _NOEXCEPT
-{
-    return __imp_.c_str();
-}
-
-#endif
-
 runtime_error::runtime_error(const string& msg) : __imp_(msg.c_str())
 {
 }
@@ -80,8 +65,10 @@ runtime_error::operator=(const runtime_error& le) _NOEXCEPT
 
 #if !defined(_LIBCPPABI_VERSION) && !defined(LIBSTDCXX)
 
-runtime_error::~runtime_error() _NOEXCEPT
+const char*
+logic_error::what() const _NOEXCEPT
 {
+    return __imp_.c_str();
 }
 
 const char*
@@ -90,15 +77,20 @@ runtime_error::what() const _NOEXCEPT
     return __imp_.c_str();
 }
 
+#if !defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)
+
+logic_error::~logic_error() _NOEXCEPT {}
 domain_error::~domain_error() _NOEXCEPT {}
 invalid_argument::~invalid_argument() _NOEXCEPT {}
 length_error::~length_error() _NOEXCEPT {}
 out_of_range::~out_of_range() _NOEXCEPT {}
 
+runtime_error::~runtime_error() _NOEXCEPT {}
 range_error::~range_error() _NOEXCEPT {}
 overflow_error::~overflow_error() _NOEXCEPT {}
 underflow_error::~underflow_error() _NOEXCEPT {}
 
+#endif
 #endif
 
 }  // std

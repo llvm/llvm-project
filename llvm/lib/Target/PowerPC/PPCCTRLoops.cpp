@@ -1,9 +1,8 @@
 //===-- PPCCTRLoops.cpp - Identify and generate CTR loops -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -661,13 +660,13 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
 
   IRBuilder<> CountBuilder(Preheader->getTerminator());
   Module *M = Preheader->getParent()->getParent();
-  Value *MTCTRFunc = Intrinsic::getDeclaration(M, Intrinsic::ppc_mtctr,
-                                               CountType);
+  Function *MTCTRFunc =
+      Intrinsic::getDeclaration(M, Intrinsic::ppc_mtctr, CountType);
   CountBuilder.CreateCall(MTCTRFunc, ECValue);
 
   IRBuilder<> CondBuilder(CountedExitBranch);
-  Value *DecFunc =
-    Intrinsic::getDeclaration(M, Intrinsic::ppc_is_decremented_ctr_nonzero);
+  Function *DecFunc =
+      Intrinsic::getDeclaration(M, Intrinsic::ppc_is_decremented_ctr_nonzero);
   Value *NewCond = CondBuilder.CreateCall(DecFunc, {});
   Value *OldCond = CountedExitBranch->getCondition();
   CountedExitBranch->setCondition(NewCond);

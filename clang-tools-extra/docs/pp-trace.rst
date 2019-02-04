@@ -11,7 +11,7 @@ pp-trace User's Manual
 activity. It's also used as a test of Clang's PPCallbacks interface.
 It runs a given source file through the Clang preprocessor, displaying
 selected information from callback functions overridden in a
-`PPCallbacks <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html>`_
+`PPCallbacks <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html>`_
 derivation. The output is in a high-level YAML format, described in
 :ref:`OutputFormat`.
 
@@ -32,7 +32,7 @@ specific to pp-trace, which are described below in
 ``<source-file>`` specifies the source file to run through the preprocessor.
 
 ``<front-end-options>`` is a place-holder for regular
-`Clang Compiler Options <http://clang.llvm.org/docs/UsersManual.html#command-line-options>`_,
+`Clang Compiler Options <https://clang.llvm.org/docs/UsersManual.html#command-line-options>`_,
 which must follow the <source-file>.
 
 .. _CommandLineOptions:
@@ -88,7 +88,7 @@ Command Line Options
 pp-trace Output Format
 ======================
 
-The pp-trace output is formatted as YAML. See http://yaml.org/ for general
+The pp-trace output is formatted as YAML. See https://yaml.org/ for general
 YAML information. It's arranged as a sequence of information about the
 callback call, including the callback name and argument information, for
 example:::
@@ -150,8 +150,8 @@ Note that in some cases, such as when a structure pointer is an argument
 value, only some key member or members are shown to represent the value,
 instead of trying to display all members of the structure.
 
-`FileChanged <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a7cc8cfaf34114fc65e92af621cd6464e>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`FileChanged <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a7cc8cfaf34114fc65e92af621cd6464e>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 FileChanged is called when the preprocessor enters or exits a file, both the
 top level file being compiled, as well as any #include directives. It will
@@ -177,8 +177,8 @@ Example:::
     FileType: C_User
     PrevFID: (invalid)
 
-`FileSkipped <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ab5b338a0670188eb05fa7685bbfb5128>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`FileSkipped <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ab5b338a0670188eb05fa7685bbfb5128>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 FileSkipped is called when a source file is skipped as the result of header
 guard optimization.
@@ -200,8 +200,8 @@ Example:::
     FilenameTok: "filename.h"
     FileType: C_User
 
-`FileNotFound <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a3045151545f987256bfa8d978916ef00>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`FileNotFound <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a3045151545f987256bfa8d978916ef00>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 FileNotFound is called when an inclusion directive results in a file-not-found error.
 
@@ -220,8 +220,8 @@ Example:::
     FileName: "/path/filename.h"
     RecoveryPath:
 
-`InclusionDirective <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a557d9738c329793513a6f57d6b60de52>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`InclusionDirective <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a557d9738c329793513a6f57d6b60de52>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 InclusionDirective is called when an inclusion directive of any kind (#include</code>, #import</code>, etc.) has been processed, regardless of whether the inclusion will actually result in an inclusion.
 
@@ -253,8 +253,8 @@ Example:::
     RelativePath: "Input/Level1B.h"
     Imported: (null)
 
-`moduleImport <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#af32dcf1b8b7c179c7fcd3e24e89830fe>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`moduleImport <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#af32dcf1b8b7c179c7fcd3e24e89830fe>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 moduleImport is called when there was an explicit module-import syntax.
 
@@ -275,8 +275,8 @@ Example:::
     Path: [{Name: Level1B, Loc: "d:/Clang/llvmnewmod/tools/clang/tools/extra/test/pp-trace/pp-trace-modules.cpp:4:9"}, {Name: Level2B, Loc: "d:/Clang/llvmnewmod/tools/clang/tools/extra/test/pp-trace/pp-trace-modules.cpp:4:17"}]
     Imported: Level2B
 
-`EndOfMainFile <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a63e170d069e99bc1c9c7ea0f3bed8bcc>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`EndOfMainFile <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a63e170d069e99bc1c9c7ea0f3bed8bcc>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 EndOfMainFile is called when the end of the main file is reached.
 
@@ -292,8 +292,8 @@ Example:::
 
   - Callback: EndOfMainFile
 
-`Ident <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a3683f1d1fa513e9b6193d446a5cc2b66>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`Ident <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a3683f1d1fa513e9b6193d446a5cc2b66>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Ident is called when a #ident or #sccs directive is read.
 
@@ -312,8 +312,8 @@ Example:::
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-ident.cpp:3:1"
     str: "$Id$"
 
-`PragmaDirective <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0a2d7a72c62184b3cbde31fb62c6f2f7>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaDirective <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0a2d7a72c62184b3cbde31fb62c6f2f7>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaDirective is called when start reading any pragma directive.
 
@@ -332,8 +332,8 @@ Example:::
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Introducer: PIK_HashPragma
 
-`PragmaComment <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ace0d940fc2c12ab76441466aab58dc37>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaComment <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ace0d940fc2c12ab76441466aab58dc37>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaComment is called when a #pragma comment directive is read.
 
@@ -354,8 +354,8 @@ Example:::
     Kind: library
     Str: kernel32.lib
 
-`PragmaDetectMismatch <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ab11158c9149fb8ad8af1903f4a6cd65d>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaDetectMismatch <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ab11158c9149fb8ad8af1903f4a6cd65d>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaDetectMismatch is called when a #pragma detect_mismatch directive is read.
 
@@ -376,8 +376,8 @@ Example:::
     Name: name
     Value: value
 
-`PragmaDebug <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a57cdccb6dcc07e926513ac3d5b121466>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaDebug <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a57cdccb6dcc07e926513ac3d5b121466>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaDebug is called when a #pragma clang __debug directive is read.
 
@@ -396,8 +396,8 @@ Example:::
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     DebugType: warning
 
-`PragmaMessage <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#abb42935d9a9fd8e2c4f51cfdc4ea2ae1>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaMessage <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#abb42935d9a9fd8e2c4f51cfdc4ea2ae1>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaMessage is called when a #pragma message directive is read.
 
@@ -420,8 +420,8 @@ Example:::
     Kind: PMK_Message
     Str: The message text.
 
-`PragmaDiagnosticPush <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0f3ff19762baa38fe6c5c58022d32979>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaDiagnosticPush <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0f3ff19762baa38fe6c5c58022d32979>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaDiagnosticPush is called when a #pragma gcc dianostic push directive is read.
 
@@ -440,7 +440,7 @@ Example:::
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Namespace: "GCC"
 
-`PragmaDiagnosticPop <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ac94d789873122221fba8d76f6c5ea45e>`_ Callback
+`PragmaDiagnosticPop <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ac94d789873122221fba8d76f6c5ea45e>`_ Callback
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaDiagnosticPop is called when a #pragma gcc dianostic pop directive is read.
@@ -460,8 +460,8 @@ Example:::
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Namespace: "GCC"
 
-`PragmaDiagnostic <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#afe7938f38a83cb7b4b25a13edfdd7bdd>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaDiagnostic <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#afe7938f38a83cb7b4b25a13edfdd7bdd>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaDiagnostic is called when a #pragma gcc dianostic directive is read.
 
@@ -484,8 +484,8 @@ Example:::
     mapping: MAP_WARNING
     Str: WarningName
 
-`PragmaOpenCLExtension <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a92a20a21fadbab4e2c788f4e27fe07e7>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaOpenCLExtension <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a92a20a21fadbab4e2c788f4e27fe07e7>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaOpenCLExtension is called when OpenCL extension is either disabled or enabled with a pragma.
 
@@ -508,8 +508,8 @@ Example:::
     StateLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:18"
     State: 1
 
-`PragmaWarning <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#aa17169d25fa1cf0a6992fc944d1d8730>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaWarning <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#aa17169d25fa1cf0a6992fc944d1d8730>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaWarning is called when a #pragma warning directive is read.
 
@@ -530,8 +530,8 @@ Example:::
     WarningSpec: disable
     Ids: 1,2,3
 
-`PragmaWarningPush <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ae5626ef70502687a859f323a809ed0b6>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaWarningPush <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ae5626ef70502687a859f323a809ed0b6>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaWarningPush is called when a #pragma warning(push) directive is read.
 
@@ -550,8 +550,8 @@ Example:::
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
     Level: 1
 
-`PragmaWarningPop <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ac98d502af8811b8a6e7342d7cd2b3b95>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`PragmaWarningPop <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ac98d502af8811b8a6e7342d7cd2b3b95>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 PragmaWarningPop is called when a #pragma warning(pop) directive is read.
 
@@ -568,8 +568,8 @@ Example:::
   - Callback: PragmaWarningPop
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
 
-`MacroExpands <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a9bc725209d3a071ea649144ab996d515>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`MacroExpands <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a9bc725209d3a071ea649144ab996d515>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MacroExpands is called when ::HandleMacroExpandedIdentifier when a macro invocation is found.
 
@@ -592,8 +592,8 @@ Example:::
     Range: [(nonfile), (nonfile)]
     Args: [a <plus> y, b]
 
-`MacroDefined <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a8448fc9f96f22ad1b93ff393cffc5a76>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`MacroDefined <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a8448fc9f96f22ad1b93ff393cffc5a76>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MacroDefined is called when a macro definition is seen.
 
@@ -612,8 +612,8 @@ Example:::
     MacroNameTok: X_IMPL
     MacroDirective: MD_Define
 
-`MacroUndefined <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#acb80fc6171a839db8e290945bf2c9d7a>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`MacroUndefined <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#acb80fc6171a839db8e290945bf2c9d7a>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MacroUndefined is called when a macro #undef is seen.
 
@@ -632,8 +632,8 @@ Example:::
     MacroNameTok: X_IMPL
     MacroDirective: MD_Define
 
-`Defined <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a3cc2a644533d0e4088a13d2baf90db94>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`Defined <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a3cc2a644533d0e4088a13d2baf90db94>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Defined is called when the 'defined' operator is seen.
 
@@ -654,8 +654,8 @@ Example:::
     MacroDirective: (null)
     Range: ["D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:5", "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:19"]
 
-`SourceRangeSkipped <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#abdb4ebe11610f079ac33515965794b46>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`SourceRangeSkipped <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#abdb4ebe11610f079ac33515965794b46>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 SourceRangeSkipped is called when a source range is skipped.
 
@@ -672,8 +672,8 @@ Example:::
   - Callback: SourceRangeSkipped
     Range: [":/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2", ":/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:9:2"]
 
-`If <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a645edcb0d6becbc6f256f02fd1287778>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`If <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a645edcb0d6becbc6f256f02fd1287778>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If is called when an #if is seen.
 
@@ -694,8 +694,8 @@ Example:::
     ConditionRange: ["D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:4", "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:9:1"]
     ConditionValue: false
 
-`Elif <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a180c9e106a28d60a6112e16b1bb8302a>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`Elif <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a180c9e106a28d60a6112e16b1bb8302a>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Elif is called when an #elif is seen.
 
@@ -718,8 +718,8 @@ Example:::
     ConditionValue: false
     IfLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2"
 
-`Ifdef <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0ce79575dda307784fd51a6dd4eec33d>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`Ifdef <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a0ce79575dda307784fd51a6dd4eec33d>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Ifdef is called when an #ifdef is seen.
 
@@ -740,8 +740,8 @@ Example:::
     MacroNameTok: MACRO
     MacroDirective: MD_Define
 
-`Ifndef <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a767af69f1cdcc4cd880fa2ebf77ad3ad>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`Ifndef <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#a767af69f1cdcc4cd880fa2ebf77ad3ad>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Ifndef is called when an #ifndef is seen.
 
@@ -762,8 +762,8 @@ Example:::
     MacroNameTok: MACRO
     MacroDirective: MD_Define
 
-`Else <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ad57f91b6d9c3cbcca326a2bfb49e0314>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`Else <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#ad57f91b6d9c3cbcca326a2bfb49e0314>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Else is called when an #else is seen.
 
@@ -782,8 +782,8 @@ Example:::
     Loc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:10:2"
     IfLoc: "D:/Clang/llvm/tools/clang/tools/extra/test/pp-trace/pp-trace-macro.cpp:8:2"
 
-`Endif <http://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#afc62ca1401125f516d58b1629a2093ce>`_ Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`Endif <https://clang.llvm.org/doxygen/classclang_1_1PPCallbacks.html#afc62ca1401125f516d58b1629a2093ce>`_ Callback
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Endif is called when an #endif is seen.
 
@@ -819,7 +819,7 @@ To build from source:
    * If using CMake, you can also use the ``pp-trace`` target to build
      just the pp-trace tool and its dependencies.
 
-.. _Getting Started with the LLVM System: http://llvm.org/docs/GettingStarted.html
-.. _Building LLVM with CMake: http://llvm.org/docs/CMake.html
-.. _Clang Tools Documentation: http://clang.llvm.org/docs/ClangTools.html
+.. _Getting Started with the LLVM System: https://llvm.org/docs/GettingStarted.html
+.. _Building LLVM with CMake: https://llvm.org/docs/CMake.html
+.. _Clang Tools Documentation: https://clang.llvm.org/docs/ClangTools.html
 

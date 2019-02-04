@@ -1,9 +1,8 @@
 //===-- AMDGPUISelLowering.cpp - AMDGPU Common DAG lowering functions -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -21,7 +20,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUFrameLowering.h"
-#include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
@@ -2717,21 +2715,33 @@ static bool isI24(SDValue Op, SelectionDAG &DAG) {
     AMDGPUTargetLowering::numBitsSigned(Op, DAG) < 24;
 }
 
-static bool simplifyI24(SDNode *Node24, unsigned OpIdx,
-                        TargetLowering::DAGCombinerInfo &DCI) {
-
+static SDValue simplifyI24(SDNode *Node24,
+                           TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
-  SDValue Op = Node24->getOperand(OpIdx);
+  SDValue LHS = Node24->getOperand(0);
+  SDValue RHS = Node24->getOperand(1);
+
+  APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
+
+  // First try to simplify using GetDemandedBits which allows the operands to
+  // have other uses, but will only perform simplifications that involve
+  // bypassing some nodes for this user.
+  SDValue DemandedLHS = DAG.GetDemandedBits(LHS, Demanded);
+  SDValue DemandedRHS = DAG.GetDemandedBits(RHS, Demanded);
+  if (DemandedLHS || DemandedRHS)
+    return DAG.getNode(Node24->getOpcode(), SDLoc(Node24), Node24->getVTList(),
+                       DemandedLHS ? DemandedLHS : LHS,
+                       DemandedRHS ? DemandedRHS : RHS);
+
+  // Now try SimplifyDemandedBits which can simplify the nodes used by our
+  // operands if this node is the only user.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT VT = Op.getValueType();
+  if (TLI.SimplifyDemandedBits(LHS, Demanded, DCI))
+    return SDValue(Node24, 0);
+  if (TLI.SimplifyDemandedBits(RHS, Demanded, DCI))
+    return SDValue(Node24, 0);
 
-  APInt Demanded = APInt::getLowBitsSet(VT.getSizeInBits(), 24);
-  APInt KnownZero, KnownOne;
-  TargetLowering::TargetLoweringOpt TLO(DAG, true, true);
-  if (TLI.SimplifyDemandedBits(Node24, OpIdx, Demanded, DCI, TLO))
-    return true;
-
-  return false;
+  return SDValue();
 }
 
 template <typename IntTy>
@@ -3279,8 +3289,8 @@ SDValue AMDGPUTargetLowering::performMulLoHi24Combine(
   SelectionDAG &DAG = DCI.DAG;
 
   // Simplify demanded bits before splitting into multiple users.
-  if (simplifyI24(N, 0, DCI) || simplifyI24(N, 1, DCI))
-    return SDValue();
+  if (SDValue V = simplifyI24(N, DCI))
+    return V;
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -3866,9 +3876,8 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MULHI_I24:
   case AMDGPUISD::MULHI_U24: {
-    // If the first call to simplify is successfull, then N may end up being
-    // deleted, so we shouldn't call simplifyI24 again.
-    simplifyI24(N, 0, DCI) || simplifyI24(N, 1, DCI);
+    if (SDValue V = simplifyI24(N, DCI))
+      return V;
     return SDValue();
   }
   case AMDGPUISD::MUL_LOHI_I24:
@@ -4174,6 +4183,9 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(INTERP_MOV)
   NODE_NAME_CASE(INTERP_P1)
   NODE_NAME_CASE(INTERP_P2)
+  NODE_NAME_CASE(INTERP_P1LL_F16)
+  NODE_NAME_CASE(INTERP_P1LV_F16)
+  NODE_NAME_CASE(INTERP_P2_F16)
   NODE_NAME_CASE(STORE_MSKOR)
   NODE_NAME_CASE(LOAD_CONSTANT)
   NODE_NAME_CASE(TBUFFER_STORE_FORMAT)
@@ -4181,10 +4193,10 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TBUFFER_STORE_FORMAT_D16)
   NODE_NAME_CASE(TBUFFER_LOAD_FORMAT)
   NODE_NAME_CASE(TBUFFER_LOAD_FORMAT_D16)
+  NODE_NAME_CASE(DS_ORDERED_COUNT)
   NODE_NAME_CASE(ATOMIC_CMP_SWAP)
   NODE_NAME_CASE(ATOMIC_INC)
   NODE_NAME_CASE(ATOMIC_DEC)
-  NODE_NAME_CASE(ATOMIC_LOAD_FADD)
   NODE_NAME_CASE(ATOMIC_LOAD_FMIN)
   NODE_NAME_CASE(ATOMIC_LOAD_FMAX)
   NODE_NAME_CASE(BUFFER_LOAD)
@@ -4296,25 +4308,36 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
                       RHSKnown.countMinTrailingZeros();
     Known.Zero.setLowBits(std::min(TrailZ, 32u));
 
-    unsigned LHSValBits = 32 - std::max(LHSKnown.countMinSignBits(), 8u);
-    unsigned RHSValBits = 32 - std::max(RHSKnown.countMinSignBits(), 8u);
-    unsigned MaxValBits = std::min(LHSValBits + RHSValBits, 32u);
-    if (MaxValBits >= 32)
-      break;
+    // Truncate to 24 bits.
+    LHSKnown = LHSKnown.trunc(24);
+    RHSKnown = RHSKnown.trunc(24);
+
     bool Negative = false;
     if (Opc == AMDGPUISD::MUL_I24) {
-      bool LHSNegative = !!(LHSKnown.One  & (1 << 23));
-      bool LHSPositive = !!(LHSKnown.Zero & (1 << 23));
-      bool RHSNegative = !!(RHSKnown.One  & (1 << 23));
-      bool RHSPositive = !!(RHSKnown.Zero & (1 << 23));
+      unsigned LHSValBits = 24 - LHSKnown.countMinSignBits();
+      unsigned RHSValBits = 24 - RHSKnown.countMinSignBits();
+      unsigned MaxValBits = std::min(LHSValBits + RHSValBits, 32u);
+      if (MaxValBits >= 32)
+        break;
+      bool LHSNegative = LHSKnown.isNegative();
+      bool LHSPositive = LHSKnown.isNonNegative();
+      bool RHSNegative = RHSKnown.isNegative();
+      bool RHSPositive = RHSKnown.isNonNegative();
       if ((!LHSNegative && !LHSPositive) || (!RHSNegative && !RHSPositive))
         break;
       Negative = (LHSNegative && RHSPositive) || (LHSPositive && RHSNegative);
-    }
-    if (Negative)
-      Known.One.setHighBits(32 - MaxValBits);
-    else
+      if (Negative)
+        Known.One.setHighBits(32 - MaxValBits);
+      else
+        Known.Zero.setHighBits(32 - MaxValBits);
+    } else {
+      unsigned LHSValBits = 24 - LHSKnown.countMinLeadingZeros();
+      unsigned RHSValBits = 24 - RHSKnown.countMinLeadingZeros();
+      unsigned MaxValBits = std::min(LHSValBits + RHSValBits, 32u);
+      if (MaxValBits >= 32)
+        break;
       Known.Zero.setHighBits(32 - MaxValBits);
+    }
     break;
   }
   case AMDGPUISD::PERM: {
@@ -4497,7 +4520,12 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 
 TargetLowering::AtomicExpansionKind
 AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
-  if (RMW->getOperation() == AtomicRMWInst::Nand)
+  switch (RMW->getOperation()) {
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
     return AtomicExpansionKind::CmpXChg;
-  return AtomicExpansionKind::None;
+  default:
+    return AtomicExpansionKind::None;
+  }
 }

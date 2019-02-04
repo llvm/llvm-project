@@ -1,9 +1,8 @@
 //===- BasicAliasAnalysisTest.cpp - Unit tests for BasicAA ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -109,7 +108,7 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   Value *ArbitraryI32 = F->arg_begin();
   AllocaInst *I8 = B.CreateAlloca(B.getInt8Ty(), B.getInt32(2));
   auto *I8AtUncertainOffset =
-      cast<GetElementPtrInst>(B.CreateGEP(I8, ArbitraryI32));
+      cast<GetElementPtrInst>(B.CreateGEP(B.getInt8Ty(), I8, ArbitraryI32));
 
   BasicAAResult &BasicAA = setupAnalyses();
   ASSERT_EQ(BasicAA.alias(

@@ -1,10 +1,9 @@
 //===- ScalarizeMaskedMemIntrin.cpp - Scalarize unsupported masked mem ----===//
 //                                    instrinsics
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -144,7 +143,7 @@ static void scalarizeMaskedLoad(CallInst *CI) {
 
   // Short-cut if the mask is all-true.
   if (isa<Constant>(Mask) && cast<Constant>(Mask)->isAllOnesValue()) {
-    Value *NewI = Builder.CreateAlignedLoad(Ptr, AlignVal);
+    Value *NewI = Builder.CreateAlignedLoad(VecType, Ptr, AlignVal);
     CI->replaceAllUsesWith(NewI);
     CI->eraseFromParent();
     return;
@@ -167,7 +166,7 @@ static void scalarizeMaskedLoad(CallInst *CI) {
         continue;
       Value *Gep =
           Builder.CreateInBoundsGEP(EltTy, FirstEltPtr, Builder.getInt32(Idx));
-      LoadInst *Load = Builder.CreateAlignedLoad(Gep, AlignVal);
+      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
       VResult =
           Builder.CreateInsertElement(VResult, Load, Builder.getInt32(Idx));
     }
@@ -199,7 +198,7 @@ static void scalarizeMaskedLoad(CallInst *CI) {
 
     Value *Gep =
         Builder.CreateInBoundsGEP(EltTy, FirstEltPtr, Builder.getInt32(Idx));
-    LoadInst *Load = Builder.CreateAlignedLoad(Gep, AlignVal);
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load,
                                                     Builder.getInt32(Idx));
 
@@ -367,6 +366,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
   Value *Src0 = CI->getArgOperand(3);
 
   VectorType *VecType = cast<VectorType>(CI->getType());
+  Type *EltTy = VecType->getElementType();
 
   IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
@@ -388,7 +388,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Builder.getInt32(Idx),
                                                 "Ptr" + Twine(Idx));
       LoadInst *Load =
-          Builder.CreateAlignedLoad(Ptr, AlignVal, "Load" + Twine(Idx));
+          Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
       VResult = Builder.CreateInsertElement(
           VResult, Load, Builder.getInt32(Idx), "Res" + Twine(Idx));
     }
@@ -419,7 +419,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Builder.getInt32(Idx),
                                               "Ptr" + Twine(Idx));
     LoadInst *Load =
-        Builder.CreateAlignedLoad(Ptr, AlignVal, "Load" + Twine(Idx));
+        Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load,
                                                     Builder.getInt32(Idx),
                                                     "Res" + Twine(Idx));

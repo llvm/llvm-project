@@ -1,9 +1,8 @@
 //===---- CGObjC.cpp - Emit LLVM Code for Objective-C ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -22,7 +21,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 using namespace clang;
@@ -370,7 +368,8 @@ static Optional<llvm::Value *>
 tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
                                   llvm::Value *Receiver,
                                   const CallArgList& Args, Selector Sel,
-                                  const ObjCMethodDecl *method) {
+                                  const ObjCMethodDecl *method,
+                                  bool isClassMessage) {
   auto &CGM = CGF.CGM;
   if (!CGM.getCodeGenOpts().ObjCConvertMessagesToRuntimeCalls)
     return None;
@@ -378,7 +377,8 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
   auto &Runtime = CGM.getLangOpts().ObjCRuntime;
   switch (Sel.getMethodFamily()) {
   case OMF_alloc:
-    if (Runtime.shouldUseRuntimeFunctionsForAlloc() &&
+    if (isClassMessage &&
+        Runtime.shouldUseRuntimeFunctionsForAlloc() &&
         ResultType->isObjCObjectPointerType()) {
         // [Foo alloc] -> objc_alloc(Foo)
         if (Sel.isUnarySelector() && Sel.getNameForSlot(0) == "alloc")
@@ -550,7 +550,8 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
     // Call runtime methods directly if we can.
     if (Optional<llvm::Value *> SpecializedResult =
             tryGenerateSpecializedMessageSend(*this, ResultType, Receiver, Args,
-                                              E->getSelector(), method)) {
+                                              E->getSelector(), method,
+                                              isClassMessage)) {
       result = RValue::get(SpecializedResult.getValue());
     } else {
       result = Runtime.GenerateMessageSend(*this, Return, ResultType,
@@ -1049,7 +1050,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
 
     // FIXME: We shouldn't need to get the function info here, the
     // runtime already should have computed it to build the function.
-    llvm::Instruction *CallInstruction;
+    llvm::CallBase *CallInstruction;
     RValue RV = EmitCall(
         getTypes().arrangeBuiltinFunctionCall(propType, args),
         callee, ReturnValueSlot(), args, &CallInstruction);
@@ -2021,7 +2022,8 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
                                            llvm::Value *value,
                                            llvm::Type *returnType,
                                            llvm::Constant *&fn,
-                                           StringRef fnName) {
+                                           StringRef fnName,
+                                           bool MayThrow) {
   if (isa<llvm::ConstantPointerNull>(value))
     return value;
 
@@ -2041,10 +2043,14 @@ static llvm::Value *emitObjCValueOperation(CodeGenFunction &CGF,
   value = CGF.Builder.CreateBitCast(value, CGF.Int8PtrTy);
 
   // Call the function.
-  llvm::CallInst *call = CGF.EmitNounwindRuntimeCall(fn, value);
+  llvm::CallBase *Inst = nullptr;
+  if (MayThrow)
+    Inst = CGF.EmitCallOrInvoke(fn, value);
+  else
+    Inst = CGF.EmitNounwindRuntimeCall(fn, value);
 
   // Cast the result back to the original type.
-  return CGF.Builder.CreateBitCast(call, origType);
+  return CGF.Builder.CreateBitCast(Inst, origType);
 }
 
 /// Produce the code to do a retain.  Based on the type, calls one of:
@@ -2492,7 +2498,7 @@ llvm::Value *CodeGenFunction::EmitObjCAlloc(llvm::Value *value,
                                             llvm::Type *resultType) {
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_alloc,
-                                "objc_alloc");
+                                "objc_alloc", /*MayThrow=*/true);
 }
 
 /// Allocate the given objc object.
@@ -2501,7 +2507,7 @@ llvm::Value *CodeGenFunction::EmitObjCAllocWithZone(llvm::Value *value,
                                                     llvm::Type *resultType) {
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_allocWithZone,
-                                "objc_allocWithZone");
+                                "objc_allocWithZone", /*MayThrow=*/true);
 }
 
 /// Produce the code to do a primitive release.
@@ -2542,18 +2548,20 @@ void CodeGenFunction::emitARCIntrinsicUse(CodeGenFunction &CGF, Address addr,
 ///   call i8* \@objc_autorelease(i8* %value)
 llvm::Value *CodeGenFunction::EmitObjCAutorelease(llvm::Value *value,
                                                   llvm::Type *returnType) {
-  return emitObjCValueOperation(*this, value, returnType,
-                      CGM.getObjCEntrypoints().objc_autoreleaseRuntimeFunction,
-                                "objc_autorelease");
+  return emitObjCValueOperation(
+      *this, value, returnType,
+      CGM.getObjCEntrypoints().objc_autoreleaseRuntimeFunction,
+      "objc_autorelease", /*MayThrow=*/false);
 }
 
 /// Retain the given object, with normal retain semantics.
 ///   call i8* \@objc_retain(i8* %value)
 llvm::Value *CodeGenFunction::EmitObjCRetainNonBlock(llvm::Value *value,
                                                      llvm::Type *returnType) {
-  return emitObjCValueOperation(*this, value, returnType,
-                          CGM.getObjCEntrypoints().objc_retainRuntimeFunction,
-                                "objc_retain");
+  return emitObjCValueOperation(
+      *this, value, returnType,
+      CGM.getObjCEntrypoints().objc_retainRuntimeFunction, "objc_retain",
+      /*MayThrow=*/false);
 }
 
 /// Release the given object.

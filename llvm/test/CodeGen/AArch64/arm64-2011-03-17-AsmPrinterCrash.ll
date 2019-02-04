@@ -28,7 +28,7 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.0 (http://llvm.org/git/clang.git git:/git/puzzlebox/clang.git/ c4d1aea01c4444eb81bdbf391f1be309127c3cf1)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !2)
 !1 = !DIFile(filename: "print.i", directory: "/Volumes/Ebi/echeng/radars/r9146594")
 !2 = !{!3}
 !3 = !DIGlobalVariableExpression(var: !4, expr: !DIExpression())

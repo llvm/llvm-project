@@ -1,9 +1,8 @@
 //=== FileOutputBuffer.h - File Output Buffer -------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -33,11 +32,6 @@ public:
   enum {
     /// set the 'x' bit on the resulting file
     F_executable = 1,
-
-    /// the contents of the new file are initialized from the file that exists
-    /// at the location (if present).  This allows in-place modification of an
-    /// existing file.
-    F_modify = 2
   };
 
   /// Factory method to create an OutputBuffer object which manages a read/write

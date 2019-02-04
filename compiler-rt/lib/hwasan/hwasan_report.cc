@@ -1,9 +1,8 @@
 //===-- hwasan_report.cc --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,15 +34,21 @@ class ScopedReport {
   ScopedReport(bool fatal = false) : error_message_(1), fatal(fatal) {
     BlockingMutexLock lock(&error_message_lock_);
     error_message_ptr_ = fatal ? &error_message_ : nullptr;
+    ++hwasan_report_count;
   }
 
   ~ScopedReport() {
-    BlockingMutexLock lock(&error_message_lock_);
-    if (fatal) {
-      SetAbortMessage(error_message_.data());
-      Die();
+    {
+      BlockingMutexLock lock(&error_message_lock_);
+      if (fatal)
+        SetAbortMessage(error_message_.data());
+      error_message_ptr_ = nullptr;
     }
-    error_message_ptr_ = nullptr;
+    if (common_flags()->print_module_map >= 2 ||
+        (fatal && common_flags()->print_module_map))
+      DumpProcessMap();
+    if (fatal)
+      Die();
   }
 
   static void MaybeAppendToErrorMessage(const char *msg) {
@@ -400,13 +405,21 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
   Thread *t = GetCurrentThread();
 
+  sptr offset =
+      __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
+  CHECK(offset >= 0 && offset < static_cast<sptr>(access_size));
   tag_t ptr_tag = GetTagFromPointer(tagged_addr);
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
+  tag_t *tag_ptr =
+      reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
   tag_t mem_tag = *tag_ptr;
+
   Printf("%s", d.Access());
   Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
          is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
          mem_tag, t->unique_id());
+  if (offset != 0)
+    Printf("Invalid access starting at offset [%zu, %zu)\n", offset,
+           Min(access_size, static_cast<uptr>(offset) + (1 << kShadowScale)));
   Printf("%s", d.Default());
 
   stack->Print();

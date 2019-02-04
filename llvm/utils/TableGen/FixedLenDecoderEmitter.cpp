@@ -1,9 +1,8 @@
 //===------------ FixedLenDecoderEmitter.cpp - Decoder Generator ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1717,7 +1716,7 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
   dumpStack(errs(), "\t\t");
 
   for (unsigned i = 0; i < Opcodes.size(); ++i) {
-    errs() << '\t' << Opcodes[i] << " ";
+    errs() << '\t' << AllInstructions[Opcodes[i]] << " ";
     dumpBits(errs(),
              getBitsField(*AllInstructions[Opcodes[i]].EncodingDef, "Inst"));
     errs() << '\n';

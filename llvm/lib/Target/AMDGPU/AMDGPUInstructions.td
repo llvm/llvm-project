@@ -1,9 +1,8 @@
 //===-- AMDGPUInstructions.td - Common instruction defs ---*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -842,6 +841,7 @@ def cvt_flr_i32_f32 : PatFrag <
   [{ (void)N; return TM.Options.NoNaNsFPMath; }]
 >;
 
+let AddedComplexity = 2 in {
 class IMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
   (add (AMDGPUmul_i24 i32:$src0, i32:$src1), i32:$src2),
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
@@ -853,6 +853,7 @@ class UMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
   !if(HasClamp, (Inst $src0, $src1, $src2, (i1 0)),
                 (Inst $src0, $src1, $src2))
 >;
+} // AddedComplexity.
 
 class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
   (fdiv FP_ONE, vt:$src),

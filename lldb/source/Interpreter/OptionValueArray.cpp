@@ -1,9 +1,8 @@
 //===-- OptionValueArray.cpp ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -221,7 +220,7 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
         if (num_remove_indexes) {
           // Sort and then erase in reverse so indexes are always valid
           if (num_remove_indexes > 1) {
-            std::sort(remove_indexes.begin(), remove_indexes.end());
+            llvm::sort(remove_indexes.begin(), remove_indexes.end());
             for (std::vector<int>::const_reverse_iterator
                      pos = remove_indexes.rbegin(),
                      end = remove_indexes.rend();

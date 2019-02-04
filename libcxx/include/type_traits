@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===------------------------ type_traits ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -1652,7 +1651,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool has_unique_object_representations_v
 // alignment_of
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS alignment_of
-    : public integral_constant<size_t, __alignof__(_Tp)> {};
+    : public integral_constant<size_t, _LIBCPP_ALIGNOF(_Tp)> {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -1682,7 +1681,7 @@ struct __nat
 template <class _Tp>
 struct __align_type
 {
-    static const size_t value = alignment_of<_Tp>::value;
+    static const size_t value = _LIBCPP_PREFERRED_ALIGNOF(_Tp);
     typedef _Tp type;
 };
 
@@ -1815,8 +1814,8 @@ struct __static_max<_I0, _I1, _In...>
 template <size_t _Len, class _Type0, class ..._Types>
 struct aligned_union
 {
-    static const size_t alignment_value = __static_max<__alignof__(_Type0),
-                                                       __alignof__(_Types)...>::value;
+    static const size_t alignment_value = __static_max<_LIBCPP_PREFERRED_ALIGNOF(_Type0),
+                                                       _LIBCPP_PREFERRED_ALIGNOF(_Types)...>::value;
     static const size_t __len = __static_max<_Len, sizeof(_Type0),
                                              sizeof(_Types)...>::value;
     typedef typename aligned_storage<__len, alignment_value>::type type;
@@ -4361,28 +4360,31 @@ _LIBCPP_INVOKE_RETURN(_VSTD::forward<_Fp>(__f)(_VSTD::forward<_Args>(__args)...)
 #undef _LIBCPP_INVOKE_RETURN
 
 // __invokable
-
 template <class _Ret, class _Fp, class ..._Args>
 struct __invokable_r
 {
-    // FIXME: Check that _Ret, _Fp, and _Args... are all complete types, cv void,
-    // or incomplete array types as required by the standard.
-    using _Result = decltype(
-        _VSTD::__invoke(_VSTD::declval<_Fp>(), _VSTD::declval<_Args>()...));
+  template <class _XFp, class ..._XArgs>
+  static auto __try_call(int) -> decltype(
+    _VSTD::__invoke(_VSTD::declval<_XFp>(), _VSTD::declval<_XArgs>()...));
+  template <class _XFp, class ..._XArgs>
+  static __nat __try_call(...);
 
-    using type =
-        typename conditional<
-            !is_same<_Result, __nat>::value,
-            typename conditional<
-                is_void<_Ret>::value,
-                true_type,
-                is_convertible<_Result, _Ret>
-            >::type,
-            false_type
-        >::type;
-    static const bool value = type::value;
+  // FIXME: Check that _Ret, _Fp, and _Args... are all complete types, cv void,
+  // or incomplete array types as required by the standard.
+  using _Result = decltype(__try_call<_Fp, _Args...>(0));
+
+  using type =
+  typename conditional<
+      !is_same<_Result, __nat>::value,
+      typename conditional<
+          is_void<_Ret>::value,
+          true_type,
+          is_convertible<_Result, _Ret>
+      >::type,
+      false_type
+  >::type;
+  static const bool value = type::value;
 };
-
 template <class _Fp, class ..._Args>
 using __invokable = __invokable_r<void, _Fp, _Args...>;
 

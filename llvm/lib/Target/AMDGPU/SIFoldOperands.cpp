@@ -1,9 +1,8 @@
 //===-- SIFoldOperands.cpp - Fold operands --- ----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 /// \file
 //===----------------------------------------------------------------------===//
@@ -854,13 +853,17 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     }
   } else {
     // Folding register.
+    SmallVector <MachineRegisterInfo::use_iterator, 4> UsesToProcess;
     for (MachineRegisterInfo::use_iterator
            Use = MRI->use_begin(Dst.getReg()), E = MRI->use_end();
          Use != E; ++Use) {
-      MachineInstr *UseMI = Use->getParent();
+      UsesToProcess.push_back(Use);
+    }
+    for (auto U : UsesToProcess) {
+      MachineInstr *UseMI = U->getParent();
 
-      foldOperand(OpToFold, UseMI, Use.getOperandNo(),
-                  FoldList, CopiesToReplace);
+      foldOperand(OpToFold, UseMI, U.getOperandNo(),
+        FoldList, CopiesToReplace);
     }
   }
 

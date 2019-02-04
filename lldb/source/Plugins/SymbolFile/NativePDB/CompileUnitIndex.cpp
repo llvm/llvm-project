@@ -1,9 +1,8 @@
 //===-- CompileUnitIndex.cpp ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -204,6 +203,12 @@ CompileUnitIndex::GetMainSourceFile(const CompilandIndexItem &item) const {
       TypeDeserializer::deserializeAs<StringIdRecord>(dir_cvt, working_dir));
   llvm::cantFail(
       TypeDeserializer::deserializeAs<StringIdRecord>(file_cvt, file_name));
+
+  llvm::sys::path::Style style = working_dir.String.startswith("/")
+                                     ? llvm::sys::path::Style::posix
+                                     : llvm::sys::path::Style::windows;
+  if (llvm::sys::path::is_absolute(file_name.String, style))
+    return file_name.String;
 
   llvm::SmallString<64> absolute_path = working_dir.String;
   llvm::sys::path::append(absolute_path, file_name.String);

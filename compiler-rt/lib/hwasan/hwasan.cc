@@ -1,9 +1,8 @@
 //===-- hwasan.cc ---------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,6 +13,7 @@
 
 #include "hwasan.h"
 #include "hwasan_checks.h"
+#include "hwasan_dynamic_shadow.h"
 #include "hwasan_poisoning.h"
 #include "hwasan_report.h"
 #include "hwasan_thread.h"
@@ -58,7 +58,7 @@ Flags *flags() {
 }
 
 int hwasan_inited = 0;
-int hwasan_shadow_inited = 0;
+int hwasan_instrumentation_inited = 0;
 bool hwasan_init_is_running;
 
 int hwasan_report_count = 0;
@@ -88,6 +88,8 @@ static void InitializeFlags() {
     cf.check_printf = false;
     cf.intercept_tls_get_addr = true;
     cf.exitcode = 99;
+    // 8 shadow pages ~512kB, small enough to cover common stack sizes.
+    cf.clear_shadow_mmap_threshold = 4096 * (SANITIZER_ANDROID ? 2 : 8);
     // Sigtrap is used in error reporting.
     cf.handle_sigtrap = kHandleSignalExclusive;
 
@@ -245,6 +247,22 @@ const char *GetStackFrameDescr(uptr pc) {
   return nullptr;
 }
 
+// Prepare to run instrumented code on the main thread.
+void InitInstrumentation() {
+  if (hwasan_instrumentation_inited) return;
+
+  if (!InitShadow()) {
+    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
+    DumpProcessMap();
+    Die();
+  }
+
+  InitThreads();
+  hwasanThreadList().CreateCurrentThread();
+
+  hwasan_instrumentation_inited = 1;
+}
+
 } // namespace __hwasan
 
 // Interface.
@@ -253,18 +271,13 @@ using namespace __hwasan;
 
 uptr __hwasan_shadow_memory_dynamic_address;  // Global interface symbol.
 
-void __hwasan_shadow_init() {
-  if (hwasan_shadow_inited) return;
-  if (!InitShadow()) {
-    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
-    DumpProcessMap();
-    Die();
-  }
-  hwasan_shadow_inited = 1;
-}
-
 void __hwasan_init_frames(uptr beg, uptr end) {
   InitFrameDescriptors(beg, end);
+}
+
+void __hwasan_init_static() {
+  InitShadowGOT();
+  InitInstrumentation();
 }
 
 void __hwasan_init() {
@@ -287,10 +300,11 @@ void __hwasan_init() {
 
   DisableCoreDumperIfNecessary();
 
-  __hwasan_shadow_init();
+  InitInstrumentation();
 
-  InitThreads();
-  hwasanThreadList().CreateCurrentThread();
+  // Needs to be called here because flags()->random_tags might not have been
+  // initialized when InitInstrumentation() was called.
+  GetCurrentThread()->InitRandomState();
 
   MadviseShadow();
 
@@ -335,14 +349,14 @@ sptr __hwasan_test_shadow(const void *p, uptr sz) {
   if (sz == 0)
     return -1;
   tag_t ptr_tag = GetTagFromPointer((uptr)p);
-  if (ptr_tag == 0)
-    return -1;
   uptr ptr_raw = UntagAddr(reinterpret_cast<uptr>(p));
   uptr shadow_first = MemToShadow(ptr_raw);
   uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
   for (uptr s = shadow_first; s <= shadow_last; ++s)
-    if (*(tag_t*)s != ptr_tag)
-      return ShadowToMem(s) - ptr_raw;
+    if (*(tag_t *)s != ptr_tag) {
+      sptr offset = ShadowToMem(s) - ptr_raw;
+      return offset < 0 ? 0 : offset;
+    }
   return -1;
 }
 

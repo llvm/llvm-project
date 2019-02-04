@@ -1,15 +1,15 @@
 //===- WasmObjectFile.cpp - Wasm object file implementation ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
@@ -176,7 +176,7 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
   case wasm::WASM_OPCODE_F64_CONST:
     Expr.Value.Float64 = readFloat64(Ctx);
     break;
-  case wasm::WASM_OPCODE_GET_GLOBAL:
+  case wasm::WASM_OPCODE_GLOBAL_GET:
     Expr.Value.Global = readULEB128(Ctx);
     break;
   default:
@@ -659,6 +659,47 @@ Error WasmObjectFile::parseLinkingSectionComdat(ReadContext &Ctx) {
   return Error::success();
 }
 
+Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
+  llvm::SmallSet<StringRef, 3> FieldsSeen;
+  uint32_t Fields = readVaruint32(Ctx);
+  for (size_t i = 0; i < Fields; ++i) {
+    StringRef FieldName = readString(Ctx);
+    if (!FieldsSeen.insert(FieldName).second)
+      return make_error<GenericBinaryError>(
+          "Producers section does not have unique fields",
+          object_error::parse_failed);
+    std::vector<std::pair<std::string, std::string>> *ProducerVec = nullptr;
+    if (FieldName == "language") {
+      ProducerVec = &ProducerInfo.Languages;
+    } else if (FieldName == "processed-by") {
+      ProducerVec = &ProducerInfo.Tools;
+    } else if (FieldName == "sdk") {
+      ProducerVec = &ProducerInfo.SDKs;
+    } else {
+      return make_error<GenericBinaryError>(
+          "Producers section field is not named one of language, processed-by, "
+          "or sdk",
+          object_error::parse_failed);
+    }
+    uint32_t ValueCount = readVaruint32(Ctx);
+    llvm::SmallSet<StringRef, 8> ProducersSeen;
+    for (size_t j = 0; j < ValueCount; ++j) {
+      StringRef Name = readString(Ctx);
+      StringRef Version = readString(Ctx);
+      if (!ProducersSeen.insert(Name).second) {
+        return make_error<GenericBinaryError>(
+            "Producers section contains repeated producer",
+            object_error::parse_failed);
+      }
+      ProducerVec->emplace_back(Name, Version);
+    }
+  }
+  if (Ctx.Ptr != Ctx.End)
+    return make_error<GenericBinaryError>("Producers section ended prematurely",
+                                          object_error::parse_failed);
+  return Error::success();
+}
+
 Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
   uint32_t SectionIndex = readVaruint32(Ctx);
   if (SectionIndex >= Sections.size())
@@ -757,6 +798,9 @@ Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
   } else if (Sec.Name == "linking") {
     if (Error Err = parseLinkingSection(Ctx))
       return Err;
+  } else if (Sec.Name == "producers") {
+    if (Error Err = parseProducersSection(Ctx))
+      return Err;
   } else if (Sec.Name.startswith("reloc.")) {
     if (Error Err = parseRelocSection(Sec.Name, Ctx))
       return Err;
@@ -819,7 +863,7 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       Im.Table = readTable(Ctx);
-      if (Im.Table.ElemType != wasm::WASM_TYPE_ANYFUNC)
+      if (Im.Table.ElemType != wasm::WASM_TYPE_FUNCREF)
         return make_error<GenericBinaryError>("Invalid table element type",
                                               object_error::parse_failed);
       break;
@@ -862,7 +906,7 @@ Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
   Tables.reserve(Count);
   while (Count--) {
     Tables.push_back(readTable(Ctx));
-    if (Tables.back().ElemType != wasm::WASM_TYPE_ANYFUNC) {
+    if (Tables.back().ElemType != wasm::WASM_TYPE_FUNCREF) {
       return make_error<GenericBinaryError>("Invalid table element type",
                                             object_error::parse_failed);
     }
@@ -1010,6 +1054,12 @@ wasm::WasmFunction &WasmObjectFile::getDefinedFunction(uint32_t Index) {
   return Functions[Index - NumImportedFunctions];
 }
 
+const wasm::WasmFunction &
+WasmObjectFile::getDefinedFunction(uint32_t Index) const {
+  assert(isDefinedFunctionIndex(Index));
+  return Functions[Index - NumImportedFunctions];
+}
+
 wasm::WasmGlobal &WasmObjectFile::getDefinedGlobal(uint32_t Index) {
   assert(isDefinedGlobalIndex(Index));
   return Globals[Index - NumImportedGlobals];
@@ -1131,7 +1181,7 @@ const wasm::WasmObjectHeader &WasmObjectFile::getHeader() const {
   return Header;
 }
 
-void WasmObjectFile::moveSymbolNext(DataRefImpl &Symb) const { Symb.d.a++; }
+void WasmObjectFile::moveSymbolNext(DataRefImpl &Symb) const { Symb.d.b++; }
 
 uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   uint32_t Result = SymbolRef::SF_None;
@@ -1153,18 +1203,20 @@ uint32_t WasmObjectFile::getSymbolFlags(DataRefImpl Symb) const {
 
 basic_symbol_iterator WasmObjectFile::symbol_begin() const {
   DataRefImpl Ref;
-  Ref.d.a = 0;
+  Ref.d.a = 1; // Arbitrary non-zero value so that Ref.p is non-null
+  Ref.d.b = 0; // Symbol index
   return BasicSymbolRef(Ref, this);
 }
 
 basic_symbol_iterator WasmObjectFile::symbol_end() const {
   DataRefImpl Ref;
-  Ref.d.a = Symbols.size();
+  Ref.d.a = 1; // Arbitrary non-zero value so that Ref.p is non-null
+  Ref.d.b = Symbols.size(); // Symbol index
   return BasicSymbolRef(Ref, this);
 }
 
 const WasmSymbol &WasmObjectFile::getWasmSymbol(const DataRefImpl &Symb) const {
-  return Symbols[Symb.d.a];
+  return Symbols[Symb.d.b];
 }
 
 const WasmSymbol &WasmObjectFile::getWasmSymbol(const SymbolRef &Symb) const {
@@ -1176,7 +1228,12 @@ Expected<StringRef> WasmObjectFile::getSymbolName(DataRefImpl Symb) const {
 }
 
 Expected<uint64_t> WasmObjectFile::getSymbolAddress(DataRefImpl Symb) const {
-  return getSymbolValue(Symb);
+  auto &Sym = getWasmSymbol(Symb);
+  if (Sym.Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION &&
+      isDefinedFunctionIndex(Sym.Info.ElementIndex))
+    return getDefinedFunction(Sym.Info.ElementIndex).CodeSectionOffset;
+  else
+    return getSymbolValue(Symb);
 }
 
 uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol &Sym) const {
@@ -1365,8 +1422,8 @@ symbol_iterator WasmObjectFile::getRelocationSymbol(DataRefImpl Ref) const {
   if (Rel.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB)
     return symbol_end();
   DataRefImpl Sym;
-  Sym.d.a = Rel.Index;
-  Sym.d.b = 0;
+  Sym.d.a = 1;
+  Sym.d.b = Rel.Index;
   return symbol_iterator(SymbolRef(Sym, this));
 }
 

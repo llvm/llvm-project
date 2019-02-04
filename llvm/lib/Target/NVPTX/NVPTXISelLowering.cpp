@@ -1,9 +1,8 @@
 //===-- NVPTXISelLowering.cpp - NVPTX DAG Lowering Implementation ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -663,6 +662,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "NVPTXISD::CallSeqEnd";
   case NVPTXISD::CallPrototype:
     return "NVPTXISD::CallPrototype";
+  case NVPTXISD::ProxyReg:
+    return "NVPTXISD::ProxyReg";
   case NVPTXISD::LoadV2:
     return "NVPTXISD::LoadV2";
   case NVPTXISD::LoadV4:
@@ -1666,6 +1667,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // indirect calls but is always null for libcalls.
   bool isIndirectCall = !Func && CS;
 
+  if (isa<ExternalSymbolSDNode>(Callee)) {
+    Function* CalleeFunc = nullptr;
+
+    // Try to find the callee in the current module.
+    Callee = DAG.getSymbolFunctionGlobalAddress(Callee, &CalleeFunc);
+    assert(CalleeFunc != nullptr && "Libcall callee must be set.");
+
+    // Set the "libcall callee" attribute to indicate that the function
+    // must always have a declaration.
+    CalleeFunc->addFnAttr("nvptx-libcall-callee", "true");
+  }
+
   if (isIndirectCall) {
     // This is indirect function call case : PTX requires a prototype of the
     // form
@@ -1738,6 +1751,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InFlag = Chain.getValue(1);
   }
 
+  SmallVector<SDValue, 16> ProxyRegOps;
+  SmallVector<Optional<MVT>, 16> ProxyRegTruncates;
+
   // Generate loads from param memory/moves from registers for result
   if (Ins.size() > 0) {
     SmallVector<EVT, 16> VTs;
@@ -1808,11 +1824,14 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             MachineMemOperand::MOLoad);
 
         for (unsigned j = 0; j < NumElts; ++j) {
-          SDValue Ret = RetVal.getValue(j);
+          ProxyRegOps.push_back(RetVal.getValue(j));
+
           if (needTruncate)
-            Ret = DAG.getNode(ISD::TRUNCATE, dl, Ins[VecIdx + j].VT, Ret);
-          InVals.push_back(Ret);
+            ProxyRegTruncates.push_back(Optional<MVT>(Ins[VecIdx + j].VT));
+          else
+            ProxyRegTruncates.push_back(Optional<MVT>());
         }
+
         Chain = RetVal.getValue(NumElts);
         InFlag = RetVal.getValue(NumElts + 1);
 
@@ -1828,7 +1847,28 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              DAG.getIntPtrConstant(uniqueCallSite + 1, dl,
                                                    true),
                              InFlag, dl);
+  InFlag = Chain.getValue(1);
   uniqueCallSite++;
+
+  // Append ProxyReg instructions to the chain to make sure that `callseq_end`
+  // will not get lost. Otherwise, during libcalls expansion, the nodes can become
+  // dangling.
+  for (unsigned i = 0; i < ProxyRegOps.size(); ++i) {
+    SDValue Ret = DAG.getNode(
+      NVPTXISD::ProxyReg, dl,
+      DAG.getVTList(ProxyRegOps[i].getSimpleValueType(), MVT::Other, MVT::Glue),
+      { Chain, ProxyRegOps[i], InFlag }
+    );
+
+    Chain = Ret.getValue(1);
+    InFlag = Ret.getValue(2);
+
+    if (ProxyRegTruncates[i].hasValue()) {
+      Ret = DAG.getNode(ISD::TRUNCATE, dl, ProxyRegTruncates[i].getValue(), Ret);
+    }
+
+    InVals.push_back(Ret);
+  }
 
   // set isTailCall to false for now, until we figure out how to express
   // tail call optimization in PTX

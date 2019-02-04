@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -ast-dump %s | FileCheck %s --strict-whitespace
-// RUN: %clang_cc1 -std=c++11 -ast-dump -fnative-half-type %s | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
+// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -std=c++11 -ast-dump -triple aarch64-linux-gnu -fnative-half-type %s | FileCheck %s --check-prefix=CHECK-NATIVE --strict-whitespace
 
 /*  Various contexts where type _Float16 can appear. */
 
@@ -132,7 +132,7 @@ public:
 //CHECK-NEXT: | |     `-BinaryOperator {{.*}} '_Float16' '+'
 //CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT: | |       | `-MemberExpr {{.*}} '_Float16' lvalue ->f1c 0x{{.*}}
-//CHECK-NEXT: | |       |   `-CXXThisExpr {{.*}} 'C1 *' this
+//CHECK-NEXT: | |       |   `-CXXThisExpr {{.*}} 'C1 *' implicit this
 //CHECK-NEXT: | |       `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT: | |         `-DeclRefExpr {{.*}} '_Float16' lvalue ParmVar 0x{{.*}} 'arg' '_Float16'
 //CHECK-NEXT: | |-CXXMethodDecl {{.*}} used func2c '_Float16 (_Float16)' static

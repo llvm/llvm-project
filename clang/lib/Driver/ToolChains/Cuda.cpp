@@ -1,9 +1,8 @@
 //===--- Cuda.cpp - Cuda Tool and ToolChain Implementations -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -662,9 +661,13 @@ void CudaToolChain::addClangTargetOptions(
                          options::OPT_fno_cuda_short_ptr, false))
     CC1Args.append({"-mllvm", "--nvptx-short-ptr"});
 
+  if (CudaInstallation.version() >= CudaVersion::UNKNOWN)
+    CC1Args.push_back(DriverArgs.MakeArgString(
+        Twine("-target-sdk-version=") +
+        CudaVersionToString(CudaInstallation.version())));
+
   if (DeviceOffloadingKind == Action::OFK_OpenMP) {
     SmallVector<StringRef, 8> LibraryPaths;
-
     if (const Arg *A = DriverArgs.getLastArg(options::OPT_libomptarget_nvptx_path_EQ))
       LibraryPaths.push_back(A->getValue());
 

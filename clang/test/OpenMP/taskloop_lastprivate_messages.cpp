@@ -20,7 +20,7 @@ public:
   const S2 &operator =(const S2&) const;
   S2 &operator =(const S2&);
   static float S2s; // expected-note {{static data member is predetermined as shared}}
-  static const float S2sc; // expected-note {{static data member is predetermined as shared}}
+  static const float S2sc; // expected-note {{'S2sc' declared here}}
 };
 const float S2::S2sc = 0;
 const S2 b;
@@ -33,9 +33,9 @@ public:
   S3() : a(0) {}
   S3(S3 &s3) : a(s3.a) {}
 };
-const S3 c;         // expected-note {{global variable is predetermined as shared}}
-const S3 ca[5];     // expected-note {{global variable is predetermined as shared}}
-extern const int f; // expected-note {{global variable is predetermined as shared}}
+const S3 c;         // expected-note {{'c' defined here}}
+const S3 ca[5];     // expected-note {{'ca' defined here}}
+extern const int f; // expected-note {{'f' declared here}}
 class S4 {
   int a;
   S4();             // expected-note 3 {{implicitly declared private here}}
@@ -156,8 +156,8 @@ using A::x;
 }
 
 int main(int argc, char **argv) {
-  const int d = 5;       // expected-note {{constant variable is predetermined as shared}}
-  const int da[5] = {0}; // expected-note {{constant variable is predetermined as shared}}
+  const int d = 5;       // expected-note {{'d' defined here}}
+  const int da[5] = {0}; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g(5);
   S3 m;
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
-#pragma omp taskloop lastprivate(a, b, c, d, f) // expected-error {{lastprivate variable with incomplete type 'S1'}} expected-error 3 {{shared variable cannot be lastprivate}}
+#pragma omp taskloop lastprivate(a, b, c, d, f) // expected-error {{lastprivate variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be lastprivate}} expected-error 2 {{const-qualified variable cannot be lastprivate}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
@@ -213,11 +213,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
-#pragma omp taskloop lastprivate(ca) // expected-error {{shared variable cannot be lastprivate}}
+#pragma omp taskloop lastprivate(ca) // expected-error {{const-qualified variable without mutable fields cannot be lastprivate}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
-#pragma omp taskloop lastprivate(da) // expected-error {{shared variable cannot be lastprivate}}
+#pragma omp taskloop lastprivate(da) // expected-error {{const-qualified variable cannot be lastprivate}}
   for (i = 0; i < argc; ++i)
     foo();
   int xa;
@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
-#pragma omp taskloop lastprivate(S2::S2sc) // expected-error {{shared variable cannot be lastprivate}}
+#pragma omp taskloop lastprivate(S2::S2sc) // expected-error {{const-qualified variable cannot be lastprivate}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel

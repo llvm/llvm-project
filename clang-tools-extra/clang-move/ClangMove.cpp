@@ -1,9 +1,8 @@
 //===-- ClangMove.cpp - Implement ClangMove functationalities ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -76,10 +75,7 @@ std::string MakeAbsolutePath(StringRef CurrentDir, StringRef Path) {
     return "";
   llvm::SmallString<128> InitialDirectory(CurrentDir);
   llvm::SmallString<128> AbsolutePath(Path);
-  if (std::error_code EC =
-          llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath))
-    llvm::errs() << "Warning: could not make absolute file: '" << EC.message()
-                 << '\n';
+  llvm::sys::fs::make_absolute(InitialDirectory, AbsolutePath);
   return CleanPath(std::move(AbsolutePath));
 }
 

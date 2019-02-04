@@ -1,9 +1,8 @@
 //===--- ScheduleDAGSDNodes.cpp - Implement the ScheduleDAGSDNodes class --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -741,28 +740,27 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
 static void
 ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
                   DenseMap<SDValue, unsigned> &VRBaseMap,
-                  SmallVectorImpl<std::pair<unsigned, MachineInstr*> > &Orders,
-                  SmallSet<unsigned, 8> &Seen) {
+                  SmallVectorImpl<std::pair<unsigned, MachineInstr *>> &Orders,
+                  SmallSet<unsigned, 8> &Seen, MachineInstr *NewInsn) {
   unsigned Order = N->getIROrder();
-  if (!Order || !Seen.insert(Order).second) {
+  if (!Order || Seen.count(Order)) {
     // Process any valid SDDbgValues even if node does not have any order
     // assigned.
     ProcessSDDbgValues(N, DAG, Emitter, Orders, VRBaseMap, 0);
     return;
   }
 
-  MachineBasicBlock *BB = Emitter.getBlock();
-  auto IP = Emitter.getInsertPos();
-  if (IP == BB->begin() || BB->back().isPHI() ||
-      // Fast-isel may have inserted some instructions, in which case the
-      // BB->back().isPHI() test will not fire when we want it to.
-      std::prev(IP)->isPHI()) {
-    // Did not insert any instruction.
-    Orders.push_back({Order, (MachineInstr *)nullptr});
-    return;
+  // If a new instruction was generated for this Order number, record it.
+  // Otherwise, leave this order number unseen: we will either find later
+  // instructions for it, or leave it unseen if there were no instructions at
+  // all.
+  if (NewInsn) {
+    Seen.insert(Order);
+    Orders.push_back({Order, NewInsn});
   }
 
-  Orders.push_back({Order, &*std::prev(IP)});
+  // Even if no instruction was generated, a Value may have become defined via
+  // earlier nodes. Try to process them now.
   ProcessSDDbgValues(N, DAG, Emitter, Orders, VRBaseMap, Order);
 }
 
@@ -815,6 +813,37 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   SmallSet<unsigned, 8> Seen;
   bool HasDbg = DAG->hasDebugValues();
 
+  // Emit a node, and determine where its first instruction is for debuginfo.
+  // Zero, one, or multiple instructions can be created when emitting a node.
+  auto EmitNode =
+      [&](SDNode *Node, bool IsClone, bool IsCloned,
+          DenseMap<SDValue, unsigned> &VRBaseMap) -> MachineInstr * {
+    // Fetch instruction prior to this, or end() if nonexistant.
+    auto GetPrevInsn = [&](MachineBasicBlock::iterator I) {
+      if (I == BB->begin())
+        return BB->end();
+      else
+        return std::prev(Emitter.getInsertPos());
+    };
+
+    MachineBasicBlock::iterator Before = GetPrevInsn(Emitter.getInsertPos());
+    Emitter.EmitNode(Node, IsClone, IsCloned, VRBaseMap);
+    MachineBasicBlock::iterator After = GetPrevInsn(Emitter.getInsertPos());
+
+    // If the iterator did not change, no instructions were inserted.
+    if (Before == After)
+      return nullptr;
+
+    if (Before == BB->end()) {
+      // There were no prior instructions; the new ones must start at the
+      // beginning of the block.
+      return &Emitter.getBlock()->instr_front();
+    } else {
+      // Return first instruction after the pre-existing instructions.
+      return &*std::next(Before);
+    }
+  };
+
   // If this is the first BB, emit byval parameter dbg_value's.
   if (HasDbg && BB->getParent()->begin() == MachineFunction::iterator(BB)) {
     SDDbgInfo::DbgIterator PDI = DAG->ByvalParmDbgBegin();
@@ -851,18 +880,18 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       GluedNodes.push_back(N);
     while (!GluedNodes.empty()) {
       SDNode *N = GluedNodes.back();
-      Emitter.EmitNode(N, SU->OrigNode != SU, SU->isCloned, VRBaseMap);
+      auto NewInsn = EmitNode(N, SU->OrigNode != SU, SU->isCloned, VRBaseMap);
       // Remember the source order of the inserted instruction.
       if (HasDbg)
-        ProcessSourceNode(N, DAG, Emitter, VRBaseMap, Orders, Seen);
+        ProcessSourceNode(N, DAG, Emitter, VRBaseMap, Orders, Seen, NewInsn);
       GluedNodes.pop_back();
     }
-    Emitter.EmitNode(SU->getNode(), SU->OrigNode != SU, SU->isCloned,
-                     VRBaseMap);
+    auto NewInsn =
+        EmitNode(SU->getNode(), SU->OrigNode != SU, SU->isCloned, VRBaseMap);
     // Remember the source order of the inserted instruction.
     if (HasDbg)
-      ProcessSourceNode(SU->getNode(), DAG, Emitter, VRBaseMap, Orders,
-                        Seen);
+      ProcessSourceNode(SU->getNode(), DAG, Emitter, VRBaseMap, Orders, Seen,
+                        NewInsn);
   }
 
   // Insert all the dbg_values which have not already been inserted in source
@@ -887,8 +916,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       unsigned Order = Orders[i].first;
       MachineInstr *MI = Orders[i].second;
       // Insert all SDDbgValue's whose order(s) are before "Order".
-      if (!MI)
-        continue;
+      assert(MI);
       for (; DI != DE; ++DI) {
         if ((*DI)->getOrder() < LastOrder || (*DI)->getOrder() >= Order)
           break;

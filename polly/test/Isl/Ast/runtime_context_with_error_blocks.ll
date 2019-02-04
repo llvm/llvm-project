@@ -54,7 +54,7 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 3.8.0 (http://llvm.org/git/clang.git 97e5436f69f1bfa7f3e7fd2ecd80cdee0ae95bef)"}
+!0 = !{!"clang version 3.8.0"}
 !1 = !{!2, !4, i64 56}
 !2 = !{!"_ZTSSt5ctypeIcE", !3, i64 16, !6, i64 24, !3, i64 32, !3, i64 40, !3, i64 48, !4, i64 56, !4, i64 57, !4, i64 313, !4, i64 569}
 !3 = !{!"any pointer", !4, i64 0}

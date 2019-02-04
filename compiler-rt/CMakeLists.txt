@@ -215,6 +215,24 @@ else()
   set(SANITIZER_CXX_ABI_SYSTEM 1)
 endif()
 
+set(DEFAULT_SANITIZER_USE_STATIC_LLVM_UNWINDER OFF)
+if (FUCHSIA)
+  set(DEFAULT_SANITIZER_USE_STATIC_LLVM_UNWINDER ON)
+elseif (DEFINED LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_SHARED)
+  set(DEFAULT_SANITIZER_USE_STATIC_LLVM_UNWINDER ON)
+endif()
+
+option(SANITIZER_USE_STATIC_LLVM_UNWINDER
+  "Use static LLVM unwinder." ${DEFAULT_SANITIZER_USE_STATIC_LLVM_UNWINDER})
+
+set(DEFAULT_SANITIZER_USE_STATIC_CXX_ABI OFF)
+if (DEFINED LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_SHARED)
+  set(DEFAULT_SANITIZER_USE_STATIC_CXX_ABI ON)
+endif()
+
+option(SANITIZER_USE_STATIC_CXX_ABI
+  "Use static libc++abi." ${DEFAULT_SANITIZER_USE_STATIC_CXX_ABI})
+
 set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY OFF)
 if (FUCHSIA)
   set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY ON)
@@ -393,15 +411,16 @@ endif()
 
 if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libc++")
   if (SANITIZER_CXX_ABI_INTREE)
-    if (NOT LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
-      list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_shared)
-    elseif (LIBCXXABI_ENABLE_STATIC_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+    if (SANITIZER_USE_STATIC_LLVM_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
       list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_static)
+    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY unwind_shared)
     endif()
-    if (NOT LIBCXX_ENABLE_STATIC_ABI_LIBRARY AND (TARGET cxxabi_shared OR HAVE_LIBCXXABI))
-      list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_shared)
-    elseif (LIBCXX_ENABLE_STATIC_ABI_LIBRARY AND (TARGET cxxabi_static OR HAVE_LIBCXXABI))
+
+    if (SANITIZER_USE_STATIC_CXX_ABI AND (TARGET cxxabi_static OR HAVE_LIBCXXABI))
       list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_static)
+    elseif (TARGET cxxabi_shared OR HAVE_LIBCXXABI)
+      list(APPEND SANITIZER_CXX_ABI_LIBRARY cxxabi_shared)
     endif()
   else()
     append_list_if(COMPILER_RT_HAS_LIBCXX c++ SANITIZER_CXX_ABI_LIBRARY)
@@ -428,15 +447,19 @@ endif()
 
 add_subdirectory(include)
 
-foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxx
-                      ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx
-                      ${LLVM_MAIN_SRC_DIR}/../libcxx
-                      ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
-  if(IS_DIRECTORY ${path})
-    set(COMPILER_RT_LIBCXX_PATH ${path})
-    break()
-  endif()
-endforeach()
+option(COMPILER_RT_USE_LIBCXX
+  "Enable compiler-rt to use libc++ from the source tree" ON)
+if(COMPILER_RT_USE_LIBCXX)
+  foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxx
+                        ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx
+                        ${LLVM_MAIN_SRC_DIR}/../libcxx
+                        ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR})
+    if(IS_DIRECTORY ${path})
+      set(COMPILER_RT_LIBCXX_PATH ${path})
+      break()
+    endif()
+  endforeach()
+endif()
 
 set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)
 if(EXISTS ${COMPILER_RT_LLD_PATH}/ AND LLVM_TOOL_LLD_BUILD)

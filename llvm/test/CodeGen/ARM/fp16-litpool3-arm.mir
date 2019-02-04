@@ -82,11 +82,11 @@ constants:
 #CHECK:    CONSTPOOL_ENTRY 1, %const{{.*}}, 2
 #
 # We don't want to decrease alignment if the block already has been
-# aligned; this can e.g. be an existing CPE that has been carefully 
-# aligned. Here BB.1.LA has already an 8-byte alignment, and we are 
+# aligned; this can e.g. be an existing CPE that has been carefully
+# aligned. Here BB.1.LA has already an 8-byte alignment, and we are
 # checking we don't set it to 4:
 #
-#CHECK:  bb.{{.*}}.LA (align 3):
+#CHECK:  bb.{{.*}}.LA (align 8):
 
 body:             |
   bb.0.entry:
@@ -100,7 +100,7 @@ body:             |
     FMSTAT 14, $noreg, implicit-def $cpsr, implicit killed $fpscr_nzcv
     Bcc %bb.2, 0, killed $cpsr
 
-  bb.1.LA (align 3):
+  bb.1.LA (align 8):
     successors: %bb.2(0x80000000)
 
     dead renamable $r0 = SPACE 1000, undef renamable $r0

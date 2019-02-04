@@ -24,6 +24,10 @@
   define void @test_xor_s8() { ret void }
   define void @test_xor_s16() { ret void }
   define void @test_xor_s32() { ret void }
+
+  define void @test_lshr_s32() { ret void }
+  define void @test_ashr_s32() { ret void }
+  define void @test_shl_s32() { ret void }
 ...
 ---
 name:            test_add_s8
@@ -555,6 +559,81 @@ body:             |
     %2(s32) = G_XOR %0, %1
     ; G_XOR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
+    $r0 = COPY %2(s32)
+    BX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            test_lshr_s32
+# CHECK-LABEL: name: test_lshr_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = G_LSHR %0, %1
+    ; G_LSHR with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_LSHR {{%[0-9]+, %[0-9]+}}
+    $r0 = COPY %2(s32)
+    BX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            test_ashr_s32
+# CHECK-LABEL: name: test_ashr_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = G_ASHR %0, %1
+    ; G_ASHR with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_ASHR {{%[0-9]+, %[0-9]+}}
+    $r0 = COPY %2(s32)
+    BX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            test_shl_s32
+# CHECK-LABEL: name: test_shl_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = G_SHL %0, %1
+    ; G_SHL with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_SHL {{%[0-9]+, %[0-9]+}}
     $r0 = COPY %2(s32)
     BX_RET 14, $noreg, implicit $r0
 

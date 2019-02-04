@@ -1,9 +1,8 @@
 //===--- FuzzyMatch.h - Approximate identifier matching  ---------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -60,7 +59,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Format.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -75,7 +73,7 @@ static constexpr int AwfulScore = -(1 << 13);
 static bool isAwful(int S) { return S < AwfulScore / 2; }
 static constexpr int PerfectBonus = 3; // Perfect per-pattern-char score.
 
-FuzzyMatcher::FuzzyMatcher(StringRef Pattern)
+FuzzyMatcher::FuzzyMatcher(llvm::StringRef Pattern)
     : PatN(std::min<int>(MaxPat, Pattern.size())),
       ScoreScale(PatN ? float{1} / (PerfectBonus * PatN) : 0), WordN(0) {
   std::copy(Pattern.begin(), Pattern.begin() + PatN, Pat);
@@ -87,20 +85,20 @@ FuzzyMatcher::FuzzyMatcher(StringRef Pattern)
     for (int W = 0; W < P; ++W)
       for (Action A : {Miss, Match})
         Scores[P][W][A] = {AwfulScore, Miss};
-  PatTypeSet =
-      calculateRoles(StringRef(Pat, PatN), makeMutableArrayRef(PatRole, PatN));
+  PatTypeSet = calculateRoles(llvm::StringRef(Pat, PatN),
+                              llvm::makeMutableArrayRef(PatRole, PatN));
 }
 
-Optional<float> FuzzyMatcher::match(StringRef Word) {
+llvm::Optional<float> FuzzyMatcher::match(llvm::StringRef Word) {
   if (!(WordContainsPattern = init(Word)))
-    return None;
+    return llvm::None;
   if (!PatN)
     return 1;
   buildGraph();
   auto Best = std::max(Scores[PatN][WordN][Miss].Score,
                        Scores[PatN][WordN][Match].Score);
   if (isAwful(Best))
-    return None;
+    return llvm::None;
   float Score =
       ScoreScale * std::min(PerfectBonus * PatN, std::max<int>(0, Best));
   // If the pattern is as long as the word, we have an exact string match,
@@ -153,7 +151,8 @@ constexpr static uint8_t CharRoles[] = {
 template <typename T> static T packedLookup(const uint8_t *Data, int I) {
   return static_cast<T>((Data[I >> 2] >> ((I & 3) * 2)) & 3);
 }
-CharTypeSet calculateRoles(StringRef Text, MutableArrayRef<CharRole> Roles) {
+CharTypeSet calculateRoles(llvm::StringRef Text,
+                           llvm::MutableArrayRef<CharRole> Roles) {
   assert(Text.size() == Roles.size());
   if (Text.size() == 0)
     return 0;
@@ -179,7 +178,7 @@ CharTypeSet calculateRoles(StringRef Text, MutableArrayRef<CharRole> Roles) {
 
 // Sets up the data structures matching Word.
 // Returns false if we can cheaply determine that no match is possible.
-bool FuzzyMatcher::init(StringRef NewWord) {
+bool FuzzyMatcher::init(llvm::StringRef NewWord) {
   WordN = std::min<int>(MaxWord, NewWord.size());
   if (PatN > WordN)
     return false;
@@ -200,8 +199,8 @@ bool FuzzyMatcher::init(StringRef NewWord) {
   // FIXME: some words are hard to tokenize algorithmically.
   // e.g. vsprintf is V S Print F, and should match [pri] but not [int].
   // We could add a tokenization dictionary for common stdlib names.
-  WordTypeSet = calculateRoles(StringRef(Word, WordN),
-                               makeMutableArrayRef(WordRole, WordN));
+  WordTypeSet = calculateRoles(llvm::StringRef(Word, WordN),
+                               llvm::makeMutableArrayRef(WordRole, WordN));
   return true;
 }
 
@@ -299,13 +298,13 @@ int FuzzyMatcher::matchBonus(int P, int W, Action Last) const {
   return S;
 }
 
-SmallString<256> FuzzyMatcher::dumpLast(raw_ostream &OS) const {
-  SmallString<256> Result;
-  OS << "=== Match \"" << StringRef(Word, WordN) << "\" against ["
-     << StringRef(Pat, PatN) << "] ===\n";
+llvm::SmallString<256> FuzzyMatcher::dumpLast(llvm::raw_ostream &OS) const {
+  llvm::SmallString<256> Result;
+  OS << "=== Match \"" << llvm::StringRef(Word, WordN) << "\" against ["
+     << llvm::StringRef(Pat, PatN) << "] ===\n";
   if (PatN == 0) {
     OS << "Pattern is empty: perfect match.\n";
-    return Result = StringRef(Word, WordN);
+    return Result = llvm::StringRef(Word, WordN);
   }
   if (WordN == 0) {
     OS << "Word is empty: no match.\n";
@@ -349,28 +348,28 @@ SmallString<256> FuzzyMatcher::dumpLast(raw_ostream &OS) const {
   if (A[WordN - 1] == Match)
     Result.push_back(']');
 
-  for (char C : StringRef(Word, WordN))
+  for (char C : llvm::StringRef(Word, WordN))
     OS << " " << C << " ";
   OS << "\n";
   for (int I = 0, J = 0; I < WordN; I++)
     OS << " " << (A[I] == Match ? Pat[J++] : ' ') << " ";
   OS << "\n";
   for (int I = 0; I < WordN; I++)
-    OS << format("%2d ", S[I]);
+    OS << llvm::format("%2d ", S[I]);
   OS << "\n";
 
   OS << "\nSegmentation:";
-  OS << "\n'" << StringRef(Word, WordN) << "'\n ";
+  OS << "\n'" << llvm::StringRef(Word, WordN) << "'\n ";
   for (int I = 0; I < WordN; ++I)
     OS << "?-+ "[static_cast<int>(WordRole[I])];
-  OS << "\n[" << StringRef(Pat, PatN) << "]\n ";
+  OS << "\n[" << llvm::StringRef(Pat, PatN) << "]\n ";
   for (int I = 0; I < PatN; ++I)
     OS << "?-+ "[static_cast<int>(PatRole[I])];
   OS << "\n";
 
   OS << "\nScoring table (last-Miss, last-Match):\n";
   OS << " |    ";
-  for (char C : StringRef(Word, WordN))
+  for (char C : llvm::StringRef(Word, WordN))
     OS << "  " << C << " ";
   OS << "\n";
   OS << "-+----" << std::string(WordN * 4, '-') << "\n";
@@ -379,8 +378,8 @@ SmallString<256> FuzzyMatcher::dumpLast(raw_ostream &OS) const {
       OS << ((I && A == Miss) ? Pat[I - 1] : ' ') << "|";
       for (int J = 0; J <= WordN; ++J) {
         if (!isAwful(Scores[I][J][A].Score))
-          OS << format("%3d%c", Scores[I][J][A].Score,
-                       Scores[I][J][A].Prev == Match ? '*' : ' ');
+          OS << llvm::format("%3d%c", Scores[I][J][A].Score,
+                             Scores[I][J][A].Prev == Match ? '*' : ' ');
         else
           OS << "    ";
       }

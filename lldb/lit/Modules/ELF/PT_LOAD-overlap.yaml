@@ -1,0 +1,42 @@
+# Test behavior on unusual (and probably corrupt) object files. Check that we
+# drop the second PT_LOAD segment which overlaps with the first one.
+
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Type: container
+# CHECK-NOT: Type: container
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1008
+    AddressAlign:    0x4
+    Content:         3232
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_W, PF_R ]
+    VAddr: 0x1000
+    Align: 0x4
+    Sections:
+      - Section: .text
+      - Section: .data
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_W ]
+    VAddr: 0x1008
+    Align: 0x4
+    Sections:
+      - Section: .data

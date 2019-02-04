@@ -1,9 +1,8 @@
 //===-- LoopPredication.cpp - Guard based loop predication pass -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -222,6 +221,12 @@ static cl::opt<float> LatchExitProbabilityScale(
     cl::desc("scale factor for the latch probability. Value should be greater "
              "than 1. Lower values are ignored"));
 
+static cl::opt<bool> PredicateWidenableBranchGuards(
+    "loop-predication-predicate-widenable-branches-to-deopt", cl::Hidden,
+    cl::desc("Whether or not we should predicate guards "
+             "expressed as widenable branches to deoptimize blocks"),
+    cl::init(true));
+
 namespace {
 class LoopPredication {
   /// Represents an induction variable check:
@@ -273,8 +278,10 @@ class LoopPredication {
                                                         LoopICmp RangeCheck,
                                                         SCEVExpander &Expander,
                                                         IRBuilder<> &Builder);
+  unsigned collectChecks(SmallVectorImpl<Value *> &Checks, Value *Condition,
+                         SCEVExpander &Expander, IRBuilder<> &Builder);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
-
+  bool widenWidenableBranchGuardConditions(BranchInst *Guard, SCEVExpander &Expander);
   // If the loop always exits through another block in the loop, we should not
   // predicate based on the latch check. For example, the latch check can be a
   // very coarse grained check and there can be more fine grained exit checks
@@ -574,26 +581,18 @@ Optional<Value *> LoopPredication::widenICmpRangeCheck(ICmpInst *ICI,
   }
 }
 
-bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
-                                           SCEVExpander &Expander) {
-  LLVM_DEBUG(dbgs() << "Processing guard:\n");
-  LLVM_DEBUG(Guard->dump());
-
-  TotalConsidered++;
-
-  IRBuilder<> Builder(cast<Instruction>(Preheader->getTerminator()));
-
+unsigned LoopPredication::collectChecks(SmallVectorImpl<Value *> &Checks,
+                                        Value *Condition,
+                                        SCEVExpander &Expander,
+                                        IRBuilder<> &Builder) {
+  unsigned NumWidened = 0;
   // The guard condition is expected to be in form of:
   //   cond1 && cond2 && cond3 ...
   // Iterate over subconditions looking for icmp conditions which can be
   // widened across loop iterations. Widening these conditions remember the
   // resulting list of subconditions in Checks vector.
-  SmallVector<Value *, 4> Worklist(1, Guard->getOperand(0));
+  SmallVector<Value *, 4> Worklist(1, Condition);
   SmallPtrSet<Value *, 4> Visited;
-
-  SmallVector<Value *, 4> Checks;
-
-  unsigned NumWidened = 0;
   do {
     Value *Condition = Worklist.pop_back_val();
     if (!Visited.insert(Condition).second)
@@ -617,8 +616,20 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 
     // Save the condition as is if we can't widen it
     Checks.push_back(Condition);
-  } while (Worklist.size() != 0);
+  } while (!Worklist.empty());
+  return NumWidened;
+}
 
+bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
+                                           SCEVExpander &Expander) {
+  LLVM_DEBUG(dbgs() << "Processing guard:\n");
+  LLVM_DEBUG(Guard->dump());
+
+  TotalConsidered++;
+  SmallVector<Value *, 4> Checks;
+  IRBuilder<> Builder(cast<Instruction>(Preheader->getTerminator()));
+  unsigned NumWidened = collectChecks(Checks, Guard->getOperand(0), Expander,
+                                      Builder);
   if (NumWidened == 0)
     return false;
 
@@ -633,6 +644,43 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
     else
       LastCheck = Builder.CreateAnd(LastCheck, Check);
   Guard->setOperand(0, LastCheck);
+
+  LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
+  return true;
+}
+
+bool LoopPredication::widenWidenableBranchGuardConditions(
+    BranchInst *Guard, SCEVExpander &Expander) {
+  assert(isGuardAsWidenableBranch(Guard) && "Must be!");
+  LLVM_DEBUG(dbgs() << "Processing guard:\n");
+  LLVM_DEBUG(Guard->dump());
+
+  TotalConsidered++;
+  SmallVector<Value *, 4> Checks;
+  IRBuilder<> Builder(cast<Instruction>(Preheader->getTerminator()));
+  Value *Condition = nullptr, *WidenableCondition = nullptr;
+  BasicBlock *GBB = nullptr, *DBB = nullptr;
+  parseWidenableBranch(Guard, Condition, WidenableCondition, GBB, DBB);
+  unsigned NumWidened = collectChecks(Checks, Condition, Expander, Builder);
+  if (NumWidened == 0)
+    return false;
+
+  TotalWidened += NumWidened;
+
+  // Emit the new guard condition
+  Builder.SetInsertPoint(Guard);
+  Value *LastCheck = nullptr;
+  for (auto *Check : Checks)
+    if (!LastCheck)
+      LastCheck = Check;
+    else
+      LastCheck = Builder.CreateAnd(LastCheck, Check);
+  // Make sure that the check contains widenable condition and therefore can be
+  // further widened.
+  LastCheck = Builder.CreateAnd(LastCheck, WidenableCondition);
+  Guard->setOperand(0, LastCheck);
+  assert(isGuardAsWidenableBranch(Guard) &&
+         "Stopped being a guard after transform?");
 
   LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
   return true;
@@ -795,7 +843,12 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   // There is nothing to do if the module doesn't use guards
   auto *GuardDecl =
       M->getFunction(Intrinsic::getName(Intrinsic::experimental_guard));
-  if (!GuardDecl || GuardDecl->use_empty())
+  bool HasIntrinsicGuards = GuardDecl && !GuardDecl->use_empty();
+  auto *WCDecl = M->getFunction(
+      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  bool HasWidenableConditions =
+      PredicateWidenableBranchGuards && WCDecl && !WCDecl->use_empty();
+  if (!HasIntrinsicGuards && !HasWidenableConditions)
     return false;
 
   DL = &M->getDataLayout();
@@ -819,12 +872,18 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   // Collect all the guards into a vector and process later, so as not
   // to invalidate the instruction iterator.
   SmallVector<IntrinsicInst *, 4> Guards;
-  for (const auto BB : L->blocks())
+  SmallVector<BranchInst *, 4> GuardsAsWidenableBranches;
+  for (const auto BB : L->blocks()) {
     for (auto &I : *BB)
       if (isGuard(&I))
         Guards.push_back(cast<IntrinsicInst>(&I));
+    if (PredicateWidenableBranchGuards &&
+        isGuardAsWidenableBranch(BB->getTerminator()))
+      GuardsAsWidenableBranches.push_back(
+          cast<BranchInst>(BB->getTerminator()));
+  }
 
-  if (Guards.empty())
+  if (Guards.empty() && GuardsAsWidenableBranches.empty())
     return false;
 
   SCEVExpander Expander(*SE, *DL, "loop-predication");
@@ -832,6 +891,8 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   bool Changed = false;
   for (auto *Guard : Guards)
     Changed |= widenGuardConditions(Guard, Expander);
+  for (auto *Guard : GuardsAsWidenableBranches)
+    Changed |= widenWidenableBranchGuardConditions(Guard, Expander);
 
   return Changed;
 }

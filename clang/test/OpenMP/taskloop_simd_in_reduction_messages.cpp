@@ -171,22 +171,22 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(+:c)
-#pragma omp taskloop simd in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified list item cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}} expected-error 2 {{in_reduction variable must appear in a task_reduction clause}}
+#pragma omp taskloop simd in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be in_reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}} expected-error 2 {{in_reduction variable must appear in a task_reduction clause}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'in_reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'in_reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(+ : ba) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(* : ca) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}} expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(- : da) // expected-error {{const-qualified variable cannot be in_reduction}} expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}} expected-error {{in_reduction variable must appear in a task_reduction clause}}
@@ -195,7 +195,7 @@ T tmain(T argc) {
 #pragma omp taskloop simd in_reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(+:k)
@@ -213,7 +213,7 @@ T tmain(T argc) {
 #pragma omp taskloop simd in_reduction(+ : p), in_reduction(+ : p) // expected-error 2 {{variable can appear only once in OpenMP 'in_reduction' clause}} expected-note 2 {{previously referenced here}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(+ : r) // expected-error 2 {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(+ : r) // expected-error 2 {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp parallel shared(i)
@@ -306,22 +306,22 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskgroup task_reduction(+:c)
-#pragma omp taskloop simd in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified list item cannot be reduction}} expected-error {{'operator+' is a private member of 'S2'}} expected-error {{in_reduction variable must appear in a task_reduction clause}}
+#pragma omp taskloop simd in_reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified variable cannot be in_reduction}} expected-error {{'operator+' is a private member of 'S2'}} expected-error {{in_reduction variable must appear in a task_reduction clause}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'in_reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'in_reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(+ : ba) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(+ : ba) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(* : ca) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(* : ca) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(- : da) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(- : da) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
 #pragma omp taskloop simd in_reduction(&& : S2::S2s) // expected-error {{shared variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(&& : S2::S2sc) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{nvalid operands to binary expression ('S4' and 'S4')}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
@@ -351,7 +351,7 @@ int main(int argc, char **argv) {
 #pragma omp taskloop simd in_reduction(+ : p), in_reduction(+ : p) // expected-error {{variable can appear only once in OpenMP 'in_reduction' clause}} expected-note {{previously referenced here}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskloop simd in_reduction(+ : r) // expected-error {{const-qualified list item cannot be reduction}}
+#pragma omp taskloop simd in_reduction(+ : r) // expected-error {{const-qualified variable cannot be in_reduction}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp parallel shared(i)

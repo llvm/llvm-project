@@ -1,9 +1,8 @@
 //===-- SymbolFile.h --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -125,22 +124,19 @@ public:
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) = 0;
 
-  virtual lldb::LanguageType
-  ParseCompileUnitLanguage(const SymbolContext &sc) = 0;
-  virtual size_t ParseCompileUnitFunctions(const SymbolContext &sc) = 0;
-  virtual bool ParseCompileUnitLineTable(const SymbolContext &sc) = 0;
-  virtual bool ParseCompileUnitDebugMacros(const SymbolContext &sc) = 0;
-  virtual bool ParseCompileUnitSupportFiles(const SymbolContext &sc,
-                                            FileSpecList &support_files) = 0;
-  virtual bool
-  ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc) {
-    return false;
-  }
+  virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
+  virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
+  virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
+  virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
+  virtual bool ParseSupportFiles(CompileUnit &comp_unit,
+                                 FileSpecList &support_files) = 0;
+  virtual size_t ParseTypes(CompileUnit &comp_unit) = 0;
+  virtual bool ParseIsOptimized(CompileUnit &comp_unit) { return false; }
+
   virtual bool
   ParseImportedModules(const SymbolContext &sc,
                        std::vector<ConstString> &imported_modules) = 0;
-  virtual size_t ParseFunctionBlocks(const SymbolContext &sc) = 0;
-  virtual size_t ParseTypes(const SymbolContext &sc) = 0;
+  virtual size_t ParseBlocksRecursive(Function &func) = 0;
   virtual size_t ParseVariablesForContext(const SymbolContext &sc) = 0;
   virtual Type *ResolveTypeUID(lldb::user_id_t type_uid) = 0;
 
@@ -196,9 +192,8 @@ public:
                                  bool include_inlines, bool append,
                                  SymbolContextList &sc_list);
   virtual uint32_t
-  FindTypes(const SymbolContext &sc, const ConstString &name,
-            const CompilerDeclContext *parent_decl_ctx, bool append,
-            uint32_t max_matches,
+  FindTypes(const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+            bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
   virtual size_t FindTypes(const std::vector<CompilerContext> &context,
@@ -221,7 +216,7 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
   virtual CompilerDeclContext
-  FindNamespace(const SymbolContext &sc, const ConstString &name,
+  FindNamespace(const ConstString &name,
                 const CompilerDeclContext *parent_decl_ctx) {
     return CompilerDeclContext();
   }

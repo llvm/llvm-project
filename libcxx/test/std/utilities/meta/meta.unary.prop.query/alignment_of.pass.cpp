@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +18,9 @@
 template <class T, unsigned A>
 void test_alignment_of()
 {
+    const unsigned AlignofResult = TEST_ALIGNOF(T);
+    static_assert( AlignofResult == A, "Golden value does not match result of alignof keyword");
+    static_assert( std::alignment_of<T>::value == AlignofResult, "");
     static_assert( std::alignment_of<T>::value == A, "");
     static_assert( std::alignment_of<const T>::value == A, "");
     static_assert( std::alignment_of<volatile T>::value == A, "");
@@ -45,7 +47,10 @@ int main()
     test_alignment_of<const int*, sizeof(intptr_t)>();
     test_alignment_of<char[3], 1>();
     test_alignment_of<int, 4>();
-    test_alignment_of<double, 8>();
+    // The test case below is a hack. It's hard to detect what golden value
+    // we should expect. In most cases it should be 8. But in i386 builds
+    // with Clang >= 8 or GCC >= 8 the value is '4'.
+    test_alignment_of<double, TEST_ALIGNOF(double)>();
 #if (defined(__ppc__) && !defined(__ppc64__))
     test_alignment_of<bool, 4>();   // 32-bit PPC has four byte bool
 #else

@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
 
-; Mostly make sure that llvm.x86.seh.recoverfp doesn't crash if the parent
+; Mostly make sure that llvm.eh.recoverfp doesn't crash if the parent
 ; function lacks a personality.
 
 declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.x86.seh.recoverfp(i8*, i8*)
+declare i8* @llvm.eh.recoverfp(i8*, i8*)
 
 define i32 @main() {
 entry:
@@ -14,7 +14,7 @@ entry:
 define internal i32 @"filt$main"() {
 entry:
   %ebp = tail call i8* @llvm.frameaddress(i32 1)
-  %parentfp = tail call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @main to i8*), i8* %ebp)
+  %parentfp = tail call i8* @llvm.eh.recoverfp(i8* bitcast (i32 ()* @main to i8*), i8* %ebp)
   %info.addr = getelementptr inbounds i8, i8* %ebp, i32 -20
   %0 = bitcast i8* %info.addr to i32***
   %1 = load i32**, i32*** %0, align 4

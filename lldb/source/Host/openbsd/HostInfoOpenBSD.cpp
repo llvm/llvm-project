@@ -1,9 +1,8 @@
 //===-- HostInfoOpenBSD.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,16 +16,17 @@
 
 using namespace lldb_private;
 
-bool HostInfoOpenBSD::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                   uint32_t &update) {
+llvm::VersionTuple HostInfoOpenBSD::GetOSVersion() {
   struct utsname un;
 
   ::memset(&un, 0, sizeof(utsname));
   if (uname(&un) < 0)
-    return false;
+    return llvm::VersionTuple();
 
-  int status = sscanf(un.release, "%u.%u", &major, &minor);
-  return status == 2;
+  unsigned major, minor;
+  if (2 == sscanf(un.release, "%u.%u", &major, &minor))
+    return llvm::VersionTuple(major, minor);
+  return llvm::VersionTuple();
 }
 
 bool HostInfoOpenBSD::GetOSBuildString(std::string &s) {
