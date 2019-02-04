@@ -322,29 +322,29 @@ cmovnae	%bx,%bx
         cmpordsd %xmm0, %xmm1
 
 // rdar://7995856
-// CHECK: fmul	%st
+// CHECK: fmul	%st(0)
 // CHECK:  encoding: [0xd8,0xc8]
-        fmul %st, %st
+        fmul %st(0), %st
 
-// CHECK: fadd	%st
+// CHECK: fadd	%st(0)
 // CHECK:  encoding: [0xd8,0xc0]
-        fadd %st, %st
+        fadd %st(0), %st
 
-// CHECK: fsub	%st
+// CHECK: fsub	%st(0)
 // CHECK:  encoding: [0xd8,0xe0]
-        fsub %st, %st
+        fsub %st(0), %st
 
-// CHECK: fsubr	%st
+// CHECK: fsubr	%st(0)
 // CHECK:  encoding: [0xd8,0xe8]
-        fsubr %st, %st
+        fsubr %st(0), %st
 
-// CHECK: fdivr	%st
+// CHECK: fdivr	%st(0)
 // CHECK:  encoding: [0xd8,0xf8]
-        fdivr %st, %st
+        fdivr %st(0), %st
 
-// CHECK: fdiv	%st
+// CHECK: fdiv	%st(0)
 // CHECK:  encoding: [0xd8,0xf0]
-        fdiv %st, %st
+        fdiv %st(0), %st
 
 // radr://8017519
 // CHECK: movl	%cs, %eax

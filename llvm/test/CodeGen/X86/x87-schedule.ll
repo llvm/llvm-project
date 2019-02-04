@@ -2046,77 +2046,77 @@ define void @test_ffree() optsize {
 ; GENERIC-LABEL: test_ffree:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    ffree %st
+; GENERIC-NEXT:    ffree %st(0)
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retl
 ;
 ; ATOM-LABEL: test_ffree:
 ; ATOM:       # %bb.0:
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    ffree %st # sched: [1:0.50]
+; ATOM-NEXT:    ffree %st(0) # sched: [1:0.50]
 ; ATOM-NEXT:    #NO_APP
 ; ATOM-NEXT:    retl # sched: [79:39.50]
 ;
 ; SLM-LABEL: test_ffree:
 ; SLM:       # %bb.0:
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    ffree %st # sched: [100:1.00]
+; SLM-NEXT:    ffree %st(0) # sched: [100:1.00]
 ; SLM-NEXT:    #NO_APP
 ; SLM-NEXT:    retl # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_ffree:
 ; SANDY:       # %bb.0:
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    ffree %st # sched: [1:1.00]
+; SANDY-NEXT:    ffree %st(0) # sched: [1:1.00]
 ; SANDY-NEXT:    #NO_APP
 ; SANDY-NEXT:    retl # sched: [6:1.00]
 ;
 ; HASWELL-LABEL: test_ffree:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    ffree %st # sched: [1:0.50]
+; HASWELL-NEXT:    ffree %st(0) # sched: [1:0.50]
 ; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retl # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_ffree:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    ffree %st # sched: [100:0.25]
+; BROADWELL-NEXT:    ffree %st(0) # sched: [100:0.25]
 ; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKYLAKE-LABEL: test_ffree:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    ffree %st # sched: [100:0.25]
+; SKYLAKE-NEXT:    ffree %st(0) # sched: [100:0.25]
 ; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retl # sched: [6:0.50]
 ;
 ; SKX-LABEL: test_ffree:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    ffree %st # sched: [100:0.25]
+; SKX-NEXT:    ffree %st(0) # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
 ; BDVER2-LABEL: test_ffree:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    #APP
-; BDVER2-NEXT:    ffree %st # sched: [100:0.50]
+; BDVER2-NEXT:    ffree %st(0) # sched: [100:0.50]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_ffree:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    ffree %st # sched: [100:0.50]
+; BTVER2-NEXT:    ffree %st(0) # sched: [100:0.50]
 ; BTVER2-NEXT:    #NO_APP
 ; BTVER2-NEXT:    retl # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ffree:
 ; ZNVER1:       # %bb.0:
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    ffree %st # sched: [11:1.00]
+; ZNVER1-NEXT:    ffree %st(0) # sched: [11:1.00]
 ; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retl # sched: [1:0.50]
   tail call void asm sideeffect "ffree %st(0)", ""() nounwind
@@ -2847,7 +2847,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    fld %st
+; GENERIC-NEXT:    fld %st(0)
 ; GENERIC-NEXT:    flds (%edx)
 ; GENERIC-NEXT:    fldl (%ecx)
 ; GENERIC-NEXT:    fldt (%eax)
@@ -2860,7 +2860,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fld %st # sched: [1:1.00]
+; ATOM-NEXT:    fld %st(0) # sched: [1:1.00]
 ; ATOM-NEXT:    flds (%edx) # sched: [1:1.00]
 ; ATOM-NEXT:    fldl (%ecx) # sched: [1:1.00]
 ; ATOM-NEXT:    fldt (%eax) # sched: [4:2.00]
@@ -2873,7 +2873,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fld %st # sched: [1:0.50]
+; SLM-NEXT:    fld %st(0) # sched: [1:0.50]
 ; SLM-NEXT:    flds (%edx) # sched: [3:1.00]
 ; SLM-NEXT:    fldl (%ecx) # sched: [3:1.00]
 ; SLM-NEXT:    fldt (%eax) # sched: [3:1.00]
@@ -2886,7 +2886,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fld %st # sched: [1:1.00]
+; SANDY-NEXT:    fld %st(0) # sched: [1:1.00]
 ; SANDY-NEXT:    flds (%edx) # sched: [9:1.00]
 ; SANDY-NEXT:    fldl (%ecx) # sched: [9:1.00]
 ; SANDY-NEXT:    fldt (%eax) # sched: [9:1.00]
@@ -2899,7 +2899,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fld %st # sched: [1:0.50]
+; HASWELL-NEXT:    fld %st(0) # sched: [1:0.50]
 ; HASWELL-NEXT:    flds (%edx) # sched: [7:0.50]
 ; HASWELL-NEXT:    fldl (%ecx) # sched: [7:0.50]
 ; HASWELL-NEXT:    fldt (%eax) # sched: [7:0.50]
@@ -2912,7 +2912,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    fld %st # sched: [1:0.25]
+; BROADWELL-NEXT:    fld %st(0) # sched: [1:0.25]
 ; BROADWELL-NEXT:    flds (%edx) # sched: [6:0.50]
 ; BROADWELL-NEXT:    fldl (%ecx) # sched: [6:0.50]
 ; BROADWELL-NEXT:    fldt (%eax) # sched: [6:0.50]
@@ -2925,7 +2925,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fld %st # sched: [1:0.25]
+; SKYLAKE-NEXT:    fld %st(0) # sched: [1:0.25]
 ; SKYLAKE-NEXT:    flds (%edx) # sched: [7:0.50]
 ; SKYLAKE-NEXT:    fldl (%ecx) # sched: [7:0.50]
 ; SKYLAKE-NEXT:    fldt (%eax) # sched: [7:0.50]
@@ -2938,7 +2938,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fld %st # sched: [1:0.25]
+; SKX-NEXT:    fld %st(0) # sched: [1:0.25]
 ; SKX-NEXT:    flds (%edx) # sched: [7:0.50]
 ; SKX-NEXT:    fldl (%ecx) # sched: [7:0.50]
 ; SKX-NEXT:    fldt (%eax) # sched: [7:0.50]
@@ -2951,7 +2951,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BDVER2-NEXT:    #APP
-; BDVER2-NEXT:    fld %st # sched: [1:0.50]
+; BDVER2-NEXT:    fld %st(0) # sched: [1:0.50]
 ; BDVER2-NEXT:    flds (%edx) # sched: [5:0.50]
 ; BDVER2-NEXT:    fldl (%ecx) # sched: [5:0.50]
 ; BDVER2-NEXT:    fldt (%eax) # sched: [5:0.50]
@@ -2964,7 +2964,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fld %st # sched: [1:0.50]
+; BTVER2-NEXT:    fld %st(0) # sched: [1:0.50]
 ; BTVER2-NEXT:    flds (%edx) # sched: [3:1.00]
 ; BTVER2-NEXT:    fldl (%ecx) # sched: [3:1.00]
 ; BTVER2-NEXT:    fldt (%eax) # sched: [3:1.00]
@@ -2977,7 +2977,7 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fld %st # sched: [1:0.50]
+; ZNVER1-NEXT:    fld %st(0) # sched: [1:0.50]
 ; ZNVER1-NEXT:    flds (%edx) # sched: [8:0.50]
 ; ZNVER1-NEXT:    fldl (%ecx) # sched: [8:0.50]
 ; ZNVER1-NEXT:    fldt (%eax) # sched: [1:0.50]
@@ -4543,10 +4543,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; GENERIC-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    fst %st
+; GENERIC-NEXT:    fst %st(0)
 ; GENERIC-NEXT:    fsts (%edx)
 ; GENERIC-NEXT:    fstl (%ecx)
-; GENERIC-NEXT:    fstp %st
+; GENERIC-NEXT:    fstp %st(0)
 ; GENERIC-NEXT:    fstpl (%edx)
 ; GENERIC-NEXT:    fstpl (%ecx)
 ; GENERIC-NEXT:    fstpt (%eax)
@@ -4559,10 +4559,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [1:1.00]
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [1:1.00]
 ; ATOM-NEXT:    #APP
-; ATOM-NEXT:    fst %st # sched: [2:1.00]
+; ATOM-NEXT:    fst %st(0) # sched: [2:1.00]
 ; ATOM-NEXT:    fsts (%edx) # sched: [2:1.00]
 ; ATOM-NEXT:    fstl (%ecx) # sched: [2:1.00]
-; ATOM-NEXT:    fstp %st # sched: [2:1.00]
+; ATOM-NEXT:    fstp %st(0) # sched: [2:1.00]
 ; ATOM-NEXT:    fstpl (%edx) # sched: [2:1.00]
 ; ATOM-NEXT:    fstpl (%ecx) # sched: [2:1.00]
 ; ATOM-NEXT:    fstpt (%eax) # sched: [5:2.50]
@@ -4575,10 +4575,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; SLM-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; SLM-NEXT:    #APP
-; SLM-NEXT:    fst %st # sched: [1:0.50]
+; SLM-NEXT:    fst %st(0) # sched: [1:0.50]
 ; SLM-NEXT:    fsts (%edx) # sched: [1:1.00]
 ; SLM-NEXT:    fstl (%ecx) # sched: [1:1.00]
-; SLM-NEXT:    fstp %st # sched: [1:0.50]
+; SLM-NEXT:    fstp %st(0) # sched: [1:0.50]
 ; SLM-NEXT:    fstpl (%edx) # sched: [1:1.00]
 ; SLM-NEXT:    fstpl (%ecx) # sched: [1:1.00]
 ; SLM-NEXT:    fstpt (%eax) # sched: [1:1.00]
@@ -4591,10 +4591,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SANDY-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SANDY-NEXT:    #APP
-; SANDY-NEXT:    fst %st # sched: [1:1.00]
+; SANDY-NEXT:    fst %st(0) # sched: [1:1.00]
 ; SANDY-NEXT:    fsts (%edx) # sched: [6:1.00]
 ; SANDY-NEXT:    fstl (%ecx) # sched: [6:1.00]
-; SANDY-NEXT:    fstp %st # sched: [1:1.00]
+; SANDY-NEXT:    fstp %st(0) # sched: [1:1.00]
 ; SANDY-NEXT:    fstpl (%edx) # sched: [6:1.00]
 ; SANDY-NEXT:    fstpl (%ecx) # sched: [6:1.00]
 ; SANDY-NEXT:    fstpt (%eax) # sched: [6:1.00]
@@ -4607,10 +4607,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; HASWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; HASWELL-NEXT:    #APP
-; HASWELL-NEXT:    fst %st # sched: [1:0.50]
+; HASWELL-NEXT:    fst %st(0) # sched: [1:0.50]
 ; HASWELL-NEXT:    fsts (%edx) # sched: [1:1.00]
 ; HASWELL-NEXT:    fstl (%ecx) # sched: [1:1.00]
-; HASWELL-NEXT:    fstp %st # sched: [1:0.50]
+; HASWELL-NEXT:    fstp %st(0) # sched: [1:0.50]
 ; HASWELL-NEXT:    fstpl (%edx) # sched: [1:1.00]
 ; HASWELL-NEXT:    fstpl (%ecx) # sched: [1:1.00]
 ; HASWELL-NEXT:    fstpt (%eax) # sched: [1:1.00]
@@ -4623,10 +4623,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BROADWELL-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BROADWELL-NEXT:    #APP
-; BROADWELL-NEXT:    fst %st # sched: [1:0.25]
+; BROADWELL-NEXT:    fst %st(0) # sched: [1:0.25]
 ; BROADWELL-NEXT:    fsts (%edx) # sched: [1:1.00]
 ; BROADWELL-NEXT:    fstl (%ecx) # sched: [1:1.00]
-; BROADWELL-NEXT:    fstp %st # sched: [1:0.25]
+; BROADWELL-NEXT:    fstp %st(0) # sched: [1:0.25]
 ; BROADWELL-NEXT:    fstpl (%edx) # sched: [1:1.00]
 ; BROADWELL-NEXT:    fstpl (%ecx) # sched: [1:1.00]
 ; BROADWELL-NEXT:    fstpt (%eax) # sched: [1:1.00]
@@ -4639,10 +4639,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKYLAKE-NEXT:    #APP
-; SKYLAKE-NEXT:    fst %st # sched: [1:0.25]
+; SKYLAKE-NEXT:    fst %st(0) # sched: [1:0.25]
 ; SKYLAKE-NEXT:    fsts (%edx) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    fstl (%ecx) # sched: [1:1.00]
-; SKYLAKE-NEXT:    fstp %st # sched: [1:0.25]
+; SKYLAKE-NEXT:    fstp %st(0) # sched: [1:0.25]
 ; SKYLAKE-NEXT:    fstpl (%edx) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    fstpl (%ecx) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    fstpt (%eax) # sched: [1:1.00]
@@ -4655,10 +4655,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; SKX-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; SKX-NEXT:    #APP
-; SKX-NEXT:    fst %st # sched: [1:0.25]
+; SKX-NEXT:    fst %st(0) # sched: [1:0.25]
 ; SKX-NEXT:    fsts (%edx) # sched: [1:1.00]
 ; SKX-NEXT:    fstl (%ecx) # sched: [1:1.00]
-; SKX-NEXT:    fstp %st # sched: [1:0.25]
+; SKX-NEXT:    fstp %st(0) # sched: [1:0.25]
 ; SKX-NEXT:    fstpl (%edx) # sched: [1:1.00]
 ; SKX-NEXT:    fstpl (%ecx) # sched: [1:1.00]
 ; SKX-NEXT:    fstpt (%eax) # sched: [1:1.00]
@@ -4671,10 +4671,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BDVER2-NEXT:    #APP
-; BDVER2-NEXT:    fst %st # sched: [1:0.50]
+; BDVER2-NEXT:    fst %st(0) # sched: [1:0.50]
 ; BDVER2-NEXT:    fsts (%edx) # sched: [1:1.00]
 ; BDVER2-NEXT:    fstl (%ecx) # sched: [1:1.00]
-; BDVER2-NEXT:    fstp %st # sched: [1:0.50]
+; BDVER2-NEXT:    fstp %st(0) # sched: [1:0.50]
 ; BDVER2-NEXT:    fstpl (%edx) # sched: [1:1.00]
 ; BDVER2-NEXT:    fstpl (%ecx) # sched: [1:1.00]
 ; BDVER2-NEXT:    fstpt (%eax) # sched: [1:1.00]
@@ -4687,10 +4687,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [3:1.00]
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [3:1.00]
 ; BTVER2-NEXT:    #APP
-; BTVER2-NEXT:    fst %st # sched: [1:0.50]
+; BTVER2-NEXT:    fst %st(0) # sched: [1:0.50]
 ; BTVER2-NEXT:    fsts (%edx) # sched: [1:1.00]
 ; BTVER2-NEXT:    fstl (%ecx) # sched: [1:1.00]
-; BTVER2-NEXT:    fstp %st # sched: [1:0.50]
+; BTVER2-NEXT:    fstp %st(0) # sched: [1:0.50]
 ; BTVER2-NEXT:    fstpl (%edx) # sched: [1:1.00]
 ; BTVER2-NEXT:    fstpl (%ecx) # sched: [1:1.00]
 ; BTVER2-NEXT:    fstpt (%eax) # sched: [1:1.00]
@@ -4703,10 +4703,10 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
-; ZNVER1-NEXT:    fst %st # sched: [5:0.50]
+; ZNVER1-NEXT:    fst %st(0) # sched: [5:0.50]
 ; ZNVER1-NEXT:    fsts (%edx) # sched: [1:0.50]
 ; ZNVER1-NEXT:    fstl (%ecx) # sched: [1:0.50]
-; ZNVER1-NEXT:    fstp %st # sched: [5:0.50]
+; ZNVER1-NEXT:    fstp %st(0) # sched: [5:0.50]
 ; ZNVER1-NEXT:    fstpl (%edx) # sched: [1:0.50]
 ; ZNVER1-NEXT:    fstpl (%ecx) # sched: [1:0.50]
 ; ZNVER1-NEXT:    fstpt (%eax) # sched: [5:0.50]
