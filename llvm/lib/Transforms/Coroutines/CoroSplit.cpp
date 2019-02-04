@@ -378,10 +378,12 @@ void CoroCloner::handleFinalSuspend() {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
     Builder.SetInsertPoint(OldSwitchBB->getTerminator());
-    auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(Shape.FrameTy, FramePtr,
-                    0, coro::Shape::SwitchFieldIndex::Resume,, "ResumeFn.addr");
+    auto *GepIndex = Builder.CreateConstInBoundsGEP2_32(
+        Shape.FrameTy, NewFramePtr, 0, coro::Shape::SwitchFieldIndex::Resume,
+        "ResumeFn.addr");
     auto *Load = Builder.CreateLoad(
-        Shape.FrameTy->getElementType(coro::Shape::SwiftFieldIndex::Resume), GepIndex);
+        Shape.FrameTy->getElementType(coro::Shape::SwitchFieldIndex::Resume),
+        GepIndex);
     auto *NullPtr =
         ConstantPointerNull::get(cast<PointerType>(Load->getType()));
     auto *Cond = Builder.CreateICmpEQ(Load, NullPtr);
