@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/ProcessInfo.h"
+#include "lldb/Host/ProcessInfo.h"
 
 #include <climits>
 

@@ -13,6 +13,7 @@
 #include "Headers.h"
 #include "SourceCode.h"
 #include "Trace.h"
+#include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "refactor/Tweak.h"
@@ -69,9 +70,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       : FIndex(FIndex), DiagConsumer(DiagConsumer) {}
 
   void onPreambleAST(PathRef Path, ASTContext &Ctx,
-                     std::shared_ptr<clang::Preprocessor> PP) override {
+                     std::shared_ptr<clang::Preprocessor> PP,
+                     const CanonicalIncludes &CanonIncludes) override {
     if (FIndex)
-      FIndex->updatePreamble(Path, Ctx, std::move(PP));
+      FIndex->updatePreamble(Path, Ctx, std::move(PP), CanonIncludes);
   }
 
   void onMainAST(PathRef Path, ParsedAST &AST) override {

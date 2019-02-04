@@ -6421,6 +6421,7 @@ void __kmp_register_library_startup(void) {
         // library. Assume the other library is alive.
         // WARN( ... ); // TODO: Issue a warning.
         file_name = "unknown library";
+        KMP_FALLTHROUGH();
       // Attention! Falling to the next case. That's intentional.
       case 1: { // Neighbor is alive.
         // Check it is allowed.
