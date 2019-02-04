@@ -65,7 +65,7 @@ void ObjFile::dumpInfo() const {
 // relocation and returns relocated index (i.e. translates from the input
 // symbol/type space to the output symbol/type space).
 uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
-  if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB) {
+  if (Reloc.Type == R_WASM_TYPE_INDEX_LEB) {
     assert(TypeIsUsed[Reloc.Index]);
     return TypeMap[Reloc.Index];
   }
@@ -76,12 +76,12 @@ uint32_t ObjFile::calcNewIndex(const WasmRelocation &Reloc) const {
 // relocation and returns updated addend by offset in the output section.
 uint32_t ObjFile::calcNewAddend(const WasmRelocation &Reloc) const {
   switch (Reloc.Type) {
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-  case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+  case R_WASM_MEMORY_ADDR_LEB:
+  case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
     return Reloc.Addend;
-  case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(Reloc.Index)->Section->OutputOffset + Reloc.Addend;
   default:
     llvm_unreachable("unexpected relocation type");
@@ -93,14 +93,14 @@ uint32_t ObjFile::calcNewAddend(const WasmRelocation &Reloc) const {
 // location.  It is useful for catching bugs in the compiler and linker.
 uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
   switch (Reloc.Type) {
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB: {
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_TABLE_INDEX_SLEB: {
     const WasmSymbol &Sym = WasmObj->syms()[Reloc.Index];
     return TableEntries[Sym.Info.ElementIndex];
   }
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB: {
+  case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_MEMORY_ADDR_LEB: {
     const WasmSymbol &Sym = WasmObj->syms()[Reloc.Index];
     if (Sym.isUndefined())
       return 0;
@@ -109,19 +109,19 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
     return Segment.Data.Offset.Value.Int32 + Sym.Info.DataRef.Offset +
            Reloc.Addend;
   }
-  case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
     if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
       return Sym->Function->getFunctionInputOffset() +
              Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
     }
     return 0;
-  case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
     return Reloc.Addend;
-  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
+  case R_WASM_TYPE_INDEX_LEB:
     return Reloc.Index;
-  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-  case R_WEBASSEMBLY_EVENT_INDEX_LEB: {
+  case R_WASM_FUNCTION_INDEX_LEB:
+  case R_WASM_GLOBAL_INDEX_LEB:
+  case R_WASM_EVENT_INDEX_LEB: {
     const WasmSymbol &Sym = WasmObj->syms()[Reloc.Index];
     return Sym.Info.ElementIndex;
   }
@@ -133,32 +133,32 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
 // Translate from the relocation's index into the final linked output value.
 uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   switch (Reloc.Type) {
-  case R_WEBASSEMBLY_TABLE_INDEX_I32:
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_TABLE_INDEX_SLEB:
     return getFunctionSymbol(Reloc.Index)->getTableIndex();
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_MEMORY_ADDR_LEB:
     if (auto *Sym = dyn_cast<DefinedData>(getDataSymbol(Reloc.Index)))
       if (Sym->isLive())
         return Sym->getVirtualAddress() + Reloc.Addend;
     return 0;
-  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
+  case R_WASM_TYPE_INDEX_LEB:
     return TypeMap[Reloc.Index];
-  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+  case R_WASM_FUNCTION_INDEX_LEB:
     return getFunctionSymbol(Reloc.Index)->getFunctionIndex();
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+  case R_WASM_GLOBAL_INDEX_LEB:
     return getGlobalSymbol(Reloc.Index)->getGlobalIndex();
-  case R_WEBASSEMBLY_EVENT_INDEX_LEB:
+  case R_WASM_EVENT_INDEX_LEB:
     return getEventSymbol(Reloc.Index)->getEventIndex();
-  case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
     if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
       if (Sym->isLive())
         return Sym->Function->OutputOffset +
                Sym->Function->getFunctionCodeOffset() + Reloc.Addend;
     }
     return 0;
-  case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(Reloc.Index)->Section->OutputOffset + Reloc.Addend;
   default:
     llvm_unreachable("unknown relocation type");

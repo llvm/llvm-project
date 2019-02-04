@@ -41,7 +41,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-NEXT:    movsd %xmm0, -56(%rbp)
 ; SSE2-NEXT:    movsd %xmm0, -24(%rbp)
 ; SSE2-NEXT:    fsubl -24(%rbp)
-; SSE2-NEXT:    fmulp %st(1)
+; SSE2-NEXT:    fmulp %st, %st(1)
 ; SSE2-NEXT:    fstpl -48(%rbp)
 ; SSE2-NEXT:    popq %rbp
 ; SSE2-NEXT:    retq
@@ -80,7 +80,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-SCHEDULE-NEXT:    movsd %xmm0, -56(%rbp)
 ; SSE2-SCHEDULE-NEXT:    movsd %xmm0, -24(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fsubl -24(%rbp)
-; SSE2-SCHEDULE-NEXT:    fmulp %st(1)
+; SSE2-SCHEDULE-NEXT:    fmulp %st, %st(1)
 ; SSE2-SCHEDULE-NEXT:    fstpl -48(%rbp)
 ; SSE2-SCHEDULE-NEXT:    popq %rbp
 ; SSE2-SCHEDULE-NEXT:    retq
@@ -109,7 +109,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE3-NEXT:    movsd %xmm0, -16(%rbp)
 ; SSE3-NEXT:    fxch %st(1)
 ; SSE3-NEXT:    fsubl -16(%rbp)
-; SSE3-NEXT:    fmulp %st(1)
+; SSE3-NEXT:    fmulp %st, %st(1)
 ; SSE3-NEXT:    fstpl -32(%rbp)
 ; SSE3-NEXT:    popq %rbp
 ; SSE3-NEXT:    retq
@@ -137,7 +137,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; AVX-NEXT:    vmovsd %xmm0, -16(%rbp)
 ; AVX-NEXT:    fxch %st(1)
 ; AVX-NEXT:    fsubl -16(%rbp)
-; AVX-NEXT:    fmulp %st(1)
+; AVX-NEXT:    fmulp %st, %st(1)
 ; AVX-NEXT:    fstpl -32(%rbp)
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq

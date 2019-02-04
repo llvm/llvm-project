@@ -20,7 +20,7 @@ define float @fast_recip_sqrt(float %x) {
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
 ; X86-NEXT:    fld1
-; X86-NEXT:    fdivp %st(1)
+; X86-NEXT:    fdivp %st, %st(1)
 ; X86-NEXT:    retl
   %y = call fast float @llvm.sqrt.f32(float %x)
   %z = fdiv fast float 1.0,  %y
@@ -95,7 +95,7 @@ define float @not_so_fast_recip_sqrt(float %x) {
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    fsqrt
 ; X86-NEXT:    fld1
-; X86-NEXT:    fdiv %st(1)
+; X86-NEXT:    fdiv %st(1), %st
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstps sqrt1
 ; X86-NEXT:    retl

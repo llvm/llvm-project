@@ -850,6 +850,10 @@ def int_smul_fix : Intrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                              [IntrNoMem, IntrSpeculatable, Commutative]>;
 
+def int_umul_fix : Intrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                             [IntrNoMem, IntrSpeculatable, Commutative]>;
+
 //===------------------------- Memory Use Markers -------------------------===//
 //
 def int_lifetime_start  : Intrinsic<[],

@@ -13,6 +13,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
@@ -838,5 +839,219 @@ TEST(CommandLineTest, GetCommandLineArguments) {
       << llvm::sys::path::filename(argv[0]);
 }
 #endif
+
+class OutputRedirector {
+public:
+  OutputRedirector(int RedirectFD)
+      : RedirectFD(RedirectFD), OldFD(dup(RedirectFD)) {
+    if (OldFD == -1 ||
+        sys::fs::createTemporaryFile("unittest-redirect", "", NewFD,
+                                     FilePath) ||
+        dup2(NewFD, RedirectFD) == -1)
+      Valid = false;
+  }
+
+  ~OutputRedirector() {
+    dup2(OldFD, RedirectFD);
+    close(OldFD);
+    close(NewFD);
+  }
+
+  SmallVector<char, 128> FilePath;
+  bool Valid = true;
+
+private:
+  int RedirectFD;
+  int OldFD;
+  int NewFD;
+};
+
+struct AutoDeleteFile {
+  SmallVector<char, 128> FilePath;
+  ~AutoDeleteFile() {
+    if (!FilePath.empty())
+      sys::fs::remove(std::string(FilePath.data(), FilePath.size()));
+  }
+};
+
+class PrintOptionInfoTest : public ::testing::Test {
+public:
+  // Return std::string because the output of a failing EXPECT check is
+  // unreadable for StringRef. It also avoids any lifetime issues.
+  template <typename... Ts> std::string runTest(Ts... OptionAttributes) {
+    AutoDeleteFile File;
+    {
+      OutputRedirector Stdout(fileno(stdout));
+      if (!Stdout.Valid)
+        return "";
+      File.FilePath = Stdout.FilePath;
+
+      StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
+                                          OptionAttributes...);
+      printOptionInfo(TestOption, 25);
+      outs().flush();
+    }
+    auto Buffer = MemoryBuffer::getFile(File.FilePath);
+    if (!Buffer)
+      return "";
+    return Buffer->get()->getBuffer().str();
+  }
+
+  enum class OptionValue { Val };
+  const StringRef Opt = "some-option";
+  const StringRef HelpText = "some help";
+
+private:
+  // This is a workaround for cl::Option sub-classes having their
+  // printOptionInfo functions private.
+  void printOptionInfo(const cl::Option &O, size_t Width) {
+    O.printOptionInfo(Width);
+  }
+};
+
+TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithoutSentinel) {
+  std::string Output =
+      runTest(cl::ValueOptional,
+              cl::values(clEnumValN(OptionValue::Val, "v1", "desc1")));
+
+  // clang-format off
+  EXPECT_EQ(Output, ("  -" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                -   desc1\n")
+                        .str());
+  // clang-format on
+}
+
+TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinel) {
+  std::string Output = runTest(
+      cl::ValueOptional, cl::values(clEnumValN(OptionValue::Val, "v1", "desc1"),
+                                    clEnumValN(OptionValue::Val, "", "")));
+
+  // clang-format off
+  EXPECT_EQ(Output,
+            ("  -" + Opt + "         - " + HelpText + "\n"
+             "  -" + Opt + "=<value> - " + HelpText + "\n"
+             "    =v1                -   desc1\n")
+                .str());
+  // clang-format on
+}
+
+TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithSentinelWithHelp) {
+  std::string Output = runTest(
+      cl::ValueOptional, cl::values(clEnumValN(OptionValue::Val, "v1", "desc1"),
+                                    clEnumValN(OptionValue::Val, "", "desc2")));
+
+  // clang-format off
+  EXPECT_EQ(Output, ("  -" + Opt + "         - " + HelpText + "\n"
+                     "  -" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                -   desc1\n"
+                     "    =<empty>           -   desc2\n")
+                        .str());
+  // clang-format on
+}
+
+TEST_F(PrintOptionInfoTest, PrintOptionInfoValueRequiredWithEmptyValueName) {
+  std::string Output = runTest(
+      cl::ValueRequired, cl::values(clEnumValN(OptionValue::Val, "v1", "desc1"),
+                                    clEnumValN(OptionValue::Val, "", "")));
+
+  // clang-format off
+  EXPECT_EQ(Output, ("  -" + Opt + "=<value> - " + HelpText + "\n"
+                     "    =v1                -   desc1\n"
+                     "    =<empty>\n")
+                        .str());
+  // clang-format on
+}
+
+TEST_F(PrintOptionInfoTest, PrintOptionInfoEmptyValueDescription) {
+  std::string Output = runTest(
+      cl::ValueRequired, cl::values(clEnumValN(OptionValue::Val, "v1", "")));
+
+  // clang-format off
+  EXPECT_EQ(Output,
+            ("  -" + Opt + "=<value> - " + HelpText + "\n"
+             "    =v1\n").str());
+  // clang-format on
+}
+
+class GetOptionWidthTest : public ::testing::Test {
+public:
+  enum class OptionValue { Val };
+
+  template <typename... Ts>
+  size_t runTest(StringRef ArgName, Ts... OptionAttributes) {
+    StackOption<OptionValue> TestOption(ArgName, cl::desc("some help"),
+                                        OptionAttributes...);
+    return getOptionWidth(TestOption);
+  }
+
+private:
+  // This is a workaround for cl::Option sub-classes having their
+  // printOptionInfo
+  // functions private.
+  size_t getOptionWidth(const cl::Option &O) { return O.getOptionWidth(); }
+};
+
+TEST_F(GetOptionWidthTest, GetOptionWidthArgNameLonger) {
+  StringRef ArgName("a-long-argument-name");
+  size_t ExpectedStrSize = ("  -" + ArgName + "=<value> - ").str().size();
+  EXPECT_EQ(
+      runTest(ArgName, cl::values(clEnumValN(OptionValue::Val, "v", "help"))),
+      ExpectedStrSize);
+}
+
+TEST_F(GetOptionWidthTest, GetOptionWidthFirstOptionNameLonger) {
+  StringRef OptName("a-long-option-name");
+  size_t ExpectedStrSize = ("    =" + OptName + " - ").str().size();
+  EXPECT_EQ(
+      runTest("a", cl::values(clEnumValN(OptionValue::Val, OptName, "help"),
+                              clEnumValN(OptionValue::Val, "b", "help"))),
+      ExpectedStrSize);
+}
+
+TEST_F(GetOptionWidthTest, GetOptionWidthSecondOptionNameLonger) {
+  StringRef OptName("a-long-option-name");
+  size_t ExpectedStrSize = ("    =" + OptName + " - ").str().size();
+  EXPECT_EQ(
+      runTest("a", cl::values(clEnumValN(OptionValue::Val, "b", "help"),
+                              clEnumValN(OptionValue::Val, OptName, "help"))),
+      ExpectedStrSize);
+}
+
+TEST_F(GetOptionWidthTest, GetOptionWidthEmptyOptionNameLonger) {
+  size_t ExpectedStrSize = StringRef("    =<empty> - ").size();
+  // The length of a=<value> (including indentation) is actually the same as the
+  // =<empty> string, so it is impossible to distinguish via testing the case
+  // where the empty string is picked from where the option name is picked.
+  EXPECT_EQ(runTest("a", cl::values(clEnumValN(OptionValue::Val, "b", "help"),
+                                    clEnumValN(OptionValue::Val, "", "help"))),
+            ExpectedStrSize);
+}
+
+TEST_F(GetOptionWidthTest,
+       GetOptionWidthValueOptionalEmptyOptionWithNoDescription) {
+  StringRef ArgName("a");
+  // The length of a=<value> (including indentation) is actually the same as the
+  // =<empty> string, so it is impossible to distinguish via testing the case
+  // where the empty string is ignored from where it is not ignored.
+  // The dash will not actually be printed, but the space it would take up is
+  // included to ensure a consistent column width.
+  size_t ExpectedStrSize = ("  -" + ArgName + "=<value> - ").str().size();
+  EXPECT_EQ(runTest(ArgName, cl::ValueOptional,
+                    cl::values(clEnumValN(OptionValue::Val, "value", "help"),
+                               clEnumValN(OptionValue::Val, "", ""))),
+            ExpectedStrSize);
+}
+
+TEST_F(GetOptionWidthTest,
+       GetOptionWidthValueRequiredEmptyOptionWithNoDescription) {
+  // The length of a=<value> (including indentation) is actually the same as the
+  // =<empty> string, so it is impossible to distinguish via testing the case
+  // where the empty string is picked from where the option name is picked
+  size_t ExpectedStrSize = StringRef("    =<empty> - ").size();
+  EXPECT_EQ(runTest("a", cl::ValueRequired,
+                    cl::values(clEnumValN(OptionValue::Val, "value", "help"),
+                               clEnumValN(OptionValue::Val, "", ""))),
+            ExpectedStrSize);
+}
 
 }  // anonymous namespace

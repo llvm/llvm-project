@@ -91,8 +91,11 @@ public:
         Expect(AsmToken::Comma, ",") || Expect(AsmToken::At, "@") ||
         Expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    auto WS = getContext().getWasmSection(Name, SectionKind::getText());
-    getStreamer().SwitchSection(WS);
+    // This is done automatically by the assembler for text sections currently,
+    // so we don't need to emit that here. This is what it would do (and may
+    // be needed later for other section types):
+    // auto WS = getContext().getWasmSection(Name, SectionKind::getText());
+    // getStreamer().SwitchSection(WS);
     return false;
   }
 
@@ -110,8 +113,10 @@ public:
       return true;
     if (Expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    // MCWasmStreamer implements this.
-    getStreamer().emitELFSize(Sym, Expr);
+    // This is done automatically by the assembler for functions currently,
+    // so we don't need to emit that here. This is what it would do:
+    (void)Sym;
+    // getStreamer().emitELFSize(Sym, Expr);
     return false;
   }
 

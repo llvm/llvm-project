@@ -719,43 +719,43 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     PreviousOffset = Reloc.Offset;
     Reloc.Index = readVaruint32(Ctx);
     switch (Reloc.Type) {
-    case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+    case wasm::R_WASM_FUNCTION_INDEX_LEB:
+    case wasm::R_WASM_TABLE_INDEX_SLEB:
+    case wasm::R_WASM_TABLE_INDEX_I32:
       if (!isValidFunctionSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation function index",
                                               object_error::parse_failed);
       break;
-    case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
+    case wasm::R_WASM_TYPE_INDEX_LEB:
       if (Reloc.Index >= Signatures.size())
         return make_error<GenericBinaryError>("Bad relocation type index",
                                               object_error::parse_failed);
       break;
-    case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+    case wasm::R_WASM_GLOBAL_INDEX_LEB:
       if (!isValidGlobalSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation global index",
                                               object_error::parse_failed);
       break;
-    case wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB:
+    case wasm::R_WASM_EVENT_INDEX_LEB:
       if (!isValidEventSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation event index",
                                               object_error::parse_failed);
       break;
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
+    case wasm::R_WASM_MEMORY_ADDR_LEB:
+    case wasm::R_WASM_MEMORY_ADDR_SLEB:
+    case wasm::R_WASM_MEMORY_ADDR_I32:
       if (!isValidDataSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation data index",
                                               object_error::parse_failed);
       Reloc.Addend = readVarint32(Ctx);
       break;
-    case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
+    case wasm::R_WASM_FUNCTION_OFFSET_I32:
       if (!isValidFunctionSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation function index",
                                               object_error::parse_failed);
       Reloc.Addend = readVarint32(Ctx);
       break;
-    case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    case wasm::R_WASM_SECTION_OFFSET_I32:
       if (!isValidSectionSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation section index",
                                               object_error::parse_failed);
@@ -771,10 +771,10 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     // also shouldn't overlap a function/element boundary, but we don't bother
     // to check that.
     uint64_t Size = 5;
-    if (Reloc.Type == wasm::R_WEBASSEMBLY_TABLE_INDEX_I32 ||
-        Reloc.Type == wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32 ||
-        Reloc.Type == wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32 ||
-        Reloc.Type == wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32)
+    if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I32 ||
+        Reloc.Type == wasm::R_WASM_MEMORY_ADDR_I32 ||
+        Reloc.Type == wasm::R_WASM_SECTION_OFFSET_I32 ||
+        Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I32)
       Size = 4;
     if (Reloc.Offset + Size > EndOffset)
       return make_error<GenericBinaryError>("Bad relocation offset",
@@ -1419,7 +1419,7 @@ uint64_t WasmObjectFile::getRelocationOffset(DataRefImpl Ref) const {
 
 symbol_iterator WasmObjectFile::getRelocationSymbol(DataRefImpl Ref) const {
   const wasm::WasmRelocation &Rel = getWasmRelocation(Ref);
-  if (Rel.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB)
+  if (Rel.Type == wasm::R_WASM_TYPE_INDEX_LEB)
     return symbol_end();
   DataRefImpl Sym;
   Sym.d.a = 1;

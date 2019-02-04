@@ -99,31 +99,31 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   switch (unsigned(Fixup.getKind())) {
   case WebAssembly::fixup_code_sleb128_i32:
     if (IsFunction)
-      return wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB;
-    return wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB;
+      return wasm::R_WASM_TABLE_INDEX_SLEB;
+    return wasm::R_WASM_MEMORY_ADDR_SLEB;
   case WebAssembly::fixup_code_sleb128_i64:
     llvm_unreachable("fixup_sleb128_i64 not implemented yet");
   case WebAssembly::fixup_code_uleb128_i32:
     if (IsGlobalType(Target))
-      return wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB;
+      return wasm::R_WASM_GLOBAL_INDEX_LEB;
     if (IsFunctionType(Target))
-      return wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB;
+      return wasm::R_WASM_TYPE_INDEX_LEB;
     if (IsFunction)
-      return wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB;
+      return wasm::R_WASM_FUNCTION_INDEX_LEB;
     if (IsEventType(Target))
-      return wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB;
-    return wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB;
+      return wasm::R_WASM_EVENT_INDEX_LEB;
+    return wasm::R_WASM_MEMORY_ADDR_LEB;
   case FK_Data_4:
     if (IsFunction)
-      return wasm::R_WEBASSEMBLY_TABLE_INDEX_I32;
+      return wasm::R_WASM_TABLE_INDEX_I32;
     if (auto Section = static_cast<const MCSectionWasm *>(
             GetFixupSection(Fixup.getValue()))) {
       if (Section->getKind().isText())
-        return wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32;
+        return wasm::R_WASM_FUNCTION_OFFSET_I32;
       else if (!Section->isWasmData())
-        return wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32;
+        return wasm::R_WASM_SECTION_OFFSET_I32;
     }
-    return wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32;
+    return wasm::R_WASM_MEMORY_ADDR_I32;
   case FK_Data_8:
     llvm_unreachable("FK_Data_8 not implemented yet");
   default:

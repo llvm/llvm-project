@@ -2,9 +2,6 @@
 # this one is just here to see if it converts to .o without errors, but doesn't check any output:
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s
 
-    .text
-    .section .text.main,"",@
-    .type    test0,@function
 test0:
     # Test all types:
     .functype   test0 (i32, i64) -> (i32)
@@ -86,8 +83,6 @@ test0:
     #i32.trunc_sat_f32_s
     global.get  __stack_pointer@GLOBAL
     end_function
-.Lfunc_end0:
-    .size	test0, .Lfunc_end0-test0
     .globaltype	__stack_pointer, i32
 
 # CHECK:           .text

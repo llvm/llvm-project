@@ -51,21 +51,21 @@ void InputChunk::verifyRelocTargets() const {
     uint32_t Offset = Rel.Offset - getInputSectionOffset();
     const uint8_t *Loc = data().data() + Offset;
     switch (Rel.Type) {
-    case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-    case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-    case R_WEBASSEMBLY_EVENT_INDEX_LEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+    case R_WASM_TYPE_INDEX_LEB:
+    case R_WASM_FUNCTION_INDEX_LEB:
+    case R_WASM_GLOBAL_INDEX_LEB:
+    case R_WASM_EVENT_INDEX_LEB:
+    case R_WASM_MEMORY_ADDR_LEB:
       ExistingValue = decodeULEB128(Loc, &BytesRead);
       break;
-    case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+    case R_WASM_TABLE_INDEX_SLEB:
+    case R_WASM_MEMORY_ADDR_SLEB:
       ExistingValue = static_cast<uint32_t>(decodeSLEB128(Loc, &BytesRead));
       break;
-    case R_WEBASSEMBLY_TABLE_INDEX_I32:
-    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-    case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    case R_WASM_TABLE_INDEX_I32:
+    case R_WASM_MEMORY_ADDR_I32:
+    case R_WASM_FUNCTION_OFFSET_I32:
+    case R_WASM_SECTION_OFFSET_I32:
       ExistingValue = static_cast<uint32_t>(read32le(Loc));
       break;
     default:
@@ -108,21 +108,21 @@ void InputChunk::writeTo(uint8_t *Buf) const {
                       << "\n");
 
     switch (Rel.Type) {
-    case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-    case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-    case R_WEBASSEMBLY_EVENT_INDEX_LEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+    case R_WASM_TYPE_INDEX_LEB:
+    case R_WASM_FUNCTION_INDEX_LEB:
+    case R_WASM_GLOBAL_INDEX_LEB:
+    case R_WASM_EVENT_INDEX_LEB:
+    case R_WASM_MEMORY_ADDR_LEB:
       encodeULEB128(Value, Loc, 5);
       break;
-    case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+    case R_WASM_TABLE_INDEX_SLEB:
+    case R_WASM_MEMORY_ADDR_SLEB:
       encodeSLEB128(static_cast<int32_t>(Value), Loc, 5);
       break;
-    case R_WEBASSEMBLY_TABLE_INDEX_I32:
-    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-    case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    case R_WASM_TABLE_INDEX_I32:
+    case R_WASM_MEMORY_ADDR_I32:
+    case R_WASM_FUNCTION_OFFSET_I32:
+    case R_WASM_SECTION_OFFSET_I32:
       write32le(Loc, Value);
       break;
     default:
@@ -148,11 +148,11 @@ void InputChunk::writeRelocations(raw_ostream &OS) const {
     writeUleb128(OS, File->calcNewIndex(Rel), "reloc index");
 
     switch (Rel.Type) {
-    case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-    case R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-    case R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    case R_WASM_MEMORY_ADDR_LEB:
+    case R_WASM_MEMORY_ADDR_SLEB:
+    case R_WASM_MEMORY_ADDR_I32:
+    case R_WASM_FUNCTION_OFFSET_I32:
+    case R_WASM_SECTION_OFFSET_I32:
       writeSleb128(OS, File->calcNewAddend(Rel), "reloc addend");
       break;
     }
@@ -178,14 +178,14 @@ void InputFunction::setTableIndex(uint32_t Index) {
 static unsigned writeCompressedReloc(uint8_t *Buf, const WasmRelocation &Rel,
                                      uint32_t Value) {
   switch (Rel.Type) {
-  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-  case R_WEBASSEMBLY_EVENT_INDEX_LEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
+  case R_WASM_TYPE_INDEX_LEB:
+  case R_WASM_FUNCTION_INDEX_LEB:
+  case R_WASM_GLOBAL_INDEX_LEB:
+  case R_WASM_EVENT_INDEX_LEB:
+  case R_WASM_MEMORY_ADDR_LEB:
     return encodeULEB128(Value, Buf);
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_MEMORY_ADDR_SLEB:
     return encodeSLEB128(static_cast<int32_t>(Value), Buf);
   default:
     llvm_unreachable("unexpected relocation type");
@@ -194,13 +194,13 @@ static unsigned writeCompressedReloc(uint8_t *Buf, const WasmRelocation &Rel,
 
 static unsigned getRelocWidthPadded(const WasmRelocation &Rel) {
   switch (Rel.Type) {
-  case R_WEBASSEMBLY_TYPE_INDEX_LEB:
-  case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-  case R_WEBASSEMBLY_EVENT_INDEX_LEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-  case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+  case R_WASM_TYPE_INDEX_LEB:
+  case R_WASM_FUNCTION_INDEX_LEB:
+  case R_WASM_GLOBAL_INDEX_LEB:
+  case R_WASM_EVENT_INDEX_LEB:
+  case R_WASM_MEMORY_ADDR_LEB:
+  case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_MEMORY_ADDR_SLEB:
     return 5;
   default:
     llvm_unreachable("unexpected relocation type");

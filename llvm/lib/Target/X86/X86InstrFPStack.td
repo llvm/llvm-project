@@ -267,32 +267,32 @@ class FPrST0PInst<Format fp, string asm>
 // of some of the 'reverse' forms of the fsub and fdiv instructions.  As such,
 // we have to put some 'r's in and take them out of weird places.
 let SchedRW = [WriteFAdd], Defs = [FPSW] in {
-def ADD_FST0r   : FPST0rInst <MRM0r, "fadd\t$op">;
+def ADD_FST0r   : FPST0rInst <MRM0r, "fadd\t{$op, %st|st, $op}">;
 def ADD_FrST0   : FPrST0Inst <MRM0r, "fadd\t{%st, $op|$op, st}">;
-def ADD_FPrST0  : FPrST0PInst<MRM0r, "faddp\t$op">;
-def SUBR_FST0r  : FPST0rInst <MRM5r, "fsubr\t$op">;
+def ADD_FPrST0  : FPrST0PInst<MRM0r, "faddp\t{%st, $op|$op, st}">;
+def SUBR_FST0r  : FPST0rInst <MRM5r, "fsubr\t{$op, %st|st, $op}">;
 def SUB_FrST0   : FPrST0Inst <MRM5r, "fsub{r}\t{%st, $op|$op, st}">;
-def SUB_FPrST0  : FPrST0PInst<MRM5r, "fsub{r}p\t$op">;
-def SUB_FST0r   : FPST0rInst <MRM4r, "fsub\t$op">;
+def SUB_FPrST0  : FPrST0PInst<MRM5r, "fsub{r}p\t{%st, $op|$op, st}">;
+def SUB_FST0r   : FPST0rInst <MRM4r, "fsub\t{$op, %st|st, $op}">;
 def SUBR_FrST0  : FPrST0Inst <MRM4r, "fsub{|r}\t{%st, $op|$op, st}">;
-def SUBR_FPrST0 : FPrST0PInst<MRM4r, "fsub{|r}p\t$op">;
+def SUBR_FPrST0 : FPrST0PInst<MRM4r, "fsub{|r}p\t{%st, $op|$op, st}">;
 } // SchedRW
 let SchedRW = [WriteFCom], Defs = [FPSW] in {
 def COM_FST0r   : FPST0rInst <MRM2r, "fcom\t$op">;
 def COMP_FST0r  : FPST0rInst <MRM3r, "fcomp\t$op">;
 } // SchedRW
 let SchedRW = [WriteFMul], Defs = [FPSW] in {
-def MUL_FST0r   : FPST0rInst <MRM1r, "fmul\t$op">;
+def MUL_FST0r   : FPST0rInst <MRM1r, "fmul\t{$op, %st|st, $op}">;
 def MUL_FrST0   : FPrST0Inst <MRM1r, "fmul\t{%st, $op|$op, st}">;
-def MUL_FPrST0  : FPrST0PInst<MRM1r, "fmulp\t$op">;
+def MUL_FPrST0  : FPrST0PInst<MRM1r, "fmulp\t{%st, $op|$op, st}">;
 } // SchedRW
 let SchedRW = [WriteFDiv], Defs = [FPSW] in {
-def DIVR_FST0r  : FPST0rInst <MRM7r, "fdivr\t$op">;
+def DIVR_FST0r  : FPST0rInst <MRM7r, "fdivr\t{$op, %st|st, $op}">;
 def DIV_FrST0   : FPrST0Inst <MRM7r, "fdiv{r}\t{%st, $op|$op, st}">;
-def DIV_FPrST0  : FPrST0PInst<MRM7r, "fdiv{r}p\t$op">;
-def DIV_FST0r   : FPST0rInst <MRM6r, "fdiv\t$op">;
+def DIV_FPrST0  : FPrST0PInst<MRM7r, "fdiv{r}p\t{%st, $op|$op, st}">;
+def DIV_FST0r   : FPST0rInst <MRM6r, "fdiv\t{$op, %st|st, $op}">;
 def DIVR_FrST0  : FPrST0Inst <MRM6r, "fdiv{|r}\t{%st, $op|$op, st}">;
-def DIVR_FPrST0 : FPrST0PInst<MRM6r, "fdiv{|r}p\t$op">;
+def DIVR_FPrST0 : FPrST0PInst<MRM6r, "fdiv{|r}p\t{%st, $op|$op, st}">;
 } // SchedRW
 
 // Unary operations.
@@ -613,14 +613,16 @@ def UCOM_FPPr  : FPI<0xDA, MRM_E9,       // cmp ST(0) with ST(1), pop, pop
 
 let Defs = [EFLAGS, FPSW], Uses = [ST0] in {
 def UCOM_FIr   : FPI<0xDB, MRM5r,     // CC = cmp ST(0) with ST(i)
-                    (outs), (ins RSTi:$reg), "fucomi\t$reg">;
+                    (outs), (ins RSTi:$reg), "fucomi\t{$reg, %st|st, $reg}">;
 def UCOM_FIPr  : FPI<0xDF, MRM5r,     // CC = cmp ST(0) with ST(i), pop
-                    (outs), (ins RSTi:$reg), "fucompi\t$reg">;
+                    (outs), (ins RSTi:$reg), "fucompi\t{$reg, %st|st, $reg}">;
 }
 
 let Defs = [EFLAGS, FPSW] in {
-def COM_FIr : FPI<0xDB, MRM6r, (outs), (ins RSTi:$reg), "fcomi\t$reg">;
-def COM_FIPr : FPI<0xDF, MRM6r, (outs), (ins RSTi:$reg), "fcompi\t$reg">;
+def COM_FIr : FPI<0xDB, MRM6r, (outs), (ins RSTi:$reg),
+                  "fcomi\t{$reg, %st|st, $reg}">;
+def COM_FIPr : FPI<0xDF, MRM6r, (outs), (ins RSTi:$reg),
+                   "fcompi\t{$reg, %st|st, $reg}">;
 }
 } // SchedRW
 

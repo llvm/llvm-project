@@ -150,11 +150,11 @@ struct WasmRelocationEntry {
 
   bool hasAddend() const {
     switch (Type) {
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-    case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    case wasm::R_WASM_MEMORY_ADDR_LEB:
+    case wasm::R_WASM_MEMORY_ADDR_SLEB:
+    case wasm::R_WASM_MEMORY_ADDR_I32:
+    case wasm::R_WASM_FUNCTION_OFFSET_I32:
+    case wasm::R_WASM_SECTION_OFFSET_I32:
       return true;
     default:
       return false;
@@ -519,8 +519,8 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   // Absolute offset within a section or a function.
   // Currently only supported for for metadata sections.
   // See: test/MC/WebAssembly/blockaddress.ll
-  if (Type == wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32 ||
-      Type == wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32) {
+  if (Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
+      Type == wasm::R_WASM_SECTION_OFFSET_I32) {
     if (!FixupSection.getKind().isMetadata())
       report_fatal_error("relocations for function or section offsets are "
                          "only supported in metadata sections");
@@ -538,9 +538,9 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     SymA = cast<MCSymbolWasm>(SectionSymbol);
   }
 
-  // Relocation other than R_WEBASSEMBLY_TYPE_INDEX_LEB are required to be
+  // Relocation other than R_WASM_TYPE_INDEX_LEB are required to be
   // against a named symbol.
-  if (Type != wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB) {
+  if (Type != wasm::R_WASM_TYPE_INDEX_LEB) {
     if (SymA->getName().empty())
       report_fatal_error("relocations against un-named temporaries are not yet "
                          "supported by wasm");
@@ -578,33 +578,33 @@ static const MCSymbolWasm *ResolveSymbol(const MCSymbolWasm &Symbol) {
 uint32_t
 WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   switch (RelEntry.Type) {
-  case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-  case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32: {
+  case wasm::R_WASM_TABLE_INDEX_SLEB:
+  case wasm::R_WASM_TABLE_INDEX_I32: {
     // Provisional value is table address of the resolved symbol itself
     const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
     assert(Sym->isFunction());
     return TableIndices[Sym];
   }
-  case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
+  case wasm::R_WASM_TYPE_INDEX_LEB:
     // Provisional value is same as the index
     return getRelocationIndexValue(RelEntry);
-  case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-  case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-  case wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB:
+  case wasm::R_WASM_FUNCTION_INDEX_LEB:
+  case wasm::R_WASM_GLOBAL_INDEX_LEB:
+  case wasm::R_WASM_EVENT_INDEX_LEB:
     // Provisional value is function/global/event Wasm index
     if (!WasmIndices.count(RelEntry.Symbol))
       report_fatal_error("symbol not found in wasm index space: " +
                          RelEntry.Symbol->getName());
     return WasmIndices[RelEntry.Symbol];
-  case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-  case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32: {
+  case wasm::R_WASM_FUNCTION_OFFSET_I32:
+  case wasm::R_WASM_SECTION_OFFSET_I32: {
     const auto &Section =
         static_cast<const MCSectionWasm &>(RelEntry.Symbol->getSection());
     return Section.getSectionOffset() + RelEntry.Addend;
   }
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB: {
+  case wasm::R_WASM_MEMORY_ADDR_LEB:
+  case wasm::R_WASM_MEMORY_ADDR_I32:
+  case wasm::R_WASM_MEMORY_ADDR_SLEB: {
     // Provisional value is address of the global
     const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
     // For undefined symbols, use zero
@@ -660,7 +660,7 @@ static void addData(SmallVectorImpl<char> &DataBytes,
 
 uint32_t
 WasmObjectWriter::getRelocationIndexValue(const WasmRelocationEntry &RelEntry) {
-  if (RelEntry.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB) {
+  if (RelEntry.Type == wasm::R_WASM_TYPE_INDEX_LEB) {
     if (!TypeIndices.count(RelEntry.Symbol))
       report_fatal_error("symbol not found in type index space: " +
                          RelEntry.Symbol->getName());
@@ -684,21 +684,21 @@ void WasmObjectWriter::applyRelocations(
     uint32_t Value = getProvisionalValue(RelEntry);
 
     switch (RelEntry.Type) {
-    case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
-    case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-    case wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB:
+    case wasm::R_WASM_FUNCTION_INDEX_LEB:
+    case wasm::R_WASM_TYPE_INDEX_LEB:
+    case wasm::R_WASM_GLOBAL_INDEX_LEB:
+    case wasm::R_WASM_MEMORY_ADDR_LEB:
+    case wasm::R_WASM_EVENT_INDEX_LEB:
       WritePatchableLEB(Stream, Value, Offset);
       break;
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-    case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-    case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+    case wasm::R_WASM_TABLE_INDEX_I32:
+    case wasm::R_WASM_MEMORY_ADDR_I32:
+    case wasm::R_WASM_FUNCTION_OFFSET_I32:
+    case wasm::R_WASM_SECTION_OFFSET_I32:
       WriteI32(Stream, Value, Offset);
       break;
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
+    case wasm::R_WASM_TABLE_INDEX_SLEB:
+    case wasm::R_WASM_MEMORY_ADDR_SLEB:
       WritePatchableSLEB(Stream, Value, Offset);
       break;
     default:
@@ -1481,8 +1481,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       // Functions referenced by a relocation need to put in the table.  This is
       // purely to make the object file's provisional values readable, and is
       // ignored by the linker, which re-calculates the relocations itself.
-      if (Rel.Type != wasm::R_WEBASSEMBLY_TABLE_INDEX_I32 &&
-          Rel.Type != wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB)
+      if (Rel.Type != wasm::R_WASM_TABLE_INDEX_I32 &&
+          Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB)
         return;
       assert(Rel.Symbol->isFunction());
       const MCSymbolWasm &WS = *ResolveSymbol(*Rel.Symbol);

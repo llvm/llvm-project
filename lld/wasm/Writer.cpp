@@ -1019,14 +1019,14 @@ void Writer::assignIndexes() {
     ObjFile *File = Chunk->File;
     ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
     for (const WasmRelocation &Reloc : Chunk->getRelocations()) {
-      if (Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_I32 ||
-          Reloc.Type == R_WEBASSEMBLY_TABLE_INDEX_SLEB) {
+      if (Reloc.Type == R_WASM_TABLE_INDEX_I32 ||
+          Reloc.Type == R_WASM_TABLE_INDEX_SLEB) {
         FunctionSymbol *Sym = File->getFunctionSymbol(Reloc.Index);
         if (Sym->hasTableIndex() || !Sym->hasFunctionIndex())
           continue;
         Sym->setTableIndex(TableIndex++);
         IndirectFunctions.emplace_back(Sym);
-      } else if (Reloc.Type == R_WEBASSEMBLY_TYPE_INDEX_LEB) {
+      } else if (Reloc.Type == R_WASM_TYPE_INDEX_LEB) {
         // Mark target type as live
         File->TypeMap[Reloc.Index] = registerType(Types[Reloc.Index]);
         File->TypeIsUsed[Reloc.Index] = true;

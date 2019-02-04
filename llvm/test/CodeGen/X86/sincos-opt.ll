@@ -115,13 +115,13 @@ entry:
 ; GNU_SINCOS: callq sincosl
 ; GNU_SINCOS: fldt 16(%rsp)
 ; GNU_SINCOS: fldt 32(%rsp)
-; GNU_SINCOS: faddp %st(1)
+; GNU_SINCOS: faddp %st, %st(1)
 
 ; GNU_SINCOS_FASTMATH-LABEL: test3:
 ; GNU_SINCOS_FASTMATH: callq sincosl
 ; GNU_SINCOS_FASTMATH: fldt 16(%{{[re]}}sp)
 ; GNU_SINCOS_FASTMATH: fldt 32(%{{[re]}}sp)
-; GNU_SINCOS_FASTMATH: faddp %st(1)
+; GNU_SINCOS_FASTMATH: faddp %st, %st(1)
   %call = tail call x86_fp80 @sinl(x86_fp80 %x) readnone
   %call1 = tail call x86_fp80 @cosl(x86_fp80 %x) readnone
   %add = fadd x86_fp80 %call, %call1

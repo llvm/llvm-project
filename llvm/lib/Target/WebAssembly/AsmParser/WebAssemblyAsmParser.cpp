@@ -17,10 +17,12 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -169,6 +171,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
     FunctionStart,
     FunctionLocals,
     Instructions,
+    EndFunction,
   } CurrentState = FileStart;
 
   // For ensuring blocks are properly nested.
@@ -186,6 +189,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   // We track this to see if a .functype following a label is the same,
   // as this is how we recognize the start of a function.
   MCSymbol *LastLabel = nullptr;
+  MCSymbol *LastFunctionLabel = nullptr;
 
 public:
   WebAssemblyAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -445,6 +449,7 @@ public:
       if (pop(BaseName, Block))
         return true;
     } else if (BaseName == "end_function") {
+      CurrentState = EndFunction;
       if (pop(BaseName, Function) || ensureEmptyNestingStack())
         return true;
     }
@@ -604,6 +609,7 @@ public:
         if (ensureEmptyNestingStack())
           return true;
         CurrentState = FunctionStart;
+        LastFunctionLabel = LastLabel;
         push(Function);
       }
       auto Signature = make_unique<wasm::WasmSignature>();
@@ -666,8 +672,12 @@ public:
             *Out.getTargetStreamer());
         TOut.emitLocal(SmallVector<wasm::ValType, 0>());
       }
-      CurrentState = Instructions;
       Out.EmitInstruction(Inst, getSTI());
+      if (CurrentState == EndFunction) {
+        onEndOfFunction();
+      } else {
+        CurrentState = Instructions;
+      }
       return false;
     }
     case Match_MissingFeature:
@@ -691,6 +701,30 @@ public:
     }
     }
     llvm_unreachable("Implement any new match types added!");
+  }
+
+  void doBeforeLabelEmit(MCSymbol *Symbol) override {
+    // Start a new section for the next function automatically, since our
+    // object writer expects each function to have its own section. This way
+    // The user can't forget this "convention".
+    auto SymName = Symbol->getName();
+    if (SymName.startswith(".L"))
+      return; // Local Symbol.
+    auto SecName = ".text." + SymName;
+    auto WS = getContext().getWasmSection(SecName, SectionKind::getText());
+    getStreamer().SwitchSection(WS);
+  }
+
+  void onEndOfFunction() {
+    // Automatically output a .size directive, so it becomes optional for the
+    // user.
+    auto TempSym = getContext().createLinkerPrivateTempSymbol();
+    getStreamer().EmitLabel(TempSym);
+    auto Start = MCSymbolRefExpr::create(LastLabel, getContext());
+    auto End = MCSymbolRefExpr::create(TempSym, getContext());
+    auto Expr =
+        MCBinaryExpr::create(MCBinaryExpr::Sub, End, Start, getContext());
+    getStreamer().emitELFSize(LastFunctionLabel, Expr);
   }
 
   void onEndOfFile() override { ensureEmptyNestingStack(); }
