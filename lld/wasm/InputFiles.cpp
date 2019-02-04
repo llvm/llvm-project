@@ -447,7 +447,7 @@ static Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &ObjSym,
 
   if (ObjSym.isUndefined()) {
     if (ObjSym.isExecutable())
-      return Symtab->addUndefinedFunction(Name, kDefaultModule, Flags, &F, nullptr);
+      return Symtab->addUndefinedFunction(Name, DefaultModule, Flags, &F, nullptr);
     return Symtab->addUndefinedData(Name, Flags, &F);
   }
 

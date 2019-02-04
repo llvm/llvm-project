@@ -39,9 +39,9 @@ using namespace llvm::wasm;
 using namespace lld;
 using namespace lld::wasm;
 
-static constexpr int kStackAlignment = 16;
-static constexpr const char *kFunctionTableName = "__indirect_function_table";
-const char *lld::wasm::kDefaultModule = "env";
+static constexpr int StackAlignment = 16;
+static constexpr const char *FunctionTableName = "__indirect_function_table";
+const char *lld::wasm::DefaultModule = "env";
 
 namespace {
 
@@ -157,7 +157,7 @@ void Writer::createImportSection() {
 
   if (Config->ImportMemory) {
     WasmImport Import;
-    Import.Module = kDefaultModule;
+    Import.Module = DefaultModule;
     Import.Field = "memory";
     Import.Kind = WASM_EXTERNAL_MEMORY;
     Import.Memory.Flags = 0;
@@ -174,8 +174,8 @@ void Writer::createImportSection() {
   if (Config->ImportTable) {
     uint32_t TableSize = TableBase + IndirectFunctions.size();
     WasmImport Import;
-    Import.Module = kDefaultModule;
-    Import.Field = kFunctionTableName;
+    Import.Module = DefaultModule;
+    Import.Field = FunctionTableName;
     Import.Kind = WASM_EXTERNAL_TABLE;
     Import.Table.ElemType = WASM_TYPE_FUNCREF;
     Import.Table.Limits = {0, TableSize, 0};
@@ -187,7 +187,7 @@ void Writer::createImportSection() {
     if (auto *F = dyn_cast<UndefinedFunction>(Sym))
       Import.Module = F->Module;
     else
-      Import.Module = kDefaultModule;
+      Import.Module = DefaultModule;
 
     Import.Field = Sym->getName();
     if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
@@ -709,9 +709,9 @@ void Writer::layoutMemory() {
   auto PlaceStack = [&]() {
     if (Config->Relocatable || Config->Shared)
       return;
-    MemoryPtr = alignTo(MemoryPtr, kStackAlignment);
-    if (Config->ZStackSize != alignTo(Config->ZStackSize, kStackAlignment))
-      error("stack size must be " + Twine(kStackAlignment) + "-byte aligned");
+    MemoryPtr = alignTo(MemoryPtr, StackAlignment);
+    if (Config->ZStackSize != alignTo(Config->ZStackSize, StackAlignment))
+      error("stack size must be " + Twine(StackAlignment) + "-byte aligned");
     log("mem: stack size  = " + Twine(Config->ZStackSize));
     log("mem: stack base  = " + Twine(MemoryPtr));
     MemoryPtr += Config->ZStackSize;
@@ -864,7 +864,7 @@ void Writer::calculateExports() {
     Exports.push_back(WasmExport{"memory", WASM_EXTERNAL_MEMORY, 0});
 
   if (!Config->Relocatable && Config->ExportTable)
-    Exports.push_back(WasmExport{kFunctionTableName, WASM_EXTERNAL_TABLE, 0});
+    Exports.push_back(WasmExport{FunctionTableName, WASM_EXTERNAL_TABLE, 0});
 
   unsigned FakeGlobalIndex = NumImportedGlobals + InputGlobals.size();
 
