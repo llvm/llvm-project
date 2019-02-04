@@ -460,7 +460,7 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X86-NEXT:    fstp %st(1)
 ; X86-NEXT:    fldz
 ; X86-NEXT:  .LBB10_2:
-; X86-NEXT:    fstp %st
+; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -542,7 +542,7 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    fstp %st(1)
 ; X86-NEXT:    fldz
 ; X86-NEXT:  .LBB11_2:
-; X86-NEXT:    fstp %st
+; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F

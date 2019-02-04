@@ -495,7 +495,7 @@ define void @t16() nounwind ssp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    calll bar4
-; X86-NEXT:    fstp %st
+; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 ;
@@ -541,7 +541,7 @@ define void @t18() nounwind ssp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    calll bar6
-; X86-NEXT:    fstp %st
+; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 ;

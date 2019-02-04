@@ -286,7 +286,7 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87_WIN-NEXT:    fstp %st(1)
 ; X87_WIN-NEXT:    fldz
 ; X87_WIN-NEXT:  LBB0_2:
-; X87_WIN-NEXT:    fstp %st
+; X87_WIN-NEXT:    fstp %st(0)
 ; X87_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87_WIN-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -320,7 +320,7 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87_LIN-NEXT:    fstp %st(1)
 ; X87_LIN-NEXT:    fldz
 ; X87_LIN-NEXT:  .LBB0_2:
-; X87_LIN-NEXT:    fstp %st
+; X87_LIN-NEXT:    fstp %st(0)
 ; X87_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87_LIN-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -774,7 +774,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87_WIN-NEXT:    fstp %st(1)
 ; X87_WIN-NEXT:    fldz
 ; X87_WIN-NEXT:  LBB2_2:
-; X87_WIN-NEXT:    fstp %st
+; X87_WIN-NEXT:    fstp %st(0)
 ; X87_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87_WIN-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -808,7 +808,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87_LIN-NEXT:    fstp %st(1)
 ; X87_LIN-NEXT:    fldz
 ; X87_LIN-NEXT:  .LBB2_2:
-; X87_LIN-NEXT:    fstp %st
+; X87_LIN-NEXT:    fstp %st(0)
 ; X87_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87_LIN-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -1305,7 +1305,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87_WIN-NEXT:    fstp %st(1)
 ; X87_WIN-NEXT:    fldz
 ; X87_WIN-NEXT:  LBB4_2:
-; X87_WIN-NEXT:    fstp %st
+; X87_WIN-NEXT:    fstp %st(0)
 ; X87_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87_WIN-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
@@ -1339,7 +1339,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87_LIN-NEXT:    fstp %st(1)
 ; X87_LIN-NEXT:    fldz
 ; X87_LIN-NEXT:  .LBB4_2:
-; X87_LIN-NEXT:    fstp %st
+; X87_LIN-NEXT:    fstp %st(0)
 ; X87_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X87_LIN-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F

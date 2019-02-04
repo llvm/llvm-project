@@ -91,10 +91,10 @@ static cl::opt<float>
 
 static cl::opt<std::string>
     AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
-                               cl::init("-"));
+                               cl::init(""));
 static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
-                                      cl::desc(""), cl::init("-"));
+                                      cl::desc(""), cl::init(""));
 
 static cl::opt<std::string>
     CpuName("mcpu",
@@ -403,6 +403,13 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
 static void analysisMain() {
   if (BenchmarkFile.empty())
     llvm::report_fatal_error("--benchmarks-file must be set.");
+
+  if (AnalysisClustersOutputFile.empty() &&
+      AnalysisInconsistenciesOutputFile.empty()) {
+    llvm::report_fatal_error(
+        "At least one of --analysis-clusters-output-file and "
+        "--analysis-inconsistencies-output-file must be specified.");
+  }
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();

@@ -508,17 +508,17 @@ define x86_regcallcc double @test_CallargRetDouble(double %a)  {
 define x86_regcallcc x86_fp80 @test_argRetf80(x86_fp80 %a0) nounwind {
 ; X32-LABEL: test_argRetf80:
 ; X32:       # %bb.0:
-; X32-NEXT:    fadd %st, %st
+; X32-NEXT:    fadd %st, %st(0)
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argRetf80:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    fadd %st, %st
+; WIN64-NEXT:    fadd %st, %st(0)
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argRetf80:
 ; LINUXOSX64:       # %bb.0:
-; LINUXOSX64-NEXT:    fadd %st, %st
+; LINUXOSX64-NEXT:    fadd %st, %st(0)
 ; LINUXOSX64-NEXT:    retq
   %r0 = fadd x86_fp80 %a0, %a0
   ret x86_fp80 %r0
@@ -529,9 +529,9 @@ define x86_regcallcc x86_fp80 @test_CallargRetf80(x86_fp80 %a)  {
 ; X32-LABEL: test_CallargRetf80:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esp
-; X32-NEXT:    fadd %st, %st
+; X32-NEXT:    fadd %st, %st(0)
 ; X32-NEXT:    calll _test_argRetf80
-; X32-NEXT:    fadd %st, %st
+; X32-NEXT:    fadd %st, %st(0)
 ; X32-NEXT:    popl %esp
 ; X32-NEXT:    retl
 ;
@@ -540,9 +540,9 @@ define x86_regcallcc x86_fp80 @test_CallargRetf80(x86_fp80 %a)  {
 ; WIN64-NEXT:    pushq %rsp
 ; WIN64-NEXT:    .seh_pushreg 4
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    fadd %st, %st
+; WIN64-NEXT:    fadd %st, %st(0)
 ; WIN64-NEXT:    callq test_argRetf80
-; WIN64-NEXT:    fadd %st, %st
+; WIN64-NEXT:    fadd %st, %st(0)
 ; WIN64-NEXT:    popq %rsp
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_handlerdata
@@ -554,9 +554,9 @@ define x86_regcallcc x86_fp80 @test_CallargRetf80(x86_fp80 %a)  {
 ; LINUXOSX64-NEXT:    pushq %rsp
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 16
 ; LINUXOSX64-NEXT:    .cfi_offset %rsp, -16
-; LINUXOSX64-NEXT:    fadd %st, %st
+; LINUXOSX64-NEXT:    fadd %st, %st(0)
 ; LINUXOSX64-NEXT:    callq test_argRetf80
-; LINUXOSX64-NEXT:    fadd %st, %st
+; LINUXOSX64-NEXT:    fadd %st, %st(0)
 ; LINUXOSX64-NEXT:    popq %rsp
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 8
 ; LINUXOSX64-NEXT:    retq
