@@ -975,15 +975,15 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
   // Create calls to wasm.get.exception and wasm.get.ehselector intrinsics.
   // Before they are lowered appropriately later, they provide values for the
   // exception and selector.
-  llvm::Value *GetExnFn =
+  llvm::Function *GetExnFn =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_get_exception);
-  llvm::Value *GetSelectorFn =
+  llvm::Function *GetSelectorFn =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_get_ehselector);
   llvm::CallInst *Exn = CGF.Builder.CreateCall(GetExnFn, CPI);
   CGF.Builder.CreateStore(Exn, CGF.getExceptionSlot());
   llvm::CallInst *Selector = CGF.Builder.CreateCall(GetSelectorFn, CPI);
 
-  llvm::Value *TypeIDFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+  llvm::Function *TypeIDFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
 
   // If there's only a single catch-all, branch directly to its handler.
   if (CatchScope.getNumHandlers() == 1 &&
@@ -1067,7 +1067,7 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
   CGF.EmitBlockAfterUses(dispatchBlock);
 
   // Select the right handler.
-  llvm::Value *llvm_eh_typeid_for =
+  llvm::Function *llvm_eh_typeid_for =
     CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
 
   // Load the selector value.
@@ -1543,7 +1543,7 @@ llvm::BasicBlock *CodeGenFunction::getTerminateFunclet() {
   // __clang_call_terminate function.
   if (getLangOpts().CPlusPlus &&
       EHPersonality::get(*this).isWasmPersonality()) {
-    llvm::Value *GetExnFn =
+    llvm::Function *GetExnFn =
         CGM.getIntrinsic(llvm::Intrinsic::wasm_get_exception);
     Exn = Builder.CreateCall(GetExnFn, CurrentFuncletPad);
   }
@@ -1630,7 +1630,7 @@ struct PerformSEHFinally final : EHScopeStack::Cleanup {
     if (CGF.IsOutlinedSEHHelper) {
       FP = &CGF.CurFn->arg_begin()[1];
     } else {
-      llvm::Value *LocalAddrFn =
+      llvm::Function *LocalAddrFn =
           CGM.getIntrinsic(llvm::Intrinsic::localaddress);
       FP = CGF.Builder.CreateCall(LocalAddrFn);
     }

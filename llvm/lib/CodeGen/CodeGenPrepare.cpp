@@ -1149,19 +1149,21 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
 
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
-static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI) {
-  // TODO: Why is this transform limited by this condition?
-  if (TLI.hasMultipleConditionRegisters())
-    return false;
-
+static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
+                                      const DataLayout &DL) {
   Value *A, *B;
   Instruction *AddI;
   if (!match(Cmp,
              m_UAddWithOverflow(m_Value(A), m_Value(B), m_Instruction(AddI))))
     return false;
 
+  // Allow the transform as long as we have an integer type that is not
+  // obviously illegal and unsupported.
   Type *Ty = AddI->getType();
   if (!isa<IntegerType>(Ty))
+    return false;
+  EVT CodegenVT = TLI.getValueType(DL, Ty);
+  if (!CodegenVT.isSimple() && TLI.isOperationExpand(ISD::UADDO, CodegenVT))
     return false;
 
   // We don't want to move around uses of condition values this late, so we we
@@ -1263,11 +1265,12 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
   return MadeChange;
 }
 
-static bool optimizeCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
+static bool optimizeCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
+                                  const DataLayout &DL) {
   if (sinkCmpExpression(Cmp, TLI))
     return true;
 
-  if (combineToUAddWithOverflow(Cmp, TLI))
+  if (combineToUAddWithOverflow(Cmp, TLI, DL))
     return true;
 
   return false;
@@ -6714,7 +6717,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   }
 
   if (CmpInst *CI = dyn_cast<CmpInst>(I))
-    if (TLI && optimizeCmpExpression(CI, *TLI))
+    if (TLI && optimizeCmpExpression(CI, *TLI, *DL))
       return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {

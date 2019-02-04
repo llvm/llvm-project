@@ -252,15 +252,14 @@ define void @test_18446744073709551615(i64*, i64*) {
 define i1 @illegal_type(i17 %x, i17* %p) {
 ; CHECK-LABEL: illegal_type:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $131071, %edi # imm = 0x1FFFF
 ; CHECK-NEXT:    addl $29, %edi
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andl $131071, %ecx # imm = 0x1FFFF
-; CHECK-NEXT:    cmpl %edi, %ecx
-; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    movw %di, (%rsi)
-; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    movb %cl, 2(%rsi)
+; CHECK-NEXT:    andl $131071, %edi # imm = 0x1FFFF
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    movb %al, 2(%rsi)
+; CHECK-NEXT:    cmpl $29, %edi
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %a = add i17 %x, 29
   store i17 %a, i17* %p

@@ -286,10 +286,11 @@ private:
   void mark(Stmt *S) {
     if (!S) return;
 
-    while (LabelStmt *Label = dyn_cast<LabelStmt>(S))
+    while (auto *Label = dyn_cast<LabelStmt>(S))
       S = Label->getSubStmt();
-    S = S->IgnoreImplicit();
-    if (Expr *E = dyn_cast<Expr>(S))
+    if (auto *E = dyn_cast<Expr>(S))
+      S = E->IgnoreImplicit();
+    if (auto *E = dyn_cast<Expr>(S))
       Removables.insert(E);
   }
 };
