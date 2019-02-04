@@ -97,7 +97,7 @@ void basic_tests()
 }
 
 
-int main()
+int main(int, char**)
 {
 
     basic_tests();
@@ -110,4 +110,6 @@ int main()
 //     test<const int*>();
 //     test<      int*>();
 
+
+  return 0;
 }

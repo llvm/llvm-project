@@ -15,8 +15,10 @@
 #include <thread>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::thread::id id = std::this_thread::get_id();
     assert(id != std::thread::id());
+
+  return 0;
 }

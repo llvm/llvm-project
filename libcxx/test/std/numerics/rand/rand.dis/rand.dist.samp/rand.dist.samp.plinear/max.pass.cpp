@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_linear_distribution<> D;
@@ -26,4 +26,6 @@ int main()
         D d(b, b+Np, p);
         assert(d.max() == 17);
     }
+
+  return 0;
 }

@@ -33,10 +33,12 @@ void test_function()
     test_function_imp<const volatile T>();
 }
 
-int main()
+int main(int, char**)
 {
     test_function<void ()>();
     test_function<void (int)>();
     test_function<int (double)>();
     test_function<int (double, char)>();
+
+  return 0;
 }

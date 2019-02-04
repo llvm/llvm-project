@@ -310,10 +310,12 @@ void test_caller_accepts_nonconst() {
   std::visit(Visitor{}, v);
 }
 
-int main() {
+int main(int, char**) {
   test_call_operator_forwarding();
   test_argument_forwarding();
   test_constexpr();
   test_exceptions();
   test_caller_accepts_nonconst();
+
+  return 0;
 }

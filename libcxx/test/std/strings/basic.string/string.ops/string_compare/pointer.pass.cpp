@@ -31,7 +31,7 @@ test(const S& s, const typename S::value_type* str, int x)
     assert(sign(s.compare(str)) == sign(x));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -73,4 +73,6 @@ int main()
     test(S("abcdefghijklmnopqrst"), "abcdefghijklmnopqrst", 0);
     }
 #endif
+
+  return 0;
 }

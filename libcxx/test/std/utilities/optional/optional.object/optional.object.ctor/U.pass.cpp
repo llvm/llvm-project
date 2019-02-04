@@ -153,7 +153,9 @@ void test_explicit() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
     test_implicit();
     test_explicit();
+
+  return 0;
 }

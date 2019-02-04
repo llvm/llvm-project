@@ -28,8 +28,10 @@ test(C c)
     assert(c.back() == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::vector<int>());
     test(nasty_vector<int>());
+
+  return 0;
 }

@@ -33,7 +33,7 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::packaged_task<double(int, char)> p(A(5));
@@ -59,4 +59,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

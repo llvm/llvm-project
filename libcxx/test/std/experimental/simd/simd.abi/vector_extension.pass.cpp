@@ -63,4 +63,6 @@ static_assert(std::is_same<ex::simd_abi::compatible<int8_t>,
                            ex::__simd_abi<ex::_StorageKind::_Array, 16>>::value,
               "");
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

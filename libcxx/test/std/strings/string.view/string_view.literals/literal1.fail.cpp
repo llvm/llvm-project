@@ -14,9 +14,11 @@
 #include <string_view>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using std::string_view;
 
     string_view foo  =   ""sv;  // should fail w/conversion operator not found
+
+  return 0;
 }

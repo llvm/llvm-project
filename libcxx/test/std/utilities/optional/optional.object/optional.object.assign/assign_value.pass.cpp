@@ -241,7 +241,7 @@ enum MyEnum { Zero, One, Two, Three, FortyTwo = 42 };
 
 using Fn = void(*)();
 
-int main()
+int main(int, char**)
 {
     test_sfinae();
     // Test with instrumented type
@@ -268,4 +268,6 @@ int main()
         assert(**opt == 3);
     }
     test_throws();
+
+  return 0;
 }

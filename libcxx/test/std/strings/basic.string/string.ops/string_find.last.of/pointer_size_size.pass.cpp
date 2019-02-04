@@ -365,7 +365,7 @@ void test3()
     test(S("hnbrcplsjfgiktoedmaq"), "qprlsfojamgndekthibc", 21, 20, 19);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -383,4 +383,6 @@ int main()
     test3<S>();
     }
 #endif
+
+  return 0;
 }

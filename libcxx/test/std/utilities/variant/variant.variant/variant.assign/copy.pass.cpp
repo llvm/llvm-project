@@ -590,7 +590,7 @@ void test_constexpr_copy_assignment() {
 #endif // > C++17
 }
 
-int main() {
+int main(int, char**) {
   test_copy_assignment_empty_empty();
   test_copy_assignment_non_empty_empty();
   test_copy_assignment_empty_non_empty();
@@ -599,4 +599,6 @@ int main() {
   test_copy_assignment_sfinae();
   test_copy_assignment_not_noexcept();
   test_constexpr_copy_assignment();
+
+  return 0;
 }

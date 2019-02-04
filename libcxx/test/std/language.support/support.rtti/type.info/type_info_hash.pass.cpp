@@ -12,11 +12,13 @@
 #include <cstring>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     const std::type_info& t1 = typeid(int);
     const std::type_info& t2 = typeid(int);
     const std::type_info& t3 = typeid(short);
     assert(t1.hash_code() == t2.hash_code());
     assert(t1.hash_code() != t3.hash_code());
+
+  return 0;
 }

@@ -17,7 +17,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex phone_numbers("\\d{3}-\\d{4}");
@@ -33,4 +33,6 @@ int main()
         assert(!(i2 == i));
         assert(i2 != i);
     }
+
+  return 0;
 }

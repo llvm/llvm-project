@@ -11,7 +11,9 @@
 
 #include <unordered_set>
 
-int main()
+int main(int, char**)
 {
     std::unordered_set<int, std::hash<int>, std::less<int>, std::allocator<long> > v;
+
+  return 0;
 }

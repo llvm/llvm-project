@@ -43,9 +43,11 @@ test()
     assert(c3.imag() ==   3.5);
 }
 
-int main()
+int main(int, char**)
 {
     test<float>();
     test<double>();
     test<long double>();
+
+  return 0;
 }

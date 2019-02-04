@@ -20,7 +20,7 @@
 #include <iterator>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::locale::facet, std::num_get<char> >::value), "");
     static_assert((std::is_base_of<std::locale::facet, std::num_get<wchar_t> >::value), "");
@@ -28,4 +28,6 @@ int main()
     static_assert((std::is_same<std::num_get<wchar_t>::char_type, wchar_t>::value), "");
     static_assert((std::is_same<std::num_get<char>::iter_type, std::istreambuf_iterator<char> >::value), "");
     static_assert((std::is_same<std::num_get<wchar_t>::iter_type, std::istreambuf_iterator<wchar_t> >::value), "");
+
+  return 0;
 }

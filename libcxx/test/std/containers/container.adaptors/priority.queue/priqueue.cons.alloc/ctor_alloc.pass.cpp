@@ -40,9 +40,11 @@ struct test
     using base::c;
 };
 
-int main()
+int main(int, char**)
 {
     test<int> q((test_allocator<int>(3)));
     assert(q.c.get_allocator() == test_allocator<int>(3));
     assert(q.c.size() == 0);
+
+  return 0;
 }

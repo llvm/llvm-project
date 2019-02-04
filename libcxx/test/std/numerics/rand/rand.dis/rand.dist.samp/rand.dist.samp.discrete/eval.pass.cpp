@@ -19,7 +19,7 @@
 #include <vector>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::discrete_distribution<> D;
@@ -275,4 +275,6 @@ int main()
             else
                 assert(u[i] == 0);
     }
+
+  return 0;
 }

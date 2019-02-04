@@ -30,7 +30,7 @@ test(It i)
     assert(std::make_move_iterator(i) == r);
 }
 
-int main()
+int main(int, char**)
 {
     {
     char s[] = "1234567890";
@@ -53,4 +53,6 @@ int main()
     static_assert(iter.base() == p);
     }
 #endif
+
+  return 0;
 }

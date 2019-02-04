@@ -57,7 +57,9 @@ struct TEST_ALIGNAS(TEST_ALIGNOF(std::max_align_t) * 2) TestType2 {
   char data[1000];
 };
 
-int main() {
+//static_assert(sizeof(void*) == 4, "");
+
+int main(int, char**) {
   test_type<char>();
   test_type<int>();
   test_type<double>();
@@ -65,4 +67,6 @@ int main() {
   test_type<std::max_align_t>();
   test_type<TestType1>();
   test_type<TestType2>();
+
+  return 0;
 }

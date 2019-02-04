@@ -18,7 +18,7 @@
 #include <atomic>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::atomic_flag f; // uninitialized
@@ -76,4 +76,6 @@ int main()
         f.clear(std::memory_order_seq_cst);
         assert(f.test_and_set() == 0);
     }
+
+  return 0;
 }

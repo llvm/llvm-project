@@ -54,7 +54,7 @@ constexpr bool can_swap() {
 #endif
 
 
-int main()
+int main(int, char**)
 {
     {
         int i[3] = {1, 2, 3};
@@ -97,4 +97,6 @@ int main()
         static_assert(noexcept(std::swap(ma, ma)), "");
     }
 #endif
+
+  return 0;
 }

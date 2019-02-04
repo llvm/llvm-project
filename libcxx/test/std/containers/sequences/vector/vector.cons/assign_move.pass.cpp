@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<MoveOnly, test_allocator<MoveOnly> > l(test_allocator<MoveOnly>(5));
@@ -95,4 +95,6 @@ int main()
         assert(l2.get_allocator() == lo.get_allocator());
         assert(is_contiguous_container_asan_correct(l2));
     }
+
+  return 0;
 }

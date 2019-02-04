@@ -61,9 +61,11 @@ void test_rvalue_any_cast_request_lvalue()
     any_cast<int&>(42);
 }
 
-int main()
+int main(int, char**)
 {
     test_const_lvalue_cast_request_non_const_lvalue();
     test_lvalue_any_cast_request_rvalue();
     test_rvalue_any_cast_request_lvalue();
+
+  return 0;
 }

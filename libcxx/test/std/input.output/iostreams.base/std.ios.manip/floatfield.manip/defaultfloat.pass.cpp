@@ -18,7 +18,7 @@
 
 struct testbuf : public std::streambuf {};
 
-int main()
+int main(int, char**)
 {
     testbuf sb;
     std::ios ios(&sb);
@@ -26,4 +26,6 @@ int main()
     assert(&r == &ios);
     assert(!(ios.flags() & std::ios::fixed));
     assert(!(ios.flags() & std::ios::scientific));
+
+  return 0;
 }

@@ -14,9 +14,11 @@
 
 #include <thread>
 
-int main()
+int main(int, char**)
 {
 #ifndef __STDCPP_THREADS__
 #error __STDCPP_THREADS__ is not defined
 #endif
+
+  return 0;
 }

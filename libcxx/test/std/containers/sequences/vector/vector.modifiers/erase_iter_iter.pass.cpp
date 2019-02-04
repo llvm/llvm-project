@@ -32,7 +32,7 @@ struct Throws {
 bool Throws::sThrows = false;
 #endif
 
-int main()
+int main(int, char**)
 {
     int a1[] = {1, 2, 3};
     {
@@ -152,4 +152,6 @@ int main()
     assert(v.size() == 0);
     }
 #endif
+
+  return 0;
 }

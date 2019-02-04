@@ -21,7 +21,9 @@ struct A {
   A() : i_(7) {}
 };
 
-int main() {
+int main(int, char**) {
   std::unique_ptr<A> p(new A);
   assert(p->i_ == 7);
+
+  return 0;
 }

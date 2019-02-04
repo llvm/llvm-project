@@ -28,7 +28,7 @@
 #include "MoveOnly.h"
 
 
-int main()
+int main(int, char**)
 {
     std::vector<MoveOnly> lhs, rhs;
     lhs.push_back(MoveOnly(2));
@@ -42,4 +42,6 @@ int main()
 
     assert(res.size() == 1);
     assert(res[0].get() == 2);
+
+  return 0;
 }

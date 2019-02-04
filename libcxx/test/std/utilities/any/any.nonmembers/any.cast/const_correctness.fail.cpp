@@ -24,7 +24,7 @@ struct TestType2 {};
 // is triggered by these tests.
 // expected-error@const_correctness.fail.cpp:* 0+ {{call to unavailable function 'any_cast': introduced in macOS 10.14}}
 
-int main()
+int main(int, char**)
 {
     using std::any;
     using std::any_cast;
@@ -46,4 +46,6 @@ int main()
     // expected-error@any:* {{cannot cast from lvalue of type 'const TestType2' to rvalue reference type 'TestType2 &&'; types are not compatible}}
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
     any_cast<TestType2 &&>(static_cast<any const&&>(a)); // expected-note {{requested here}}
+
+  return 0;
 }

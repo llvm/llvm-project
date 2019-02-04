@@ -28,7 +28,9 @@ test()
     assert(m.prefix().matched == true);
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

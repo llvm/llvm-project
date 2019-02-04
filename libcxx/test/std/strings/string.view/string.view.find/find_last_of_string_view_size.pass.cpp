@@ -137,11 +137,13 @@ void test1()
     test(S("pniotcfrhqsmgdkjbael"), S("htaobedqikfplcgjsmrn"), 19);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
     test0<S>();
     test1<S>();
     }
+
+  return 0;
 }

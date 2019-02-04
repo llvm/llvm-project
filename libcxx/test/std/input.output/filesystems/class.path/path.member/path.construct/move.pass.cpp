@@ -22,7 +22,7 @@
 #include "count_new.hpp"
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   static_assert(std::is_nothrow_move_constructible<path>::value, "");
   assert(globalMemCounter.checkOutstandingNewEq(0));
@@ -36,4 +36,6 @@ int main() {
     assert(p2.native() == s);
     assert(p.native() != s); // Testing moved from state
   }
+
+  return 0;
 }

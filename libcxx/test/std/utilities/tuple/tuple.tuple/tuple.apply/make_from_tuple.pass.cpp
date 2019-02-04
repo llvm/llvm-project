@@ -205,9 +205,11 @@ void test_noexcept() {
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_constexpr_construction();
     test_perfect_forwarding();
     test_noexcept();
+
+  return 0;
 }

@@ -191,7 +191,7 @@ void test_copy_assign_throws()
 #endif
 }
 
-int main() {
+int main(int, char**) {
     test_copy_assign<small1, small2>();
     test_copy_assign<large1, large2>();
     test_copy_assign<small, large>();
@@ -201,4 +201,6 @@ int main() {
     test_copy_assign_self();
     test_copy_assign_throws<small_throws_on_copy>();
     test_copy_assign_throws<large_throws_on_copy>();
+
+  return 0;
 }

@@ -38,7 +38,7 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("  Sat Dec 31 23:55:59 2061");
@@ -72,4 +72,6 @@ int main()
         assert(is.eof());
         assert(!is.fail());
     }
+
+  return 0;
 }

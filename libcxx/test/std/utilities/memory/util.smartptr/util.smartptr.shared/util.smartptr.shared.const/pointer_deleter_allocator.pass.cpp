@@ -28,7 +28,7 @@ struct A
 int A::count = 0;
 
 
-int main()
+int main(int, char**)
 {
     {
     A* ptr = new A;
@@ -85,4 +85,6 @@ int main()
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
 #endif
+
+  return 0;
 }

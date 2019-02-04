@@ -53,6 +53,8 @@ void testKeyValueTrait() {
   }
 }
 
-int main() {
+int main(int, char**) {
   testKeyValueTrait();
+
+  return 0;
 }

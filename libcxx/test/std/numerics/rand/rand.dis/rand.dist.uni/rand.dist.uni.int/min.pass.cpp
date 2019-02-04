@@ -16,11 +16,13 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::uniform_int_distribution<> D;
         D d(3, 8);
         assert(d.min() == 3);
     }
+
+  return 0;
 }

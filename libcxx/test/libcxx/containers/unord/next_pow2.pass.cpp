@@ -74,7 +74,7 @@ fuzz_unordered_map_reserve(unsigned num_inserts,
     assert(m.bucket_count() >= num_reserve2);
 }
 
-int main()
+int main(int, char**)
 {
     test_next_pow2();
 

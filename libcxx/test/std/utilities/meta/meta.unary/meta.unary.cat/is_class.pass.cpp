@@ -70,7 +70,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_class<Empty>();
     test_is_class<bit_zero>();
@@ -96,4 +96,6 @@ int main()
     test_is_not_class<Enum>();
     test_is_not_class<Union>();
     test_is_not_class<FunctionPtr>();
+
+  return 0;
 }

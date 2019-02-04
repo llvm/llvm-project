@@ -15,7 +15,4 @@ std::set<int> s;
 using std::map;
 using std::multimap;
 
-int main(void)
-{
-       return 0;
-}
+int main(int, char**) { return 0; }

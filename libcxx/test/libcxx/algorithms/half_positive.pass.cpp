@@ -28,7 +28,7 @@ TEST_CONSTEXPR bool test(IntType max_v = IntType(std::numeric_limits<UnderlyingT
 
 }  // namespace
 
-int main()
+int main(int, char**)
 {
     {
         assert(test<char>());
@@ -52,4 +52,6 @@ int main()
 #endif  // !defined(_LIBCPP_HAS_NO_INT128)
     }
 #endif // TEST_STD_VER >= 11
+
+  return 0;
 }

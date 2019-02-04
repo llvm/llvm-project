@@ -159,7 +159,9 @@ void test_basic() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_basic();
   test_emplace_sfinae();
+
+  return 0;
 }

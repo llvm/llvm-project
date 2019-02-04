@@ -35,7 +35,7 @@ int my_facet::count = 0;
 
 //#endif
 
-int main()
+int main(int, char**)
 {
 //#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     {
@@ -54,4 +54,6 @@ int main()
     }
     assert(my_facet::count == 0);
 //#endif
+
+  return 0;
 }

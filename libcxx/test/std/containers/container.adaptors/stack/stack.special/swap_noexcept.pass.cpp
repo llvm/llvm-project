@@ -21,10 +21,12 @@
 
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::stack<MoveOnly> C;
         static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
+
+  return 0;
 }

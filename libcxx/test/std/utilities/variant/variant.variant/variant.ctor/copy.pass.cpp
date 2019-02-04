@@ -260,7 +260,7 @@ void test_constexpr_copy_ctor() {
 #endif // > C++17
 }
 
-int main() {
+int main(int, char**) {
   test_copy_ctor_basic();
   test_copy_ctor_valueless_by_exception();
   test_copy_ctor_sfinae();
@@ -274,4 +274,6 @@ int main() {
   (void) v2;
 }
 #endif
+
+  return 0;
 }

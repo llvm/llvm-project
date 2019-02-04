@@ -362,7 +362,7 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, SV("12345678901234567890"), S("can't happen"));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -380,4 +380,6 @@ int main()
     test2<S, SV>();
     }
 #endif
+
+  return 0;
 }

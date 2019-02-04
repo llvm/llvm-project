@@ -71,7 +71,7 @@ test(std::basic_string_view<charT> sv, const A& a)
   }
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -107,4 +107,6 @@ int main()
     test(SV("123456798012345679801234567980123456798012345679801234567980"), A());
     }
 #endif
+
+  return 0;
 }

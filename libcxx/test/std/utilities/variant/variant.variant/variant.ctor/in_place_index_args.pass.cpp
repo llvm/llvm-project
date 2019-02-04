@@ -104,7 +104,9 @@ void test_ctor_basic() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_ctor_basic();
   test_ctor_sfinae();
+
+  return 0;
 }

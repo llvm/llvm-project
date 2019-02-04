@@ -31,7 +31,7 @@ test(S s, typename S::value_type c, S expected)
     assert(s == expected);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -56,4 +56,6 @@ int main()
     s.push_back(vl);
     s.push_back(vl);
     }
+
+  return 0;
 }

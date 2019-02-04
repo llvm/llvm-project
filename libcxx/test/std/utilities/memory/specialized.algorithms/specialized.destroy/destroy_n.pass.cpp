@@ -30,7 +30,7 @@ struct Counted {
 };
 int Counted::count = 0;
 
-int main()
+int main(int, char**)
 {
     using It = forward_iterator<Counted*>;
     const int N = 5;
@@ -45,4 +45,6 @@ int main()
     It it = std::destroy_n(It(p), 4);
     assert(it == It(p+4));
     assert(Counted::count == 0);
+
+  return 0;
 }

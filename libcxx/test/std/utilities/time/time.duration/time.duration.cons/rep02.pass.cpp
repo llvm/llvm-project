@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     std::chrono::duration<double> d(5);
     assert(d.count() == 5);
@@ -28,4 +28,6 @@ int main()
     constexpr std::chrono::duration<double> d2(5);
     static_assert(d2.count() == 5, "");
 #endif
+
+  return 0;
 }

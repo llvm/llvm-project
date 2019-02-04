@@ -23,7 +23,7 @@
 #include "container_test_types.h"
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::pair<const int, double> V;
@@ -139,4 +139,6 @@ int main()
     assert(m.size() == 8);
     }
 #endif
+
+  return 0;
 }

@@ -56,7 +56,7 @@ public:
 };
 
 
-int main()
+int main(int, char**)
 {
     { // pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);
         typedef std::map<int, Moveable> M;
@@ -181,4 +181,6 @@ int main()
         assert(r->first.get()  == 3);  // key
         assert(r->second.get() == 5);  // value
     }
+
+  return 0;
 }

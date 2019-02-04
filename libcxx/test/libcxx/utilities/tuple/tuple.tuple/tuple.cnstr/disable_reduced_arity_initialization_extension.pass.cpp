@@ -77,7 +77,7 @@ void test_example_from_docs() {
   assert(std::get<2>(tup) == std::error_code{});
 }
 
-int main()
+int main(int, char**)
 {
     {
         using E = MoveOnly;
@@ -104,4 +104,6 @@ int main()
     // constructor extensions.
     test_default_constructible_extension_sfinae();
     test_example_from_docs();
+
+  return 0;
 }

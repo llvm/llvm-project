@@ -58,6 +58,8 @@ void test_pr34298()
   }
 }
 
-int main() {
+int main(int, char**) {
   test_pr34298();
+
+  return 0;
 }

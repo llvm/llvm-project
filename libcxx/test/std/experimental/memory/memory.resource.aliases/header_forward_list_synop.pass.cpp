@@ -26,11 +26,13 @@
 
 namespace pmr = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     using StdForwardList = std::forward_list<int, pmr::polymorphic_allocator<int>>;
     using PmrForwardList = pmr::forward_list<int>;
     static_assert(std::is_same<StdForwardList, PmrForwardList>::value, "");
     PmrForwardList d;
     assert(d.get_allocator().resource() == pmr::get_default_resource());
+
+  return 0;
 }

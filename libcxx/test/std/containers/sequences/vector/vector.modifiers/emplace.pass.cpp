@@ -52,7 +52,7 @@ public:
     double getd() const {return d_;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<A> c;
@@ -132,4 +132,6 @@ int main()
         assert(c.back().geti() == 3);
         assert(c.back().getd() == 4.5);
     }
+
+  return 0;
 }

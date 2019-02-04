@@ -15,7 +15,7 @@
 #include <queue>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::priority_queue<int> q;
     q.push(1);
@@ -30,4 +30,6 @@ int main()
     assert(q.top() == 1);
     q.pop();
     assert(q.empty());
+
+  return 0;
 }

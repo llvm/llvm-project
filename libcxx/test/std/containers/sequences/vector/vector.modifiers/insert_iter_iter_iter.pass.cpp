@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::vector<int> V;
@@ -171,4 +171,6 @@ int main()
             assert(v[j] == 0);
     }
 #endif
+
+  return 0;
 }

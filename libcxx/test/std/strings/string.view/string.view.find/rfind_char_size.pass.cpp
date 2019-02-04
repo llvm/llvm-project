@@ -34,7 +34,7 @@ test(const S& s, typename S::value_type c, typename S::size_type x)
         assert(x + 1 <= s.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -80,4 +80,6 @@ int main()
     static_assert (sv2.rfind( 'b', 4 ) == 1, "" );
     }
 #endif
+
+  return 0;
 }

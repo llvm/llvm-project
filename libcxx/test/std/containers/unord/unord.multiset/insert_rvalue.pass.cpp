@@ -21,7 +21,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multiset<double> C;
@@ -111,4 +111,6 @@ int main()
         assert(*r == 5);
     }
 #endif  // TEST_STD_VER >= 11
+
+  return 0;
 }

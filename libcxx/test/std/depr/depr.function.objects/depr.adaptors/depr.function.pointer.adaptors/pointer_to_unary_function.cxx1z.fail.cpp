@@ -18,7 +18,9 @@
 
 double unary_f(int i) {return 0.5 - i;}
 
-int main()
+int main(int, char**)
 {
     typedef std::pointer_to_unary_function<int, double> F;
+
+  return 0;
 }

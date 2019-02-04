@@ -24,7 +24,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::bernoulli_distribution D;
@@ -36,4 +36,6 @@ int main()
         is >> d2;
         assert(d1 == d2);
     }
+
+  return 0;
 }

@@ -244,10 +244,12 @@ void test_ctor_under_alloc_with_alloc() {
 
 
 
-int main() {
+int main(int, char**) {
   basic_test();
   test_emplacable_concept();
   test_emplacable_concept_with_alloc();
   test_ctor_under_alloc();
   test_ctor_under_alloc_with_alloc();
+
+  return 0;
 }

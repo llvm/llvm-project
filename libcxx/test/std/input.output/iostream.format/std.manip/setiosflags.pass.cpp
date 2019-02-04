@@ -22,7 +22,7 @@ struct testbuf
     testbuf() {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -52,4 +52,6 @@ int main()
         os << std::setiosflags(std::ios_base::oct);
         assert(os.flags() & std::ios_base::oct);
     }
+
+  return 0;
 }

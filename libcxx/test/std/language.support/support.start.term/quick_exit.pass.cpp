@@ -13,10 +13,12 @@
 
 void f() {}
 
-int main()
+int main(int, char**)
 {
 #ifdef _LIBCPP_HAS_QUICK_EXIT
     std::at_quick_exit(f);
     std::quick_exit(0);
 #endif
+
+  return 0;
 }

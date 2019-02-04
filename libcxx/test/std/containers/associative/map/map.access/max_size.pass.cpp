@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
   typedef std::pair<const int, int> KV;
   {
@@ -47,4 +47,6 @@ int main()
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
+
+  return 0;
 }

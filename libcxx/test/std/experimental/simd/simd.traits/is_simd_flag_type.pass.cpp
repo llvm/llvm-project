@@ -47,4 +47,6 @@ static_assert(!ex::is_simd_flag_type_v<UserType>, "");
 static_assert(!ex::is_simd_flag_type_v<ex::simd<int8_t>>, "");
 static_assert(!ex::is_simd_flag_type_v<ex::simd_mask<int8_t>>, "");
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

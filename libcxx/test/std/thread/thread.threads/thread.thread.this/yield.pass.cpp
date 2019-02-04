@@ -15,7 +15,9 @@
 #include <thread>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::this_thread::yield();
+
+  return 0;
 }

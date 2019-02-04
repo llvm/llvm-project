@@ -61,7 +61,7 @@ void reserve_invariant(size_t n) // LWG #2156
     }
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string> C;
@@ -119,4 +119,6 @@ int main()
     }
 #endif
     reserve_invariant(20);
+
+  return 0;
 }

@@ -29,10 +29,12 @@ std::istream& operator>>(std::istream& is, A& a)
     return is >> a.d_ >> a.i_;
 }
 
-int main()
+int main(int, char**)
 {
     std::istringstream inf("1.5  23 ");
     std::istream_iterator<A> i(inf);
     assert(i->d_ == 1.5);
     assert(i->i_ == 23);
+
+  return 0;
 }

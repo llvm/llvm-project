@@ -15,7 +15,4 @@ std::map<int,int>::iterator it;
 using std::set;
 using std::multiset;
 
-int main(void)
-{
-       return 0;
-}
+int main(int, char**) { return 0; }

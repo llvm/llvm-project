@@ -54,7 +54,7 @@ int A::count = 0;
 
 int g(int) { return 0; }
 
-int main()
+int main(int, char**)
 {
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
@@ -105,4 +105,6 @@ int main()
         assert(f2.target<Ptr>());
         assert(f.target<Ptr>()); // f is unchanged because the target is small
     }
+
+  return 0;
 }

@@ -27,9 +27,11 @@ test()
     assert(a[1] == z.imag());
 }
 
-int main()
+int main(int, char**)
 {
     test<float>();
     test<double>();
     test<long double>();
+
+  return 0;
 }

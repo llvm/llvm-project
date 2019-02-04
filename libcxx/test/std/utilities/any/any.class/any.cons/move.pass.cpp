@@ -95,7 +95,7 @@ void test_move() {
     assert(Type::count == 0);
 }
 
-int main()
+int main(int, char**)
 {
     // noexcept test
     {
@@ -108,4 +108,6 @@ int main()
     test_move<large>();
     test_move_empty();
     test_move_does_not_throw();
+
+  return 0;
 }

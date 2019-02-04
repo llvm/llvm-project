@@ -90,7 +90,7 @@ void test_throw_max_size() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
         A* ap = new A;
@@ -103,4 +103,6 @@ int main()
     {
         test_throw_max_size();
     }
+
+  return 0;
 }

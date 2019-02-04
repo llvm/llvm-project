@@ -39,7 +39,7 @@ TEST_CONSTEXPR bool test_constexpr() {
 
 
 
-int main()
+int main(int, char**)
 {
     {
     int v = 12;
@@ -80,4 +80,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

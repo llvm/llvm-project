@@ -31,7 +31,7 @@
 
 MultiStringType longString = MKSTR("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/123456789/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   auto const& MS = longString;
@@ -57,4 +57,6 @@ int main()
     std::u32string s = p.generic_u32string();
     assert(s == (const char32_t*)MS);
   }
+
+  return 0;
 }

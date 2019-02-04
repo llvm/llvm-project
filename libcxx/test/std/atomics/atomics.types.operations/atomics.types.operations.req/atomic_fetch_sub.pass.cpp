@@ -74,9 +74,11 @@ void testp()
     }
 }
 
-int main()
+int main(int, char**)
 {
     TestEachIntegralType<TestFn>()();
     testp<int*>();
     testp<const int*>();
+
+  return 0;
 }

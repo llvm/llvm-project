@@ -36,7 +36,9 @@ test(F f)
     }
 }
 
-int main()
+int main(int, char**)
 {
     test(std::mem_fn(&A::data_));
+
+  return 0;
 }

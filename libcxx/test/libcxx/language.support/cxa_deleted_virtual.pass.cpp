@@ -21,7 +21,9 @@
 // XFAIL: with_system_cxx_lib=macosx10.7
 
 struct S { virtual void f() = delete; virtual ~S() {} };
-int main() {
+int main(int, char**) {
   S *s = new S;
   delete s;
+
+  return 0;
 }

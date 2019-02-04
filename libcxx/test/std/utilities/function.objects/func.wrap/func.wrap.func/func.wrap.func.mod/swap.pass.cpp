@@ -57,7 +57,7 @@ int h(int) { return 1; }
 int g2(int, int) { return 2; }
 int g3(int, int, int) { return 3; }
 
-int main() {
+int main(int, char**) {
   assert(globalMemCounter.checkOutstandingNewEq(0));
   {
     std::function<int(int)> f1 = A(1);
@@ -189,4 +189,6 @@ int main() {
   }
   assert(globalMemCounter.checkOutstandingNewEq(0));
   assert(A::count == 0);
+
+  return 0;
 }

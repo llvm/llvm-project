@@ -26,7 +26,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef int V;
@@ -83,4 +83,6 @@ int main()
     assert(m.get_allocator() == a);
     }
 #endif
+
+  return 0;
 }

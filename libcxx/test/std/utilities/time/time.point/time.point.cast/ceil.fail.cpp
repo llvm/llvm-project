@@ -19,7 +19,9 @@
 
 #include <chrono>
 
-int main()
+int main(int, char**)
 {
     std::chrono::ceil<int>(std::chrono::system_clock::now());
+
+  return 0;
 }

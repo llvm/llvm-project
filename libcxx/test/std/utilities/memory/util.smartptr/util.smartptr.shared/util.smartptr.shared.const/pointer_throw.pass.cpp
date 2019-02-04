@@ -33,7 +33,7 @@ struct A
 int A::count = 0;
 
 
-int main()
+int main(int, char**)
 {
     A* ptr = new A;
     assert(A::count == 1);
@@ -48,4 +48,6 @@ int main()
         assert(A::count == 0);
     }
     assert(globalMemCounter.checkOutstandingNewEq(0));
+
+  return 0;
 }

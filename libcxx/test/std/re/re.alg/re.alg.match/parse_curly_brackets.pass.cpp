@@ -62,10 +62,12 @@ test4()
     assert((std::regex_match(target, smatch, regex)));
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
     test3();
     test4();
+
+  return 0;
 }

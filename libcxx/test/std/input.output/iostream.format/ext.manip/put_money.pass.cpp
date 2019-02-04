@@ -50,7 +50,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -88,4 +88,6 @@ int main()
         os << std::put_money(x, true);
         assert(sb.str() == L"-USD 1,234,567.89");
     }
+
+  return 0;
 }

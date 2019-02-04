@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::negate<int> F;
     const F f = F();
@@ -36,4 +36,6 @@ int main()
     constexpr double bar = std::negate<> () (3.0);
     static_assert ( bar == -3.0, "" );
 #endif
+
+  return 0;
 }

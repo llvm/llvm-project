@@ -16,7 +16,7 @@
 #include <cassert>
 #include <string>
 
-int main()
+int main(int, char**)
 {
     {
         char buf[] = "123 4.5 dog";
@@ -40,4 +40,6 @@ int main()
         assert(buf[9] == 'g');
         assert(buf[10] == 'g');
     }
+
+  return 0;
 }

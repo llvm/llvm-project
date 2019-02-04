@@ -30,11 +30,13 @@ test(const Allocator& a)
     assert(m1.get_allocator() == m0.get_allocator());
 }
 
-int main()
+int main(int, char**)
 {
     test<char>   (std::allocator<std::sub_match<const char *> >());
     test<wchar_t>(std::allocator<std::sub_match<const wchar_t *> >());
 
     test<char>   (test_allocator<std::sub_match<const char*> >(3));
     test<wchar_t>(test_allocator<std::sub_match<const wchar_t*> >(3));
+
+  return 0;
 }

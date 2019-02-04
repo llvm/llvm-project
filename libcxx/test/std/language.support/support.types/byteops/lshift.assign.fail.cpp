@@ -25,6 +25,8 @@ constexpr std::byte test(std::byte b) {
     }
 
 
-int main () {
+int main(int, char**) {
     constexpr std::byte b1 = test(std::byte{1});
+
+  return 0;
 }

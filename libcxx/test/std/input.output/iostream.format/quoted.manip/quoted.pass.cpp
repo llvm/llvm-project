@@ -123,7 +123,7 @@ void test_padding () {
 }
 
 
-int main()
+int main(int, char**)
 {
     both_ways ( "" );   // This is a compilation check
 
@@ -173,8 +173,12 @@ int main()
     assert ( unquote (  "" ) ==  "" ); // nothing there
     assert ( unquote ( L"" ) == L"" ); // nothing there
     test_padding ();
-    }
+    
+    return 0;
+}
 
 #else
-int main() {}
+int main(int, char**) {
+  return 0;
+}
 #endif

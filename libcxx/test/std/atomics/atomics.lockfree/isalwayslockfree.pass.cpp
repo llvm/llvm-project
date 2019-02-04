@@ -134,4 +134,4 @@ void run()
     static_assert(std::atomic<std::nullptr_t>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE));
 }
 
-int main() { run(); }
+int main(int, char**) { run(); return 0; }

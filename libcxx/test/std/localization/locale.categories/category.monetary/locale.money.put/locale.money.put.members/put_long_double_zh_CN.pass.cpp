@@ -49,7 +49,7 @@ public:
         : Fw(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     std::ios ios(0);
     std::string loc_name(LOCALE_zh_CN_UTF_8);
@@ -495,4 +495,6 @@ int main()
         assert(ios.width() == 0);
     }
 }
+
+  return 0;
 }

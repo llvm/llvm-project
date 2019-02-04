@@ -32,7 +32,7 @@ namespace std
     };
 }
 
-int main()
+int main(int, char**)
 {
     typedef std::unordered_map<Key, int> MapT;
     typedef MapT::iterator Iter;
@@ -42,4 +42,6 @@ int main()
     std::pair<Iter, bool> result = map.insert(std::make_pair(Key(0), 42));
     assert(result.second);
     assert(result.first->second == 42);
+
+  return 0;
 }

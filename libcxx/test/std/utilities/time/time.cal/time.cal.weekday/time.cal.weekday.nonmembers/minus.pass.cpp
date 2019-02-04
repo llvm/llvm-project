@@ -44,7 +44,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using weekday  = std::chrono::weekday;
     using days     = std::chrono::days;
@@ -72,4 +72,6 @@ int main()
             assert(weekday{i} + d == weekday{j});
         }
 
+
+  return 0;
 }

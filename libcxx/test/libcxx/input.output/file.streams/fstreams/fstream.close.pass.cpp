@@ -18,7 +18,7 @@
 #include <cassert>
 #include "platform_support.h"
 
-int main()
+int main(int, char**)
 {
     std::string temp = get_temp_file_name();
 
@@ -31,4 +31,6 @@ int main()
     assert(!ofs.good());
 
     std::remove(temp.c_str());
+
+  return 0;
 }

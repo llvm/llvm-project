@@ -17,7 +17,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<int> c;
@@ -108,4 +108,6 @@ int main()
             assert(c[j] == j);
     }
 #endif
+
+  return 0;
 }

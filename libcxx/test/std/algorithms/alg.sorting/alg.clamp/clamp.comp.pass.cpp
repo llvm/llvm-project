@@ -38,7 +38,7 @@ test(const T& v, const T& lo, const T& hi, C c, const T& x)
     assert(&std::clamp(v, lo, hi, c) == &x);
 }
 
-int main()
+int main(int, char**)
 {
     {
     int x = 0;
@@ -123,4 +123,6 @@ int main()
     static_assert(std::clamp(x, y, z, std::greater<T>()) == y, "" );
     static_assert(std::clamp(y, x, z, std::greater<T>()) == y, "" );
     }
+
+  return 0;
 }

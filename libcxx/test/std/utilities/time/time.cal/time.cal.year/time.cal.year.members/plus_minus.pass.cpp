@@ -28,7 +28,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using year  = std::chrono::year;
 
@@ -46,4 +46,6 @@ int main()
         assert(static_cast<int>(+year) ==  i);
         assert(static_cast<int>(-year) == -i);
     }
+
+  return 0;
 }

@@ -393,4 +393,4 @@
 
 #endif // TEST_STD_VER > 17
 
-int main() {}
+int main(int, char**) { return 0; }

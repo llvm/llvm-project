@@ -130,7 +130,7 @@ test_larger_sorts(int N)
     test_larger_sorts(N, N);
 }
 
-int main()
+int main(int, char**)
 {
     // test null range
     int d = 0;
@@ -152,4 +152,6 @@ int main()
     test_larger_sorts(997);
     test_larger_sorts(1000);
     test_larger_sorts(1009);
+
+  return 0;
 }

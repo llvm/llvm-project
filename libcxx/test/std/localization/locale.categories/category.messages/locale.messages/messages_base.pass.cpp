@@ -17,7 +17,9 @@
 #include <locale>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     std::messages_base mb;
+
+  return 0;
 }

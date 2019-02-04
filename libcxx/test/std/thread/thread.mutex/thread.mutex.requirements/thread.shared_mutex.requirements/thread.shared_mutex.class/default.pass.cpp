@@ -17,7 +17,9 @@
 
 #include <shared_mutex>
 
-int main()
+int main(int, char**)
 {
     std::shared_mutex m;
+
+  return 0;
 }

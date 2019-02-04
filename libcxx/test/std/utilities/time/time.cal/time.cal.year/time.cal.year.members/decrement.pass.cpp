@@ -30,7 +30,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using year = std::chrono::year;
     ASSERT_NOEXCEPT(--(std::declval<year&>())  );
@@ -48,4 +48,6 @@ int main()
         assert(static_cast<int>(year--) == i - 1);
         assert(static_cast<int>(year)   == i - 2);
     }
+
+  return 0;
 }

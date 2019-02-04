@@ -34,7 +34,7 @@ public:
         {return A(&et);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         int i = 0;
@@ -45,4 +45,6 @@ int main()
     {
         (std::pointer_traits<A<void> >::element_type)0;
     }
+
+  return 0;
 }

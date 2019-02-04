@@ -17,7 +17,9 @@
 #include <thread>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::thread::hardware_concurrency() > 0);
+
+  return 0;
 }

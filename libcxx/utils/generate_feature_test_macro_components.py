@@ -865,7 +865,7 @@ def produce_tests():
 
 #endif // TEST_STD_VER > 17
 
-int main() {{}}
+int main(int, char**) { return 0; }
 """.format(script_name=script_name,
            header=h,
            test_tags=test_tags,

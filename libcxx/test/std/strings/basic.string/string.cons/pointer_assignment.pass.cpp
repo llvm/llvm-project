@@ -29,7 +29,7 @@ test(S s1, const typename S::value_type* s2)
     assert(s1.capacity() >= s1.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -69,4 +69,6 @@ int main()
          "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz");
     }
 #endif
+
+  return 0;
 }

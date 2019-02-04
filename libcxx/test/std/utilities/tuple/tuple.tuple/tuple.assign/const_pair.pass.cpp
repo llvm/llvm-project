@@ -19,7 +19,7 @@
 #include <utility>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<long, char> T0;
@@ -30,4 +30,6 @@ int main()
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == short('a'));
     }
+
+  return 0;
 }

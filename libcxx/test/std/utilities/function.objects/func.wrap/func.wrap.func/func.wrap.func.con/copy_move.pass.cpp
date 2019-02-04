@@ -50,7 +50,7 @@ int A::count = 0;
 
 int g(int) {return 0;}
 
-int main()
+int main(int, char**)
 {
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
@@ -161,4 +161,6 @@ int main()
         LIBCPP_ASSERT(f.target<Ptr>()); // f is unchanged because the target is small
     }
 #endif  // TEST_STD_VER >= 11
+
+  return 0;
 }

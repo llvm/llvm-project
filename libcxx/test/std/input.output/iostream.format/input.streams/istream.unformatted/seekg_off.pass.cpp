@@ -52,7 +52,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb(" 123456789");
@@ -83,4 +83,6 @@ int main()
         assert(is.good());
         assert(!is.eof());
     }
+
+  return 0;
 }

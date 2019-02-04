@@ -27,7 +27,7 @@ struct some_alloc
     ~some_alloc() noexcept(false);
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::list<MoveOnly> C;
@@ -47,4 +47,6 @@ int main()
         static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
 #endif // _LIBCPP_VERSION
+
+  return 0;
 }

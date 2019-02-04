@@ -23,8 +23,10 @@
 std::mutex m;
 int foo __attribute__((guarded_by(m)));
 
-int main() {
+int main(int, char**) {
   m.lock();
   foo++;
   m.unlock();
+
+  return 0;
 }

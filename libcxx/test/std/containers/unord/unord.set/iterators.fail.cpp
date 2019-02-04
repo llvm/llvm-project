@@ -22,7 +22,7 @@
 #include <unordered_set>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_set<int> C;
@@ -63,4 +63,6 @@ int main()
         assert(std::distance(c.begin(), c.end()) == c.size());
         assert(std::distance(c.cbegin(), c.cend()) == c.size());
     }
+
+  return 0;
 }

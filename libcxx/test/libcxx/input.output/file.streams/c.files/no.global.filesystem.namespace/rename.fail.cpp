@@ -10,7 +10,9 @@
 
 #include <cstdio>
 
-int main() {
+int main(int, char**) {
     // rename is not available on systems without a global filesystem namespace.
     std::rename("", "");
+
+  return 0;
 }

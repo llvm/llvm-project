@@ -51,6 +51,8 @@ void test_ctor_under_alloc() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_ctor_under_alloc();
+
+  return 0;
 }

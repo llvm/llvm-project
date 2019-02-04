@@ -15,7 +15,7 @@
 #include <tuple>
 #include <memory>
 
-int main () {
+int main(int, char**) {
     {
     std::tuple<std::unique_ptr<char>> up;
     std::tuple<std::shared_ptr<char>> sp;
@@ -29,4 +29,6 @@ int main () {
     // Smart pointers of type 'T[N]' are not tested here since they are not
     // supported by the standard nor by libc++'s implementation.
     // See https://reviews.llvm.org/D21320 for more information.
+
+  return 0;
 }

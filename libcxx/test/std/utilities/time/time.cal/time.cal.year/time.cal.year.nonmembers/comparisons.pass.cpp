@@ -26,7 +26,7 @@
 #include "test_comparisons.h"
 
 
-int main()
+int main(int, char**)
 {
     using year = std::chrono::year;
 
@@ -43,4 +43,6 @@ int main()
     for (int i = 1; i < 10; ++i)
         for (int j = 1; j < 10; ++j)
             assert(testComparisons6Values<year>(i, j));
+
+  return 0;
 }

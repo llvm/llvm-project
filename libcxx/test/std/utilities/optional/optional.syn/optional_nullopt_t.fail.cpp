@@ -14,7 +14,7 @@
 
 #include <optional>
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     using std::nullopt_t;
@@ -25,4 +25,6 @@ int main()
     optional<nullopt_t &> opt2; // expected-note 1 {{requested here}}
     optional<nullopt_t &&> opt3; // expected-note 1 {{requested here}}
     // expected-error@optional:* 4 {{instantiation of optional with nullopt_t is ill-formed}}
+
+  return 0;
 }

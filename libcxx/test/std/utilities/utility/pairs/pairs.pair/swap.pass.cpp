@@ -24,7 +24,7 @@ struct S {
     bool operator==(int x) const { return i == x; }
     };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P1;
@@ -46,4 +46,6 @@ int main()
         assert(p2.first == 3);
         assert(p2.second == 4);
     }
+
+  return 0;
 }

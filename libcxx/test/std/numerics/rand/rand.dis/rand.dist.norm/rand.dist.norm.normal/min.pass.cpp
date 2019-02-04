@@ -16,11 +16,13 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::normal_distribution<> D;
         D d(.5, .5);
         assert(d.min() == -INFINITY);
     }
+
+  return 0;
 }

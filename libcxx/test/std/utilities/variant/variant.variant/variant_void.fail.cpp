@@ -23,10 +23,12 @@
 #include "variant_test_helpers.hpp"
 #include "test_convertible.hpp"
 
-int main()
+int main(int, char**)
 {
     // expected-error@variant:* 3 {{static_assert failed}}
     std::variant<int, void> v; // expected-note {{requested here}}
     std::variant<int, const void> v2; // expected-note {{requested here}}
     std::variant<const volatile void, int> v3; // expected-note {{requested here}}
+
+  return 0;
 }

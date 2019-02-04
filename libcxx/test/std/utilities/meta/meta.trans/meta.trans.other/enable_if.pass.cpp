@@ -14,7 +14,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::enable_if<true>::type, void>::value), "");
     static_assert((std::is_same<std::enable_if<true, int>::type, int>::value), "");
@@ -22,4 +22,6 @@ int main()
     static_assert((std::is_same<std::enable_if_t<true>, void>::value), "");
     static_assert((std::is_same<std::enable_if_t<true, int>, int>::value), "");
 #endif
+
+  return 0;
 }

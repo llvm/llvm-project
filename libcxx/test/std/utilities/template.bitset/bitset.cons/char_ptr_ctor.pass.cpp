@@ -46,7 +46,7 @@ void test_char_pointer_ctor()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_char_pointer_ctor<0>();
     test_char_pointer_ctor<1>();
@@ -57,4 +57,6 @@ int main()
     test_char_pointer_ctor<64>();
     test_char_pointer_ctor<65>();
     test_char_pointer_ctor<1000>();
+
+  return 0;
 }

@@ -37,7 +37,9 @@ test()
     assert(A::count == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

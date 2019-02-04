@@ -17,8 +17,10 @@
 
 #include <chrono>
 
-int main()
+int main(int, char**)
 {
     std::chrono::microseconds us(1);
     std::chrono::milliseconds ms = us;
+
+  return 0;
 }

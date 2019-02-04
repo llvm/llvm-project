@@ -74,7 +74,7 @@ void test(int N)
     delete [] ia;
 }
 
-int main()
+int main(int, char**)
 {
     test(0);
     test(1);
@@ -97,4 +97,6 @@ int main()
     delete [] ia;
     }
 #endif
+
+  return 0;
 }

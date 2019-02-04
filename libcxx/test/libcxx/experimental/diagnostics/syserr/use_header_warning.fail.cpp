@@ -14,4 +14,6 @@
 
 // expected-error@experimental/system_error:* {{"<experimental/system_error> has been removed. Use <system_error> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

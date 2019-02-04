@@ -49,7 +49,7 @@ struct throw_comparator
 };
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         std::set<int> src{1, 3, 5};
@@ -145,4 +145,5 @@ int main()
             first.merge(std::move(second));
         }
     }
+    return 0;
 }

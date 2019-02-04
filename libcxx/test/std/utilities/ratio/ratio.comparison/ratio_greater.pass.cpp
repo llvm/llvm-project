@@ -21,7 +21,7 @@ void test()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::ratio<1, 1> R1;
@@ -63,4 +63,6 @@ int main()
     typedef std::ratio<1, -0x7FFFFFFFFFFFFFFFLL> R2;
     test<R1, R2, true>();
     }
+
+  return 0;
 }

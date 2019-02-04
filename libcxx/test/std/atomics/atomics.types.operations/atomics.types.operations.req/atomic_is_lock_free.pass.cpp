@@ -40,8 +40,10 @@ struct A
     char _[4];
 };
 
-int main()
+int main(int, char**)
 {
     TestFn<A>()();
     TestEachAtomicType<TestFn>()();
+
+  return 0;
 }

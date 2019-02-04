@@ -13,7 +13,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l;
     assert(!std::ispunct(' ', l));
@@ -27,4 +27,6 @@ int main()
     assert(!std::ispunct('f', l));
     assert(!std::ispunct('9', l));
     assert( std::ispunct('+', l));
+
+  return 0;
 }

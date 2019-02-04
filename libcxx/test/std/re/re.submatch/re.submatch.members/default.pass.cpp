@@ -16,7 +16,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef char CharT;
@@ -30,4 +30,6 @@ int main()
         SM sm;
         assert(sm.matched == false);
     }
+
+  return 0;
 }

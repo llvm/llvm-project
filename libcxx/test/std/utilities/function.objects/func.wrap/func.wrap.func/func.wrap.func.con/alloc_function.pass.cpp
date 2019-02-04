@@ -111,7 +111,7 @@ void test_for_alloc(Alloc& alloc)
     test_MemFunClass<int(MemFunClass::*)(int, int) const, int(MemFunClass&, int, int)>(alloc);
 }
 
-int main()
+int main(int, char**)
 {
   {
     bare_allocator<DummyClass> alloc;
@@ -121,4 +121,6 @@ int main()
     non_default_test_allocator<DummyClass> alloc(42);
     test_for_alloc(alloc);
   }
+
+  return 0;
 }

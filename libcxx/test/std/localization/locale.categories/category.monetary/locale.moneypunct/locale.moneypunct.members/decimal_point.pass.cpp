@@ -53,7 +53,7 @@ public:
         : std::moneypunct<wchar_t, true>(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         Fnf f(1);
@@ -71,4 +71,6 @@ int main()
         Fwt f(1);
         assert(f.decimal_point() == std::numeric_limits<wchar_t>::max());
     }
+
+  return 0;
 }

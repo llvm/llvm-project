@@ -21,7 +21,7 @@
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef Emplaceable T;
@@ -67,4 +67,6 @@ int main()
         assert(*next(c.begin()) == Emplaceable());
         assert(distance(c.begin(), c.end()) == 2);
     }
+
+  return 0;
 }

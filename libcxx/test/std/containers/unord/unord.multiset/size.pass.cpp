@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::unordered_multiset<int> M;
@@ -58,4 +58,6 @@ int main()
     assert(m.size() == 0);
     }
 #endif
+
+  return 0;
 }

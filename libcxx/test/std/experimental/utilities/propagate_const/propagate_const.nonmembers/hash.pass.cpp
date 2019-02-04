@@ -31,7 +31,7 @@ template <> struct hash<X>
 };
 } // namespace std
 
-int main() {
+int main(int, char**) {
 
   typedef propagate_const<X> P;
 
@@ -40,4 +40,6 @@ int main() {
   auto h = std::hash<P>();
 
   assert(h(p)==99);
+
+  return 0;
 }

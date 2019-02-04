@@ -24,7 +24,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex re("^(?=(.))a$");
@@ -95,4 +95,6 @@ int main()
         assert(m[3] == "a");
         assert(m[4] == "");
     }
+
+  return 0;
 }

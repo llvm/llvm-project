@@ -30,7 +30,7 @@ test(It i, It x)
     assert(rr.base() == i);
 }
 
-int main()
+int main(int, char**)
 {
     const char* s = "123";
     test(bidirectional_iterator<const char*>(s+1), bidirectional_iterator<const char*>(s));
@@ -49,4 +49,6 @@ int main()
         static_assert(it2 == it3, "");
     }
 #endif
+
+  return 0;
 }

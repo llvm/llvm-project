@@ -93,7 +93,7 @@ DEFINE_AND_RUN_IS_INCOMPLETE_TEST({
   checkNumIncompleteTypeAlive(0);
 })
 
-int main() {
+int main(int, char**) {
   {
     test_basic<int>();
     test_sfinae<int>();
@@ -102,4 +102,6 @@ int main() {
     test_basic<int[]>();
     test_sfinae<int[]>();
   }
+
+  return 0;
 }
