@@ -382,6 +382,16 @@ struct ExistingString {
   const char *e4 = "bar";
 };
 
+struct UnionExisting {
+  UnionExisting() : e(5.0) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: member initializer for 'e' is redundant
+  // CHECK-FIXES: UnionExisting()  {}
+  union {
+    int i;
+    double e = 5.0;
+  };
+};
+
 template <typename T>
 struct NegativeTemplateExisting {
   NegativeTemplateExisting(int) : t(0) {}
