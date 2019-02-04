@@ -2802,8 +2802,8 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
       } else {
         if (ObjCMethodDecl *CurMeth = getCurMethodDecl()) {
           if (ObjCInterfaceDecl *ClassDecl = CurMeth->getClassInterface()) {
-            // FIXME: Is this correct? Why are we assuming that a message to
-            // Class will call a method in the current interface?
+            // As a guess, try looking for the method in the current interface.
+            // This very well may not produce the "right" method.
 
             // First check the public methods in the class interface.
             Method = ClassDecl->lookupClassMethod(Sel);
@@ -2811,8 +2811,7 @@ ExprResult Sema::BuildInstanceMessage(Expr *Receiver,
             if (!Method)
               Method = ClassDecl->lookupPrivateClassMethod(Sel);
 
-            if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs, nullptr,
-                                            false, false, ClassDecl))
+            if (Method && DiagnoseUseOfDecl(Method, SelectorSlotLocs))
               return ExprError();
           }
         }
