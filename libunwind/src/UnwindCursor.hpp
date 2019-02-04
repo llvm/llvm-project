@@ -482,6 +482,10 @@ public:
   DISPATCHER_CONTEXT *getDispatcherContext() { return &_dispContext; }
   void setDispatcherContext(DISPATCHER_CONTEXT *disp) { _dispContext = *disp; }
 
+  // libunwind does not and should not depend on C++ library which means that we
+  // need our own defition of inline placement new.
+  static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
+
 private:
 
   pint_t getLastPC() const { return _dispContext.ControlPc; }
