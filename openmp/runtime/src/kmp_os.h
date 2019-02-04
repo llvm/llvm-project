@@ -296,6 +296,20 @@ extern "C" {
 
 #define KMP_CACHE_PREFETCH(ADDR) /* nothing */
 
+// Define attribute that indicates that the fall through from the previous 
+// case label is intentional and should not be diagnosed by a compiler
+//   Code from libcxx/include/__config
+// Use a function like macro to imply that it must be followed by a semicolon
+#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#  define KMP_FALLTHROUGH() [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
+#  define KMP_FALLTHROUGH() [[clang::fallthrough]]
+#elif __has_attribute(fallthough) || _GNUC_VER >= 700
+#  define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
+#else
+#  define KMP_FALLTHROUGH() ((void)0)
+#endif
+
 // Define attribute that indicates a function does not return
 #if __cplusplus >= 201103L
 #define KMP_NORETURN [[noreturn]]
