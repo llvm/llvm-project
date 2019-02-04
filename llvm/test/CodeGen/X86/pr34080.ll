@@ -93,7 +93,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE3-NEXT:    movq %rsp, %rbp
 ; SSE3-NEXT:    .cfi_def_cfa_register %rbp
 ; SSE3-NEXT:    fldt 16(%rbp)
-; SSE3-NEXT:    fld %st
+; SSE3-NEXT:    fld %st(0)
 ; SSE3-NEXT:    fisttpl -4(%rbp)
 ; SSE3-NEXT:    cvtsi2sdl -4(%rbp), %xmm0
 ; SSE3-NEXT:    movsd %xmm0, -48(%rbp)
@@ -122,7 +122,7 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; AVX-NEXT:    movq %rsp, %rbp
 ; AVX-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX-NEXT:    fldt 16(%rbp)
-; AVX-NEXT:    fld %st
+; AVX-NEXT:    fld %st(0)
 ; AVX-NEXT:    fisttpl -4(%rbp)
 ; AVX-NEXT:    vcvtsi2sdl -4(%rbp), %xmm0, %xmm0
 ; AVX-NEXT:    vmovsd %xmm0, -48(%rbp)

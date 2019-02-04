@@ -19,7 +19,7 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, <8 x x86_fp80>* %c) local_unn
 ; CHECK-NEXT:    negq %rcx
 ; CHECK-NEXT:    fld1
 ; CHECK-NEXT:    fldz
-; CHECK-NEXT:    fld %st
+; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fcmove %st(2), %st
 ; CHECK-NEXT:    cmpq %rax, %rsi
 ; CHECK-NEXT:    fld %st(1)
@@ -40,15 +40,15 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, <8 x x86_fp80>* %c) local_unn
 ; CHECK-NEXT:    fstpt 30(%rdi)
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt 10(%rdi)
-; CHECK-NEXT:    fadd %st, %st
+; CHECK-NEXT:    fadd %st, %st(0)
 ; CHECK-NEXT:    fstpt 60(%rdi)
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fadd %st, %st
+; CHECK-NEXT:    fadd %st, %st(0)
 ; CHECK-NEXT:    fstpt 40(%rdi)
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fadd %st, %st
+; CHECK-NEXT:    fadd %st, %st(0)
 ; CHECK-NEXT:    fstpt 20(%rdi)
-; CHECK-NEXT:    fadd %st, %st
+; CHECK-NEXT:    fadd %st, %st(0)
 ; CHECK-NEXT:    fstpt (%rdi)
   %1 = icmp eq <4 x i64> <i64 0, i64 1, i64 2, i64 3>, %a
   %2 = select <4 x i1> %1, <4 x x86_fp80> <x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000>, <4 x x86_fp80> zeroinitializer

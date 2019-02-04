@@ -1072,13 +1072,6 @@ public:
   ///   works on systems with GraphViz (Mac OS X) or dot+gv installed.
   void viewAST() const;
 
-  /// Skip past any implicit AST nodes which might surround this
-  /// statement, such as ExprWithCleanups or ImplicitCastExpr nodes.
-  Stmt *IgnoreImplicit();
-  const Stmt *IgnoreImplicit() const {
-    return const_cast<Stmt *>(this)->IgnoreImplicit();
-  }
-
   /// Skip no-op (attributed, compound) container stmts and skip captured
   /// stmt at the top, if \a IgnoreCaptured is true.
   Stmt *IgnoreContainers(bool IgnoreCaptured = false);
