@@ -9,8 +9,9 @@
 #include "BenchmarkResult.h"
 #include "BenchmarkRunner.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/bit.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,7 +30,28 @@ namespace {
 // serialization process to encode/decode registers and instructions.
 struct YamlContext {
   YamlContext(const exegesis::LLVMState &State)
-      : State(&State), ErrorStream(LastError) {}
+      : State(&State), ErrorStream(LastError),
+        OpcodeNameToOpcodeIdx(
+            generateOpcodeNameToOpcodeIdxMapping(State.getInstrInfo())),
+        RegNameToRegNo(generateRegNameToRegNoMapping(State.getRegInfo())) {}
+
+  static llvm::StringMap<unsigned>
+  generateOpcodeNameToOpcodeIdxMapping(const llvm::MCInstrInfo &InstrInfo) {
+    llvm::StringMap<unsigned> Map(InstrInfo.getNumOpcodes());
+    for (unsigned I = 0, E = InstrInfo.getNumOpcodes(); I < E; ++I)
+      Map[InstrInfo.getName(I)] = I;
+    assert(Map.size() == InstrInfo.getNumOpcodes() && "Size prediction failed");
+    return Map;
+  };
+
+  llvm::StringMap<unsigned>
+  generateRegNameToRegNoMapping(const llvm::MCRegisterInfo &RegInfo) {
+    llvm::StringMap<unsigned> Map(RegInfo.getNumRegs());
+    for (unsigned I = 0, E = RegInfo.getNumRegs(); I < E; ++I)
+      Map[RegInfo.getName(I)] = I;
+    assert(Map.size() == RegInfo.getNumRegs() && "Size prediction failed");
+    return Map;
+  };
 
   void serializeMCInst(const llvm::MCInst &MCInst, llvm::raw_ostream &OS) {
     OS << getInstrName(MCInst.getOpcode());
@@ -40,7 +62,7 @@ struct YamlContext {
   }
 
   void deserializeMCInst(llvm::StringRef String, llvm::MCInst &Value) {
-    llvm::SmallVector<llvm::StringRef, 8> Pieces;
+    llvm::SmallVector<llvm::StringRef, 16> Pieces;
     String.split(Pieces, " ", /* MaxSplit */ -1, /* KeepEmpty */ false);
     if (Pieces.empty()) {
       ErrorStream << "Unknown Instruction: '" << String << "'";
@@ -68,10 +90,9 @@ struct YamlContext {
   }
 
   unsigned getRegNo(llvm::StringRef RegName) {
-    const llvm::MCRegisterInfo &RegInfo = State->getRegInfo();
-    for (unsigned E = RegInfo.getNumRegs(), I = 0; I < E; ++I)
-      if (RegInfo.getName(I) == RegName)
-        return I;
+    auto Iter = RegNameToRegNo.find(RegName);
+    if (Iter != RegNameToRegNo.end())
+      return Iter->second;
     ErrorStream << "No register with name " << RegName;
     return 0;
   }
@@ -136,10 +157,9 @@ private:
   }
 
   unsigned getInstrOpcode(llvm::StringRef InstrName) {
-    const llvm::MCInstrInfo &InstrInfo = State->getInstrInfo();
-    for (unsigned E = InstrInfo.getNumOpcodes(), I = 0; I < E; ++I)
-      if (InstrInfo.getName(I) == InstrName)
-        return I;
+    auto Iter = OpcodeNameToOpcodeIdx.find(InstrName);
+    if (Iter != OpcodeNameToOpcodeIdx.end())
+      return Iter->second;
     ErrorStream << "No opcode with name " << InstrName;
     return 0;
   }
@@ -147,6 +167,8 @@ private:
   const llvm::exegesis::LLVMState *State;
   std::string LastError;
   llvm::raw_string_ostream ErrorStream;
+  const llvm::StringMap<unsigned> OpcodeNameToOpcodeIdx;
+  const llvm::StringMap<unsigned> RegNameToRegNo;
 };
 } // namespace
 

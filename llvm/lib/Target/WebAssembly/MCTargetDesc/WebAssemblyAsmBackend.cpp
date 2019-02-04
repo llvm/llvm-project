@@ -35,7 +35,6 @@ class WebAssemblyAsmBackend final : public MCAsmBackend {
 public:
   explicit WebAssemblyAsmBackend(bool Is64Bit)
       : MCAsmBackend(support::little), Is64Bit(Is64Bit) {}
-  ~WebAssemblyAsmBackend() override {}
 
   unsigned getNumFixupKinds() const override {
     return WebAssembly::NumTargetFixupKinds;
@@ -91,7 +90,7 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
 bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS,
                                          uint64_t Count) const {
-  for (uint64_t i = 0; i < Count; ++i)
+  for (uint64_t I = 0; I < Count; ++I)
     OS << char(WebAssembly::Nop);
 
   return true;
@@ -118,8 +117,8 @@ void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
-  for (unsigned i = 0; i != NumBytes; ++i)
-    Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+  for (unsigned I = 0; I != NumBytes; ++I)
+    Data[Offset + I] |= uint8_t((Value >> (I * 8)) & 0xff);
 }
 
 std::unique_ptr<MCObjectTargetWriter>

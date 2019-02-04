@@ -9,7 +9,7 @@
 #include "lldb/Host/MonitoringProcessLauncher.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostProcess.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/FileSystem.h"

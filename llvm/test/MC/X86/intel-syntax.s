@@ -556,12 +556,12 @@ fnstsw
 fnstsw AX
 fnstsw WORD PTR [EAX]
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fdivrp %st(1)
-// CHECK: fdivp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
 faddp ST(1), ST(0)
 fmulp ST(1), ST(0)
 fsubp ST(1), ST(0)
@@ -569,12 +569,12 @@ fsubrp ST(1), ST(0)
 fdivp ST(1), ST(0)
 fdivrp ST(1), ST(0)
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fdivrp %st(1)
-// CHECK: fdivp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
 faddp ST(0), ST(1)
 fmulp ST(0), ST(1)
 fsubp ST(0), ST(1)
@@ -582,12 +582,12 @@ fsubrp ST(0), ST(1)
 fdivp ST(0), ST(1)
 fdivrp ST(0), ST(1)
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fdivrp %st(1)
-// CHECK: fdivp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
 faddp ST(1)
 fmulp ST(1)
 fsubp ST(1)
@@ -596,12 +596,12 @@ fdivp ST(1)
 fdivrp ST(1)
 
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fdivrp %st(1)
-// CHECK: fdivp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
 fadd 
 fmul
 fsub
@@ -609,12 +609,12 @@ fsubr
 fdiv
 fdivr
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fdivrp %st(1)
-// CHECK: fdivp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
 faddp
 fmulp
 fsubp
@@ -622,12 +622,12 @@ fsubrp
 fdivp
 fdivrp
 
-// CHECK: fadd %st(1)
-// CHECK: fmul %st(1)
-// CHECK: fsub %st(1)
-// CHECK: fsubr %st(1)
-// CHECK: fdiv %st(1)
-// CHECK: fdivr %st(1)
+// CHECK: fadd %st(1), %st
+// CHECK: fmul %st(1), %st
+// CHECK: fsub %st(1), %st
+// CHECK: fsubr %st(1), %st
+// CHECK: fdiv %st(1), %st
+// CHECK: fdivr %st(1), %st
 fadd ST(0), ST(1)
 fmul ST(0), ST(1)
 fsub ST(0), ST(1)
@@ -648,12 +648,12 @@ fsubr ST(1), ST(0)
 fdiv ST(1), ST(0)
 fdivr ST(1), ST(0)
 
-// CHECK: fadd %st(1)
-// CHECK: fmul %st(1)
-// CHECK: fsub %st(1)
-// CHECK: fsubr %st(1)
-// CHECK: fdiv %st(1)
-// CHECK: fdivr %st(1)
+// CHECK: fadd %st(1), %st
+// CHECK: fmul %st(1), %st
+// CHECK: fsub %st(1), %st
+// CHECK: fsubr %st(1), %st
+// CHECK: fdiv %st(1), %st
+// CHECK: fdivr %st(1), %st
 fadd ST(1)
 fmul ST(1)
 fsub ST(1)

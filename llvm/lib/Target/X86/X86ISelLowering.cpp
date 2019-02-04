@@ -33070,6 +33070,13 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     break;
   }
+  case X86ISD::PCMPGT:
+    // icmp sgt(0, R) == ashr(R, BitWidth-1).
+    // iff we only need the sign bit then we can use R directly.
+    if (OriginalDemandedBits.isSignMask() &&
+        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
+      return TLO.CombineTo(Op, Op.getOperand(1));
+    break;
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
@@ -40493,8 +40500,7 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   // make the transformation for non-constant splats as well, but it's unclear
   // that would be a benefit as it would not eliminate any operations, just
   // perform one more step in scalar code before moving to the vector unit.
-  if (BuildVectorSDNode *BV =
-          dyn_cast<BuildVectorSDNode>(N->getOperand(0)->getOperand(1))) {
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(N->getOperand(0).getOperand(1))) {
     // Bail out if the vector isn't a constant.
     if (!BV->isConstant())
       return SDValue();

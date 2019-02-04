@@ -148,7 +148,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
   case ISD::USUBSAT:     Res = PromoteIntRes_ADDSUBSAT(N); break;
-  case ISD::SMULFIX:     Res = PromoteIntRes_SMULFIX(N); break;
+  case ISD::SMULFIX:
+  case ISD::UMULFIX:     Res = PromoteIntRes_MULFIX(N); break;
 
   case ISD::ATOMIC_LOAD:
     Res = PromoteIntRes_Atomic0(cast<AtomicSDNode>(N)); break;
@@ -645,11 +646,17 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSAT(SDNode *N) {
   return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_SMULFIX(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_MULFIX(SDNode *N) {
   // Can just promote the operands then continue with operation.
   SDLoc dl(N);
-  SDValue Op1Promoted = SExtPromotedInteger(N->getOperand(0));
-  SDValue Op2Promoted = SExtPromotedInteger(N->getOperand(1));
+  SDValue Op1Promoted, Op2Promoted;
+  if (N->getOpcode() == ISD::SMULFIX) {
+    Op1Promoted = SExtPromotedInteger(N->getOperand(0));
+    Op2Promoted = SExtPromotedInteger(N->getOperand(1));
+  } else {
+    Op1Promoted = ZExtPromotedInteger(N->getOperand(0));
+    Op2Promoted = ZExtPromotedInteger(N->getOperand(1));
+  }
   EVT PromotedType = Op1Promoted.getValueType();
   return DAG.getNode(N->getOpcode(), dl, PromotedType, Op1Promoted, Op2Promoted,
                      N->getOperand(2));
@@ -1090,7 +1097,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::PREFETCH: Res = PromoteIntOp_PREFETCH(N, OpNo); break;
 
-  case ISD::SMULFIX: Res = PromoteIntOp_SMULFIX(N); break;
+  case ISD::SMULFIX:
+  case ISD::UMULFIX: Res = PromoteIntOp_MULFIX(N); break;
 
   case ISD::FPOWI: Res = PromoteIntOp_FPOWI(N); break;
   }
@@ -1452,7 +1460,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_SMULFIX(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntOp_MULFIX(SDNode *N) {
   SDValue Op2 = ZExtPromotedInteger(N->getOperand(2));
   return SDValue(
       DAG.UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1), Op2), 0);
@@ -1620,7 +1628,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
   case ISD::USUBSAT: ExpandIntRes_ADDSUBSAT(N, Lo, Hi); break;
-  case ISD::SMULFIX: ExpandIntRes_SMULFIX(N, Lo, Hi); break;
+  case ISD::SMULFIX:
+  case ISD::UMULFIX: ExpandIntRes_MULFIX(N, Lo, Hi); break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -2588,8 +2597,12 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUBSAT(SDNode *N, SDValue &Lo,
   SplitInteger(Result, Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_SMULFIX(SDNode *N, SDValue &Lo,
-                                            SDValue &Hi) {
+void DAGTypeLegalizer::ExpandIntRes_MULFIX(SDNode *N, SDValue &Lo,
+                                           SDValue &Hi) {
+  assert(
+      (N->getOpcode() == ISD::SMULFIX || N->getOpcode() == ISD::UMULFIX) &&
+      "Expected operand to be signed or unsigned fixed point multiplication");
+
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
@@ -2607,10 +2620,12 @@ void DAGTypeLegalizer::ExpandIntRes_SMULFIX(SDNode *N, SDValue &Lo,
   GetExpandedInteger(RHS, RL, RH);
   SmallVector<SDValue, 4> Result;
 
-  if (!TLI.expandMUL_LOHI(ISD::SMUL_LOHI, VT, dl, LHS, RHS, Result, NVT, DAG,
+  bool Signed = N->getOpcode() == ISD::SMULFIX;
+  unsigned LoHiOp = Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
+  if (!TLI.expandMUL_LOHI(LoHiOp, VT, dl, LHS, RHS, Result, NVT, DAG,
                           TargetLowering::MulExpansionKind::OnlyLegalOrCustom,
                           LL, LH, RL, RH)) {
-    report_fatal_error("Unable to expand SMUL_FIX using SMUL_LOHI.");
+    report_fatal_error("Unable to expand MUL_FIX using MUL_LOHI.");
     return;
   }
 
@@ -2671,9 +2686,16 @@ void DAGTypeLegalizer::ExpandIntRes_SMULFIX(SDNode *N, SDValue &Lo,
     Hi = DAG.getNode(ISD::SRL, dl, NVT, ResultHL, SRLAmnt);
     Hi = DAG.getNode(ISD::OR, dl, NVT, Hi,
                      DAG.getNode(ISD::SHL, dl, NVT, ResultHH, SHLAmnt));
+  } else if (Scale == VTSize) {
+    assert(
+        !Signed &&
+        "Only unsigned types can have a scale equal to the operand bit width");
+
+    Lo = ResultHL;
+    Hi = ResultHH;
   } else {
-    llvm_unreachable(
-        "Expected the scale to be less than the width of the operands");
+    llvm_unreachable("Expected the scale to be less than or equal to the width "
+                     "of the operands");
   }
 }
 

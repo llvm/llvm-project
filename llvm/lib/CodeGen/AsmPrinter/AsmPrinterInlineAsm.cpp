@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
@@ -154,7 +153,6 @@ void AsmPrinter::EmitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                        " we don't have an asm parser for this target\n");
   Parser->setAssemblerDialect(Dialect);
   Parser->setTargetParser(*TAP.get());
-  Parser->setEnablePrintSchedInfo(EnablePrintSchedInfo);
   // Enable lexing Masm binary and hex integer literals in intel inline
   // assembly.
   if (Dialect == InlineAsm::AD_Intel)

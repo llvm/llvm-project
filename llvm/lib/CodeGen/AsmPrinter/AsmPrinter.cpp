@@ -59,7 +59,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constant.h"
@@ -141,10 +140,6 @@ static const char *const CodeViewLineTablesGroupDescription =
   "CodeView Line Tables";
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
-
-static cl::opt<bool>
-    PrintSchedule("print-schedule", cl::Hidden, cl::init(false),
-                  cl::desc("Print 'sched: [latency:throughput]' in .s output"));
 
 char AsmPrinter::ID = 0;
 
@@ -746,10 +741,7 @@ void AsmPrinter::EmitFunctionEntryLabel() {
 }
 
 /// emitComments - Pretty-print comments for instructions.
-/// It returns true iff the sched comment was emitted.
-///   Otherwise it returns false.
-static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
-                         AsmPrinter *AP) {
+static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   const MachineFunction *MF = MI.getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
@@ -757,7 +749,6 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
   int FI;
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
-  bool Commented = false;
 
   auto getSize =
       [&MFI](const SmallVectorImpl<const MachineMemOperand *> &Accesses) {
@@ -777,43 +768,24 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
   if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
     if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
-      CommentOS << MMO->getSize() << "-byte Reload";
-      Commented = true;
+      CommentOS << MMO->getSize() << "-byte Reload\n";
     }
   } else if (TII->hasLoadFromStackSlot(MI, Accesses)) {
-    if (auto Size = getSize(Accesses)) {
-      CommentOS << Size << "-byte Folded Reload";
-      Commented = true;
-    }
+    if (auto Size = getSize(Accesses))
+      CommentOS << Size << "-byte Folded Reload\n";
   } else if (TII->isStoreToStackSlotPostFE(MI, FI)) {
     if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
-      CommentOS << MMO->getSize() << "-byte Spill";
-      Commented = true;
+      CommentOS << MMO->getSize() << "-byte Spill\n";
     }
   } else if (TII->hasStoreToStackSlot(MI, Accesses)) {
-    if (auto Size = getSize(Accesses)) {
-      CommentOS << Size << "-byte Folded Spill";
-      Commented = true;
-    }
+    if (auto Size = getSize(Accesses))
+      CommentOS << Size << "-byte Folded Spill\n";
   }
 
   // Check for spill-induced copies
-  if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse)) {
-    Commented = true;
-    CommentOS << " Reload Reuse";
-  }
-
-  if (Commented) {
-    if (AP->EnablePrintSchedInfo) {
-      // If any comment was added above and we need sched info comment then add
-      // this new comment just after the above comment w/o "\n" between them.
-      CommentOS << " " << MF->getSubtarget().getSchedInfoStr(MI) << "\n";
-      return true;
-    }
-    CommentOS << "\n";
-  }
-  return false;
+  if (MI.getAsmPrinterFlag(MachineInstr::ReloadReuse))
+    CommentOS << " Reload Reuse\n";
 }
 
 /// emitImplicitDef - This method emits the specified machine instruction
@@ -1101,10 +1073,8 @@ void AsmPrinter::EmitFunctionBody() {
         }
       }
 
-      if (isVerbose() && emitComments(MI, OutStreamer->GetCommentOS(), this)) {
-        MachineInstr *MIP = const_cast<MachineInstr *>(&MI);
-        MIP->setAsmPrinterFlag(MachineInstr::NoSchedComment);
-      }
+      if (isVerbose())
+        emitComments(MI, OutStreamer->GetCommentOS());
 
       switch (MI.getOpcode()) {
       case TargetOpcode::CFI_INSTRUCTION:
@@ -1636,11 +1606,6 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   }
 
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  EnablePrintSchedInfo = PrintSchedule.getNumOccurrences()
-                             ? PrintSchedule
-                             : STI.supportPrintSchedInfo();
 }
 
 namespace {

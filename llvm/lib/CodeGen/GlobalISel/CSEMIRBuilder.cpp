@@ -194,6 +194,12 @@ MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
   constexpr unsigned Opc = TargetOpcode::G_CONSTANT;
   if (!canPerformCSEForOpc(Opc))
     return MachineIRBuilder::buildConstant(Res, Val);
+
+  // For vectors, CSE the element only for now.
+  LLT Ty = Res.getLLTTy(*getMRI());
+  if (Ty.isVector())
+    return buildSplatVector(Res, buildConstant(Ty.getElementType(), Val));
+
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
   void *InsertPos = nullptr;
@@ -205,6 +211,7 @@ MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
     // Handle generating copies here.
     return generateCopiesIfRequired({Res}, MIB);
   }
+
   MachineInstrBuilder NewMIB = MachineIRBuilder::buildConstant(Res, Val);
   return memoizeMI(NewMIB, InsertPos);
 }
@@ -214,6 +221,12 @@ MachineInstrBuilder CSEMIRBuilder::buildFConstant(const DstOp &Res,
   constexpr unsigned Opc = TargetOpcode::G_FCONSTANT;
   if (!canPerformCSEForOpc(Opc))
     return MachineIRBuilder::buildFConstant(Res, Val);
+
+  // For vectors, CSE the element only for now.
+  LLT Ty = Res.getLLTTy(*getMRI());
+  if (Ty.isVector())
+    return buildSplatVector(Res, buildFConstant(Ty.getElementType(), Val));
+
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
   void *InsertPos = nullptr;

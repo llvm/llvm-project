@@ -175,7 +175,7 @@ void MachOReader::readSymbolTable(Object &O) const {
                   MachOObj.getSymbolTableEntry(Symbol.getRawDataRefImpl()));
     O.SymTable.NameList.push_back(NLE);
   }
-};
+}
 
 void MachOReader::readStringTable(Object &O) const {
   StringRef Data = MachOObj.getStringTableData();
@@ -184,7 +184,7 @@ void MachOReader::readStringTable(Object &O) const {
   O.StrTable.Strings.reserve(Strs.size());
   for (auto S : Strs)
     O.StrTable.Strings.push_back(S.str());
-};
+}
 
 void MachOReader::readRebaseInfo(Object &O) const {
   O.Rebases.Opcodes = MachOObj.getDyldInfoRebaseOpcodes();

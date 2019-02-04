@@ -115,8 +115,8 @@ LegalityPredicate LegalityPredicates::memSizeInBytesNotPow2(unsigned MMOIdx) {
 
 LegalityPredicate LegalityPredicates::numElementsNotPow2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
-    const LLT &QueryTy = Query.Types[TypeIdx];
-    return QueryTy.isVector() && isPowerOf2_32(QueryTy.getNumElements());
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isVector() && !isPowerOf2_32(QueryTy.getNumElements());
   };
 }
 

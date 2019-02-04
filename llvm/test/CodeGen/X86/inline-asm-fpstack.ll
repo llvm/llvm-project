@@ -218,8 +218,8 @@ define void @testPR4485(x86_fp80* %a) {
 ; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fldt (%eax)
-; CHECK-NEXT:    fmulp %st(1)
-; CHECK-NEXT:    fmulp %st(1)
+; CHECK-NEXT:    fmulp %st, %st(1)
+; CHECK-NEXT:    fmulp %st, %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
@@ -497,7 +497,7 @@ define double @test_operand_rewrite() {
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    foo %st, %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    fsubp %st(1)
+; CHECK-NEXT:    fsubp %st, %st(1)
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call { double, double } asm sideeffect "foo $0, $1", "={st},={st(1)},~{dirflag},~{fpsr},~{flags}"()

@@ -585,6 +585,7 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildConstant(const DstOp &Res, int64_t Val);
+  MachineInstrBuilder buildConstant(const DstOp &Res, const APInt &Val);
 
   /// Build and insert \p Res = G_FCONSTANT \p Val
   ///
@@ -709,6 +710,11 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildBuildVector(const DstOp &Res,
                                        ArrayRef<unsigned> Ops);
+
+  /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
+  /// the number of elements
+  MachineInstrBuilder buildSplatVector(const DstOp &Res,
+                                       const SrcOp &Src);
 
   /// Build and insert \p Res = G_BUILD_VECTOR_TRUNC \p Op0, ...
   ///

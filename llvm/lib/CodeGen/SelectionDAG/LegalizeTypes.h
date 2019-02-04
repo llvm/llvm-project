@@ -344,7 +344,7 @@ private:
   SDValue PromoteIntRes_VAARG(SDNode *N);
   SDValue PromoteIntRes_XMULO(SDNode *N, unsigned ResNo);
   SDValue PromoteIntRes_ADDSUBSAT(SDNode *N);
-  SDValue PromoteIntRes_SMULFIX(SDNode *N);
+  SDValue PromoteIntRes_MULFIX(SDNode *N);
   SDValue PromoteIntRes_FLT_ROUNDS(SDNode *N);
 
   // Integer Operand Promotion.
@@ -378,7 +378,7 @@ private:
   SDValue PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FRAMERETURNADDR(SDNode *N);
   SDValue PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_SMULFIX(SDNode *N);
+  SDValue PromoteIntOp_MULFIX(SDNode *N);
   SDValue PromoteIntOp_FPOWI(SDNode *N);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
@@ -435,7 +435,7 @@ private:
   void ExpandIntRes_UADDSUBO          (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_XMULO             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUBSAT         (SDNode *N, SDValue &Lo, SDValue &Hi);
-  void ExpandIntRes_SMULFIX           (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_MULFIX            (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_ATOMIC_LOAD       (SDNode *N, SDValue &Lo, SDValue &Hi);
 
@@ -692,7 +692,7 @@ private:
   SDValue ScalarizeVecRes_UNDEF(SDNode *N);
   SDValue ScalarizeVecRes_VECTOR_SHUFFLE(SDNode *N);
 
-  SDValue ScalarizeVecRes_SMULFIX(SDNode *N);
+  SDValue ScalarizeVecRes_MULFIX(SDNode *N);
 
   // Vector Operand Scalarization: <1 x ty> -> ty.
   bool ScalarizeVectorOperand(SDNode *N, unsigned OpNo);
@@ -729,7 +729,7 @@ private:
   void SplitVecRes_ExtVecInRegOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo, SDValue &Hi);
 
-  void SplitVecRes_SMULFIX(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_MULFIX(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void SplitVecRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);

@@ -16,6 +16,7 @@
 #include "Headers.h"
 #include "Path.h"
 #include "Protocol.h"
+#include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
@@ -48,7 +49,8 @@ namespace clangd {
 struct PreambleData {
   PreambleData(PrecompiledPreamble Preamble, std::vector<Diag> Diags,
                IncludeStructure Includes,
-               std::unique_ptr<PreambleFileStatusCache> StatCache);
+               std::unique_ptr<PreambleFileStatusCache> StatCache,
+               CanonicalIncludes CanonIncludes);
 
   tooling::CompileCommand CompileCommand;
   PrecompiledPreamble Preamble;
@@ -59,6 +61,7 @@ struct PreambleData {
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::unique_ptr<PreambleFileStatusCache> StatCache;
+  CanonicalIncludes CanonIncludes;
 };
 
 /// Stores and provides access to parsed AST.
@@ -100,13 +103,14 @@ public:
   /// bytes. Does not include the size of the preamble.
   std::size_t getUsedBytes() const;
   const IncludeStructure &getIncludeStructure() const;
+  const CanonicalIncludes &getCanonicalIncludes() const;
 
 private:
   ParsedAST(std::shared_ptr<const PreambleData> Preamble,
             std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action,
             std::vector<Decl *> LocalTopLevelDecls, std::vector<Diag> Diags,
-            IncludeStructure Includes);
+            IncludeStructure Includes, CanonicalIncludes CanonIncludes);
 
   // In-memory preambles must outlive the AST, it is important that this member
   // goes before Clang and Action.
@@ -125,10 +129,12 @@ private:
   // top-level decls from the preamble.
   std::vector<Decl *> LocalTopLevelDecls;
   IncludeStructure Includes;
+  CanonicalIncludes CanonIncludes;
 };
 
 using PreambleParsedCallback =
-    std::function<void(ASTContext &, std::shared_ptr<clang::Preprocessor>)>;
+    std::function<void(ASTContext &, std::shared_ptr<clang::Preprocessor>,
+                       const CanonicalIncludes &)>;
 
 /// Rebuild the preamble for the new inputs unless the old one can be reused.
 /// If \p OldPreamble can be reused, it is returned unchanged.

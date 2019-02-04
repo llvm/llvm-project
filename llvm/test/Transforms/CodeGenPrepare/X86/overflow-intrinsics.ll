@@ -7,10 +7,10 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 define i64 @test1(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OVERFLOW]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %add = add i64 %b, %a
@@ -21,10 +21,10 @@ define i64 @test1(i64 %a, i64 %b) nounwind ssp {
 
 define i64 @test2(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OVERFLOW]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %add = add i64 %b, %a
@@ -35,10 +35,10 @@ define i64 @test2(i64 %a, i64 %b) nounwind ssp {
 
 define i64 @test3(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OVERFLOW]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %add = add i64 %b, %a
@@ -52,10 +52,10 @@ define i64 @test4(i64 %a, i64 %b, i1 %c) nounwind ssp {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OVERFLOW]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i64 0
@@ -105,11 +105,11 @@ exit:
 
 define i1 @uaddo_i64_increment(i64 %x, i64* %p) {
 ; CHECK-LABEL: @uaddo_i64_increment(
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 1)
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    store i64 [[UADD]], i64* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OVERFLOW]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %a = add i64 %x, 1
   %ov = icmp eq i64 %a, 0
@@ -119,11 +119,11 @@ define i1 @uaddo_i64_increment(i64 %x, i64* %p) {
 
 define i1 @uaddo_i8_increment_noncanonical_1(i8 %x, i8* %p) {
 ; CHECK-LABEL: @uaddo_i8_increment_noncanonical_1(
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 1, i8 [[X:%.*]])
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i8, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i8, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    store i8 [[UADD]], i8* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OVERFLOW]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 1, i8 [[X:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i8, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i8 [[MATH]], i8* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %a = add i8 1, %x        ; commute
   %ov = icmp eq i8 %a, 0
@@ -133,11 +133,11 @@ define i1 @uaddo_i8_increment_noncanonical_1(i8 %x, i8* %p) {
 
 define i1 @uaddo_i32_increment_noncanonical_2(i32 %x, i32* %p) {
 ; CHECK-LABEL: @uaddo_i32_increment_noncanonical_2(
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 1)
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i32, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    store i32 [[UADD]], i32* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OVERFLOW]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i32 [[MATH]], i32* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %a = add i32 %x, 1
   %ov = icmp eq i32 0, %a   ; commute
@@ -147,11 +147,11 @@ define i1 @uaddo_i32_increment_noncanonical_2(i32 %x, i32* %p) {
 
 define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, i16* %p) {
 ; CHECK-LABEL: @uaddo_i16_increment_noncanonical_3(
-; CHECK-NEXT:    [[UADD_OVERFLOW:%.*]] = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 1, i16 [[X:%.*]])
-; CHECK-NEXT:    [[UADD:%.*]] = extractvalue { i16, i1 } [[UADD_OVERFLOW]], 0
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i16, i1 } [[UADD_OVERFLOW]], 1
-; CHECK-NEXT:    store i16 [[UADD]], i16* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OVERFLOW]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 1, i16 [[X:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i16, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i16 [[MATH]], i16* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %a = add i16 1, %x        ; commute
   %ov = icmp eq i16 0, %a   ; commute

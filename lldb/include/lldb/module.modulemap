@@ -17,6 +17,7 @@ module lldb_Host {
   module Editline { header "Host/Editline.h" export * }
   module FileCache { header "Host/FileCache.h" export * }
   module File { header "Host/File.h" export * }
+  module FileAction { header "Host/FileAction.h" export * }
   module FileSystem { header "Host/FileSystem.h" export * }
   module HostGetOpt { header "Host/HostGetOpt.h" export * }
   module Host { header "Host/Host.h" export * }
@@ -38,7 +39,9 @@ module lldb_Host {
   module PipeBase { header "Host/PipeBase.h" export * }
   module Pipe { header "Host/Pipe.h" export * }
   module PosixApi { header "Host/PosixApi.h" export * }
+  module ProcessInfo { header "Host/ProcessInfo.h" export * }
   module ProcessLauncher { header "Host/ProcessLauncher.h" export * }
+  module ProcessLaunchInfo { header "Host/ProcessLaunchInfo.h" export * }
   module ProcessRunLock { header "Host/ProcessRunLock.h" export * }
   module PseudoTerminal { header "Host/PseudoTerminal.h" export * }
   module SafeMachO { header "Host/SafeMachO.h" export * }

@@ -370,9 +370,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   // TODO: Pointer types, any 32-bit or 64-bit vector
   getActionDefinitionsBuilder(G_SELECT)
-    .legalForCartesianProduct({S32, S64, V2S32, V2S16, GlobalPtr, LocalPtr,
-          FlatPtr, PrivatePtr, LLT::vector(2, LocalPtr),
-          LLT::vector(2, PrivatePtr)}, {S1})
+    .legalForCartesianProduct({S32, S64, V2S32, V2S16, V4S16,
+          GlobalPtr, LocalPtr, FlatPtr, PrivatePtr,
+          LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1})
     .clampScalar(0, S32, S64)
     .fewerElementsIf(
       [=](const LegalityQuery &Query) {
