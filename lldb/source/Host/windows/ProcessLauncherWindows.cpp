@@ -8,7 +8,7 @@
 
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ConvertUTF.h"

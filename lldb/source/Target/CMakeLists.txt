@@ -49,7 +49,6 @@ add_lldb_library(lldbTarget
   ABI.cpp
   CPPLanguageRuntime.cpp
   ExecutionContext.cpp
-  FileAction.cpp
   JITLoader.cpp
   JITLoaderList.cpp
   InstrumentationRuntime.cpp
@@ -64,8 +63,6 @@ add_lldb_library(lldbTarget
   PathMappingList.cpp
   Platform.cpp
   Process.cpp
-  ProcessInfo.cpp
-  ProcessLaunchInfo.cpp
   Queue.cpp
   QueueItem.cpp
   QueueList.cpp

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Target_FileAction_h
-#define liblldb_Target_FileAction_h
+#ifndef LLDB_HOST_FILEACTION_H
+#define LLDB_HOST_FILEACTION_H
 
 #include "lldb/Utility/FileSpec.h"
 #include <string>

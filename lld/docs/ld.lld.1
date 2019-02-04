@@ -46,6 +46,9 @@ as a native linker as well as a cross linker.
 .It Fl -allow-multiple-definition
 Do not error if a symbol is defined multiple times.
 The first definition will be used.
+.It Fl -allow-shlib-undefined
+Allow unresolved references in shared libraries.
+This option is enabled by default when linking a shared library.
 .It Fl -apply-dynamic-relocs
 Apply link-time values for dynamic relocations.
 .It Fl -as-needed
@@ -242,6 +245,9 @@ Set target emulation.
 .It Fl -Map Ns = Ns Ar file , Fl M Ar file
 Print a link map to
 .Ar file .
+.It Fl -no-allow-shlib-undefined
+Do not allow unresolved references in shared libraries.
+This option is enabled by default when linking an executable.
 .It Fl -no-as-needed
 Always set
 .Dv DT_NEEDED
