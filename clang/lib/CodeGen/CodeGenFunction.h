@@ -3990,8 +3990,8 @@ public:
   //                         Annotations Emission
   //===--------------------------------------------------------------------===//
 
-  /// Emit an annotation call (intrinsic or builtin).
-  llvm::Value *EmitAnnotationCall(llvm::Value *AnnotationFn,
+  /// Emit an annotation call (intrinsic).
+  llvm::Value *EmitAnnotationCall(llvm::Function *AnnotationFn,
                                   llvm::Value *AnnotatedVal,
                                   StringRef AnnotationStr,
                                   SourceLocation Location);

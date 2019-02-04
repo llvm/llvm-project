@@ -854,6 +854,8 @@ void TextNodeDumper::VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node) {
 }
 
 void TextNodeDumper::VisitCXXThisExpr(const CXXThisExpr *Node) {
+  if (Node->isImplicit())
+    OS << " implicit";
   OS << " this";
 }
 

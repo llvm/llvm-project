@@ -1331,6 +1331,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       (Opts.OptimizationLevel > 0) && (Opts.OptimizeSize != 2) &&
       Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, true);
 
+  Opts.PassPlugins = Args.getAllArgValues(OPT_fpass_plugin_EQ);
+
   return Success;
 }
 
