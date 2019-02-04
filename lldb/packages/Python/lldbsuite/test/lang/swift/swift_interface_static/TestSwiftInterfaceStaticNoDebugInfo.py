@@ -44,12 +44,11 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
 
 
     def do_test(self):
-        # A custom module cache location
-        mod_cache = self.getBuildArtifact("module-cache-dir")
+        # The custom module cache location
+        mod_cache = self.getBuildArtifact("MCP")
 
-        # Clear the module cache if it already exists
-        if os.path.isdir(mod_cache):
-          shutil.rmtree(mod_cache)
+        # Clear the module cache (populated by the Makefile build)
+        shutil.rmtree(mod_cache)
         self.assertFalse(os.path.isdir(mod_cache),
                          "module cache should not exist")
 
@@ -86,9 +85,9 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
         a_modules = glob.glob(os.path.join(mod_cache, 'AA-*.swiftmodule'))
         b_modules = glob.glob(os.path.join(mod_cache, 'BB-*.swiftmodule'))
         c_modules = glob.glob(os.path.join(mod_cache, 'CC-*.swiftmodule'))
-        self.assertTrue(len(a_modules) == 1)
-        self.assertTrue(len(b_modules) == 1)
-        self.assertTrue(len(c_modules) == 0)
+        self.assertEqual(len(a_modules), 1)
+        self.assertEqual(len(b_modules), 1)
+        self.assertEqual(len(c_modules), 0)
 
         # Update the timestamps of the modules to a time well in the past
         for file in a_modules + b_modules:
@@ -109,9 +108,9 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
         a_modules = glob.glob(os.path.join(mod_cache, 'AA-*.swiftmodule'))
         b_modules = glob.glob(os.path.join(mod_cache, 'BB-*.swiftmodule'))
         c_modules = glob.glob(os.path.join(mod_cache, 'CC-*.swiftmodule'))
-        self.assertTrue(len(a_modules) == 1, "unexpected number of swiftmodules for A.swift")
-        self.assertTrue(len(b_modules) == 1, "unexpected number of swiftmodules for B.swift")
-        self.assertTrue(len(c_modules) == 1, "unexpected number of swiftmodules for C.swift")
+        self.assertEqual(len(a_modules), 1, "unexpected number of swiftmodules for A.swift")
+        self.assertEqual(len(b_modules), 1, "unexpected number of swiftmodules for B.swift")
+        self.assertEqual(len(c_modules), 1, "unexpected number of swiftmodules for C.swift")
 
         # Make sure the .swiftmodule files of A and B were re-used rather than
         # re-generated when they were re-imported

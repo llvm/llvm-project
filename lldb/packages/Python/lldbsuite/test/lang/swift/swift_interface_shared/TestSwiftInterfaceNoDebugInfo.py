@@ -44,12 +44,11 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
 
     def do_test(self):
-        # A custom module cache location
-        mod_cache = self.getBuildArtifact("module-cache-dir")
+        # The custom module cache location
+        mod_cache = self.getBuildArtifact("MCP")
 
-        # Clear the module cache if it already exists
-        if os.path.isdir(mod_cache):
-          shutil.rmtree(mod_cache)
+        # Clear the module cache (populated by the Makefile build)
+        shutil.rmtree(mod_cache)
         self.assertFalse(os.path.isdir(mod_cache),
                          "module cache should not exist")
 

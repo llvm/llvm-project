@@ -7,7 +7,11 @@ DYLIB_SWIFT_SOURCES := libs/$(BASENAME).swift
 # this test
 SWIFTFLAGS=-Onone -Xfrontend -serialize-debugging-options -enable-parseable-module-interface
 
+# don't include the wrapped .swiftmodule on linux to make sure we actually use the .swiftinterface
+EXCLUDE_WRAPPED_SWIFTMODULE=1
+
 include $(LEVEL)/Makefile.rules
 
 clean::
-	rm -rf $(BASENAME).swiftinterface
+	rm -f $(BASENAME).swiftinterface
+	rm -f $(CLANG_MODULE_CACHE_DIR)/$(BASENAME)-*.swiftmodule

@@ -1,8 +1,9 @@
 // Test that .swiftinterface files can be loaded via the repl.
 
-// RUN: mkdir -p %t
-// RUN: %target-swiftc -module-name A -emit-parseable-module-interface-path %t/A.swiftinterface -emit-library -o %t/libA.dylib %S/Inputs/A.swift
-// RUN: %lldb --repl="-I%t -L%t -lA" < %s | FileCheck %s
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: %target-swiftc -module-name A -emit-parseable-module-interface-path %t/A.swiftinterface -emit-library -o %t/libA%target-shared-library-suffix %S/Inputs/A.swift
+// RUN: %lldb --repl="-I%t -L%t -lA -enable-parseable-module-interface" < %s | FileCheck %s
 
 import A
 
