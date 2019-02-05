@@ -40,7 +40,7 @@ namespace {
 
 // Went we ceate the indirect function table we start at 1, so that there is
 // and emtpy slot at 0 and therefore calling a null function pointer will trap.
-static const uint32_t kInitialTableOffset = 1;
+static const uint32_t InitialTableOffset = 1;
 
 // For patching purposes, we need to remember where each section starts, both
 // for patching up the section size field, and for patching up references to
@@ -60,15 +60,13 @@ struct SectionBookkeeping {
 // TODO: Consider using wasm::WasmSignature directly instead.
 struct WasmSignature {
   // Support empty and tombstone instances, needed by DenseMap.
-  enum { Plain, Empty, Tombstone } State;
+  enum { Plain, Empty, Tombstone } State = Plain;
 
   // The return types of the function.
   SmallVector<wasm::ValType, 1> Returns;
 
   // The parameter types of the function.
   SmallVector<wasm::ValType, 4> Params;
-
-  WasmSignature() : State(Plain) {}
 
   bool operator==(const WasmSignature &Other) const {
     return State == Other.State && Returns == Other.Returns &&
@@ -172,7 +170,7 @@ struct WasmRelocationEntry {
 #endif
 };
 
-static const uint32_t INVALID_INDEX = -1;
+static const uint32_t InvalidIndex = -1;
 
 struct WasmCustomSection {
 
@@ -184,7 +182,7 @@ struct WasmCustomSection {
 
   WasmCustomSection(StringRef Name, MCSectionWasm *Section)
       : Name(Name), Section(Section), OutputContentsOffset(0),
-        OutputIndex(INVALID_INDEX) {}
+        OutputIndex(InvalidIndex) {}
 };
 
 #if !defined(NDEBUG)
@@ -196,7 +194,7 @@ raw_ostream &operator<<(raw_ostream &OS, const WasmRelocationEntry &Rel) {
 
 // Write X as an (unsigned) LEB value at offset Offset in Stream, padded
 // to allow patching.
-static void WritePatchableLEB(raw_pwrite_stream &Stream, uint32_t X,
+static void writePatchableLEB(raw_pwrite_stream &Stream, uint32_t X,
                               uint64_t Offset) {
   uint8_t Buffer[5];
   unsigned SizeLen = encodeULEB128(X, Buffer, 5);
@@ -206,7 +204,7 @@ static void WritePatchableLEB(raw_pwrite_stream &Stream, uint32_t X,
 
 // Write X as an signed LEB value at offset Offset in Stream, padded
 // to allow patching.
-static void WritePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
+static void writePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
                                uint64_t Offset) {
   uint8_t Buffer[5];
   unsigned SizeLen = encodeSLEB128(X, Buffer, 5);
@@ -215,7 +213,7 @@ static void WritePatchableSLEB(raw_pwrite_stream &Stream, int32_t X,
 }
 
 // Write X as a plain integer value at offset Offset in Stream.
-static void WriteI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
+static void writeI32(raw_pwrite_stream &Stream, uint32_t X, uint64_t Offset) {
   uint8_t Buffer[4];
   support::endian::write32le(Buffer, X);
   Stream.pwrite((char *)Buffer, sizeof(Buffer), Offset);
@@ -281,8 +279,6 @@ public:
   WasmObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
                    raw_pwrite_stream &OS)
       : W(OS, support::little), TargetObjectWriter(std::move(MOTW)) {}
-
-  ~WasmObjectWriter() override;
 
 private:
   void reset() override {
@@ -360,8 +356,6 @@ private:
 
 } // end anonymous namespace
 
-WasmObjectWriter::~WasmObjectWriter() {}
-
 // Write out a section header and a patchable section size field.
 void WasmObjectWriter::startSection(SectionBookkeeping &Section,
                                     unsigned SectionId) {
@@ -412,7 +406,7 @@ void WasmObjectWriter::endSection(SectionBookkeeping &Section) {
 
   // Write the final section size to the payload_len field, which follows
   // the section id byte.
-  WritePatchableLEB(static_cast<raw_pwrite_stream &>(W.OS), Size,
+  writePatchableLEB(static_cast<raw_pwrite_stream &>(W.OS), Size,
                     Section.SizeOffset);
 }
 
@@ -562,7 +556,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   }
 }
 
-static const MCSymbolWasm *ResolveSymbol(const MCSymbolWasm &Symbol) {
+static const MCSymbolWasm *resolveSymbol(const MCSymbolWasm &Symbol) {
   if (Symbol.isVariable()) {
     const MCExpr *Expr = Symbol.getVariableValue();
     auto *Inner = cast<MCSymbolRefExpr>(Expr);
@@ -581,7 +575,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   case wasm::R_WASM_TABLE_INDEX_SLEB:
   case wasm::R_WASM_TABLE_INDEX_I32: {
     // Provisional value is table address of the resolved symbol itself
-    const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
+    const MCSymbolWasm *Sym = resolveSymbol(*RelEntry.Symbol);
     assert(Sym->isFunction());
     return TableIndices[Sym];
   }
@@ -606,7 +600,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry) {
   case wasm::R_WASM_MEMORY_ADDR_I32:
   case wasm::R_WASM_MEMORY_ADDR_SLEB: {
     // Provisional value is address of the global
-    const MCSymbolWasm *Sym = ResolveSymbol(*RelEntry.Symbol);
+    const MCSymbolWasm *Sym = resolveSymbol(*RelEntry.Symbol);
     // For undefined symbols, use zero
     if (!Sym->isDefined())
       return 0;
@@ -689,17 +683,17 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_GLOBAL_INDEX_LEB:
     case wasm::R_WASM_MEMORY_ADDR_LEB:
     case wasm::R_WASM_EVENT_INDEX_LEB:
-      WritePatchableLEB(Stream, Value, Offset);
+      writePatchableLEB(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_I32:
     case wasm::R_WASM_MEMORY_ADDR_I32:
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
     case wasm::R_WASM_SECTION_OFFSET_I32:
-      WriteI32(Stream, Value, Offset);
+      writeI32(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_SLEB:
-      WritePatchableSLEB(Stream, Value, Offset);
+      writePatchableSLEB(Stream, Value, Offset);
       break;
     default:
       llvm_unreachable("invalid relocation type");
@@ -854,7 +848,7 @@ void WasmObjectWriter::writeElemSection(ArrayRef<uint32_t> TableElems) {
 
   // init expr for starting offset
   W.OS << char(wasm::WASM_OPCODE_I32_CONST);
-  encodeSLEB128(kInitialTableOffset, W.OS);
+  encodeSLEB128(InitialTableOffset, W.OS);
   W.OS << char(wasm::WASM_OPCODE_END);
 
   encodeULEB128(TableElems.size(), W.OS);
@@ -1087,7 +1081,7 @@ void WasmObjectWriter::registerFunctionType(const MCSymbolWasm &Symbol) {
   assert(Symbol.isFunction());
 
   WasmSignature S;
-  const MCSymbolWasm *ResolvedSym = ResolveSymbol(Symbol);
+  const MCSymbolWasm *ResolvedSym = resolveSymbol(Symbol);
   if (auto *Sig = ResolvedSym->getSignature()) {
     S.Returns = Sig->Returns;
     S.Params = Sig->Params;
@@ -1164,7 +1158,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   // For now, always emit the memory import, since loads and stores are not
   // valid without it. In the future, we could perhaps be more clever and omit
   // it if there are no loads or stores.
-  MCSymbolWasm *MemorySym =
+  auto *MemorySym =
       cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__linear_memory"));
   wasm::WasmImport MemImport;
   MemImport.Module = MemorySym->getImportModule();
@@ -1175,7 +1169,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   // For now, always emit the table section, since indirect calls are not
   // valid without it. In the future, we could perhaps be more clever and omit
   // it if there are no indirect calls.
-  MCSymbolWasm *TableSym =
+  auto *TableSym =
       cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__indirect_function_table"));
   wasm::WasmImport TableImport;
   TableImport.Module = TableSym->getImportModule();
@@ -1325,7 +1319,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
           report_fatal_error(
               "function sections must contain one function each");
 
-        if (WS.getSize() == 0)
+        if (WS.getSize() == nullptr)
           report_fatal_error(
               "function symbols must have a size set with .size");
 
@@ -1422,7 +1416,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     // Find the target symbol of this weak alias and export that index
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
-    const MCSymbolWasm *ResolvedSym = ResolveSymbol(WS);
+    const MCSymbolWasm *ResolvedSym = resolveSymbol(WS);
     LLVM_DEBUG(dbgs() << WS.getName() << ": weak alias of '" << *ResolvedSym
                       << "'\n");
 
@@ -1446,7 +1440,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   for (const MCSymbol &S : Asm.symbols()) {
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     if (!isInSymtab(WS)) {
-      WS.setIndex(INVALID_INDEX);
+      WS.setIndex(InvalidIndex);
       continue;
     }
     LLVM_DEBUG(dbgs() << "adding to symtab: " << WS << "\n");
@@ -1485,9 +1479,9 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
           Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB)
         return;
       assert(Rel.Symbol->isFunction());
-      const MCSymbolWasm &WS = *ResolveSymbol(*Rel.Symbol);
+      const MCSymbolWasm &WS = *resolveSymbol(*Rel.Symbol);
       uint32_t FunctionIndex = WasmIndices.find(&WS)->second;
-      uint32_t TableIndex = TableElems.size() + kInitialTableOffset;
+      uint32_t TableIndex = TableElems.size() + InitialTableOffset;
       if (TableIndices.try_emplace(&WS, TableIndex).second) {
         LLVM_DEBUG(dbgs() << "  -> adding " << WS.getName()
                           << " to table: " << TableIndex << "\n");
@@ -1546,10 +1540,10 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
     const auto &DataFrag = cast<MCDataFragment>(Frag);
     const SmallVectorImpl<char> &Contents = DataFrag.getContents();
     for (const uint8_t *
-             p = (const uint8_t *)Contents.data(),
-            *end = (const uint8_t *)Contents.data() + Contents.size();
-         p != end; ++p) {
-      if (*p != 0)
+             P = (const uint8_t *)Contents.data(),
+            *End = (const uint8_t *)Contents.data() + Contents.size();
+         P != End; ++P) {
+      if (*P != 0)
         report_fatal_error("non-symbolic data in .init_array section");
     }
     for (const MCFixup &Fixup : DataFrag.getFixups()) {
@@ -1561,7 +1555,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
         report_fatal_error("fixups in .init_array should be symbol references");
       if (Sym->getKind() != MCSymbolRefExpr::VK_WebAssembly_FUNCTION)
         report_fatal_error("symbols in .init_array should be for functions");
-      if (Sym->getSymbol().getIndex() == INVALID_INDEX)
+      if (Sym->getSymbol().getIndex() == InvalidIndex)
         report_fatal_error("symbols in .init_array should exist in symbtab");
       InitFuncs.push_back(
           std::make_pair(Priority, Sym->getSymbol().getIndex()));

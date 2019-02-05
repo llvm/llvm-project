@@ -37,9 +37,9 @@ class WebAssemblyDAGToDAGISel final : public SelectionDAGISel {
   bool ForCodeSize;
 
 public:
-  WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &tm,
+  WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &TM,
                           CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr), ForCodeSize(false) {
+      : SelectionDAGISel(TM, OptLevel), Subtarget(nullptr), ForCodeSize(false) {
   }
 
   StringRef getPassName() const override {

@@ -14,11 +14,11 @@
 
 using namespace llvm;
 
-MCSectionWasm::~MCSectionWasm() {} // anchor.
+MCSectionWasm::~MCSectionWasm() = default; // anchor.
 
 // Decides whether a '.section' directive
 // should be printed before the section name.
-bool MCSectionWasm::ShouldOmitSectionDirective(StringRef Name,
+bool MCSectionWasm::shouldOmitSectionDirective(StringRef Name,
                                                const MCAsmInfo &MAI) const {
   return MAI.shouldOmitSectionDirective(Name);
 }
@@ -50,7 +50,7 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,
                                          const MCExpr *Subsection) const {
 
-  if (ShouldOmitSectionDirective(SectionName, MAI)) {
+  if (shouldOmitSectionDirective(SectionName, MAI)) {
     OS << '\t' << getSectionName();
     if (Subsection) {
       OS << '\t';

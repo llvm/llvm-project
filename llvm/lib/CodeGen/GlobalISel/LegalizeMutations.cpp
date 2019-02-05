@@ -40,12 +40,11 @@ LegalizeMutation LegalizeMutations::widenScalarToNextPow2(unsigned TypeIdx,
 LegalizeMutation LegalizeMutations::moreElementsToNextPow2(unsigned TypeIdx,
                                                            unsigned Min) {
   return [=](const LegalityQuery &Query) {
-    const LLT &VecTy = Query.Types[TypeIdx];
-    unsigned NewNumElements = 1 << Log2_32_Ceil(VecTy.getNumElements());
-    if (NewNumElements < Min)
-      NewNumElements = Min;
-    return std::make_pair(
-        TypeIdx, LLT::vector(NewNumElements, VecTy.getScalarSizeInBits()));
+    const LLT VecTy = Query.Types[TypeIdx];
+    unsigned NewNumElements =
+        std::max(1u << Log2_32_Ceil(VecTy.getNumElements()), Min);
+    return std::make_pair(TypeIdx,
+                          LLT::vector(NewNumElements, VecTy.getElementType()));
   };
 }
 

@@ -210,6 +210,15 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   W.printString("Name", Symbol.Info.Name);
   W.printEnum("Type", Symbol.Info.Kind, makeArrayRef(WasmSymbolTypes));
   W.printHex("Flags", Symbol.Info.Flags);
+  if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)
+    W.printString("Module", Symbol.Info.Module);
+  if (Symbol.Info.Kind != wasm::WASM_SYMBOL_TYPE_DATA) {
+    W.printHex("ElementIndex", Symbol.Info.ElementIndex);
+  } else if (!(Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)) {
+    W.printHex("Offset", Symbol.Info.DataRef.Offset);
+    W.printHex("Segment", Symbol.Info.DataRef.Segment);
+    W.printHex("Size", Symbol.Info.DataRef.Size);
+  }
 }
 
 } // namespace
@@ -219,7 +228,7 @@ namespace llvm {
 std::error_code createWasmDumper(const object::ObjectFile *Obj,
                                  ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result) {
-  const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(Obj);
+  const auto *WasmObj = dyn_cast<WasmObjectFile>(Obj);
   assert(WasmObj && "createWasmDumper called with non-wasm object");
 
   Result.reset(new WasmDumper(WasmObj, Writer));

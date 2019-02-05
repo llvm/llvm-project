@@ -10,7 +10,7 @@ config("compiler_defaults") {
     defines += [ "NDEBUG" ]
   }
 
-  cflags = target_flags + target_cflags
+  cflags = target_flags
   ldflags = target_flags + target_ldflags
 
   if (host_os == "mac" && clang_base_path != "") {
@@ -34,7 +34,11 @@ config("compiler_defaults") {
     ]
   } else {
     if (is_debug) {
-      cflags += [ "/Zi" ]
+      cflags += [
+        "/Zi",
+        "/FS",
+      ]
+      ldflags += [ "/DEBUG" ]
     } else {
       cflags += [
         "/O2",
@@ -57,7 +61,7 @@ config("compiler_defaults") {
 
     # The MSVC default value (1 MB) is not enough for parsing recursive C++
     # templates in Clang.
-    ldflags = [ "/STACK:10000000" ]
+    ldflags += [ "/STACK:10000000" ]
   }
 
   # Warning setup.

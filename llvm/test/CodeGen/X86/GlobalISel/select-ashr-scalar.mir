@@ -131,7 +131,7 @@ body:             |
     ; ALL: $rax = COPY [[SAR64ri]]
     ; ALL: RET 0, implicit $rax
     %0(s64) = COPY $rdi
-    %1(s8) = G_CONSTANT i64 5
+    %1(s8) = G_CONSTANT i8 5
     %2(s64) = G_ASHR %0, %1
     $rax = COPY %2(s64)
     RET 0, implicit $rax
@@ -162,7 +162,7 @@ body:             |
     ; ALL: $rax = COPY [[SAR64r1_]]
     ; ALL: RET 0, implicit $rax
     %0(s64) = COPY $rdi
-    %1(s8) = G_CONSTANT i64 1
+    %1(s8) = G_CONSTANT i8 1
     %2(s64) = G_ASHR %0, %1
     $rax = COPY %2(s64)
     RET 0, implicit $rax
@@ -229,7 +229,7 @@ body:             |
     ; ALL: $eax = COPY [[SAR32ri]]
     ; ALL: RET 0, implicit $eax
     %0(s32) = COPY $edi
-    %1(s8) = G_CONSTANT i32 5
+    %1(s8) = G_CONSTANT i8 5
     %2(s32) = G_ASHR %0, %1
     $eax = COPY %2(s32)
     RET 0, implicit $eax
@@ -260,7 +260,7 @@ body:             |
     ; ALL: $eax = COPY [[SAR32r1_]]
     ; ALL: RET 0, implicit $eax
     %0(s32) = COPY $edi
-    %1(s8) = G_CONSTANT i32 1
+    %1(s8) = G_CONSTANT i8 1
     %2(s32) = G_ASHR %0, %1
     $eax = COPY %2(s32)
     RET 0, implicit $eax
@@ -332,7 +332,7 @@ body:             |
     ; ALL: $ax = COPY [[SAR16ri]]
     ; ALL: RET 0, implicit $ax
     %0(s32) = COPY $edi
-    %2(s8) = G_CONSTANT i16 5
+    %2(s8) = G_CONSTANT i8 5
     %1(s16) = G_TRUNC %0(s32)
     %3(s16) = G_ASHR %1, %2
     $ax = COPY %3(s16)
@@ -366,7 +366,7 @@ body:             |
     ; ALL: $ax = COPY [[SAR16r1_]]
     ; ALL: RET 0, implicit $ax
     %0(s32) = COPY $edi
-    %2(s8) = G_CONSTANT i16 1
+    %2(s8) = G_CONSTANT i8 1
     %1(s16) = G_TRUNC %0(s32)
     %3(s16) = G_ASHR %1, %2
     $ax = COPY %3(s16)

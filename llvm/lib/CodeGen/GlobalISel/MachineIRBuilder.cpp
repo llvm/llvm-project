@@ -244,38 +244,26 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     const ConstantInt &Val) {
   LLT Ty = Res.getLLTTy(*getMRI());
   LLT EltTy = Ty.getScalarType();
-
-  const ConstantInt *NewVal = &Val;
-  if (EltTy.getSizeInBits() != Val.getBitWidth()) {
-    NewVal = ConstantInt::get(
-      getMF().getFunction().getContext(),
-      Val.getValue().sextOrTrunc(EltTy.getSizeInBits()));
-  }
+  assert(EltTy.getScalarSizeInBits() == Val.getBitWidth() &&
+         "creating constant with the wrong size");
 
   if (Ty.isVector()) {
-    unsigned EltReg = getMRI()->createGenericVirtualRegister(EltTy);
-    buildInstr(TargetOpcode::G_CONSTANT)
-      .addDef(EltReg)
-      .addCImm(NewVal);
-
-    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
-    Res.addDefToMIB(*getMRI(), MIB);
-
-    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
-      MIB.addUse(EltReg);
-    return MIB;
+    auto Const = buildInstr(TargetOpcode::G_CONSTANT)
+    .addDef(getMRI()->createGenericVirtualRegister(EltTy))
+    .addCImm(&Val);
+    return buildSplatVector(Res, Const);
   }
 
-  auto MIB = buildInstr(TargetOpcode::G_CONSTANT);
-  Res.addDefToMIB(*getMRI(), MIB);
-  MIB.addCImm(NewVal);
-  return MIB;
+  auto Const = buildInstr(TargetOpcode::G_CONSTANT);
+  Res.addDefToMIB(*getMRI(), Const);
+  Const.addCImm(&Val);
+  return Const;
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     int64_t Val) {
   auto IntN = IntegerType::get(getMF().getFunction().getContext(),
-                               Res.getLLTTy(*getMRI()).getSizeInBits());
+                               Res.getLLTTy(*getMRI()).getScalarSizeInBits());
   ConstantInt *CI = ConstantInt::get(IntN, Val, true);
   return buildConstant(Res, *CI);
 }
@@ -283,28 +271,32 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      const ConstantFP &Val) {
   LLT Ty = Res.getLLTTy(*getMRI());
+  LLT EltTy = Ty.getScalarType();
+
+  assert(APFloat::getSizeInBits(Val.getValueAPF().getSemantics())
+         == EltTy.getSizeInBits() &&
+         "creating fconstant with the wrong size");
 
   assert(!Ty.isPointer() && "invalid operand type");
 
   if (Ty.isVector()) {
-    unsigned EltReg
-      = getMRI()->createGenericVirtualRegister(Ty.getElementType());
-    buildInstr(TargetOpcode::G_FCONSTANT)
-      .addDef(EltReg)
-      .addFPImm(&Val);
+    auto Const = buildInstr(TargetOpcode::G_FCONSTANT)
+    .addDef(getMRI()->createGenericVirtualRegister(EltTy))
+    .addFPImm(&Val);
 
-    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
-    Res.addDefToMIB(*getMRI(), MIB);
-
-    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
-      MIB.addUse(EltReg);
-    return MIB;
+    return buildSplatVector(Res, Const);
   }
 
-  auto MIB = buildInstr(TargetOpcode::G_FCONSTANT);
-  Res.addDefToMIB(*getMRI(), MIB);
-  MIB.addFPImm(&Val);
-  return MIB;
+  auto Const = buildInstr(TargetOpcode::G_FCONSTANT);
+  Res.addDefToMIB(*getMRI(), Const);
+  Const.addFPImm(&Val);
+  return Const;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
+                                                    const APInt &Val) {
+  ConstantInt *CI = ConstantInt::get(getMF().getFunction().getContext(), Val);
+  return buildConstant(Res, *CI);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
@@ -312,7 +304,7 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   LLT DstTy = Res.getLLTTy(*getMRI());
   auto &Ctx = getMF().getFunction().getContext();
   auto *CFP =
-      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getSizeInBits()));
+      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getScalarSizeInBits()));
   return buildFConstant(Res, *CFP);
 }
 
@@ -554,6 +546,12 @@ MachineInstrBuilder MachineIRBuilder::buildBuildVector(const DstOp &Res,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
+  return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
+                                                       const SrcOp &Src) {
+  SmallVector<SrcOp, 8> TmpVec(Res.getLLTTy(*getMRI()).getNumElements(), Src);
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 

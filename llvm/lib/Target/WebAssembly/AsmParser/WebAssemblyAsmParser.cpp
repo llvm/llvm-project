@@ -253,13 +253,13 @@ public:
   }
 
   bool ensureEmptyNestingStack() {
-    auto err = !NestingStack.empty();
+    auto Err = !NestingStack.empty();
     while (!NestingStack.empty()) {
       error(Twine("Unmatched block construct(s) at function end: ") +
             nestingString(NestingStack.back()).first);
       NestingStack.pop_back();
     }
-    return err;
+    return Err;
   }
 
   bool isNext(AsmToken::TokenKind Kind) {

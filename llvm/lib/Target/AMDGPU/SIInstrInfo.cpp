@@ -140,7 +140,8 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
-    return true;
+    // No implicit operands.
+    return MI.getNumOperands() == MI.getDesc().getNumOperands();
   default:
     return false;
   }

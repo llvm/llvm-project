@@ -36,7 +36,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ0) {
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
-  ASSERT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
+  EXPECT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -48,7 +48,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ0) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTTZ expansion in terms of CTLZ
@@ -67,7 +67,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ1) {
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
   // Perform Legalization
-  ASSERT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
+  EXPECT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -81,7 +81,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ1) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTTZ expansion in terms of CTPOP
@@ -99,7 +99,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ2) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
+  EXPECT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -111,7 +111,72 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ2) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// CTPOP widening.
+TEST_F(GISelMITest, WidenBitCountingCTPOP1) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+      getActionDefinitionsBuilder(G_CTPOP).legalFor({{s16, s16}});
+    });
+
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, {s16}, {MIBTrunc});
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*MIBCTPOP, 1, s16));
+
+  auto CheckStr = R"(
+  CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC %0:_(s64)
+  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC]]:_(s8)
+  CHECK: [[CTPOP:%[0-9]+]]:_(s16) = G_CTPOP [[ZEXT]]
+  CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY [[CTPOP]]:_(s16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test a strange case where the result is wider than the source
+TEST_F(GISelMITest, WidenBitCountingCTPOP2) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+      getActionDefinitionsBuilder(G_CTPOP).legalFor({{s32, s16}});
+    });
+
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  LLT s32{LLT::scalar(32)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, {s32}, {MIBTrunc});
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*MIBCTPOP, 1, s16));
+
+  auto CheckStr = R"(
+  CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC %0:_(s64)
+  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC]]:_(s8)
+  CHECK: [[CTPOP:%[0-9]+]]:_(s16) = G_CTPOP [[ZEXT]]
+  CHECK: [[COPY:%[0-9]+]]:_(s32) = G_ZEXT [[CTPOP]]:_(s16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTTZ_ZERO_UNDEF expansion in terms of CTTZ
@@ -129,7 +194,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ3) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
+  EXPECT_TRUE(Helper.lower(*MIBCTTZ, 0, LLT::scalar(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -137,7 +202,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ3) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTLZ expansion in terms of CTLZ_ZERO_UNDEF
@@ -155,7 +220,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ0) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.lower(*MIBCTLZ, 0, LLT::scalar(64)) ==
+  EXPECT_TRUE(Helper.lower(*MIBCTLZ, 0, LLT::scalar(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -167,7 +232,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ0) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTLZ expansion in terms of CTLZ_ZERO_UNDEF if the latter is a libcall
@@ -185,7 +250,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZLibcall) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.lower(*MIBCTLZ, 0, LLT::scalar(64)) ==
+  EXPECT_TRUE(Helper.lower(*MIBCTLZ, 0, LLT::scalar(64)) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -197,7 +262,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZLibcall) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTLZ expansion
@@ -217,7 +282,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ1) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.lower(*MIBCTLZ, 0, s8) ==
+  EXPECT_TRUE(Helper.lower(*MIBCTLZ, 0, s8) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -237,7 +302,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ1) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTLZ widening.
@@ -258,7 +323,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZ) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ, 1, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBCTLZ, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -271,7 +336,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZ) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTLZ_ZERO_UNDEF widening.
@@ -293,7 +358,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZZeroUndef) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTLZ_ZU, 1, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBCTLZ_ZU, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -306,7 +371,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZZeroUndef) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTPOP widening.
@@ -327,7 +392,7 @@ TEST_F(GISelMITest, WidenBitCountingCTPOP) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTPOP, 1, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBCTPOP, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -338,7 +403,7 @@ TEST_F(GISelMITest, WidenBitCountingCTPOP) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTTZ_ZERO_UNDEF widening.
@@ -360,7 +425,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_UNDEF, 1, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBCTTZ_ZERO_UNDEF, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -371,7 +436,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // CTTZ widening.
@@ -392,7 +457,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBCTTZ, 1, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBCTTZ, 1, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -405,7 +470,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 // UADDO widening.
 TEST_F(GISelMITest, WidenUADDO) {
@@ -427,7 +492,7 @@ TEST_F(GISelMITest, WidenUADDO) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBUAddO, 0, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBUAddO, 0, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -442,7 +507,7 @@ TEST_F(GISelMITest, WidenUADDO) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
 // USUBO widening.
@@ -465,7 +530,7 @@ TEST_F(GISelMITest, WidenUSUBO) {
   AInfo Info(MF->getSubtarget());
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, Info, Observer, B);
-  ASSERT_TRUE(Helper.widenScalar(*MIBUSUBO, 0, s16) ==
+  EXPECT_TRUE(Helper.widenScalar(*MIBUSUBO, 0, s16) ==
               LegalizerHelper::LegalizeResult::Legalized);
 
   auto CheckStr = R"(
@@ -480,6 +545,6 @@ TEST_F(GISelMITest, WidenUSUBO) {
   )";
 
   // Check
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 } // namespace

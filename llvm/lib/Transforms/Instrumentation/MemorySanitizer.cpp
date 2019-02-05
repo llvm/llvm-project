@@ -454,17 +454,16 @@ namespace {
 /// the module.
 class MemorySanitizer {
 public:
-  MemorySanitizer(Module &M, int TrackOrigins = 0, bool Recover = false,
-                  bool EnableKmsan = false) {
+  MemorySanitizer(Module &M, MemorySanitizerOptions Options) {
     this->CompileKernel =
-        ClEnableKmsan.getNumOccurrences() > 0 ? ClEnableKmsan : EnableKmsan;
+        ClEnableKmsan.getNumOccurrences() > 0 ? ClEnableKmsan : Options.Kernel;
     if (ClTrackOrigins.getNumOccurrences() > 0)
       this->TrackOrigins = ClTrackOrigins;
     else
-      this->TrackOrigins = this->CompileKernel ? 2 : TrackOrigins;
+      this->TrackOrigins = this->CompileKernel ? 2 : Options.TrackOrigins;
     this->Recover = ClKeepGoing.getNumOccurrences() > 0
                         ? ClKeepGoing
-                        : (this->CompileKernel | Recover);
+                        : (this->CompileKernel | Options.Recover);
     initializeModule(M);
   }
 
@@ -598,10 +597,8 @@ struct MemorySanitizerLegacyPass : public FunctionPass {
   // Pass identification, replacement for typeid.
   static char ID;
 
-  MemorySanitizerLegacyPass(int TrackOrigins = 0, bool Recover = false,
-                            bool EnableKmsan = false)
-      : FunctionPass(ID), TrackOrigins(TrackOrigins), Recover(Recover),
-        EnableKmsan(EnableKmsan) {}
+  MemorySanitizerLegacyPass(MemorySanitizerOptions Options = {})
+      : FunctionPass(ID), Options(Options) {}
   StringRef getPassName() const override { return "MemorySanitizerLegacyPass"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -615,16 +612,14 @@ struct MemorySanitizerLegacyPass : public FunctionPass {
   bool doInitialization(Module &M) override;
 
   Optional<MemorySanitizer> MSan;
-  int TrackOrigins;
-  bool Recover;
-  bool EnableKmsan;
+  MemorySanitizerOptions Options;
 };
 
 } // end anonymous namespace
 
 PreservedAnalyses MemorySanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  MemorySanitizer Msan(*F.getParent(), TrackOrigins, Recover, EnableKmsan);
+  MemorySanitizer Msan(*F.getParent(), Options);
   if (Msan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -640,10 +635,9 @@ INITIALIZE_PASS_END(MemorySanitizerLegacyPass, "msan",
                     "MemorySanitizer: detects uninitialized reads.", false,
                     false)
 
-FunctionPass *llvm::createMemorySanitizerLegacyPassPass(int TrackOrigins,
-                                                        bool Recover,
-                                                        bool CompileKernel) {
-  return new MemorySanitizerLegacyPass(TrackOrigins, Recover, CompileKernel);
+FunctionPass *
+llvm::createMemorySanitizerLegacyPassPass(MemorySanitizerOptions Options) {
+  return new MemorySanitizerLegacyPass(Options);
 }
 
 /// Create a non-const global initialized with the given string.
@@ -950,7 +944,7 @@ void MemorySanitizer::initializeModule(Module &M) {
 }
 
 bool MemorySanitizerLegacyPass::doInitialization(Module &M) {
-  MSan.emplace(M, TrackOrigins, Recover, EnableKmsan);
+  MSan.emplace(M, Options);
   return true;
 }
 

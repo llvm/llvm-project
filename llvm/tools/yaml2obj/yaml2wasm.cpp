@@ -124,14 +124,14 @@ class SubSectionWriter {
 public:
   SubSectionWriter(raw_ostream &OS) : OS(OS), StringStream(OutString) {}
 
-  void Done() {
+  void done() {
     StringStream.flush();
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
     OutString.clear();
   }
 
-  raw_ostream &GetStream() { return StringStream; }
+  raw_ostream &getStream() { return StringStream; }
 };
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
@@ -159,78 +159,78 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
   if (Section.SymbolTable.size()) {
     writeUint8(OS, wasm::WASM_SYMBOL_TABLE);
 
-    encodeULEB128(Section.SymbolTable.size(), SubSection.GetStream());
+    encodeULEB128(Section.SymbolTable.size(), SubSection.getStream());
 #ifndef NDEBUG
     uint32_t SymbolIndex = 0;
 #endif
     for (const WasmYAML::SymbolInfo &Info : Section.SymbolTable) {
       assert(Info.Index == SymbolIndex++);
-      writeUint8(SubSection.GetStream(), Info.Kind);
-      encodeULEB128(Info.Flags, SubSection.GetStream());
+      writeUint8(SubSection.getStream(), Info.Kind);
+      encodeULEB128(Info.Flags, SubSection.getStream());
       switch (Info.Kind) {
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
       case wasm::WASM_SYMBOL_TYPE_EVENT:
-        encodeULEB128(Info.ElementIndex, SubSection.GetStream());
+        encodeULEB128(Info.ElementIndex, SubSection.getStream());
         if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0)
-          writeStringRef(Info.Name, SubSection.GetStream());
+          writeStringRef(Info.Name, SubSection.getStream());
         break;
       case wasm::WASM_SYMBOL_TYPE_DATA:
-        writeStringRef(Info.Name, SubSection.GetStream());
+        writeStringRef(Info.Name, SubSection.getStream());
         if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0) {
-          encodeULEB128(Info.DataRef.Segment, SubSection.GetStream());
-          encodeULEB128(Info.DataRef.Offset, SubSection.GetStream());
-          encodeULEB128(Info.DataRef.Size, SubSection.GetStream());
+          encodeULEB128(Info.DataRef.Segment, SubSection.getStream());
+          encodeULEB128(Info.DataRef.Offset, SubSection.getStream());
+          encodeULEB128(Info.DataRef.Size, SubSection.getStream());
         }
         break;
       case wasm::WASM_SYMBOL_TYPE_SECTION:
-        encodeULEB128(Info.ElementIndex, SubSection.GetStream());
+        encodeULEB128(Info.ElementIndex, SubSection.getStream());
         break;
       default:
         llvm_unreachable("unexpected kind");
       }
     }
 
-    SubSection.Done();
+    SubSection.done();
   }
 
   // SEGMENT_NAMES subsection
   if (Section.SegmentInfos.size()) {
     writeUint8(OS, wasm::WASM_SEGMENT_INFO);
-    encodeULEB128(Section.SegmentInfos.size(), SubSection.GetStream());
+    encodeULEB128(Section.SegmentInfos.size(), SubSection.getStream());
     for (const WasmYAML::SegmentInfo &SegmentInfo : Section.SegmentInfos) {
-      writeStringRef(SegmentInfo.Name, SubSection.GetStream());
-      encodeULEB128(SegmentInfo.Alignment, SubSection.GetStream());
-      encodeULEB128(SegmentInfo.Flags, SubSection.GetStream());
+      writeStringRef(SegmentInfo.Name, SubSection.getStream());
+      encodeULEB128(SegmentInfo.Alignment, SubSection.getStream());
+      encodeULEB128(SegmentInfo.Flags, SubSection.getStream());
     }
-    SubSection.Done();
+    SubSection.done();
   }
 
   // INIT_FUNCS subsection
   if (Section.InitFunctions.size()) {
     writeUint8(OS, wasm::WASM_INIT_FUNCS);
-    encodeULEB128(Section.InitFunctions.size(), SubSection.GetStream());
+    encodeULEB128(Section.InitFunctions.size(), SubSection.getStream());
     for (const WasmYAML::InitFunction &Func : Section.InitFunctions) {
-      encodeULEB128(Func.Priority, SubSection.GetStream());
-      encodeULEB128(Func.Symbol, SubSection.GetStream());
+      encodeULEB128(Func.Priority, SubSection.getStream());
+      encodeULEB128(Func.Symbol, SubSection.getStream());
     }
-    SubSection.Done();
+    SubSection.done();
   }
 
   // COMDAT_INFO subsection
   if (Section.Comdats.size()) {
     writeUint8(OS, wasm::WASM_COMDAT_INFO);
-    encodeULEB128(Section.Comdats.size(), SubSection.GetStream());
+    encodeULEB128(Section.Comdats.size(), SubSection.getStream());
     for (const auto &C : Section.Comdats) {
-      writeStringRef(C.Name, SubSection.GetStream());
-      encodeULEB128(0, SubSection.GetStream()); // flags for future use
-      encodeULEB128(C.Entries.size(), SubSection.GetStream());
+      writeStringRef(C.Name, SubSection.getStream());
+      encodeULEB128(0, SubSection.getStream()); // flags for future use
+      encodeULEB128(C.Entries.size(), SubSection.getStream());
       for (const WasmYAML::ComdatEntry &Entry : C.Entries) {
-        writeUint8(SubSection.GetStream(), Entry.Kind);
-        encodeULEB128(Entry.Index, SubSection.GetStream());
+        writeUint8(SubSection.getStream(), Entry.Kind);
+        encodeULEB128(Entry.Index, SubSection.getStream());
       }
     }
-    SubSection.Done();
+    SubSection.done();
   }
 
   return 0;
@@ -244,13 +244,13 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 
     SubSectionWriter SubSection(OS);
 
-    encodeULEB128(Section.FunctionNames.size(), SubSection.GetStream());
+    encodeULEB128(Section.FunctionNames.size(), SubSection.getStream());
     for (const WasmYAML::NameEntry &NameEntry : Section.FunctionNames) {
-      encodeULEB128(NameEntry.Index, SubSection.GetStream());
-      writeStringRef(NameEntry.Name, SubSection.GetStream());
+      encodeULEB128(NameEntry.Index, SubSection.getStream());
+      writeStringRef(NameEntry.Name, SubSection.getStream());
     }
 
-    SubSection.Done();
+    SubSection.done();
   }
   return 0;
 }

@@ -131,24 +131,24 @@ static int64_t readLEB128(WasmObjectFile::ReadContext &Ctx) {
 }
 
 static uint8_t readVaruint1(WasmObjectFile::ReadContext &Ctx) {
-  int64_t result = readLEB128(Ctx);
-  if (result > VARUINT1_MAX || result < 0)
+  int64_t Result = readLEB128(Ctx);
+  if (Result > VARUINT1_MAX || Result < 0)
     report_fatal_error("LEB is outside Varuint1 range");
-  return result;
+  return Result;
 }
 
 static int32_t readVarint32(WasmObjectFile::ReadContext &Ctx) {
-  int64_t result = readLEB128(Ctx);
-  if (result > INT32_MAX || result < INT32_MIN)
+  int64_t Result = readLEB128(Ctx);
+  if (Result > INT32_MAX || Result < INT32_MIN)
     report_fatal_error("LEB is outside Varint32 range");
-  return result;
+  return Result;
 }
 
 static uint32_t readVaruint32(WasmObjectFile::ReadContext &Ctx) {
-  uint64_t result = readULEB128(Ctx);
-  if (result > UINT32_MAX)
+  uint64_t Result = readULEB128(Ctx);
+  if (Result > UINT32_MAX)
     report_fatal_error("LEB is outside Varuint32 range");
-  return result;
+  return Result;
 }
 
 static int64_t readVarint64(WasmObjectFile::ReadContext &Ctx) {
@@ -418,17 +418,17 @@ Error WasmObjectFile::parseLinkingSection(ReadContext &Ctx) {
       if (Count > DataSegments.size())
         return make_error<GenericBinaryError>("Too many segment names",
                                               object_error::parse_failed);
-      for (uint32_t i = 0; i < Count; i++) {
-        DataSegments[i].Data.Name = readString(Ctx);
-        DataSegments[i].Data.Alignment = readVaruint32(Ctx);
-        DataSegments[i].Data.Flags = readVaruint32(Ctx);
+      for (uint32_t I = 0; I < Count; I++) {
+        DataSegments[I].Data.Name = readString(Ctx);
+        DataSegments[I].Data.Alignment = readVaruint32(Ctx);
+        DataSegments[I].Data.Flags = readVaruint32(Ctx);
       }
       break;
     }
     case wasm::WASM_INIT_FUNCS: {
       uint32_t Count = readVaruint32(Ctx);
       LinkingData.InitFunctions.reserve(Count);
-      for (uint32_t i = 0; i < Count; i++) {
+      for (uint32_t I = 0; I < Count; I++) {
         wasm::WasmInitFunc Init;
         Init.Priority = readVaruint32(Ctx);
         Init.Symbol = readVaruint32(Ctx);
@@ -662,7 +662,7 @@ Error WasmObjectFile::parseLinkingSectionComdat(ReadContext &Ctx) {
 Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
   llvm::SmallSet<StringRef, 3> FieldsSeen;
   uint32_t Fields = readVaruint32(Ctx);
-  for (size_t i = 0; i < Fields; ++i) {
+  for (size_t I = 0; I < Fields; ++I) {
     StringRef FieldName = readString(Ctx);
     if (!FieldsSeen.insert(FieldName).second)
       return make_error<GenericBinaryError>(
@@ -683,7 +683,7 @@ Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
     }
     uint32_t ValueCount = readVaruint32(Ctx);
     llvm::SmallSet<StringRef, 8> ProducersSeen;
-    for (size_t j = 0; j < ValueCount; ++j) {
+    for (size_t J = 0; J < ValueCount; ++J) {
       StringRef Name = readString(Ctx);
       StringRef Version = readString(Ctx);
       if (!ProducersSeen.insert(Name).second) {
@@ -843,7 +843,7 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Imports.reserve(Count);
-  for (uint32_t i = 0; i < Count; i++) {
+  for (uint32_t I = 0; I < Count; I++) {
     wasm::WasmImport Im;
     Im.Module = readString(Ctx);
     Im.Field = readString(Ctx);
@@ -969,7 +969,7 @@ Error WasmObjectFile::parseEventSection(ReadContext &Ctx) {
 Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Exports.reserve(Count);
-  for (uint32_t i = 0; i < Count; i++) {
+  for (uint32_t I = 0; I < Count; I++) {
     wasm::WasmExport Ex;
     Ex.Name = readString(Ctx);
     Ex.Kind = readUint8(Ctx);

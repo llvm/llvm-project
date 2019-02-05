@@ -50,12 +50,33 @@ void emitWebAssemblyDisassemblerTables(
     auto IsStackBased =
         StackString &&
         reinterpret_cast<const StringInit *>(StackString)->getValue() == "true";
-    if (IsStackBased && !CGIP.second) {
-      // this picks the first of many typed variants, which is
-      // currently the except_ref one, though this shouldn't matter for
-      // disassembly purposes.
-      CGIP = std::make_pair(I, &CGI);
+    if (!IsStackBased)
+      continue;
+    if (CGIP.second) {
+      // We already have an instruction for this slot, so decide which one
+      // should be the canonical one. This determines which variant gets
+      // printed in a disassembly. We want e.g. "call" not "i32.call", and
+      // "end" when we don't know if its "end_loop" or "end_block" etc.
+      auto IsCanonicalExisting = CGIP.second->TheDef->getValue("IsCanonical")
+                                     ->getValue()
+                                     ->getAsString() == "1";
+      // We already have one marked explicitly as canonical, so keep it.
+      if (IsCanonicalExisting)
+        continue;
+      auto IsCanonicalNew =
+          Def.getValue("IsCanonical")->getValue()->getAsString() == "1";
+      // If the new one is explicitly marked as canonical, take it.
+      if (!IsCanonicalNew) {
+        // Neither the existing or new instruction is canonical.
+        // Pick the one with with the shortest name as heuristic.
+        // Though ideally IsCanonical is always defined for at least one
+        // variant so this never has to apply.
+        if (CGIP.second->AsmString.size() <= CGI.AsmString.size())
+          continue;
+      }
     }
+    // Set this instruction as the one to use.
+    CGIP = std::make_pair(I, &CGI);
   }
   OS << "#include \"MCTargetDesc/WebAssemblyMCTargetDesc.h\"\n";
   OS << "\n";

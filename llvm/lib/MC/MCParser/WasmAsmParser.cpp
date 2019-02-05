@@ -32,8 +32,8 @@ using namespace llvm;
 namespace {
 
 class WasmAsmParser : public MCAsmParserExtension {
-  MCAsmParser *Parser;
-  MCAsmLexer *Lexer;
+  MCAsmParser *Parser = nullptr;
+  MCAsmLexer *Lexer = nullptr;
 
   template<bool (WasmAsmParser::*HandlerMethod)(StringRef, SMLoc)>
   void addDirectiveHandler(StringRef Directive) {
@@ -44,9 +44,7 @@ class WasmAsmParser : public MCAsmParserExtension {
   }
 
 public:
-  WasmAsmParser() : Parser(nullptr), Lexer(nullptr) {
-    BracketExpressionsSupported = true;
-  }
+  WasmAsmParser() { BracketExpressionsSupported = true; }
 
   void Initialize(MCAsmParser &P) override {
     Parser = &P;
@@ -60,19 +58,20 @@ public:
     addDirectiveHandler<&WasmAsmParser::parseDirectiveType>(".type");
   }
 
-  bool Error(const StringRef &msg, const AsmToken &tok) {
-    return Parser->Error(tok.getLoc(), msg + tok.getString());
+  bool error(const StringRef &Msg, const AsmToken &Tok) {
+    return Parser->Error(Tok.getLoc(), Msg + Tok.getString());
   }
 
-  bool IsNext(AsmToken::TokenKind Kind) {
-    auto ok = Lexer->is(Kind);
-    if (ok) Lex();
-    return ok;
+  bool isNext(AsmToken::TokenKind Kind) {
+    auto Ok = Lexer->is(Kind);
+    if (Ok)
+      Lex();
+    return Ok;
   }
 
-  bool Expect(AsmToken::TokenKind Kind, const char *KindName) {
-    if (!IsNext(Kind))
-      return Error(std::string("Expected ") + KindName + ", instead got: ",
+  bool expect(AsmToken::TokenKind Kind, const char *KindName) {
+    if (!isNext(Kind))
+      return error(std::string("Expected ") + KindName + ", instead got: ",
                    Lexer->getTok());
     return false;
   }
@@ -87,9 +86,9 @@ public:
     if (Parser->parseIdentifier(Name))
       return TokError("expected identifier in directive");
     // FIXME: currently requiring this very fixed format.
-    if (Expect(AsmToken::Comma, ",") || Expect(AsmToken::String, "string") ||
-        Expect(AsmToken::Comma, ",") || Expect(AsmToken::At, "@") ||
-        Expect(AsmToken::EndOfStatement, "eol"))
+    if (expect(AsmToken::Comma, ",") || expect(AsmToken::String, "string") ||
+        expect(AsmToken::Comma, ",") || expect(AsmToken::At, "@") ||
+        expect(AsmToken::EndOfStatement, "eol"))
       return true;
     // This is done automatically by the assembler for text sections currently,
     // so we don't need to emit that here. This is what it would do (and may
@@ -106,12 +105,12 @@ public:
     if (Parser->parseIdentifier(Name))
       return TokError("expected identifier in directive");
     auto Sym = getContext().getOrCreateSymbol(Name);
-    if (Expect(AsmToken::Comma, ","))
+    if (expect(AsmToken::Comma, ","))
       return true;
     const MCExpr *Expr;
     if (Parser->parseExpression(Expr))
       return true;
-    if (Expect(AsmToken::EndOfStatement, "eol"))
+    if (expect(AsmToken::EndOfStatement, "eol"))
       return true;
     // This is done automatically by the assembler for functions currently,
     // so we don't need to emit that here. This is what it would do:
@@ -124,24 +123,24 @@ public:
     // This could be the start of a function, check if followed by
     // "label,@function"
     if (!Lexer->is(AsmToken::Identifier))
-      return Error("Expected label after .type directive, got: ",
+      return error("Expected label after .type directive, got: ",
                    Lexer->getTok());
     auto WasmSym = cast<MCSymbolWasm>(
                      getStreamer().getContext().getOrCreateSymbol(
                        Lexer->getTok().getString()));
     Lex();
-    if (!(IsNext(AsmToken::Comma) && IsNext(AsmToken::At) &&
+    if (!(isNext(AsmToken::Comma) && isNext(AsmToken::At) &&
           Lexer->is(AsmToken::Identifier)))
-      return Error("Expected label,@type declaration, got: ", Lexer->getTok());
+      return error("Expected label,@type declaration, got: ", Lexer->getTok());
     auto TypeName = Lexer->getTok().getString();
     if (TypeName == "function")
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     else if (TypeName == "global")
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
     else
-      return Error("Unknown WASM symbol type: ", Lexer->getTok());
+      return error("Unknown WASM symbol type: ", Lexer->getTok());
     Lex();
-    return Expect(AsmToken::EndOfStatement, "EOL");
+    return expect(AsmToken::EndOfStatement, "EOL");
   }
 };
 

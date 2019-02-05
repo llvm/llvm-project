@@ -32071,6 +32071,14 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR)
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
+    // Share broadcast with the longest vector and extract low subvector (free).
+    for (SDNode *User : Src->uses())
+      if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
+          User->getValueSizeInBits(0) > VT.getSizeInBits()) {
+        return extractSubVector(SDValue(User, 0), 0, DAG, DL,
+                                VT.getSizeInBits());
+      }
+
     return SDValue();
   }
   case X86ISD::PSHUFD:
@@ -43005,6 +43013,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     // flags -> EFLAGS
     if (StringRef("{flags}").equals_lower(Constraint))
       return std::make_pair(X86::EFLAGS, &X86::CCRRegClass);
+
+    // dirflag -> DF
+    if (StringRef("{dirflag}").equals_lower(Constraint))
+      return std::make_pair(X86::DF, &X86::DFCCRRegClass);
+
+    // fpsr -> FPSW
+    if (StringRef("{fpsr}").equals_lower(Constraint))
+      return std::make_pair(X86::FPSW, &X86::FPCCRRegClass);
 
     // 'A' means [ER]AX + [ER]DX.
     if (Constraint == "A") {

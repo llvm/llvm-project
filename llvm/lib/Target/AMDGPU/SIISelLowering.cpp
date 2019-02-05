@@ -2711,6 +2711,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
+  // Add a redundant copy of the callee global which will not be legalized, as
+  // we need direct access to the callee later.
+  GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Callee);
+  const GlobalValue *GV = GSD->getGlobal();
+  Ops.push_back(DAG.getTargetGlobalAddress(GV, DL, MVT::i64));
 
   if (IsTailCall) {
     // Each tail call may have to adjust the stack by a different amount, so
@@ -3474,34 +3479,16 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
         .addReg(Info->getFrameOffsetReg(), RegState::Implicit);
     return BB;
   }
-  case AMDGPU::SI_CALL_ISEL:
-  case AMDGPU::SI_TCRETURN_ISEL: {
+  case AMDGPU::SI_CALL_ISEL: {
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
     const DebugLoc &DL = MI.getDebugLoc();
+
     unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    unsigned GlobalAddrReg = MI.getOperand(0).getReg();
-    MachineInstr *PCRel = MRI.getVRegDef(GlobalAddrReg);
-    assert(PCRel->getOpcode() == AMDGPU::SI_PC_ADD_REL_OFFSET);
-
-    const GlobalValue *G = PCRel->getOperand(1).getGlobal();
-
     MachineInstrBuilder MIB;
-    if (MI.getOpcode() == AMDGPU::SI_CALL_ISEL) {
-      MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg)
-        .add(MI.getOperand(0))
-        .addGlobalAddress(G);
-    } else {
-      MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_TCRETURN))
-        .add(MI.getOperand(0))
-        .addGlobalAddress(G);
+    MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL), ReturnAddrReg);
 
-      // There is an additional imm operand for tcreturn, but it should be in the
-      // right place already.
-    }
-
-    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
       MIB.add(MI.getOperand(I));
 
     MIB.cloneMemRefs(MI);
@@ -4008,7 +3995,10 @@ bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
 }
 
 bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
-  return (GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+  // FIXME: Either avoid relying on address space here or change the default
+  // address space for functions to avoid the explicit check.
+  return (GV->getValueType()->isFunctionTy() ||
+          GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
           GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
           GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          !shouldEmitFixup(GV) &&

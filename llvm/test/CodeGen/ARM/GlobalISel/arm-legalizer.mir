@@ -3,8 +3,6 @@
   define void @test_load_from_stack() { ret void }
   define void @test_load_store_64() #0 { ret void }
 
-  define void @test_gep() { ret void }
-
   define void @test_constants_s64() { ret void }
 
   define void @test_icmp_s8() { ret void }
@@ -83,31 +81,6 @@ body:             |
     %1(s64) = G_LOAD %0(p0) :: (load 8)
     G_STORE %1(s64), %0(p0) :: (store 8)
     BX_RET 14, $noreg
-...
----
-name:            test_gep
-# CHECK-LABEL: name: test_gep
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $r1
-
-    %0(p0) = COPY $r0
-    %1(s32) = COPY $r1
-
-    ; CHECK: {{%[0-9]+}}:_(p0) = G_GEP {{%[0-9]+}}, {{%[0-9]+}}(s32)
-    %2(p0) = G_GEP %0, %1(s32)
-
-    $r0 = COPY %2(p0)
-    BX_RET 14, $noreg, implicit $r0
 ...
 ---
 name:            test_constants_s64

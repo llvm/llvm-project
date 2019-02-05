@@ -1095,6 +1095,8 @@ void FPS::handleZeroArgFP(MachineBasicBlock::iterator &I) {
   // Change from the pseudo instruction to the concrete instruction.
   MI.RemoveOperand(0); // Remove the explicit ST(0) operand
   MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
+  MI.addOperand(
+      MachineOperand::CreateReg(X86::ST0, /*isDef*/ true, /*isImp*/ true));
 
   // Result gets pushed on the stack.
   pushReg(DestReg);
@@ -1139,6 +1141,8 @@ void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
   // Convert from the pseudo instruction to the concrete instruction.
   MI.RemoveOperand(NumOps - 1); // Remove explicit ST(0) operand
   MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
+  MI.addOperand(
+      MachineOperand::CreateReg(X86::ST0, /*isDef*/ false, /*isImp*/ true));
 
   if (MI.getOpcode() == X86::IST_FP64m || MI.getOpcode() == X86::ISTT_FP16m ||
       MI.getOpcode() == X86::ISTT_FP32m || MI.getOpcode() == X86::ISTT_FP64m ||
