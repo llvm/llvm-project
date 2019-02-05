@@ -16,7 +16,7 @@
 #include <iterator>
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   using RIt = std::reverse_iterator<path::iterator>;
 
@@ -25,4 +25,6 @@ int main() {
     RIt r;
     ((void)r);
   }
+
+  return 0;
 }

@@ -39,7 +39,7 @@ void test_val_ctor()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_val_ctor<0>();
     test_val_ctor<1>();
@@ -50,4 +50,6 @@ int main()
     test_val_ctor<64>();
     test_val_ctor<65>();
     test_val_ctor<1000>();
+
+  return 0;
 }

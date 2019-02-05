@@ -26,11 +26,13 @@
 
 namespace pmr = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     using StdVector = std::vector<int, pmr::polymorphic_allocator<int>>;
     using PmrVector = pmr::vector<int>;
     static_assert(std::is_same<StdVector, PmrVector>::value, "");
     PmrVector d;
     assert(d.get_allocator().resource() == pmr::get_default_resource());
+
+  return 0;
 }

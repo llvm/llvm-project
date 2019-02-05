@@ -22,7 +22,7 @@
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::set<DefaultOnly> M;
@@ -84,4 +84,6 @@ int main()
         assert(m.size() == 1);
         assert(*r.first == 2);
     }
+
+  return 0;
 }

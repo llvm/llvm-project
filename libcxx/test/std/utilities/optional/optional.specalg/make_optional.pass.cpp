@@ -27,7 +27,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     using std::make_optional;
@@ -55,4 +55,6 @@ int main()
         assert(**opt == 3);
         assert(s == nullptr);
     }
+
+  return 0;
 }

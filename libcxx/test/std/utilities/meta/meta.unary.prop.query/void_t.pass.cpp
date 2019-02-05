@@ -45,7 +45,7 @@ public:
     ~Class();
 };
 
-int main()
+int main(int, char**)
 {
     static_assert( std::is_same<void, std::void_t<>>::value, "");
 
@@ -64,4 +64,6 @@ int main()
     test2<void *, int&>();
 
     static_assert( std::is_same<void, std::void_t<int, double const &, Class, volatile int[], void>>::value, "");
+
+  return 0;
 }

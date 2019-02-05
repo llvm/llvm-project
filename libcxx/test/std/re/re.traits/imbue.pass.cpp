@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::regex_traits<char> t;
@@ -29,4 +29,6 @@ int main()
         assert(loc.name() == "C");
         assert(t.getloc().name() == LOCALE_en_US_UTF_8);
     }
+
+  return 0;
 }

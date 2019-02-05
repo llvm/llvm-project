@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string> C;
@@ -44,4 +44,6 @@ int main()
         const C c(std::begin(a), std::end(a));
         assert(c.bucket_count() >= 8);
     }
+
+  return 0;
 }

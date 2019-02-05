@@ -57,7 +57,7 @@ const RemoveFilenameTestcase TestCases[] =
     , {"bar/../baz/./file.txt", "bar/../baz/./"}
   };
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   for (auto const & TC : TestCases) {
@@ -69,4 +69,6 @@ int main()
     assert(&Ref == &p);
     assert(!p.has_filename());
   }
+
+  return 0;
 }

@@ -1043,7 +1043,8 @@ public:
   UserExpression *GetUserExpressionForLanguage(
       llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
       Expression::ResultType desired_type,
-      const EvaluateExpressionOptions &options, Status &error);
+      const EvaluateExpressionOptions &options,
+      ValueObject *ctx_obj, Status &error);
 
   // Creates a FunctionCaller for the given language, the rest of the
   // parameters have the same meaning as for the FunctionCaller constructor.
@@ -1107,7 +1108,8 @@ public:
       llvm::StringRef expression, ExecutionContextScope *exe_scope,
       lldb::ValueObjectSP &result_valobj_sp,
       const EvaluateExpressionOptions &options = EvaluateExpressionOptions(),
-      std::string *fixed_expression = nullptr);
+      std::string *fixed_expression = nullptr,
+      ValueObject *ctx_obj = nullptr);
 
   lldb::ExpressionVariableSP GetPersistentVariable(const ConstString &name);
 

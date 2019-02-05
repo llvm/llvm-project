@@ -44,7 +44,9 @@ test1()
     where(E::table_size);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
+
+  return 0;
 }

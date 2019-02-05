@@ -98,10 +98,12 @@ void test_copy()
     assert(Type::count == 0);
 }
 
-int main() {
+int main(int, char**) {
     test_copy<small>();
     test_copy<large>();
     test_copy_empty();
     test_copy_throws<small_throws_on_copy>();
     test_copy_throws<large_throws_on_copy>();
+
+  return 0;
 }

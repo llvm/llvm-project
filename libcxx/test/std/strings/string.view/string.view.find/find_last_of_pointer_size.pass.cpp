@@ -141,7 +141,7 @@ void test1()
     test(S("pniotcfrhqsmgdkjbael"), "htaobedqikfplcgjsmrn", 19);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -162,4 +162,6 @@ int main()
     static_assert (sv2.find_last_of( "lecar", 5) == 4, "" );
     }
 #endif
+
+  return 0;
 }

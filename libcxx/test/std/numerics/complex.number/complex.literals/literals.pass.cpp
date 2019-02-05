@@ -15,7 +15,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using namespace std::literals::complex_literals;
 
@@ -47,4 +47,6 @@ int main()
     auto c2 = 3if;
     assert ( c1 == c2 );
     }
+
+  return 0;
 }

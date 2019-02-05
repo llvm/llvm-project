@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::poisson_distribution<> D;
@@ -33,4 +33,6 @@ int main()
         param_type p2(0.5);
         assert(p1 != p2);
     }
+
+  return 0;
 }

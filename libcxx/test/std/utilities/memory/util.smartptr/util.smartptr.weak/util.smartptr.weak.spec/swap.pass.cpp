@@ -27,7 +27,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
         A* ptr1 = new A;
@@ -46,4 +46,6 @@ int main()
         }
     }
     assert(A::count == 0);
+
+  return 0;
 }

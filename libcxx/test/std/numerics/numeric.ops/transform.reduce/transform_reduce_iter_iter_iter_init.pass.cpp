@@ -65,7 +65,7 @@ void test_move_only_types()
         std::transform_reduce(std::begin(ia), std::end(ia), std::begin(ib), MoveOnly{0}).get());
 }
 
-int main()
+int main(int, char**)
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -103,4 +103,6 @@ int main()
     test<      int*,       unsigned int *>();
 
     test_move_only_types();
+
+  return 0;
 }

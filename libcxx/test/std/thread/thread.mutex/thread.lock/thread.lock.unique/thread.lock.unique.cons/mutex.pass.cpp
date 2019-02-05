@@ -46,7 +46,7 @@ void f()
     assert(d < ms(50));  // within 50ms
 }
 
-int main()
+int main(int, char**)
 {
     m.lock();
     std::thread t(f);
@@ -58,4 +58,6 @@ int main()
     std::unique_lock ul(m);
     static_assert((std::is_same<decltype(ul), std::unique_lock<decltype(m)>>::value), "" );
 #endif
+
+  return 0;
 }

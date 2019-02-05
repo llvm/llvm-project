@@ -57,7 +57,7 @@ f(std::basic_ios<CharT>& os)
     return os;
 }
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -66,4 +66,6 @@ int main()
         os << f;
         assert( (os.flags() & std::ios_base::uppercase));
     }
+
+  return 0;
 }

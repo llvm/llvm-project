@@ -31,7 +31,7 @@ test(Iterator first, Iterator last, const typename C::allocator_type& a)
         assert(*i == *first);
 }
 
-int main()
+int main(int, char**)
 {
     bool a[] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0};
     bool* an = a + sizeof(a)/sizeof(a[0]);
@@ -53,4 +53,6 @@ int main()
     test<std::vector<bool, min_allocator<bool>> >(a, an, alloc);
     }
 #endif
+
+  return 0;
 }

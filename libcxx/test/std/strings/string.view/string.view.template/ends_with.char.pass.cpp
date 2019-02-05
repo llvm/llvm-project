@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "constexpr_char_traits.hpp"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view SV;
@@ -43,4 +43,6 @@ int main()
     static_assert (!sv2.ends_with('x'), "" );
     }
 #endif
+
+  return 0;
 }

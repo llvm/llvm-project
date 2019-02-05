@@ -30,7 +30,7 @@ test(S s)
     assert(b == cb);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -44,4 +44,6 @@ int main()
     test(S("123"));
     }
 #endif
+
+  return 0;
 }

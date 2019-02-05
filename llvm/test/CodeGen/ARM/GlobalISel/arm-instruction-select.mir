@@ -1495,7 +1495,7 @@ registers:
   - { id: 0, class: gprb }
 body:             |
   bb.0:
-    %0(s32) = G_CONSTANT 65537
+    %0(s32) = G_CONSTANT i32 65537
     ; CHECK: %[[C:[0-9]+]]:gpr = MOVi32imm 65537
 
     $r0 = COPY %0(s32)
@@ -1512,7 +1512,7 @@ registers:
   - { id: 0, class: gprb }
 body:             |
   bb.0:
-    %0(s32) = G_CONSTANT 42
+    %0(s32) = G_CONSTANT i32 42
     ; CHECK: %[[C:[0-9]+]]:gpr = MOVi 42, 14, $noreg, $noreg
 
     $r0 = COPY %0(s32)

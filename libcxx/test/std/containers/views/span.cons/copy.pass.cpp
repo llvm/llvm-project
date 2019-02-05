@@ -42,7 +42,7 @@ void testCV ()
 }
 
 
-int main ()
+int main(int, char**)
 {
     constexpr int carr[] = {1,2,3};
 
@@ -67,4 +67,6 @@ int main ()
     testCV<const          int>();
     testCV<      volatile int>();
     testCV<const volatile int>();
+
+  return 0;
 }

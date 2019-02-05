@@ -66,7 +66,7 @@ void test()
     test0(S({1,2,3}), False, S({1,2,3}));
 }
 
-int main()
+int main(int, char**)
 {
     test<std::multiset<int>>();
     test<std::multiset<int, std::less<int>, min_allocator<int>>> ();
@@ -74,4 +74,6 @@ int main()
 
     test<std::multiset<long>>();
     test<std::multiset<double>>();
+
+  return 0;
 }

@@ -40,7 +40,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
@@ -81,4 +81,6 @@ int main()
     }
     assert(A::count == 0);
 #endif
+
+  return 0;
 }

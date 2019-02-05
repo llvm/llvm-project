@@ -109,7 +109,7 @@ void test_void_pointer()
 
 struct Foo { int x; };
 
-int main()
+int main(int, char**)
 {
     test_pointer<std::scoped_allocator_adaptor<std::allocator<char>>> ();
     test_pointer<std::scoped_allocator_adaptor<std::allocator<int>>> ();
@@ -118,7 +118,9 @@ int main()
     test_void_pointer<std::scoped_allocator_adaptor<std::allocator<char>>> ();
     test_void_pointer<std::scoped_allocator_adaptor<std::allocator<int>>> ();
     test_void_pointer<std::scoped_allocator_adaptor<std::allocator<Foo>>> ();
+
+  return 0;
 }
 #else
-int main() {}
+int main(int, char**) { return 0; }
 #endif

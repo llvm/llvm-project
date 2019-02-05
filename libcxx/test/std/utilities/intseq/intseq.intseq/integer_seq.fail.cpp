@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER > 11
 
@@ -36,4 +36,6 @@ int main()
 X
 
 #endif  // TEST_STD_VER > 11
+
+  return 0;
 }

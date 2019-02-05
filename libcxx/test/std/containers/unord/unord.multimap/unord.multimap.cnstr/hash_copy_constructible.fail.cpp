@@ -26,6 +26,8 @@ private:
     };
 
 
-int main() {
+int main(int, char**) {
     std::unordered_multimap<int, int, Hash<int> > m;
+
+  return 0;
 }

@@ -53,7 +53,7 @@ assertion handler as follows:
 
   #define _LIBCPP_DEBUG 1
   #include <string>
-  int main() {
+  int main(int, char**) {
     std::__libcpp_debug_function = std::__libcpp_throw_debug_function;
     try {
       std::string::iterator bad_it;

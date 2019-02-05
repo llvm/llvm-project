@@ -47,7 +47,7 @@ const ReplaceFilenameTestcase TestCases[] =
     , {"/foo\\baz/bong", "/foo\\baz/bar", "bar"}
   };
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   for (auto const & TC : TestCases) {
@@ -67,4 +67,6 @@ int main()
       ASSERT_EQ(p, p2);
     }
   }
+
+  return 0;
 }

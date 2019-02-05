@@ -64,11 +64,7 @@ void WriteState::addUser(ReadState *User, int ReadAdvance) {
     return;
   }
 
-  if (llvm::find_if(Users, [&User](const std::pair<ReadState *, int> &Use) {
-        return Use.first == User;
-      }) == Users.end()) {
-    Users.emplace_back(User, ReadAdvance);
-  }
+  Users.emplace_back(User, ReadAdvance);
 }
 
 void WriteState::addUser(WriteState *User) {
@@ -127,7 +123,7 @@ void WriteRef::dump() const {
 
 void Instruction::dispatch(unsigned RCUToken) {
   assert(Stage == IS_INVALID);
-  Stage = IS_AVAILABLE;
+  Stage = IS_DISPATCHED;
   RCUTokenID = RCUToken;
 
   // Check if input operands are already available.

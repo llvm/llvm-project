@@ -1615,3 +1615,171 @@ define <16 x i32> @test_2xi32_to_16xi32_mem(<2 x i32>* %vp) {
   %res = shufflevector <2 x i32> %vec, <2 x i32> undef, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   ret <16 x i32> %res
 }
+
+;
+; PR34041
+;
+
+define <4 x double> @broadcast_v4f64_f64_u000(double* %p) {
+; X32-LABEL: broadcast_v4f64_f64_u000:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_v4f64_f64_u000:
+; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastsd (%rdi), %ymm0
+; X64-NEXT:    retq
+  %s = load double, double* %p
+  %vec = insertelement <2 x double> undef, double %s, i32 0
+  %res = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
+  ret <4 x double> %res
+}
+
+define <4 x double> @broadcast_v4f64_v2f64_4u61(<2 x double>* %vp, <4 x double> %default) {
+; X32-LABEL: broadcast_v4f64_v2f64_4u61:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vinsertf128 $1, (%eax), %ymm0, %ymm1
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_v4f64_v2f64_4u61:
+; X64:       # %bb.0:
+; X64-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm1
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
+; X64-NEXT:    retq
+  %vec = load <2 x double>, <2 x double>* %vp
+  %shuf = shufflevector <2 x double> %vec, <2 x double> undef, <4 x i32> <i32 0, i32 3, i32 undef, i32 1>
+  %res = select <4 x i1> <i1 0, i1 1, i1 0, i1 1>, <4 x double> %shuf, <4 x double> %default
+  ret <4 x double> %res
+}
+
+define <8 x float> @broadcast_v8f32_v2f32_u1uu0uEu(<2 x float>* %vp, <8 x float> %default) {
+; X32-AVX1-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X32-AVX1:       # %bb.0:
+; X32-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X32-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X32-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; X32-AVX1-NEXT:    retl
+;
+; X32-AVX2-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X32-AVX2:       # %bb.0:
+; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X32-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; X32-AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,3]
+; X32-AVX2-NEXT:    retl
+;
+; X32-AVX512-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X32-AVX512:       # %bb.0:
+; X32-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X32-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; X32-AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,3]
+; X32-AVX512-NEXT:    retl
+;
+; X64-AVX1-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,3]
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512-LABEL: broadcast_v8f32_v2f32_u1uu0uEu:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; X64-AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,3]
+; X64-AVX512-NEXT:    retq
+  %vec = load <2 x float>, <2 x float>* %vp
+  %shuf = shufflevector <2 x float> %vec, <2 x float> undef, <8 x i32> <i32 undef, i32 1, i32 undef, i32 undef, i32 0, i32 2, i32 3, i32 undef>
+  %res = select <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <8 x float> %shuf, <8 x float> %default
+  ret <8 x float> %res
+}
+
+define <8 x double> @broadcast_v8f64_v2f64_u1u10101(<2 x double>* %vp) {
+; X32-AVX1-LABEL: broadcast_v8f64_v2f64_u1u10101:
+; X32-AVX1:       # %bb.0:
+; X32-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-AVX1-NEXT:    vmovaps %ymm0, %ymm1
+; X32-AVX1-NEXT:    retl
+;
+; X32-AVX2-LABEL: broadcast_v8f64_v2f64_u1u10101:
+; X32-AVX2:       # %bb.0:
+; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX2-NEXT:    vmovaps (%eax), %xmm0
+; X32-AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X32-AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
+; X32-AVX2-NEXT:    retl
+;
+; X32-AVX512-LABEL: broadcast_v8f64_v2f64_u1u10101:
+; X32-AVX512:       # %bb.0:
+; X32-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X32-AVX512-NEXT:    retl
+;
+; X64-AVX1-LABEL: broadcast_v8f64_v2f64_u1u10101:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX1-NEXT:    vmovaps %ymm0, %ymm1
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: broadcast_v8f64_v2f64_u1u10101:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,2,1]
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512-LABEL: broadcast_v8f64_v2f64_u1u10101:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; X64-AVX512-NEXT:    retq
+  %vec = load <2 x double>, <2 x double>* %vp
+  %res = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 3, i32 1, i32 undef, i32 1, i32 0, i32 1, i32 0, i32 1>
+  ret <8 x double> %res
+}
+
+define <8 x double> @broadcast_v8f64_v2f64_0uuu0101(<2 x double>* %vp) {
+; X32-AVX-LABEL: broadcast_v8f64_v2f64_0uuu0101:
+; X32-AVX:       # %bb.0:
+; X32-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX-NEXT:    vmovaps (%eax), %xmm0
+; X32-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X32-AVX-NEXT:    retl
+;
+; X32-AVX512-LABEL: broadcast_v8f64_v2f64_0uuu0101:
+; X32-AVX512:       # %bb.0:
+; X32-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX512-NEXT:    vmovaps (%eax), %xmm0
+; X32-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X32-AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X32-AVX512-NEXT:    retl
+;
+; X64-AVX-LABEL: broadcast_v8f64_v2f64_0uuu0101:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX-NEXT:    retq
+;
+; X64-AVX512-LABEL: broadcast_v8f64_v2f64_0uuu0101:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X64-AVX512-NEXT:    retq
+  %vec = load <2 x double>, <2 x double>* %vp
+  %res = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 0, i32 1>
+  ret <8 x double> %res
+}

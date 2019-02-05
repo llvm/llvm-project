@@ -10,9 +10,11 @@
 
 #include <ratio>
 
-int main()
+int main(int, char**)
 {
     typedef std::ratio<0x7FFFFFFFFFFFFFFFLL, 1> R1;
     typedef std::ratio<1, 1> R2;
     typedef std::ratio_add<R1, R2>::type R;
+
+  return 0;
 }

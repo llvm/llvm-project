@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::string C;
@@ -35,4 +35,6 @@ int main()
         typedef std::basic_string<char, std::char_traits<char>, limited_allocator<char, 10>> C;
         static_assert(!std::is_nothrow_default_constructible<C>::value, "");
     }
+
+  return 0;
 }

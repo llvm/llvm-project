@@ -19,7 +19,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -39,4 +39,6 @@ int main()
         static_assert(std::get<2>(c) == 3.5, "");
     }
 #endif
+
+  return 0;
 }

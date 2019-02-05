@@ -21,8 +21,10 @@ struct test_ostream
     : public std::basic_ostream<char, std::char_traits<wchar_t> > {};
 
 
-int main()
+int main(int, char**)
 {
 //  expected-error-re@ios:* {{static_assert failed{{.*}} "traits_type::char_type must be the same type as CharT"}}
+
+  return 0;
 }
 

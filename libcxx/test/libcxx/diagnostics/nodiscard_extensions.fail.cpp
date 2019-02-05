@@ -26,9 +26,11 @@
 
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   {
     // expected-error-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
     std::get_temporary_buffer<int>(1);
   }
+
+  return 0;
 }

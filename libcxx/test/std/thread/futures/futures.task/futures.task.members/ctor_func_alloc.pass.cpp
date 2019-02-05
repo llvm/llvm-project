@@ -44,7 +44,7 @@ int A::n_copies = 0;
 
 int func(int i) { return i; }
 
-int main()
+int main(int, char**)
 {
     {
         std::packaged_task<double(int, char)> p(std::allocator_arg,
@@ -123,4 +123,6 @@ int main()
     }
     A::n_copies = 0;
     A::n_moves  = 0;
+
+  return 0;
 }

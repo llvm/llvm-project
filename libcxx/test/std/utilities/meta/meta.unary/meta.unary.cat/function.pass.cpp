@@ -66,7 +66,7 @@ void test()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     TEST_REGULAR( void () );
     TEST_REGULAR( void (int) );
@@ -89,4 +89,6 @@ int main()
 
 //  LWG#2582
     static_assert(!std::is_function<incomplete_type>::value, "");
+
+  return 0;
 }

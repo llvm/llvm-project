@@ -21,7 +21,7 @@
 
 #include "allocators.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::scoped_allocator_adaptor<A1<int>> A;
@@ -68,4 +68,6 @@ int main()
         assert(A3<int>::move_called == false);
         assert(aN == a1);
     }
+
+  return 0;
 }

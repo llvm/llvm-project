@@ -22,7 +22,7 @@ test(SV lhs, const S& rhs, bool x)
     assert((lhs == rhs) == x);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -66,4 +66,6 @@ int main()
     test(SV("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrst"), true);
     }
 #endif
+
+  return 0;
 }

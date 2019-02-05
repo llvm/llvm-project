@@ -114,6 +114,71 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ2) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// CTPOP widening.
+TEST_F(GISelMITest, WidenBitCountingCTPOP1) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+      getActionDefinitionsBuilder(G_CTPOP).legalFor({{s16, s16}});
+    });
+
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, {s16}, {MIBTrunc});
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*MIBCTPOP, 1, s16));
+
+  auto CheckStr = R"(
+  CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC %0:_(s64)
+  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC]]:_(s8)
+  CHECK: [[CTPOP:%[0-9]+]]:_(s16) = G_CTPOP [[ZEXT]]
+  CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY [[CTPOP]]:_(s16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test a strange case where the result is wider than the source
+TEST_F(GISelMITest, WidenBitCountingCTPOP2) {
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+      getActionDefinitionsBuilder(G_CTPOP).legalFor({{s32, s16}});
+    });
+
+  // Build
+  // Trunc it to s8.
+  LLT s8{LLT::scalar(8)};
+  LLT s16{LLT::scalar(16)};
+  LLT s32{LLT::scalar(32)};
+  auto MIBTrunc = B.buildTrunc(s8, Copies[0]);
+  auto MIBCTPOP = B.buildInstr(TargetOpcode::G_CTPOP, {s32}, {MIBTrunc});
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*MIBCTPOP, 1, s16));
+
+  auto CheckStr = R"(
+  CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC %0:_(s64)
+  CHECK: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[TRUNC]]:_(s8)
+  CHECK: [[CTPOP:%[0-9]+]]:_(s16) = G_CTPOP [[ZEXT]]
+  CHECK: [[COPY:%[0-9]+]]:_(s32) = G_ZEXT [[CTPOP]]:_(s16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 // CTTZ_ZERO_UNDEF expansion in terms of CTTZ
 TEST_F(GISelMITest, LowerBitCountingCTTZ3) {
   if (!TM)

@@ -70,7 +70,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_void<void>();
 
@@ -90,4 +90,6 @@ int main()
     test_is_not_void<Enum>();
     test_is_not_void<FunctionPtr>();
     test_is_not_void<incomplete_type>();
+
+  return 0;
 }

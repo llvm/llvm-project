@@ -16,7 +16,7 @@
 #include <strstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         char buf[] = "0123456789";
@@ -35,4 +35,6 @@ int main()
         assert(sb.sputc('a') == 'a');
         assert(sb.str() == std::string("012a456789"));
     }
+
+  return 0;
 }

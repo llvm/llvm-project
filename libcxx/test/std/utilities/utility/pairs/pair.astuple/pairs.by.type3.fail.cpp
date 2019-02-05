@@ -12,9 +12,11 @@
 
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::unique_ptr<int> upint;
     std::pair<upint, int> t(upint(new int(4)), 23);
     upint p = std::get<upint>(t);
+
+  return 0;
 }

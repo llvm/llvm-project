@@ -17,9 +17,11 @@
 
 #include "poisoned_hash_helper.hpp"
 
-int main() {
+int main(int, char**) {
   test_library_hash_specializations_available();
   {
 
   }
+
+  return 0;
 }

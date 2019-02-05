@@ -15,8 +15,10 @@
 
 void foo ( const string &s ) {}
 
-int main()
+int main(int, char**)
 {
     std::string_view sv = "ABCDE";
     foo(sv);    // requires implicit conversion from string_view to string
+
+  return 0;
 }

@@ -37,7 +37,7 @@ constexpr_test(It first, It last, typename std::iterator_traits<It>::difference_
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     const char* s = "1234567890";
@@ -57,4 +57,6 @@ int main()
     static_assert( constexpr_test(s, s+10, 10), "");
     }
 #endif
+
+  return 0;
 }

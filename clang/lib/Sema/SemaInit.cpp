@@ -4670,19 +4670,23 @@ static void TryReferenceInitializationCore(Sema &S,
     //   applied.
     // Postpone address space conversions to after the temporary materialization
     // conversion to allow creating temporaries in the alloca address space.
-    auto AS1 = T1Quals.getAddressSpace();
-    auto AS2 = T2Quals.getAddressSpace();
-    T1Quals.removeAddressSpace();
-    T2Quals.removeAddressSpace();
-    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1Quals);
-    if (T1Quals != T2Quals)
+    auto T1QualsIgnoreAS = T1Quals;
+    auto T2QualsIgnoreAS = T2Quals;
+    if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
+      T1QualsIgnoreAS.removeAddressSpace();
+      T2QualsIgnoreAS.removeAddressSpace();
+    }
+    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1QualsIgnoreAS);
+    if (T1QualsIgnoreAS != T2QualsIgnoreAS)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_RValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
-    if (AS1 != AS2) {
-      T1Quals.addAddressSpace(AS1);
-      QualType cv1AST4 = S.Context.getQualifiedType(cv2T2, T1Quals);
-      Sequence.AddQualificationConversionStep(cv1AST4, ValueKind);
+    // Add addr space conversion if required.
+    if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
+      auto T4Quals = cv1T4.getQualifiers();
+      T4Quals.addAddressSpace(T1Quals.getAddressSpace());
+      QualType cv1T4WithAS = S.Context.getQualifiedType(T2, T4Quals);
+      Sequence.AddQualificationConversionStep(cv1T4WithAS, ValueKind);
     }
 
     //   In any case, the reference is bound to the resulting glvalue (or to

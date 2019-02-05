@@ -22,7 +22,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l(LOCALE_fr_CA_ISO8859_1);
@@ -60,4 +60,6 @@ int main()
             assert(v[6] == '*');
         }
     }
+
+  return 0;
 }

@@ -65,7 +65,7 @@ test()
     assert(std::lexicographical_compare(ic, base(ce), ir, ir+sr) == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test<input_iterator<const int*>, input_iterator<const int*>, output_iterator<int*> >();
     test<input_iterator<const int*>, input_iterator<const int*>, forward_iterator<int*> >();
@@ -220,4 +220,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

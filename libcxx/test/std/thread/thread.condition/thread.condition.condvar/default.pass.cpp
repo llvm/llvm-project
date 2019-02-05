@@ -17,7 +17,9 @@
 #include <condition_variable>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::condition_variable cv;
+
+  return 0;
 }

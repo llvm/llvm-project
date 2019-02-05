@@ -18,6 +18,8 @@
 #error macro defined unexpectedly
 #endif
 
-int main() {
+int main(int, char**) {
     try { ((void)0); } catch (...) {}
+
+  return 0;
 }

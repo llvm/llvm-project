@@ -31070,6 +31070,24 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   bool IsEVEXShuffle =
       RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128);
 
+  // Attempt to match a subvector broadcast.
+  // shuffle(insert_subvector(undef, sub, 0), undef, 0, 0, 0, 0)
+  if (UnaryShuffle &&
+      (BaseMaskEltSizeInBits == 128 || BaseMaskEltSizeInBits == 256)) {
+    SmallVector<int, 64> BroadcastMask(NumBaseMaskElts, 0);
+    if (isTargetShuffleEquivalent(BaseMask, BroadcastMask)) {
+      SDValue Src = Inputs[0];
+      if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Src.getOperand(0).isUndef() &&
+          Src.getOperand(1).getValueSizeInBits() == BaseMaskEltSizeInBits &&
+          MayFoldLoad(Src.getOperand(1)) && isNullConstant(Src.getOperand(2))) {
+        return DAG.getBitcast(RootVT, DAG.getNode(X86ISD::SUBV_BROADCAST, DL,
+                                                  Src.getValueType(),
+                                                  Src.getOperand(1)));
+      }
+    }
+  }
+
   // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
@@ -32071,6 +32089,14 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR)
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
+    // Share broadcast with the longest vector and extract low subvector (free).
+    for (SDNode *User : Src->uses())
+      if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
+          User->getValueSizeInBits(0) > VT.getSizeInBits()) {
+        return extractSubVector(SDValue(User, 0), 0, DAG, DL,
+                                VT.getSizeInBits());
+      }
+
     return SDValue();
   }
   case X86ISD::PSHUFD:
@@ -32828,6 +32854,27 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedRHS, SrcUndef,
                                    SrcZero, TLO, Depth + 1))
       return true;
+    break;
+  }
+  case X86ISD::BLENDV: {
+    APInt SelUndef, SelZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, SelUndef,
+                                   SelZero, TLO, Depth + 1))
+      return true;
+
+    // TODO: Use SelZero to adjust LHS/RHS DemandedElts.
+    APInt LHSUndef, LHSZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, LHSUndef,
+                                   LHSZero, TLO, Depth + 1))
+      return true;
+
+    APInt RHSUndef, RHSZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(2), DemandedElts, RHSUndef,
+                                   RHSZero, TLO, Depth + 1))
+      return true;
+
+    KnownZero = LHSZero & RHSZero;
+    KnownUndef = LHSUndef & RHSUndef;
     break;
   }
   case X86ISD::VBROADCAST: {
@@ -43005,6 +43052,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     // flags -> EFLAGS
     if (StringRef("{flags}").equals_lower(Constraint))
       return std::make_pair(X86::EFLAGS, &X86::CCRRegClass);
+
+    // dirflag -> DF
+    if (StringRef("{dirflag}").equals_lower(Constraint))
+      return std::make_pair(X86::DF, &X86::DFCCRRegClass);
+
+    // fpsr -> FPSW
+    if (StringRef("{fpsr}").equals_lower(Constraint))
+      return std::make_pair(X86::FPSW, &X86::FPCCRRegClass);
 
     // 'A' means [ER]AX + [ER]DX.
     if (Constraint == "A") {

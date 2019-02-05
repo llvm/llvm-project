@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::multiplies<int> F;
     const F f = F();
@@ -37,4 +37,6 @@ int main()
     constexpr double bar = std::multiplies<> () (3.0, 2);
     static_assert ( bar == 6.0, "" );
 #endif
+
+  return 0;
 }

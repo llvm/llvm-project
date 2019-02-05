@@ -28,7 +28,7 @@
 #error WEOF not defined
 #endif
 
-int main()
+int main(int, char**)
 {
 // mbstate_t comes from the underlying C library; it is defined (in C99) as:
 //    a complete object type other than an array type that can hold the conversion
@@ -126,4 +126,6 @@ int main()
     static_assert((std::is_same<decltype(vwprintf(L"", va)), int>::value), "");
     static_assert((std::is_same<decltype(wprintf(L"")), int>::value), "");
 #endif
+
+  return 0;
 }

@@ -38,8 +38,10 @@ test()
     static_assert((std::is_same<typename I::iterator_category, std::forward_iterator_tag>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<char>();
     test<wchar_t>();
+
+  return 0;
 }

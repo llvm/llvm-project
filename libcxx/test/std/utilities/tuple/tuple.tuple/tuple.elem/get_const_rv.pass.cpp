@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::tuple<int> T;
@@ -76,4 +76,6 @@ int main()
     static_assert(std::get<1>(std::move(t)) == 5, "");
     }
 #endif
+
+  return 0;
 }

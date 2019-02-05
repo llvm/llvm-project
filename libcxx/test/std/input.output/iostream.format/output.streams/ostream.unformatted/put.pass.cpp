@@ -48,7 +48,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::wostream os((std::wstreambuf*)0);
@@ -72,4 +72,6 @@ int main()
         assert(sb.str() == "a");
         assert(os.good());
     }
+
+  return 0;
 }

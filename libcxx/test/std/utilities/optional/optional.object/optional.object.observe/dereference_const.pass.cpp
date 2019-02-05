@@ -36,7 +36,7 @@ struct Y
     int test() const {return 2;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         const optional<X> opt; ((void)opt);
@@ -65,4 +65,6 @@ int main()
         assert(false);
     }
 #endif  // _LIBCPP_DEBUG
+
+  return 0;
 }

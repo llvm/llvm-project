@@ -3,6 +3,8 @@
 ; RUN: opt < %s -msan -msan-check-access-address=0 -S | FileCheck %s
 ; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S          \
 ; RUN: -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
+; RUN: opt < %s -msan-check-access-address=0 -S          \
+; RUN: -passes="msan<track-origins=1>" 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
 ; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=1 -S | FileCheck %s --check-prefixes=CHECK,CHECK-ORIGIN
 ; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S          \
 ; RUN: -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"

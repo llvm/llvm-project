@@ -24,7 +24,7 @@ struct S {
 
 size_t S::cnt_dtor = 0;
 
-int main()
+int main(int, char**)
 {
     {
         std::valarray<int> v(100);
@@ -51,4 +51,6 @@ int main()
             assert(v[i].x == 1);
     }
     assert(S::cnt_dtor == 100);
+
+  return 0;
 }

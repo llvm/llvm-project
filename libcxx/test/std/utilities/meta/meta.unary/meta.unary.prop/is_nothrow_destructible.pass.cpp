@@ -79,7 +79,7 @@ class Abstract
 };
 
 
-int main()
+int main(int, char**)
 {
     test_is_not_nothrow_destructible<void>();
     test_is_not_nothrow_destructible<char[]>();
@@ -110,4 +110,6 @@ int main()
     test_is_not_nothrow_destructible<PureProtectedDestructor>();
     test_is_not_nothrow_destructible<PurePrivateDestructor>();
 #endif
+
+  return 0;
 }

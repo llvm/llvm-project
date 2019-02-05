@@ -48,7 +48,7 @@ void test_return_type()
     static_assert( std::is_same_v<Init, decltype(std::reduce(p, p, Init{}, std::plus<>()))>, "" );
 }
 
-int main()
+int main(int, char**)
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -70,4 +70,6 @@ int main()
     unsigned res = std::reduce(v.begin(), v.end(), 1U, std::multiplies<>());
     assert(res == 40320);       // 8! will not fit into a char
     }
+
+  return 0;
 }

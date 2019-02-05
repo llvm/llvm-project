@@ -22,7 +22,7 @@ public:
 };
 
 
-int main ()
+int main(int, char**)
 {
     static_assert ( !is_transparent<std::less<int>>::value, "" );
     static_assert ( !is_transparent<std::less<std::string>>::value, "" );

@@ -24,7 +24,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using month              = std::chrono::month;
     using weekday_last       = std::chrono::weekday_last;
@@ -69,4 +69,6 @@ int main()
             month_weekday_last{month{1}, weekday_last{weekday{1}}},
             month_weekday_last{month{2}, weekday_last{weekday{2}}},
         false)));
+
+  return 0;
 }

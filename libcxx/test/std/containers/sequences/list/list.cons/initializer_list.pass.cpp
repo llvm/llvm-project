@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::list<int> d = {3, 4, 5, 6};
@@ -37,4 +37,6 @@ int main()
     assert(*i++ == 5);
     assert(*i++ == 6);
     }
+
+  return 0;
 }

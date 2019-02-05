@@ -30,7 +30,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::cmatch m;
@@ -1547,4 +1547,6 @@ int main()
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+
+  return 0;
 }

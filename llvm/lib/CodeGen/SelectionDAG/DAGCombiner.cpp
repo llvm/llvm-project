@@ -15656,7 +15656,9 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
     Offset = DAG.getNode(
         ISD::MUL, DL, PtrType, Offset,
         DAG.getConstant(VecEltVT.getStoreSize(), DL, PtrType));
-    MPI = OriginalLoad->getPointerInfo();
+    // Discard the pointer info except the address space because the memory
+    // operand can't represent this new access since the offset is variable.
+    MPI = MachinePointerInfo(OriginalLoad->getPointerInfo().getAddrSpace());
   }
   NewPtr = DAG.getNode(ISD::ADD, DL, PtrType, NewPtr, Offset);
 

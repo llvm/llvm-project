@@ -47,7 +47,7 @@ int A::count = 0;
 
 int g(int) {return 0;}
 
-int main()
+int main(int, char**)
 {
     {
     std::function<int(int)> f = A();
@@ -57,4 +57,6 @@ int main()
     std::function<int(int)> f;
     assert(f.target_type() == typeid(void));
     }
+
+  return 0;
 }

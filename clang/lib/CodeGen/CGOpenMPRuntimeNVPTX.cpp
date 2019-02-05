@@ -105,17 +105,18 @@ enum OpenMPRTLFunctionNVPTX {
 
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
 class NVPTXActionTy final : public PrePostActionTy {
-  llvm::Value *EnterCallee = nullptr;
+  llvm::FunctionCallee EnterCallee = nullptr;
   ArrayRef<llvm::Value *> EnterArgs;
-  llvm::Value *ExitCallee = nullptr;
+  llvm::FunctionCallee ExitCallee = nullptr;
   ArrayRef<llvm::Value *> ExitArgs;
   bool Conditional = false;
   llvm::BasicBlock *ContBlock = nullptr;
 
 public:
-  NVPTXActionTy(llvm::Value *EnterCallee, ArrayRef<llvm::Value *> EnterArgs,
-                llvm::Value *ExitCallee, ArrayRef<llvm::Value *> ExitArgs,
-                bool Conditional = false)
+  NVPTXActionTy(llvm::FunctionCallee EnterCallee,
+                ArrayRef<llvm::Value *> EnterArgs,
+                llvm::FunctionCallee ExitCallee,
+                ArrayRef<llvm::Value *> ExitArgs, bool Conditional = false)
       : EnterCallee(EnterCallee), EnterArgs(EnterArgs), ExitCallee(ExitCallee),
         ExitArgs(ExitArgs), Conditional(Conditional) {}
   void Enter(CodeGenFunction &CGF) override {
@@ -1515,14 +1516,14 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
   // directive.
   auto *ParallelFnTy =
       llvm::FunctionType::get(CGM.VoidTy, {CGM.Int16Ty, CGM.Int32Ty},
-                              /*isVarArg=*/false)
-          ->getPointerTo();
-  llvm::Value *WorkFnCast = Bld.CreateBitCast(WorkID, ParallelFnTy);
+                              /*isVarArg=*/false);
+  llvm::Value *WorkFnCast =
+      Bld.CreateBitCast(WorkID, ParallelFnTy->getPointerTo());
   // Insert call to work function via shared wrapper. The shared
   // wrapper takes two arguments:
   //   - the parallelism level;
   //   - the thread ID;
-  emitCall(CGF, WST.Loc, WorkFnCast,
+  emitCall(CGF, WST.Loc, {ParallelFnTy, WorkFnCast},
            {Bld.getInt16(/*ParallelLevel=*/0), getThreadID(CGF, WST.Loc)});
   // Go to end of parallel region.
   CGF.EmitBranch(TerminateBB);
@@ -1550,9 +1551,9 @@ void CGOpenMPRuntimeNVPTX::emitWorkerLoop(CodeGenFunction &CGF,
 /// implementation.  Specialized for the NVPTX device.
 /// \param Function OpenMP runtime function.
 /// \return Specified function.
-llvm::Constant *
+llvm::FunctionCallee
 CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
-  llvm::Constant *RTLFn = nullptr;
+  llvm::FunctionCallee RTLFn = nullptr;
   switch (static_cast<OpenMPRTLFunctionNVPTX>(Function)) {
   case OMPRTL_NVPTX__kmpc_kernel_init: {
     // Build void __kmpc_kernel_init(kmp_int32 thread_limit, int16_t
@@ -1809,7 +1810,8 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier");
-    cast<llvm::Function>(RTLFn)->addFnAttr(llvm::Attribute::Convergent);
+    cast<llvm::Function>(RTLFn.getCallee())
+        ->addFnAttr(llvm::Attribute::Convergent);
     break;
   }
   case OMPRTL__kmpc_barrier_simple_spmd: {
@@ -1820,7 +1822,8 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn =
         CGM.CreateRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier_simple_spmd");
-    cast<llvm::Function>(RTLFn)->addFnAttr(llvm::Attribute::Convergent);
+    cast<llvm::Function>(RTLFn.getCallee())
+        ->addFnAttr(llvm::Attribute::Convergent);
     break;
   }
   }
@@ -1931,7 +1934,7 @@ void CGOpenMPRuntimeNVPTX::emitNumTeamsClause(CodeGenFunction &CGF,
                                               const Expr *ThreadLimit,
                                               SourceLocation Loc) {}
 
-llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
+llvm::Function *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
   // Emit target region as a standalone region.
@@ -2008,7 +2011,7 @@ getTeamsReductionVars(ASTContext &Ctx, const OMPExecutableDirective &D,
   }
 }
 
-llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
+llvm::Function *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
   SourceLocation Loc = D.getBeginLoc();
@@ -2071,9 +2074,8 @@ llvm::Value *CGOpenMPRuntimeNVPTX::emitTeamsOutlinedFunction(
     }
   } Action(Loc, GlobalizedRD, MappedDeclsFields);
   CodeGen.setAction(Action);
-  llvm::Value *OutlinedFunVal = CGOpenMPRuntime::emitTeamsOutlinedFunction(
+  llvm::Function *OutlinedFun = CGOpenMPRuntime::emitTeamsOutlinedFunction(
       D, ThreadIDVar, InnermostKind, CodeGen);
-  llvm::Function *OutlinedFun = cast<llvm::Function>(OutlinedFunVal);
   OutlinedFun->removeFnAttr(llvm::Attribute::NoInline);
   OutlinedFun->removeFnAttr(llvm::Attribute::OptimizeNone);
   OutlinedFun->addFnAttr(llvm::Attribute::AlwaysInline);
@@ -2432,7 +2434,7 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsEpilog(CodeGenFunction &CGF,
 void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
                                          const OMPExecutableDirective &D,
                                          SourceLocation Loc,
-                                         llvm::Value *OutlinedFn,
+                                         llvm::Function *OutlinedFn,
                                          ArrayRef<llvm::Value *> CapturedVars) {
   if (!CGF.HaveInsertPoint())
     return;
@@ -2449,7 +2451,7 @@ void CGOpenMPRuntimeNVPTX::emitTeamsCall(CodeGenFunction &CGF,
 }
 
 void CGOpenMPRuntimeNVPTX::emitParallelCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
     ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond) {
   if (!CGF.HaveInsertPoint())
     return;
@@ -2628,7 +2630,7 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
 }
 
 void CGOpenMPRuntimeNVPTX::emitSPMDParallelCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
     ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond) {
   // Just call the outlined function to execute the parallel region.
   // OutlinedFn(&GTid, &zero, CapturedStruct);
@@ -3421,9 +3423,9 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 ///   (2k+1)th thread is ignored in the value aggregation.  Therefore
 ///   we copy the Reduce list from the (2k+1)th lane to (k+1)th lane so
 ///   that the contiguity assumption still holds.
-static llvm::Value *emitShuffleAndReduceFunction(
+static llvm::Function *emitShuffleAndReduceFunction(
     CodeGenModule &CGM, ArrayRef<const Expr *> Privates,
-    QualType ReductionArrayTy, llvm::Value *ReduceFn, SourceLocation Loc) {
+    QualType ReductionArrayTy, llvm::Function *ReduceFn, SourceLocation Loc) {
   ASTContext &C = CGM.getContext();
 
   // Thread local Reduce list used to host the values of data to be reduced.
@@ -3887,10 +3889,10 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
     llvm::Value *ReductionArrayTySize = CGF.getTypeSize(ReductionArrayTy);
     llvm::Value *RL = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
         ReductionList.getPointer(), CGF.VoidPtrTy);
-    llvm::Value *ReductionFn = emitReductionFunction(
+    llvm::Function *ReductionFn = emitReductionFunction(
         CGM, Loc, CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo(),
         Privates, LHSExprs, RHSExprs, ReductionOps);
-    llvm::Value *ShuffleAndReduceFn = emitShuffleAndReduceFunction(
+    llvm::Function *ShuffleAndReduceFn = emitShuffleAndReduceFunction(
         CGM, Privates, ReductionArrayTy, ReductionFn, Loc);
     llvm::Value *InterWarpCopyFn =
         emitInterWarpCopyFunction(CGM, Privates, ReductionArrayTy, Loc);
@@ -4037,12 +4039,11 @@ CGOpenMPRuntimeNVPTX::getParameterAddress(CodeGenFunction &CGF,
 }
 
 void CGOpenMPRuntimeNVPTX::emitOutlinedFunctionCall(
-    CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::FunctionCallee OutlinedFn,
     ArrayRef<llvm::Value *> Args) const {
   SmallVector<llvm::Value *, 4> TargetArgs;
   TargetArgs.reserve(Args.size());
-  auto *FnType =
-      cast<llvm::FunctionType>(OutlinedFn->getType()->getPointerElementType());
+  auto *FnType = OutlinedFn.getFunctionType();
   for (unsigned I = 0, E = Args.size(); I < E; ++I) {
     if (FnType->isVarArg() && FnType->getNumParams() <= I) {
       TargetArgs.append(std::next(Args.begin(), I), Args.end());

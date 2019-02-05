@@ -24,7 +24,7 @@ public:
     bool operator==(const A& a) const {return data_ == a.data_;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<float, short*> P;
@@ -38,4 +38,6 @@ int main()
         assert(p.first == A(1));
         assert(p.second == 2);
     }
+
+  return 0;
 }

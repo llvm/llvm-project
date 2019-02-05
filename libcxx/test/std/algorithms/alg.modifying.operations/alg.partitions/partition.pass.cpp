@@ -93,9 +93,11 @@ test()
         assert(!is_odd()(*i));
 }
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+
+  return 0;
 }

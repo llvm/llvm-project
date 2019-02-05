@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ostringstream outf;
@@ -28,4 +28,6 @@ int main()
         std::ostreambuf_iterator<wchar_t> i(outf.rdbuf());
         assert(!i.failed());
     }
+
+  return 0;
 }

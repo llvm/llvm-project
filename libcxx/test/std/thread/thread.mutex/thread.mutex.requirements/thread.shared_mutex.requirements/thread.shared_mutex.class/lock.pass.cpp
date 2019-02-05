@@ -53,11 +53,13 @@ void f()
     assert(d < Tolerance);  // within tolerance
 }
 
-int main()
+int main(int, char**)
 {
     m.lock();
     std::thread t(f);
     std::this_thread::sleep_for(WaitTime);
     m.unlock();
     t.join();
+
+  return 0;
 }

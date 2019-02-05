@@ -5330,6 +5330,14 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
       MI.modifiesRegister(AArch64::W30, &getRegisterInfo()))
     return outliner::InstrType::Illegal;
 
+  // Don't outline BTI instructions, because that will prevent the outlining
+  // site from being indirectly callable.
+  if (MI.getOpcode() == AArch64::HINT) {
+    int64_t Imm = MI.getOperand(0).getImm();
+    if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38)
+      return outliner::InstrType::Illegal;
+  }
+
   return outliner::InstrType::Legal;
 }
 

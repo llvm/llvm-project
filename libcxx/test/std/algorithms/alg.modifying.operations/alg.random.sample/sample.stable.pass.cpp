@@ -48,7 +48,9 @@ void test_stability(bool expect_stable) {
   assert(expect_stable == !unstable);
 }
 
-int main() {
+int main(int, char**) {
   test_stability<forward_iterator<int *>, output_iterator<int *> >(true);
   test_stability<input_iterator<int *>, random_access_iterator<int *> >(false);
+
+  return 0;
 }

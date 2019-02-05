@@ -48,7 +48,7 @@ test(const charT* s, unsigned n, const A& a)
     assert(s2.capacity() >= s2.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -90,4 +90,6 @@ int main()
     assert(s == "a");
     }
 #endif
+
+  return 0;
 }

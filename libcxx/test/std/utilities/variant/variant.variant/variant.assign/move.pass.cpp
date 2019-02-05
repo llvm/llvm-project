@@ -506,7 +506,7 @@ void test_constexpr_move_assignment() {
 #endif // > C++17
 }
 
-int main() {
+int main(int, char**) {
   test_move_assignment_empty_empty();
   test_move_assignment_non_empty_empty();
   test_move_assignment_empty_non_empty();
@@ -515,4 +515,6 @@ int main() {
   test_move_assignment_sfinae();
   test_move_assignment_noexcept();
   test_constexpr_move_assignment();
+
+  return 0;
 }

@@ -21,11 +21,13 @@ struct my_facet
 
 std::locale::id my_facet::id;
 
-int main()
+int main(int, char**)
 {
     std::locale loc;
     assert(std::has_facet<std::ctype<char> >(loc));
     assert(!std::has_facet<my_facet>(loc));
     std::locale loc2(loc, new my_facet);
     assert(std::has_facet<my_facet>(loc2));
+
+  return 0;
 }

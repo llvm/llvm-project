@@ -21,7 +21,7 @@
 
 namespace ex = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     // check return types
     {
@@ -72,4 +72,6 @@ int main()
         assert(r1.checkIsEqualCalledEq(1));
         assert(r2.checkIsEqualCalledEq(1));
     }
+
+  return 0;
 }

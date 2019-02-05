@@ -32,7 +32,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::regex_constants::icase != 0);
     assert(std::regex_constants::nosubs != 0);
@@ -111,4 +111,6 @@ int main()
     e1 &= e2;
     e1 |= e2;
     e1 ^= e2;
+
+  return 0;
 }

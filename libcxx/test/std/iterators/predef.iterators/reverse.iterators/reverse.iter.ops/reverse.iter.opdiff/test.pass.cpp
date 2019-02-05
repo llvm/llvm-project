@@ -33,7 +33,7 @@ test(It1 l, It2 r, std::ptrdiff_t x)
     assert((r1 - r2) == x);
 }
 
-int main()
+int main(int, char**)
 {
     char s[3] = {0};
     test(random_access_iterator<const char*>(s), random_access_iterator<char*>(s), 0);
@@ -53,4 +53,6 @@ int main()
         static_assert( it2 - it1 == -1, "");
     }
 #endif
+
+  return 0;
 }

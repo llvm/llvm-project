@@ -44,7 +44,7 @@ struct C
     typedef int size_type;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert(( std::is_same<std::stack<int>::container_type, std::deque<int> >::value), "");
     static_assert(( std::is_same<std::stack<int, std::vector<int> >::container_type, std::vector<int> >::value), "");
@@ -55,4 +55,6 @@ int main()
     static_assert(( std::uses_allocator<std::stack<int>, std::allocator<int> >::value), "");
     static_assert((!std::uses_allocator<std::stack<int, C>, std::allocator<int> >::value), "");
     test t;
+
+  return 0;
 }

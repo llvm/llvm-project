@@ -22,7 +22,7 @@
 #include "filesystem_test_helper.hpp"
 
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   const char* const value = "hello world";
@@ -35,4 +35,6 @@ int main()
     path p(value);
     assert(p.native() == value);
   }
+
+  return 0;
 }

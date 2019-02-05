@@ -50,7 +50,7 @@ void testSet() {
   }
 }
 
-int main() {
+int main(int, char**) {
   {
     typedef std::map<int, int> Map;
     typedef std::pair<const int, int> ValueTp;
@@ -127,4 +127,6 @@ int main() {
     testSet<Set, ValueTp, min_pointer<const ValueTp>>();
   }
 #endif
+
+  return 0;
 }

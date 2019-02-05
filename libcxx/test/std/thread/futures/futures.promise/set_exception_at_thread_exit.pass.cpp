@@ -24,7 +24,7 @@ void func(std::promise<int> p)
     p.set_exception_at_thread_exit(std::make_exception_ptr(3));
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -41,4 +41,6 @@ int main()
             assert(i == 3);
         }
     }
+
+  return 0;
 }

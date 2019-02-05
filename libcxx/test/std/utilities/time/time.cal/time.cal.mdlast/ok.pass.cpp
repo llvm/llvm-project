@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month          = std::chrono::month;
     using month_day_last = std::chrono::month_day_last;
@@ -42,4 +42,6 @@ int main()
         month_day_last mdl{month{i}};
         assert(!mdl.ok());
     }
+
+  return 0;
 }

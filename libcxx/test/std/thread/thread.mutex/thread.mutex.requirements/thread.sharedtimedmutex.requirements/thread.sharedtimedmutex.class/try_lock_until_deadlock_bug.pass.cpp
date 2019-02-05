@@ -47,7 +47,7 @@ void blocked_reader() {
   m.unlock_shared();
 }
 
-int main()
+int main(int, char**)
 {
   typedef std::chrono::steady_clock Clock;
 
@@ -66,4 +66,6 @@ int main()
   t1.join();
   t2.join();
   t3.join();
+
+  return 0;
 }

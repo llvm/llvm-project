@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
     {
@@ -47,4 +47,6 @@ int main()
         std::promise<void> p(p0); // expected-error {{calling a private constructor of class 'std::__1::promise<void>'}}
     }
 #endif
+
+  return 0;
 }

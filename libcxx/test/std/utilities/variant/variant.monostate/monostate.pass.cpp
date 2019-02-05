@@ -16,7 +16,7 @@
 #include <type_traits>
 #include <variant>
 
-int main() {
+int main(int, char**) {
   using M = std::monostate;
   static_assert(std::is_trivially_default_constructible<M>::value, "");
   static_assert(std::is_trivially_copy_constructible<M>::value, "");
@@ -24,4 +24,6 @@ int main() {
   static_assert(std::is_trivially_destructible<M>::value, "");
   constexpr M m{};
   ((void)m);
+
+  return 0;
 }

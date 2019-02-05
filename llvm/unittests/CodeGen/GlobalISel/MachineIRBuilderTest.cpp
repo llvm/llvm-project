@@ -65,3 +65,28 @@ TEST_F(GISelMITest, TestBuildConstantFConstantDeath) {
 
 #endif
 #endif
+
+TEST_F(GISelMITest, DstOpSrcOp) {
+  if (!TM)
+    return;
+
+  SmallVector<unsigned, 4> Copies;
+  collectCopies(Copies, MF);
+
+  LLT s64 = LLT::scalar(64);
+  auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
+
+  // Test SrcOp and DstOp can be constructed directly from MachineOperand by
+  // copying the instruction
+  B.buildAdd(MIBAdd->getOperand(0), MIBAdd->getOperand(1), MIBAdd->getOperand(2));
+
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[ADD]]:_(s64) = G_ADD [[COPY0]]:_, [[COPY1]]:_
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}

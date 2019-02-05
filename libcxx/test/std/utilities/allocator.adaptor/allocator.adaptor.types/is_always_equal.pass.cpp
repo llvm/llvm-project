@@ -21,7 +21,7 @@
 #include "allocators.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     // sanity checks
     static_assert( (std::is_same<
@@ -68,4 +68,6 @@ int main()
               std::allocator_traits<A2<int>>::is_always_equal::value &&
               std::allocator_traits<A3<int>>::is_always_equal::value)
         ), "");
+
+  return 0;
 }

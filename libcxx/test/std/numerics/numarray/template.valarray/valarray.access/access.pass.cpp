@@ -15,7 +15,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -29,4 +29,6 @@ int main()
             assert(v[i] == static_cast<int>(i));
         }
     }
+
+  return 0;
 }

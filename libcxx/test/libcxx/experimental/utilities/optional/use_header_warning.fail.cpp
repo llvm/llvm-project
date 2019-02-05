@@ -14,4 +14,6 @@
 
 // expected-error@experimental/optional:* {{"<experimental/optional> has been removed. Use <optional> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

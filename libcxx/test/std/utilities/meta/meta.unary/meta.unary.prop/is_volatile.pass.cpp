@@ -30,7 +30,7 @@ void test_is_volatile()
 
 struct A; // incomplete
 
-int main()
+int main(int, char**)
 {
     test_is_volatile<void>();
     test_is_volatile<int>();
@@ -44,4 +44,6 @@ int main()
 
     static_assert(!std::is_volatile<int&>::value, "");
     static_assert(!std::is_volatile<volatile int&>::value, "");
+
+  return 0;
 }

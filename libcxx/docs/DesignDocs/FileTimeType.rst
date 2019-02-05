@@ -119,7 +119,7 @@ to throw in cases where the user was confident the call should succeed. (See bel
     set_file_times("/tmp/foo", new_times); // OK, supported by most FSes
   }
 
-  int main() {
+  int main(int, char**) {
     path p = "/tmp/foo";
     file_status st = status(p);
     if (!exists(st) || !is_regular_file(st))
@@ -128,6 +128,7 @@ to throw in cases where the user was confident the call should succeed. (See bel
       return 1;
     // It seems reasonable to assume this call should succeed.
     file_time_type tp = last_write_time(p); // BAD! Throws value_too_large.
+    return 0;
   }
 
 

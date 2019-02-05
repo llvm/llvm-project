@@ -102,7 +102,7 @@ void test_default_constructible_extension_sfinae()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::tuple<MoveOnly> t(MoveOnly(0));
@@ -156,4 +156,6 @@ int main()
     // Check that SFINAE is properly applied with the default reduced arity
     // constructor extensions.
     test_default_constructible_extension_sfinae();
+
+  return 0;
 }

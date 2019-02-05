@@ -162,8 +162,10 @@ void test_ctor_under_alloc() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   basic_tests();
   emplaceable_concept_tests(); // See PR34898
   test_ctor_under_alloc();
+
+  return 0;
 }

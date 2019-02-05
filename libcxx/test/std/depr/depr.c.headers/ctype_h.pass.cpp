@@ -68,7 +68,7 @@
 #error toupper defined
 #endif
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<decltype(isalnum(0)), int>::value), "");
     static_assert((std::is_same<decltype(isalpha(0)), int>::value), "");
@@ -99,4 +99,6 @@ int main()
     assert(isxdigit('a'));
     assert(tolower('A') == 'a');
     assert(toupper('a') == 'A');
+
+  return 0;
 }

@@ -627,7 +627,8 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
       Args, cast<FunctionType>(FQTy.getTypePtr()), false);
 
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
-  llvm::Constant *Func = CGF.CGM.CreateBuiltinFunction(FTy, LibCallName);
+  llvm::FunctionCallee Func = CGF.CGM.CreateRuntimeFunction(
+      FTy, LibCallName, llvm::AttributeList(), true);
   CGCallee Callee = CGCallee::forDirect(Func, FQTy->getAs<FunctionProtoType>());
 
   llvm::CallBase *Call;

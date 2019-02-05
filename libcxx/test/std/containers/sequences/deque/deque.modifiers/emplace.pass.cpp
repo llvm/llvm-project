@@ -86,7 +86,7 @@ testN(int start, int N)
 }
 
 
-int main()
+int main(int, char**)
 {
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
@@ -102,4 +102,6 @@ int main()
         for (int j = 0; j < N; ++j)
             testN<std::deque<Emplaceable, min_allocator<Emplaceable>> >(rng[i], rng[j]);
     }
+
+  return 0;
 }

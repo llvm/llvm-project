@@ -26206,7 +26206,7 @@ void test12()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
@@ -26246,4 +26246,6 @@ int main()
     {
         long double v = std::nan(""); ((void)v);
     }
+
+  return 0;
 }

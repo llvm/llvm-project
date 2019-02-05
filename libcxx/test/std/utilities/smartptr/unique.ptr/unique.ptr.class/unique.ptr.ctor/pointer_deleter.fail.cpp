@@ -22,7 +22,9 @@ struct Deleter {
   void operator()(int* p) const { delete p; }
 };
 
-int main() {
+int main(int, char**) {
   // expected-error@+1 {{call to deleted constructor of 'std::unique_ptr<int, const Deleter &>}}
   std::unique_ptr<int, const Deleter&> s((int*)nullptr, Deleter());
+
+  return 0;
 }

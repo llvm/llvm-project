@@ -206,10 +206,12 @@ private:
 
 
 
-int main() {
+int main(int, char**) {
     TestCase<ArgType>::run();
     TestCase<ArgType const>::run();
     TestCase<ArgType volatile>::run();
     TestCase<ArgType const volatile>::run();
     TestCase<ArgType*>::run();
+
+  return 0;
 }

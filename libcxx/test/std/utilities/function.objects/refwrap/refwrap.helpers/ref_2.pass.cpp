@@ -22,7 +22,7 @@ bool is5 ( int i ) { return i == 5; }
 template <typename T>
 bool call_pred ( T pred ) { return pred(5); }
 
-int main()
+int main(int, char**)
 {
     {
     int i = 0;
@@ -39,4 +39,6 @@ int main()
     assert(call_pred(std::ref(cp)));
     assert(cp.count() == 2);
     }
+
+  return 0;
 }

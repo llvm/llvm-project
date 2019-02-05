@@ -58,7 +58,7 @@ void test_flip_one(bool test_throws)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_flip_one<0>(true);
     test_flip_one<1>(true);
@@ -69,4 +69,6 @@ int main()
     test_flip_one<64>(false);
     test_flip_one<65>(false);
     test_flip_one<1000>(false);
+
+  return 0;
 }

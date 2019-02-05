@@ -33,7 +33,7 @@ struct some_comp
     bool operator()(const T&, const T&) const { return false; }
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::set<MoveOnly> C;
@@ -53,4 +53,6 @@ int main()
         typedef std::set<MoveOnly, some_comp<MoveOnly>> C;
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");
     }
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   // Default
   {
@@ -27,4 +27,6 @@ int main() {
     directory_entry e;
     assert(e.path() == path());
   }
+
+  return 0;
 }

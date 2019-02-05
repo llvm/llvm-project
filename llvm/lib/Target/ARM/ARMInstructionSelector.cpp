@@ -930,7 +930,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     return selectShift(ARM_AM::ShiftOpc::lsl, MIB);
   }
   case G_GEP:
-    I.setDesc(TII.get(ARM::ADDrr));
+    I.setDesc(TII.get(STI.isThumb2() ? ARM::t2ADDrr : ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
   case G_FRAME_INDEX:

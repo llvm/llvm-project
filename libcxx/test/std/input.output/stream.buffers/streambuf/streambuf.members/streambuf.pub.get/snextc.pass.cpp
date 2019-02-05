@@ -38,7 +38,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         test t;
@@ -52,4 +52,6 @@ int main()
         assert(t.snextc() == 'C');
         assert(uflow_called == 1);
     }
+
+  return 0;
 }

@@ -29,7 +29,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 
 //  Test the explicit deduction guides
@@ -112,4 +112,6 @@ int main()
     static_assert(std::is_same_v<decltype(vec)::allocator_type, std::allocator<bool>>, "");
     assert(vec.size() == 0);
     }
+
+  return 0;
 }

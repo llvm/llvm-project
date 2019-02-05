@@ -47,7 +47,7 @@ test(S s, typename S::size_type pos, S str, S expected)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -226,4 +226,6 @@ int main()
     assert(s == "a");
     }
 #endif
+
+  return 0;
 }

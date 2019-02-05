@@ -29,8 +29,10 @@ void test() {
     static_assert( b == ex::is_detected_v<copy_assign_t, T>, "" );
 }
 
-int main () {
+int main(int, char**) {
     test<int, true>();
     test<std::string, true>();
     test<not_assignable, false>();
+
+  return 0;
 }

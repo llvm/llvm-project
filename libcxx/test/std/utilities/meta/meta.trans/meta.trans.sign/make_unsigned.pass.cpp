@@ -42,7 +42,7 @@ void test_make_unsigned()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_make_unsigned<signed char, unsigned char> ();
     test_make_unsigned<unsigned char, unsigned char> ();
@@ -67,4 +67,6 @@ int main()
     test_make_unsigned<HugeEnum, __uint128_t>();
 # endif
 #endif
+
+  return 0;
 }

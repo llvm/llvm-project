@@ -85,25 +85,34 @@ WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: main
 WASM-NEXT:     Type: FUNCTION (0x0)
 WASM-NEXT:     Flags: 0x0
+WASM-NEXT:     ElementIndex: 0x2
 WASM-NEXT:   }
 WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: .L.str
 WASM-NEXT:     Type: DATA (0x1)
 WASM-NEXT:     Flags: 0x2
+WASM-NEXT:     Offset: 0x0
+WASM-NEXT:     Segment: 0x0
+WASM-NEXT:     Size: 0xD
 WASM-NEXT:   }
 WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: puts
 WASM-NEXT:     Type: FUNCTION (0x0)
 WASM-NEXT:     Flags: 0x10
+WASM-NEXT:     Module: env
+WASM-NEXT:     ElementIndex: 0x0
 WASM-NEXT:   }
 WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: .LSomeOtherFunction_bitcast
 WASM-NEXT:     Type: FUNCTION (0x0)
 WASM-NEXT:     Flags: 0x2
+WASM-NEXT:     ElementIndex: 0x3
 WASM-NEXT:   }
 WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: SomeOtherFunction
 WASM-NEXT:     Type: FUNCTION (0x0)
 WASM-NEXT:     Flags: 0x10
+WASM-NEXT:     Module: env
+WASM-NEXT:     ElementIndex: 0x1
 WASM-NEXT:   }
 WASM-NEXT: ]

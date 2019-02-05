@@ -86,7 +86,7 @@ test(unsigned n)
     test2<T, Allocator> ( n );
 }
 
-int main()
+int main(int, char**)
 {
     test<DefaultOnly, std::allocator<DefaultOnly> >(0);
     test<DefaultOnly, std::allocator<DefaultOnly> >(1);
@@ -113,4 +113,6 @@ int main()
     test3<int, min_allocator<int>> (3);
 #endif
 
+
+  return 0;
 }

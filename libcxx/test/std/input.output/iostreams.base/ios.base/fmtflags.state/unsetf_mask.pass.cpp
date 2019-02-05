@@ -25,10 +25,12 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(t.flags() == (test::skipws | test::dec));
     t.unsetf(test::dec | test::right);
     assert(t.flags() == test::skipws);
+
+  return 0;
 }

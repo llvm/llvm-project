@@ -31,10 +31,12 @@ test(typename C::size_type n, const typename C::value_type& x,
         assert(*i == x);
 }
 
-int main()
+int main(int, char**)
 {
     test<std::vector<int> >(50, 3, std::allocator<int>());
 #if TEST_STD_VER >= 11
     test<std::vector<int, min_allocator<int>> >(50, 3, min_allocator<int>());
 #endif
+
+  return 0;
 }

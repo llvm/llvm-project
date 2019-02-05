@@ -24,10 +24,12 @@ struct test
     test() {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         test<char> t;
         assert(t.pubseekpos(0, std::ios_base::app) == -1);
     }
+
+  return 0;
 }

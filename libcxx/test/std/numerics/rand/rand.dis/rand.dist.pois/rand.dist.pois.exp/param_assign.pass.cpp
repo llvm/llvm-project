@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::exponential_distribution<> D;
@@ -27,4 +27,6 @@ int main()
         p = p0;
         assert(p.lambda() == .7);
     }
+
+  return 0;
 }

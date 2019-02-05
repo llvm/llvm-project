@@ -17,7 +17,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     std::locale cloc;
     std::locale copy(cloc);
@@ -82,4 +82,6 @@ int main()
     assert(noname2 != noname1);
     assert(noname2 != nonamec);
     assert(noname2 == noname2);
+
+  return 0;
 }

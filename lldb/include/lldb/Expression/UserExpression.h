@@ -272,6 +272,16 @@ public:
   /// @param[out] jit_module_sp_ptr
   ///     If non-nullptr, used to persist the generated IR module.
   ///
+  /// @param[in] ctx_obj
+  ///     If specified, then the expression will be evaluated in the context of
+  ///     this object. It means that the context object's address will be
+  ///     treated as `this` for the expression (the expression will be
+  ///     evaluated as if it was inside of a method of the context object's
+  ///     class, and its `this` parameter were pointing to the context object).
+  ///     The parameter makes sense for class and union types only.
+  ///     Currently there is a limitation: the context object must be located
+  ///     in the debuggee process' memory (and have the load address).
+  ///
   /// @result
   ///      A Process::ExpressionResults value.  eExpressionCompleted for
   ///      success.
@@ -281,7 +291,8 @@ public:
            llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
            lldb::ValueObjectSP &result_valobj_sp, Status &error,
            uint32_t line_offset = 0, std::string *fixed_expression = nullptr,
-           lldb::ModuleSP *jit_module_sp_ptr = nullptr);
+           lldb::ModuleSP *jit_module_sp_ptr = nullptr,
+           ValueObject *ctx_obj = nullptr);
 
   static const Status::ValueType kNoResult =
       0x1001; ///< ValueObject::GetError() returns this if there is no result

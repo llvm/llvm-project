@@ -81,6 +81,10 @@ defm ELSE : NRI<(outs), (ins), [], "else", 0x05>;
 defm END_BLOCK : NRI<(outs), (ins), [], "end_block", 0x0b>;
 defm END_LOOP  : NRI<(outs), (ins), [], "end_loop", 0x0b>;
 defm END_IF    : NRI<(outs), (ins), [], "end_if", 0x0b>;
+// Generic instruction, for disassembler.
+let IsCanonical = 1 in {
+defm END       : NRI<(outs), (ins), [], "end", 0x0b>;
+}
 let isTerminator = 1, isBarrier = 1 in
 defm END_FUNCTION : NRI<(outs), (ins), [], "end_function", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]

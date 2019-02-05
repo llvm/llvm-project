@@ -17,7 +17,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main() {
+int main(int, char**) {
   {
     typedef double T;
     typedef std::array<const T, 0> C;
@@ -25,4 +25,6 @@ int main() {
     // expected-error-re@array:* {{static_assert failed {{.*}}"cannot fill zero-sized array of type 'const T'"}}
     c.fill(5.5); // expected-note {{requested here}}
   }
+
+  return 0;
 }

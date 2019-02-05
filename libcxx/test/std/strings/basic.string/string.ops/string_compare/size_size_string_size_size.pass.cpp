@@ -5836,7 +5836,7 @@ void test55()
     test_npos(S("abcde"), 0, 0, S("abcdefghij"), 5, -5);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -5958,4 +5958,6 @@ int main()
     test55<S>();
     }
 #endif
+
+  return 0;
 }

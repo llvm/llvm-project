@@ -15,7 +15,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -36,4 +36,6 @@ int main()
         std::valarray<T> v1(a1, N1);
         assert((2*v1).max() == 8.0);
     }
+
+  return 0;
 }

@@ -26,7 +26,7 @@ struct Dummy {
   Dummy(Dummy &&) = default;
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::pair<int, short> P;
     {
@@ -52,4 +52,6 @@ int main()
 #endif
     }
 #endif
+
+  return 0;
 }

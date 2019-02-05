@@ -44,7 +44,7 @@ void test_function1()
 
 struct Foo {};
 
-int main()
+int main(int, char**)
 {
     test_add_lvalue_reference<void, void>();
     test_add_lvalue_reference<int, int&>();
@@ -75,4 +75,6 @@ int main()
     test_function0<void (Foo::*)() const &>();
     test_function0<void (Foo::*)() const &&>();
 #endif
+
+  return 0;
 }

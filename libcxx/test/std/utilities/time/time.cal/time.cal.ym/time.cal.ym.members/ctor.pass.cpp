@@ -25,7 +25,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year       = std::chrono::year;
     using month      = std::chrono::month;
@@ -48,4 +48,6 @@ int main()
     static_assert( ym2.year()  == year{2018}, "");
     static_assert( ym2.month() == month{},    "");
     static_assert(!ym2.ok(),                  "");
+
+  return 0;
 }

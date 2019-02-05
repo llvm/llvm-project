@@ -28,7 +28,7 @@ public:
         : F(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     {
@@ -45,4 +45,6 @@ int main()
         assert(rc > 0);
         assert(ex == expected_str);
     }
+
+  return 0;
 }

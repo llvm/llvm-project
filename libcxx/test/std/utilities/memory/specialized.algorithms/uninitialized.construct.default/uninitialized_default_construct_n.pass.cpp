@@ -107,9 +107,11 @@ void test_value_initialized()
 }
 
 
-int main()
+int main(int, char**)
 {
     test_counted();
     test_value_initialized();
     test_ctor_throws();
+
+  return 0;
 }

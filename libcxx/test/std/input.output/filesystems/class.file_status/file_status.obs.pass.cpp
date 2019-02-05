@@ -20,7 +20,7 @@
 #include <cassert>
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
 
   const file_status st(file_type::regular, perms::owner_read);
@@ -41,4 +41,6 @@ int main() {
                  "operation must return perms");
     assert(st.permissions() == perms::owner_read);
   }
+
+  return 0;
 }

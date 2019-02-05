@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::string s("123def456");
@@ -30,4 +30,6 @@ int main()
         s.replace(s.cbegin() + 3, s.cbegin() + 6, {'a', 'b', 'c'});
         assert(s == "123abc456");
     }
+
+  return 0;
 }

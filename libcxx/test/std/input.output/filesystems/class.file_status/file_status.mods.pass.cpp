@@ -20,7 +20,7 @@
 #include <cassert>
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
 
   file_status st;
@@ -45,4 +45,6 @@ int main() {
     st.permissions(perms::owner_read);
     assert(st.permissions() == perms::owner_read);
   }
+
+  return 0;
 }

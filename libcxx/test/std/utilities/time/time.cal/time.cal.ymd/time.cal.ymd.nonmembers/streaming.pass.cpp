@@ -46,7 +46,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year_month_day = std::chrono::year_month_day;
     using year           = std::chrono::year;
@@ -54,4 +54,6 @@ int main()
     using day            = std::chrono::day;
 
     std::cout << year_month_day{year{2018}, month{3}, day{12}};
+
+  return 0;
 }

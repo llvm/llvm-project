@@ -24,7 +24,7 @@ bool test ( const CharT *s, size_t len ) {
     return &sv.back() == s + len - 1;
     }
 
-int main () {
+int main(int, char**) {
     assert ( test ( "ABCDE", 5 ));
     assert ( test ( "a", 1 ));
 
@@ -46,4 +46,6 @@ int main () {
     static_assert ( sv.back()  == 'B', "" );
     }
 #endif
+
+  return 0;
 }

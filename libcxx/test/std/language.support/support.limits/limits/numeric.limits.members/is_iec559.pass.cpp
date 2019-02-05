@@ -24,7 +24,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::is_iec559 == expected, "is_iec559 test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, false>();
     test<char, false>();
@@ -57,4 +57,6 @@ int main()
 #else
     test<long double, true>();
 #endif
+
+  return 0;
 }

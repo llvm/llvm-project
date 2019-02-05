@@ -31,7 +31,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::traps == expected, "traps test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, false>();
     test<char, integral_types_trap>();
@@ -60,4 +60,6 @@ int main()
     test<float, false>();
     test<double, false>();
     test<long double, false>();
+
+  return 0;
 }

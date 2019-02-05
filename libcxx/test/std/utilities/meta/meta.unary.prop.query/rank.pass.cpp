@@ -35,7 +35,7 @@ public:
     ~Class();
 };
 
-int main()
+int main(int, char**)
 {
     test_rank<void, 0>();
     test_rank<int&, 0>();
@@ -50,4 +50,6 @@ int main()
     test_rank<char[3], 1>();
     test_rank<char[][3], 2>();
     test_rank<char[][4][3], 3>();
+
+  return 0;
 }

@@ -21,7 +21,7 @@
 #include <codecvt>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::codecvt_utf8<wchar_t> Codecvt;
     typedef std::wstring_convert<Codecvt> Myconv;
@@ -34,4 +34,6 @@ int main()
     // move construct a new converter and make sure the state is the same.
     Myconv myconv2(std::move(myconv));
     assert(myconv2.converted() == old_converted);
+
+  return 0;
 }

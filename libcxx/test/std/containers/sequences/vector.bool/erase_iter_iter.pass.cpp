@@ -16,7 +16,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     bool a1[] = {1, 0, 1};
     {
@@ -81,4 +81,6 @@ int main()
         assert(i == l1.begin());
     }
 #endif
+
+  return 0;
 }

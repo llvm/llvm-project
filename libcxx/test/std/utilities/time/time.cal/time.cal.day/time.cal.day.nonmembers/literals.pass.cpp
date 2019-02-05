@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     using namespace std::chrono;
@@ -43,4 +43,6 @@ int main()
     assert (d1 == std::chrono::day(4));
     }
 
+
+  return 0;
 }

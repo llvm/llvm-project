@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
 #if defined(_LIBCPP_VERSION)
     {
@@ -29,4 +29,6 @@ int main()
         static_assert(std::is_nothrow_default_constructible<C>::value, "");
     }
 #endif
+
+  return 0;
 }

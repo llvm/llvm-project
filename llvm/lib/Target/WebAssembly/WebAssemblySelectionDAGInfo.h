@@ -22,6 +22,12 @@ namespace llvm {
 class WebAssemblySelectionDAGInfo final : public SelectionDAGTargetInfo {
 public:
   ~WebAssemblySelectionDAGInfo() override;
+  SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
+                                  SDValue Chain, SDValue Op1, SDValue Op2,
+                                  SDValue Op3, unsigned Align, bool isVolatile,
+                                  bool AlwaysInline,
+                                  MachinePointerInfo DstPtrInfo,
+                                  MachinePointerInfo SrcPtrInfo) const override;
 };
 
 } // end namespace llvm

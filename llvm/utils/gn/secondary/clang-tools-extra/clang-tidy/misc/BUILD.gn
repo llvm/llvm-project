@@ -1,0 +1,32 @@
+static_library("misc") {
+  output_name = "clangTidyMiscModule"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang-tools-extra/clang-tidy",
+    "//clang-tools-extra/clang-tidy/utils",
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Analysis",
+    "//clang/lib/Basic",
+    "//clang/lib/Lex",
+    "//clang/lib/Serialization",
+    "//clang/lib/Tooling",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "DefinitionsInHeadersCheck.cpp",
+    "MiscTidyModule.cpp",
+    "MisplacedConstCheck.cpp",
+    "NewDeleteOverloadsCheck.cpp",
+    "NonCopyableObjects.cpp",
+    "NonPrivateMemberVariablesInClassesCheck.cpp",
+    "RedundantExpressionCheck.cpp",
+    "StaticAssertCheck.cpp",
+    "ThrowByValueCatchByReferenceCheck.cpp",
+    "UnconventionalAssignOperatorCheck.cpp",
+    "UniqueptrResetReleaseCheck.cpp",
+    "UnusedAliasDeclsCheck.cpp",
+    "UnusedParametersCheck.cpp",
+    "UnusedUsingDeclsCheck.cpp",
+  ]
+}

@@ -22,7 +22,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -47,4 +47,6 @@ int main()
         static_assert((std::is_same<std::collate<wchar_t>::string_type, std::wstring>::value), "");
         static_assert((std::is_base_of<std::locale::facet, std::collate<wchar_t> >::value), "");
     }
+
+  return 0;
 }

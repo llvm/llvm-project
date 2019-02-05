@@ -11,7 +11,7 @@
 #include <chrono>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using namespace std::chrono;
 
@@ -67,4 +67,6 @@ int main()
     assert(November  == month(11));
     assert(December  == month(12));
 #endif
+
+  return 0;
 }

@@ -28,7 +28,7 @@ void test_pr26961() {
 }
 #endif
 
-int main()
+int main(int, char**)
 {
 #ifndef TEST_IS_UNSUPPORTED
   {
@@ -42,4 +42,6 @@ int main()
     test_pr26961();
   }
 #endif
+
+  return 0;
 }

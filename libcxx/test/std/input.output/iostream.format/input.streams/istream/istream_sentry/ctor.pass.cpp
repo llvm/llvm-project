@@ -49,7 +49,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::istream is((testbuf<char>*)0);
@@ -124,4 +124,6 @@ int main()
         assert(sync_called == 0);
         assert(sb.gptr() == sb.eback());
     }
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::list<MoveOnly, test_allocator<MoveOnly> > l(test_allocator<MoveOnly>(5));
@@ -72,4 +72,6 @@ int main()
         assert(l.empty());
         assert(l2.get_allocator() == min_allocator<MoveOnly>());
     }
+
+  return 0;
 }

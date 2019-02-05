@@ -35,11 +35,13 @@ public:
 #include <type_traits>
 #include <variant>
 
-int main() {
+int main(int, char**) {
   static_assert(std::is_base_of<std::exception, std::bad_variant_access>::value,
                 "");
   static_assert(noexcept(std::bad_variant_access{}), "must be noexcept");
   static_assert(noexcept(std::bad_variant_access{}.what()), "must be noexcept");
   std::bad_variant_access ex;
   assert(ex.what());
+
+  return 0;
 }

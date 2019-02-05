@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::not_equal_to<int> F;
     const F f = F();
@@ -41,4 +41,6 @@ int main()
     constexpr bool bar = std::not_equal_to<> () (36.0, 36);
     static_assert ( !bar, "" );
 #endif
+
+  return 0;
 }

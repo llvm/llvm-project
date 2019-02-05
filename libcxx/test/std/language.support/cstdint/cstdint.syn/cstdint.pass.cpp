@@ -18,7 +18,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     // typedef std::int8_t
     static_assert(sizeof(std::int8_t)*CHAR_BIT == 8,
@@ -288,4 +288,6 @@ int main()
 #ifndef UINTMAX_C
 #error UINTMAX_C not defined
 #endif
+
+  return 0;
 }
