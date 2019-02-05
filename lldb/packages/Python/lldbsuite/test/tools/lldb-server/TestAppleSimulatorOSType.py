@@ -16,7 +16,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     @decorators.skipIfOutOfTreeDebugserver
     def check_simulator_ostype(self, sdk, platform, arch='x86_64'):
         sim_devices_str = subprocess.check_output(['xcrun', 'simctl', 'list',
-                                                   '-j', 'devices'])
+                                                   '-j', 'devices']).decode("utf-8")
         sim_devices = json.loads(sim_devices_str)['devices']
         # Find an available simulator for the requested platform
         deviceUDID = None
