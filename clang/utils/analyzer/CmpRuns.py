@@ -73,6 +73,21 @@ class AnalysisDiagnostic(object):
             return fileName[len(root) + 1:]
         return fileName
 
+    def getRootFileName(self):
+        path = self._data['path']
+        if not path:
+            return self.getFileName()
+        p = path[0]
+        if 'location' in p:
+            fIdx = p['location']['file']
+        else: # control edge
+            fIdx = path[0]['edges'][0]['start'][0]['file']
+        out = self._report.files[fIdx]
+        root = self._report.run.root
+        if out.startswith(root):
+            return out[len(root):]
+        return out
+
     def getLine(self):
         return self._loc['line']
 
@@ -106,7 +121,13 @@ class AnalysisDiagnostic(object):
             funcnamePostfix = "#" + self._data['issue_context']
         else:
             funcnamePostfix = ""
-        return '%s%s:%d:%d, %s: %s' % (self.getFileName(),
+        rootFilename = self.getRootFileName()
+        fileName = self.getFileName()
+        if rootFilename != fileName:
+            filePrefix = "[%s] %s" % (rootFilename, fileName)
+        else:
+            filePrefix = rootFilename
+        return '%s%s:%d:%d, %s: %s' % (filePrefix,
                                        funcnamePostfix,
                                        self.getLine(),
                                        self.getColumn(), self.getCategory(),
