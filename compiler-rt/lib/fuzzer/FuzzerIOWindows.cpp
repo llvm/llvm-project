@@ -333,8 +333,7 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
 }
 
 void RawPrint(const char *Str) {
-  // Not tested, may or may not work. Fix if needed.
-  write(2, Str, strlen(Str));
+  _write(2, Str, strlen(Str));
 }
 
 }  // namespace fuzzer
