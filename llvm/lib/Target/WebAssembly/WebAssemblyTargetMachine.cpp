@@ -120,7 +120,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   // splitting and tail merging.
 }
 
-WebAssemblyTargetMachine::~WebAssemblyTargetMachine() {}
+WebAssemblyTargetMachine::~WebAssemblyTargetMachine() = default; // anchor.
 
 const WebAssemblySubtarget *
 WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {

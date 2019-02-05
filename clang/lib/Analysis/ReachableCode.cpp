@@ -192,9 +192,10 @@ static bool isConfigurationValue(const Stmt *S,
   if (!S)
     return false;
 
-  S = S->IgnoreImplicit();
+  if (const auto *Ex = dyn_cast<Expr>(S))
+    S = Ex->IgnoreImplicit();
 
-  if (const Expr *Ex = dyn_cast<Expr>(S))
+  if (const auto *Ex = dyn_cast<Expr>(S))
     S = Ex->IgnoreCasts();
 
   // Special case looking for the sigil '()' around an integer literal.

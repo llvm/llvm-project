@@ -29,8 +29,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   CHECK: [[VEC0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CONST1]]:_(s32), [[CONST1]]:_(s32)
   CHECK: [[FCONST1:%[0-9]+]]:_(s32) = G_FCONSTANT double 2.000000e+00
   CHECK: [[VEC1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FCONST1]]:_(s32), [[FCONST1]]:_(s32)
-
   )";
 
-  ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }

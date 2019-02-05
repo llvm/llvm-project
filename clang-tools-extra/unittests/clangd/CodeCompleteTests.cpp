@@ -645,6 +645,36 @@ TEST(CompletionTest, CompletionInPreamble) {
   EXPECT_THAT(Results, ElementsAre(Named("ifndef")));
 }
 
+TEST(CompletionTest, DynamicIndexIncludeInsertion) {
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  Opts.BuildDynamicSymbolIndex = true;
+  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+
+  FS.Files[testPath("foo_header.h")] = R"cpp(
+    struct Foo {
+       // Member doc
+       int foo();
+    };
+  )cpp";
+  const std::string FileContent(R"cpp(
+    #include "foo_header.h"
+    int Foo::foo() {
+      return 42;
+    }
+  )cpp");
+  Server.addDocument(testPath("foo_impl.cpp"), FileContent);
+  // Wait for the dynamic index being built.
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_THAT(
+      completions(Server, "Foo^ foo;").Completions,
+      ElementsAre(AllOf(Named("Foo"),
+                        HasInclude('"' + testPath("foo_header.h") + '"'),
+                        InsertInclude())));
+}
+
 TEST(CompletionTest, DynamicIndexMultiFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;

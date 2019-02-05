@@ -1728,7 +1728,6 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
           CGM.getContext().getCharWidth());
       // struct objc_ivar ivars[]
       auto ivarArrayBuilder = ivarListBuilder.beginArray();
-      CodeGenTypes &Types = CGM.getTypes();
       for (const ObjCIvarDecl *IVD = classDecl->all_declared_ivar_begin(); IVD;
            IVD = IVD->getNextIvar()) {
         auto ivarTy = IVD->getType();
@@ -1762,8 +1761,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         ivarBuilder.add(OffsetVar);
         // Ivar size
         ivarBuilder.addInt(Int32Ty,
-            td.getTypeSizeInBits(Types.ConvertType(ivarTy)) /
-              CGM.getContext().getCharWidth());
+            CGM.getContext().getTypeSizeInChars(ivarTy).getQuantity());
         // Alignment will be stored as a base-2 log of the alignment.
         int align = llvm::Log2_32(Context.getTypeAlignInChars(ivarTy).getQuantity());
         // Objects that require more than 2^64-byte alignment should be impossible!

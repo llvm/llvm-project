@@ -91,10 +91,10 @@ static cl::opt<float>
 
 static cl::opt<std::string>
     AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
-                               cl::init("-"));
+                               cl::init(""));
 static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
-                                      cl::desc(""), cl::init("-"));
+                                      cl::desc(""), cl::init(""));
 
 static cl::opt<std::string>
     CpuName("mcpu",
@@ -191,8 +191,7 @@ public:
   // Implementation of the llvm::MCStreamer interface. We only care about
   // instructions.
   void EmitInstruction(const llvm::MCInst &Instruction,
-                       const llvm::MCSubtargetInfo &STI,
-                       bool PrintSchedInfo) override {
+                       const llvm::MCSubtargetInfo &STI) override {
     Result->Instructions.push_back(Instruction);
   }
 
@@ -403,6 +402,13 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
 static void analysisMain() {
   if (BenchmarkFile.empty())
     llvm::report_fatal_error("--benchmarks-file must be set.");
+
+  if (AnalysisClustersOutputFile.empty() &&
+      AnalysisInconsistenciesOutputFile.empty()) {
+    llvm::report_fatal_error(
+        "At least one of --analysis-clusters-output-file and "
+        "--analysis-inconsistencies-output-file must be specified.");
+  }
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();

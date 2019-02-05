@@ -79,19 +79,19 @@ entry:
 ; CHECK-NEXT:         Functions:       [ 4, 1, 2 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x00000004
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:         Offset:          0x0000000A
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x00000013
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x0000001A
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           7
 ; CHECK-NEXT:         Offset:          0x00000026
 ; CHECK-NEXT:     Functions:
@@ -106,16 +106,16 @@ entry:
 ; CHECK-NEXT:         Body:          419C808080000B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000012
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x0000001B
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x00000024
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_I32
+; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           12
 ; CHECK-NEXT:         Offset:          0x0000002D
 ; CHECK-NEXT:     Segments:

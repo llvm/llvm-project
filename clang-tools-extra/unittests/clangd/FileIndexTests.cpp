@@ -12,6 +12,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -147,8 +148,8 @@ void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
   File.HeaderFilename = (Basename + ".h").str();
   File.HeaderCode = Code;
   auto AST = File.build();
-  M.updatePreamble(File.Filename, AST.getASTContext(),
-                   AST.getPreprocessorPtr());
+  M.updatePreamble(File.Filename, AST.getASTContext(), AST.getPreprocessorPtr(),
+                   AST.getCanonicalIncludes());
 }
 
 TEST(FileIndexTest, CustomizedURIScheme) {
@@ -199,13 +200,16 @@ TEST(FileIndexTest, ClassMembers) {
                                    QName("X::f")));
 }
 
-TEST(FileIndexTest, NoIncludeCollected) {
+TEST(FileIndexTest, IncludeCollected) {
   FileIndex M;
-  update(M, "f", "class string {};");
+  update(
+      M, "f",
+      "// IWYU pragma: private, include <the/good/header.h>\nclass string {};");
 
   auto Symbols = runFuzzyFind(M, "");
   EXPECT_THAT(Symbols, ElementsAre(_));
-  EXPECT_THAT(Symbols.begin()->IncludeHeaders, IsEmpty());
+  EXPECT_THAT(Symbols.begin()->IncludeHeaders.front().IncludeHeader,
+              "<the/good/header.h>");
 }
 
 TEST(FileIndexTest, TemplateParamsInLabel) {
@@ -270,10 +274,11 @@ TEST(FileIndexTest, RebuildWithPreamble) {
   buildPreamble(
       FooCpp, *CI, /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
       std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
-      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {
+      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
+          const CanonicalIncludes &CanonIncludes) {
         EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
         IndexUpdated = true;
-        Index.updatePreamble(FooCpp, Ctx, std::move(PP));
+        Index.updatePreamble(FooCpp, Ctx, std::move(PP), CanonIncludes);
       });
   ASSERT_TRUE(IndexUpdated);
 
@@ -358,7 +363,8 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
       MainFile, *buildCompilerInvocation(PI), /*OldPreamble=*/nullptr,
       tooling::CompileCommand(), PI, std::make_shared<PCHContainerOperations>(),
       /*StoreInMemory=*/true,
-      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP) {});
+      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
+          const CanonicalIncludes &) {});
   // Build AST for main file with preamble.
   auto AST =
       ParsedAST::build(createInvocationFromCommandLine(Cmd), PreambleData,

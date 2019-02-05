@@ -99,6 +99,14 @@ LegalityPredicate LegalityPredicates::sizeNotPow2(unsigned TypeIdx) {
   };
 }
 
+LegalityPredicate LegalityPredicates::sameSize(unsigned TypeIdx0,
+                                               unsigned TypeIdx1) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx0].getSizeInBits() ==
+           Query.Types[TypeIdx1].getSizeInBits();
+  };
+}
+
 LegalityPredicate LegalityPredicates::memSizeInBytesNotPow2(unsigned MMOIdx) {
   return [=](const LegalityQuery &Query) {
     return !isPowerOf2_32(Query.MMODescrs[MMOIdx].SizeInBits / 8);
@@ -107,8 +115,8 @@ LegalityPredicate LegalityPredicates::memSizeInBytesNotPow2(unsigned MMOIdx) {
 
 LegalityPredicate LegalityPredicates::numElementsNotPow2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
-    const LLT &QueryTy = Query.Types[TypeIdx];
-    return QueryTy.isVector() && isPowerOf2_32(QueryTy.getNumElements());
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isVector() && !isPowerOf2_32(QueryTy.getNumElements());
   };
 }
 

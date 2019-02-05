@@ -277,7 +277,7 @@ def K7 : X86Reg<"k7", 7>, DwarfRegNum<[125, 100, 100]>;
 // pseudo registers, but we still mark them as aliasing FP registers. That
 // way both kinds can be live without exceeding the stack depth. ST registers
 // are only live around inline assembly.
-def ST0 : X86Reg<"st(0)", 0>, DwarfRegNum<[33, 12, 11]>;
+def ST0 : X86Reg<"st", 0>, DwarfRegNum<[33, 12, 11]>;
 def ST1 : X86Reg<"st(1)", 1>, DwarfRegNum<[34, 13, 12]>;
 def ST2 : X86Reg<"st(2)", 2>, DwarfRegNum<[35, 14, 13]>;
 def ST3 : X86Reg<"st(3)", 3>, DwarfRegNum<[36, 15, 14]>;
@@ -537,6 +537,9 @@ def RFP80_7 : RegisterClass<"X86",[f80], 32, (add FP7)> {
 def RST : RegisterClass<"X86", [f80, f64, f32], 32, (sequence "ST%u", 0, 7)> {
   let isAllocatable = 0;
 }
+
+// Helper to allow %st to print as %st(0) when its encoded in the instruction.
+def RSTi : RegisterOperand<RST, "printSTiRegOperand">;
 
 // Generic vector registers: VR64 and VR128.
 // Ensure that float types are declared first - only float is legal on SSE1.

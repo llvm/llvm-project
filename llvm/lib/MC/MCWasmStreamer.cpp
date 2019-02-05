@@ -34,15 +34,15 @@
 
 using namespace llvm;
 
-MCWasmStreamer::~MCWasmStreamer() {}
+MCWasmStreamer::~MCWasmStreamer() = default; // anchor.
 
 void MCWasmStreamer::mergeFragment(MCDataFragment *DF, MCDataFragment *EF) {
   flushPendingLabels(DF, DF->getContents().size());
 
-  for (unsigned i = 0, e = EF->getFixups().size(); i != e; ++i) {
-    EF->getFixups()[i].setOffset(EF->getFixups()[i].getOffset() +
+  for (unsigned I = 0, E = EF->getFixups().size(); I != E; ++I) {
+    EF->getFixups()[I].setOffset(EF->getFixups()[I].getOffset() +
                                  DF->getContents().size());
-    DF->getFixups().push_back(EF->getFixups()[i]);
+    DF->getFixups().push_back(EF->getFixups()[I]);
   }
   if (DF->getSubtargetInfo() == nullptr && EF->getSubtargetInfo())
     DF->setHasInstructions(*EF->getSubtargetInfo());
@@ -179,9 +179,9 @@ void MCWasmStreamer::EmitInstToData(const MCInst &Inst,
   MCDataFragment *DF = getOrCreateDataFragment();
 
   // Add the fixups and data.
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    Fixups[i].setOffset(Fixups[i].getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixups[i]);
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    Fixups[I].setOffset(Fixups[I].getOffset() + DF->getContents().size());
+    DF->getFixups().push_back(Fixups[I]);
   }
   DF->setHasInstructions(STI);
   DF->getContents().append(Code.begin(), Code.end());

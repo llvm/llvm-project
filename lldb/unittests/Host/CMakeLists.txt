@@ -1,9 +1,12 @@
 set (FILES
+  FileActionTest.cpp
   FileSystemTest.cpp
   HostInfoTest.cpp
   HostTest.cpp
   MainLoopTest.cpp
   NativeProcessProtocolTest.cpp
+  ProcessInfoTest.cpp
+  ProcessLaunchInfoTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
   SymbolsTest.cpp

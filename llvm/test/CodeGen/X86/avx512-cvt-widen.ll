@@ -1909,8 +1909,6 @@ define <8 x float> @ubto8f32(<8 x i32> %a) {
 define <8 x double> @ubto8f64(<8 x i32> %a) {
 ; ALL-LABEL: ubto8f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
 ; ALL-NEXT:    vpsrld $31, %ymm0, %ymm0
 ; ALL-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; ALL-NEXT:    retq
@@ -1942,8 +1940,6 @@ define <4 x float> @ubto4f32(<4 x i32> %a) {
 define <4 x double> @ubto4f64(<4 x i32> %a) {
 ; ALL-LABEL: ubto4f64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; ALL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; ALL-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; ALL-NEXT:    retq

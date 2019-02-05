@@ -58,15 +58,25 @@ declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
 declare void @other(i32* ) nounwind;
 
 define void @cond_ae_to_cond_ne(i32* %p) nounwind {
-; CHECK-LABEL: cond_ae_to_cond_ne:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $1, (%eax)
-; CHECK-NEXT:    jae .LBB4_1
-; CHECK-NEXT:  # %bb.2: # %if.end4
-; CHECK-NEXT:    jmp other # TAILCALL
-; CHECK-NEXT:  .LBB4_1: # %return
-; CHECK-NEXT:    retl
+; INCDEC-LABEL: cond_ae_to_cond_ne:
+; INCDEC:       # %bb.0: # %entry
+; INCDEC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; INCDEC-NEXT:    incl (%eax)
+; INCDEC-NEXT:    jne .LBB4_1
+; INCDEC-NEXT:  # %bb.2: # %if.end4
+; INCDEC-NEXT:    jmp other # TAILCALL
+; INCDEC-NEXT:  .LBB4_1: # %return
+; INCDEC-NEXT:    retl
+;
+; ADD-LABEL: cond_ae_to_cond_ne:
+; ADD:       # %bb.0: # %entry
+; ADD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ADD-NEXT:    addl $1, (%eax)
+; ADD-NEXT:    jne .LBB4_1
+; ADD-NEXT:  # %bb.2: # %if.end4
+; ADD-NEXT:    jmp other # TAILCALL
+; ADD-NEXT:  .LBB4_1: # %return
+; ADD-NEXT:    retl
 entry:
   %t0 = load i32, i32* %p, align 8
   %add_ov = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %t0, i32 1)
@@ -91,19 +101,33 @@ declare void @external_b()
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8, i8)
 
 define void @test_tail_call(i32* %ptr) nounwind {
-; CHECK-LABEL: test_tail_call:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl $1, (%eax)
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    addb $1, a
-; CHECK-NEXT:    setb d
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB5_2
-; CHECK-NEXT:  # %bb.1: # %then
-; CHECK-NEXT:    jmp external_a # TAILCALL
-; CHECK-NEXT:  .LBB5_2: # %else
-; CHECK-NEXT:    jmp external_b # TAILCALL
+; INCDEC-LABEL: test_tail_call:
+; INCDEC:       # %bb.0: # %entry
+; INCDEC-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; INCDEC-NEXT:    incl (%eax)
+; INCDEC-NEXT:    setne %al
+; INCDEC-NEXT:    incb a
+; INCDEC-NEXT:    sete d
+; INCDEC-NEXT:    testb %al, %al
+; INCDEC-NEXT:    jne .LBB5_2
+; INCDEC-NEXT:  # %bb.1: # %then
+; INCDEC-NEXT:    jmp external_a # TAILCALL
+; INCDEC-NEXT:  .LBB5_2: # %else
+; INCDEC-NEXT:    jmp external_b # TAILCALL
+;
+; ADD-LABEL: test_tail_call:
+; ADD:       # %bb.0: # %entry
+; ADD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ADD-NEXT:    addl $1, (%eax)
+; ADD-NEXT:    setne %al
+; ADD-NEXT:    addb $1, a
+; ADD-NEXT:    sete d
+; ADD-NEXT:    testb %al, %al
+; ADD-NEXT:    jne .LBB5_2
+; ADD-NEXT:  # %bb.1: # %then
+; ADD-NEXT:    jmp external_a # TAILCALL
+; ADD-NEXT:  .LBB5_2: # %else
+; ADD-NEXT:    jmp external_b # TAILCALL
 entry:
   %val = load i32, i32* %ptr
   %add_ov = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %val, i32 1)

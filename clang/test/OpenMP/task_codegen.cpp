@@ -149,6 +149,45 @@ int main() {
   {
     a = 1;
   }
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 0, i64 40, i64 1,
+// CHECK: getelementptr inbounds [2 x [[STRUCT_S]]], [2 x [[STRUCT_S]]]* [[S]], i64 0, i64 0
+// CHECK: getelementptr inbounds [2 x [[KMP_DEPEND_INFO]]], [2 x [[KMP_DEPEND_INFO]]]* %{{[^,]+}}, i64 0, i64 0
+// CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 0
+// CHECK: ptrtoint [[STRUCT_S]]* %{{.+}} to i64
+// CHECK: store i64 %{{[^,]+}}, i64*
+// CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 1
+// CHECK: store i64 4, i64*
+// CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 2
+// CHECK: store i8 4, i8*
+// CHECK: [[B_VAL:%.+]] = load i8, i8* [[B]]
+// CHECK: [[IDX2:%.+]] = sext i8 [[B_VAL]] to i64
+// CHECK: [[IDX1:%.+]] = mul nsw i64 4, [[A_VAL]]
+// CHECK: [[START:%.+]] = getelementptr inbounds i32, i32* %{{.+}}, i64 [[IDX1]]
+// CHECK: [[START1:%.+]] = getelementptr inbounds i32, i32* [[START]], i64 [[IDX2]]
+// CHECK: [[B_VAL:%.+]] = load i8, i8* [[B]]
+// CHECK: [[IDX2:%.+]] = sext i8 [[B_VAL]] to i64
+// CHECK: [[IDX1:%.+]] = mul nsw i64 9, [[A_VAL]]
+// CHECK: [[END:%.+]] = getelementptr inbounds i32, i32* %{{.+}}, i64 [[IDX1]]
+// CHECK: [[END1:%.+]] = getelementptr inbounds i32, i32* [[END]], i64 [[IDX2]]
+// CHECK: [[END2:%.+]] = getelementptr i32, i32* [[END1]], i32 1
+// CHECK: [[START_INT:%.+]] = ptrtoint i32* [[START1]] to i64
+// CHECK: [[END_INT:%.+]] = ptrtoint i32* [[END2]] to i64
+// CHECK: [[SIZEOF:%.+]] = sub nuw i64 [[END_INT]], [[START_INT]]
+// CHECK: getelementptr inbounds [2 x [[KMP_DEPEND_INFO]]], [2 x [[KMP_DEPEND_INFO]]]* %{{[^,]+}}, i64 0, i64 1
+// CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 0
+// CHECK: ptrtoint i32* [[START1]] to i64
+// CHECK: store i64 %{{[^,]+}}, i64*
+// CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 1
+// CHECK: store i64 [[SIZEOF]], i64*
+// CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 2
+// CHECK: store i8 4, i8*
+// CHECK: getelementptr inbounds [2 x [[KMP_DEPEND_INFO]]], [2 x [[KMP_DEPEND_INFO]]]* %{{[^,]+}}, i32 0, i32 0
+// CHECK: bitcast [[KMP_DEPEND_INFO]]* %{{.+}} to i8*
+// CHECK: call i32 @__kmpc_omp_task_with_deps([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i8* [[ORIG_TASK_PTR]], i32 2, i8* %{{[^,]+}}, i32 0, i8* null)
+#pragma omp task untied depend(mutexinoutset: s[0], arr[4:][b])
+  {
+    a = 1;
+  }
 // CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 3, i64 40, i64 1,
 // CHECK: getelementptr inbounds [3 x [[KMP_DEPEND_INFO]]], [3 x [[KMP_DEPEND_INFO]]]* %{{[^,]+}}, i64 0, i64 0
 // CHECK: getelementptr inbounds [[KMP_DEPEND_INFO]], [[KMP_DEPEND_INFO]]* %{{[^,]+}}, i32 0, i32 0

@@ -180,14 +180,17 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   EXPECT_TRUE(Relevance.InBaseClass);
 
   auto Index = Test.index();
-  Symbol X;
   FuzzyFindRequest Req;
   Req.Query = "X";
   Req.AnyScope = true;
-  Index->fuzzyFind(Req, [&X](const Symbol& S){ X = S; });
-  Relevance = {};
-  Relevance.merge(X);
-  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
+  bool Matched = false;
+  Index->fuzzyFind(Req, [&](const Symbol &S) {
+    Matched = true;
+    Relevance = {};
+    Relevance.merge(S);
+    EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
+  });
+  EXPECT_TRUE(Matched);
 }
 
 // Do the signals move the scores in the direction we expect?
