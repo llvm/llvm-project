@@ -967,6 +967,8 @@ static swift::ASTContext *SetupASTContext(
   // Normally we'd like to verify, but unfortunately the verifier's
   // error mode is abort().
   swift_ast_context->GetIRGenOptions().Verify = false;
+
+  swift_ast_context->GetIRGenOptions().DisableRoundTripDebugTypes = true;
   return ast_context;
 }
 
