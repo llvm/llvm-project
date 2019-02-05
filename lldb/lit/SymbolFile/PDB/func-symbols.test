@@ -7,7 +7,7 @@ RUN: lldb-test symbols %T/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-T
 ; In this test, We don't check demangled name of a mangled function.
 
 CHECK-ONE: Module [[MD:.*]]
-CHECK-ONE-DAG: {{.*}}: SymbolVendor ([[MD]])
+CHECK-ONE-DAG: {{.*}}: SymbolVendor pdb ([[MD]])
 CHECK-ONE-DAG: [[TY0:.*]]:   Type{[[UID0:.*]]} , name = "Func_arg_array", decl = FuncSymbolsTestMain.cpp:3, compiler_type = {{.*}} int (int *)
 CHECK-ONE-DAG: [[TY1:.*]]:   Type{[[UID1:.*]]} , name = "Func_arg_void", decl = FuncSymbolsTestMain.cpp:4, compiler_type = {{.*}} void (void)
 CHECK-ONE-DAG: [[TY2:.*]]:   Type{[[UID2:.*]]} , name = "Func_arg_none", decl = FuncSymbolsTestMain.cpp:5, compiler_type = {{.*}} void (void)

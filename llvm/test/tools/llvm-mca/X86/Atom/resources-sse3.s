@@ -21,6 +21,8 @@ hsubps    (%rax), %xmm2
 
 lddqu     (%rax), %xmm2
 
+monitor
+
 movddup   %xmm0, %xmm2
 movddup   (%rax), %xmm2
 
@@ -29,6 +31,8 @@ movshdup  (%rax), %xmm2
 
 movsldup  %xmm0, %xmm2
 movsldup  (%rax), %xmm2
+
+mwait
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -52,12 +56,14 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT:  1      8     4.00                        hsubps	%xmm0, %xmm2
 # CHECK-NEXT:  1      9     4.50    *                   hsubps	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.50    *                   lddqu	(%rax), %xmm2
+# CHECK-NEXT:  1      45    22.50                 U     monitor
 # CHECK-NEXT:  1      1     1.00                        movddup	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   movddup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        movshdup	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   movshdup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        movsldup	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   movsldup	(%rax), %xmm2
+# CHECK-NEXT:  1      46    23.00   *      *      U     mwait
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - AtomPort0
@@ -65,7 +71,7 @@ movsldup  (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 58.00  42.00
+# CHECK-NEXT: 103.50 87.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -82,9 +88,11 @@ movsldup  (%rax), %xmm2
 # CHECK-NEXT: 4.00   4.00   hsubps	%xmm0, %xmm2
 # CHECK-NEXT: 4.50   4.50   hsubps	(%rax), %xmm2
 # CHECK-NEXT: 1.50   1.50   lddqu	(%rax), %xmm2
+# CHECK-NEXT: 22.50  22.50  monitor
 # CHECK-NEXT: 1.00    -     movddup	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     movddup	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     movshdup	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     movshdup	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     movsldup	%xmm0, %xmm2
 # CHECK-NEXT: 1.00    -     movsldup	(%rax), %xmm2
+# CHECK-NEXT: 23.00  23.00  mwait

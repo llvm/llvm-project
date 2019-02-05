@@ -53,7 +53,7 @@ with CTU analysis enabled, execute:
     
     $ analyze-build --ctu
 
-For CTU analysis an additional (function-definition) collection-phase is required. 
+For CTU analysis an additional (external definition) collection-phase is required. 
 For debugging purposes, it is possible to separately execute the collection 
 and the analysis phase. By doing this, the intermediate files used for 
 the analysis are kept on the disk in `./ctu-dir`.
@@ -138,7 +138,7 @@ how to fix it, include that as well. Patches are also welcome.
 License
 -------
 
-The project is licensed under University of Illinois/NCSA Open Source License.
+The project is licensed under Apache-2.0 with LLVM exceptions.
 See LICENSE.TXT for details.
 
   [1]: http://clang.llvm.org/docs/JSONCompilationDatabase.html

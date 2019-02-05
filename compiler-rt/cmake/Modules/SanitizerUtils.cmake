@@ -30,7 +30,7 @@ macro(add_sanitizer_rt_symbols name)
     add_custom_command(OUTPUT ${stamp}
       COMMAND ${PYTHON_EXECUTABLE}
         ${SANITIZER_GEN_DYNAMIC_LIST} ${extra_args} $<TARGET_FILE:${target_name}>
-        > $<TARGET_FILE:${target_name}>.syms
+        -o $<TARGET_FILE:${target_name}>.syms
       COMMAND ${CMAKE_COMMAND} -E touch ${stamp}
       DEPENDS ${target_name} ${SANITIZER_GEN_DYNAMIC_LIST} ${ARG_EXTRA}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -80,7 +80,7 @@ macro(add_sanitizer_rt_version_list name)
   add_custom_command(OUTPUT ${vers}
     COMMAND ${PYTHON_EXECUTABLE}
       ${SANITIZER_GEN_DYNAMIC_LIST} --version-list ${args}
-      > ${vers}
+      -o ${vers}
     DEPENDS ${SANITIZER_GEN_DYNAMIC_LIST} ${ARG_EXTRA} ${ARG_LIBS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Generating version list for ${name}"

@@ -1,9 +1,8 @@
 //===- MCSymbolWasm.h -  ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_MC_MCSYMBOLWASM_H
@@ -19,7 +18,8 @@ class MCSymbolWasm : public MCSymbol {
   bool IsWeak = false;
   bool IsHidden = false;
   bool IsComdat = false;
-  std::string ModuleName;
+  Optional<std::string> ImportModule;
+  Optional<std::string> ImportName;
   wasm::WasmSignature *Signature = nullptr;
   Optional<wasm::WasmGlobalType> GlobalType;
   Optional<wasm::WasmEventType> EventType;
@@ -32,7 +32,7 @@ public:
   // Use a module name of "env" for now, for compatibility with existing tools.
   // This is temporary, and may change, as the ABI is not yet stable.
   MCSymbolWasm(const StringMapEntry<bool> *Name, bool isTemporary)
-      : MCSymbol(SymbolKindWasm, Name, isTemporary), ModuleName("env") {}
+      : MCSymbol(SymbolKindWasm, Name, isTemporary) {}
   static bool classof(const MCSymbol *S) { return S->isWasm(); }
 
   const MCExpr *getSize() const { return SymbolSize; }
@@ -55,8 +55,21 @@ public:
   bool isComdat() const { return IsComdat; }
   void setComdat(bool isComdat) { IsComdat = isComdat; }
 
-  const StringRef getModuleName() const { return ModuleName; }
-  void setModuleName(StringRef Name) { ModuleName = Name; }
+  const StringRef getImportModule() const {
+      if (ImportModule.hasValue()) {
+          return ImportModule.getValue();
+      }
+      return "env";
+  }
+  void setImportModule(StringRef Name) { ImportModule = Name; }
+
+  const StringRef getImportName() const {
+      if (ImportName.hasValue()) {
+          return ImportName.getValue();
+      }
+      return getName();
+  }
+  void setImportName(StringRef Name) { ImportName = Name; }
 
   const wasm::WasmSignature *getSignature() const { return Signature; }
   void setSignature(wasm::WasmSignature *Sig) { Signature = Sig; }

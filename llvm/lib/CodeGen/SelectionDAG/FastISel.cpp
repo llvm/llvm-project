@@ -1,9 +1,8 @@
 //===- FastISel.cpp - Implementation of the FastISel class ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1303,9 +1302,6 @@ bool FastISel::selectCall(const User *I) {
         .addImm(ExtraInfo);
     return true;
   }
-
-  MachineModuleInfo &MMI = FuncInfo.MF->getMMI();
-  computeUsesVAFloatArgument(*Call, MMI);
 
   // Handle intrinsic function calls.
   if (const auto *II = dyn_cast<IntrinsicInst>(Call))

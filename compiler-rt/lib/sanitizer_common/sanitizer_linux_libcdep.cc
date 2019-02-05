@@ -1,9 +1,8 @@
 //===-- sanitizer_linux_libcdep.cc ----------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -100,6 +99,10 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
 
     // Find the mapping that contains a stack variable.
     MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+    if (proc_maps.Error()) {
+      *stack_top = *stack_bottom = 0;
+      return;
+    }
     MemoryMappedSegment segment;
     uptr prev_end = 0;
     while (proc_maps.Next(&segment)) {

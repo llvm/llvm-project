@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===--------------------------- regex ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -6140,7 +6139,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {return  __match_;}
     _LIBCPP_INLINE_VISIBILITY
-    pointer operator->() const  {return &__match_;}
+    pointer operator->() const  {return _VSTD::addressof(__match_);}
 
     regex_iterator& operator++();
     _LIBCPP_INLINE_VISIBILITY
@@ -6164,7 +6163,7 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::
                    const regex_type& __re, regex_constants::match_flag_type __m)
     : __begin_(__a),
       __end_(__b),
-      __pregex_(&__re),
+      __pregex_(_VSTD::addressof(__re)),
       __flags_(__m)
 {
     _VSTD::regex_search(__begin_, __end_, __match_, *__pregex_, __flags_);
@@ -6405,7 +6404,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::
                              regex_constants::match_flag_type __m)
     : __position_(__a, __b, __re, __m),
       __n_(0),
-      __subs_(__submatches, __submatches + _Np)
+      __subs_(begin(__submatches), end(__submatches))
 {
     __init(__a, __b);
 }

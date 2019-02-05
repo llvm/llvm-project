@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=xcore | FileCheck %s
-; RUN: llc < %s -march=xcore -disable-fp-elim | FileCheck %s -check-prefix=CHECKFP
+; RUN: llc < %s -march=xcore -frame-pointer=all | FileCheck %s -check-prefix=CHECKFP
 
 ; When using SP for small frames, we don't need any scratch registers (SR).
 ; When using SP for large frames, we may need two scratch registers.

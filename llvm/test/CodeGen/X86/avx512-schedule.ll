@@ -4285,16 +4285,14 @@ define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
 ; GENERIC-LABEL: trunc_16i8_to_16i1:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    vpmovmskb %xmm0, %eax # sched: [2:1.00]
 ; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: trunc_16i8_to_16i1:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0 # sched: [1:0.50]
-; SKX-NEXT:    vpmovb2m %xmm0, %k0 # sched: [1:1.00]
-; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
+; SKX-NEXT:    vpmovmskb %xmm0, %eax # sched: [2:1.00]
 ; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask_b = trunc <16 x i8>%a to <16 x i1>
@@ -7302,37 +7300,37 @@ define <64 x i8> @vmov_test17(i64 %x, i32 %y, i32 %z) {
 define <8 x i1> @vmov_test18(i8 %a, i16 %y) {
 ; GENERIC-LABEL: vmov_test18:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    kmovd %edi, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    kmovd %esi, %k2 # sched: [1:0.33]
-; GENERIC-NEXT:    kshiftrw $8, %k2, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    kshiftrw $9, %k2, %k2 # sched: [1:1.00]
-; GENERIC-NEXT:    kshiftrb $6, %k1, %k3 # sched: [1:1.00]
-; GENERIC-NEXT:    kxorb %k2, %k3, %k2 # sched: [1:0.33]
-; GENERIC-NEXT:    kshiftlb $7, %k2, %k2 # sched: [1:1.00]
-; GENERIC-NEXT:    kshiftrb $1, %k2, %k2 # sched: [1:1.00]
-; GENERIC-NEXT:    kxorb %k2, %k1, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    kshiftlb $1, %k1, %k1 # sched: [1:1.00]
+; GENERIC-NEXT:    kmovd %edi, %k0 # sched: [1:0.33]
+; GENERIC-NEXT:    kmovd %esi, %k1 # sched: [1:0.33]
+; GENERIC-NEXT:    kshiftrw $8, %k1, %k2 # sched: [1:1.00]
+; GENERIC-NEXT:    kshiftrw $9, %k1, %k1 # sched: [1:1.00]
+; GENERIC-NEXT:    kshiftrb $6, %k0, %k3 # sched: [1:1.00]
+; GENERIC-NEXT:    kxorb %k1, %k3, %k1 # sched: [1:0.33]
+; GENERIC-NEXT:    kshiftlb $7, %k1, %k1 # sched: [1:1.00]
 ; GENERIC-NEXT:    kshiftrb $1, %k1, %k1 # sched: [1:1.00]
-; GENERIC-NEXT:    kshiftlb $7, %k0, %k0 # sched: [1:1.00]
-; GENERIC-NEXT:    korb %k0, %k1, %k0 # sched: [1:0.33]
+; GENERIC-NEXT:    kxorb %k1, %k0, %k0 # sched: [1:0.33]
+; GENERIC-NEXT:    kshiftlb $1, %k0, %k0 # sched: [1:1.00]
+; GENERIC-NEXT:    kshiftrb $1, %k0, %k0 # sched: [1:1.00]
+; GENERIC-NEXT:    kshiftlb $7, %k2, %k1 # sched: [1:1.00]
+; GENERIC-NEXT:    korb %k1, %k0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpmovm2w %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vmov_test18:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    kmovd %edi, %k1 # sched: [1:1.00]
-; SKX-NEXT:    kmovd %esi, %k2 # sched: [1:1.00]
-; SKX-NEXT:    kshiftrw $8, %k2, %k0 # sched: [3:1.00]
-; SKX-NEXT:    kshiftrw $9, %k2, %k2 # sched: [3:1.00]
-; SKX-NEXT:    kshiftrb $6, %k1, %k3 # sched: [3:1.00]
-; SKX-NEXT:    kxorb %k2, %k3, %k2 # sched: [1:1.00]
-; SKX-NEXT:    kshiftlb $7, %k2, %k2 # sched: [3:1.00]
-; SKX-NEXT:    kshiftrb $1, %k2, %k2 # sched: [3:1.00]
-; SKX-NEXT:    kxorb %k2, %k1, %k1 # sched: [1:1.00]
-; SKX-NEXT:    kshiftlb $1, %k1, %k1 # sched: [3:1.00]
+; SKX-NEXT:    kmovd %edi, %k0 # sched: [1:1.00]
+; SKX-NEXT:    kmovd %esi, %k1 # sched: [1:1.00]
+; SKX-NEXT:    kshiftrw $8, %k1, %k2 # sched: [3:1.00]
+; SKX-NEXT:    kshiftrw $9, %k1, %k1 # sched: [3:1.00]
+; SKX-NEXT:    kshiftrb $6, %k0, %k3 # sched: [3:1.00]
+; SKX-NEXT:    kxorb %k1, %k3, %k1 # sched: [1:1.00]
+; SKX-NEXT:    kshiftlb $7, %k1, %k1 # sched: [3:1.00]
 ; SKX-NEXT:    kshiftrb $1, %k1, %k1 # sched: [3:1.00]
-; SKX-NEXT:    kshiftlb $7, %k0, %k0 # sched: [3:1.00]
-; SKX-NEXT:    korb %k0, %k1, %k0 # sched: [1:1.00]
+; SKX-NEXT:    kxorb %k1, %k0, %k0 # sched: [1:1.00]
+; SKX-NEXT:    kshiftlb $1, %k0, %k0 # sched: [3:1.00]
+; SKX-NEXT:    kshiftrb $1, %k0, %k0 # sched: [3:1.00]
+; SKX-NEXT:    kshiftlb $7, %k2, %k1 # sched: [3:1.00]
+; SKX-NEXT:    korb %k1, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0 # sched: [1:0.25]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %b = bitcast i8 %a to <8 x i1>

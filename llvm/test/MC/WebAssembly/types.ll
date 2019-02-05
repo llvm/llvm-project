@@ -1,4 +1,4 @@
-; RUN: llc -wasm-enable-unimplemented-simd -mattr=+sign-ext,+simd128 -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -mattr=+unimplemented-simd128 -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

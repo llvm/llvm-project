@@ -1,9 +1,8 @@
 //===-------- LegalizeFloatTypes.cpp - Legalization of float types --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -104,6 +103,7 @@ bool DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FSUB:        R = SoftenFloatRes_FSUB(N); break;
     case ISD::FTRUNC:      R = SoftenFloatRes_FTRUNC(N); break;
     case ISD::LOAD:        R = SoftenFloatRes_LOAD(N, ResNo); break;
+    case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::SELECT:      R = SoftenFloatRes_SELECT(N, ResNo); break;
     case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N, ResNo); break;
     case ISD::SINT_TO_FP:
@@ -1748,6 +1748,8 @@ static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
 }
 
 bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
+  LLVM_DEBUG(dbgs() << "Promote float operand " << OpNo << ": "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue R = SDValue();
 
   if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
@@ -1762,6 +1764,10 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   // a part of PromoteFloatResult.
   switch (N->getOpcode()) {
     default:
+  #ifndef NDEBUG
+      dbgs() << "PromoteFloatOperand Op #" << OpNo << ": ";
+      N->dump(&DAG); dbgs() << "\n";
+  #endif
       llvm_unreachable("Do not know how to promote this operator's operand!");
 
     case ISD::BITCAST:    R = PromoteFloatOp_BITCAST(N, OpNo); break;
@@ -1872,6 +1878,8 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_STORE(SDNode *N, unsigned OpNo) {
 //===----------------------------------------------------------------------===//
 
 void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
+  LLVM_DEBUG(dbgs() << "Promote float result " << ResNo << ": "; N->dump(&DAG);
+             dbgs() << "\n");
   SDValue R = SDValue();
 
   switch (N->getOpcode()) {
@@ -1880,6 +1888,10 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FP16_TO_FP:
     case ISD::FP_TO_FP16:
     default:
+#ifndef NDEBUG
+      dbgs() << "PromoteFloatResult #" << ResNo << ": ";
+      N->dump(&DAG); dbgs() << "\n";
+#endif
       llvm_unreachable("Do not know how to promote this operator's result!");
 
     case ISD::BITCAST:    R = PromoteFloatRes_BITCAST(N); break;
@@ -1932,7 +1944,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP: R = PromoteFloatRes_XINT_TO_FP(N); break;
     case ISD::UNDEF:      R = PromoteFloatRes_UNDEF(N); break;
-
+    case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
   }
 
   if (R.getNode())
@@ -2143,9 +2155,9 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_SELECT_CC(SDNode *N) {
   SDValue TrueVal = GetPromotedFloat(N->getOperand(2));
   SDValue FalseVal = GetPromotedFloat(N->getOperand(3));
 
-  return DAG.getNode(ISD::SELECT_CC, SDLoc(N), N->getValueType(0),
-                     N->getOperand(0), N->getOperand(1), TrueVal, FalseVal,
-                     N->getOperand(4));
+  return DAG.getNode(ISD::SELECT_CC, SDLoc(N),
+                     TrueVal.getNode()->getValueType(0), N->getOperand(0),
+                     N->getOperand(1), TrueVal, FalseVal, N->getOperand(4));
 }
 
 // Construct a SDNode that transforms the SINT or UINT operand to the promoted
@@ -2164,5 +2176,31 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_XINT_TO_FP(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {
   return DAG.getUNDEF(TLI.getTypeToTransformTo(*DAG.getContext(),
                                                N->getValueType(0)));
+}
+
+SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NFPVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+
+  AtomicSDNode *AM = cast<AtomicSDNode>(N);
+  SDLoc SL(N);
+
+  SDValue CastVal = BitConvertToInteger(AM->getVal());
+  EVT CastVT = CastVal.getValueType();
+
+  SDValue NewAtomic
+    = DAG.getAtomic(ISD::ATOMIC_SWAP, SL, CastVT,
+                    DAG.getVTList(CastVT, MVT::Other),
+                    { AM->getChain(), AM->getBasePtr(), CastVal },
+                    AM->getMemOperand());
+
+  SDValue ResultCast = DAG.getNode(GetPromotionOpcode(VT, NFPVT), SL, NFPVT,
+                                   NewAtomic);
+  // Legalize the chain result by replacing uses of the old value chain with the
+  // new one
+  ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
+
+  return ResultCast;
+
 }
 

@@ -1,9 +1,8 @@
 //===- SourceLocation.h - Compact identifier for Source Files ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,7 +25,6 @@
 namespace llvm {
 
 template <typename T> struct DenseMapInfo;
-template <typename T> struct isPodLike;
 
 } // namespace llvm
 
@@ -457,11 +455,6 @@ namespace llvm {
       return LHS == RHS;
     }
   };
-
-  template <>
-  struct isPodLike<clang::SourceLocation> { static const bool value = true; };
-  template <>
-  struct isPodLike<clang::FileID> { static const bool value = true; };
 
   // Teach SmallPtrSet how to handle SourceLocation.
   template<>

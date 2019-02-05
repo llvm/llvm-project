@@ -1,9 +1,8 @@
 //===-- sanitizer_mac.cc --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -282,6 +281,8 @@ uptr internal_waitpid(int pid, int *status, int options) {
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
+  if (ShouldMockFailureToOpen(filename))
+    return false;
   struct stat st;
   if (stat(filename, &st))
     return false;

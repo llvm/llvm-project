@@ -1,32 +1,29 @@
 //===-- JSONTransportTests.cpp  -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "Protocol.h"
 #include "Transport.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <stdio.h>
+#include <cstdio>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 
 // No fmemopen on windows or on versions of MacOS X earlier than 10.13, so we
 // can't easily run this test.
-#if !(defined(WIN32) || \
-      (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
-       __MAC_OS_X_VERSION_MIN_REQUIRED < 101300))
+#if !(defined(WIN32) || (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) &&           \
+                         __MAC_OS_X_VERSION_MIN_REQUIRED < 101300))
 
 // Fixture takes care of managing the input/output buffers for the transport.
 class JSONTransportTest : public ::testing::Test {
   std::string InBuf, OutBuf, MirrorBuf;
-  raw_string_ostream Out, Mirror;
+  llvm::raw_string_ostream Out, Mirror;
   std::unique_ptr<FILE, int (*)(FILE *)> In;
 
 protected:
@@ -53,40 +50,43 @@ protected:
 class Echo : public Transport::MessageHandler {
   Transport &Target;
   std::string LogBuf;
-  raw_string_ostream Log;
+  llvm::raw_string_ostream Log;
 
 public:
   Echo(Transport &Target) : Target(Target), Log(LogBuf) {}
 
   std::string log() { return Log.str(); }
 
-  bool onNotify(StringRef Method, json::Value Params) override {
+  bool onNotify(llvm::StringRef Method, llvm::json::Value Params) override {
     Log << "Notification " << Method << ": " << Params << "\n";
     if (Method == "call")
       Target.call("echo call", std::move(Params), 42);
     return Method != "exit";
   }
 
-  bool onCall(StringRef Method, json::Value Params, json::Value ID) override {
+  bool onCall(llvm::StringRef Method, llvm::json::Value Params,
+              llvm::json::Value ID) override {
     Log << "Call " << Method << "(" << ID << "): " << Params << "\n";
     if (Method == "err")
-      Target.reply(ID, make_error<LSPError>("trouble at mill", ErrorCode(88)));
+      Target.reply(
+          ID, llvm::make_error<LSPError>("trouble at mill", ErrorCode(88)));
     else
       Target.reply(ID, std::move(Params));
     return true;
   }
 
-  bool onReply(json::Value ID, Expected<json::Value> Params) override {
+  bool onReply(llvm::json::Value ID,
+               llvm::Expected<llvm::json::Value> Params) override {
     if (Params)
       Log << "Reply(" << ID << "): " << *Params << "\n";
     else
-      Log << "Reply(" << ID << "): error = " << toString(Params.takeError())
-          << "\n";
+      Log << "Reply(" << ID
+          << "): error = " << llvm::toString(Params.takeError()) << "\n";
     return true;
   }
 };
 
-std::string trim(StringRef S) { return S.trim().str(); }
+std::string trim(llvm::StringRef S) { return S.trim().str(); }
 
 // Runs an Echo session using the standard JSON-RPC format we use in production.
 TEST_F(JSONTransportTest, StandardDense) {

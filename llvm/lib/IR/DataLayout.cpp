@@ -1,9 +1,8 @@
 //===- DataLayout.cpp - Data size & alignment routines ---------------------==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -633,6 +632,14 @@ unsigned DataLayout::getPointerSize(unsigned AS) const {
     assert(I->AddressSpace == 0);
   }
   return I->TypeByteWidth;
+}
+
+unsigned DataLayout::getMaxPointerSize() const {
+  unsigned MaxPointerSize = 0;
+  for (auto &P : Pointers)
+    MaxPointerSize = std::max(MaxPointerSize, P.TypeByteWidth);
+
+  return MaxPointerSize;
 }
 
 unsigned DataLayout::getPointerTypeSizeInBits(Type *Ty) const {

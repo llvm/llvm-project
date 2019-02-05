@@ -1,9 +1,8 @@
 //===-- tsan_suppressions.cc ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -66,38 +65,30 @@ SuppressionContext *Suppressions() {
 }
 
 static const char *conv(ReportType typ) {
-  if (typ == ReportTypeRace)
-    return kSuppressionRace;
-  else if (typ == ReportTypeVptrRace)
-    return kSuppressionRace;
-  else if (typ == ReportTypeUseAfterFree)
-    return kSuppressionRace;
-  else if (typ == ReportTypeVptrUseAfterFree)
-    return kSuppressionRace;
-  else if (typ == ReportTypeExternalRace)
-    return kSuppressionRace;
-  else if (typ == ReportTypeThreadLeak)
-    return kSuppressionThread;
-  else if (typ == ReportTypeMutexDestroyLocked)
-    return kSuppressionMutex;
-  else if (typ == ReportTypeMutexDoubleLock)
-    return kSuppressionMutex;
-  else if (typ == ReportTypeMutexInvalidAccess)
-    return kSuppressionMutex;
-  else if (typ == ReportTypeMutexBadUnlock)
-    return kSuppressionMutex;
-  else if (typ == ReportTypeMutexBadReadLock)
-    return kSuppressionMutex;
-  else if (typ == ReportTypeMutexBadReadUnlock)
-    return kSuppressionMutex;
-  else if (typ == ReportTypeSignalUnsafe)
-    return kSuppressionSignal;
-  else if (typ == ReportTypeErrnoInSignal)
-    return kSuppressionNone;
-  else if (typ == ReportTypeDeadlock)
-    return kSuppressionDeadlock;
-  Printf("ThreadSanitizer: unknown report type %d\n", typ);
-  Die();
+  switch (typ) {
+    case ReportTypeRace:
+    case ReportTypeVptrRace:
+    case ReportTypeUseAfterFree:
+    case ReportTypeVptrUseAfterFree:
+    case ReportTypeExternalRace:
+      return kSuppressionRace;
+    case ReportTypeThreadLeak:
+      return kSuppressionThread;
+    case ReportTypeMutexDestroyLocked:
+    case ReportTypeMutexDoubleLock:
+    case ReportTypeMutexInvalidAccess:
+    case ReportTypeMutexBadUnlock:
+    case ReportTypeMutexBadReadLock:
+    case ReportTypeMutexBadReadUnlock:
+      return kSuppressionMutex;
+    case ReportTypeSignalUnsafe:
+    case ReportTypeErrnoInSignal:
+      return kSuppressionSignal;
+    case ReportTypeDeadlock:
+      return kSuppressionDeadlock;
+    // No default case so compiler warns us if we miss one
+  }
+  UNREACHABLE("missing case");
 }
 
 static uptr IsSuppressed(const char *stype, const AddressInfo &info,

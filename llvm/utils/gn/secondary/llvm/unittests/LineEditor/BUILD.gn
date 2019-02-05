@@ -1,0 +1,11 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("LineEditorTests") {
+  deps = [
+    "//llvm/lib/LineEditor",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "LineEditor.cpp",
+  ]
+}

@@ -278,7 +278,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !opencl.ocl.version = !{!107}
 !llvm.ident = !{!108, !109}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0 (https://github.com/llvm-mirror/clang.git 3edc9a6d1f98fec61a944167cb5c36c40104918a) (https://github.com/llvm-mirror/llvm.git 90eddc791688f226397e600c287c043d9b0e35fa)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !74)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !74)
 !1 = !DIFile(filename: "tmp.cl", directory: "/home/yaxunl/h/git/llvm/assert")
 !2 = !{!3, !27, !37, !42, !46, !51, !55, !68}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "BrdfType", file: !4, line: 1334, size: 32, elements: !5)
@@ -386,7 +386,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !105 = !{i32 2, !"Debug Info Version", i32 3}
 !106 = !{i32 1, !"wchar_size", i32 4}
 !107 = !{i32 2, i32 0}
-!108 = !{!"clang version 7.0.0 (https://github.com/llvm-mirror/clang.git 3edc9a6d1f98fec61a944167cb5c36c40104918a) (https://github.com/llvm-mirror/llvm.git 90eddc791688f226397e600c287c043d9b0e35fa)"}
+!108 = !{!"clang version 7.0.0"}
 !109 = !{!"clang version 4.0 "}
 !110 = distinct !DISubprogram(name: "Scene_transformT", scope: !4, file: !4, line: 2182, type: !111, isLocal: false, isDefinition: true, scopeLine: 2183, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !116)
 !111 = !DISubroutineType(types: !112)

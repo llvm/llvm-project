@@ -88,7 +88,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
 //
 // CHECK: [[AWAIT_WORK]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]]
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
@@ -127,7 +127,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[BAR_PARALLEL]]
 //
 // CHECK: [[BAR_PARALLEL]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[AWAIT_WORK]]
 //
 // CHECK: [[EXIT]]
@@ -164,21 +164,21 @@ int bar(int n){
 // CHECK: [[MTMP1:%.+]] = sub nuw i32 [[MNTH]], [[MWS]]
 // CHECK: call void @__kmpc_kernel_init(i32 [[MTMP1]]
 // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN1]]_wrapper to i8*),
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: call void @__kmpc_serialized_parallel(
 // CHECK: {{call|invoke}} void [[PARALLEL_FN3:@.+]](
 // CHECK: call void @__kmpc_end_serialized_parallel(
 // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN2]]_wrapper to i8*),
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK-64-DAG: load i32, i32* [[REF_A]]
 // CHECK-32-DAG: load i32, i32* [[LOCAL_A]]
 // CHECK: br label {{%?}}[[TERMINATE:.+]]
 //
 // CHECK: [[TERMINATE]]
 // CHECK: call void @__kmpc_kernel_deinit(
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[EXIT]]
 //
 // CHECK: [[EXIT]]
@@ -207,7 +207,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
 //
 // CHECK: [[AWAIT_WORK]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]],
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
@@ -237,7 +237,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[BAR_PARALLEL]]
 //
 // CHECK: [[BAR_PARALLEL]]
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[AWAIT_WORK]]
 //
 // CHECK: [[EXIT]]
@@ -289,8 +289,8 @@ int bar(int n){
 //
 // CHECK: [[IF_THEN]]
 // CHECK: call void @__kmpc_kernel_prepare_parallel(i8* bitcast (void (i16, i32)* [[PARALLEL_FN4]]_wrapper to i8*),
-// CHECK: call void @llvm.nvvm.barrier0()
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[IF_END:.+]]
 //
 // CHECK: [[IF_ELSE]]
@@ -309,7 +309,7 @@ int bar(int n){
 //
 // CHECK: [[TERMINATE]]
 // CHECK: call void @__kmpc_kernel_deinit(
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
 // CHECK: br label {{%?}}[[EXIT]]
 //
 // CHECK: [[EXIT]]
@@ -330,7 +330,7 @@ int bar(int n){
 // CHECK-64: [[CONV:%.+]] = bitcast i64* [[A_ADDR]] to i32*
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CHECK: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
-// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i16 0, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CHECK: [[BC:%.+]] = bitcast i8* [[STACK]] to %struct._globalized_locals_ty*
@@ -339,7 +339,7 @@ int bar(int n){
 // CHECK: [[GLOBAL_A_ADDR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: store i32 [[A]], i32* [[GLOBAL_A_ADDR]],
 // CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 [[IS_SHARED]])
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 0, i16 [[IS_SHARED]])
 
 // CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.*}})
 // CHECK:  [[CC:%.+]] = alloca i32,

@@ -1,9 +1,8 @@
 //===- Loads.cpp - Local load analysis ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -107,8 +106,8 @@ static bool isDereferenceableAndAlignedPointer(
     return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Align, Size,
                                               DL, CtxI, DT, Visited);
 
-  if (auto CS = ImmutableCallSite(V))
-    if (auto *RP = getArgumentAliasingToReturnedPointer(CS))
+  if (const auto *Call = dyn_cast<CallBase>(V))
+    if (auto *RP = getArgumentAliasingToReturnedPointer(Call))
       return isDereferenceableAndAlignedPointer(RP, Align, Size, DL, CtxI, DT,
                                                 Visited);
 
@@ -281,9 +280,17 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, unsigned Align,
     Value *AccessedPtr;
     unsigned AccessedAlign;
     if (LoadInst *LI = dyn_cast<LoadInst>(BBI)) {
+      // Ignore volatile loads. The execution of a volatile load cannot
+      // be used to prove an address is backed by regular memory; it can,
+      // for example, point to an MMIO register.
+      if (LI->isVolatile())
+        continue;
       AccessedPtr = LI->getPointerOperand();
       AccessedAlign = LI->getAlignment();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(BBI)) {
+      // Ignore volatile stores (see comment for loads).
+      if (SI->isVolatile())
+        continue;
       AccessedPtr = SI->getPointerOperand();
       AccessedAlign = SI->getAlignment();
     } else

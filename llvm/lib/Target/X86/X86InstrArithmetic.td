@@ -1,9 +1,8 @@
 //===-- X86InstrArithmetic.td - Integer Arithmetic Instrs --*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -422,22 +421,35 @@ def NOT64m : RI<0xF7, MRM2m, (outs), (ins i64mem:$dst), "not{q}\t$dst",
 } // SchedRW
 } // CodeSize
 
+def X86add_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
+                               (X86add_flag node:$lhs, node:$rhs), [{
+  return hasNoCarryFlagUses(SDValue(N, 1));
+}]>;
+
+def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
+                               (X86sub_flag node:$lhs, node:$rhs), [{
+  // Only use DEC if the result is used.
+  return !SDValue(N, 0).use_empty() && hasNoCarryFlagUses(SDValue(N, 1));
+}]>;
+
 // TODO: inc/dec is slow for P4, but fast for Pentium-M.
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 let CodeSize = 2 in
 def INC8r  : I<0xFE, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),
                "inc{b}\t$dst",
-               [(set GR8:$dst, EFLAGS, (X86inc_flag GR8:$src1))]>;
+               [(set GR8:$dst, EFLAGS, (X86add_flag_nocf GR8:$src1, 1))]>;
 let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def INC16r : I<0xFF, MRM0r, (outs GR16:$dst), (ins GR16:$src1),
                "inc{w}\t$dst",
-               [(set GR16:$dst, EFLAGS, (X86inc_flag GR16:$src1))]>, OpSize16;
+               [(set GR16:$dst, EFLAGS, (X86add_flag_nocf GR16:$src1, 1))]>,
+               OpSize16;
 def INC32r : I<0xFF, MRM0r, (outs GR32:$dst), (ins GR32:$src1),
                "inc{l}\t$dst",
-               [(set GR32:$dst, EFLAGS, (X86inc_flag GR32:$src1))]>, OpSize32;
+               [(set GR32:$dst, EFLAGS, (X86add_flag_nocf GR32:$src1, 1))]>,
+               OpSize32;
 def INC64r : RI<0xFF, MRM0r, (outs GR64:$dst), (ins GR64:$src1), "inc{q}\t$dst",
-                [(set GR64:$dst, EFLAGS, (X86inc_flag GR64:$src1))]>;
+                [(set GR64:$dst, EFLAGS, (X86add_flag_nocf GR64:$src1, 1))]>;
 } // isConvertibleToThreeAddress = 1, CodeSize = 2
 
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
@@ -474,16 +486,18 @@ let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 let CodeSize = 2 in
 def DEC8r  : I<0xFE, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                "dec{b}\t$dst",
-               [(set GR8:$dst, EFLAGS, (X86dec_flag GR8:$src1))]>;
+               [(set GR8:$dst, EFLAGS, (X86sub_flag_nocf GR8:$src1, 1))]>;
 let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def DEC16r : I<0xFF, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                "dec{w}\t$dst",
-               [(set GR16:$dst, EFLAGS, (X86dec_flag GR16:$src1))]>, OpSize16;
+               [(set GR16:$dst, EFLAGS, (X86sub_flag_nocf GR16:$src1, 1))]>,
+               OpSize16;
 def DEC32r : I<0xFF, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
                "dec{l}\t$dst",
-               [(set GR32:$dst, EFLAGS, (X86dec_flag GR32:$src1))]>, OpSize32;
+               [(set GR32:$dst, EFLAGS, (X86sub_flag_nocf GR32:$src1, 1))]>,
+               OpSize32;
 def DEC64r : RI<0xFF, MRM1r, (outs GR64:$dst), (ins GR64:$src1), "dec{q}\t$dst",
-                [(set GR64:$dst, EFLAGS, (X86dec_flag GR64:$src1))]>;
+                [(set GR64:$dst, EFLAGS, (X86sub_flag_nocf GR64:$src1, 1))]>;
 } // isConvertibleToThreeAddress = 1, CodeSize = 2
 
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.

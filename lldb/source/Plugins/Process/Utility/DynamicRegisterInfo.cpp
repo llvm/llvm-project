@@ -1,9 +1,8 @@
 //===-- DynamicRegisterInfo.cpp ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -464,7 +463,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
                                  end = m_value_regs_map.end();
        pos != end; ++pos) {
     if (pos->second.size() > 1) {
-      std::sort(pos->second.begin(), pos->second.end());
+      llvm::sort(pos->second.begin(), pos->second.end());
       reg_num_collection::iterator unique_end =
           std::unique(pos->second.begin(), pos->second.end());
       if (unique_end != pos->second.end())
@@ -514,7 +513,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
                                  end = m_invalidate_regs_map.end();
        pos != end; ++pos) {
     if (pos->second.size() > 1) {
-      std::sort(pos->second.begin(), pos->second.end());
+      llvm::sort(pos->second.begin(), pos->second.end());
       reg_num_collection::iterator unique_end =
           std::unique(pos->second.begin(), pos->second.end());
       if (unique_end != pos->second.end())

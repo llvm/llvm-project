@@ -1,9 +1,8 @@
 //===-- Instruction.cpp - Implement the Instruction class -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -516,9 +515,8 @@ bool Instruction::mayReadFromMemory() const {
   case Instruction::CatchRet:
     return true;
   case Instruction::Call:
-    return !cast<CallInst>(this)->doesNotAccessMemory();
   case Instruction::Invoke:
-    return !cast<InvokeInst>(this)->doesNotAccessMemory();
+    return !cast<CallBase>(this)->doesNotAccessMemory();
   case Instruction::Store:
     return !cast<StoreInst>(this)->isUnordered();
   }
@@ -536,9 +534,8 @@ bool Instruction::mayWriteToMemory() const {
   case Instruction::CatchRet:
     return true;
   case Instruction::Call:
-    return !cast<CallInst>(this)->onlyReadsMemory();
   case Instruction::Invoke:
-    return !cast<InvokeInst>(this)->onlyReadsMemory();
+    return !cast<CallBase>(this)->onlyReadsMemory();
   case Instruction::Load:
     return !cast<LoadInst>(this)->isUnordered();
   }

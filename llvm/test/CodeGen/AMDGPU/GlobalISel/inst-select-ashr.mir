@@ -20,7 +20,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:vgpr(s32) = COPY $vgpr0
-    %3:vgpr(s64) = COPY $vgpr3_vgpr4
+    %3:vgpr(p1) = COPY $vgpr3_vgpr4
 
     ; GCN: [[C1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1
     ; GCN: [[C4096:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 4096
@@ -80,7 +80,7 @@ body: |
     %17:vgpr(s32) = G_ASHR %16, %5
 
 
-    G_STORE %17, %3 :: (store 4 into %ir.global0)
+    G_STORE %17, %3 :: (store 4 into %ir.global0, addrspace 1)
 
 ...
 ---

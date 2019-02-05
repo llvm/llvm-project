@@ -1,9 +1,8 @@
 //===----- LegalizeIntegerTypes.cpp - Legalization of integer types -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -140,6 +139,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULO:
   case ISD::UMULO:       Res = PromoteIntRes_XMULO(N, ResNo); break;
 
+  case ISD::ADDE:
+  case ISD::SUBE:
   case ISD::ADDCARRY:
   case ISD::SUBCARRY:    Res = PromoteIntRes_ADDSUBCARRY(N, ResNo); break;
 
@@ -439,8 +440,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTTZ(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N) {
   SDLoc dl(N);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NVT, N->getOperand(0),
-                     N->getOperand(1));
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // If the input also needs to be promoted, do that first so we can get a
+  // get a good idea for the output type.
+  if (TLI.getTypeAction(*DAG.getContext(), Op0.getValueType())
+      == TargetLowering::TypePromoteInteger) {
+    SDValue In = GetPromotedInteger(Op0);
+
+    // If the new type is larger than NVT, use it. We probably won't need to
+    // promote it again.
+    EVT SVT = In.getValueType().getScalarType();
+    if (SVT.bitsGE(NVT)) {
+      SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SVT, In, Op1);
+      return DAG.getAnyExtOrTrunc(Ext, dl, NVT);
+    }
+  }
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NVT, Op0, Op1);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
@@ -535,7 +554,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MLOAD(MaskedLoadSDNode *N) {
   SDLoc dl(N);
   SDValue Res = DAG.getMaskedLoad(NVT, dl, N->getChain(), N->getBasePtr(),
                                   N->getMask(), ExtPassThru, N->getMemoryVT(),
-                                  N->getMemOperand(), ISD::SEXTLOAD);
+                                  N->getMemOperand(), ISD::EXTLOAD);
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
@@ -865,6 +884,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_UADDSUBO(SDNode *N, unsigned ResNo) {
   return Res;
 }
 
+// Handle promotion for the ADDE/SUBE/ADDCARRY/SUBCARRY nodes. Notice that
+// the third operand of ADDE/SUBE nodes is carry flag, which differs from 
+// the ADDCARRY/SUBCARRY nodes in that the third operand is carry Boolean.
 SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo) {
   if (ResNo == 1)
     return PromoteIntRes_Overflow(N);
@@ -1069,6 +1091,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PREFETCH: Res = PromoteIntOp_PREFETCH(N, OpNo); break;
 
   case ISD::SMULFIX: Res = PromoteIntOp_SMULFIX(N); break;
+
+  case ISD::FPOWI: Res = PromoteIntOp_FPOWI(N); break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1452,6 +1476,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo) {
                  0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_FPOWI(SDNode *N) {
+  SDValue Op = SExtPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op), 0);
+}
+
 //===----------------------------------------------------------------------===//
 //  Integer Result Expansion
 //===----------------------------------------------------------------------===//
@@ -1476,7 +1505,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
     dbgs() << "ExpandIntegerResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    llvm_unreachable("Do not know how to expand the result of this operator!");
+    report_fatal_error("Do not know how to expand the result of this "
+                       "operator!");
 
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_SELECT(N, Lo, Hi); break;
@@ -2554,7 +2584,7 @@ void DAGTypeLegalizer::ExpandIntRes_READCYCLECOUNTER(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_ADDSUBSAT(SDNode *N, SDValue &Lo,
                                               SDValue &Hi) {
-  SDValue Result = TLI.getExpandedSaturationAdditionSubtraction(N, DAG);
+  SDValue Result = TLI.expandAddSubSat(N, DAG);
   SplitInteger(Result, Lo, Hi);
 }
 
@@ -2742,11 +2772,15 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
   }
 
   // Next check to see if the target supports this SHL_PARTS operation or if it
-  // will custom expand it.
+  // will custom expand it. Don't lower this to SHL_PARTS when we optimise for
+  // size, but create a libcall instead.
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   TargetLowering::LegalizeAction Action = TLI.getOperationAction(PartsOpc, NVT);
-  if ((Action == TargetLowering::Legal && TLI.isTypeLegal(NVT)) ||
-      Action == TargetLowering::Custom) {
+  const bool LegalOrCustom =
+    (Action == TargetLowering::Legal && TLI.isTypeLegal(NVT)) ||
+    Action == TargetLowering::Custom;
+
+  if (LegalOrCustom && TLI.shouldExpandShift(DAG, N)) {
     // Expand the subcomponents.
     SDValue LHSL, LHSH;
     GetExpandedInteger(N->getOperand(0), LHSL, LHSH);
@@ -3144,7 +3178,7 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
     dbgs() << "ExpandIntegerOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
   #endif
-    llvm_unreachable("Do not know how to expand this operator's operand!");
+    report_fatal_error("Do not know how to expand this operator's operand!");
 
   case ISD::BITCAST:           Res = ExpandOp_BITCAST(N); break;
   case ISD::BR_CC:             Res = ExpandIntOp_BR_CC(N); break;

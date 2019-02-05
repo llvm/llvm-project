@@ -1,9 +1,8 @@
 //===- GVN.cpp - Eliminate redundant values and loads ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -437,7 +436,7 @@ uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
 
     // Non-local case.
     const MemoryDependenceResults::NonLocalDepInfo &deps =
-      MD->getNonLocalCallDependency(CallSite(C));
+        MD->getNonLocalCallDependency(C);
     // FIXME: Move the checking logic to MemDep!
     CallInst* cdep = nullptr;
 
@@ -1235,10 +1234,10 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     BasicBlock *UnavailablePred = PredLoad.first;
     Value *LoadPtr = PredLoad.second;
 
-    auto *NewLoad = new LoadInst(LoadPtr, LI->getName()+".pre",
-                                 LI->isVolatile(), LI->getAlignment(),
-                                 LI->getOrdering(), LI->getSyncScopeID(),
-                                 UnavailablePred->getTerminator());
+    auto *NewLoad =
+        new LoadInst(LI->getType(), LoadPtr, LI->getName() + ".pre",
+                     LI->isVolatile(), LI->getAlignment(), LI->getOrdering(),
+                     LI->getSyncScopeID(), UnavailablePred->getTerminator());
     NewLoad->setDebugLoc(LI->getDebugLoc());
 
     // Transfer the old load's AA tags to the new load.
@@ -1645,10 +1644,12 @@ static bool isOnlyReachableViaThisEdge(const BasicBlockEdge &E,
 }
 
 void GVN::assignBlockRPONumber(Function &F) {
+  BlockRPONumber.clear();
   uint32_t NextBlockNumber = 1;
   ReversePostOrderTraversal<Function *> RPOT(&F);
   for (BasicBlock *BB : RPOT)
     BlockRPONumber[BB] = NextBlockNumber++;
+  InvalidBlockRPONumbers = false;
 }
 
 // Tries to replace instruction with const, using information from
@@ -1992,6 +1993,7 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   ICF = &ImplicitCFT;
   VN.setMemDep(MD);
   ORE = RunORE;
+  InvalidBlockRPONumbers = true;
 
   bool Changed = false;
   bool ShouldContinue = true;
@@ -2021,7 +2023,6 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
     // Fabricate val-num for dead-code in order to suppress assertion in
     // performPRE().
     assignValNumForDeadCode();
-    assignBlockRPONumber(F);
     bool PREChanged = true;
     while (PREChanged) {
       PREChanged = performPRE(F);
@@ -2079,10 +2080,9 @@ bool GVN::processBlock(BasicBlock *BB) {
       salvageDebugInfo(*I);
       if (MD) MD->removeInstruction(I);
       LLVM_DEBUG(verifyRemoved(I));
+      ICF->removeInstruction(I);
       I->eraseFromParent();
     }
-
-    ICF->invalidateBlock(BB);
     InstrsToErase.clear();
 
     if (AtStart)
@@ -2184,6 +2184,10 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   BasicBlock *PREPred = nullptr;
   BasicBlock *CurrentBlock = CurInst->getParent();
 
+  // Update the RPO numbers for this function.
+  if (InvalidBlockRPONumbers)
+    assignBlockRPONumber(*CurrentBlock->getParent());
+
   SmallVector<std::pair<Value *, BasicBlock *>, 8> predMap;
   for (BasicBlock *P : predecessors(CurrentBlock)) {
     // We're not interested in PRE where blocks with predecessors that are
@@ -2195,6 +2199,8 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
     // It is not safe to do PRE when P->CurrentBlock is a loop backedge, and
     // when CurInst has operand defined in CurrentBlock (so it may be defined
     // by phi in the loop header).
+    assert(BlockRPONumber.count(P) && BlockRPONumber.count(CurrentBlock) &&
+           "Invalid BlockRPONumber map.");
     if (BlockRPONumber[P] >= BlockRPONumber[CurrentBlock] &&
         llvm::any_of(CurInst->operands(), [&](const Use &U) {
           if (auto *Inst = dyn_cast<Instruction>(U.get()))
@@ -2301,7 +2307,7 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   LLVM_DEBUG(verifyRemoved(CurInst));
   // FIXME: Intended to be markInstructionForDeletion(CurInst), but it causes
   // some assertion failures.
-  ICF->invalidateBlock(CurrentBlock);
+  ICF->removeInstruction(CurInst);
   CurInst->eraseFromParent();
   ++NumGVNInstr;
 
@@ -2342,6 +2348,7 @@ BasicBlock *GVN::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
       SplitCriticalEdge(Pred, Succ, CriticalEdgeSplittingOptions(DT));
   if (MD)
     MD->invalidateCachedPredecessors();
+  InvalidBlockRPONumbers = true;
   return BB;
 }
 
@@ -2356,6 +2363,7 @@ bool GVN::splitCriticalEdges() {
                       CriticalEdgeSplittingOptions(DT));
   } while (!toSplit.empty());
   if (MD) MD->invalidateCachedPredecessors();
+  InvalidBlockRPONumbers = true;
   return true;
 }
 
@@ -2382,6 +2390,7 @@ void GVN::cleanupGlobalSets() {
   BlockRPONumber.clear();
   TableAllocator.Reset();
   ICF->clear();
+  InvalidBlockRPONumbers = true;
 }
 
 /// Verify that the specified instruction does not occur in our

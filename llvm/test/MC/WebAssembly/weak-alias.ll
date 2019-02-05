@@ -62,7 +62,7 @@ entry:
 ; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK-NEXT:         Kind:            TABLE
 ; CHECK-NEXT:         Table:
-; CHECK-NEXT:           ElemType:        ANYFUNC
+; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
 ; CHECK-NEXT:             Initial:         0x00000001
 ; CHECK-NEXT:   - Type:            FUNCTION
@@ -138,7 +138,7 @@ entry:
 ; CHECK-NEXT:         Content:         '01000000'
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     Version:         2
 ; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -197,26 +197,26 @@ entry:
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .data.direct_address
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            .data.alias_address
-; CHECK-NEXT:         Alignment:       8
+; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT: ...
 
 ; CHECK-SYMS: SYMBOL TABLE:
-; CHECK-SYMS-NEXT: 00000000 g     F CODE	.hidden foo
-; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden call_direct
-; CHECK-SYMS-NEXT: 00000002 g     F CODE	.hidden call_alias
-; CHECK-SYMS-NEXT: 00000000 gw    F CODE	.hidden foo_alias
-; CHECK-SYMS-NEXT: 00000003 g     F CODE	.hidden call_direct_ptr
+; CHECK-SYMS-NEXT: 00000001 g     F CODE	.hidden foo
+; CHECK-SYMS-NEXT: 00000006 g     F CODE	.hidden call_direct
+; CHECK-SYMS-NEXT: 0000000f g     F CODE	.hidden call_alias
+; CHECK-SYMS-NEXT: 00000001 gw    F CODE	.hidden foo_alias
+; CHECK-SYMS-NEXT: 00000018 g     F CODE	.hidden call_direct_ptr
 ; CHECK-SYMS-NEXT: 00000008 g     O DATA	direct_address
-; CHECK-SYMS-NEXT: 00000004 g     F CODE	.hidden call_alias_ptr
+; CHECK-SYMS-NEXT: 0000002b g     F CODE	.hidden call_alias_ptr
 ; CHECK-SYMS-NEXT: 00000010 g     O DATA	alias_address
 ; CHECK-SYMS-NEXT: 00000000 g     O DATA	bar
 ; CHECK-SYMS-NEXT: 00000000 gw    O DATA	.hidden bar_alias

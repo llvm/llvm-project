@@ -2,5 +2,5 @@
 ; RUN:              | FileCheck %s
 
 ; CHECK: Sections:
-; CHECK: Idx Name          Size      Address          Type
+; CHECK: Idx Name          Size      VMA              Type
 ; CHECK-NOT: {{.}}

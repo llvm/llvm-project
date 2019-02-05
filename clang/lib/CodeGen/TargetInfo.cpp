@@ -1,9 +1,8 @@
 //===---- TargetInfo.cpp - Encapsulate target details -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -720,10 +719,12 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
 // This is a very simple ABI that relies a lot on DefaultABIInfo.
 //===----------------------------------------------------------------------===//
 
-class WebAssemblyABIInfo final : public DefaultABIInfo {
+class WebAssemblyABIInfo final : public SwiftABIInfo {
+  DefaultABIInfo defaultInfo;
+
 public:
   explicit WebAssemblyABIInfo(CodeGen::CodeGenTypes &CGT)
-      : DefaultABIInfo(CGT) {}
+      : SwiftABIInfo(CGT), defaultInfo(CGT) {}
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
@@ -741,6 +742,15 @@ private:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
+
+  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
+                                    bool asReturnValue) const override {
+    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
+  }
+
+  bool isSwiftErrorInRegister() const override {
+    return false;
+  }
 };
 
 class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
@@ -750,6 +760,22 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
+    TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+      if (const auto *Attr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
+        llvm::Function *Fn = cast<llvm::Function>(GV);
+        llvm::AttrBuilder B;
+        B.addAttribute("wasm-import-module", Attr->getImportModule());
+        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+      }
+      if (const auto *Attr = FD->getAttr<WebAssemblyImportNameAttr>()) {
+        llvm::Function *Fn = cast<llvm::Function>(GV);
+        llvm::AttrBuilder B;
+        B.addAttribute("wasm-import-name", Attr->getImportName());
+        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+      }
+    }
+
     if (auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
       llvm::Function *Fn = cast<llvm::Function>(GV);
       if (!FD->doesThisDeclarationHaveABody() && !FD->hasPrototype())
@@ -778,7 +804,7 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
   }
 
   // Otherwise just do the default thing.
-  return DefaultABIInfo::classifyArgumentType(Ty);
+  return defaultInfo.classifyArgumentType(Ty);
 }
 
 ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
@@ -798,7 +824,7 @@ ABIArgInfo WebAssemblyABIInfo::classifyReturnType(QualType RetTy) const {
   }
 
   // Otherwise just do the default thing.
-  return DefaultABIInfo::classifyReturnType(RetTy);
+  return defaultInfo.classifyReturnType(RetTy);
 }
 
 Address WebAssemblyABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -6763,21 +6789,19 @@ void MSP430TargetCodeGenInfo::setTargetAttributes(
   if (GV->isDeclaration())
     return;
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
-    if (const MSP430InterruptAttr *attr = FD->getAttr<MSP430InterruptAttr>()) {
-      // Handle 'interrupt' attribute:
-      llvm::Function *F = cast<llvm::Function>(GV);
+    const auto *InterruptAttr = FD->getAttr<MSP430InterruptAttr>();
+    if (!InterruptAttr)
+      return;
 
-      // Step 1: Set ISR calling convention.
-      F->setCallingConv(llvm::CallingConv::MSP430_INTR);
+    // Handle 'interrupt' attribute:
+    llvm::Function *F = cast<llvm::Function>(GV);
 
-      // Step 2: Add attributes goodness.
-      F->addFnAttr(llvm::Attribute::NoInline);
+    // Step 1: Set ISR calling convention.
+    F->setCallingConv(llvm::CallingConv::MSP430_INTR);
 
-      // Step 3: Emit ISR vector alias.
-      unsigned Num = attr->getNumber() / 2;
-      llvm::GlobalAlias::create(llvm::Function::ExternalLinkage,
-                                "__isr_" + Twine(Num), F);
-    }
+    // Step 2: Add attributes goodness.
+    F->addFnAttr(llvm::Attribute::NoInline);
+    F->addFnAttr("interrupt", llvm::utostr(InterruptAttr->getNumber()));
   }
 }
 
@@ -8307,7 +8331,7 @@ ABIArgInfo ARCABIInfo::getIndirectByRef(QualType Ty, bool HasFreeRegs) const {
 }
 
 ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
-  // Compute the byval alignment. 
+  // Compute the byval alignment.
   const unsigned MinABIStackAlignInBytes = 4;
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
   return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), /*ByVal=*/true,
@@ -8371,7 +8395,7 @@ ABIArgInfo ARCABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isAnyComplexType())
     return ABIArgInfo::getDirectInReg();
 
-  // Arguments of size > 4 registers are indirect.  
+  // Arguments of size > 4 registers are indirect.
   auto RetSize = llvm::alignTo(getContext().getTypeSize(RetTy), 32) / 32;
   if (RetSize > 4)
     return getIndirectByRef(RetTy, /*HasFreeRegs*/ true);

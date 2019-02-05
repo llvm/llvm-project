@@ -1,9 +1,8 @@
 //===- llvm/Analysis/ScalarEvolutionExpressions.h - SCEV Exprs --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,7 +50,7 @@ class Type;
     ConstantInt *V;
 
     SCEVConstant(const FoldingSetNodeIDRef ID, ConstantInt *v) :
-      SCEV(ID, scConstant), V(v) {}
+      SCEV(ID, scConstant, 1), V(v) {}
 
   public:
     ConstantInt *getValue() const { return V; }
@@ -64,6 +63,13 @@ class Type;
       return S->getSCEVType() == scConstant;
     }
   };
+
+  static unsigned short computeExpressionSize(ArrayRef<const SCEV *> Args) {
+    APInt Size(16, 1);
+    for (auto *Arg : Args)
+      Size = Size.uadd_sat(APInt(16, Arg->getExpressionSize()));
+    return (unsigned short)Size.getZExtValue();
+  }
 
   /// This is the base class for unary cast operator classes.
   class SCEVCastExpr : public SCEV {
@@ -142,9 +148,10 @@ class Type;
     const SCEV *const *Operands;
     size_t NumOperands;
 
-    SCEVNAryExpr(const FoldingSetNodeIDRef ID,
-                 enum SCEVTypes T, const SCEV *const *O, size_t N)
-      : SCEV(ID, T), Operands(O), NumOperands(N) {}
+    SCEVNAryExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
+                 const SCEV *const *O, size_t N)
+        : SCEV(ID, T, computeExpressionSize(makeArrayRef(O, N))), Operands(O),
+          NumOperands(N) {}
 
   public:
     size_t getNumOperands() const { return NumOperands; }
@@ -258,7 +265,8 @@ class Type;
     const SCEV *RHS;
 
     SCEVUDivExpr(const FoldingSetNodeIDRef ID, const SCEV *lhs, const SCEV *rhs)
-      : SCEV(ID, scUDivExpr), LHS(lhs), RHS(rhs) {}
+        : SCEV(ID, scUDivExpr, computeExpressionSize({lhs, rhs})), LHS(lhs),
+          RHS(rhs) {}
 
   public:
     const SCEV *getLHS() const { return LHS; }
@@ -411,7 +419,7 @@ class Type;
 
     SCEVUnknown(const FoldingSetNodeIDRef ID, Value *V,
                 ScalarEvolution *se, SCEVUnknown *next) :
-      SCEV(ID, scUnknown), CallbackVH(V), SE(se), Next(next) {}
+      SCEV(ID, scUnknown, 1), CallbackVH(V), SE(se), Next(next) {}
 
     // Implement CallbackVH.
     void deleted() override;

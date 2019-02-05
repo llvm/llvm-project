@@ -200,6 +200,12 @@ So to reformat all the lines in the latest :program:`git` commit, just do:
 
   git diff -U0 --no-color HEAD^ | clang-format-diff.py -i -p1
 
+With Mercurial/:program:`hg`:
+
+.. code-block:: console
+
+  hg diff -U0 --color=never | clang-format-diff.py -i -p1
+
 In an SVN client, you can do:
 
 .. code-block:: console

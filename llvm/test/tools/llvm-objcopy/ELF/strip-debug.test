@@ -1,12 +1,16 @@
 # RUN: yaml2obj %s > %t
 # RUN: cp %t %t3
-# RUN: llvm-objcopy -strip-debug %t %t2
-# RUN: llvm-readobj -file-headers -sections -symbols %t2 | FileCheck %s
+# RUN: llvm-objcopy --strip-debug %t %t2
+# RUN: llvm-readobj --file-headers --sections --symbols %t2 | FileCheck %s
 
 # Verify that the previous run of llvm-objcopy has not modified the input.
 # RUN: cmp %t %t3
 
-# RUN: llvm-strip -strip-debug %t3
+# RUN: llvm-objcopy -g %t %t2g
+# Verify that --strip-debug and -g produce the same output
+# RUN: cmp %t2 %t2g
+
+# RUN: llvm-strip --strip-debug %t3
 # RUN: cmp %t2 %t3
 
 # RUN: cp %t %t4

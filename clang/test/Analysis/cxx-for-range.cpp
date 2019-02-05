@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core -analyzer-output=plist-multi-file -o %t.plist -verify -analyzer-config eagerly-assume=false %s
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/cxx-for-range.cpp.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/cxx-for-range.cpp.plist -
 
 extern void work();
 

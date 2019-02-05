@@ -1,9 +1,8 @@
 //===- TwoAddressInstructionPass.cpp - Two-Address instruction pass -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -929,9 +928,12 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   MachineBasicBlock::iterator Begin = MI;
   MachineBasicBlock::iterator AfterMI = std::next(Begin);
   MachineBasicBlock::iterator End = AfterMI;
-  while (End->isCopy() &&
-         regOverlapsSet(Defs, End->getOperand(1).getReg(), TRI)) {
-    Defs.push_back(End->getOperand(0).getReg());
+  while (End != MBB->end()) {
+    End = skipDebugInstructionsForward(End, MBB->end());
+    if (End->isCopy() && regOverlapsSet(Defs, End->getOperand(1).getReg(), TRI))
+      Defs.push_back(End->getOperand(0).getReg());
+    else
+      break;
     ++End;
   }
 

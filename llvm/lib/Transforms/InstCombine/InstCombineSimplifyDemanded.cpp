@@ -1,9 +1,8 @@
 //===- InstCombineSimplifyDemanded.cpp ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -969,10 +968,22 @@ InstCombiner::simplifyShrShlDemandedBits(Instruction *Shr, const APInt &ShrOp1,
 /// Implement SimplifyDemandedVectorElts for amdgcn buffer and image intrinsics.
 Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
                                                            APInt DemandedElts,
-                                                           int DMaskIdx) {
+                                                           int DMaskIdx,
+                                                           int TFCIdx) {
   unsigned VWidth = II->getType()->getVectorNumElements();
   if (VWidth == 1)
     return nullptr;
+
+  // Need to change to new instruction format
+  bool TFELWEEnabled = false;
+  if (TFCIdx > 0) {
+    if (ConstantInt *TFC = dyn_cast<ConstantInt>(II->getArgOperand(TFCIdx)))
+      TFELWEEnabled =    TFC->getZExtValue() & 0x1  // TFE
+                      || TFC->getZExtValue() & 0x2; // LWE
+  }
+
+  if (TFELWEEnabled)
+    return nullptr; // TFE not yet supported
 
   ConstantInt *NewDMask = nullptr;
 
@@ -1171,6 +1182,18 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
   switch (I->getOpcode()) {
   default: break;
 
+  case Instruction::GetElementPtr: {
+    // Conservatively track the demanded elements back through any vector
+    // operands we may have.  We know there must be at least one, or we
+    // wouldn't have a vector result to get here. Note that we intentionally
+    // merge the undef bits here since gepping with either an undef base or
+    // index results in undef. 
+    for (unsigned i = 0; i < I->getNumOperands(); i++)
+      if (I->getOperand(i)->getType()->isVectorTy())
+        simplifyAndSetOp(I, i, DemandedElts, UndefElts);
+
+    break;
+  }
   case Instruction::InsertElement: {
     // If this is a variable index, we don't know which element it overwrites.
     // demand exactly the same input as we produce.
@@ -1626,7 +1649,8 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       return simplifyAMDGCNMemoryIntrinsicDemanded(II, DemandedElts);
     default: {
       if (getAMDGPUImageDMaskIntrinsic(II->getIntrinsicID()))
-        return simplifyAMDGCNMemoryIntrinsicDemanded(II, DemandedElts, 0);
+        return simplifyAMDGCNMemoryIntrinsicDemanded(
+            II, DemandedElts, 0, II->getNumArgOperands() - 2);
 
       break;
     }

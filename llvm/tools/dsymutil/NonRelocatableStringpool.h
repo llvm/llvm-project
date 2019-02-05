@@ -1,14 +1,15 @@
 //===- NonRelocatableStringpool.h - A simple stringpool  --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
 #define LLVM_TOOLS_DSYMUTIL_NONRELOCATABLESTRINGPOOL_H
+
+#include "SymbolMap.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,7 +33,9 @@ public:
   /// order.
   using MapTy = StringMap<DwarfStringPoolEntry, BumpPtrAllocator>;
 
-  NonRelocatableStringpool() {
+  NonRelocatableStringpool(
+      SymbolMapTranslator Translator = SymbolMapTranslator())
+      : Translator(Translator) {
     // Legacy dsymutil puts an empty string at the start of the line table.
     EmptyString = getEntry("");
   }
@@ -62,6 +65,7 @@ private:
   uint32_t CurrentEndOffset = 0;
   unsigned NumEntries = 0;
   DwarfStringPoolEntryRef EmptyString;
+  SymbolMapTranslator Translator;
 };
 
 /// Helper for making strong types.

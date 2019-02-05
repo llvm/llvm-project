@@ -104,9 +104,11 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
     ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i64 0
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK: [[ICMP1:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[COPY1]](s32), [[C]]
-    ; CHECK: [[AND:%[0-9]+]]:sgpr(s1) = G_AND [[ICMP]], [[ICMP1]]
+    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY1]](s32), [[C]]
+    ; CHECK: [[COPY2:%[0-9]+]]:sgpr(s1) = COPY [[ICMP]](s1)
+    ; CHECK: [[COPY3:%[0-9]+]]:sgpr(s1) = COPY [[ICMP1]](s1)
+    ; CHECK: [[AND:%[0-9]+]]:sgpr(s1) = G_AND [[COPY2]], [[COPY3]]
     ; CHECK: S_NOP 0, implicit [[AND]](s1)
       %0:_(s32) = COPY $vgpr0
       %1:_(s32) = COPY $vgpr1
@@ -129,9 +131,10 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i64 0
     ; CHECK: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK: [[ICMP1:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[COPY1]](s32), [[C]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY1]](s32), [[C]]
     ; CHECK: [[COPY2:%[0-9]+]]:sgpr(s1) = COPY [[ICMP]](s1)
-    ; CHECK: [[AND:%[0-9]+]]:sgpr(s1) = G_AND [[COPY2]], [[ICMP1]]
+    ; CHECK: [[COPY3:%[0-9]+]]:sgpr(s1) = COPY [[ICMP1]](s1)
+    ; CHECK: [[AND:%[0-9]+]]:sgpr(s1) = G_AND [[COPY2]], [[COPY3]]
     ; CHECK: S_NOP 0, implicit [[AND]](s1)
       %0:_(s32) = COPY $sgpr0
       %1:_(s32) = COPY $vgpr0
@@ -196,8 +199,9 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[AND:%[0-9]+]]:sgpr(s1) = G_AND [[TRUNC]], [[ICMP]]
+    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]]:sgpr(s1) = COPY [[ICMP]](s1)
+    ; CHECK: [[AND:%[0-9]+]]:sgpr(s1) = G_AND [[TRUNC]], [[COPY2]]
     ; CHECK: S_NOP 0, implicit [[AND]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
@@ -205,4 +209,390 @@ body:             |
     %3:_(s1) = G_ICMP intpred(ne), %0, %1
     %4:_(s1) = G_AND %2, %3
     S_NOP 0, implicit %4
+...
+
+---
+name: and_i64_ss
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK-LABEL: name: and_i64_ss
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK: [[AND:%[0-9]+]]:sgpr(s64) = G_AND [[COPY]], [[COPY1]]
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = COPY $sgpr2_sgpr3
+    %2:_(s64) = G_AND %0, %1
+...
+
+---
+name: and_i64_sv
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    ; CHECK-LABEL: name: and_i64_sv
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = COPY $vgpr0_vgpr1
+    %2:_(s64) = G_AND %0, %1
+...
+
+---
+name: and_i64_vs
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    ; CHECK-LABEL: name: and_i64_vs
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $sgpr0_sgpr1
+    %2:_(s64) = G_AND %0, %1
+...
+
+---
+name: and_i64_vv
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-LABEL: name: and_i64_vv
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s64) = G_AND %0, %1
+...
+
+---
+name: and_i64_vv_user
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-LABEL: name: and_i64_vv_user
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[MV]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s64) = G_AND %0, %1
+    S_NOP 0, implicit %2
+...
+---
+name: and_i64_ss_ss_merge
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; CHECK-LABEL: name: and_i64_ss_ss_merge
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+    ; CHECK: [[MV:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK: [[MV1:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:sgpr(s64) = G_AND [[MV]], [[MV1]]
+    ; CHECK: S_NOP 0, implicit [[AND]](s64)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $sgpr2
+    %3:_(s32) = COPY $sgpr3
+    %4:_(s64) = G_MERGE_VALUES %0, %1
+    %5:_(s64) = G_MERGE_VALUES %2, %3
+    %6:_(s64) = G_AND %4, %5
+    S_NOP 0, implicit %6
+...
+
+---
+name: and_i64_vv_vv_merge
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    ; CHECK-LABEL: name: and_i64_vv_vv_merge
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
+    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV2:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[MV2]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s32) = COPY $vgpr3
+    %4:_(s64) = G_MERGE_VALUES %0, %1
+    %5:_(s64) = G_MERGE_VALUES %2, %3
+    %6:_(s64) = G_AND %4, %5
+    S_NOP 0, implicit %6
+...
+
+---
+name: and_i64_s_sv_merge
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2, $vgpr0
+    ; CHECK-LABEL: name: and_i64_s_sv_merge
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY2]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[MV1]](s64)
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s32) = COPY $sgpr2
+    %2:_(s32) = COPY $vgpr0
+    %3:_(s64) = G_MERGE_VALUES %1, %2
+    %4:_(s64) = G_AND %0, %3
+    S_NOP 0, implicit %4
+...
+
+---
+name: and_i64_s_vs_merge
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2, $vgpr0
+    ; CHECK-LABEL: name: and_i64_s_vs_merge
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[MV1]](s64)
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s32) = COPY $sgpr2
+    %2:_(s32) = COPY $vgpr0
+    %3:_(s64) = G_MERGE_VALUES %2, %1
+    %4:_(s64) = G_AND %0, %3
+    S_NOP 0, implicit %4
+...
+
+---
+name: and_i64_sv_sv_merge
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: and_i64_sv_sv_merge
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY2]](s32)
+    ; CHECK: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY5]](s32), [[COPY3]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV2:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[MV2]](s64)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $vgpr0
+    %3:_(s32) = COPY $vgpr1
+    %4:_(s64) = G_MERGE_VALUES %0, %2
+    %5:_(s64) = G_MERGE_VALUES %1, %3
+    %6:_(s64) = G_AND %4, %5
+    S_NOP 0, implicit %6
+...
+
+---
+name: and_i64_sv_vs_merge
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: and_i64_sv_vs_merge
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY2]](s32)
+    ; CHECK: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY5]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV2:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[MV2]](s64)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $vgpr0
+    %3:_(s32) = COPY $vgpr1
+    %4:_(s64) = G_MERGE_VALUES %0, %2
+    %5:_(s64) = G_MERGE_VALUES %3, %1
+    %6:_(s64) = G_AND %4, %5
+    S_NOP 0, implicit %6
+...
+
+---
+name: and_chain_i64_sv
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr0_vgpr1
+    ; CHECK-LABEL: name: and_chain_i64_sv
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: [[UV4:%[0-9]+]]:sgpr(s32), [[UV5:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK: [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s64)
+    ; CHECK: [[AND2:%[0-9]+]]:vgpr(s32) = G_AND [[UV4]], [[UV6]]
+    ; CHECK: [[AND3:%[0-9]+]]:vgpr(s32) = G_AND [[UV5]], [[UV7]]
+    ; CHECK: [[MV1:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND2]](s32), [[AND3]](s32)
+    ; CHECK: S_NOP 0, implicit [[MV1]](s64)
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s64) = COPY $sgpr2_sgpr3
+    %2:_(s64) = COPY $vgpr0_vgpr1
+    %3:_(s64) = G_AND %0, %2
+    %4:_(s64) = G_AND %1, %3
+    S_NOP 0, implicit %4
+...
+
+---
+name: and_v2i32_ss
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
+    ; CHECK-LABEL: name: and_v2i32_ss
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
+    ; CHECK: [[AND:%[0-9]+]]:sgpr(<2 x s32>) = G_AND [[COPY]], [[COPY1]]
+    ; CHECK: S_NOP 0, implicit [[AND]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $sgpr0_sgpr1
+    %1:_(<2 x s32>) = COPY $sgpr2_sgpr3
+    %2:_(<2 x s32>) = G_AND %0, %1
+    S_NOP 0, implicit %2
+...
+
+---
+name: and_v2i32_sv
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    ; CHECK-LABEL: name: and_v2i32_sv
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $sgpr0_sgpr1
+    %1:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %2:_(<2 x s32>) = G_AND %0, %1
+    S_NOP 0, implicit %2
+...
+
+---
+name: and_v2i32_vs
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: and_v2i32_vs
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $sgpr0_sgpr1
+    %2:_(<2 x s32>) = G_AND %0, %1
+    S_NOP 0, implicit %2
+...
+
+---
+name: and_v2i32_vv
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK-LABEL: name: and_v2i32_vv
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[UV]], [[UV2]]
+    ; CHECK: [[AND1:%[0-9]+]]:vgpr(s32) = G_AND [[UV1]], [[UV3]]
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[AND1]](s32)
+    ; CHECK: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x s32>) = G_AND %0, %1
+    S_NOP 0, implicit %2
 ...

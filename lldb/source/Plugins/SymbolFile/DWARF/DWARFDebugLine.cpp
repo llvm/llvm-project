@@ -1,9 +1,8 @@
 //===-- DWARFDebugLine.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 
+#include "DWARFUnit.h"
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
 
@@ -528,8 +528,7 @@ bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
 
 bool DWARFDebugLine::ParseSupportFiles(
     const lldb::ModuleSP &module_sp, const DWARFDataExtractor &debug_line_data,
-    const lldb_private::FileSpec &cu_comp_dir, dw_offset_t stmt_list,
-    FileSpecList &support_files, DWARFUnit *dwarf_cu) {
+    dw_offset_t stmt_list, FileSpecList &support_files, DWARFUnit *dwarf_cu) {
   lldb::offset_t offset = stmt_list;
 
   Prologue prologue;
@@ -545,7 +544,9 @@ bool DWARFDebugLine::ParseSupportFiles(
   std::string remapped_file;
 
   for (uint32_t file_idx = 1;
-       prologue.GetFile(file_idx, cu_comp_dir, file_spec); ++file_idx) {
+       prologue.GetFile(file_idx, dwarf_cu->GetCompilationDirectory(),
+                        dwarf_cu->GetPathStyle(), file_spec);
+       ++file_idx) {
     if (module_sp->RemapSourceFile(file_spec.GetPath(), remapped_file))
       file_spec.SetFile(remapped_file, FileSpec::Style::native);
     support_files.Append(file_spec);
@@ -947,10 +948,12 @@ void DWARFDebugLine::Prologue::Dump(Log *log) {
 //}
 
 bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx,
-    const lldb_private::FileSpec &comp_dir, FileSpec &file) const {
+                                       const FileSpec &comp_dir,
+                                       FileSpec::Style style,
+                                       FileSpec &file) const {
   uint32_t idx = file_idx - 1; // File indexes are 1 based...
   if (idx < file_names.size()) {
-    file.SetFile(file_names[idx].name, FileSpec::Style::native);
+    file.SetFile(file_names[idx].name, style);
     if (file.IsRelative()) {
       if (file_names[idx].dir_idx > 0) {
         const uint32_t dir_idx = file_names[idx].dir_idx - 1;

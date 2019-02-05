@@ -1,9 +1,8 @@
 //===-- AppleObjCDeclVendor.cpp ---------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -558,7 +557,7 @@ AppleObjCDeclVendor::FindDecls(const ConstString &name, bool append,
       LIBLLDB_LOG_EXPRESSIONS)); // FIXME - a more appropriate log channel?
 
   if (log)
-    log->Printf("AppleObjCDeclVendor::FindTypes [%u] ('%s', %s, %u, )",
+    log->Printf("AppleObjCDeclVendor::FindDecls [%u] ('%s', %s, %u, )",
                 current_id, (const char *)name.AsCString(),
                 append ? "true" : "false", max_matches);
 

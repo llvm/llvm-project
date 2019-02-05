@@ -1,9 +1,8 @@
 //===-- PDBLocationToDWARFExpression.h --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #define lldb_Plugins_SymbolFile_PDB_PDBLocationToDWARFExpression_h_
 
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/Variable.h"
 
 namespace lldb_private {
 class DWARFExpression;
@@ -31,6 +31,9 @@ class PDBSymbolData;
 /// @param[in] symbol
 ///     The symbol with a location information to convert.
 ///
+/// @param[in] ranges
+///     Ranges where this variable is valid.
+///
 /// @param[out] is_constant
 ///     Set to \b true if the result expression is a constant value data,
 ///     and \b false if it is a DWARF bytecode.
@@ -41,5 +44,6 @@ class PDBSymbolData;
 lldb_private::DWARFExpression
 ConvertPDBLocationToDWARFExpression(lldb::ModuleSP module,
                                     const llvm::pdb::PDBSymbolData &symbol,
+                                    const lldb_private::Variable::RangeList &ranges,
                                     bool &is_constant);
 #endif

@@ -18,6 +18,7 @@
 ; CHECK-NEXT: <FUNCTION op0=4 op1=7
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
+; CHECK-NEXT:    <FLAGS
 ; See if the call to func is registered.
 ; The value id 1 matches the second FUNCTION record above.
 ; CHECK-NEXT:    <PERMODULE {{.*}} op6=1/>

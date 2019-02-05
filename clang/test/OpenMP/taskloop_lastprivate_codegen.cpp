@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DLAMBDA -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -fblocks -DBLOCKS -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=BLOCKS %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=ARRAY %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DLOOP -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=LOOP %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
@@ -11,11 +12,12 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -std=c++11 -DLAMBDA -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -fblocks -DBLOCKS -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -std=c++11 -DLOOP -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 // It doesn't pass on win32.
 // REQUIRES: shell
-#ifndef ARRAY
+#if !defined(ARRAY) && !defined(LOOP)
 #ifndef HEADER
 #define HEADER
 
@@ -501,7 +503,7 @@ int main() {
 // CHECK: ret i32
 
 #endif
-#else
+#elif defined(ARRAY)
 // ARRAY-LABEL: array_func
 struct St {
   int a, b;
@@ -520,6 +522,17 @@ void array_func(int n, float a[n], St s[2]) {
 // ARRAY: store %struct.St* %{{.+}}, %struct.St** %{{.+}},
 #pragma omp taskloop lastprivate(a, s)
   for (int i = 0; i < 10; ++i)
+    ;
+}
+#else
+
+// LOOP-LABEL: loop
+void loop() {
+// LOOP: call i8* @__kmpc_omp_task_alloc(
+// LOOP: call void @__kmpc_taskloop(
+  int i;
+#pragma omp taskloop lastprivate(i)
+  for (i = 0; i < 10; ++i)
     ;
 }
 #endif

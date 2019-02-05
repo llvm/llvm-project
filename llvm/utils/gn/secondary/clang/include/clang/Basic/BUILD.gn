@@ -1,22 +1,13 @@
 import("//clang/utils/TableGen/clang_tablegen.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
 # Version header.
 
-action("version") {
-  script = "//llvm/utils/gn/build/write_cmake_config.py"
-
-  sources = [
-    "Version.inc.in",
-  ]
-  outputs = [
-    "$root_gen_dir/clang/include/clang/Basic/Version.inc",
-  ]
-  args = [
-    "-o",
-    rebase_path(outputs[0], root_out_dir),
-    rebase_path(sources[0], root_out_dir),
-
+write_cmake_config("version") {
+  input = "Version.inc.in"
+  output = "$target_gen_dir/Version.inc"
+  values = [
     "CLANG_VERSION=$llvm_version",
     "CLANG_VERSION_MAJOR=$llvm_version_major",
     "CLANG_VERSION_MINOR=$llvm_version_minor",

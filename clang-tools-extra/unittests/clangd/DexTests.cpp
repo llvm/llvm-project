@@ -1,9 +1,8 @@
 //===-- DexTests.cpp  ---------------------------------*- C++ -*-----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,7 +26,6 @@ using ::testing::AnyOf;
 using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace dex {
@@ -248,17 +246,17 @@ TEST(DexIterators, StringRepresentation) {
 
   // No token given, prints full posting list.
   auto I1 = L1.iterator();
-  EXPECT_EQ(to_string(*I1), "[1 3 5]");
+  EXPECT_EQ(llvm::to_string(*I1), "[1 3 5]");
 
   // Token given, uses token's string representation.
   Token Tok(Token::Kind::Trigram, "L2");
   auto I2 = L1.iterator(&Tok);
-  EXPECT_EQ(to_string(*I2), "T=L2");
+  EXPECT_EQ(llvm::to_string(*I2), "T=L2");
 
   auto Tree = C.limit(C.intersect(move(I1), move(I2)), 10);
   // AND reorders its children, we don't care which order it prints.
-  EXPECT_THAT(to_string(*Tree), AnyOf("(LIMIT 10 (& [1 3 5] T=L2))",
-                                      "(LIMIT 10 (& T=L2 [1 3 5]))"));
+  EXPECT_THAT(llvm::to_string(*Tree), AnyOf("(LIMIT 10 (& [1 3 5] T=L2))",
+                                            "(LIMIT 10 (& T=L2 [1 3 5]))"));
 }
 
 TEST(DexIterators, Limit) {
@@ -323,27 +321,28 @@ TEST(DexIterators, Optimizations) {
   const PostingList L3{3};
 
   // empty and/or yield true/false
-  EXPECT_EQ(to_string(*C.intersect()), "true");
-  EXPECT_EQ(to_string(*C.unionOf()), "false");
+  EXPECT_EQ(llvm::to_string(*C.intersect()), "true");
+  EXPECT_EQ(llvm::to_string(*C.unionOf()), "false");
 
   // true/false inside and/or short-circuit
-  EXPECT_EQ(to_string(*C.intersect(L1.iterator(), C.all())), "[1]");
-  EXPECT_EQ(to_string(*C.intersect(L1.iterator(), C.none())), "false");
+  EXPECT_EQ(llvm::to_string(*C.intersect(L1.iterator(), C.all())), "[1]");
+  EXPECT_EQ(llvm::to_string(*C.intersect(L1.iterator(), C.none())), "false");
   // Not optimized to avoid breaking boosts.
-  EXPECT_EQ(to_string(*C.unionOf(L1.iterator(), C.all())), "(| [1] true)");
-  EXPECT_EQ(to_string(*C.unionOf(L1.iterator(), C.none())), "[1]");
+  EXPECT_EQ(llvm::to_string(*C.unionOf(L1.iterator(), C.all())),
+            "(| [1] true)");
+  EXPECT_EQ(llvm::to_string(*C.unionOf(L1.iterator(), C.none())), "[1]");
 
   // and/or nested inside and/or are flattened
-  EXPECT_EQ(to_string(*C.intersect(L1.iterator(),
-                                   C.intersect(L1.iterator(), L1.iterator()))),
+  EXPECT_EQ(llvm::to_string(*C.intersect(
+                L1.iterator(), C.intersect(L1.iterator(), L1.iterator()))),
             "(& [1] [1] [1])");
-  EXPECT_EQ(to_string(*C.unionOf(L1.iterator(),
-                                 C.unionOf(L2.iterator(), L3.iterator()))),
+  EXPECT_EQ(llvm::to_string(*C.unionOf(
+                L1.iterator(), C.unionOf(L2.iterator(), L3.iterator()))),
             "(| [1] [2] [3])");
 
   // optimizations combine over multiple levels
-  EXPECT_EQ(to_string(*C.intersect(C.intersect(L1.iterator(), C.intersect()),
-                                   C.unionOf(C.all()))),
+  EXPECT_EQ(llvm::to_string(*C.intersect(
+                C.intersect(L1.iterator(), C.intersect()), C.unionOf(C.all()))),
             "[1]");
 }
 
@@ -657,9 +656,9 @@ TEST(DexTest, ProximityPathsBoosting) {
 }
 
 TEST(DexTests, Refs) {
-  DenseMap<SymbolID, std::vector<Ref>> Refs;
+  llvm::DenseMap<SymbolID, std::vector<Ref>> Refs;
   auto AddRef = [&](const Symbol &Sym, const char *Filename, RefKind Kind) {
-    auto& SymbolRefs = Refs[Sym.ID];
+    auto &SymbolRefs = Refs[Sym.ID];
     SymbolRefs.emplace_back();
     SymbolRefs.back().Kind = Kind;
     SymbolRefs.back().Location.FileURI = Filename;
@@ -667,18 +666,26 @@ TEST(DexTests, Refs) {
   auto Foo = symbol("foo");
   auto Bar = symbol("bar");
   AddRef(Foo, "foo.h", RefKind::Declaration);
+  AddRef(Foo, "foo.cc", RefKind::Definition);
   AddRef(Foo, "reffoo.h", RefKind::Reference);
   AddRef(Bar, "bar.h", RefKind::Declaration);
 
-  std::vector<std::string> Files;
   RefsRequest Req;
   Req.IDs.insert(Foo.ID);
   Req.Filter = RefKind::Declaration | RefKind::Definition;
+
+  std::vector<std::string> Files;
   Dex(std::vector<Symbol>{Foo, Bar}, Refs).refs(Req, [&](const Ref &R) {
     Files.push_back(R.Location.FileURI);
   });
+  EXPECT_THAT(Files, UnorderedElementsAre("foo.h", "foo.cc"));
 
-  EXPECT_THAT(Files, ElementsAre("foo.h"));
+  Req.Limit = 1;
+  Files.clear();
+  Dex(std::vector<Symbol>{Foo, Bar}, Refs).refs(Req, [&](const Ref &R) {
+    Files.push_back(R.Location.FileURI);
+  });
+  EXPECT_THAT(Files, ElementsAre(AnyOf("foo.h", "foo.cc")));
 }
 
 } // namespace

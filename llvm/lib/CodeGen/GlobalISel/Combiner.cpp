@@ -1,9 +1,8 @@
 //===-- lib/CodeGen/GlobalISel/Combiner.cpp -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -13,7 +12,9 @@
 
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -35,38 +36,33 @@ namespace {
 /// instruction creation will schedule that instruction for a future visit.
 /// Other Combiner implementations may require more complex behaviour from
 /// their GISelChangeObserver subclass.
-class WorkListMaintainer : public GISelChangeObserver,
-                           public MachineFunction::Delegate {
+class WorkListMaintainer : public GISelChangeObserver {
   using WorkListTy = GISelWorkList<512>;
-  MachineFunction &MF;
   WorkListTy &WorkList;
   /// The instructions that have been created but we want to report once they
   /// have their operands. This is only maintained if debug output is requested.
   SmallPtrSet<const MachineInstr *, 4> CreatedInstrs;
 
 public:
-  WorkListMaintainer(MachineFunction &MF, WorkListTy &WorkList)
-      : GISelChangeObserver(), MF(MF), WorkList(WorkList) {
-    MF.setDelegate(this);
-  }
+  WorkListMaintainer(WorkListTy &WorkList)
+      : GISelChangeObserver(), WorkList(WorkList) {}
   virtual ~WorkListMaintainer() {
-    MF.resetDelegate(this);
   }
 
-  void erasingInstr(const MachineInstr &MI) override {
+  void erasingInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Erased: " << MI << "\n");
     WorkList.remove(&MI);
   }
-  void createdInstr(const MachineInstr &MI) override {
+  void createdInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Creating: " << MI << "\n");
     WorkList.insert(&MI);
     LLVM_DEBUG(CreatedInstrs.insert(&MI));
   }
-  void changingInstr(const MachineInstr &MI) override {
+  void changingInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Changing: " << MI << "\n");
     WorkList.insert(&MI);
   }
-  void changedInstr(const MachineInstr &MI) override {
+  void changedInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Changed: " << MI << "\n");
     WorkList.insert(&MI);
   }
@@ -79,13 +75,6 @@ public:
     });
     LLVM_DEBUG(CreatedInstrs.clear());
   }
-
-  void MF_HandleInsertion(const MachineInstr &MI) override {
-    createdInstr(MI);
-  }
-  void MF_HandleRemoval(const MachineInstr &MI) override {
-    erasingInstr(MI);
-  }
 };
 }
 
@@ -94,15 +83,20 @@ Combiner::Combiner(CombinerInfo &Info, const TargetPassConfig *TPC)
   (void)this->TPC; // FIXME: Remove when used.
 }
 
-bool Combiner::combineMachineInstrs(MachineFunction &MF) {
+bool Combiner::combineMachineInstrs(MachineFunction &MF,
+                                    GISelCSEInfo *CSEInfo) {
   // If the ISel pipeline failed, do not bother running this pass.
   // FIXME: Should this be here or in individual combiner passes.
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::FailedISel))
     return false;
 
+  Builder =
+      CSEInfo ? make_unique<CSEMIRBuilder>() : make_unique<MachineIRBuilder>();
   MRI = &MF.getRegInfo();
-  Builder.setMF(MF);
+  Builder->setMF(MF);
+  if (CSEInfo)
+    Builder->setCSEInfo(CSEInfo);
 
   LLVM_DEBUG(dbgs() << "Generic MI Combiner for: " << MF.getName() << '\n');
 
@@ -110,14 +104,19 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF) {
 
   bool MFChanged = false;
   bool Changed;
+  MachineIRBuilder &B = *Builder.get();
 
   do {
     // Collect all instructions. Do a post order traversal for basic blocks and
     // insert with list bottom up, so while we pop_back_val, we'll traverse top
     // down RPOT.
     Changed = false;
-    GISelWorkList<512> WorkList(&MF);
-    WorkListMaintainer Observer(MF, WorkList);
+    GISelWorkList<512> WorkList;
+    WorkListMaintainer Observer(WorkList);
+    GISelObserverWrapper WrapperObserver(&Observer);
+    if (CSEInfo)
+      WrapperObserver.addObserver(CSEInfo);
+    RAIIDelegateInstaller DelInstall(MF, &WrapperObserver);
     for (MachineBasicBlock *MBB : post_order(&MF)) {
       if (MBB->empty())
         continue;
@@ -137,7 +136,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF) {
     while (!WorkList.empty()) {
       MachineInstr *CurrInst = WorkList.pop_back_val();
       LLVM_DEBUG(dbgs() << "\nTry combining " << *CurrInst;);
-      Changed |= CInfo.combine(Observer, *CurrInst, Builder);
+      Changed |= CInfo.combine(WrapperObserver, *CurrInst, B);
       Observer.reportFullyCreatedInstrs();
     }
     MFChanged |= Changed;

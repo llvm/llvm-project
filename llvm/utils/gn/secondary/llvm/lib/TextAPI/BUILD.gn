@@ -1,0 +1,12 @@
+static_library("TextAPI") {
+  output_name = "LLVMTextAPI"
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ "." ]
+  sources = [
+    "ELF/ELFStub.cpp",
+    "ELF/TBEHandler.cpp",
+  ]
+}

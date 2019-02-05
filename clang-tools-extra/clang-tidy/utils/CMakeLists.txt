@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS support)
 add_clang_library(clangTidyUtils
   ASTUtils.cpp
   DeclRefExprUtils.cpp
+  ExceptionAnalyzer.cpp
   ExprSequence.cpp
   FixItHintUtils.cpp
   HeaderFileExtensionsUtils.cpp

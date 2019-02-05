@@ -1,9 +1,8 @@
 //===------------- debug.h - NVPTX OpenMP debug macros ----------- CUDA -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -130,7 +129,7 @@
 #include "option.h"
 
 template <typename... Arguments>
-static NOINLINE void log(const char *fmt, Arguments... parameters) {
+NOINLINE static void log(const char *fmt, Arguments... parameters) {
   printf(fmt, (int)blockIdx.x, (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),
          (int)(threadIdx.x & 0x1F), parameters...);
 }
@@ -138,6 +137,18 @@ static NOINLINE void log(const char *fmt, Arguments... parameters) {
 #endif
 #if OMPTARGET_NVPTX_TEST
 #include <assert.h>
+
+template <typename... Arguments>
+NOINLINE static void check(bool cond, const char *fmt,
+                           Arguments... parameters) {
+  if (!cond)
+    printf(fmt, (int)blockIdx.x, (int)threadIdx.x,
+           (int)(threadIdx.x / WARPSIZE), (int)(threadIdx.x & 0x1F),
+           parameters...);
+  assert(cond);
+}
+
+NOINLINE static void check(bool cond) { assert(cond); }
 #endif
 
 // set flags that are tested (inclusion properties)
@@ -207,13 +218,13 @@ static NOINLINE void log(const char *fmt, Arguments... parameters) {
 #define ASSERT0(_flag, _cond, _str)                                            \
   {                                                                            \
     if (TON(_flag)) {                                                          \
-      assert(_cond);                                                           \
+      check(_cond);                                                            \
     }                                                                          \
   }
 #define ASSERT(_flag, _cond, _str, _args...)                                   \
   {                                                                            \
     if (TON(_flag)) {                                                          \
-      assert(_cond);                                                           \
+      check(_cond);                                                            \
     }                                                                          \
   }
 
@@ -222,16 +233,15 @@ static NOINLINE void log(const char *fmt, Arguments... parameters) {
 #define TON(_flag) ((OMPTARGET_NVPTX_TEST) & (_flag))
 #define ASSERT0(_flag, _cond, _str)                                            \
   {                                                                            \
-    if (TON(_flag) && !(_cond)) {                                              \
-      log("<b %3d, t %4d, w %2d, l %2d> ASSERT: " _str "\n");                  \
-      assert(_cond);                                                           \
+    if (TON(_flag)) {                                                          \
+      check((_cond), "<b %3d, t %4d, w %2d, l %2d> ASSERT: " _str "\n");       \
     }                                                                          \
   }
 #define ASSERT(_flag, _cond, _str, _args...)                                   \
   {                                                                            \
-    if (TON(_flag) && !(_cond)) {                                              \
-      log("<b %3d, t %4d, w %2d, l %d2> ASSERT: " _str "\n", _args);           \
-      assert(_cond);                                                           \
+    if (TON(_flag)) {                                                          \
+      check((_cond), "<b %3d, t %4d, w %2d, l %d2> ASSERT: " _str "\n",        \
+            _args);                                                            \
     }                                                                          \
   }
 

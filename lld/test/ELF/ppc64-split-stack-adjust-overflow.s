@@ -20,7 +20,7 @@
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 4096
 # RUN: llvm-objdump -d %t | FileCheck %s
 
-# OVERFLOW: error: {{.*}}.o:(function caller): split-stack prologue adjustment overflows
+# OVERFLOW: error: {{.*}}.o:(function caller: .text+0x8): split-stack prologue adjustment overflows
 
         .p2align    2
         .global caller

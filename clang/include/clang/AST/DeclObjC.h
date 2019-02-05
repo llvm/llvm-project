@@ -1,9 +1,8 @@
 //===- DeclObjC.h - Classes for representing declarations -------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -367,6 +366,14 @@ public:
   ArrayRef<ParmVarDecl*> parameters() const {
     return llvm::makeArrayRef(const_cast<ParmVarDecl**>(getParams()),
                               NumParams);
+  }
+
+  ParmVarDecl *getParamDecl(unsigned Idx) {
+    assert(Idx < NumParams && "Index out of bounds!");
+    return getParams()[Idx];
+  }
+  const ParmVarDecl *getParamDecl(unsigned Idx) const {
+    return const_cast<ObjCMethodDecl *>(this)->getParamDecl(Idx);
   }
 
   /// Sets the method's parameters and selector source locations.

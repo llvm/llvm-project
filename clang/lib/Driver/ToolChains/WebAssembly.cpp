@@ -1,9 +1,8 @@
 //===--- WebAssembly.cpp - WebAssembly ToolChain Implementation -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,6 +22,15 @@ using namespace llvm::opt;
 
 wasm::Linker::Linker(const ToolChain &TC)
     : GnuTool("wasm::Linker", "lld", TC) {}
+
+/// Following the conventions in https://wiki.debian.org/Multiarch/Tuples,
+/// we remove the vendor field to form the multiarch triple.
+static std::string getMultiarchTriple(const Driver &D,
+                                      const llvm::Triple &TargetTriple,
+                                      StringRef SysRoot) {
+    return (TargetTriple.getArchName() + "-" +
+            TargetTriple.getOSAndEnvironmentName()).str();
+}
 
 bool wasm::Linker::isLinkJob() const { return true; }
 
@@ -75,7 +83,17 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
 
   getProgramPaths().push_back(getDriver().getInstalledDir());
 
-  getFilePaths().push_back(getDriver().SysRoot + "/lib");
+  if (getTriple().getOS() == llvm::Triple::UnknownOS) {
+    // Theoretically an "unknown" OS should mean no standard libraries, however
+    // it could also mean that a custom set of libraries is in use, so just add
+    // /lib to the search path. Disable multiarch in this case, to discourage
+    // paths containing "unknown" from acquiring meanings.
+    getFilePaths().push_back(getDriver().SysRoot + "/lib");
+  } else {
+    const std::string MultiarchTriple =
+        getMultiarchTriple(getDriver(), Triple, getDriver().SysRoot);
+    getFilePaths().push_back(getDriver().SysRoot + "/lib/" + MultiarchTriple);
+  }
 }
 
 bool WebAssembly::IsMathErrnoDefault() const { return false; }
@@ -124,16 +142,29 @@ WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
 
 void WebAssembly::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args) const {
-  if (!DriverArgs.hasArg(options::OPT_nostdinc))
+  if (!DriverArgs.hasArg(options::OPT_nostdinc)) {
+    if (getTriple().getOS() != llvm::Triple::UnknownOS) {
+      const std::string MultiarchTriple =
+          getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
+      addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include/" + MultiarchTriple);
+    }
     addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
+  }
 }
 
 void WebAssembly::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
   if (!DriverArgs.hasArg(options::OPT_nostdlibinc) &&
-      !DriverArgs.hasArg(options::OPT_nostdincxx))
+      !DriverArgs.hasArg(options::OPT_nostdincxx)) {
+    if (getTriple().getOS() != llvm::Triple::UnknownOS) {
+      const std::string MultiarchTriple =
+          getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
+      addSystemInclude(DriverArgs, CC1Args,
+                       getDriver().SysRoot + "/include/" + MultiarchTriple + "/c++/v1");
+    }
     addSystemInclude(DriverArgs, CC1Args,
                      getDriver().SysRoot + "/include/c++/v1");
+  }
 }
 
 void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,

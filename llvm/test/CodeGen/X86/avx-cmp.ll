@@ -35,11 +35,7 @@ define void @render() nounwind {
 ; CHECK-NEXT:  # %bb.1: # %for.cond5.preheader
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movb $1, %bpl
-; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB2_5: # %if.then
-; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    callq scale
 ; CHECK-NEXT:  .LBB2_2: # %for.cond5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
@@ -52,7 +48,10 @@ define void @render() nounwind {
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    vucomisd {{\.LCPI.*}}, %xmm0
 ; CHECK-NEXT:    jne .LBB2_5
-; CHECK-NEXT:    jp .LBB2_5
+; CHECK-NEXT:    jnp .LBB2_2
+; CHECK-NEXT:  .LBB2_5: # %if.then
+; CHECK-NEXT:   # in Loop: Header=BB2_2 Depth=1
+; CHECK-NEXT:    callq   scale
 ; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:  .LBB2_6: # %for.end52
 ; CHECK-NEXT:    addq $8, %rsp

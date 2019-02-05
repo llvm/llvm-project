@@ -1,9 +1,8 @@
 //===- SelectionDAGDumper.cpp - Implement SelectionDAG::dump() ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -96,6 +95,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ATOMIC_LOAD_MAX:            return "AtomicLoadMax";
   case ISD::ATOMIC_LOAD_UMIN:           return "AtomicLoadUMin";
   case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
+  case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
   case ISD::ATOMIC_LOAD:                return "AtomicLoad";
   case ISD::ATOMIC_STORE:               return "AtomicStore";
   case ISD::PCMARKER:                   return "PCMarker";
@@ -145,6 +145,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     unsigned IID = cast<ConstantSDNode>(getOperand(OpNo))->getZExtValue();
     if (IID < Intrinsic::num_intrinsics)
       return Intrinsic::getName((Intrinsic::ID)IID, None);
+    else if (!G)
+      return "Unknown intrinsic";
     else if (const TargetIntrinsicInfo *TII = G->getTarget().getIntrinsicInfo())
       return TII->getName(IID);
     llvm_unreachable("Invalid intrinsic ID");
@@ -650,6 +652,36 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << ", " << AM;
 
     OS << ">";
+  } else if (const MaskedLoadSDNode *MLd = dyn_cast<MaskedLoadSDNode>(this)) {
+    OS << "<";
+
+    printMemOperand(OS, *MLd->getMemOperand(), G);
+
+    bool doExt = true;
+    switch (MLd->getExtensionType()) {
+    default: doExt = false; break;
+    case ISD::EXTLOAD:  OS << ", anyext"; break;
+    case ISD::SEXTLOAD: OS << ", sext"; break;
+    case ISD::ZEXTLOAD: OS << ", zext"; break;
+    }
+    if (doExt)
+      OS << " from " << MLd->getMemoryVT().getEVTString();
+
+    if (MLd->isExpandingLoad())
+      OS << ", expanding";
+
+    OS << ">";
+  } else if (const MaskedStoreSDNode *MSt = dyn_cast<MaskedStoreSDNode>(this)) {
+    OS << "<";
+    printMemOperand(OS, *MSt->getMemOperand(), G);
+
+    if (MSt->isTruncatingStore())
+      OS << ", trunc to " << MSt->getMemoryVT().getEVTString();
+
+    if (MSt->isCompressingStore())
+      OS << ", compressing";
+
+    OS << ">";
   } else if (const MemSDNode* M = dyn_cast<MemSDNode>(this)) {
     OS << "<";
     printMemOperand(OS, *M->getMemOperand(), G);
@@ -684,45 +716,63 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     if (getNodeId() != -1)
       OS << " [ID=" << getNodeId() << ']';
     if (!(isa<ConstantSDNode>(this) || (isa<ConstantFPSDNode>(this))))
-      OS << "# D:" << isDivergent();
+      OS << " # D:" << isDivergent();
 
-    if (!G)
-      return;
-
-    DILocation *L = getDebugLoc();
-    if (!L)
-      return;
-
-    if (auto *Scope = L->getScope())
-      OS << Scope->getFilename();
-    else
-      OS << "<unknown>";
-    OS << ':' << L->getLine();
-    if (unsigned C = L->getColumn())
-      OS << ':' << C;
-
-    for (SDDbgValue *Dbg : G->GetDbgValues(this)) {
-      if (Dbg->getKind() != SDDbgValue::SDNODE || Dbg->isInvalidated())
-        continue;
-      Dbg->dump(OS);
-    }
+    if (G && !G->GetDbgValues(this).empty()) {
+      OS << " [NoOfDbgValues=" << G->GetDbgValues(this).size() << ']';
+      for (SDDbgValue *Dbg : G->GetDbgValues(this))
+        if (!Dbg->isInvalidated())
+          Dbg->print(OS);
+    } else if (getHasDebugValue())
+      OS << " [NoOfDbgValues>0]";
   }
 }
 
-LLVM_DUMP_METHOD void SDDbgValue::dump(raw_ostream &OS) const {
- OS << " DbgVal";
- if (kind==SDNODE)
-   OS << '(' << u.s.ResNo << ')';
- OS << ":\"" << Var->getName() << '"';
+LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
+  OS << " DbgVal(Order=" << getOrder() << ')';
+  if (isInvalidated()) OS << "(Invalidated)";
+  if (isEmitted()) OS << "(Emitted)";
+  switch (getKind()) {
+  case SDNODE:
+    if (getSDNode())
+      OS << "(SDNODE=" << PrintNodeId(*getSDNode()) << ':' <<  getResNo() << ')';
+    else
+      OS << "(SDNODE)";
+    break;
+  case CONST:
+    OS << "(CONST)";
+    break;
+  case FRAMEIX:
+    OS << "(FRAMEIX=" << getFrameIx() << ')';
+    break;
+  case VREG:
+    OS << "(VREG=" << getVReg() << ')';
+    break;
+  }
+  if (isIndirect()) OS << "(Indirect)";
+  OS << ":\"" << Var->getName() << '"';
 #ifndef NDEBUG
- if (Expr->getNumElements())
-   Expr->dump();
+  if (Expr->getNumElements())
+    Expr->dump();
 #endif
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void SDDbgValue::dump() const {
+  if (isInvalidated())
+    return;
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
 /// Return true if this node is so simple that we should just print it inline
 /// if it appears as an operand.
-static bool shouldPrintInline(const SDNode &Node) {
+static bool shouldPrintInline(const SDNode &Node, const SelectionDAG *G) {
+  // Avoid lots of cluttering when inline printing nodes with associated
+  // DbgValues in verbose mode.
+  if (VerboseDAGDumping && G && !G->GetDbgValues(&Node).empty())
+    return false;
   if (Node.getOpcode() == ISD::EntryToken)
     return false;
   return Node.getNumOperands() == 0;
@@ -731,7 +781,7 @@ static bool shouldPrintInline(const SDNode &Node) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   for (const SDValue &Op : N->op_values()) {
-    if (shouldPrintInline(*Op.getNode()))
+    if (shouldPrintInline(*Op.getNode(), G))
       continue;
     if (Op.getNode()->hasOneUse())
       DumpNodes(Op.getNode(), indent+2, G);
@@ -748,12 +798,24 @@ LLVM_DUMP_METHOD void SelectionDAG::dump() const {
        I != E; ++I) {
     const SDNode *N = &*I;
     if (!N->hasOneUse() && N != getRoot().getNode() &&
-        (!shouldPrintInline(*N) || N->use_empty()))
+        (!shouldPrintInline(*N, this) || N->use_empty()))
       DumpNodes(N, 2, this);
   }
 
   if (getRoot().getNode()) DumpNodes(getRoot().getNode(), 2, this);
-  dbgs() << "\n\n";
+  dbgs() << "\n";
+
+  if (VerboseDAGDumping) {
+    if (DbgBegin() != DbgEnd())
+      dbgs() << "SDDbgValues:\n";
+    for (auto *Dbg : make_range(DbgBegin(), DbgEnd()))
+      Dbg->dump();
+    if (ByvalParmDbgBegin() != ByvalParmDbgEnd())
+      dbgs() << "Byval SDDbgValues:\n";
+    for (auto *Dbg : make_range(ByvalParmDbgBegin(), ByvalParmDbgEnd()))
+      Dbg->dump();
+  }
+  dbgs() << "\n";
 }
 #endif
 
@@ -769,7 +831,7 @@ static bool printOperand(raw_ostream &OS, const SelectionDAG *G,
   if (!Value.getNode()) {
     OS << "<null>";
     return false;
-  } else if (shouldPrintInline(*Value.getNode())) {
+  } else if (shouldPrintInline(*Value.getNode(), G)) {
     OS << Value->getOperationName(G) << ':';
     Value->print_types(OS, G);
     Value->print_details(OS, G);

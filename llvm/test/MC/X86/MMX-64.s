@@ -288,34 +288,6 @@ paddd %mm4, %mm4
 // CHECK: encoding: [0x0f,0xfe,0x22]        
 paddd (%rdx), %mm4 
 
-// CHECK: paddq 485498096, %mm4 
-// CHECK: encoding: [0x0f,0xd4,0x24,0x25,0xf0,0x1c,0xf0,0x1c]        
-paddq 485498096, %mm4 
-
-// CHECK: paddq 64(%rdx), %mm4 
-// CHECK: encoding: [0x0f,0xd4,0x62,0x40]        
-paddq 64(%rdx), %mm4 
-
-// CHECK: paddq 64(%rdx,%rax,4), %mm4 
-// CHECK: encoding: [0x0f,0xd4,0x64,0x82,0x40]        
-paddq 64(%rdx,%rax,4), %mm4 
-
-// CHECK: paddq -64(%rdx,%rax,4), %mm4 
-// CHECK: encoding: [0x0f,0xd4,0x64,0x82,0xc0]        
-paddq -64(%rdx,%rax,4), %mm4 
-
-// CHECK: paddq 64(%rdx,%rax), %mm4 
-// CHECK: encoding: [0x0f,0xd4,0x64,0x02,0x40]        
-paddq 64(%rdx,%rax), %mm4 
-
-// CHECK: paddq %mm4, %mm4 
-// CHECK: encoding: [0x0f,0xd4,0xe4]        
-paddq %mm4, %mm4 
-
-// CHECK: paddq (%rdx), %mm4 
-// CHECK: encoding: [0x0f,0xd4,0x22]        
-paddq (%rdx), %mm4 
-
 // CHECK: paddsb 485498096, %mm4 
 // CHECK: encoding: [0x0f,0xec,0x24,0x25,0xf0,0x1c,0xf0,0x1c]        
 paddsb 485498096, %mm4 
@@ -736,39 +708,7 @@ pcmpgtw %mm4, %mm4
 // CHECK: encoding: [0x0f,0x65,0x22]        
 pcmpgtw (%rdx), %mm4 
 
-// CHECK: pextrw $0, %mm4, %r13d 
-// CHECK: encoding: [0x44,0x0f,0xc5,0xec,0x00]       
-pextrw $0, %mm4, %r13d 
-
-// CHECK: pinsrw $0, 485498096, %mm4 
-// CHECK: encoding: [0x0f,0xc4,0x24,0x25,0xf0,0x1c,0xf0,0x1c,0x00]       
-pinsrw $0, 485498096, %mm4 
-
-// CHECK: pinsrw $0, 64(%rdx), %mm4 
-// CHECK: encoding: [0x0f,0xc4,0x62,0x40,0x00]       
-pinsrw $0, 64(%rdx), %mm4 
-
-// CHECK: pinsrw $0, 64(%rdx,%rax,4), %mm4 
-// CHECK: encoding: [0x0f,0xc4,0x64,0x82,0x40,0x00]       
-pinsrw $0, 64(%rdx,%rax,4), %mm4 
-
-// CHECK: pinsrw $0, -64(%rdx,%rax,4), %mm4 
-// CHECK: encoding: [0x0f,0xc4,0x64,0x82,0xc0,0x00]       
-pinsrw $0, -64(%rdx,%rax,4), %mm4 
-
-// CHECK: pinsrw $0, 64(%rdx,%rax), %mm4 
-// CHECK: encoding: [0x0f,0xc4,0x64,0x02,0x40,0x00]       
-pinsrw $0, 64(%rdx,%rax), %mm4 
-
-// CHECK: pinsrw $0, %r13d, %mm4 
-// CHECK: encoding: [0x41,0x0f,0xc4,0xe5,0x00]       
-pinsrw $0, %r13d, %mm4 
-
-// CHECK: pinsrw $0, (%rdx), %mm4 
-// CHECK: encoding: [0x0f,0xc4,0x22,0x00]       
-pinsrw $0, (%rdx), %mm4 
-
-// CHECK: pmaddwd 485498096, %mm4 
+// CHECK: pmaddwd 485498096, %mm4
 // CHECK: encoding: [0x0f,0xf5,0x24,0x25,0xf0,0x1c,0xf0,0x1c]        
 pmaddwd 485498096, %mm4 
 
@@ -1387,34 +1327,6 @@ psubd %mm4, %mm4
 // CHECK: psubd (%rdx), %mm4 
 // CHECK: encoding: [0x0f,0xfa,0x22]        
 psubd (%rdx), %mm4 
-
-// CHECK: psubq 485498096, %mm4 
-// CHECK: encoding: [0x0f,0xfb,0x24,0x25,0xf0,0x1c,0xf0,0x1c]        
-psubq 485498096, %mm4 
-
-// CHECK: psubq 64(%rdx), %mm4 
-// CHECK: encoding: [0x0f,0xfb,0x62,0x40]        
-psubq 64(%rdx), %mm4 
-
-// CHECK: psubq 64(%rdx,%rax,4), %mm4 
-// CHECK: encoding: [0x0f,0xfb,0x64,0x82,0x40]        
-psubq 64(%rdx,%rax,4), %mm4 
-
-// CHECK: psubq -64(%rdx,%rax,4), %mm4 
-// CHECK: encoding: [0x0f,0xfb,0x64,0x82,0xc0]        
-psubq -64(%rdx,%rax,4), %mm4 
-
-// CHECK: psubq 64(%rdx,%rax), %mm4 
-// CHECK: encoding: [0x0f,0xfb,0x64,0x02,0x40]        
-psubq 64(%rdx,%rax), %mm4 
-
-// CHECK: psubq %mm4, %mm4 
-// CHECK: encoding: [0x0f,0xfb,0xe4]        
-psubq %mm4, %mm4 
-
-// CHECK: psubq (%rdx), %mm4 
-// CHECK: encoding: [0x0f,0xfb,0x22]        
-psubq (%rdx), %mm4 
 
 // CHECK: psubsb 485498096, %mm4 
 // CHECK: encoding: [0x0f,0xe8,0x24,0x25,0xf0,0x1c,0xf0,0x1c]        

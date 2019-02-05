@@ -1,9 +1,8 @@
 //===- ARMLegalizerInfo.cpp --------------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -89,6 +88,31 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       .legalFor({s32})
       .minScalar(0, s32);
 
+  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
+    .legalFor({{s32, s32}})
+    .clampScalar(1, s32, s32);
+
+  bool HasHWDivide = (!ST.isThumb() && ST.hasDivideInARMMode()) ||
+                     (ST.isThumb() && ST.hasDivideInThumbMode());
+  if (HasHWDivide)
+    getActionDefinitionsBuilder({G_SDIV, G_UDIV})
+        .legalFor({s32})
+        .clampScalar(0, s32, s32);
+  else
+    getActionDefinitionsBuilder({G_SDIV, G_UDIV})
+        .libcallFor({s32})
+        .clampScalar(0, s32, s32);
+
+  for (unsigned Op : {G_SREM, G_UREM}) {
+    setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
+    if (HasHWDivide)
+      setAction({Op, s32}, Lower);
+    else if (AEABI(ST))
+      setAction({Op, s32}, Custom);
+    else
+      setAction({Op, s32}, Libcall);
+  }
+
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
   getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
 
@@ -117,40 +141,23 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
-  if (ST.hasDivideInARMMode())
-    getActionDefinitionsBuilder({G_SDIV, G_UDIV})
-        .legalFor({s32})
-        .clampScalar(0, s32, s32);
-  else
-    getActionDefinitionsBuilder({G_SDIV, G_UDIV})
-        .libcallFor({s32})
-        .clampScalar(0, s32, s32);
-
-  for (unsigned Op : {G_SREM, G_UREM}) {
-    setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
-    if (ST.hasDivideInARMMode())
-      setAction({Op, s32}, Lower);
-    else if (AEABI(ST))
-      setAction({Op, s32}, Custom);
-    else
-      setAction({Op, s32}, Libcall);
-  }
-
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL}).legalFor({s32});
-
   if (ST.hasV5TOps()) {
     getActionDefinitionsBuilder(G_CTLZ)
-        .legalFor({s32})
+        .legalFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
     getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
-        .lowerFor({s32})
+        .lowerFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   } else {
     getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
-        .libcallFor({s32})
+        .libcallFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
     getActionDefinitionsBuilder(G_CTLZ)
-        .lowerFor({s32})
+        .lowerFor({s32, s32})
+        .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   }
 

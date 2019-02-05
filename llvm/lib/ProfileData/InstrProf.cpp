@@ -1,9 +1,8 @@
 //===- InstrProf.cpp - Instrumented profiling format support --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -252,11 +251,12 @@ static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
 // data, its original linkage must be non-internal.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   if (!InLTO) {
-    StringRef FileName = (StaticFuncFullModulePrefix
-                              ? F.getParent()->getName()
-                              : sys::path::filename(F.getParent()->getName()));
-    if (StaticFuncFullModulePrefix && StaticFuncStripDirNamePrefix != 0)
-      FileName = stripDirPrefix(FileName, StaticFuncStripDirNamePrefix);
+    StringRef FileName(F.getParent()->getSourceFileName());
+    uint32_t StripLevel = StaticFuncFullModulePrefix ? 0 : (uint32_t)-1;
+    if (StripLevel < StaticFuncStripDirNamePrefix)
+      StripLevel = StaticFuncStripDirNamePrefix;
+    if (StripLevel)
+      FileName = stripDirPrefix(FileName, StripLevel);
     return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
   }
 

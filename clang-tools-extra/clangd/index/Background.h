@@ -1,9 +1,8 @@
 //===--- Background.h - Build an index in a background thread ----*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -68,9 +67,7 @@ public:
   /// If BuildIndexPeriodMs is greater than 0, the symbol index will only be
   /// rebuilt periodically (one per \p BuildIndexPeriodMs); otherwise, index is
   /// rebuilt for each indexed file.
-  // FIXME: resource-dir injection should be hoisted somewhere common.
-  BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
-                  const FileSystemProvider &,
+  BackgroundIndex(Context BackgroundContext, const FileSystemProvider &,
                   const GlobalCompilationDatabase &CDB,
                   BackgroundIndexStorage::Factory IndexStorageFactory,
                   size_t BuildIndexPeriodMs = 0,
@@ -81,7 +78,6 @@ public:
   // The indexing happens in a background thread, so the symbols will be
   // available sometime later.
   void enqueue(const std::vector<std::string> &ChangedFiles);
-  void enqueue(const std::string &File);
 
   // Cause background threads to stop after ther current task, any remaining
   // tasks will be discarded.
@@ -92,14 +88,14 @@ public:
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
 private:
-  /// Given index results from a TU, only update files in \p FilesToUpdate.
-  /// Also stores new index information on IndexStorage.
+  /// Given index results from a TU, only update symbols coming from files with
+  /// different digests than \p DigestsSnapshot. Also stores new index
+  /// information on IndexStorage.
   void update(llvm::StringRef MainFile, IndexFileIn Index,
-              const llvm::StringMap<FileDigest> &FilesToUpdate,
+              const llvm::StringMap<FileDigest> &DigestsSnapshot,
               BackgroundIndexStorage *IndexStorage);
 
   // configuration
-  std::string ResourceDir;
   const FileSystemProvider &FSProvider;
   const GlobalCompilationDatabase &CDB;
   Context BackgroundContext;
@@ -118,6 +114,21 @@ private:
   std::mutex DigestsMu;
 
   BackgroundIndexStorage::Factory IndexStorageFactory;
+  struct Source {
+    std::string Path;
+    bool NeedsReIndexing;
+    Source(llvm::StringRef Path, bool NeedsReIndexing)
+        : Path(Path), NeedsReIndexing(NeedsReIndexing) {}
+  };
+  // Loads the shards for a single TU and all of its dependencies. Returns the
+  // list of sources and whether they need to be re-indexed.
+  std::vector<Source> loadShard(const tooling::CompileCommand &Cmd,
+                                BackgroundIndexStorage *IndexStorage,
+                                llvm::StringSet<> &LoadedShards);
+  // Tries to load shards for the ChangedFiles.
+  std::vector<std::pair<tooling::CompileCommand, BackgroundIndexStorage *>>
+  loadShards(std::vector<std::string> ChangedFiles);
+  void enqueue(tooling::CompileCommand Cmd, BackgroundIndexStorage *Storage);
 
   // queue management
   using Task = std::function<void()>;

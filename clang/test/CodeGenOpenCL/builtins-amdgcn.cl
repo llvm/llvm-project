@@ -536,6 +536,18 @@ void test_s_getpc(global ulong* out)
   *out = __builtin_amdgcn_s_getpc();
 }
 
+// CHECK-LABEL: @test_ds_append_lds(
+// CHECK: call i32 @llvm.amdgcn.ds.append.p3i32(i32 addrspace(3)* %ptr, i1 false)
+kernel void test_ds_append_lds(global int* out, local int* ptr) {
+  *out = __builtin_amdgcn_ds_append(ptr);
+}
+
+// CHECK-LABEL: @test_ds_consume_lds(
+// CHECK: call i32 @llvm.amdgcn.ds.consume.p3i32(i32 addrspace(3)* %ptr, i1 false)
+kernel void test_ds_consume_lds(global int* out, local int* ptr) {
+  *out = __builtin_amdgcn_ds_consume(ptr);
+}
+
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
 // CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }

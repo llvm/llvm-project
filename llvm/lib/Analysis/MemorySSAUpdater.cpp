@@ -1,9 +1,8 @@
 //===-- MemorySSAUpdater.cpp - Memory SSA Updater--------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------===//
 //
@@ -1052,7 +1051,7 @@ void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
   }
 }
 
-void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
+void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA, bool OptimizePhis) {
   assert(!MSSA->isLiveOnEntryDef(MA) &&
          "Trying to remove the live on entry def");
   // We can only delete phi nodes if they have no uses, or we can replace all
@@ -1070,6 +1069,8 @@ void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
   } else {
     NewDefTarget = cast<MemoryUseOrDef>(MA)->getDefiningAccess();
   }
+
+  SmallSetVector<MemoryPhi *, 4> PhisToCheck;
 
   // Re-point the uses at our defining access
   if (!isa<MemoryUse>(MA) && !MA->use_empty()) {
@@ -1090,6 +1091,9 @@ void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
       Use &U = *MA->use_begin();
       if (auto *MUD = dyn_cast<MemoryUseOrDef>(U.getUser()))
         MUD->resetOptimized();
+      if (OptimizePhis)
+        if (MemoryPhi *MP = dyn_cast<MemoryPhi>(U.getUser()))
+          PhisToCheck.insert(MP);
       U.set(NewDefTarget);
     }
   }
@@ -1098,6 +1102,21 @@ void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
   // are doing things here
   MSSA->removeFromLookups(MA);
   MSSA->removeFromLists(MA);
+
+  // Optionally optimize Phi uses. This will recursively remove trivial phis.
+  if (!PhisToCheck.empty()) {
+    SmallVector<WeakVH, 16> PhisToOptimize{PhisToCheck.begin(),
+                                           PhisToCheck.end()};
+    PhisToCheck.clear();
+
+    unsigned PhisSize = PhisToOptimize.size();
+    while (PhisSize-- > 0)
+      if (MemoryPhi *MP =
+              cast_or_null<MemoryPhi>(PhisToOptimize.pop_back_val())) {
+        auto OperRange = MP->operands();
+        tryRemoveTrivialPhi(MP, OperRange);
+      }
+  }
 }
 
 void MemorySSAUpdater::removeBlocks(

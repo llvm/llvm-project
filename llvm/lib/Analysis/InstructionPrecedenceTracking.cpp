@@ -1,9 +1,8 @@
 //===-- InstructionPrecedenceTracking.cpp -----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // Implements a class that is able to define some instructions as "special"
@@ -99,9 +98,17 @@ void InstructionPrecedenceTracking::validateAll() const {
 }
 #endif
 
-void InstructionPrecedenceTracking::invalidateBlock(const BasicBlock *BB) {
+void InstructionPrecedenceTracking::insertInstructionTo(const Instruction *Inst,
+                                                        const BasicBlock *BB) {
+  if (isSpecialInstruction(Inst))
+    FirstSpecialInsts.erase(BB);
   OI.invalidateBlock(BB);
-  FirstSpecialInsts.erase(BB);
+}
+
+void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
+  if (isSpecialInstruction(Inst))
+    FirstSpecialInsts.erase(Inst->getParent());
+  OI.invalidateBlock(Inst->getParent());
 }
 
 void InstructionPrecedenceTracking::clear() {

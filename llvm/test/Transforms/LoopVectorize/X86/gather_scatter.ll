@@ -47,7 +47,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; AVX512-NEXT:    [[TMP12:%.*]] = icmp sgt <16 x i32> [[WIDE_LOAD_1]], zeroinitializer
 ; AVX512-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[INDEX]], i64 [[INDEX_NEXT]]
 ; AVX512-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP13]] to <16 x i32>*
-; AVX512-NEXT:    [[WIDE_MASKED_LOAD_1:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* [[TMP14]], i32 4, <16 x i1> [[TMP12]], <16 x i32> undef)
+; AVX512-NEXT:    [[WIDE_MASKED_LOAD_1:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* nonnull [[TMP14]], i32 4, <16 x i1> [[TMP12]], <16 x i32> undef)
 ; AVX512-NEXT:    [[TMP15:%.*]] = sext <16 x i32> [[WIDE_MASKED_LOAD_1]] to <16 x i64>
 ; AVX512-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, float* [[IN]], <16 x i64> [[TMP15]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER_1:%.*]] = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> [[TMP16]], i32 4, <16 x i1> [[TMP12]], <16 x float> undef)
@@ -62,7 +62,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; AVX512-NEXT:    [[TMP22:%.*]] = icmp sgt <16 x i32> [[WIDE_LOAD_2]], zeroinitializer
 ; AVX512-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[INDEX]], i64 [[INDEX_NEXT_1]]
 ; AVX512-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP23]] to <16 x i32>*
-; AVX512-NEXT:    [[WIDE_MASKED_LOAD_2:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* [[TMP24]], i32 4, <16 x i1> [[TMP22]], <16 x i32> undef)
+; AVX512-NEXT:    [[WIDE_MASKED_LOAD_2:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* nonnull [[TMP24]], i32 4, <16 x i1> [[TMP22]], <16 x i32> undef)
 ; AVX512-NEXT:    [[TMP25:%.*]] = sext <16 x i32> [[WIDE_MASKED_LOAD_2]] to <16 x i64>
 ; AVX512-NEXT:    [[TMP26:%.*]] = getelementptr inbounds float, float* [[IN]], <16 x i64> [[TMP25]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER_2:%.*]] = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> [[TMP26]], i32 4, <16 x i1> [[TMP22]], <16 x float> undef)
@@ -77,7 +77,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; AVX512-NEXT:    [[TMP32:%.*]] = icmp sgt <16 x i32> [[WIDE_LOAD_3]], zeroinitializer
 ; AVX512-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, i32* [[INDEX]], i64 [[INDEX_NEXT_2]]
 ; AVX512-NEXT:    [[TMP34:%.*]] = bitcast i32* [[TMP33]] to <16 x i32>*
-; AVX512-NEXT:    [[WIDE_MASKED_LOAD_3:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* [[TMP34]], i32 4, <16 x i1> [[TMP32]], <16 x i32> undef)
+; AVX512-NEXT:    [[WIDE_MASKED_LOAD_3:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* nonnull [[TMP34]], i32 4, <16 x i1> [[TMP32]], <16 x i32> undef)
 ; AVX512-NEXT:    [[TMP35:%.*]] = sext <16 x i32> [[WIDE_MASKED_LOAD_3]] to <16 x i64>
 ; AVX512-NEXT:    [[TMP36:%.*]] = getelementptr inbounds float, float* [[IN]], <16 x i64> [[TMP35]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER_3:%.*]] = call <16 x float> @llvm.masked.gather.v16f32.v16p0f32(<16 x float*> [[TMP36]], i32 4, <16 x i1> [[TMP32]], <16 x float> undef)
@@ -117,7 +117,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; FVW2-NEXT:    [[TMP12:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD_1]], zeroinitializer
 ; FVW2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[INDEX]], i64 [[INDEX_NEXT]]
 ; FVW2-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP13]] to <2 x i32>*
-; FVW2-NEXT:    [[WIDE_MASKED_LOAD_1:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* [[TMP14]], i32 4, <2 x i1> [[TMP12]], <2 x i32> undef)
+; FVW2-NEXT:    [[WIDE_MASKED_LOAD_1:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* nonnull [[TMP14]], i32 4, <2 x i1> [[TMP12]], <2 x i32> undef)
 ; FVW2-NEXT:    [[TMP15:%.*]] = sext <2 x i32> [[WIDE_MASKED_LOAD_1]] to <2 x i64>
 ; FVW2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, float* [[IN]], <2 x i64> [[TMP15]]
 ; FVW2-NEXT:    [[WIDE_MASKED_GATHER_1:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP16]], i32 4, <2 x i1> [[TMP12]], <2 x float> undef)
@@ -132,7 +132,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; FVW2-NEXT:    [[TMP22:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD_2]], zeroinitializer
 ; FVW2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, i32* [[INDEX]], i64 [[INDEX_NEXT_1]]
 ; FVW2-NEXT:    [[TMP24:%.*]] = bitcast i32* [[TMP23]] to <2 x i32>*
-; FVW2-NEXT:    [[WIDE_MASKED_LOAD_2:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* [[TMP24]], i32 4, <2 x i1> [[TMP22]], <2 x i32> undef)
+; FVW2-NEXT:    [[WIDE_MASKED_LOAD_2:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* nonnull [[TMP24]], i32 4, <2 x i1> [[TMP22]], <2 x i32> undef)
 ; FVW2-NEXT:    [[TMP25:%.*]] = sext <2 x i32> [[WIDE_MASKED_LOAD_2]] to <2 x i64>
 ; FVW2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds float, float* [[IN]], <2 x i64> [[TMP25]]
 ; FVW2-NEXT:    [[WIDE_MASKED_GATHER_2:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP26]], i32 4, <2 x i1> [[TMP22]], <2 x float> undef)
@@ -147,7 +147,7 @@ define void @foo1(float* noalias %in, float* noalias %out, i32* noalias %trigger
 ; FVW2-NEXT:    [[TMP32:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD_3]], zeroinitializer
 ; FVW2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i32, i32* [[INDEX]], i64 [[INDEX_NEXT_2]]
 ; FVW2-NEXT:    [[TMP34:%.*]] = bitcast i32* [[TMP33]] to <2 x i32>*
-; FVW2-NEXT:    [[WIDE_MASKED_LOAD_3:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* [[TMP34]], i32 4, <2 x i1> [[TMP32]], <2 x i32> undef)
+; FVW2-NEXT:    [[WIDE_MASKED_LOAD_3:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* nonnull [[TMP34]], i32 4, <2 x i1> [[TMP32]], <2 x i32> undef)
 ; FVW2-NEXT:    [[TMP35:%.*]] = sext <2 x i32> [[WIDE_MASKED_LOAD_3]] to <2 x i64>
 ; FVW2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds float, float* [[IN]], <2 x i64> [[TMP35]]
 ; FVW2-NEXT:    [[WIDE_MASKED_GATHER_3:%.*]] = call <2 x float> @llvm.masked.gather.v2f32.v2p0f32(<2 x float*> [[TMP36]], i32 4, <2 x i1> [[TMP32]], <2 x float> undef)

@@ -1,9 +1,8 @@
 //===-- llvm-exegesis.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -57,16 +56,19 @@ static cl::opt<std::string> SnippetsFile("snippets-file",
 static cl::opt<std::string> BenchmarkFile("benchmarks-file", cl::desc(""),
                                           cl::init(""));
 
-static cl::opt<exegesis::InstructionBenchmark::ModeE>
-    BenchmarkMode("mode", cl::desc("the mode to run"),
-                  cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency,
-                                        "latency", "Instruction Latency"),
-                             clEnumValN(exegesis::InstructionBenchmark::Uops,
-                                        "uops", "Uop Decomposition"),
-                             // When not asking for a specific benchmark mode,
-                             // we'll analyse the results.
-                             clEnumValN(exegesis::InstructionBenchmark::Unknown,
-                                        "analysis", "Analysis")));
+static cl::opt<exegesis::InstructionBenchmark::ModeE> BenchmarkMode(
+    "mode", cl::desc("the mode to run"),
+    cl::values(clEnumValN(exegesis::InstructionBenchmark::Latency, "latency",
+                          "Instruction Latency"),
+               clEnumValN(exegesis::InstructionBenchmark::InverseThroughput,
+                          "inverse_throughput",
+                          "Instruction Inverse Throughput"),
+               clEnumValN(exegesis::InstructionBenchmark::Uops, "uops",
+                          "Uop Decomposition"),
+               // When not asking for a specific benchmark mode,
+               // we'll analyse the results.
+               clEnumValN(exegesis::InstructionBenchmark::Unknown, "analysis",
+                          "Analysis")));
 
 static cl::opt<unsigned>
     NumRepetitions("num-repetitions",
@@ -89,10 +91,10 @@ static cl::opt<float>
 
 static cl::opt<std::string>
     AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
-                               cl::init("-"));
+                               cl::init(""));
 static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
-                                      cl::desc(""), cl::init("-"));
+                                      cl::desc(""), cl::init(""));
 
 static cl::opt<std::string>
     CpuName("mcpu",
@@ -401,6 +403,13 @@ static void maybeRunAnalysis(const Analysis &Analyzer, const std::string &Name,
 static void analysisMain() {
   if (BenchmarkFile.empty())
     llvm::report_fatal_error("--benchmarks-file must be set.");
+
+  if (AnalysisClustersOutputFile.empty() &&
+      AnalysisInconsistenciesOutputFile.empty()) {
+    llvm::report_fatal_error(
+        "At least one of --analysis-clusters-output-file and "
+        "--analysis-inconsistencies-output-file must be specified.");
+  }
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();

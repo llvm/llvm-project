@@ -30,8 +30,12 @@ int teams_argument_global(int n) {
   // CK1: alloca i32,
   // CK1: [[TE:%.+]] = alloca i32,
   // CK1: [[TH:%.+]] = alloca i32,
+  // CK1: alloca i32,
+  // CK1: alloca i32,
+  // CK1: alloca i32,
   // CK1: [[TE_CAST:%.+]] = alloca i{{32|64}},
   // CK1: [[TH_CAST:%.+]] = alloca i{{32|64}},
+  // CK1: call void @__kmpc_push_target_tripcount(i64 -1, i64 %{{.+}})
   // CK1: [[TE_PAR:%.+]] = load{{.+}}, {{.+}} [[TE_CAST]],
   // CK1: [[TH_PAR:%.+]] = load{{.+}}, {{.+}} [[TH_CAST]],
 

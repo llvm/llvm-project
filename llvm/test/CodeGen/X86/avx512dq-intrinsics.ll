@@ -212,7 +212,7 @@ define <8 x i64>@test_int_x86_avx512_mask_cvt_ps2uqq_512(<8 x float> %x0, <8 x i
   ret <8 x i64> %res2
 }
 
-declare <8 x double> @llvm.x86.avx512.mask.cvtqq2pd.512(<8 x i64>, <8 x double>, i8, i32)
+declare <8 x double> @llvm.x86.avx512.sitofp.round.v8f64.v8i64(<8 x i64>, i32)
 
 define <8 x double>@test_int_x86_avx512_mask_cvt_qq2pd_512(<8 x i64> %x0, <8 x double> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_qq2pd_512:
@@ -230,13 +230,15 @@ define <8 x double>@test_int_x86_avx512_mask_cvt_qq2pd_512(<8 x i64> %x0, <8 x d
 ; X64-NEXT:    vcvtqq2pd {rn-sae}, %zmm0, %zmm0 # encoding: [0x62,0xf1,0xfe,0x18,0xe6,0xc0]
 ; X64-NEXT:    vaddpd %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf1,0xf5,0x48,0x58,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.mask.cvtqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 -1, i32 0)
-  %res2 = fadd <8 x double> %res, %res1
+  %cvt = sitofp <8 x i64> %x0 to <8 x double>
+  %1 = bitcast i8 %x2 to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %cvt, <8 x double> %x1
+  %3 = call <8 x double> @llvm.x86.avx512.sitofp.round.v8f64.v8i64(<8 x i64> %x0, i32 0)
+  %res2 = fadd <8 x double> %2, %3
   ret <8 x double> %res2
 }
 
-declare <8 x float> @llvm.x86.avx512.mask.cvtqq2ps.512(<8 x i64>, <8 x float>, i8, i32)
+declare <8 x float> @llvm.x86.avx512.sitofp.round.v8f32.v8i64(<8 x i64>, i32)
 
 define <8 x float>@test_int_x86_avx512_mask_cvt_qq2ps_512(<8 x i64> %x0, <8 x float> %x1, i8 %x2) {
 ; X86-AVX512DQ-LABEL: test_int_x86_avx512_mask_cvt_qq2ps_512:
@@ -270,9 +272,11 @@ define <8 x float>@test_int_x86_avx512_mask_cvt_qq2ps_512(<8 x i64> %x0, <8 x fl
 ; X64-AVX512DQVL-NEXT:    vcvtqq2ps {rn-sae}, %zmm0, %ymm0 # encoding: [0x62,0xf1,0xfc,0x18,0x5b,0xc0]
 ; X64-AVX512DQVL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xf4,0x58,0xc0]
 ; X64-AVX512DQVL-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.cvtqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 -1, i32 0)
-  %res2 = fadd <8 x float> %res, %res1
+  %cvt = sitofp <8 x i64> %x0 to <8 x float>
+  %1 = bitcast i8 %x2 to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %cvt, <8 x float> %x1
+  %3 = call <8 x float> @llvm.x86.avx512.sitofp.round.v8f32.v8i64(<8 x i64> %x0, i32 0)
+  %res2 = fadd <8 x float> %2, %3
   ret <8 x float> %res2
 }
 
@@ -372,7 +376,7 @@ define <8 x i64>@test_int_x86_avx512_mask_cvtt_ps2uqq_512(<8 x float> %x0, <8 x 
   ret <8 x i64> %res2
 }
 
-declare <8 x double> @llvm.x86.avx512.mask.cvtuqq2pd.512(<8 x i64>, <8 x double>, i8, i32)
+declare <8 x double> @llvm.x86.avx512.uitofp.round.v8f64.v8i64(<8 x i64>, i32)
 
 define <8 x double>@test_int_x86_avx512_mask_cvt_uqq2pd_512(<8 x i64> %x0, <8 x double> %x1, i8 %x2) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_uqq2pd_512:
@@ -390,13 +394,15 @@ define <8 x double>@test_int_x86_avx512_mask_cvt_uqq2pd_512(<8 x i64> %x0, <8 x 
 ; X64-NEXT:    vcvtuqq2pd {rn-sae}, %zmm0, %zmm0 # encoding: [0x62,0xf1,0xfe,0x18,0x7a,0xc0]
 ; X64-NEXT:    vaddpd %zmm0, %zmm1, %zmm0 # encoding: [0x62,0xf1,0xf5,0x48,0x58,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x double> @llvm.x86.avx512.mask.cvtuqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x double> @llvm.x86.avx512.mask.cvtuqq2pd.512(<8 x i64> %x0, <8 x double> %x1, i8 -1, i32 0)
-  %res2 = fadd <8 x double> %res, %res1
+  %cvt = uitofp <8 x i64> %x0 to <8 x double>
+  %1 = bitcast i8 %x2 to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %cvt, <8 x double> %x1
+  %3 = call <8 x double> @llvm.x86.avx512.uitofp.round.v8f64.v8i64(<8 x i64> %x0, i32 0)
+  %res2 = fadd <8 x double> %2, %3
   ret <8 x double> %res2
 }
 
-declare <8 x float> @llvm.x86.avx512.mask.cvtuqq2ps.512(<8 x i64>, <8 x float>, i8, i32)
+declare <8 x float> @llvm.x86.avx512.uitofp.round.v8f32.v8i64(<8 x i64>, i32)
 
 define <8 x float>@test_int_x86_avx512_mask_cvt_uqq2ps_512(<8 x i64> %x0, <8 x float> %x1, i8 %x2) {
 ; X86-AVX512DQ-LABEL: test_int_x86_avx512_mask_cvt_uqq2ps_512:
@@ -430,9 +436,11 @@ define <8 x float>@test_int_x86_avx512_mask_cvt_uqq2ps_512(<8 x i64> %x0, <8 x f
 ; X64-AVX512DQVL-NEXT:    vcvtuqq2ps {rn-sae}, %zmm0, %ymm0 # encoding: [0x62,0xf1,0xff,0x18,0x7a,0xc0]
 ; X64-AVX512DQVL-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xf4,0x58,0xc0]
 ; X64-AVX512DQVL-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.cvtuqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 %x2, i32 4)
-  %res1 = call <8 x float> @llvm.x86.avx512.mask.cvtuqq2ps.512(<8 x i64> %x0, <8 x float> %x1, i8 -1, i32 0)
-  %res2 = fadd <8 x float> %res, %res1
+  %cvt = uitofp <8 x i64> %x0 to <8 x float>
+  %1 = bitcast i8 %x2 to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x float> %cvt, <8 x float> %x1
+  %3 = call <8 x float> @llvm.x86.avx512.uitofp.round.v8f32.v8i64(<8 x i64> %x0, i32 0)
+  %res2 = fadd <8 x float> %2, %3
   ret <8 x float> %res2
 }
 

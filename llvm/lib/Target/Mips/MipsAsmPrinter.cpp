@@ -1,9 +1,8 @@
 //===- MipsAsmPrinter.cpp - Mips LLVM Assembly Printer --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -67,6 +66,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mips-asm-printer"
+
+extern cl::opt<bool> EmitJalrReloc;
 
 MipsTargetStreamer &MipsAsmPrinter::getTargetStreamer() const {
   return static_cast<MipsTargetStreamer &>(*OutStreamer->getTargetStreamer());
@@ -148,6 +149,40 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
   EmitToStreamer(OutStreamer, TmpInst0);
 }
 
+// If there is an MO_JALR operand, insert:
+//
+// .reloc tmplabel, R_{MICRO}MIPS_JALR, symbol
+// tmplabel:
+//
+// This is an optimization hint for the linker which may then replace
+// an indirect call with a direct branch.
+static void emitDirectiveRelocJalr(const MachineInstr &MI,
+                                   MCContext &OutContext,
+                                   TargetMachine &TM,
+                                   MCStreamer &OutStreamer,
+                                   const MipsSubtarget &Subtarget) {
+  for (unsigned int I = MI.getDesc().getNumOperands(), E = MI.getNumOperands();
+       I < E; ++I) {
+    MachineOperand MO = MI.getOperand(I);
+    if (MO.isMCSymbol() && (MO.getTargetFlags() & MipsII::MO_JALR)) {
+      MCSymbol *Callee = MO.getMCSymbol();
+      if (Callee && !Callee->getName().empty()) {
+        MCSymbol *OffsetLabel = OutContext.createTempSymbol();
+        const MCExpr *OffsetExpr =
+            MCSymbolRefExpr::create(OffsetLabel, OutContext);
+        const MCExpr *CaleeExpr =
+            MCSymbolRefExpr::create(Callee, OutContext);
+        OutStreamer.EmitRelocDirective
+            (*OffsetExpr,
+             Subtarget.inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
+             CaleeExpr, SMLoc(), *TM.getMCSubtargetInfo());
+        OutStreamer.EmitLabel(OffsetLabel);
+        return;
+      }
+    }
+  }
+}
+
 void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MipsTargetStreamer &TS = getTargetStreamer();
   unsigned Opc = MI->getOpcode();
@@ -205,6 +240,11 @@ void MipsAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case Mips::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(*MI);
     return;
+  }
+
+  if (EmitJalrReloc &&
+      (MI->isReturn() || MI->isCall() || MI->isIndirectBranch())) {
+    emitDirectiveRelocJalr(*MI, OutContext, TM, *OutStreamer, *Subtarget);
   }
 
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();

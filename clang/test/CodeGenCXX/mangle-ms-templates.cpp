@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=i386-pc-win32 | FileCheck %s
 // RUN: %clang_cc1 -std=c++11 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
 
 template<typename T>
 class Class {

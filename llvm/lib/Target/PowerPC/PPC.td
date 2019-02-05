@@ -1,9 +1,8 @@
 //===-- PPC.td - Describe the PowerPC Target Machine -------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -191,6 +190,13 @@ def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
                                         "Enable POWER9 vector instructions",
                                         [FeatureISA3_0, FeatureP8Vector,
                                          FeatureP9Altivec]>;
+// A separate feature for this even though it is equivalent to P9Vector
+// because this is a feature of the implementation rather than the architecture
+// and may go away with future CPU's.
+def FeatureVectorsUseTwoUnits : SubtargetFeature<"vectors-use-two-units",
+                                                 "VectorsUseTwoUnits",
+                                                 "true",
+                                                 "Vectors use two units">;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -223,7 +229,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> Power8FeatureList =
       !listconcat(Power7FeatureList, Power8SpecificFeatures);
   list<SubtargetFeature> Power9SpecificFeatures =
-      [DirectivePwr9, FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0];
+      [DirectivePwr9, FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0,
+       FeatureVectorsUseTwoUnits];
   list<SubtargetFeature> Power9FeatureList =
       !listconcat(Power8FeatureList, Power9SpecificFeatures);
 }

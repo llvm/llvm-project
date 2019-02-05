@@ -105,10 +105,10 @@ int main(void) {
   // CHECK: test1: 'e303e49b34f981c2740cdf809200d51b'
   // CHECK: test2: 'e303e49b34f981c2740cdf809200d51b'
   // CHECK: test3: 'e303e49b34f981c2740cdf809200d51b'
-  // CHECK: test4: 'a409cff8627afa00f3b563cf5f09af05'
-  // CHECK: test5: 'a409cff8627afa00f3b563cf5f09af05'
-  // CHECK: test6: '{{.*}}'
-  // CHECK: test7: '{{.*}}'
+  // CHECK: test4: '{{.*}}'
+  // CHECK: test5: '{{.*}}'
+  // CHECK: test6: 'e303e49b34f981c2740cdf809200d51b'
+  // CHECK: test7: 'e303e49b34f981c2740cdf809200d51b'
 
   return 0;
 }

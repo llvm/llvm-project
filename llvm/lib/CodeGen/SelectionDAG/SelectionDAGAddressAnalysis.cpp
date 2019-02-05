@@ -1,9 +1,8 @@
 //==- llvm/CodeGen/SelectionDAGAddressAnalysis.cpp - DAG Address Analysis --==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -178,3 +177,22 @@ BaseIndexOffset BaseIndexOffset::match(const LSBaseSDNode *N,
   }
   return BaseIndexOffset(Base, Index, Offset, IsIndexSignExt);
 }
+
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+LLVM_DUMP_METHOD void BaseIndexOffset::dump() const {
+  print(dbgs());
+}
+
+void BaseIndexOffset::print(raw_ostream& OS) const {
+  OS << "BaseIndexOffset base=[";
+  Base->print(OS);
+  OS << "] index=[";
+  if (Index)
+    Index->print(OS);
+  OS << "] offset=" << Offset;
+}
+
+#endif
+

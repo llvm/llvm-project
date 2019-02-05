@@ -1,0 +1,20 @@
+# RUN: echo -n abcd > %t.x-txt
+# Preserve input to verify it is not modified.
+# RUN: cp %t.x-txt %t-copy.txt
+# RUN: llvm-objcopy -I binary -B i386 -O elf64-x86-64 %t.x-txt %t.o
+# RUN: llvm-readobj --file-headers %t.o | FileCheck %s
+# RUN: cmp %t.x-txt %t-copy.txt
+
+# Many uses of objcopy use no spaces in the flags, make sure that also works.
+# RUN: llvm-objcopy -Ibinary -Bi386 -Oelf64-x86-64 %t.x-txt %t-no-spaces.o
+# RUN: cmp %t.o %t-no-spaces.o
+
+# CHECK:      Format: ELF64-x86-64
+# CHECK-NEXT: Arch: x86_64
+# CHECK-NEXT: AddressSize: 64bit
+
+# CHECK: Class: 64-bit
+# CHECK: DataEncoding: LittleEndian
+# CHECK: Machine: EM_X86_64
+# CHECK: HeaderSize: 64
+# CHECK: SectionHeaderEntrySize: 64

@@ -1,4 +1,4 @@
-# UNSUPPORTED: windows
+# UNSUPPORTED: system-windows
 
 # RUN: %clangxx %p/Inputs/call-function.cpp -g -o %t
 

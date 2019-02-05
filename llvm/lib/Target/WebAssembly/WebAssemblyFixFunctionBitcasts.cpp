@@ -1,9 +1,8 @@
 //===-- WebAssemblyFixFunctionBitcasts.cpp - Fix function bitcasts --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -35,11 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-fix-function-bitcasts"
-
-static cl::opt<bool>
-    TemporaryWorkarounds("wasm-temporary-workarounds",
-                         cl::desc("Apply certain temporary workarounds"),
-                         cl::init(true), cl::Hidden);
 
 namespace {
 class FixFunctionBitcasts final : public ModulePass {
@@ -227,7 +221,20 @@ static Function *CreateWrapper(Function *F, FunctionType *Ty) {
   return Wrapper;
 }
 
+// Test whether a main function with type FuncTy should be rewritten to have
+// type MainTy.
+bool ShouldFixMainFunction(FunctionType *FuncTy, FunctionType *MainTy) {
+  // Only fix the main function if it's the standard zero-arg form. That way,
+  // the standard cases will work as expected, and users will see signature
+  // mismatches from the linker for non-standard cases.
+  return FuncTy->getReturnType() == MainTy->getReturnType() &&
+         FuncTy->getNumParams() == 0 &&
+         !FuncTy->isVarArg();
+}
+
 bool FixFunctionBitcasts::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "********** Fix Function Bitcasts **********\n");
+
   Function *Main = nullptr;
   CallInst *CallMain = nullptr;
   SmallVector<std::pair<Use *, Function *>, 0> Uses;
@@ -241,21 +248,21 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     // "int main(int argc, char *argv[])", create an artificial call with it
     // bitcasted to that type so that we generate a wrapper for it, so that
     // the C runtime can call it.
-    if (!TemporaryWorkarounds && !F.isDeclaration() && F.getName() == "main") {
+    if (F.getName() == "main") {
       Main = &F;
       LLVMContext &C = M.getContext();
       Type *MainArgTys[] = {Type::getInt32Ty(C),
                             PointerType::get(Type::getInt8PtrTy(C), 0)};
       FunctionType *MainTy = FunctionType::get(Type::getInt32Ty(C), MainArgTys,
                                                /*isVarArg=*/false);
-      if (F.getFunctionType() != MainTy) {
+      if (ShouldFixMainFunction(F.getFunctionType(), MainTy)) {
         LLVM_DEBUG(dbgs() << "Found `main` function with incorrect type: "
                           << *F.getFunctionType() << "\n");
         Value *Args[] = {UndefValue::get(MainArgTys[0]),
                          UndefValue::get(MainArgTys[1])};
         Value *Casted =
             ConstantExpr::getBitCast(Main, PointerType::get(MainTy, 0));
-        CallMain = CallInst::Create(Casted, Args, "call_main");
+        CallMain = CallInst::Create(MainTy, Casted, Args, "call_main");
         Use *UseMain = &CallMain->getOperandUse(2);
         Uses.push_back(std::make_pair(UseMain, &F));
       }
@@ -296,12 +303,18 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     Main->setName("__original_main");
     Function *MainWrapper =
         cast<Function>(CallMain->getCalledValue()->stripPointerCasts());
-    MainWrapper->setName("main");
-    MainWrapper->setLinkage(Main->getLinkage());
-    MainWrapper->setVisibility(Main->getVisibility());
-    Main->setLinkage(Function::PrivateLinkage);
-    Main->setVisibility(Function::DefaultVisibility);
     delete CallMain;
+    if (Main->isDeclaration()) {
+      // The wrapper is not needed in this case as we don't need to export
+      // it to anyone else.
+      MainWrapper->eraseFromParent();
+    } else {
+      // Otherwise give the wrapper the same linkage as the original main
+      // function, so that it can be called from the same places.
+      MainWrapper->setName("main");
+      MainWrapper->setLinkage(Main->getLinkage());
+      MainWrapper->setVisibility(Main->getVisibility());
+    }
   }
 
   return true;

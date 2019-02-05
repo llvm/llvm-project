@@ -1,9 +1,8 @@
 //===- dsymutil.cpp - Debug info dumping utility for llvm -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -59,6 +58,8 @@ static opt<std::string>
     OutputFileOpt("o",
                   desc("Specify the output file. default: <input file>.dwarf"),
                   value_desc("filename"), cat(DsymCategory));
+static alias OutputFileOptA("out", desc("Alias for -o"),
+                            aliasopt(OutputFileOpt));
 
 static opt<std::string> OsoPrependPath(
     "oso-prepend-path",
@@ -99,6 +100,11 @@ static opt<bool> Update(
          "tables and other DWARF optimizations."),
     init(false), cat(DsymCategory));
 static alias UpdateA("u", desc("Alias for --update"), aliasopt(Update));
+
+static opt<std::string> SymbolMap(
+    "symbol-map",
+    desc("Updates the existing dSYMs inplace using symbol map specified."),
+    value_desc("bcsymbolmap"), cat(DsymCategory));
 
 static cl::opt<AccelTableKind> AcceleratorTable(
     "accelerator", cl::desc("Output accelerator tables."),
@@ -273,8 +279,11 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
 }
 
 static Expected<std::string> getOutputFileName(llvm::StringRef InputFile) {
+  if (OutputFileOpt == "-")
+    return OutputFileOpt;
+
   // When updating, do in place replacement.
-  if (OutputFileOpt.empty() && Update)
+  if (OutputFileOpt.empty() && (Update || !SymbolMap.empty()))
     return InputFile;
 
   // If a flat dSYM has been requested, things are pretty simple.
@@ -324,6 +333,9 @@ static Expected<LinkOptions> getOptions() {
   Options.NoTimestamp = NoTimestamp;
   Options.PrependPath = OsoPrependPath;
   Options.TheAccelTableKind = AcceleratorTable;
+
+  if (!SymbolMap.empty())
+    Options.Update = true;
 
   if (Assembly)
     Options.FileType = OutputFileType::Assembly;
@@ -443,6 +455,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (InputFiles.size() > 1 && !SymbolMap.empty() &&
+      !llvm::sys::fs::is_directory(SymbolMap)) {
+    WithColor::error() << "when unobfuscating multiple files, --symbol-map "
+                       << "needs to point to a directory.\n";
+    return 1;
+  }
+
   if (getenv("RC_DEBUG_OPTIONS"))
     PaperTrailWarnings = true;
 
@@ -456,6 +475,8 @@ int main(int argc, char **argv) {
       WithColor::error() << "unsupported cpu architecture: '" << Arch << "'\n";
       return 1;
     }
+
+  SymbolMapLoader SymMapLoader(SymbolMap);
 
   for (auto &InputFile : *InputsOrErr) {
     // Dump the symbol table for each input file and requested arch
@@ -510,6 +531,9 @@ int main(int argc, char **argv) {
 
       if (DumpDebugMap)
         continue;
+
+      if (!SymbolMap.empty())
+        OptionsOrErr->Translator = SymMapLoader.Load(InputFile, *Map);
 
       if (Map->begin() == Map->end())
         WithColor::warning()

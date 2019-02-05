@@ -1,9 +1,8 @@
 //===-- NVPTXTargetMachine.cpp - Define TargetMachine for NVPTX -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -68,6 +67,7 @@ void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry&);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerArgsPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
+void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 
 } // end namespace llvm
 
@@ -87,6 +87,7 @@ extern "C" void LLVMInitializeNVPTXTarget() {
   initializeNVPTXLowerArgsPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerAggrCopiesPass(PR);
+  initializeNVPTXProxyRegErasurePass(PR);
 }
 
 static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
@@ -160,6 +161,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addMachineSSAOptimization() override;
 
@@ -299,6 +301,11 @@ bool NVPTXPassConfig::addInstSelector() {
     addPass(createNVPTXReplaceImageHandlesPass());
 
   return false;
+}
+
+void NVPTXPassConfig::addPreRegAlloc() {
+  // Remove Proxy Register pseudo instructions used to keep `callseq_end` alive.
+  addPass(createNVPTXProxyRegErasurePass());
 }
 
 void NVPTXPassConfig::addPostRegAlloc() {

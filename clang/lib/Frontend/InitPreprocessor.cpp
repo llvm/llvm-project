@@ -1,9 +1,8 @@
 //===--- InitPreprocessor.cpp - PP initialization code. ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -543,6 +542,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   // C++20 features.
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "201811L");
+  Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
 
   // TS features.
   if (LangOpts.ConceptsTS)

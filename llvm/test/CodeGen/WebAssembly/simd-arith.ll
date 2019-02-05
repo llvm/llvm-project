@@ -1,13 +1,13 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-unimplemented-simd -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128,SIMD128-SLOW
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-unimplemented-simd -mattr=+simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128,SIMD128-FAST
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+unimplemented-simd128 | FileCheck %s --check-prefixes CHECK,SIMD128,SIMD128-SLOW
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+unimplemented-simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128,SIMD128-FAST
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128-VM
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,SIMD128-VM
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=-simd128 | FileCheck %s --check-prefixes CHECK,NO-SIMD128
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=-simd128 -fast-isel | FileCheck %s --check-prefixes CHECK,NO-SIMD128
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefixes CHECK,NO-SIMD128
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -fast-isel | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
 ; check that a non-test run (including explicit locals pass) at least finishes
-; RUN: llc < %s -O0 -wasm-enable-unimplemented-simd -mattr=+simd128,+sign-ext
-; RUN: llc < %s -O2 -wasm-enable-unimplemented-simd -mattr=+simd128,+sign-ext
+; RUN: llc < %s -O0 -mattr=+unimplemented-simd128
+; RUN: llc < %s -O2 -mattr=+unimplemented-simd128
 
 ; Test that basic SIMD128 arithmetic operations assemble as expected.
 
@@ -90,7 +90,11 @@ define <16 x i8> @shl_const_v16i8(<16 x i8> %v) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shl_vec_v16i8 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 7{{$}}
+; SIMD128-NEXT: i8x16.splat $push[[M1:[0-9]+]]=, $pop[[M0]]{{$}}
+; SIMD128-NEXT: v128.and $push[[M2:[0-9]+]]=, $1, $pop[[M1]]{{$}}
+; SIMD128-NEXT: local.tee $push[[M:[0-9]+]]=, $1=, $pop[[M2]]{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $pop[[M]], 0{{$}}
 ; SIMD128-NEXT: i32.shl $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; SIMD128-NEXT: i8x16.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; Skip 14 lanes
@@ -122,22 +126,18 @@ define <16 x i8> @shr_s_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shr_s_vec_v16i8 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 24{{$}}
-; SIMD128-NEXT: i32.shl $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
-; SIMD128-NEXT: i32.const $push[[L3:[0-9]+]]=, 24{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_u $push[[L5:[0-9]+]]=, $1, 0{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L6:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
-; SIMD128-NEXT: i8x16.splat $push[[L7:[0-9]+]]=, $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 7{{$}}
+; SIMD128-NEXT: i8x16.splat $push[[M1:[0-9]+]]=, $pop[[M0]]{{$}}
+; SIMD128-NEXT: v128.and $push[[M2:[0-9]+]]=, $1, $pop[[M1]]{{$}}
+; SIMD128-NEXT: local.tee $push[[M:[0-9]+]]=, $1=, $pop[[M2]]{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $pop[[M]], 0{{$}}
+; SIMD128-NEXT: i32.shr_s $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: i8x16.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; Skip 14 lanes
-; SIMD128:      i8x16.extract_lane_s $push[[L7:[0-9]+]]=, $0, 15{{$}}
-; SIMD128-NEXT: i32.const $push[[L8:[0-9]+]]=, 24{{$}}
-; SIMD128-NEXT: i32.shl $push[[L9:[0-9]+]]=, $pop[[L7]], $pop[[L8]]{{$}}
-; SIMD128-NEXT: i32.const $push[[L10:[0-9]+]]=, 24{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L11:[0-9]+]]=, $pop[[L9]], $pop[[L10]]{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_u $push[[L12:[0-9]+]]=, $1, 15{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L13:[0-9]+]]=, $pop[[L11]], $pop[[L12]]{{$}}
-; SIMD128-NEXT: i8x16.replace_lane $push[[R:[0-9]+]]=, $pop[[L14:[0-9]+]], 15, $pop[[L13]]{{$}}
+; SIMD128:      i8x16.extract_lane_s $push[[L0:[0-9]+]]=, $0, 15{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $1, 15{{$}}
+; SIMD128-NEXT: i32.shr_s $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: i8x16.replace_lane $push[[R:[0-9]+]]=, $pop{{[0-9]+}}, 15, $pop[[L2]]{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @shr_s_vec_v16i8(<16 x i8> %v, <16 x i8> %x) {
   %a = ashr <16 x i8> %v, %x
@@ -162,7 +162,11 @@ define <16 x i8> @shr_u_v16i8(<16 x i8> %v, i8 %x) {
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shr_u_vec_v16i8 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i8x16.extract_lane_u $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 7{{$}}
+; SIMD128-NEXT: i8x16.splat $push[[M1:[0-9]+]]=, $pop[[M0]]{{$}}
+; SIMD128-NEXT: v128.and $push[[M2:[0-9]+]]=, $1, $pop[[M1]]{{$}}
+; SIMD128-NEXT: local.tee $push[[M:[0-9]+]]=, $1=, $pop[[M2]]{{$}}
+; SIMD128-NEXT: i8x16.extract_lane_u $push[[L1:[0-9]+]]=, $pop[[M]], 0{{$}}
 ; SIMD128-NEXT: i32.shr_u $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; SIMD128-NEXT: i8x16.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; Skip 14 lanes
@@ -312,7 +316,11 @@ define <8 x i16> @shl_const_v8i16(<8 x i16> %v) {
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .functype shl_vec_v8i16 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i16x8.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 15{{$}}
+; SIMD128-NEXT: i16x8.splat $push[[M1:[0-9]+]]=, $pop[[M0]]{{$}}
+; SIMD128-NEXT: v128.and $push[[M2:[0-9]+]]=, $1, $pop[[M1]]{{$}}
+; SIMD128-NEXT: local.tee $push[[M:[0-9]+]]=, $1=, $pop[[M2]]{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $pop[[M]], 0{{$}}
 ; SIMD128-NEXT: i32.shl $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; SIMD128-NEXT: i16x8.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; Skip 6 lanes
@@ -343,22 +351,18 @@ define <8 x i16> @shr_s_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .functype shr_s_vec_v8i16 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i16x8.extract_lane_s $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
-; SIMD128-NEXT: i32.shl $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
-; SIMD128-NEXT: i32.const $push[[L3:[0-9]+]]=, 16{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_u $push[[L5:[0-9]+]]=, $1, 0{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L6:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
-; SIMD128-NEXT: i16x8.splat $push[[L7:[0-9]+]]=, $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 15{{$}}
+; SIMD128-NEXT: i16x8.splat $push[[M1:[0-9]+]]=, $pop[[M0]]{{$}}
+; SIMD128-NEXT: v128.and $push[[M2:[0-9]+]]=, $1, $pop[[M1]]{{$}}
+; SIMD128-NEXT: local.tee $push[[M:[0-9]+]]=, $1=, $pop[[M2]]{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $pop[[M]], 0{{$}}
+; SIMD128-NEXT: i32.shr_s $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: i16x8.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; Skip 6 lanes
-; SIMD128:      i16x8.extract_lane_s $push[[L7:[0-9]+]]=, $0, 7{{$}}
-; SIMD128-NEXT: i32.const $push[[L8:[0-9]+]]=, 16{{$}}
-; SIMD128-NEXT: i32.shl $push[[L9:[0-9]+]]=, $pop[[L7]], $pop[[L8]]{{$}}
-; SIMD128-NEXT: i32.const $push[[L10:[0-9]+]]=, 16{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L11:[0-9]+]]=, $pop[[L9]], $pop[[L10]]{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_u $push[[L12:[0-9]+]]=, $1, 7{{$}}
-; SIMD128-NEXT: i32.shr_s $push[[L13:[0-9]+]]=, $pop[[L11]], $pop[[L12]]{{$}}
-; SIMD128-NEXT: i16x8.replace_lane $push[[R:[0-9]+]]=, $pop[[L14:[0-9]+]], 7, $pop[[L13]]{{$}}
+; SIMD128:      i16x8.extract_lane_s $push[[L0:[0-9]+]]=, $0, 7{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $1, 7{{$}}
+; SIMD128-NEXT: i32.shr_s $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: i16x8.replace_lane $push[[R:[0-9]+]]=, $pop{{[0-9]+}}, 7, $pop[[L2]]{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @shr_s_vec_v8i16(<8 x i16> %v, <8 x i16> %x) {
   %a = ashr <8 x i16> %v, %x
@@ -382,7 +386,11 @@ define <8 x i16> @shr_u_v8i16(<8 x i16> %v, i16 %x) {
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .functype shr_u_vec_v8i16 (v128, v128) -> (v128){{$}}
 ; SIMD128-NEXT: i16x8.extract_lane_u $push[[L0:[0-9]+]]=, $0, 0{{$}}
-; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $1, 0{{$}}
+; SIMD128-NEXT: i32.const $push[[M0:[0-9]+]]=, 15{{$}}
+; SIMD128-NEXT: i16x8.splat $push[[M1:[0-9]+]]=, $pop[[M0]]{{$}}
+; SIMD128-NEXT: v128.and $push[[M2:[0-9]+]]=, $1, $pop[[M1]]{{$}}
+; SIMD128-NEXT: local.tee $push[[M:[0-9]+]]=, $1=, $pop[[M2]]{{$}}
+; SIMD128-NEXT: i16x8.extract_lane_u $push[[L1:[0-9]+]]=, $pop[[M]], 0{{$}}
 ; SIMD128-NEXT: i32.shr_u $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; SIMD128-NEXT: i16x8.splat $push[[L3:[0-9]+]]=, $pop[[L2]]{{$}}
 ; Skip 6 lanes
@@ -725,7 +733,7 @@ define <2 x i64> @shl_v2i64(<2 x i64> %v, i32 %x) {
 ; CHECK-LABEL: shl_nozext_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-NEXT: .functype shl_nozext_v2i64 (v128, i64) -> (v128){{$}}
-; SIMD128-NEXT: i32.wrap/i64 $push[[L0:[0-9]+]]=, $1{{$}}
+; SIMD128-NEXT: i32.wrap_i64 $push[[L0:[0-9]+]]=, $1{{$}}
 ; SIMD128-NEXT: i64x2.shl $push[[R:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @shl_nozext_v2i64(<2 x i64> %v, i64 %x) {
@@ -779,7 +787,7 @@ define <2 x i64> @shr_s_v2i64(<2 x i64> %v, i32 %x) {
 ; CHECK-LABEL: shr_s_nozext_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-NEXT: .functype shr_s_nozext_v2i64 (v128, i64) -> (v128){{$}}
-; SIMD128-NEXT: i32.wrap/i64 $push[[L0:[0-9]+]]=, $1{{$}}
+; SIMD128-NEXT: i32.wrap_i64 $push[[L0:[0-9]+]]=, $1{{$}}
 ; SIMD128-NEXT: i64x2.shr_s $push[[R:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @shr_s_nozext_v2i64(<2 x i64> %v, i64 %x) {
@@ -833,7 +841,7 @@ define <2 x i64> @shr_u_v2i64(<2 x i64> %v, i32 %x) {
 ; CHECK-LABEL: shr_u_nozext_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-NEXT: .functype shr_u_nozext_v2i64 (v128, i64) -> (v128){{$}}
-; SIMD128-NEXT: i32.wrap/i64 $push[[L0:[0-9]+]]=, $1{{$}}
+; SIMD128-NEXT: i32.wrap_i64 $push[[L0:[0-9]+]]=, $1{{$}}
 ; SIMD128-NEXT: i64x2.shr_u $push[[R:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @shr_u_nozext_v2i64(<2 x i64> %v, i64 %x) {

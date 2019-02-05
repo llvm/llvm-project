@@ -2,13 +2,67 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer -global-isel %s -o - | FileCheck %s
 
 ---
-name: test_sitofp_f32_to_i32
+name: test_sitofp_s32_to_s32
 body: |
   bb.0:
     liveins: $vgpr0
 
-    ; CHECK-LABEL: name: test_sitofp_f32_to_i32
+    ; CHECK-LABEL: name: test_sitofp_s32_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[COPY]](s32)
+    ; CHECK: $vgpr0 = COPY [[SITOFP]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_SITOFP %0
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_sitofp_s32_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_sitofp_s32_to_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[COPY]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[SITOFP]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s64) = G_SITOFP %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_sitofp_v2s32_to_v2s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_sitofp_v2s32_to_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[UV]](s32)
+    ; CHECK: [[SITOFP1:%[0-9]+]]:_(s32) = G_SITOFP [[UV1]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SITOFP]](s32), [[SITOFP1]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = G_SITOFP %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: test_sitofp_v2s32_to_v2s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_sitofp_v2s32_to_v2s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[UV]](s32)
+    ; CHECK: [[SITOFP1:%[0-9]+]]:_(s64) = G_SITOFP [[UV1]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SITOFP]](s64), [[SITOFP1]](s64)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s64>) = G_SITOFP %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
 ...

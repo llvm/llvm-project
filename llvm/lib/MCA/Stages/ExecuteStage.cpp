@@ -1,9 +1,8 @@
 //===---------------------- ExecuteStage.cpp --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -57,6 +56,7 @@ Error ExecuteStage::issueInstruction(InstRef &IR) {
   HWS.issueInstruction(IR, Used, Ready);
 
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ false);
+
   notifyInstructionIssued(IR, Used);
   if (IR.getInstruction()->isExecuted()) {
     notifyInstructionExecuted(IR);
@@ -184,7 +184,7 @@ void ExecuteStage::notifyResourceAvailable(const ResourceRef &RR) const {
 
 void ExecuteStage::notifyInstructionIssued(
     const InstRef &IR,
-    ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const {
+    MutableArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const {
   LLVM_DEBUG({
     dbgs() << "[E] Instruction Issued: #" << IR << '\n';
     for (const std::pair<ResourceRef, ResourceCycles> &Resource : Used) {
@@ -193,6 +193,11 @@ void ExecuteStage::notifyInstructionIssued(
       dbgs() << "cycles: " << Resource.second << '\n';
     }
   });
+
+  // Replace resource masks with valid resource processor IDs.
+  for (std::pair<ResourceRef, ResourceCycles> &Use : Used)
+    Use.first.first = HWS.getResourceID(Use.first.first);
+
   notifyEvent<HWInstructionEvent>(HWInstructionIssuedEvent(IR, Used));
 }
 

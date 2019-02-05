@@ -43,7 +43,6 @@ int main(int argc, char **argv) {
 // CHECK80-RIGHT: allocated heap chunk; size: 32 offset:
 // CHECK80-RIGHT: is located 50 bytes to the right of 30-byte region
 //
-// CHECKm30: allocated heap chunk; size: 32 offset: 2
 // CHECKm30: is located 30 bytes to the left of 30-byte region
 //
 // CHECKMm30: is a large allocated heap chunk; size: 1003520 offset: -30

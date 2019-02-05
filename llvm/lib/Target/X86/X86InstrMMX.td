@@ -1,9 +1,8 @@
 //===-- X86InstrMMX.td - Describe the MMX Instruction Set --*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -153,7 +152,9 @@ multiclass sse12_cvt_pint_3addr<bits<8> opc, RegisterClass SrcRC,
 // MMX EMMS Instruction
 //===----------------------------------------------------------------------===//
 
-let SchedRW = [WriteEMMS] in
+let SchedRW = [WriteEMMS],
+    Defs = [MM0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
+            ST0, ST1, ST2, ST3, ST4, ST5, ST6, ST7] in
 def MMX_EMMS  : MMXI<0x77, RawFrm, (outs), (ins), "emms", [(int_x86_mmx_emms)]>;
 
 //===----------------------------------------------------------------------===//
@@ -544,7 +545,7 @@ let Predicates = [HasMMX, HasSSE1] in {
                     "pinsrw\t{$src3, $src2, $dst|$dst, $src2, $src3}",
                     [(set VR64:$dst, (int_x86_mmx_pinsr_w VR64:$src1,
                                       GR32orGR64:$src2, imm:$src3))]>,
-                    Sched<[WriteVecInsert]>;
+                    Sched<[WriteVecInsert, ReadDefault, ReadInt2Fpu]>;
 
   def MMX_PINSRWrm : MMXIi8<0xC4, MRMSrcMem,
                    (outs VR64:$dst),

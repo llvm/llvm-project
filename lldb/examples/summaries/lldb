@@ -11,7 +11,7 @@ type summary add -w lldb lldb_private::CommandObject                           -
 type summary add -w lldb lldb_private::Variable                                -s "${var.m_type.m_name} ${var.m_name}"
 type summary add -w lldb lldb_private::StopInfo                                -s "ID: ${var.m_stop_id}, ${var.m_description}"
 type summary add -w lldb lldb_private::FileSpec                                -s "file: ${var.m_filename%S} dir: ${var.m_directory%S}"
-type summary add -w -v lldb lldb::ConnectionStatus                             -s "[enum=${var%E} val=${var%i}]"
+type summary add -v -w lldb lldb::ConnectionStatus                             -s "[enum=${var%E} val=${var%i}]"
 # Where '-v' tells type summary not to show the value itself, but just use the summary format.
 
 type summary add -w lldb "lldb_private::ThreadSafeValue<lldb::StateType>"      -s "${var.m_value}"

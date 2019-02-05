@@ -94,10 +94,10 @@ WebAssemblyTargetLowering.
 //===---------------------------------------------------------------------===//
 
 Instead of the OptimizeReturned pass, which should consider preserving the
-"returned" attribute through to MachineInstrs and extending the StoreResults
-pass to do this optimization on calls too. That would also let the
-WebAssemblyPeephole pass clean up dead defs for such calls, as it does for
-stores.
+"returned" attribute through to MachineInstrs and extending the
+MemIntrinsicResults pass to do this optimization on calls too. That would also
+let the WebAssemblyPeephole pass clean up dead defs for such calls, as it does
+for stores.
 
 //===---------------------------------------------------------------------===//
 
@@ -120,8 +120,8 @@ code like this:
 It could be done with a smaller encoding like this:
 
     i32.const   $push5=, 0
-    tee_local   $push6=, $4=, $pop5
-    copy_local  $3=, $pop6
+    local.tee   $push6=, $4=, $pop5
+    local.copy  $3=, $pop6
 
 //===---------------------------------------------------------------------===//
 
@@ -180,11 +180,11 @@ floating-point constants.
 //===---------------------------------------------------------------------===//
 
 The function @dynamic_alloca_redzone in test/CodeGen/WebAssembly/userstack.ll
-ends up with a tee_local in its prolog which has an unused result, requiring
+ends up with a local.tee in its prolog which has an unused result, requiring
 an extra drop:
 
-    get_global  $push8=, 0
-    tee_local   $push9=, 1, $pop8
+    global.get  $push8=, 0
+    local.tee   $push9=, 1, $pop8
     drop        $pop9
     [...]
 

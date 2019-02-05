@@ -1,9 +1,8 @@
 //===- AsmParser.cpp - Parser for Assembly Files --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -159,9 +158,10 @@ private:
   /// The values from the last parsed cpp hash file line comment if any.
   struct CppHashInfoTy {
     StringRef Filename;
-    int64_t LineNumber = 0;
+    int64_t LineNumber;
     SMLoc Loc;
-    unsigned Buf = 0;
+    unsigned Buf;
+    CppHashInfoTy() : Filename(), LineNumber(0), Loc(), Buf(0) {}
   };
   CppHashInfoTy CppHashInfo;
 
@@ -426,6 +426,7 @@ private:
     DK_WEAK_DEFINITION,
     DK_WEAK_REFERENCE,
     DK_WEAK_DEF_CAN_BE_HIDDEN,
+    DK_COLD,
     DK_COMM,
     DK_COMMON,
     DK_LCOMM,
@@ -898,6 +899,12 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     if (!getLexer().isAtStartOfStatement())
       eatToEndOfStatement();
   }
+
+  // Make sure we get proper DWARF even for empty files.
+  (void)enabledGenDwarfForAssembly();
+
+  getTargetParser().onEndOfFile();
+  printPendingErrors();
 
   // All errors should have been emitted.
   assert(!hasPendingError() && "unexpected error from parseStatement");
@@ -1980,6 +1987,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveSymbolAttribute(MCSA_WeakReference);
     case DK_WEAK_DEF_CAN_BE_HIDDEN:
       return parseDirectiveSymbolAttribute(MCSA_WeakDefAutoPrivate);
+    case DK_COLD:
+      return parseDirectiveSymbolAttribute(MCSA_Cold);
     case DK_COMM:
     case DK_COMMON:
       return parseDirectiveComm(/*IsLocal=*/false);
@@ -5032,9 +5041,9 @@ bool AsmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
     MCSymbol *Sym = getContext().lookupSymbol(Name);
 
     if (expect_defined)
-      TheCondState.CondMet = (Sym && !Sym->isUndefined());
+      TheCondState.CondMet = (Sym && !Sym->isUndefined(false));
     else
-      TheCondState.CondMet = (!Sym || Sym->isUndefined());
+      TheCondState.CondMet = (!Sym || Sym->isUndefined(false));
     TheCondState.Ignore = !TheCondState.CondMet;
   }
 
@@ -5220,6 +5229,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".weak_definition"] = DK_WEAK_DEFINITION;
   DirectiveKindMap[".weak_reference"] = DK_WEAK_REFERENCE;
   DirectiveKindMap[".weak_def_can_be_hidden"] = DK_WEAK_DEF_CAN_BE_HIDDEN;
+  DirectiveKindMap[".cold"] = DK_COLD;
   DirectiveKindMap[".comm"] = DK_COMM;
   DirectiveKindMap[".common"] = DK_COMMON;
   DirectiveKindMap[".lcomm"] = DK_LCOMM;

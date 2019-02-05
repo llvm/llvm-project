@@ -8,23 +8,22 @@ Getting Started with the LLVM System
 Overview
 ========
 
-Welcome to LLVM! In order to get started, you first need to know some basic
-information.
+Welcome to the LLVM project! In order to get started, you first need to know
+some basic information.
 
-First, LLVM comes in three pieces. The first piece is the LLVM suite. This
-contains all of the tools, libraries, and header files needed to use LLVM.  It
-contains an assembler, disassembler, bitcode analyzer and bitcode optimizer.  It
-also contains basic regression tests that can be used to test the LLVM tools and
-the Clang front end.
+First, the LLVM project has multiple components. The core of the project is
+itself called "LLVM". This contains all of the tools, libraries, and header
+files needed to process an intermediate representation and convert it into
+object files.  It contains an assembler, disassembler, bitcode analyzer and
+bitcode optimizer.  It also contains basic regression tests.
 
-The second piece is the `Clang <http://clang.llvm.org/>`_ front end.  This
-component compiles C, C++, Objective C, and Objective C++ code into LLVM
-bitcode. Once compiled into LLVM bitcode, a program can be manipulated with the
-LLVM tools from the LLVM suite.
+Another piece is the `Clang <http://clang.llvm.org/>`_ front end.  This
+component compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode
+-- and from there into object files, using LLVM.
 
-There is a third, optional piece called Test Suite.  It is a suite of programs
-with a testing harness that can be used to further test LLVM's functionality
-and performance.
+There are other components as well:
+the `libc++ C++ standard library <https://libcxx.llvm.org>`_,
+the `LLD linker <https://lld.llvm.org>`_, and more.
 
 Getting Started Quickly (A Summary)
 ===================================
@@ -39,89 +38,37 @@ Here's the short story for getting up and running quickly with LLVM:
 #. Read the documentation.
 #. Remember that you were warned twice about reading the documentation.
 
-   * In particular, the *relative paths specified are important*.
+#. Checkout LLVM (including related subprojects like Clang):
 
-#. Checkout LLVM:
+   * ``git clone https://github.com/llvm/llvm-project.git``
+   * Or, on windows, ``git clone --config core.autocrlf=false
+     https://github.com/llvm/llvm-project.git``
 
-   * ``cd where-you-want-llvm-to-live``
-   * ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``
+#. Configure and build LLVM and Clang:.
 
-#. Checkout Clang:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/tools``
-   * ``svn co http://llvm.org/svn/llvm-project/cfe/trunk clang``
-
-#. Checkout Extra Clang Tools **[Optional]**:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/tools/clang/tools``
-   * ``svn co http://llvm.org/svn/llvm-project/clang-tools-extra/trunk extra``
-
-#. Checkout LLD linker **[Optional]**:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/tools``
-   * ``svn co http://llvm.org/svn/llvm-project/lld/trunk lld``
-
-#. Checkout Polly Loop Optimizer **[Optional]**:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/tools``
-   * ``svn co http://llvm.org/svn/llvm-project/polly/trunk polly``
-
-#. Checkout Compiler-RT (required to build the sanitizers) **[Optional]**:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/projects``
-   * ``svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt``
-
-#. Checkout Libomp (required for OpenMP support) **[Optional]**:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/projects``
-   * ``svn co http://llvm.org/svn/llvm-project/openmp/trunk openmp``
-
-#. Checkout libcxx and libcxxabi **[Optional]**:
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/projects``
-   * ``svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx``
-   * ``svn co http://llvm.org/svn/llvm-project/libcxxabi/trunk libcxxabi``
-
-#. Get the Test Suite Source Code **[Optional]**
-
-   * ``cd where-you-want-llvm-to-live``
-   * ``cd llvm/projects``
-   * ``svn co http://llvm.org/svn/llvm-project/test-suite/trunk test-suite``
-
-#. Configure and build LLVM and Clang:
-
-   *Warning:* Make sure you've checked out *all of* the source code
-   before trying to configure with cmake.  cmake does not pickup newly
-   added source directories in incremental builds.
-
-   The build uses `CMake <CMake.html>`_. LLVM requires CMake 3.4.3 to build. It
-   is generally recommended to use a recent CMake, especially if you're
-   generating Ninja build files. This is because the CMake project is constantly
-   improving the quality of the generators, and the Ninja generator gets a lot
-   of attention.
-
-   * ``cd where you want to build llvm``
+   * ``cd llvm-project``
    * ``mkdir build``
    * ``cd build``
-   * ``cmake -G <generator> [options] <path to llvm sources>``
+   * ``cmake -G <generator> [options] ../llvm``
 
      Some common generators are:
 
-     * ``Unix Makefiles`` --- for generating make-compatible parallel makefiles.
      * ``Ninja`` --- for generating `Ninja <https://ninja-build.org>`_
        build files. Most llvm developers use Ninja.
+     * ``Unix Makefiles`` --- for generating make-compatible parallel makefiles.
      * ``Visual Studio`` --- for generating Visual Studio projects and
        solutions.
      * ``Xcode`` --- for generating Xcode projects.
 
      Some Common options:
+
+     * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
+       subprojects you'd like to additionally build. Can include any of: clang,
+       libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld, polly, or
+       debuginfo-tests.
+
+       For example, to build LLVM, Clang, libcxx, and libcxxabi, use
+       ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
 
      * ``-DCMAKE_INSTALL_PREFIX=directory`` --- Specify for *directory* the full
        pathname of where you want the LLVM tools and libraries to be installed
@@ -135,16 +82,18 @@ Here's the short story for getting up and running quickly with LLVM:
 
    * Run your build tool of choice!
 
-     * The default target (i.e. ``make``) will build all of LLVM
+     * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.
 
-     * The ``check-all`` target (i.e. ``make check-all``) will run the
+     * The ``check-all`` target (i.e. ``ninja check-all``) will run the
        regression tests to ensure everything is in working order.
 
      * CMake will generate build targets for each tool and library, and most
        LLVM sub-projects generate their own ``check-<project>`` target.
 
-     * Running a serial build will be *slow*.  Make sure you run a
-       parallel build; for ``make``, use ``make -j``.
+     * Running a serial build will be *slow*.  Make sure you run a parallel
+       build. That's already done by default in Ninja; for ``make``, use
+       ``make -j NNN`` (with an appropriate value of NNN, e.g. number of CPUs
+       you have.)
 
    * For more information see `CMake <CMake.html>`_
 
@@ -172,7 +121,7 @@ OS                 Arch                  Compilers
 ================== ===================== =============
 Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
-Linux              ARM\ :sup:`4`         GCC, Clang
+Linux              ARM                   GCC, Clang
 Linux              PowerPC               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 FreeBSD            x86\ :sup:`1`         GCC, Clang
@@ -192,7 +141,6 @@ Windows x64        x86-64                Visual Studio
   #. Code generation supported for 32-bit ABI only
   #. To use LLVM modules on Win32-based system, you may configure LLVM
      with ``-DBUILD_SHARED_LIBS=On``.
-  #. MCJIT not working well pre-v7, old JIT engine not supported any more.
 
 Note that Debug builds require a lot of time and disk space.  An LLVM-only build
 will need about 1-3 GB of space.  A full build of LLVM and Clang will need around
@@ -272,15 +220,16 @@ Host C++ Toolchain, both Compiler and Standard Library
 ------------------------------------------------------
 
 LLVM is very demanding of the host C++ compiler, and as such tends to expose
-bugs in the compiler. We are also planning to follow improvements and
-developments in the C++ language and library reasonably closely. As such, we
-require a modern host C++ toolchain, both compiler and standard library, in
-order to build LLVM.
+bugs in the compiler. We also attempt to follow improvements and developments in
+the C++ language and library reasonably closely. As such, we require a modern
+host C++ toolchain, both compiler and standard library, in order to build LLVM.
 
-For the most popular host toolchains we check for specific minimum versions in
-our build systems:
+LLVM is written using the subset of C++ documented in :doc:`coding
+standards<CodingStandards>`. To enforce this language version, we check the most
+popular host toolchains for specific minimum versions in our build systems:
 
 * Clang 3.1
+* Apple Clang 3.1
 * GCC 4.8
 * Visual Studio 2015 (Update 3)
 
@@ -388,7 +337,7 @@ If you fail to set rpath, most LLVM binaries will fail on startup with a message
 from the loader similar to ``libstdc++.so.6: version `GLIBCXX_3.4.20' not
 found``. This means you need to tweak the -rpath linker flag.
 
-When you build Clang, you will need to give *it* access to modern C++11
+When you build Clang, you will need to give *it* access to modern C++
 standard library in order to use it as your new host in part of a bootstrap.
 There are two easy ways to do this, either build (and install) libc++ along
 with Clang and then use it with the ``-stdlib=libc++`` compile and link flag,
@@ -433,10 +382,9 @@ Unpacking the LLVM Archives
 ---------------------------
 
 If you have the LLVM distribution, you will need to unpack it before you can
-begin to compile it.  LLVM is distributed as a set of two files: the LLVM suite
-and the LLVM GCC front end compiled for your platform.  There is an additional
-test suite that is optional.  Each file is a TAR archive that is compressed with
-the gzip program.
+begin to compile it.  LLVM is distributed as a number of different
+subprojects. Each one has its own download which is a TAR archive that is
+compressed with the gzip program.
 
 The files are as follows, with *x.y* marking the version number:
 
@@ -444,18 +392,132 @@ The files are as follows, with *x.y* marking the version number:
 
   Source release for the LLVM libraries and tools.
 
-``llvm-test-x.y.tar.gz``
+``cfe-x.y.tar.gz``
 
-  Source release for the LLVM test-suite.
+  Source release for the Clang frontend.
 
 .. _checkout:
 
-Checkout LLVM from Subversion
------------------------------
+Checkout LLVM from Git
+----------------------
 
-If you have access to our Subversion repository, you can get a fresh copy of the
-entire source code.  All you need to do is check it out from Subversion as
-follows:
+You can also checkout the source code for LLVM from Git. While the LLVM
+project's official source-code repository is Subversion, we are in the process
+of migrating to git. We currently recommend that all developers use Git for
+day-to-day development.
+
+.. note::
+
+  Passing ``--config core.autocrlf=false`` should not be required in
+  the future after we adjust the .gitattribute settings correctly, but
+  is required for Windows users at the time of this writing.
+
+Simply run:
+
+.. code-block:: console
+
+  % git clone https://github.com/llvm/llvm-project.git
+
+or on Windows,
+
+.. code-block:: console
+
+  % git clone --config core.autocrlf=false https://github.com/llvm/llvm-project.git
+
+This will create an '``llvm-project``' directory in the current directory and
+fully populate it with all of the source code, test directories, and local
+copies of documentation files for LLVM and all the related subprojects. Note
+that unlike the tarballs, which contain each subproject in a separate file, the
+git repository contains all of the projects together.
+
+If you want to get a specific release (as opposed to the most recent revision),
+you can check out a tag after cloning the repository. E.g., `git checkout
+llvmorg-6.0.1` inside the ``llvm-project`` directory created by the above
+command.  Use `git tag -l` to list all of them.
+
+Sending patches
+^^^^^^^^^^^^^^^
+
+Please read `Developer Policy <DeveloperPolicy.html#one-off-patches>`_, too.
+
+We don't currently accept github pull requests, so you'll need to send patches
+either via emailing to llvm-commits, or, preferably, via :ref:`Phabricator
+<phabricator-reviews>`.
+
+You'll generally want to make sure your branch has a single commit,
+corresponding to the review you wish to send, up-to-date with the upstream
+``origin/master`` branch, and doesn't contain merges. Once you have that, you
+can use ``git show`` or ``git format-patch`` to output the diff, and attach it
+to a Phabricator review (or to an email message).
+
+However, using the "Arcanist" tool is often easier. After `installing
+arcanist`_, you can upload the latest commit using:
+
+.. code-block:: console
+
+  % arc diff HEAD~1
+
+Additionally, before sending a patch for review, please also try to ensure it's
+formatted properly. We use ``clang-format`` for this, which has git integration
+through the ``git-clang-format`` script. On some systems, it may already be
+installed (or be installable via your package manager). If so, you can simply
+run it -- the following command will format only the code changed in the most
+recent commit:
+
+.. code-block:: console
+
+  % git clang-format HEAD~1
+
+Note that this modifies the files, but doesn't commit them -- you'll likely want
+to run
+
+.. code-block:: console
+
+  % git commit --amend -a
+
+in order to update the last commit with all pending changes.
+
+.. note::
+  If you don't already have ``clang-format`` or ``git clang-format`` installed
+  on your system, the ``clang-format`` binary will be built alongside clang, and
+  the git integration can be run from
+  ``clang/tools/clang-format/git-clang-format``.
+
+
+.. _commit_from_git:
+
+For developers to commit changes from Git
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A helper script is provided in ``llvm/utils/git-svn/git-llvm``. After you add it
+to your path, you can push committed changes upstream with ``git llvm
+push``. While this creates a Subversion checkout and patches it under the hood,
+it does not require you to have interaction with it.
+
+.. code-block:: console
+
+  % export PATH=$PATH:$TOP_LEVEL_DIR/llvm-project/llvm/utils/git-svn/
+  % git llvm push
+
+Within a couple minutes after pushing to subversion, the svn commit will have
+been converted back to a Git commit, and made its way into the official Git
+repository. At that point, ``git pull`` should get back the changes as they were
+committed.
+
+You'll likely want to ``git pull --rebase`` to get the official git commit
+downloaded back to your repository. The SVN revision numbers of each commit can
+be found at the end of the commit message, e.g. ``llvm-svn: 350914``.
+
+You may also find the ``-n`` flag useful, like ``git llvm push -n``. This runs
+through all the steps of committing _without_ actually doing the commit, and
+tell you what it would have done. That can be useful if you're unsure whether
+the right thing will happen.
+
+Checkout via SVN (deprecated)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Until we have fully migrated to Git, you may also get a fresh copy of
+the code from the official Subversion repository.
 
 * ``cd where-you-want-llvm-to-live``
 * Read-Only: ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``
@@ -475,305 +537,13 @@ directory:
 * Release 1.1 through 2.8: **RELEASE_11** and so on
 * Release 1.0: **RELEASE_1**
 
-If you would like to get the LLVM test suite (a separate package as of 1.4), you
-get it from the Subversion repository:
-
-.. code-block:: console
-
-  % cd llvm/projects
-  % svn co http://llvm.org/svn/llvm-project/test-suite/trunk test-suite
-
-By placing it in the ``llvm/projects``, it will be automatically configured by
-the LLVM cmake configuration.
-
-Git Mirror
-----------
-
-Git mirrors are available for a number of LLVM subprojects. These mirrors sync
-automatically with each Subversion commit and contain all necessary git-svn
-marks (so, you can recreate git-svn metadata locally). Note that right now
-mirrors reflect only ``trunk`` for each project.
-
-.. note::
-
-  On Windows, first you will want to do ``git config --global core.autocrlf
-  false`` before you clone. This goes a long way toward ensuring that
-  line-endings will be handled correctly (the LLVM project mostly uses Linux
-  line-endings).
-
-You can do the read-only Git clone of LLVM via:
-
-.. code-block:: console
-
-  % git clone https://git.llvm.org/git/llvm.git/
-
-If you want to check out clang too, run:
-
-.. code-block:: console
-
-  % cd llvm/tools
-  % git clone https://git.llvm.org/git/clang.git/
-
-If you want to check out compiler-rt (required to build the sanitizers), run:
-
-.. code-block:: console
-
-  % cd llvm/projects
-  % git clone https://git.llvm.org/git/compiler-rt.git/
-
-If you want to check out libomp (required for OpenMP support), run:
-
-.. code-block:: console
-
-  % cd llvm/projects
-  % git clone https://git.llvm.org/git/openmp.git/
-
-If you want to check out libcxx and libcxxabi (optional), run:
-
-.. code-block:: console
-
-  % cd llvm/projects
-  % git clone https://git.llvm.org/git/libcxx.git/
-  % git clone https://git.llvm.org/git/libcxxabi.git/
-
-If you want to check out the Test Suite Source Code (optional), run:
-
-.. code-block:: console
-
-  % cd llvm/projects
-  % git clone https://git.llvm.org/git/test-suite.git/
-
-Since the upstream repository is in Subversion, you should use ``git
-pull --rebase`` instead of ``git pull`` to avoid generating a non-linear history
-in your clone.  To configure ``git pull`` to pass ``--rebase`` by default on the
-master branch, run the following command:
-
-.. code-block:: console
-
-  % git config branch.master.rebase true
-
-Sending patches with Git
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Please read `Developer Policy <DeveloperPolicy.html#one-off-patches>`_, too.
-
-Assume ``master`` points the upstream and ``mybranch`` points your working
-branch, and ``mybranch`` is rebased onto ``master``.  At first you may check
-sanity of whitespaces:
-
-.. code-block:: console
-
-  % git diff --check master..mybranch
-
-The easiest way to generate a patch is as below:
-
-.. code-block:: console
-
-  % git diff master..mybranch > /path/to/mybranch.diff
-
-It is a little different from svn-generated diff. git-diff-generated diff has
-prefixes like ``a/`` and ``b/``. Don't worry, most developers might know it
-could be accepted with ``patch -p1 -N``.
-
-But you may generate patchset with git-format-patch. It generates by-each-commit
-patchset. To generate patch files to attach to your article:
-
-.. code-block:: console
-
-  % git format-patch --no-attach master..mybranch -o /path/to/your/patchset
-
-If you would like to send patches directly, you may use git-send-email or
-git-imap-send. Here is an example to generate the patchset in Gmail's [Drafts].
-
-.. code-block:: console
-
-  % git format-patch --attach master..mybranch --stdout | git imap-send
-
-Then, your .git/config should have [imap] sections.
-
-.. code-block:: ini
-
-  [imap]
-        host = imaps://imap.gmail.com
-        user = your.gmail.account@gmail.com
-        pass = himitsu!
-        port = 993
-        sslverify = false
-  ; in English
-        folder = "[Gmail]/Drafts"
-  ; example for Japanese, "Modified UTF-7" encoded.
-        folder = "[Gmail]/&Tgtm+DBN-"
-  ; example for Traditional Chinese
-        folder = "[Gmail]/&g0l6Pw-"
-
-.. _developers-work-with-git-svn:
-
-For developers to work with git-svn
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To set up clone from which you can submit code using ``git-svn``, run:
-
-.. code-block:: console
-
-  % git clone https://git.llvm.org/git/llvm.git/
-  % cd llvm
-  % git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
-  % git config svn-remote.svn.fetch :refs/remotes/origin/master
-  % git svn rebase -l  # -l avoids fetching ahead of the git mirror.
-
-  # If you have clang too:
-  % cd tools
-  % git clone https://git.llvm.org/git/clang.git/
-  % cd clang
-  % git svn init https://llvm.org/svn/llvm-project/cfe/trunk --username=<username>
-  % git config svn-remote.svn.fetch :refs/remotes/origin/master
-  % git svn rebase -l
-
-Likewise for compiler-rt, libomp and test-suite.
-
-To update this clone without generating git-svn tags that conflict with the
-upstream Git repo, run:
-
-.. code-block:: console
-
-  % git fetch && (cd tools/clang && git fetch)  # Get matching revisions of both trees.
-  % git checkout master
-  % git svn rebase -l
-  % (cd tools/clang &&
-     git checkout master &&
-     git svn rebase -l)
-
-Likewise for compiler-rt, libomp and test-suite.
-
-This leaves your working directories on their master branches, so you'll need to
-``checkout`` each working branch individually and ``rebase`` it on top of its
-parent branch.
-
-For those who wish to be able to update an llvm repo/revert patches easily using
-git-svn, please look in the directory for the scripts ``git-svnup`` and
-``git-svnrevert``.
-
-To perform the aforementioned update steps go into your source directory and
-just type ``git-svnup`` or ``git svnup`` and everything will just work.
-
-If one wishes to revert a commit with git-svn, but do not want the git hash to
-escape into the commit message, one can use the script ``git-svnrevert`` or
-``git svnrevert`` which will take in the git hash for the commit you want to
-revert, look up the appropriate svn revision, and output a message where all
-references to the git hash have been replaced with the svn revision.
-
-To commit back changes via git-svn, use ``git svn dcommit``:
-
-.. code-block:: console
-
-  % git svn dcommit
-
-Note that git-svn will create one SVN commit for each Git commit you have pending,
-so squash and edit each commit before executing ``dcommit`` to make sure they all
-conform to the coding standards and the developers' policy.
-
-On success, ``dcommit`` will rebase against the HEAD of SVN, so to avoid conflict,
-please make sure your current branch is up-to-date (via fetch/rebase) before
-proceeding.
-
-The git-svn metadata can get out of sync after you mess around with branches and
-``dcommit``. When that happens, ``git svn dcommit`` stops working, complaining
-about files with uncommitted changes. The fix is to rebuild the metadata:
-
-.. code-block:: console
-
-  % rm -rf .git/svn
-  % git svn rebase -l
-
-Please, refer to the Git-SVN manual (``man git-svn``) for more information.
-
-For developers to work with a git monorepo
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. note::
-
-   This set-up is using an unofficial mirror hosted on GitHub, use with caution.
-
-To set up a clone of all the llvm projects using a unified repository:
-
-.. code-block:: console
-
-  % export TOP_LEVEL_DIR=`pwd`
-  % git clone https://github.com/llvm-project/llvm-project-20170507/ llvm-project
-  % cd llvm-project
-  % git config branch.master.rebase true
-
-You can configure various build directory from this clone, starting with a build
-of LLVM alone:
-
-.. code-block:: console
-
-  % cd $TOP_LEVEL_DIR
-  % mkdir llvm-build && cd llvm-build
-  % cmake -GNinja ../llvm-project/llvm
-
-Or lldb:
-
-.. code-block:: console
-
-  % cd $TOP_LEVEL_DIR
-  % mkdir lldb-build && cd lldb-build
-  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS=lldb
-
-Or a combination of multiple projects:
-
-.. code-block:: console
-
-  % cd $TOP_LEVEL_DIR
-  % mkdir clang-build && cd clang-build
-  % cmake -GNinja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"
-
-A helper script is provided in ``llvm/utils/git-svn/git-llvm``. After you add it
-to your path, you can push committed changes upstream with ``git llvm push``.
-
-.. code-block:: console
-
-  % export PATH=$PATH:$TOP_LEVEL_DIR/llvm-project/llvm/utils/git-svn/
-  % git llvm push
-
-While this is using SVN under the hood, it does not require any interaction from
-you with git-svn.
-After a few minutes, ``git pull`` should get back the changes as they were
-committed. Note that a current limitation is that ``git`` does not directly
-record file rename, and thus it is propagated to SVN as a combination of
-delete-add instead of a file rename.
-
-The SVN revision of each monorepo commit can be found in the commit notes.  git
-does not fetch notes by default. The following commands will fetch the notes and
-configure git to fetch future notes. Use ``git notes show $commit`` to look up
-the SVN revision of a git commit. The notes show up ``git log``, and searching
-the log is currently the recommended way to look up the git commit for a given
-SVN revision.
-
-.. code-block:: console
-
-  % git config --add remote.origin.fetch +refs/notes/commits:refs/notes/commits
-  % git fetch
-
-If you are using `arc` to interact with Phabricator, you need to manually put it
-at the root of the checkout:
-
-.. code-block:: console
-
-  % cd $TOP_LEVEL_DIR
-  % cp llvm/.arcconfig ./
-  % mkdir -p .git/info/
-  % echo .arcconfig >> .git/info/exclude
-
-
 Local LLVM Configuration
 ------------------------
 
-Once checked out from the Subversion repository, the LLVM suite source code must
-be configured before being built. This process uses CMake.
-Unlinke the normal ``configure`` script, CMake
-generates the build files in whatever format you request as well as various
-``*.inc`` files, and ``llvm/include/Config/config.h``.
+Once checked out repository, the LLVM suite source code must be configured
+before being built. This process uses CMake.  Unlinke the normal ``configure``
+script, CMake generates the build files in whatever format you request as well
+as various ``*.inc`` files, and ``llvm/include/Config/config.h``.
 
 Variables are passed to ``cmake`` on the command line using the format
 ``-D<variable name>=<value>``. The following variables are some common options
@@ -797,18 +567,25 @@ used by people developing LLVM.
 |                         | running the install action of the build files.     |
 +-------------------------+----------------------------------------------------+
 | LLVM_TARGETS_TO_BUILD   | A semicolon delimited list controlling which       |
-|                         | targets will be built and linked into llc. This is |
-|                         | equivalent to the ``--enable-targets`` option in   |
-|                         | the configure script. The default list is defined  |
-|                         | as ``LLVM_ALL_TARGETS``, and can be set to include |
+|                         | targets will be built and linked into llvm.        |
+|                         | The default list is defined as                     |
+|                         | ``LLVM_ALL_TARGETS``, and can be set to include    |
 |                         | out-of-tree targets. The default value includes:   |
 |                         | ``AArch64, AMDGPU, ARM, BPF, Hexagon, Mips,        |
 |                         | MSP430, NVPTX, PowerPC, Sparc, SystemZ, X86,       |
 |                         | XCore``.                                           |
+|                         |                                                    |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_DOXYGEN     | Build doxygen-based documentation from the source  |
 |                         | code This is disabled by default because it is     |
 |                         | slow and generates a lot of output.                |
++-------------------------+----------------------------------------------------+
+| LLVM_ENABLE_PROJECTS    | A semicolon-delimited list selecting which of the  |
+|                         | other LLVM subprojects to additionally build. (Only|
+|                         | effective when using a side-by-side project layout |
+|                         | e.g. via git). The default list is empty. Can      |
+|                         | include: clang, libcxx, libcxxabi, libunwind, lldb,|
+|                         | compiler-rt, lld, polly, or debuginfo-tests.       |
 +-------------------------+----------------------------------------------------+
 | LLVM_ENABLE_SPHINX      | Build sphinx-based documentation from the source   |
 |                         | code. This is disabled by default because it is    |
@@ -1030,10 +807,10 @@ Public header files exported from the LLVM library. The three main subdirectorie
 
 ``llvm/include/llvm/Config``
 
-  Header files configured by the ``configure`` script.
-  They wrap "standard" UNIX and C header files.  Source code can include these
-  header files which automatically take care of the conditional #includes that
-  the ``configure`` script generates.
+  Header files configured by ``cmake``.  They wrap "standard" UNIX and
+  C header files.  Source code can include these header files which
+  automatically take care of the conditional #includes that ``cmake``
+  generates.
 
 ``llvm/lib``
 ------------
@@ -1105,10 +882,11 @@ are intended to run quickly and cover a lot of territory without being exhaustiv
 ``test-suite``
 --------------
 
-A comprehensive correctness, performance, and benchmarking test suite for LLVM.
-Comes in a separate Subversion module because not every LLVM user is interested
-in such a comprehensive suite. For details see the :doc:`Testing Guide
-<TestingGuide>` document.
+A comprehensive correctness, performance, and benchmarking test suite
+for LLVM.  This comes in a ``separate git repository
+<https://github.com/llvm/llvm-test-suite>``, because it contains a
+large amount of third-party code under a variety of licenses. For
+details see the :doc:`Testing Guide <TestingGuide>` document.
 
 .. _tools:
 
@@ -1322,3 +1100,5 @@ write something up!).  For more information about LLVM, check out:
 * `LLVM Homepage <http://llvm.org/>`_
 * `LLVM Doxygen Tree <http://llvm.org/doxygen/>`_
 * `Starting a Project that Uses LLVM <http://llvm.org/docs/Projects.html>`_
+
+.. _installing arcanist: https://secure.phabricator.com/book/phabricator/article/arcanist_quick_start/

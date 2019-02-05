@@ -1,0 +1,154 @@
+
+# RUN: llc -O0 -mattr=-fullfp16 -mtriple=aarch64-- \
+# RUN: -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define <2 x double> @test_v2s64_unmerge(<2 x double> %a) {
+    ret <2 x double> %a
+  }
+
+  define <4 x float> @test_v4s32_unmerge(<4 x float> %a) {
+    ret <4 x float> %a
+  }
+
+  define <4 x half> @test_v4s16_unmerge(<4 x half> %a) {
+    ret <4 x half> %a
+  }
+
+  define <8 x half> @test_v8s16_unmerge(<8 x half> %a) {
+    ret <8 x half> %a
+  }
+
+...
+---
+name:            test_v2s64_unmerge
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0
+    ; CHECK-LABEL: name:            test_v2s64_unmerge
+    %0:fpr(<2 x s64>) = COPY $q0
+
+    ; Since 2 * 64 = 128, we can just directly copy.
+    ; CHECK: %2:fpr64 = COPY %0.dsub
+    ; CHECK: %3:fpr64 = CPYi64 %0, 1
+    %2:fpr(s64), %3:fpr(s64) = G_UNMERGE_VALUES %0(<2 x s64>)
+
+    %1:fpr(<2 x s64>) = G_BUILD_VECTOR %2(s64), %3(s64)
+    $q0 = COPY %1(<2 x s64>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            test_v4s32_unmerge
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+  - { id: 4, class: fpr }
+  - { id: 5, class: fpr }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0
+    ; CHECK-LABEL: name:            test_v4s32_unmerge
+    %0:fpr(<4 x s32>) = COPY $q0
+
+    ; Since 4 * 32 = 128, we can just directly copy.
+    ; CHECK: %2:fpr32 = COPY %0.ssub
+    ; CHECK: %3:fpr32 = CPYi32 %0, 1
+    ; CHECK: %4:fpr32 = CPYi32 %0, 2
+    ; CHECK: %5:fpr32 = CPYi32 %0, 3
+    %2:fpr(s32), %3:fpr(s32), %4:fpr(s32), %5:fpr(s32) = G_UNMERGE_VALUES %0(<4 x s32>)
+
+    %1:fpr(<4 x s32>) = G_BUILD_VECTOR %2(s32), %3(s32), %4(s32), %5(s32)
+    $q0 = COPY %1(<4 x s32>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            test_v4s16_unmerge
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+  - { id: 4, class: fpr }
+  - { id: 5, class: fpr }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $d0
+    ; CHECK-LABEL: name:            test_v4s16_unmerge
+    %0:fpr(<4 x s16>) = COPY $d0
+
+    ; Since 4 * 16 != 128, we need to widen using implicit defs.
+    ; Note that we expect to reuse one of the INSERT_SUBREG results, as CPYi16
+    ; expects a lane > 0.
+    ; CHECK-DAG: [[IMPDEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INS_SHARED:%[0-9]+]]:fpr128 = INSERT_SUBREG [[IMPDEF1]], %0, %subreg.dsub
+    ; CHECK: [[IMPDEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INS2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[IMPDEF2]], %0, %subreg.dsub
+    ; CHECK: [[IMPDEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INS3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[IMPDEF3]], %0, %subreg.dsub
+    ; CHECK: %2:fpr16 = COPY [[INS_SHARED]].hsub
+    ; CHECK: %3:fpr16 = CPYi16 [[INS_SHARED]], 1
+    ; CHECK: %4:fpr16 = CPYi16 [[INS2]], 2
+    ; CHECK: %5:fpr16 = CPYi16 [[INS3]], 3
+    %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+
+    %1:fpr(<4 x s16>) = G_BUILD_VECTOR %2(s16), %3(s16), %4(s16), %5(s16)
+    $d0 = COPY %1(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            test_v8s16_unmerge
+alignment:       2
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+  - { id: 4, class: fpr }
+  - { id: 5, class: fpr }
+  - { id: 6, class: fpr }
+  - { id: 7, class: fpr }
+  - { id: 8, class: fpr }
+  - { id: 9, class: fpr }
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $q0
+    ; CHECK-LABEL: name:            test_v8s16_unmerge
+    %0:fpr(<8 x s16>) = COPY $q0
+
+    ; Since 8 * 16 = 128, we can just directly copy.
+    ; CHECK: %2:fpr16 = COPY %0.hsub
+    ; CHECK: %3:fpr16 = CPYi16 %0, 1
+    ; CHECK: %4:fpr16 = CPYi16 %0, 2
+    ; CHECK: %5:fpr16 = CPYi16 %0, 3
+    ; CHECK: %6:fpr16 = CPYi16 %0, 4
+    ; CHECK: %7:fpr16 = CPYi16 %0, 5
+    ; CHECK: %8:fpr16 = CPYi16 %0, 6
+    ; CHECK: %9:fpr16 = CPYi16 %0, 7
+    %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16), %6:fpr(s16), %7:fpr(s16), %8:fpr(s16), %9:fpr(s16) = G_UNMERGE_VALUES %0(<8 x s16>)
+
+    %1:fpr(<8 x s16>) = G_BUILD_VECTOR %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16), %6:fpr(s16), %7:fpr(s16), %8:fpr(s16), %9:fpr(s16)
+    $q0 = COPY %1(<8 x s16>)
+    RET_ReallyLR implicit $q0
+...

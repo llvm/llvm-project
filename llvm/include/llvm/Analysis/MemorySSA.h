@@ -1,9 +1,8 @@
 //===- MemorySSA.h - Build Memory SSA ---------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -404,6 +403,7 @@ public:
 
   void resetOptimized() {
     OptimizedID = INVALID_MEMORYACCESS_ID;
+    setOperand(1, nullptr);
   }
 
   void print(raw_ostream &OS) const;
@@ -703,6 +703,7 @@ public:
   ~MemorySSA();
 
   MemorySSAWalker *getWalker();
+  MemorySSAWalker *getSkipSelfWalker();
 
   /// Given a memory Mod/Ref'ing instruction, get the MemorySSA
   /// access associated with it. If passed a basic block gets the memory phi
@@ -828,7 +829,9 @@ protected:
                                       const MemoryUseOrDef *Template = nullptr);
 
 private:
+  class ClobberWalkerBase;
   class CachingWalker;
+  class SkipSelfWalker;
   class OptimizeUses;
 
   CachingWalker *getWalkerImpl();
@@ -882,7 +885,9 @@ private:
   mutable DenseMap<const MemoryAccess *, unsigned long> BlockNumbering;
 
   // Memory SSA building info
+  std::unique_ptr<ClobberWalkerBase> WalkerBase;
   std::unique_ptr<CachingWalker> Walker;
+  std::unique_ptr<SkipSelfWalker> SkipWalker;
   unsigned NextID;
 };
 

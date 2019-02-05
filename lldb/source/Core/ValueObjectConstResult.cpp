@@ -1,9 +1,8 @@
 //===-- ValueObjectConstResult.cpp ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -198,10 +197,11 @@ lldb::ValueType ValueObjectConstResult::GetValueType() const {
 
 uint64_t ValueObjectConstResult::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-
-  if (m_byte_size == 0)
-    SetByteSize(
-        GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope()));
+  if (m_byte_size == 0) {
+    if (auto size =
+        GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope()))
+      SetByteSize(*size);
+  }
   return m_byte_size;
 }
 

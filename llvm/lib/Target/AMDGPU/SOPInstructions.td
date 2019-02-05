@@ -1,9 +1,8 @@
 //===-- SOPInstructions.td - SOP Instruction Defintions -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -302,6 +301,8 @@ class SOP2_Real<bits<7> op, SOP_Pseudo ps> :
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let TSFlags = ps.TSFlags;
 
   // encoding
   bits<7> sdst;

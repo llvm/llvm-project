@@ -1,9 +1,8 @@
 //===--------------------- Support.cpp --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -19,13 +18,18 @@
 namespace llvm {
 namespace mca {
 
+#define DEBUG_TYPE "llvm-mca"
+
 void computeProcResourceMasks(const MCSchedModel &SM,
-                              SmallVectorImpl<uint64_t> &Masks) {
+                              MutableArrayRef<uint64_t> Masks) {
   unsigned ProcResourceID = 0;
 
+  assert(Masks.size() == SM.getNumProcResourceKinds() &&
+         "Invalid number of elements");
+  // Resource at index 0 is the 'InvalidUnit'. Set an invalid mask for it.
+  Masks[0] = 0;
+
   // Create a unique bitmask for every processor resource unit.
-  // Skip resource at index 0, since it always references 'InvalidUnit'.
-  Masks.resize(SM.getNumProcResourceKinds());
   for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &Desc = *SM.getProcResource(I);
     if (Desc.SubUnitsIdxBegin)
@@ -46,6 +50,16 @@ void computeProcResourceMasks(const MCSchedModel &SM,
     }
     ProcResourceID++;
   }
+
+#ifndef NDEBUG
+  LLVM_DEBUG(dbgs() << "\nProcessor resource masks:"
+                    << "\n");
+  for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    const MCProcResourceDesc &Desc = *SM.getProcResource(I);
+    LLVM_DEBUG(dbgs() << '[' << I << "] " << Desc.Name << " - " << Masks[I]
+                      << '\n');
+  }
+#endif
 }
 
 double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,

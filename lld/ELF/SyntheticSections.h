@@ -1,9 +1,8 @@
 //===- SyntheticSection.h ---------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -317,8 +316,9 @@ private:
     size_t StartIndex = 0;
 
     struct PageBlock {
-      size_t FirstIndex = 0;
-      size_t Count = 0;
+      size_t FirstIndex;
+      size_t Count;
+      PageBlock() : FirstIndex(0), Count(0) {}
     };
 
     // Map output sections referenced by MIPS GOT relocations

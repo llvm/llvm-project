@@ -1,9 +1,8 @@
 //===- FileOutputBuffer.cpp - File Output Buffer ----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -88,6 +87,12 @@ public:
   size_t getBufferSize() const override { return Buffer.size(); }
 
   Error commit() override {
+    if (FinalPath == "-") {
+      llvm::outs() << StringRef((const char *)Buffer.base(), Buffer.size());
+      llvm::outs().flush();
+      return Error::success();
+    }
+
     using namespace sys::fs;
     int FD;
     std::error_code EC;
@@ -115,40 +120,38 @@ createInMemoryBuffer(StringRef Path, size_t Size, unsigned Mode) {
   return llvm::make_unique<InMemoryBuffer>(Path, MB, Mode);
 }
 
-static Expected<std::unique_ptr<OnDiskBuffer>>
-createOnDiskBuffer(StringRef Path, size_t Size, bool InitExisting,
-                   unsigned Mode) {
+static Expected<std::unique_ptr<FileOutputBuffer>>
+createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
   Expected<fs::TempFile> FileOrErr =
       fs::TempFile::create(Path + ".tmp%%%%%%%", Mode);
   if (!FileOrErr)
     return FileOrErr.takeError();
   fs::TempFile File = std::move(*FileOrErr);
 
-  if (InitExisting) {
-    if (auto EC = sys::fs::copy_file(Path, File.FD))
-      return errorCodeToError(EC);
-  } else {
 #ifndef _WIN32
-    // On Windows, CreateFileMapping (the mmap function on Windows)
-    // automatically extends the underlying file. We don't need to
-    // extend the file beforehand. _chsize (ftruncate on Windows) is
-    // pretty slow just like it writes specified amount of bytes,
-    // so we should avoid calling that function.
-    if (auto EC = fs::resize_file(File.FD, Size)) {
-      consumeError(File.discard());
-      return errorCodeToError(EC);
-    }
-#endif
+  // On Windows, CreateFileMapping (the mmap function on Windows)
+  // automatically extends the underlying file. We don't need to
+  // extend the file beforehand. _chsize (ftruncate on Windows) is
+  // pretty slow just like it writes specified amount of bytes,
+  // so we should avoid calling that function.
+  if (auto EC = fs::resize_file(File.FD, Size)) {
+    consumeError(File.discard());
+    return errorCodeToError(EC);
   }
+#endif
 
   // Mmap it.
   std::error_code EC;
   auto MappedFile = llvm::make_unique<fs::mapped_file_region>(
       File.FD, fs::mapped_file_region::readwrite, Size, 0, EC);
+
+  // mmap(2) can fail if the underlying filesystem does not support it.
+  // If that happens, we fall back to in-memory buffer as the last resort.
   if (EC) {
     consumeError(File.discard());
-    return errorCodeToError(EC);
+    return createInMemoryBuffer(Path, Size, Mode);
   }
+
   return llvm::make_unique<OnDiskBuffer>(Path, std::move(File),
                                          std::move(MappedFile));
 }
@@ -156,21 +159,16 @@ createOnDiskBuffer(StringRef Path, size_t Size, bool InitExisting,
 // Create an instance of FileOutputBuffer.
 Expected<std::unique_ptr<FileOutputBuffer>>
 FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
+  // Handle "-" as stdout just like llvm::raw_ostream does.
+  if (Path == "-")
+    return createInMemoryBuffer("-", Size, /*Mode=*/0);
+
   unsigned Mode = fs::all_read | fs::all_write;
   if (Flags & F_executable)
     Mode |= fs::all_exe;
 
   fs::file_status Stat;
   fs::status(Path, Stat);
-
-  if ((Flags & F_modify) && Size == size_t(-1)) {
-    if (Stat.type() == fs::file_type::regular_file)
-      Size = Stat.getSize();
-    else if (Stat.type() == fs::file_type::file_not_found)
-      return errorCodeToError(errc::no_such_file_or_directory);
-    else
-      return errorCodeToError(errc::invalid_argument);
-  }
 
   // Usually, we want to create OnDiskBuffer to create a temporary file in
   // the same directory as the destination file and atomically replaces it
@@ -186,7 +184,7 @@ FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
   case fs::file_type::regular_file:
   case fs::file_type::file_not_found:
   case fs::file_type::status_error:
-    return createOnDiskBuffer(Path, Size, !!(Flags & F_modify), Mode);
+    return createOnDiskBuffer(Path, Size, Mode);
   default:
     return createInMemoryBuffer(Path, Size, Mode);
   }

@@ -1,9 +1,8 @@
 //===-- SystemInitializerCommon.cpp -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -66,6 +65,7 @@ SystemInitializerCommon::Initialize(const InitializerOptions &options) {
   }
 #endif
 
+  // Initialize the reproducer.
   ReproducerMode mode = ReproducerMode::Off;
   if (options.reproducer_capture)
     mode = ReproducerMode::Capture;
@@ -75,7 +75,23 @@ SystemInitializerCommon::Initialize(const InitializerOptions &options) {
   if (auto e = Reproducer::Initialize(mode, FileSpec(options.reproducer_path)))
     return e;
 
-  FileSystem::Initialize();
+  // Initialize the file system.
+  auto &r = repro::Reproducer::Instance();
+  if (repro::Loader *loader = r.GetLoader()) {
+    FileSpec vfs_mapping = loader->GetFile<FileInfo>();
+    if (vfs_mapping) {
+      if (llvm::Error e = FileSystem::Initialize(vfs_mapping))
+        return e;
+    } else {
+      FileSystem::Initialize();
+    }
+  } else if (repro::Generator *g = r.GetGenerator()) {
+    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+    FileSystem::Initialize(fp.GetFileCollector());
+  } else {
+    FileSystem::Initialize();
+  }
+
   Log::Initialize();
   HostInfo::Initialize();
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);

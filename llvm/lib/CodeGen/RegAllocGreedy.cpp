@@ -1,9 +1,8 @@
 //===- RegAllocGreedy.cpp - greedy register allocator ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -318,7 +317,7 @@ class RAGreedy : public MachineFunctionPass,
 
     /// Track new eviction.
     /// The Evictor vreg has evicted the Evictee vreg from Physreg.
-    /// \param PhysReg The phisical register Evictee was evicted from.
+    /// \param PhysReg The physical register Evictee was evicted from.
     /// \param Evictor The evictor Vreg that evicted Evictee.
     /// \param Evictee The evictee Vreg.
     void addEviction(unsigned PhysReg, unsigned Evictor, unsigned Evictee) {

@@ -1,9 +1,8 @@
 //===-- TargetLowering.cpp - Implement the TargetLowering class -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -429,56 +428,6 @@ bool TargetLowering::ShrinkDemandedOp(SDValue Op, unsigned BitWidth,
     }
   }
   return false;
-}
-
-bool
-TargetLowering::SimplifyDemandedBits(SDNode *User, unsigned OpIdx,
-                                     const APInt &DemandedBits,
-                                     DAGCombinerInfo &DCI,
-                                     TargetLoweringOpt &TLO) const {
-  SDValue Op = User->getOperand(OpIdx);
-  KnownBits Known;
-
-  if (!SimplifyDemandedBits(Op, DemandedBits, Known, TLO, 0, true))
-    return false;
-
-
-  // Old will not always be the same as Op.  For example:
-  //
-  // Demanded = 0xffffff
-  // Op = i64 truncate (i32 and x, 0xffffff)
-  // In this case simplify demand bits will want to replace the 'and' node
-  // with the value 'x', which will give us:
-  // Old = i32 and x, 0xffffff
-  // New = x
-  if (TLO.Old.hasOneUse()) {
-    // For the one use case, we just commit the change.
-    DCI.CommitTargetLoweringOpt(TLO);
-    return true;
-  }
-
-  // If Old has more than one use then it must be Op, because the
-  // AssumeSingleUse flag is not propogated to recursive calls of
-  // SimplifyDemanded bits, so the only node with multiple use that
-  // it will attempt to combine will be Op.
-  assert(TLO.Old == Op);
-
-  SmallVector <SDValue, 4> NewOps;
-  for (unsigned i = 0, e = User->getNumOperands(); i != e; ++i) {
-    if (i == OpIdx) {
-      NewOps.push_back(TLO.New);
-      continue;
-    }
-    NewOps.push_back(User->getOperand(i));
-  }
-  User = TLO.DAG.UpdateNodeOperands(User, NewOps);
-  // Op has less users now, so we may be able to perform additional combines
-  // with it.
-  DCI.AddToWorklist(Op.getNode());
-  // User's operands have been updated, so we may be able to do new combines
-  // with it.
-  DCI.AddToWorklist(User);
-  return true;
 }
 
 bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
@@ -1484,6 +1433,53 @@ bool TargetLowering::SimplifyDemandedVectorElts(SDValue Op,
   return Simplified;
 }
 
+/// Given a vector binary operation and known undefined elements for each input
+/// operand, compute whether each element of the output is undefined.
+static APInt getKnownUndefForVectorBinop(SDValue BO, SelectionDAG &DAG,
+                                         const APInt &UndefOp0,
+                                         const APInt &UndefOp1) {
+  EVT VT = BO.getValueType();
+  assert(ISD::isBinaryOp(BO.getNode()) && VT.isVector() && "Vector binop only");
+
+  EVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  assert(UndefOp0.getBitWidth() == NumElts &&
+         UndefOp1.getBitWidth() == NumElts && "Bad type for undef analysis");
+
+  auto getUndefOrConstantElt = [&](SDValue V, unsigned Index,
+                                   const APInt &UndefVals) {
+    if (UndefVals[Index])
+      return DAG.getUNDEF(EltVT);
+
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(V)) {
+      // Try hard to make sure that the getNode() call is not creating temporary
+      // nodes. Ignore opaque integers because they do not constant fold.
+      SDValue Elt = BV->getOperand(Index);
+      auto *C = dyn_cast<ConstantSDNode>(Elt);
+      if (isa<ConstantFPSDNode>(Elt) || Elt.isUndef() || (C && !C->isOpaque()))
+        return Elt;
+    }
+
+    return SDValue();
+  };
+
+  APInt KnownUndef = APInt::getNullValue(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    // If both inputs for this element are either constant or undef and match
+    // the element type, compute the constant/undef result for this element of
+    // the vector.
+    // TODO: Ideally we would use FoldConstantArithmetic() here, but that does
+    // not handle FP constants. The code within getNode() should be refactored
+    // to avoid the danger of creating a bogus temporary node here.
+    SDValue C0 = getUndefOrConstantElt(BO.getOperand(0), i, UndefOp0);
+    SDValue C1 = getUndefOrConstantElt(BO.getOperand(1), i, UndefOp1);
+    if (C0 && C1 && C0.getValueType() == EltVT && C1.getValueType() == EltVT)
+      if (DAG.getNode(BO.getOpcode(), SDLoc(BO), EltVT, C0, C1).isUndef())
+        KnownUndef.setBit(i);
+  }
+  return KnownUndef;
+}
+
 bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Op, const APInt &DemandedEltMask, APInt &KnownUndef,
     APInt &KnownZero, TargetLoweringOpt &TLO, unsigned Depth,
@@ -1856,6 +1852,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+
+  // TODO: There are more binop opcodes that could be handled here - MUL, MIN,
+  // MAX, saturated math, etc.
   case ISD::OR:
   case ISD::XOR:
   case ISD::ADD:
@@ -1865,15 +1864,17 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM: {
-    APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,
-                                   SrcZero, TLO, Depth + 1))
+    APInt UndefRHS, ZeroRHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, UndefRHS,
+                                   ZeroRHS, TLO, Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
-                                   KnownZero, TLO, Depth + 1))
+    APInt UndefLHS, ZeroLHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, UndefLHS,
+                                   ZeroLHS, TLO, Depth + 1))
       return true;
-    KnownZero &= SrcZero;
-    KnownUndef &= SrcUndef;
+
+    KnownZero = ZeroLHS & ZeroRHS;
+    KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
     break;
   }
   case ISD::AND: {
@@ -1887,6 +1888,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
     // If either side has a zero element, then the result element is zero, even
     // if the other is an UNDEF.
+    // TODO: Extend getKnownUndefForVectorBinop to also deal with known zeros
+    // and then handle 'and' nodes with the rest of the binop opcodes.
     KnownZero |= SrcZero;
     KnownUndef &= SrcUndef;
     KnownUndef &= ~KnownZero;
@@ -4370,7 +4373,7 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
 
   // Expand f32 -> i64 conversion
   // This algorithm comes from compiler-rt's implementation of fixsfdi:
-  // https://github.com/llvm-mirror/compiler-rt/blob/master/lib/builtins/fixsfdi.c
+  // https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/builtins/fixsfdi.c
   unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
   EVT IntVT = SrcVT.changeTypeToInteger();
   EVT IntShVT = getShiftAmountTy(IntVT, DAG.getDataLayout());
@@ -4762,6 +4765,27 @@ bool TargetLowering::expandCTTZ(SDNode *Node, SDValue &Result,
   }
 
   Result = DAG.getNode(ISD::CTPOP, dl, VT, Tmp);
+  return true;
+}
+
+bool TargetLowering::expandABS(SDNode *N, SDValue &Result,
+                               SelectionDAG &DAG) const {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
+  SDValue Op = N->getOperand(0);
+
+  // Only expand vector types if we have the appropriate vector operations.
+  if (VT.isVector() && (!isOperationLegalOrCustom(ISD::SRA, VT) ||
+                        !isOperationLegalOrCustom(ISD::ADD, VT) ||
+                        !isOperationLegalOrCustomOrPromote(ISD::XOR, VT)))
+    return false;
+
+  SDValue Shift =
+      DAG.getNode(ISD::SRA, dl, VT, Op,
+                  DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, ShVT));
+  SDValue Add = DAG.getNode(ISD::ADD, dl, VT, Op, Shift);
+  Result = DAG.getNode(ISD::XOR, dl, VT, Add, Shift);
   return true;
 }
 
@@ -5304,9 +5328,30 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   return SDValue();
 }
 
-SDValue TargetLowering::getExpandedSaturationAdditionSubtraction(
-    SDNode *Node, SelectionDAG &DAG) const {
+SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  EVT VT = LHS.getValueType();
+  SDLoc dl(Node);
+
+  // usub.sat(a, b) -> umax(a, b) - b
+  if (Opcode == ISD::USUBSAT && isOperationLegalOrCustom(ISD::UMAX, VT)) {
+    SDValue Max = DAG.getNode(ISD::UMAX, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, RHS);
+  }
+
+  if (Opcode == ISD::UADDSAT && isOperationLegalOrCustom(ISD::UMIN, VT)) {
+    SDValue InvRHS = DAG.getNOT(dl, RHS, VT);
+    SDValue Min = DAG.getNode(ISD::UMIN, dl, VT, LHS, InvRHS);
+    return DAG.getNode(ISD::ADD, dl, VT, Min, RHS);
+  }
+
+  if (VT.isVector()) {
+    // TODO: Consider not scalarizing here.
+    return SDValue();
+  }
+
   unsigned OverflowOp;
   switch (Opcode) {
   case ISD::SADDSAT:
@@ -5325,11 +5370,7 @@ SDValue TargetLowering::getExpandedSaturationAdditionSubtraction(
     llvm_unreachable("Expected method to receive signed or unsigned saturation "
                      "addition or subtraction node.");
   }
-  assert(Node->getNumOperands() == 2 && "Expected node to have 2 operands.");
 
-  SDLoc dl(Node);
-  SDValue LHS = Node->getOperand(0);
-  SDValue RHS = Node->getOperand(1);
   assert(LHS.getValueType().isScalarInteger() &&
          "Expected operands to be integers. Vector of int arguments should "
          "already be unrolled.");
@@ -5373,31 +5414,26 @@ SDValue TargetLowering::getExpandedSaturationAdditionSubtraction(
 }
 
 SDValue
-TargetLowering::getExpandedFixedPointMultiplication(SDNode *Node,
-                                                    SelectionDAG &DAG) const {
+TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   assert(Node->getOpcode() == ISD::SMULFIX && "Expected opcode to be SMULFIX.");
-  assert(Node->getNumOperands() == 3 &&
-         "Expected signed fixed point multiplication to have 3 operands.");
 
   SDLoc dl(Node);
   SDValue LHS = Node->getOperand(0);
   SDValue RHS = Node->getOperand(1);
-  assert(LHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
-  assert(RHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
+  EVT VT = LHS.getValueType();
+  unsigned Scale = Node->getConstantOperandVal(2);
+
+  // [us]mul.fix(a, b, 0) -> mul(a, b)
+  if (!Scale) {
+    if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
+      return SDValue();
+    return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+  }
+
   assert(LHS.getValueType() == RHS.getValueType() &&
          "Expected both operands to be the same type");
-
-  unsigned Scale = Node->getConstantOperandVal(2);
-  EVT VT = LHS.getValueType();
   assert(Scale < VT.getScalarSizeInBits() &&
          "Expected scale to be less than the number of bits.");
-
-  if (!Scale)
-    return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
 
   // Get the upper and lower bits of the result.
   SDValue Lo, Hi;
@@ -5409,6 +5445,8 @@ TargetLowering::getExpandedFixedPointMultiplication(SDNode *Node,
   } else if (isOperationLegalOrCustom(ISD::MULHS, VT)) {
     Lo = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
     Hi = DAG.getNode(ISD::MULHS, dl, VT, LHS, RHS);
+  } else if (VT.isVector()) {
+    return SDValue();
   } else {
     report_fatal_error("Unable to expand signed fixed point multiplication.");
   }

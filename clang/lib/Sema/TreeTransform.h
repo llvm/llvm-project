@@ -1,9 +1,8 @@
 //===------- TreeTransform.h - Semantic Tree Transformation -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 //
 //  This file implements a semantic tree transformation that takes a given
@@ -328,7 +327,7 @@ public:
   /// other mechanism.
   ///
   /// \returns the transformed statement.
-  StmtResult TransformStmt(Stmt *S);
+  StmtResult TransformStmt(Stmt *S, bool DiscardedValue = false);
 
   /// Transform the given statement.
   ///
@@ -682,6 +681,7 @@ public:
 #define OPENMP_CLAUSE(Name, Class)                        \
   LLVM_ATTRIBUTE_NOINLINE \
   OMPClause *Transform ## Class(Class *S);
+  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
 
   /// Build a new qualified type given its unqualified type and type location.
@@ -3269,8 +3269,8 @@ private:
                                       bool DeducibleTSTContext);
 };
 
-template<typename Derived>
-StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S) {
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S, bool DiscardedValue) {
   if (!S)
     return S;
 
@@ -3294,7 +3294,7 @@ StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S) {
       if (E.isInvalid())
         return StmtError();
 
-      return getSema().ActOnExprStmt(E);
+      return getSema().ActOnExprStmt(E, DiscardedValue);
     }
   }
 
@@ -3312,6 +3312,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPClause(OMPClause *S) {
 #define OPENMP_CLAUSE(Name, Class)                                             \
   case OMPC_ ## Name :                                                         \
     return getDerived().Transform ## Class(cast<Class>(S));
+  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   }
 
@@ -4715,7 +4716,8 @@ TreeTransform<Derived>::TransformVariableArrayType(TypeLocBuilder &TLB,
   }
   if (SizeResult.isInvalid())
     return QualType();
-  SizeResult = SemaRef.ActOnFinishFullExpr(SizeResult.get());
+  SizeResult =
+      SemaRef.ActOnFinishFullExpr(SizeResult.get(), /*DiscardedValue*/ false);
   if (SizeResult.isInvalid())
     return QualType();
 
@@ -6520,7 +6522,9 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
   bool SubStmtChanged = false;
   SmallVector<Stmt*, 8> Statements;
   for (auto *B : S->body()) {
-    StmtResult Result = getDerived().TransformStmt(B);
+    StmtResult Result =
+        getDerived().TransformStmt(B, !IsStmtExpr || B != S->body_back());
+
     if (Result.isInvalid()) {
       // Immediately fail if this was a DeclStmt, since it's very
       // likely that this will cause problems for future statements.
@@ -9069,10 +9073,10 @@ TreeTransform<Derived>::TransformGenericSelectionExpr(GenericSelectionExpr *E) {
 
   SmallVector<Expr *, 4> AssocExprs;
   SmallVector<TypeSourceInfo *, 4> AssocTypes;
-  for (unsigned i = 0; i != E->getNumAssocs(); ++i) {
-    TypeSourceInfo *TS = E->getAssocTypeSourceInfo(i);
-    if (TS) {
-      TypeSourceInfo *AssocType = getDerived().TransformType(TS);
+  for (const GenericSelectionExpr::Association &Assoc : E->associations()) {
+    TypeSourceInfo *TSI = Assoc.getTypeSourceInfo();
+    if (TSI) {
+      TypeSourceInfo *AssocType = getDerived().TransformType(TSI);
       if (!AssocType)
         return ExprError();
       AssocTypes.push_back(AssocType);
@@ -9080,7 +9084,8 @@ TreeTransform<Derived>::TransformGenericSelectionExpr(GenericSelectionExpr *E) {
       AssocTypes.push_back(nullptr);
     }
 
-    ExprResult AssocExpr = getDerived().TransformExpr(E->getAssocExpr(i));
+    ExprResult AssocExpr =
+        getDerived().TransformExpr(Assoc.getAssociationExpr());
     if (AssocExpr.isInvalid())
       return ExprError();
     AssocExprs.push_back(AssocExpr.get());

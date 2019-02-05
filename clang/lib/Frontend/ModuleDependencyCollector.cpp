@@ -1,9 +1,8 @@
 //===--- ModuleDependencyCollector.cpp - Collect module dependencies ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -99,24 +98,6 @@ struct ModuleDependencyMMCallbacks : public ModuleMapCallbacks {
 
 }
 
-// TODO: move this to Support/Path.h and check for HAVE_REALPATH?
-static bool real_path(StringRef SrcPath, SmallVectorImpl<char> &RealPath) {
-#ifdef LLVM_ON_UNIX
-  char CanonicalPath[PATH_MAX];
-
-  // TODO: emit a warning in case this fails...?
-  if (!realpath(SrcPath.str().c_str(), CanonicalPath))
-    return false;
-
-  SmallString<256> RPath(CanonicalPath);
-  RealPath.swap(RPath);
-  return true;
-#else
-  // FIXME: Add support for systems without realpath.
-  return false;
-#endif
-}
-
 void ModuleDependencyCollector::attachToASTReader(ASTReader &R) {
   R.addListener(llvm::make_unique<ModuleDependencyListener>(*this));
 }
@@ -131,7 +112,7 @@ void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
 static bool isCaseSensitivePath(StringRef Path) {
   SmallString<256> TmpDest = Path, UpperDest, RealDest;
   // Remove component traversals, links, etc.
-  if (!real_path(Path, TmpDest))
+  if (llvm::sys::fs::real_path(Path, TmpDest))
     return true; // Current default value in vfs.yaml
   Path = TmpDest;
 
@@ -141,7 +122,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   // already expects when sensitivity isn't setup.
   for (auto &C : Path)
     UpperDest.push_back(toUppercase(C));
-  if (real_path(UpperDest, RealDest) && Path.equals(RealDest))
+  if (!llvm::sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
     return false;
   return true;
 }
@@ -187,7 +168,7 @@ bool ModuleDependencyCollector::getRealPath(StringRef SrcPath,
   // Computing the real path is expensive, cache the search through the
   // parent path directory.
   if (DirWithSymLink == SymLinkMap.end()) {
-    if (!real_path(Dir, RealPath))
+    if (llvm::sys::fs::real_path(Dir, RealPath))
       return false;
     SymLinkMap[Dir] = RealPath.str();
   } else {

@@ -45,6 +45,7 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
+; ENABLED-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  RegBankSelect

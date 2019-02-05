@@ -31,7 +31,7 @@ Sections:
         Field:           imported_table
         Kind:            TABLE
         Table:
-          ElemType:      ANYFUNC
+          ElemType:      FUNCREF
           Limits:
             Flags:           [ HAS_MAX ]
             Initial:         0x00000020
@@ -63,7 +63,7 @@ Sections:
 # CHECK:         Field:           imported_table
 # CHECK:         Kind:            TABLE
 # CHECK:         Table:
-# CHECK:           ElemType:      ANYFUNC
+# CHECK:           ElemType:      FUNCREF
 # CHECK:           Limits:
 # CHECK:             Flags:           [ HAS_MAX ]
 # CHECK:             Initial:         0x00000020

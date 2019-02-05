@@ -1,9 +1,8 @@
 //===-- RISCVISelLowering.h - RISCV DAG Lowering Interface ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -32,7 +31,24 @@ enum NodeType : unsigned {
   SELECT_CC,
   BuildPairF64,
   SplitF64,
-  TAIL
+  TAIL,
+  // RV64I shifts, directly matching the semantics of the named RISC-V
+  // instructions.
+  SLLW,
+  SRAW,
+  SRLW,
+  // 32-bit operations from RV64M that can't be simply matched with a pattern
+  // at instruction selection time.
+  DIVW,
+  DIVUW,
+  REMUW,
+  // FPR32<->GPR transfer operations for RV64. Needed as an i32<->f32 bitcast
+  // is not legal on RV64. FMV_W_X_RV64 matches the semantics of the FMV.W.X.
+  // FMV_X_ANYEXTW_RV64 is similar to FMV.X.W but has an any-extended result.
+  // This is a more convenient semantic for producing dagcombines that remove
+  // unnecessary GPR->FPR->GPR moves.
+  FMV_W_X_RV64,
+  FMV_X_ANYEXTW_RV64
 };
 }
 
@@ -58,8 +74,15 @@ public:
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           unsigned Depth) const override;
 
   // This method returns the name of a target specific DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;

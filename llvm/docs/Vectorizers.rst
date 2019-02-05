@@ -311,7 +311,7 @@ ignored (as other compilers do) are still being left un-vectorized.
 Vectorization of function calls
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The Loop Vectorize can vectorize intrinsic math functions.
+The Loop Vectorizer can vectorize intrinsic math functions.
 See the table below for a list of these functions.
 
 +-----+-----+---------+
@@ -327,6 +327,11 @@ See the table below for a list of these functions.
 +-----+-----+---------+
 |     |     | fmuladd |
 +-----+-----+---------+
+
+Note that the optimizer may not be able to vectorize math library functions 
+that correspond to these intrinsics if the library calls access external state 
+such as "errno". To allow better optimization of C/C++ math library functions, 
+use "-fno-math-errno".
 
 The loop vectorizer knows about special instructions on the target and will
 vectorize a loop containing a function call that maps to the instructions. For
@@ -369,7 +374,7 @@ Performance
 -----------
 
 This section shows the execution time of Clang on a simple benchmark:
-`gcc-loops <http://llvm.org/viewvc/llvm-project/test-suite/trunk/SingleSource/UnitTests/Vectorizer/>`_.
+`gcc-loops <https://github.com/llvm/llvm-test-suite/tree/master/SingleSource/UnitTests/Vectorizer>`_.
 This benchmarks is a collection of loops from the GCC autovectorization
 `page <http://gcc.gnu.org/projects/tree-ssa/vectorization.html>`_ by Dorit Nuzman.
 

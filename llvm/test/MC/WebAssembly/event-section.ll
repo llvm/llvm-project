@@ -44,7 +44,7 @@ define i32 @test_throw1(i8* %p) {
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
-; CHECK-NEXT:     Version:         1
+; CHECK-NEXT:     Version:         2
 ; CHECK-NEXT:     SymbolTable:
 
 ; CHECK:            - Index:           1

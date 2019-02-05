@@ -44,8 +44,7 @@
 ; CHECK-NEXT:    9a:	ff fd 00 00 	lw	$ra, 0($sp)
 ; CHECK-NEXT:    9e:	00 01 0f 3c 	jr	$1
 ; CHECK-NEXT:    a2:	33 bd 00 08 	addiu	$sp, $sp, 8
-
-; CHECK:      10466:	00 00 00 00 	nop
+; CHECK:                ...
 ; CHECK-NEXT: 1046a:	94 00 00 02 	b	8 <foo+0x10472>
 ; CHECK-NEXT: 1046e:	00 00 00 00 	nop
 ; CHECK-NEXT: 10472:	33 bd ff f8 	addiu	$sp, $sp, -8

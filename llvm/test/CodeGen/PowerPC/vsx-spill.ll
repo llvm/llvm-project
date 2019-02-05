@@ -93,8 +93,8 @@ entry:
 
 ; CHECK-P9-REG-LABEL: foo3
 ; CHECK-P9-REG: stdu r1, -400(r1)
-; CHECK-P9-REG: lfd f30, 384(r1)
-; CHECK-P9-REG: xsadddp f1, f0, f0
+; CHECK-P9-REG-DAG: lfd f30, 384(r1)
+; CHECK-P9-REG-DAG: xsadddp f1, f0, f0
 
 ; CHECK-P9-FISL-LABEL: foo3
 ; CHECK-P9-FISL: stdu r1, -400(r1)

@@ -67,7 +67,7 @@ void test(int *List, int Length, int Value) {
   }
 
 // pragma clang unroll_and_jam is disabled for the moment
-/* expected-error {{invalid option 'unroll_and_jam'; expected vectorize, vectorize_width, interleave, interleave_count, unroll, unroll_count, or distribute}} */ #pragma clang loop unroll_and_jam(4)
+/* expected-error {{invalid option 'unroll_and_jam'; expected vectorize, vectorize_width, interleave, interleave_count, unroll, unroll_count, pipeline, pipeline_initiation_interval, or distribute}} */ #pragma clang loop unroll_and_jam(4)
   for (int i = 0; i < Length; i++) {
     for (int j = 0; j < Length; j++) {
       List[i * Length + j] = Value;

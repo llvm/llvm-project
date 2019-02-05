@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+m -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IM %s
+; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64I %s
+; RUN: llc -mtriple=riscv64 -mattr=+m -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64IM %s
 
 define i32 @urem(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: urem:
@@ -18,6 +22,24 @@ define i32 @urem(i32 %a, i32 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    remu a0, a0, a1
 ; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: urem:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp)
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    call __umoddi3
+; RV64I-NEXT:    ld ra, 8(sp)
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: urem:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    remuw a0, a0, a1
+; RV64IM-NEXT:    ret
   %1 = urem i32 %a, %b
   ret i32 %1
 }
@@ -36,6 +58,22 @@ define i32 @srem(i32 %a, i32 %b) nounwind {
 ; RV32IM:       # %bb.0:
 ; RV32IM-NEXT:    rem a0, a0, a1
 ; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: srem:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp)
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    sext.w a1, a1
+; RV64I-NEXT:    call __moddi3
+; RV64I-NEXT:    ld ra, 8(sp)
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: srem:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    remw a0, a0, a1
+; RV64IM-NEXT:    ret
   %1 = srem i32 %a, %b
   ret i32 %1
 }

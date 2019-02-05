@@ -4,10 +4,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -4505,6 +4504,7 @@ static void __kmp_aux_affinity_initialize(void) {
         KMP_WARNING(AffNoValidProcID);
       }
       __kmp_affinity_type = affinity_none;
+      __kmp_create_affinity_none_places();
       return;
     }
     break;
@@ -4557,11 +4557,9 @@ static void __kmp_aux_affinity_initialize(void) {
         KMP_WARNING(AffBalancedNotAvail, "KMP_AFFINITY");
       }
       __kmp_affinity_type = affinity_none;
+      __kmp_create_affinity_none_places();
       return;
-    } else if (__kmp_affinity_uniform_topology()) {
-      break;
-    } else { // Non-uniform topology
-
+    } else if (!__kmp_affinity_uniform_topology()) {
       // Save the depth for further usage
       __kmp_aff_depth = depth;
 
@@ -4602,8 +4600,9 @@ static void __kmp_aux_affinity_initialize(void) {
 
         procarr[core * maxprocpercore + inlastcore] = proc;
       }
-
-      break;
+    }
+    if (__kmp_affinity_compact >= depth) {
+      __kmp_affinity_compact = depth - 1;
     }
 
   sortAddresses:
@@ -4781,6 +4780,11 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
     th->th.th_new_place = i;
     th->th.th_first_place = 0;
     th->th.th_last_place = __kmp_affinity_num_masks - 1;
+  } else if (KMP_AFFINITY_NON_PROC_BIND) {
+    // When using a Non-OMP_PROC_BIND affinity method,
+    // set all threads' place-partition-var to the entire place list
+    th->th.th_first_place = 0;
+    th->th.th_last_place = __kmp_affinity_num_masks - 1;
   }
 
   if (i == KMP_PLACE_ALL) {
@@ -4880,7 +4884,7 @@ int __kmp_aux_set_affinity(void **mask) {
   }
 
   gtid = __kmp_entry_gtid();
-  KA_TRACE(1000, ; {
+  KA_TRACE(1000, (""); {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
                               (kmp_affin_mask_t *)(*mask));
@@ -4950,7 +4954,7 @@ int __kmp_aux_get_affinity(void **mask) {
   th = __kmp_threads[gtid];
   KMP_DEBUG_ASSERT(th->th.th_affin_mask != NULL);
 
-  KA_TRACE(1000, ; {
+  KA_TRACE(1000, (""); {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
                               th->th.th_affin_mask);
@@ -4967,7 +4971,7 @@ int __kmp_aux_get_affinity(void **mask) {
 #if !KMP_OS_WINDOWS
 
   retval = __kmp_get_system_affinity((kmp_affin_mask_t *)(*mask), FALSE);
-  KA_TRACE(1000, ; {
+  KA_TRACE(1000, (""); {
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
                               (kmp_affin_mask_t *)(*mask));
@@ -5001,7 +5005,7 @@ int __kmp_aux_set_affinity_mask_proc(int proc, void **mask) {
     return -1;
   }
 
-  KA_TRACE(1000, ; {
+  KA_TRACE(1000, (""); {
     int gtid = __kmp_entry_gtid();
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
@@ -5033,7 +5037,7 @@ int __kmp_aux_unset_affinity_mask_proc(int proc, void **mask) {
     return -1;
   }
 
-  KA_TRACE(1000, ; {
+  KA_TRACE(1000, (""); {
     int gtid = __kmp_entry_gtid();
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,
@@ -5065,7 +5069,7 @@ int __kmp_aux_get_affinity_mask_proc(int proc, void **mask) {
     return -1;
   }
 
-  KA_TRACE(1000, ; {
+  KA_TRACE(1000, (""); {
     int gtid = __kmp_entry_gtid();
     char buf[KMP_AFFIN_MASK_PRINT_LEN];
     __kmp_affinity_print_mask(buf, KMP_AFFIN_MASK_PRINT_LEN,

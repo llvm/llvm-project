@@ -1,9 +1,8 @@
 //== ----- llvm/CodeGen/GlobalISel/Combiner.h --------------------- == //
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -21,6 +20,7 @@
 namespace llvm {
 class MachineRegisterInfo;
 class CombinerInfo;
+class GISelCSEInfo;
 class TargetPassConfig;
 class MachineFunction;
 
@@ -28,14 +28,17 @@ class Combiner {
 public:
   Combiner(CombinerInfo &CombinerInfo, const TargetPassConfig *TPC);
 
-  bool combineMachineInstrs(MachineFunction &MF);
+  /// If CSEInfo is not null, then the Combiner will setup observer for
+  /// CSEInfo and instantiate a CSEMIRBuilder. Pass nullptr if CSE is not
+  /// needed.
+  bool combineMachineInstrs(MachineFunction &MF, GISelCSEInfo *CSEInfo);
 
 protected:
   CombinerInfo &CInfo;
 
   MachineRegisterInfo *MRI = nullptr;
   const TargetPassConfig *TPC;
-  MachineIRBuilder Builder;
+  std::unique_ptr<MachineIRBuilder> Builder;
 };
 
 } // End namespace llvm.

@@ -1,9 +1,8 @@
 //===- X86RegisterInfo.td - Describe the X86 Register File --*- tablegen -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -278,7 +277,7 @@ def K7 : X86Reg<"k7", 7>, DwarfRegNum<[125, 100, 100]>;
 // pseudo registers, but we still mark them as aliasing FP registers. That
 // way both kinds can be live without exceeding the stack depth. ST registers
 // are only live around inline assembly.
-def ST0 : X86Reg<"st(0)", 0>, DwarfRegNum<[33, 12, 11]>;
+def ST0 : X86Reg<"st", 0>, DwarfRegNum<[33, 12, 11]>;
 def ST1 : X86Reg<"st(1)", 1>, DwarfRegNum<[34, 13, 12]>;
 def ST2 : X86Reg<"st(2)", 2>, DwarfRegNum<[35, 14, 13]>;
 def ST3 : X86Reg<"st(3)", 3>, DwarfRegNum<[36, 15, 14]>;
@@ -522,9 +521,15 @@ def FR64 : RegisterClass<"X86", [f64], 64, (add FR32)>;
 // faster on common hardware.  In reality, this should be controlled by a
 // command line option or something.
 
+
 def RFP32 : RegisterClass<"X86",[f32], 32, (sequence "FP%u", 0, 6)>;
 def RFP64 : RegisterClass<"X86",[f64], 32, (add RFP32)>;
 def RFP80 : RegisterClass<"X86",[f80], 32, (add RFP32)>;
+
+// st(7) may be is not allocatable.
+def RFP80_7 : RegisterClass<"X86",[f80], 32, (add FP7)> {
+  let isAllocatable = 0;
+}
 
 // Floating point stack registers (these are not allocatable by the
 // register allocator - the floating point stackifier is responsible
@@ -532,6 +537,9 @@ def RFP80 : RegisterClass<"X86",[f80], 32, (add RFP32)>;
 def RST : RegisterClass<"X86", [f80, f64, f32], 32, (sequence "ST%u", 0, 7)> {
   let isAllocatable = 0;
 }
+
+// Helper to allow %st to print as %st(0) when its encoded in the instruction.
+def RSTi : RegisterOperand<RST, "printSTiRegOperand">;
 
 // Generic vector registers: VR64 and VR128.
 // Ensure that float types are declared first - only float is legal on SSE1.

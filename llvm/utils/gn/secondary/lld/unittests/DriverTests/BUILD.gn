@@ -1,15 +1,12 @@
-executable("DriverTests") {
-  # test/Unit/lit.cfg expects unittests in LLD_BINARY_DIR/unittest
-  output_dir = target_out_dir
+import("//llvm/utils/unittest/unittest.gni")
 
+unittest("DriverTests") {
   configs += [ "//llvm/utils/gn/build:lld_code" ]
   deps = [
     "//lld/lib/Driver",
     "//lld/lib/ReaderWriter/MachO",
-    "//llvm/utils/unittest/UnitTestMain",
   ]
   sources = [
     "DarwinLdDriverTest.cpp",
   ]
-  testonly = true
 }

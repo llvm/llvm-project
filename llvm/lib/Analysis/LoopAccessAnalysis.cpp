@@ -1,9 +1,8 @@
 //===- LoopAccessAnalysis.cpp - Loop Access Analysis Implementation --------==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1014,7 +1013,7 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
     return 0;
   }
 
-  // The accesss function must stride over the innermost loop.
+  // The access function must stride over the innermost loop.
   if (Lp != AR->getLoop()) {
     LLVM_DEBUG(dbgs() << "LAA: Bad stride - Not striding over innermost loop "
                       << *Ptr << " SCEV: " << *AR << "\n");
@@ -1086,7 +1085,7 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
     if (Assume) {
       // We can avoid this case by adding a run-time check.
       LLVM_DEBUG(dbgs() << "LAA: Non unit strided pointer which is not either "
-                        << "inbouds or in address space 0 may wrap:\n"
+                        << "inbounds or in address space 0 may wrap:\n"
                         << "LAA:   Pointer: " << *Ptr << "\n"
                         << "LAA:   SCEV: " << *AR << "\n"
                         << "LAA:   Added an overflow assumption\n");
@@ -1346,7 +1345,7 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // where Step is the absolute stride of the memory accesses in bytes,
   // then there is no dependence.
   //
-  // Ratioanle:
+  // Rationale:
   // We basically want to check if the absolute distance (|Dist/Step|)
   // is >= the loop iteration count (or > BackedgeTakenCount).
   // This is equivalent to the Strong SIV Test (Practical Dependence Testing,
@@ -1369,7 +1368,7 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 
   // The dependence distance can be positive/negative, so we sign extend Dist;
   // The multiplication of the absolute stride in bytes and the
-  // backdgeTakenCount is non-negative, so we zero extend Product.
+  // backedgeTakenCount is non-negative, so we zero extend Product.
   if (DistTypeSize > ProductTypeSize)
     CastedProduct = SE.getZeroExtendExpr(Product, Dist.getType());
   else

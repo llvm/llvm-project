@@ -1,9 +1,8 @@
 //===- CIndex.cpp - Clang-C Source Indexing Library -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2131,6 +2130,7 @@ public:
   OMPClauseEnqueue(EnqueueVisitor *Visitor) : Visitor(Visitor) { }
 #define OPENMP_CLAUSE(Name, Class)                                             \
   void Visit##Class(const Class *C);
+  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   void VisitOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
@@ -3694,7 +3694,7 @@ struct ExprEvalResult {
   ~ExprEvalResult() {
     if (EvalType != CXEval_UnExposed && EvalType != CXEval_Float &&
         EvalType != CXEval_Int) {
-      delete EvalData.stringVal;
+      delete[] EvalData.stringVal;
     }
   }
 };
@@ -3902,33 +3902,32 @@ static const ExprEvalResult* evaluateExpr(Expr *expr, CXCursor C) {
   return nullptr;
 }
 
-CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
-  const Decl *D = getCursorDecl(C);
-  if (D) {
-    const Expr *expr = nullptr;
-    if (auto *Var = dyn_cast<VarDecl>(D)) {
-      expr = Var->getInit();
-    } else if (auto *Field = dyn_cast<FieldDecl>(D)) {
-      expr = Field->getInClassInitializer();
-    }
-    if (expr)
-      return const_cast<CXEvalResult>(reinterpret_cast<const void *>(
-          evaluateExpr(const_cast<Expr *>(expr), C)));
+static const Expr *evaluateDeclExpr(const Decl *D) {
+  if (!D)
     return nullptr;
-  }
+  if (auto *Var = dyn_cast<VarDecl>(D))
+    return Var->getInit();
+  else if (auto *Field = dyn_cast<FieldDecl>(D))
+    return Field->getInClassInitializer();
+  return nullptr;
+}
 
-  const CompoundStmt *compoundStmt = dyn_cast_or_null<CompoundStmt>(getCursorStmt(C));
-  if (compoundStmt) {
-    Expr *expr = nullptr;
-    for (auto *bodyIterator : compoundStmt->body()) {
-      if ((expr = dyn_cast<Expr>(bodyIterator))) {
-        break;
-      }
-    }
-    if (expr)
-      return const_cast<CXEvalResult>(
-          reinterpret_cast<const void *>(evaluateExpr(expr, C)));
+static const Expr *evaluateCompoundStmtExpr(const CompoundStmt *CS) {
+  assert(CS && "invalid compound statement");
+  for (auto *bodyIterator : CS->body()) {
+    if (const auto *E = dyn_cast<Expr>(bodyIterator))
+      return E;
   }
+  return nullptr;
+}
+
+CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
+  if (const Expr *E =
+          clang_getCursorKind(C) == CXCursor_CompoundStmt
+              ? evaluateCompoundStmtExpr(cast<CompoundStmt>(getCursorStmt(C)))
+              : evaluateDeclExpr(getCursorDecl(C)))
+    return const_cast<CXEvalResult>(
+        reinterpret_cast<const void *>(evaluateExpr(const_cast<Expr *>(E), C)));
   return nullptr;
 }
 
@@ -6230,6 +6229,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::Import:
   case Decl::OMPThreadPrivate:
   case Decl::OMPDeclareReduction:
+  case Decl::OMPDeclareMapper:
   case Decl::OMPRequires:
   case Decl::ObjCTypeParam:
   case Decl::BuiltinTemplate:
@@ -8362,7 +8362,7 @@ unsigned clang_CXXMethod_isConst(CXCursor C) {
   const Decl *D = cxcursor::getCursorDecl(C);
   const CXXMethodDecl *Method =
       D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
-  return (Method && Method->getTypeQualifiers().hasConst()) ? 1 : 0;
+  return (Method && Method->getMethodQualifiers().hasConst()) ? 1 : 0;
 }
 
 unsigned clang_CXXMethod_isDefaulted(CXCursor C) {

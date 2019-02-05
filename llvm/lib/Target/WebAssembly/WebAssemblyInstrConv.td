@@ -1,9 +1,8 @@
 //===-- WebAssemblyInstrConv.td-WebAssembly Conversion support -*- tablegen -*-=
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -15,15 +14,15 @@
 
 defm I32_WRAP_I64 : I<(outs I32:$dst), (ins I64:$src), (outs), (ins),
                       [(set I32:$dst, (trunc I64:$src))],
-                      "i32.wrap/i64\t$dst, $src", "i32.wrap/i64", 0xa7>;
+                      "i32.wrap_i64\t$dst, $src", "i32.wrap_i64", 0xa7>;
 
 defm I64_EXTEND_S_I32 : I<(outs I64:$dst), (ins I32:$src), (outs), (ins),
                           [(set I64:$dst, (sext I32:$src))],
-                          "i64.extend_s/i32\t$dst, $src", "i64.extend_s/i32",
+                          "i64.extend_i32_s\t$dst, $src", "i64.extend_i32_s",
                           0xac>;
 defm I64_EXTEND_U_I32 : I<(outs I64:$dst), (ins I32:$src), (outs), (ins),
                           [(set I64:$dst, (zext I32:$src))],
-                          "i64.extend_u/i32\t$dst, $src", "i64.extend_u/i32",
+                          "i64.extend_i32_u\t$dst, $src", "i64.extend_i32_u",
                           0xad>;
 
 let Predicates = [HasSignExt] in {
@@ -58,43 +57,43 @@ def : Pat<(i64 (anyext I32:$src)), (I64_EXTEND_U_I32 I32:$src)>;
 // overflow or invalid.
 defm I32_TRUNC_S_SAT_F32 : I<(outs I32:$dst), (ins F32:$src), (outs), (ins),
                              [(set I32:$dst, (fp_to_sint F32:$src))],
-                             "i32.trunc_s:sat/f32\t$dst, $src",
-                             "i32.trunc_s:sat/f32", 0xfc00>,
+                             "i32.trunc_sat_f32_s\t$dst, $src",
+                             "i32.trunc_sat_f32_s", 0xfc00>,
                              Requires<[HasNontrappingFPToInt]>;
 defm I32_TRUNC_U_SAT_F32 : I<(outs I32:$dst), (ins F32:$src), (outs), (ins),
                              [(set I32:$dst, (fp_to_uint F32:$src))],
-                             "i32.trunc_u:sat/f32\t$dst, $src",
-                             "i32.trunc_u:sat/f32", 0xfc01>,
+                             "i32.trunc_sat_f32_u\t$dst, $src",
+                             "i32.trunc_sat_f32_u", 0xfc01>,
                              Requires<[HasNontrappingFPToInt]>;
 defm I64_TRUNC_S_SAT_F32 : I<(outs I64:$dst), (ins F32:$src), (outs), (ins),
                              [(set I64:$dst, (fp_to_sint F32:$src))],
-                             "i64.trunc_s:sat/f32\t$dst, $src",
-                             "i64.trunc_s:sat/f32", 0xfc04>,
+                             "i64.trunc_sat_f32_s\t$dst, $src",
+                             "i64.trunc_sat_f32_s", 0xfc04>,
                              Requires<[HasNontrappingFPToInt]>;
 defm I64_TRUNC_U_SAT_F32 : I<(outs I64:$dst), (ins F32:$src), (outs), (ins),
                              [(set I64:$dst, (fp_to_uint F32:$src))],
-                             "i64.trunc_u:sat/f32\t$dst, $src",
-                             "i64.trunc_u:sat/f32", 0xfc05>,
+                             "i64.trunc_sat_f32_u\t$dst, $src",
+                             "i64.trunc_sat_f32_u", 0xfc05>,
                              Requires<[HasNontrappingFPToInt]>;
 defm I32_TRUNC_S_SAT_F64 : I<(outs I32:$dst), (ins F64:$src), (outs), (ins),
                              [(set I32:$dst, (fp_to_sint F64:$src))],
-                             "i32.trunc_s:sat/f64\t$dst, $src",
-                             "i32.trunc_s:sat/f64", 0xfc02>,
+                             "i32.trunc_sat_f64_s\t$dst, $src",
+                             "i32.trunc_sat_f64_s", 0xfc02>,
                              Requires<[HasNontrappingFPToInt]>;
 defm I32_TRUNC_U_SAT_F64 : I<(outs I32:$dst), (ins F64:$src), (outs), (ins),
                              [(set I32:$dst, (fp_to_uint F64:$src))],
-                             "i32.trunc_u:sat/f64\t$dst, $src",
-                             "i32.trunc_u:sat/f64", 0xfc03>,
+                             "i32.trunc_sat_f64_u\t$dst, $src",
+                             "i32.trunc_sat_f64_u", 0xfc03>,
                              Requires<[HasNontrappingFPToInt]>;
 defm I64_TRUNC_S_SAT_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
                              [(set I64:$dst, (fp_to_sint F64:$src))],
-                             "i64.trunc_s:sat/f64\t$dst, $src",
-                             "i64.trunc_s:sat/f64", 0xfc06>,
+                             "i64.trunc_sat_f64_s\t$dst, $src",
+                             "i64.trunc_sat_f64_s", 0xfc06>,
                              Requires<[HasNontrappingFPToInt]>;
 defm I64_TRUNC_U_SAT_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
                              [(set I64:$dst, (fp_to_uint F64:$src))],
-                             "i64.trunc_u:sat/f64\t$dst, $src",
-                             "i64.trunc_u:sat/f64", 0xfc07>,
+                             "i64.trunc_sat_f64_u\t$dst, $src",
+                             "i64.trunc_sat_f64_u", 0xfc07>,
                              Requires<[HasNontrappingFPToInt]>;
 
 // Lower llvm.wasm.trunc.saturate.* to saturating instructions
@@ -147,86 +146,86 @@ defm FP_TO_UINT_I64_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
 // Conversion from floating point to integer traps on overflow and invalid.
 let hasSideEffects = 1 in {
 defm I32_TRUNC_S_F32 : I<(outs I32:$dst), (ins F32:$src), (outs), (ins),
-                         [], "i32.trunc_s/f32\t$dst, $src", "i32.trunc_s/f32",
+                         [], "i32.trunc_f32_s\t$dst, $src", "i32.trunc_f32_s",
                          0xa8>;
 defm I32_TRUNC_U_F32 : I<(outs I32:$dst), (ins F32:$src), (outs), (ins),
-                         [], "i32.trunc_u/f32\t$dst, $src", "i32.trunc_u/f32",
+                         [], "i32.trunc_f32_u\t$dst, $src", "i32.trunc_f32_u",
                          0xa9>;
 defm I64_TRUNC_S_F32 : I<(outs I64:$dst), (ins F32:$src), (outs), (ins),
-                         [], "i64.trunc_s/f32\t$dst, $src", "i64.trunc_s/f32",
+                         [], "i64.trunc_f32_s\t$dst, $src", "i64.trunc_f32_s",
                          0xae>;
 defm I64_TRUNC_U_F32 : I<(outs I64:$dst), (ins F32:$src), (outs), (ins),
-                         [], "i64.trunc_u/f32\t$dst, $src", "i64.trunc_u/f32",
+                         [], "i64.trunc_f32_u\t$dst, $src", "i64.trunc_f32_u",
                          0xaf>;
 defm I32_TRUNC_S_F64 : I<(outs I32:$dst), (ins F64:$src), (outs), (ins),
-                         [], "i32.trunc_s/f64\t$dst, $src", "i32.trunc_s/f64",
+                         [], "i32.trunc_f64_s\t$dst, $src", "i32.trunc_f64_s",
                          0xaa>;
 defm I32_TRUNC_U_F64 : I<(outs I32:$dst), (ins F64:$src), (outs), (ins),
-                         [], "i32.trunc_u/f64\t$dst, $src", "i32.trunc_u/f64",
+                         [], "i32.trunc_f64_u\t$dst, $src", "i32.trunc_f64_u",
                          0xab>;
 defm I64_TRUNC_S_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
-                         [], "i64.trunc_s/f64\t$dst, $src", "i64.trunc_s/f64",
+                         [], "i64.trunc_f64_s\t$dst, $src", "i64.trunc_f64_s",
                          0xb0>;
 defm I64_TRUNC_U_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
-                         [], "i64.trunc_u/f64\t$dst, $src", "i64.trunc_u/f64",
+                         [], "i64.trunc_f64_u\t$dst, $src", "i64.trunc_f64_u",
                          0xb1>;
 } // hasSideEffects = 1
 
 defm F32_CONVERT_S_I32 : I<(outs F32:$dst), (ins I32:$src), (outs), (ins),
                            [(set F32:$dst, (sint_to_fp I32:$src))],
-                           "f32.convert_s/i32\t$dst, $src", "f32.convert_s/i32",
+                           "f32.convert_i32_s\t$dst, $src", "f32.convert_i32_s",
                            0xb2>;
 defm F32_CONVERT_U_I32 : I<(outs F32:$dst), (ins I32:$src), (outs), (ins),
                            [(set F32:$dst, (uint_to_fp I32:$src))],
-                           "f32.convert_u/i32\t$dst, $src", "f32.convert_u/i32",
+                           "f32.convert_i32_u\t$dst, $src", "f32.convert_i32_u",
                            0xb3>;
 defm F64_CONVERT_S_I32 : I<(outs F64:$dst), (ins I32:$src), (outs), (ins),
                            [(set F64:$dst, (sint_to_fp I32:$src))],
-                           "f64.convert_s/i32\t$dst, $src", "f64.convert_s/i32",
+                           "f64.convert_i32_s\t$dst, $src", "f64.convert_i32_s",
                            0xb7>;
 defm F64_CONVERT_U_I32 : I<(outs F64:$dst), (ins I32:$src), (outs), (ins),
                            [(set F64:$dst, (uint_to_fp I32:$src))],
-                           "f64.convert_u/i32\t$dst, $src", "f64.convert_u/i32",
+                           "f64.convert_i32_u\t$dst, $src", "f64.convert_i32_u",
                            0xb8>;
 defm F32_CONVERT_S_I64 : I<(outs F32:$dst), (ins I64:$src), (outs), (ins),
                            [(set F32:$dst, (sint_to_fp I64:$src))],
-                           "f32.convert_s/i64\t$dst, $src", "f32.convert_s/i64",
+                           "f32.convert_i64_s\t$dst, $src", "f32.convert_i64_s",
                            0xb4>;
 defm F32_CONVERT_U_I64 : I<(outs F32:$dst), (ins I64:$src), (outs), (ins),
                            [(set F32:$dst, (uint_to_fp I64:$src))],
-                           "f32.convert_u/i64\t$dst, $src", "f32.convert_u/i64",
+                           "f32.convert_i64_u\t$dst, $src", "f32.convert_i64_u",
                            0xb5>;
 defm F64_CONVERT_S_I64 : I<(outs F64:$dst), (ins I64:$src), (outs), (ins),
                            [(set F64:$dst, (sint_to_fp I64:$src))],
-                           "f64.convert_s/i64\t$dst, $src", "f64.convert_s/i64",
+                           "f64.convert_i64_s\t$dst, $src", "f64.convert_i64_s",
                            0xb9>;
 defm F64_CONVERT_U_I64 : I<(outs F64:$dst), (ins I64:$src), (outs), (ins),
                            [(set F64:$dst, (uint_to_fp I64:$src))],
-                           "f64.convert_u/i64\t$dst, $src", "f64.convert_u/i64",
+                           "f64.convert_i64_u\t$dst, $src", "f64.convert_i64_u",
                            0xba>;
 
 defm F64_PROMOTE_F32 : I<(outs F64:$dst), (ins F32:$src), (outs), (ins),
                          [(set F64:$dst, (fpextend F32:$src))],
-                         "f64.promote/f32\t$dst, $src", "f64.promote/f32",
+                         "f64.promote_f32\t$dst, $src", "f64.promote_f32",
                          0xbb>;
 defm F32_DEMOTE_F64 : I<(outs F32:$dst), (ins F64:$src), (outs), (ins),
                         [(set F32:$dst, (fpround F64:$src))],
-                        "f32.demote/f64\t$dst, $src", "f32.demote/f64",
+                        "f32.demote_f64\t$dst, $src", "f32.demote_f64",
                         0xb6>;
 
 defm I32_REINTERPRET_F32 : I<(outs I32:$dst), (ins F32:$src), (outs), (ins),
                              [(set I32:$dst, (bitconvert F32:$src))],
-                             "i32.reinterpret/f32\t$dst, $src",
-                             "i32.reinterpret/f32", 0xbc>;
+                             "i32.reinterpret_f32\t$dst, $src",
+                             "i32.reinterpret_f32", 0xbc>;
 defm F32_REINTERPRET_I32 : I<(outs F32:$dst), (ins I32:$src), (outs), (ins),
                              [(set F32:$dst, (bitconvert I32:$src))],
-                             "f32.reinterpret/i32\t$dst, $src",
-                             "f32.reinterpret/i32", 0xbe>;
+                             "f32.reinterpret_i32\t$dst, $src",
+                             "f32.reinterpret_i32", 0xbe>;
 defm I64_REINTERPRET_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
                              [(set I64:$dst, (bitconvert F64:$src))],
-                             "i64.reinterpret/f64\t$dst, $src",
-                             "i64.reinterpret/f64", 0xbd>;
+                             "i64.reinterpret_f64\t$dst, $src",
+                             "i64.reinterpret_f64", 0xbd>;
 defm F64_REINTERPRET_I64 : I<(outs F64:$dst), (ins I64:$src), (outs), (ins),
                              [(set F64:$dst, (bitconvert I64:$src))],
-                             "f64.reinterpret/i64\t$dst, $src",
-                             "f64.reinterpret/i64", 0xbf>;
+                             "f64.reinterpret_i64\t$dst, $src",
+                             "f64.reinterpret_i64", 0xbf>;

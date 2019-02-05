@@ -14,8 +14,8 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN-LABEL: name: constant
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
+    %0:vgpr(p1) = COPY $vgpr0_vgpr1
+    %1:vgpr(p1) = COPY $vgpr2_vgpr3
 
     ; GCN: %{{[0-9]+}}:sreg_32 = S_MOV_B32 1
     %2:sreg_32(s32) = G_CONSTANT i32 1
@@ -49,13 +49,13 @@ body: |
     ; GCN: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE [[LO3]], %subreg.sub0, [[HI3]], %subreg.sub1
     %9:vgpr(s64) = G_FCONSTANT double 1.0
 
-    G_STORE %2, %0 :: (volatile store 4 into %ir.global0)
-    G_STORE %4, %0 :: (volatile store 4 into %ir.global0)
-    G_STORE %6, %0 :: (volatile store 4 into %ir.global0)
-    G_STORE %8, %0 :: (volatile store 4 into %ir.global0)
-    G_STORE %3, %1 :: (volatile store 8 into %ir.global1)
-    G_STORE %5, %1 :: (volatile store 8 into %ir.global1)
-    G_STORE %7, %1 :: (volatile store 8 into %ir.global1)
-    G_STORE %9, %1 :: (volatile store 8 into %ir.global1)
+    G_STORE %2, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
+    G_STORE %4, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
+    G_STORE %6, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
+    G_STORE %8, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
+    G_STORE %3, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
+    G_STORE %5, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
+    G_STORE %7, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
+    G_STORE %9, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
 ...
 ---

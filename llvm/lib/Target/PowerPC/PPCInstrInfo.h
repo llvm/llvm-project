@@ -1,9 +1,8 @@
 //===-- PPCInstrInfo.h - PowerPC Instruction Information --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -413,6 +412,8 @@ public:
   bool convertToImmediateForm(MachineInstr &MI,
                               MachineInstr **KilledDef = nullptr) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
+  void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
+                                  int64_t Imm) const;
 
   bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III,
                        bool PostRA) const;

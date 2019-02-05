@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """ This module parses and validates arguments for command-line interfaces.
 
 It uses argparse module to create the command line parser. (This library is
@@ -135,10 +134,10 @@ def validate_args_for_analyze(parser, args, from_build_command):
         if args.ctu_phases.analyze and not args.ctu_phases.collect \
                 and not os.path.exists(args.ctu_dir):
             parser.error(message='missing CTU directory')
-        # Check CTU capability via checking clang-func-mapping
-        if not is_ctu_capable(args.func_map_cmd):
+        # Check CTU capability via checking clang-extdef-mapping
+        if not is_ctu_capable(args.extdef_map_cmd):
             parser.error(message="""This version of clang does not support CTU
-            functionality or clang-func-mapping command not found.""")
+            functionality or clang-extdef-mapping command not found.""")
 
 
 def create_intercept_parser():
@@ -366,7 +365,7 @@ def create_analyze_parser(from_build_command):
             '--ctu',
             action='store_const',
             const=CtuConfig(collect=True, analyze=True,
-                            dir='', func_map_cmd=''),
+                            dir='', extdef_map_cmd=''),
             dest='ctu_phases',
             help="""Perform cross translation unit (ctu) analysis (both collect
             and analyze phases) using default <ctu-dir> for temporary output.
@@ -382,7 +381,7 @@ def create_analyze_parser(from_build_command):
             '--ctu-collect-only',
             action='store_const',
             const=CtuConfig(collect=True, analyze=False,
-                            dir='', func_map_cmd=''),
+                            dir='', extdef_map_cmd=''),
             dest='ctu_phases',
             help="""Perform only the collect phase of ctu.
             Keep <ctu-dir> for further use.""")
@@ -390,20 +389,20 @@ def create_analyze_parser(from_build_command):
             '--ctu-analyze-only',
             action='store_const',
             const=CtuConfig(collect=False, analyze=True,
-                            dir='', func_map_cmd=''),
+                            dir='', extdef_map_cmd=''),
             dest='ctu_phases',
             help="""Perform only the analyze phase of ctu. <ctu-dir> should be
             present and will not be removed after analysis.""")
         ctu.add_argument(
-            '--use-func-map-cmd',
+            '--use-extdef-map-cmd',
             metavar='<path>',
-            dest='func_map_cmd',
-            default='clang-func-mapping',
-            help="""'%(prog)s' uses the 'clang-func-mapping' executable
-            relative to itself for generating function maps for static
-            analysis. One can override this behavior with this option by using
-            the 'clang-func-mapping' packaged with Xcode (on OS X) or from the
-            PATH.""")
+            dest='extdef_map_cmd',
+            default='clang-extdef-mapping',
+            help="""'%(prog)s' uses the 'clang-extdef-mapping' executable
+            relative to itself for generating external definition maps for
+            static analysis. One can override this behavior with this option
+            by using the 'clang-extdef-mapping' packaged with Xcode (on OS X)
+            or from the PATH.""")
     return parser
 
 

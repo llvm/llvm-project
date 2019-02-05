@@ -1,9 +1,8 @@
 //===-- ScalarTest.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,6 +44,24 @@ TEST(ScalarTest, Equality) {
   float f1 = 2.0;
   ASSERT_TRUE(void1 == void2);
   ASSERT_FALSE(void1 == Scalar(f1));
+}
+
+TEST(ScalarTest, Comparison) {
+  auto s1 = Scalar(23);
+  auto s2 = Scalar(46);
+  ASSERT_TRUE(s1 < s2);
+  ASSERT_TRUE(s1 <= s2);
+  ASSERT_TRUE(s2 > s1);
+  ASSERT_TRUE(s2 >= s1);
+}
+
+TEST(ScalarTest, ComparisonFloat) {
+  auto s1 = Scalar(23.0f);
+  auto s2 = Scalar(46.0f);
+  ASSERT_TRUE(s1 < s2);
+  ASSERT_TRUE(s1 <= s2);
+  ASSERT_TRUE(s2 > s1);
+  ASSERT_TRUE(s2 >= s1);
 }
 
 TEST(ScalarTest, RightShiftOperator) {
@@ -245,4 +262,42 @@ TEST(ScalarTest, SetValueFromCString) {
   EXPECT_THAT_ERROR(
       a.SetValueFromCString("-123", lldb::eEncodingUint, 8).ToError(),
       Failed());
+}
+
+TEST(ScalarTest, APIntConstructor) {
+  auto width_array = {8, 16, 32};
+  for (auto &w : width_array) {
+    Scalar A(APInt(w, 24));
+    EXPECT_EQ(A.GetType(), Scalar::e_sint);
+  }
+
+  Scalar B(APInt(64, 42));
+  EXPECT_EQ(B.GetType(), Scalar::e_slonglong);
+  Scalar C(APInt(128, 96));
+  EXPECT_EQ(C.GetType(), Scalar::e_sint128);
+  Scalar D(APInt(256, 156));
+  EXPECT_EQ(D.GetType(), Scalar::e_sint256);
+  Scalar E(APInt(512, 456));
+  EXPECT_EQ(E.GetType(), Scalar::e_sint512);
+}
+
+TEST(ScalarTest, Scalar_512) {
+  Scalar Z(APInt(512, 0));
+  ASSERT_TRUE(Z.IsZero());
+  Z.MakeUnsigned();
+  ASSERT_TRUE(Z.IsZero());
+
+  Scalar S(APInt(512, 2000));
+  ASSERT_STREQ(S.GetTypeAsCString(), "int512_t");
+  ASSERT_STREQ(S.GetValueTypeAsCString(Scalar::e_sint512), "int512_t");
+
+  ASSERT_TRUE(S.MakeUnsigned());
+  EXPECT_EQ(S.GetType(), Scalar::e_uint512);
+  ASSERT_STREQ(S.GetTypeAsCString(), "unsigned int512_t");
+  ASSERT_STREQ(S.GetValueTypeAsCString(Scalar::e_uint512), "uint512_t");
+  EXPECT_EQ(S.GetByteSize(), 64U);
+
+  ASSERT_TRUE(S.MakeSigned());
+  EXPECT_EQ(S.GetType(), Scalar::e_sint512);
+  EXPECT_EQ(S.GetByteSize(), 64U);
 }

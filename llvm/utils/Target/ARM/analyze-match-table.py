@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 def analyze_match_table(path):
     # Extract the instruction table.
     data = open(path).read()
@@ -37,10 +39,10 @@ def analyze_match_table(path):
     condcode_mnemonics = set(m for m in mnemonics
                              if 'MCK_CondCode' in mnemonic_flags[m])
     noncondcode_mnemonics = mnemonics - condcode_mnemonics
-    print ' || '.join('Mnemonic == "%s"' % m
-                      for m in ccout_mnemonics)
-    print ' || '.join('Mnemonic == "%s"' % m
-                      for m in noncondcode_mnemonics)
+    print(' || '.join('Mnemonic == "%s"' % m
+                      for m in ccout_mnemonics))
+    print(' || '.join('Mnemonic == "%s"' % m
+                      for m in noncondcode_mnemonics))
 
 def main():
     import sys

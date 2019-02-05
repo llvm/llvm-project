@@ -1,9 +1,8 @@
 //===-- hwasan_thread_list.h ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -109,38 +108,52 @@ struct ThreadStats {
 class HwasanThreadList {
  public:
   HwasanThreadList(uptr storage, uptr size)
-      : free_space_(storage),
-        free_space_end_(storage + size),
-        ring_buffer_size_(RingBufferSize()) {}
+      : free_space_(storage), free_space_end_(storage + size) {
+    // [storage, storage + size) is used as a vector of
+    // thread_alloc_size_-sized, ring_buffer_size_*2-aligned elements.
+    // Each element contains
+    // * a ring buffer at offset 0,
+    // * a Thread object at offset ring_buffer_size_.
+    ring_buffer_size_ = RingBufferSize();
+    thread_alloc_size_ =
+        RoundUpTo(ring_buffer_size_ + sizeof(Thread), ring_buffer_size_ * 2);
+  }
 
   Thread *CreateCurrentThread() {
     Thread *t;
     {
       SpinMutexLock l(&list_mutex_);
       t = free_list_.Pop();
-      if (t)
-        internal_memset((void *)t, 0, sizeof(Thread) + ring_buffer_size_);
-      else
+      if (t) {
+        uptr start = (uptr)t - ring_buffer_size_;
+        internal_memset((void *)start, 0, ring_buffer_size_ + sizeof(Thread));
+      } else {
         t = AllocThread();
+      }
       live_list_.Push(t);
     }
-    t->Init((uptr)(t + 1), ring_buffer_size_);
+    t->Init((uptr)t - ring_buffer_size_, ring_buffer_size_);
     AddThreadStats(t);
     return t;
   }
 
+  void DontNeedThread(Thread *t) {
+    uptr start = (uptr)t - ring_buffer_size_;
+    ReleaseMemoryPagesToOS(start, start + thread_alloc_size_);
+  }
+
   void ReleaseThread(Thread *t) {
-    // FIXME: madvise away the ring buffer?
     RemoveThreadStats(t);
     t->Destroy();
     SpinMutexLock l(&list_mutex_);
     live_list_.Remove(t);
     free_list_.Push(t);
+    DontNeedThread(t);
   }
 
   Thread *GetThreadByBufferAddress(uptr p) {
-    uptr align = ring_buffer_size_ * 2;
-    return (Thread *)(RoundDownTo(p, align) - sizeof(Thread));
+    return (Thread *)(RoundDownTo(p, ring_buffer_size_ * 2) +
+                      ring_buffer_size_);
   }
 
   uptr MemoryUsedPerThread() {
@@ -176,15 +189,17 @@ class HwasanThreadList {
  private:
   Thread *AllocThread() {
     uptr align = ring_buffer_size_ * 2;
-    uptr ring_buffer_start = RoundUpTo(free_space_ + sizeof(Thread), align);
-    free_space_ = ring_buffer_start + ring_buffer_size_;
+    CHECK(IsAligned(free_space_, align));
+    Thread *t = (Thread *)(free_space_ + ring_buffer_size_);
+    free_space_ += thread_alloc_size_;
     CHECK(free_space_ <= free_space_end_ && "out of thread memory");
-    return (Thread *)(ring_buffer_start - sizeof(Thread));
+    return t;
   }
 
   uptr free_space_;
   uptr free_space_end_;
   uptr ring_buffer_size_;
+  uptr thread_alloc_size_;
 
   ThreadListHead free_list_;
   ThreadListHead live_list_;

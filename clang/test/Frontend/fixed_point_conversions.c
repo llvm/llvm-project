@@ -1,5 +1,39 @@
-// RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - | FileCheck %s -check-prefix=DEFAULT
-// RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s -check-prefix=SAME
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck %s -check-prefix=DEFAULT
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -S -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s -check-prefix=SAME
+
+// Between different fixed point types
+short _Accum sa_const = 2.5hk; // DEFAULT-DAG: @sa_const  = {{.*}}global i16 320, align 2
+_Accum a_const = 2.5hk;        // DEFAULT-DAG: @a_const   = {{.*}}global i32 81920, align 4
+short _Accum sa_const2 = 2.5k; // DEFAULT-DAG: @sa_const2 = {{.*}}global i16 320, align 2
+
+short _Accum sa_from_f_const = 0.5r; // DEFAULT-DAG: sa_from_f_const = {{.*}}global i16 64, align 2
+_Fract f_from_sa_const = 0.5hk;      // DEFAULT-DAG: f_from_sa_const = {{.*}}global i16 16384, align 2
+
+unsigned short _Accum usa_const = 2.5uk;
+unsigned _Accum ua_const = 2.5uhk;
+// DEFAULT-DAG: @usa_const  = {{.*}}global i16 640, align 2
+// DEFAULT-DAG: @ua_const   = {{.*}}global i32 163840, align 4
+// SAME-DAG:    @usa_const  = {{.*}}global i16 320, align 2
+// SAME-DAG:    @ua_const   = {{.*}}global i32 81920, align 4
+
+// Signedness
+unsigned short _Accum usa_const2 = 2.5hk;
+// DEFAULT-DAG: @usa_const2  = {{.*}}global i16 640, align 2
+// SAME-DAG:    @usa_const2  = {{.*}}global i16 320, align 2
+short _Accum sa_const3 = 2.5hk; // DEFAULT-DAG: @sa_const3 = {{.*}}global i16 320, align 2
+
+// Overflow (this is undefined but allowed)
+short _Accum sa_const4 = 256.0k;
+
+// Saturation
+_Sat short _Accum sat_sa_const = 2.5hk;   // DEFAULT-DAG: @sat_sa_const  = {{.*}}global i16 320, align 2
+_Sat short _Accum sat_sa_const2 = 256.0k; // DEFAULT-DAG: @sat_sa_const2 = {{.*}}global i16 32767, align 2
+_Sat unsigned short _Accum sat_usa_const = -1.0hk;
+// DEFAULT-DAG: @sat_usa_const = {{.*}}global i16 0, align 2
+// SAME-DAG:    @sat_usa_const = {{.*}}global i16 0, align 2
+_Sat unsigned short _Accum sat_usa_const2 = 256.0k;
+// DEFAULT-DAG: @sat_usa_const2 = {{.*}}global i16 -1, align 2
+// SAME-DAG:    @sat_usa_const2 = {{.*}}global i16 32767, align 2
 
 void TestFixedPointCastSameType() {
   _Accum a = 2.5k;
@@ -214,19 +248,17 @@ void TestFixedPointCastSaturation() {
   // Only get overflow checking if signed fract to unsigned accum
   sat_ua = sat_sf;
   // DEFAULT:      [[FRACT:%[0-9a-z]+]] = load i8, i8* %sat_sf, align 1
-  // DEFAULT-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i17
-  // DEFAULT-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i17 [[FRACT_EXT]], 9
-  // DEFAULT-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i17 [[ACCUM]], 0
-  // DEFAULT-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i17 0, i17 [[ACCUM]]
-  // DEFAULT-NEXT: [[RESULT_EXT:%[0-9a-z]+]] = sext i17 [[RESULT]] to i32
-  // DEFAULT-NEXT: store i32 [[RESULT_EXT]], i32* %sat_ua, align 4
+  // DEFAULT-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i32
+  // DEFAULT-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i32 [[FRACT_EXT]], 9
+  // DEFAULT-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i32 [[ACCUM]], 0
+  // DEFAULT-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i32 0, i32 [[ACCUM]]
+  // DEFAULT-NEXT: store i32 [[RESULT]], i32* %sat_ua, align 4
   // SAME:      [[FRACT:%[0-9a-z]+]] = load i8, i8* %sat_sf, align 1
-  // SAME-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i16
-  // SAME-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i16 [[FRACT_EXT]], 8
-  // SAME-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i16 [[ACCUM]], 0
-  // SAME-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i16 0, i16 [[ACCUM]]
-  // SAME-NEXT: [[RESULT_EXT:%[0-9a-z]+]] = sext i16 [[RESULT]] to i32
-  // SAME-NEXT: store i32 [[RESULT_EXT]], i32* %sat_ua, align 4
+  // SAME-NEXT: [[FRACT_EXT:%[0-9a-z]+]] = sext i8 [[FRACT]] to i32
+  // SAME-NEXT: [[ACCUM:%[0-9a-z]+]] = shl i32 [[FRACT_EXT]], 8
+  // SAME-NEXT: [[IS_NEG:%[0-9a-z]+]] = icmp slt i32 [[ACCUM]], 0
+  // SAME-NEXT: [[RESULT:%[0-9a-z]+]] = select i1 [[IS_NEG]], i32 0, i32 [[ACCUM]]
+  // SAME-NEXT: store i32 [[RESULT]], i32* %sat_ua, align 4
 }
 
 void TestFixedPointCastBetFractAccum() {

@@ -39,3 +39,13 @@ define void @f(i32* %x) {
   fence syncscope("device") seq_cst
   ret void
 }
+
+define void @fp_atomics(float* %x) {
+ ; CHECK: atomicrmw fadd float* %x, float 1.000000e+00 seq_cst
+  atomicrmw fadd float* %x, float 1.0 seq_cst
+
+  ; CHECK: atomicrmw volatile fadd float* %x, float 1.000000e+00 seq_cst
+  atomicrmw volatile fadd float* %x, float 1.0 seq_cst
+
+  ret void
+}

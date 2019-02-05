@@ -1,6 +1,7 @@
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64 --check-prefix CHECK-DIV64
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -fopenmp-optimistic-collapse -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-DIV32
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -fopenmp-cuda-mode -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
@@ -9,11 +10,12 @@
 #define HEADER
 
 // Check that the execution mode of all 5 target regions on the gpu is set to SPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l43}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l48}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l56}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l34}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l40}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l45}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l50}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l58}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l65}}_exec_mode = weak constant i8 0
 
 #define N 1000
 #define M 10
@@ -80,17 +82,17 @@ int bar(int n){
 // CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
 // CHECK-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l32(
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l34(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
-// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} 4, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i16 1, i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} 4, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[TEAM_ALLOC:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[BC:%.+]] = bitcast i8* [[TEAM_ALLOC]] to [[REC:%.+]]*
 // CHECK: getelementptr inbounds [[REC]], [[REC]]* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL1:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 1)
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 1, i16 1)
 // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
@@ -214,16 +216,19 @@ int bar(int n){
 // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 0)
 // CHECK: ret void
 
-// CHECK: define internal void [[OUTL4]](
+// CHECK-32: define internal void [[OUTL4]](
+// CHECK-64: define internal void [[OUTL4]](
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 33,
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
-// CHECK: define weak void @__omp_offloading_{{.*}}_l56(i[[SZ:64|32]] %{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{.*}})
+// CHECK: define weak void @__omp_offloading_{{.*}}_l58(i[[SZ:64|32]] %{{[^,]+}}, [10 x [10 x i32]]* dereferenceable{{.*}})
 // CHECK: call void [[OUTLINED:@__omp_outlined.*]](i32* %{{.+}}, i32* %{{.+}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, [10 x [10 x i32]]* %{{.*}})
 // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}} i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x [10 x i32]]* dereferenceable{{.*}})
+// CHECK-DIV64: div i64
+// CHECK-DIV32-NO: div i64
 
-// CHECK: define weak void @__omp_offloading_{{.*}}_l63(i[[SZ:64|32]] %{{[^,]+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{[^)]+}})
+// CHECK: define weak void @__omp_offloading_{{.*}}_l65(i[[SZ:64|32]] %{{[^,]+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{[^)]+}})
 // CHECK: call void [[OUTLINED:@__omp_outlined.*]](i32* %{{.+}}, i32* %{{.+}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, i[[SZ]] %{{.*}}, [1000 x i32]* %{{.*}}, i32* %{{.*}})
 // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.*}}, i32* noalias %{{.*}} i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [1000 x i32]* dereferenceable{{.*}}, i32* %{{.*}})
 

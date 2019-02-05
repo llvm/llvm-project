@@ -1,21 +1,21 @@
 //===--------- PolyhedralInfo.cpp  - Create Scops from LLVM IR-------------===//
-///
-///                     The LLVM Compiler Infrastructure
-///
-/// This file is distributed under the University of Illinois Open Source
-/// License. See LICENSE.TXT for details.
-///
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
 //===----------------------------------------------------------------------===//
-///
-/// An interface to the Polyhedral analysis engine(Polly) of LLVM.
-///
-/// This pass provides an interface to the polyhedral analysis performed by
-/// Polly.
-///
-/// This interface provides basic interface like isParallel, isVectorizable
-/// that can be used in LLVM transformation passes.
-///
-/// Work in progress, this file is subject to change.
+//
+// An interface to the Polyhedral analysis engine(Polly) of LLVM.
+//
+// This pass provides an interface to the polyhedral analysis performed by
+// Polly.
+//
+// This interface provides basic interface like isParallel, isVectorizable
+// that can be used in LLVM transformation passes.
+//
+// Work in progress, this file is subject to change.
+//
 //===----------------------------------------------------------------------===//
 
 #include "polly/PolyhedralInfo.h"

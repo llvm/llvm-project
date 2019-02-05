@@ -1,9 +1,8 @@
 //===- SILoadStoreOptimizer.cpp -------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -160,7 +159,7 @@ private:
   bool OptimizeAgain;
 
   static bool offsetsCanBeCombined(CombineInfo &CI);
-  static bool widthsFit(const CombineInfo &CI);
+  static bool widthsFit(const GCNSubtarget &STM, const CombineInfo &CI);
   static unsigned getNewOpcode(const CombineInfo &CI);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI);
   const TargetRegisterClass *getTargetRegisterClass(const CombineInfo &CI);
@@ -367,11 +366,12 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI) {
   return false;
 }
 
-bool SILoadStoreOptimizer::widthsFit(const CombineInfo &CI) {
+bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
+                                     const CombineInfo &CI) {
   const unsigned Width = (CI.Width0 + CI.Width1);
   switch (CI.InstClass) {
   default:
-    return Width <= 4;
+    return (Width <= 4) && (STM.hasDwordx3LoadStores() || (Width != 3));
   case S_BUFFER_LOAD_IMM:
     switch (Width) {
     default:
@@ -645,7 +645,7 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
       // We also need to go through the list of instructions that we plan to
       // move and make sure they are all safe to move down past the merged
       // instruction.
-      if (widthsFit(CI) && offsetsCanBeCombined(CI))
+      if (widthsFit(*STM, CI) && offsetsCanBeCombined(CI))
         if (canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))
           return true;
     }

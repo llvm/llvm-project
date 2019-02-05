@@ -1,9 +1,8 @@
 //===---- MachineCombiner.cpp - Instcombining on SSA form machine code ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -231,6 +230,8 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
     // Get the first instruction that uses MO
     MachineRegisterInfo::reg_iterator RI = MRI->reg_begin(MO.getReg());
     RI++;
+    if (RI == MRI->reg_end())
+      continue;
     MachineInstr *UseMO = RI->getParent();
     unsigned LatencyOp = 0;
     if (UseMO && BlockTrace.isDepInTrace(*Root, *UseMO)) {

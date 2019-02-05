@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -O3 -relocation-model=pic -disable-fp-elim -mcpu=cortex-a8
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -O3 -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8
 ; rdar://8110842
 
 declare arm_apcscc i32 @__maskrune(i32, i32)

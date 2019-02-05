@@ -203,7 +203,7 @@ OPTIONS
  annotations.
 
 .. option:: -topn=n
-	     
+
  Instruct the profile dumper to show the top ``n`` functions with the
  hottest basic blocks in the summary section. By default, the topn functions
  are not dumped.
@@ -215,6 +215,16 @@ OPTIONS
 .. option:: -memop-sizes
 
  Show the profiled sizes of the memory intrinsic calls for shown functions.
+
+.. option:: -value-cutoff=n
+
+ Show only those functions whose max count values are greater or equal to ``n``.
+ By default, the value-cutoff is set to 0.
+
+.. option:: -list-below-cutoff
+
+ Only output names of functions whose max count value are below the cutoff
+ value.
 
 EXIT STATUS
 -----------

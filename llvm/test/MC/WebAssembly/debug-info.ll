@@ -124,6 +124,12 @@
 ; CHECK-NEXT:    Offset: 991
 ; CHECK-NEXT:    Name: reloc..debug_line
 ; CHECK-NEXT:  }
+; CHECK-NEXT:  Section {
+; CHECK-NEXT:    Type: CUSTOM (0x0)
+; CHECK-NEXT:    Size: 77
+; CHECK-NEXT:    Offset: 1021
+; CHECK-NEXT:    Name: producers
+; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 ; CHECK-NEXT:Relocations [
 ; CHECK-NEXT:  Section (6) DATA {

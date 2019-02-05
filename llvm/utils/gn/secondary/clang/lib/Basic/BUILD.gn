@@ -58,7 +58,6 @@ static_library("Basic") {
     "Targets/MSP430.cpp",
     "Targets/Mips.cpp",
     "Targets/NVPTX.cpp",
-    "Targets/Nios2.cpp",
     "Targets/OSTargets.cpp",
     "Targets/PNaCl.cpp",
     "Targets/PPC.cpp",

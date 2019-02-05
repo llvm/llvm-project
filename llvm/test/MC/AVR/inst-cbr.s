@@ -8,7 +8,7 @@ foo:
   cbr r20, 173
   cbr r31, 0
 
-; CHECK: cbr r17, 208                 ; encoding: [0x1f,0x72]
-; CHECK: cbr r24, 190                 ; encoding: [0x81,0x74]
-; CHECK: cbr r20, 173                 ; encoding: [0x42,0x75]
-; CHECK: cbr r31, 0                   ; encoding: [0xff,0x7f]
+; CHECK: andi r17, -209              ; encoding: [0x1f,0x72]
+; CHECK: andi r24, -191              ; encoding: [0x81,0x74]
+; CHECK: andi r20, -174              ; encoding: [0x42,0x75]
+; CHECK: andi r31, -1                ; encoding: [0xff,0x7f]

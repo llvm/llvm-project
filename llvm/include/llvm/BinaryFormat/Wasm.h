@@ -1,9 +1,8 @@
 //===- Wasm.h - Wasm object file format -------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,7 +25,7 @@ const char WasmMagic[] = {'\0', 'a', 's', 'm'};
 // Wasm binary format version
 const uint32_t WasmVersion = 0x1;
 // Wasm linking metadata version
-const uint32_t WasmMetadataVersion = 0x1;
+const uint32_t WasmMetadataVersion = 0x2;
 // Wasm uses a 64k page size
 const uint32_t WasmPageSize = 65536;
 
@@ -41,6 +40,12 @@ struct WasmDylinkInfo {
   uint32_t TableSize;  // Table size in elements
   uint32_t TableAlignment;  // P2 alignment of table
   std::vector<StringRef> Needed; // Shared library depenedencies
+};
+
+struct WasmProducerInfo {
+  std::vector<std::pair<std::string, std::string>> Languages;
+  std::vector<std::pair<std::string, std::string>> Tools;
+  std::vector<std::pair<std::string, std::string>> SDKs;
 };
 
 struct WasmExport {
@@ -211,7 +216,7 @@ enum : unsigned {
   WASM_TYPE_F32 = 0x7D,
   WASM_TYPE_F64 = 0x7C,
   WASM_TYPE_V128 = 0x7B,
-  WASM_TYPE_ANYFUNC = 0x70,
+  WASM_TYPE_FUNCREF = 0x70,
   WASM_TYPE_EXCEPT_REF = 0x68,
   WASM_TYPE_FUNC = 0x60,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
@@ -229,7 +234,7 @@ enum : unsigned {
 // Opcodes used in initializer expressions.
 enum : unsigned {
   WASM_OPCODE_END = 0x0b,
-  WASM_OPCODE_GET_GLOBAL = 0x23,
+  WASM_OPCODE_GLOBAL_GET = 0x23,
   WASM_OPCODE_I32_CONST = 0x41,
   WASM_OPCODE_I64_CONST = 0x42,
   WASM_OPCODE_F32_CONST = 0x43,

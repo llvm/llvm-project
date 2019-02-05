@@ -1,9 +1,8 @@
 //===------ utils/wasm2yaml.cpp - obj2yaml conversion tool ------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -133,6 +132,29 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     }
 
     CustomSec = std::move(LinkingSec);
+  } else if (WasmSec.Name == "producers") {
+    std::unique_ptr<WasmYAML::ProducersSection> ProducersSec =
+        make_unique<WasmYAML::ProducersSection>();
+    const llvm::wasm::WasmProducerInfo &Info = Obj.getProducerInfo();
+    for (auto &E : Info.Languages) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->Languages.push_back(Producer);
+    }
+    for (auto &E : Info.Tools) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->Tools.push_back(Producer);
+    }
+    for (auto &E : Info.SDKs) {
+      WasmYAML::ProducerEntry Producer;
+      Producer.Name = E.first;
+      Producer.Version = E.second;
+      ProducersSec->SDKs.push_back(Producer);
+    }
+    CustomSec = std::move(ProducersSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);
   }

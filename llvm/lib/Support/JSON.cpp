@@ -1,9 +1,8 @@
 //=== JSON.cpp - JSON value, parsing and serialization - C++ -----------*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
 
@@ -182,6 +181,12 @@ bool operator==(const Value &L, const Value &R) {
   case Value::Boolean:
     return *L.getAsBoolean() == *R.getAsBoolean();
   case Value::Number:
+    // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=323
+    // The same integer must convert to the same double, per the standard.
+    // However we see 64-vs-80-bit precision comparisons with gcc-7 -O3 -m32.
+    // So we avoid floating point promotion for exact comparisons.
+    if (L.Type == Value::T_Integer || R.Type == Value::T_Integer)
+      return L.getAsInteger() == R.getAsInteger();
     return *L.getAsNumber() == *R.getAsNumber();
   case Value::String:
     return *L.getAsString() == *R.getAsString();

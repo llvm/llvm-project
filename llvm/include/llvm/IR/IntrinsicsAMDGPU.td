@@ -1,9 +1,8 @@
 //===- IntrinsicsAMDGPU.td - Defines AMDGPU intrinsics -----*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -392,6 +391,35 @@ class AMDGPULDSF32Intrin<string clang_builtin> :
     [IntrArgMemOnly, NoCapture<0>]
 >;
 
+class AMDGPUDSOrderedIntrinsic : Intrinsic<
+  [llvm_i32_ty],
+  // M0 = {hi16:address, lo16:waveID}. Allow passing M0 as a pointer, so that
+  // the bit packing can be optimized at the IR level.
+  [LLVMQualPointerType<llvm_i32_ty, 2>, // IntToPtr(M0)
+   llvm_i32_ty, // value to add or swap
+   llvm_i32_ty, // ordering
+   llvm_i32_ty, // scope
+   llvm_i1_ty,  // isVolatile
+   llvm_i32_ty, // ordered count index (OA index), also added to the address
+   llvm_i1_ty,  // wave release, usually set to 1
+   llvm_i1_ty], // wave done, set to 1 for the last ordered instruction
+  [NoCapture<0>]
+>;
+
+class AMDGPUDSAppendConsumedIntrinsic : Intrinsic<
+  [llvm_i32_ty],
+  [llvm_anyptr_ty, // LDS or GDS ptr
+   llvm_i1_ty], // isVolatile
+   [IntrConvergent, IntrArgMemOnly, NoCapture<0>]
+>;
+
+def int_amdgcn_ds_ordered_add : AMDGPUDSOrderedIntrinsic;
+def int_amdgcn_ds_ordered_swap : AMDGPUDSOrderedIntrinsic;
+
+// The pointer argument is assumed to be dynamically uniform if a VGPR.
+def int_amdgcn_ds_append : AMDGPUDSAppendConsumedIntrinsic;
+def int_amdgcn_ds_consume : AMDGPUDSAppendConsumedIntrinsic;
+
 def int_amdgcn_ds_fadd : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_faddf">;
 def int_amdgcn_ds_fmin : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_fminf">;
 def int_amdgcn_ds_fmax : AMDGPULDSF32Intrin<"__builtin_amdgcn_ds_fmaxf">;
@@ -590,7 +618,7 @@ class AMDGPUDimSampleProfile<string opmod,
                              AMDGPUDimProps dim,
                              AMDGPUSampleVariant sample> : AMDGPUDimProfile<opmod, dim> {
   let IsSample = 1;
-  let RetTypes = [llvm_anyfloat_ty];
+  let RetTypes = [llvm_any_ty];
   let ExtraAddrArgs = sample.ExtraAddrArgs;
   let Gradients = sample.Gradients;
   let LodClampMip = sample.LodOrClamp;
@@ -683,11 +711,11 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
   }
 
   defm int_amdgcn_image_load
-    : AMDGPUImageDimIntrinsicsAll<"LOAD", [llvm_anyfloat_ty], [], [IntrReadMem],
+    : AMDGPUImageDimIntrinsicsAll<"LOAD", [llvm_any_ty], [], [IntrReadMem],
                                   [SDNPMemOperand]>,
       AMDGPUImageDMaskIntrinsic;
   defm int_amdgcn_image_load_mip
-    : AMDGPUImageDimIntrinsicsNoMsaa<"LOAD_MIP", [llvm_anyfloat_ty], [],
+    : AMDGPUImageDimIntrinsicsNoMsaa<"LOAD_MIP", [llvm_any_ty], [],
                                      [IntrReadMem], [SDNPMemOperand], 1>,
       AMDGPUImageDMaskIntrinsic;
 
@@ -1147,6 +1175,20 @@ def int_amdgcn_interp_p2 :
             [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrSpeculatable]>;
           // See int_amdgcn_v_interp_p1 for why this is IntrNoMem.
+
+// __builtin_amdgcn_interp_p1_f16 <i>, <attr_chan>, <attr>, <high>, <m0>
+def int_amdgcn_interp_p1_f16 :
+  GCCBuiltin<"__builtin_amdgcn_interp_p1_f16">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+// __builtin_amdgcn_interp_p2_f16 <p1>, <j>, <attr_chan>, <attr>, <high>, <m0>
+def int_amdgcn_interp_p2_f16 :
+  GCCBuiltin<"__builtin_amdgcn_interp_p2_f16">,
+  Intrinsic<[llvm_half_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).

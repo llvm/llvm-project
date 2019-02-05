@@ -1,9 +1,8 @@
 //===- BTFDebug.cpp - BTF Generator ---------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -494,7 +493,7 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   auto File = SP->getFile();
   std::string FileName;
 
-  if (File->getDirectory().size())
+  if (!File->getFilename().startswith("/") && File->getDirectory().size())
     FileName = File->getDirectory().str() + "/" + File->getFilename().str();
   else
     FileName = File->getFilename();

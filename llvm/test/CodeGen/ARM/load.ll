@@ -562,3 +562,473 @@ entry:
   store i32 %x, i32* %0, align 4
   ret void
 }
+
+
+; Negative offset
+
+define i32 @ldrsb_ri_negative(i8* %p) {
+; CHECK-T1-LABEL: ldrsb_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #0
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrsb r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrsb_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrsb r0, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  %0 = load i8, i8* %add.ptr, align 1
+  %conv = sext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrsh_ri_negative(i8* %p) {
+; CHECK-T1-LABEL: ldrsh_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #0
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrsh r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrsh_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrsh r0, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  %0 = bitcast i8* %add.ptr to i16*
+  %1 = load i16, i16* %0, align 2
+  %conv = sext i16 %1 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrb_ri_negative(i8* %p) {
+; CHECK-T1-LABEL: ldrb_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, r0, #1
+; CHECK-T1-NEXT:    ldrb r0, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrb_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrb r0, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  %0 = load i8, i8* %add.ptr, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrh_ri_negative(i8* %p) {
+; CHECK-T1-LABEL: ldrh_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, r0, #1
+; CHECK-T1-NEXT:    ldrh r0, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrh_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrh r0, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  %0 = bitcast i8* %add.ptr to i16*
+  %1 = load i16, i16* %0, align 2
+  %conv = zext i16 %1 to i32
+  ret i32 %conv
+}
+
+define i32 @ldr_ri_negative(i8* %p) {
+; CHECK-T1-LABEL: ldr_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, r0, #1
+; CHECK-T1-NEXT:    ldr r0, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldr_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldr r0, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  %0 = bitcast i8* %add.ptr to i32*
+  %1 = load i32, i32* %0, align 4
+  ret i32 %1
+}
+
+define void @strb_ri_negative(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: strb_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, r0, #1
+; CHECK-T1-NEXT:    strb r1, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: strb_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    strb r1, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %conv = trunc i32 %x to i8
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  store i8 %conv, i8* %add.ptr, align 1
+  ret void
+}
+
+define void @strh_ri_negative(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: strh_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, r0, #1
+; CHECK-T1-NEXT:    strh r1, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: strh_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    strh r1, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %conv = trunc i32 %x to i16
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  %0 = bitcast i8* %add.ptr to i16*
+  store i16 %conv, i16* %0, align 2
+  ret void
+}
+
+define void @str_ri_negative(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: str_ri_negative:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, r0, #1
+; CHECK-T1-NEXT:    str r1, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: str_ri_negative:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    str r1, [r0, #-1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -1
+  %0 = bitcast i8* %add.ptr to i32*
+  store i32 %x, i32* %0, align 4
+  ret void
+}
+
+
+; Negative 255 offset
+
+define i32 @ldrsb_ri_negative255(i8* %p) {
+; CHECK-T1-LABEL: ldrsb_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #254
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrsb r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrsb_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrsb r0, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  %0 = load i8, i8* %add.ptr, align 1
+  %conv = sext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrsh_ri_negative255(i8* %p) {
+; CHECK-T1-LABEL: ldrsh_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #254
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrsh r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrsh_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrsh r0, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  %0 = bitcast i8* %add.ptr to i16*
+  %1 = load i16, i16* %0, align 2
+  %conv = sext i16 %1 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrb_ri_negative255(i8* %p) {
+; CHECK-T1-LABEL: ldrb_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, #255
+; CHECK-T1-NEXT:    ldrb r0, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrb_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrb r0, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  %0 = load i8, i8* %add.ptr, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrh_ri_negative255(i8* %p) {
+; CHECK-T1-LABEL: ldrh_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, #255
+; CHECK-T1-NEXT:    ldrh r0, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrh_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldrh r0, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  %0 = bitcast i8* %add.ptr to i16*
+  %1 = load i16, i16* %0, align 2
+  %conv = zext i16 %1 to i32
+  ret i32 %conv
+}
+
+define i32 @ldr_ri_negative255(i8* %p) {
+; CHECK-T1-LABEL: ldr_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, #255
+; CHECK-T1-NEXT:    ldr r0, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldr_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    ldr r0, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  %0 = bitcast i8* %add.ptr to i32*
+  %1 = load i32, i32* %0, align 4
+  ret i32 %1
+}
+
+define void @strb_ri_negative255(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: strb_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, #255
+; CHECK-T1-NEXT:    strb r1, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: strb_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    strb r1, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %conv = trunc i32 %x to i8
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  store i8 %conv, i8* %add.ptr, align 1
+  ret void
+}
+
+define void @strh_ri_negative255(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: strh_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, #255
+; CHECK-T1-NEXT:    strh r1, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: strh_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    strh r1, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %conv = trunc i32 %x to i16
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  %0 = bitcast i8* %add.ptr to i16*
+  store i16 %conv, i16* %0, align 2
+  ret void
+}
+
+define void @str_ri_negative255(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: str_ri_negative255:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    subs r0, #255
+; CHECK-T1-NEXT:    str r1, [r0]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: str_ri_negative255:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    str r1, [r0, #-255]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -255
+  %0 = bitcast i8* %add.ptr to i32*
+  store i32 %x, i32* %0, align 4
+  ret void
+}
+
+
+; Negative 256 offset
+
+define i32 @ldrsb_ri_negative256(i8* %p) {
+; CHECK-T1-LABEL: ldrsb_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #255
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrsb r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrsb_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r1, #255
+; CHECK-T2-NEXT:    ldrsb r0, [r0, r1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  %0 = load i8, i8* %add.ptr, align 1
+  %conv = sext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrsh_ri_negative256(i8* %p) {
+; CHECK-T1-LABEL: ldrsh_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #255
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrsh r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrsh_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r1, #255
+; CHECK-T2-NEXT:    ldrsh r0, [r0, r1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  %0 = bitcast i8* %add.ptr to i16*
+  %1 = load i16, i16* %0, align 2
+  %conv = sext i16 %1 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrb_ri_negative256(i8* %p) {
+; CHECK-T1-LABEL: ldrb_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #255
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrb r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrb_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r1, #255
+; CHECK-T2-NEXT:    ldrb r0, [r0, r1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  %0 = load i8, i8* %add.ptr, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ldrh_ri_negative256(i8* %p) {
+; CHECK-T1-LABEL: ldrh_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #255
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldrh r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldrh_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r1, #255
+; CHECK-T2-NEXT:    ldrh r0, [r0, r1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  %0 = bitcast i8* %add.ptr to i16*
+  %1 = load i16, i16* %0, align 2
+  %conv = zext i16 %1 to i32
+  ret i32 %conv
+}
+
+define i32 @ldr_ri_negative256(i8* %p) {
+; CHECK-T1-LABEL: ldr_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r1, #255
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    ldr r0, [r0, r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: ldr_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r1, #255
+; CHECK-T2-NEXT:    ldr r0, [r0, r1]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  %0 = bitcast i8* %add.ptr to i32*
+  %1 = load i32, i32* %0, align 4
+  ret i32 %1
+}
+
+define void @strb_ri_negative256(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: strb_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r2, #255
+; CHECK-T1-NEXT:    mvns r2, r2
+; CHECK-T1-NEXT:    strb r1, [r0, r2]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: strb_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r2, #255
+; CHECK-T2-NEXT:    strb r1, [r0, r2]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %conv = trunc i32 %x to i8
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  store i8 %conv, i8* %add.ptr, align 1
+  ret void
+}
+
+define void @strh_ri_negative256(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: strh_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r2, #255
+; CHECK-T1-NEXT:    mvns r2, r2
+; CHECK-T1-NEXT:    strh r1, [r0, r2]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: strh_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r2, #255
+; CHECK-T2-NEXT:    strh r1, [r0, r2]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %conv = trunc i32 %x to i16
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  %0 = bitcast i8* %add.ptr to i16*
+  store i16 %conv, i16* %0, align 2
+  ret void
+}
+
+define void @str_ri_negative256(i8* %p, i32 %x) {
+; CHECK-T1-LABEL: str_ri_negative256:
+; CHECK-T1:       @ %bb.0: @ %entry
+; CHECK-T1-NEXT:    movs r2, #255
+; CHECK-T1-NEXT:    mvns r2, r2
+; CHECK-T1-NEXT:    str r1, [r0, r2]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: str_ri_negative256:
+; CHECK-T2:       @ %bb.0: @ %entry
+; CHECK-T2-NEXT:    mvn r2, #255
+; CHECK-T2-NEXT:    str r1, [r0, r2]
+; CHECK-T2-NEXT:    bx lr
+entry:
+  %add.ptr = getelementptr inbounds i8, i8* %p, i32 -256
+  %0 = bitcast i8* %add.ptr to i32*
+  store i32 %x, i32* %0, align 4
+  ret void
+}

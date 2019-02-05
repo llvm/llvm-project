@@ -1,9 +1,8 @@
 //===--- Headers.h - Include headers -----------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,10 +12,12 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "index/Index.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
@@ -37,6 +38,15 @@ struct HeaderFile {
 
   bool valid() const;
 };
+
+/// Creates a `HeaderFile` from \p Header which can be either a URI or a literal
+/// include.
+llvm::Expected<HeaderFile> toHeaderFile(llvm::StringRef Header,
+                                        llvm::StringRef HintPath);
+
+// Returns include headers for \p Sym sorted by popularity. If two headers are
+// equally popular, prefer the shorter one.
+llvm::SmallVector<llvm::StringRef, 1> getRankedIncludes(const Symbol &Sym);
 
 // An #include directive that we found in the main file.
 struct Inclusion {

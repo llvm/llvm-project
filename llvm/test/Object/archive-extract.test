@@ -49,7 +49,7 @@ CHECK-GNU: 1465 Nov 19 03:01 2004 very_long_bytecode_file_name.bc
 CHECK-DARWIN: 1472 Nov 19 03:01 2004 very_long_bytecode_file_name.bc
 
 RUN: not llvm-ar x %p/Inputs/GNU.a foo.o 2>&1 | FileCheck --check-prefix=NOTFOUND %s
-NOTFOUND: foo.o was not found
+NOTFOUND: error: 'foo.o' was not found
 
 RUN: not llvm-ar x %p/Inputs/thin.a foo.o 2>&1 | FileCheck %s --check-prefix=THINEXTRACT
 THINEXTRACT: extracting from a thin archive is not supported

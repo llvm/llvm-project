@@ -870,13 +870,13 @@ def function (valobj,internal_dict):<br/>
             
             <p><code>internal_dict</code> is an internal support parameter used by LLDB and you should
             not touch it.<br/><code>valobj</code> is the object encapsulating the actual
-            variable being displayed, and its type is <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/API/SBValue.h">SBValue</a>.
+            variable being displayed, and its type is <a href="https://github.com/llvm/llvm-project/blob/master/lldb/include/lldb/API/SBValue.h">SBValue</a>.
  			Out of the many possible operations on an SBValue, the basic one is retrieve the children objects
             it contains (essentially, the fields of the object wrapped by it), by calling
             <code>GetChildMemberWithName()</code>, passing it the child's name as a string.<br/>
             If the variable has a value, you can ask for it, and return it as a string using <code>GetValue()</code>,
             or as a signed/unsigned number using <code>GetValueAsSigned()</code>, <code>GetValueAsUnsigned()</code>.
-			It is also possible to retrieve an <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/API/SBData.h"><code>SBData</code></a> object by calling <code>GetData()</code> and then read
+			It is also possible to retrieve an <a href="https://github.com/llvm/llvm-project/blob/master/lldb/include/lldb/API/SBData.h"><code>SBData</code></a> object by calling <code>GetData()</code> and then read
 			the object's contents out of the <code>SBData</code>.
             
             <p>If you need to delve into several levels of hierarchy, as you can do with summary
@@ -957,7 +957,7 @@ def function (valobj,internal_dict):<br/>
                 matching. </p>
 				<p>One of the ways LLDB uses this feature internally, is to match
 					the names of STL container classes, regardless of the template
-					arguments provided. The details for this are found at <a href="http://llvm.org/svn/llvm-project/lldb/trunk/source/DataFormatters/FormatManager.cpp">FormatManager.cpp</a></p>
+					arguments provided. The details for this are found at <a href="https://github.com/llvm/llvm-project/blob/master/lldb/source/DataFormatters/FormatManager.cpp">FormatManager.cpp</a></p>
 
               <p>The regular expression language used by LLDB is the <a href="http://en.wikipedia.org/wiki/Regular_expression#POSIX_Extended_Regular_Expressions">POSIX extended language</a>, as defined by the <a href="http://pubs.opengroup.org/onlinepubs/7908799/xsh/regex.h.html">Single UNIX Specification</a>, of which Mac OS X is a
 	compliant implementation.
@@ -1069,9 +1069,9 @@ def function (valobj,internal_dict):<br/>
 <br/>
 <sup>[3]</sup> This method is optional (starting with SVN revision 219330). The SBValue you return here will most likely be a numeric type (int, float, ...) as its value bytes will be used as-if they were the value of the root SBValue proper. As a shortcut for this, you can inherit from lldb.SBSyntheticValueProvider, and just define get_value as other methods are defaulted in the superclass as returning default no-children responses.
 <p>If a synthetic child provider supplies a special child named <code>$$dereference$$</code> then it will be used when evaluating <code>opertaor*</code> and <code>operator-&gt;</code> in the <code>frame variable</code> command and related SB API functions.</p>
-		<p>For examples of how synthetic children are created, you are encouraged to look at <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/synthetic/">examples/synthetic</a> in the LLDB trunk. Please, be aware that the code in those files (except bitfield/)
+		<p>For examples of how synthetic children are created, you are encouraged to look at <a href="https://github.com/llvm/llvm-project/blob/master/lldb/examples/synthetic/">examples/synthetic</a> in the LLDB sources. Please, be aware that the code in those files (except bitfield/)
 			is legacy code and is not maintained.
-			You may especially want to begin looking at <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/synthetic/bitfield">this example</a> to get
+			You may especially want to begin looking at <a href="https://github.com/llvm/llvm-project/blob/master/lldb/examples/synthetic/bitfield/">this example</a> to get
 			a feel for this feature, as it is a very easy and well commented example.</p>
 			The design pattern consistently used in synthetic providers shipping with LLDB
 				is to use the <code>__init__</code> to store the SBValue instance as a part of <code>self</code>. The <code>update</code> function is then used
@@ -1206,7 +1206,7 @@ By default, LLDB will not show you the real type of the object. it can actually 
           	Because LLDB uses a detection algorithm that does not need to invoke any functions
           	on the target process, <code>no-run-target</code> is enough for this to work.</p>
           	As a side note, the summary for NSString shown in the example is built right into LLDB.
-			It was initially implemented through Python (the code is still available for reference at <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/summaries/cocoa/CFString.py">CFString.py</a>).
+			It was initially implemented through Python (the code is still available for reference at <a href="https://github.com/llvm/llvm-project/blob/master/lldb/examples/summaries/cocoa/CFString.py">CFString.py</a>).
 			However, this is out of sync with the current implementation of the NSString formatter (which is a C++ function compiled into the LLDB core).
 			</p>
           </div>
@@ -1281,9 +1281,7 @@ By default, LLDB will not show you the real type of the object. it can actually 
           <div class="post">
             <h1 class="postheader">Finding formatters 101</h1>
             <div class="postcontent">
-              <p>Searching for a formatter
-	             (including formats, starting in SVN rev <a href="http://llvm.org/viewvc/llvm-project?view=revision&amp;revision=192217">r192217</a>)
-	            given a variable goes through
+              <p>Searching for a formatter given a variable goes through
 				a rather intricate set of rules. Namely, what happens is that LLDB
 				starts looking in each enabled category, according to the order in which
 				they were enabled (latest enabled first). In each category, LLDB does

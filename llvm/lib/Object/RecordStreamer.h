@@ -1,9 +1,8 @@
 //===- RecordStreamer.h - Record asm defined and used symbols ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -56,6 +55,15 @@ public:
                     unsigned ByteAlignment, SMLoc Loc = SMLoc()) override;
   void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         unsigned ByteAlignment) override;
+
+  // Ignore COFF-specific directives; we do not need any information from them,
+  // but the default implementation of these methods crashes, so we override
+  // them with versions that do nothing.
+  void BeginCOFFSymbolDef(const MCSymbol *Symbol) override {}
+  void EmitCOFFSymbolStorageClass(int StorageClass) override {}
+  void EmitCOFFSymbolType(int Type) override {}
+  void EndCOFFSymbolDef() override {}
+
   /// Record .symver aliases for later processing.
   void emitELFSymverDirective(StringRef AliasName,
                               const MCSymbol *Aliasee) override;

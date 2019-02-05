@@ -1,4 +1,5 @@
 ; MSan converts 2-element global_ctors to 3-element when adding the new entry.
+; RUN: opt < %s -msan-with-comdat -S -passes=msan 2>&1 | FileCheck %s
 ; RUN: opt < %s -msan -msan-with-comdat -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

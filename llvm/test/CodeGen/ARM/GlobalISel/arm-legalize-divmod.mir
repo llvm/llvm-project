@@ -1,7 +1,11 @@
-# RUN: llc -mtriple arm-linux-gnueabi -mattr=+hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
-# RUN: llc -mtriple arm-linux-gnueabi -mattr=-hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT,SOFT-AEABI
-# RUN: llc -mtriple arm-linux-gnu -mattr=+hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,HWDIV
-# RUN: llc -mtriple arm-linux-gnu -mattr=-hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,SOFT,SOFT-DEFAULT
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=+hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple arm-linux-gnueabi -mattr=-hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT,SOFT-AEABI,ARM-AEABI
+# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=+hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple arm-linux-gnu -mattr=-hwdiv-arm -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,SOFT,SOFT-DEFAULT,ARM-DEFAULT
+# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,+hwdiv -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple thumb-linux-gnueabi -mattr=+v6t2,-hwdiv -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,SOFT,SOFT-AEABI,THUMB-AEABI
+# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,+hwdiv -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,HWDIV
+# RUN: llc -O0 -mtriple thumb-linux-gnu -mattr=+v6t2,-hwdiv -run-pass=legalizer %s -o - | FileCheck %s  -check-prefixes=CHECK,SOFT,SOFT-DEFAULT,THUMB-DEFAULT
 --- |
   define void @test_sdiv_i32() { ret void }
   define void @test_udiv_i32() { ret void }
@@ -46,10 +50,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
-    ; SOFT-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r0
-    ; SOFT-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
     %2(s32) = G_SDIV %0, %1
@@ -82,10 +87,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
-    ; SOFT-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r0
-    ; SOFT-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
     %2(s32) = G_UDIV %0, %1
@@ -133,10 +139,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r0
-    ; SOFT-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
     ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
@@ -185,10 +192,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r0
-    ; SOFT-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
     ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
@@ -239,10 +247,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r0
-    ; SOFT-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; ARM-AEABI: BL &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__divsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SDIV
     ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR
@@ -291,10 +300,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r0
-    ; SOFT-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
-    ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
+    ; ARM-AEABI: BL &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidiv, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__udivsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; SOFT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UDIV
     ; CHECK: [[R:%[0-9]+]]:_(s32) = G_AND
@@ -332,9 +342,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
-    ; SOFT-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r1
-    ; SOFT-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
@@ -370,9 +382,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X]]
     ; SOFT-DAG: $r1 = COPY [[Y]]
-    ; SOFT-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
     ; SOFT-AEABI: [[R:%[0-9]+]]:_(s32) = COPY $r1
-    ; SOFT-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
@@ -423,9 +437,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
-    ; SOFT-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
@@ -477,9 +493,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
-    ; SOFT-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM
@@ -533,9 +551,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-AEABI: BL &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_idivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
-    ; SOFT-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__modsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_SREM
@@ -587,9 +607,11 @@ body:             |
     ; SOFT: ADJCALLSTACKDOWN
     ; SOFT-DAG: $r0 = COPY [[X32]]
     ; SOFT-DAG: $r1 = COPY [[Y32]]
-    ; SOFT-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-AEABI: BL &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-AEABI: tBL 14, $noreg, &__aeabi_uidivmod, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-AEABI: [[R32:%[0-9]+]]:_(s32) = COPY $r1
-    ; SOFT-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; ARM-DEFAULT: BL &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
+    ; THUMB-DEFAULT: tBL 14, $noreg, &__umodsi3, {{.*}}, implicit $r0, implicit $r1, implicit-def $r0
     ; SOFT-DEFAULT: [[R32:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT: ADJCALLSTACKUP
     ; SOFT-NOT: G_UREM

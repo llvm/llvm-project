@@ -1,9 +1,8 @@
 //===- Preprocessor.h - C Language Family Preprocessor ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1816,8 +1815,8 @@ public:
   void CheckEndOfDirective(const char *DirType, bool EnableMacros = false);
 
   /// Read and discard all tokens remaining on the current line until
-  /// the tok::eod token is found.
-  void DiscardUntilEndOfDirective();
+  /// the tok::eod token is found. Returns the range of the skipped tokens.
+  SourceRange DiscardUntilEndOfDirective();
 
   /// Returns true if the preprocessor has seen a use of
   /// __DATE__ or __TIME__ in the file so far.
@@ -1982,6 +1981,9 @@ private:
 
     /// True if the expression contained identifiers that were undefined.
     bool IncludedUndefinedIds;
+
+    /// The source range for the expression.
+    SourceRange ExprRange;
   };
 
   /// Evaluate an integer constant expression that may occur after a

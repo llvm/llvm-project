@@ -1,9 +1,8 @@
 //===- llvm-profdata.cpp - LLVM profile data tool -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -633,13 +632,21 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
         Stats.ValueSitesHistogram.resize(NV, 0);
       Stats.ValueSitesHistogram[NV - 1]++;
     }
+
+    uint64_t SiteSum = 0;
+    for (uint32_t V = 0; V < NV; V++)
+      SiteSum += VD[V].Count;
+    if (SiteSum == 0)
+      SiteSum = 1;
+
     for (uint32_t V = 0; V < NV; V++) {
-      OS << "\t[ " << I << ", ";
+      OS << "\t[ " << format("%2u", I) << ", ";
       if (Symtab == nullptr)
-        OS << VD[V].Value;
+        OS << format("%4u", VD[V].Value);
       else
         OS << Symtab->getFuncName(VD[V].Value);
-      OS << ", " << VD[V].Count << " ]\n";
+      OS << ", " << format("%10" PRId64, VD[V].Count) << " ] ("
+         << format("%.2f%%", (VD[V].Count * 100.0 / SiteSum)) << ")\n";
     }
   }
 }
@@ -662,9 +669,9 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                             uint32_t TopN, bool ShowIndirectCallTargets,
                             bool ShowMemOPSizes, bool ShowDetailedSummary,
                             std::vector<uint32_t> DetailedSummaryCutoffs,
-                            bool ShowAllFunctions,
-                            const std::string &ShowFunction, bool TextFormat,
-                            raw_fd_ostream &OS) {
+                            bool ShowAllFunctions, uint64_t ValueCutoff,
+                            bool OnlyListBelow, const std::string &ShowFunction,
+                            bool TextFormat, raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
@@ -677,6 +684,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRInstr = Reader->isIRLevelProfile();
   size_t ShownFunctions = 0;
+  size_t BelowCutoffFunctions = 0;
   int NumVPKind = IPVK_Last - IPVK_First + 1;
   std::vector<ValueSitesStats> VPStats(NumVPKind);
 
@@ -689,6 +697,11 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                       std::vector<std::pair<std::string, uint64_t>>,
                       decltype(MinCmp)>
       HottestFuncs(MinCmp);
+
+  if (!TextFormat && OnlyListBelow) {
+    OS << "The list of functions with the maximum counter less than "
+       << ValueCutoff << ":\n";
+  }
 
   // Add marker so that IR-level instrumentation round-trips properly.
   if (TextFormat && IsIRInstr)
@@ -711,11 +724,24 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     assert(Func.Counts.size() > 0 && "function missing entry counter");
     Builder.addRecord(Func);
 
-    if (TopN) {
-      uint64_t FuncMax = 0;
-      for (size_t I = 0, E = Func.Counts.size(); I < E; ++I)
-        FuncMax = std::max(FuncMax, Func.Counts[I]);
+    uint64_t FuncMax = 0;
+    uint64_t FuncSum = 0;
+    for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
+      FuncMax = std::max(FuncMax, Func.Counts[I]);
+      FuncSum += Func.Counts[I];
+    }
 
+    if (FuncMax < ValueCutoff) {
+      ++BelowCutoffFunctions;
+      if (OnlyListBelow) {
+        OS << "  " << Func.Name << ": (Max = " << FuncMax
+           << " Sum = " << FuncSum << ")\n";
+      }
+      continue;
+    } else if (OnlyListBelow)
+      continue;
+
+    if (TopN) {
       if (HottestFuncs.size() == TopN) {
         if (HottestFuncs.top().second < FuncMax) {
           HottestFuncs.pop();
@@ -726,7 +752,6 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     }
 
     if (Show) {
-
       if (!ShownFunctions)
         OS << "Counters:\n";
 
@@ -781,6 +806,12 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
   OS << "Total functions: " << PS->getNumFunctions() << "\n";
+  if (ValueCutoff > 0) {
+    OS << "Number of functions with maximum count (< " << ValueCutoff
+       << "): " << BelowCutoffFunctions << "\n";
+    OS << "Number of functions with maximum count (>= " << ValueCutoff
+       << "): " << PS->getNumFunctions() - BelowCutoffFunctions << "\n";
+  }
   OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
   OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
 
@@ -882,7 +913,14 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<uint32_t> TopNFunctions(
       "topn", cl::init(0),
       cl::desc("Show the list of functions with the largest internal counts"));
-
+  cl::opt<uint32_t> ValueCutoff(
+      "value-cutoff", cl::init(0),
+      cl::desc("Set the count value cutoff. Functions with the maximum count "
+               "less than this value will not be printed out. (Default is 0)"));
+  cl::opt<bool> OnlyListBelow(
+      "list-below-cutoff", cl::init(false),
+      cl::desc("Only output names of functions whose max count values are "
+               "below the cutoff value"));
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
   if (OutputFilename.empty())
@@ -902,7 +940,8 @@ static int show_main(int argc, const char *argv[]) {
     return showInstrProfile(Filename, ShowCounts, TopNFunctions,
                             ShowIndirectCallTargets, ShowMemOPSizes,
                             ShowDetailedSummary, DetailedSummaryCutoffs,
-                            ShowAllFunctions, ShowFunction, TextFormat, OS);
+                            ShowAllFunctions, ValueCutoff, OnlyListBelow,
+                            ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
                              ShowFunction, OS);

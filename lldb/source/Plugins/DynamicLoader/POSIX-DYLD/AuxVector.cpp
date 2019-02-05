@@ -1,9 +1,8 @@
 //===-- AuxVector.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -100,7 +99,7 @@ const char *AuxVector::GetEntryName(EntryType type) {
 
 #define ENTRY_NAME(_type) \
   _type:                  \
-  name = #_type + 5
+  name = &#_type[5]
   switch (type) {
     case ENTRY_NAME(AUXV_AT_NULL);           break;
     case ENTRY_NAME(AUXV_AT_IGNORE);         break;

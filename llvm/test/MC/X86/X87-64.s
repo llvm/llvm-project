@@ -59,9 +59,9 @@ fadds 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x02]        
 fadds (%rdx) 
 
-// CHECK: fadd %st(0), %st(4) 
+// CHECK: fadd %st, %st(4) 
 // CHECK: encoding: [0xdc,0xc4]       
-fadd %st(0), %st(4) 
+fadd %st, %st(4) 
 
 // CHECK: fadd %st(4) 
 // CHECK: encoding: [0xd8,0xc4]        
@@ -315,9 +315,9 @@ fdivrs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x3a]        
 fdivrs (%rdx) 
 
-// CHECK: fdivr %st(0), %st(4) 
+// CHECK: fdivr %st, %st(4) 
 // CHECK: encoding: [0xdc,0xfc]       
-fdivr %st(0), %st(4) 
+fdivr %st, %st(4) 
 
 // CHECK: fdivr %st(4) 
 // CHECK: encoding: [0xd8,0xfc]        
@@ -347,9 +347,9 @@ fdivs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x32]        
 fdivs (%rdx) 
 
-// CHECK: fdiv %st(0), %st(4) 
+// CHECK: fdiv %st, %st(4) 
 // CHECK: encoding: [0xdc,0xf4]       
-fdiv %st(0), %st(4) 
+fdiv %st, %st(4) 
 
 // CHECK: fdiv %st(4) 
 // CHECK: encoding: [0xd8,0xf4]        
@@ -1147,9 +1147,9 @@ fmuls 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x0a]        
 fmuls (%rdx) 
 
-// CHECK: fmul %st(0), %st(4) 
+// CHECK: fmul %st, %st(4) 
 // CHECK: encoding: [0xdc,0xcc]       
-fmul %st(0), %st(4) 
+fmul %st, %st(4) 
 
 // CHECK: fmul %st(4) 
 // CHECK: encoding: [0xd8,0xcc]        
@@ -1535,9 +1535,9 @@ fsubrs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x2a]        
 fsubrs (%rdx) 
 
-// CHECK: fsubr %st(0), %st(4) 
+// CHECK: fsubr %st, %st(4) 
 // CHECK: encoding: [0xdc,0xec]       
-fsubr %st(0), %st(4) 
+fsubr %st, %st(4) 
 
 // CHECK: fsubr %st(4) 
 // CHECK: encoding: [0xd8,0xec]        
@@ -1567,9 +1567,9 @@ fsubs 64(%rdx,%rax)
 // CHECK: encoding: [0xd8,0x22]        
 fsubs (%rdx) 
 
-// CHECK: fsub %st(0), %st(4) 
+// CHECK: fsub %st, %st(4) 
 // CHECK: encoding: [0xdc,0xe4]       
-fsub %st(0), %st(4) 
+fsub %st, %st(4) 
 
 // CHECK: fsub %st(4) 
 // CHECK: encoding: [0xd8,0xe4]        

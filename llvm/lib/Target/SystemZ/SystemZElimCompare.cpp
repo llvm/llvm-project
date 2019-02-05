@@ -1,9 +1,8 @@
 //===-- SystemZElimCompare.cpp - Eliminate comparison instructions --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -147,6 +146,9 @@ static bool resultTests(MachineInstr &MI, unsigned Reg) {
 // Describe the references to Reg or any of its aliases in MI.
 Reference SystemZElimCompare::getRegReferences(MachineInstr &MI, unsigned Reg) {
   Reference Ref;
+  if (MI.isDebugInstr())
+    return Ref;
+
   for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
     const MachineOperand &MO = MI.getOperand(I);
     if (MO.isReg()) {

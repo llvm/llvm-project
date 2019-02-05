@@ -1,9 +1,8 @@
 //===- PPCInstrVSX.td - The PowerPC VSX Extension --*- tablegen -*-===//
 // 
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // 
 //===----------------------------------------------------------------------===//
 //
@@ -1217,6 +1216,27 @@ def ScalarLoads {
   dag Li32 = (i32 (load xoaddr:$src));
 }
 
+def DWToSPExtractConv {
+  dag El0US1 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 0))))));
+  dag El1US1 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 1))))));
+  dag El0US2 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 0))))));
+  dag El1US2 = (f32 (PPCfcfidus
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 1))))));
+  dag El0SS1 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 0))))));
+  dag El1SS1 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S1, 1))))));
+  dag El0SS2 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 0))))));
+  dag El1SS2 = (f32 (PPCfcfids
+                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S2, 1))))));
+  dag BVU = (v4f32 (build_vector El0US1, El1US1, El0US2, El1US2));
+  dag BVS = (v4f32 (build_vector El0SS1, El1SS1, El0SS2, El1SS2));
+}
+
 // The following VSX instructions were introduced in Power ISA 2.07
 /* FIXME: if the operands are v2i64, these patterns will not match.
    we should define new patterns or otherwise match the same patterns
@@ -1452,35 +1472,27 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   } // UseVSXReg = 1
 
   let Predicates = [IsLittleEndian] in {
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
+  def : Pat<DWToSPExtractConv.El0SS1,
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1SS1,
             (f32 (XSCVSXDSP (COPY_TO_REGCLASS
-                              (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
+                              (f64 (COPY_TO_REGCLASS $S1, VSRC)), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El0US1,
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1US1,
             (f32 (XSCVUXDSP (COPY_TO_REGCLASS
-                              (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
+                              (f64 (COPY_TO_REGCLASS $S1, VSRC)), VSFRC)))>;
   }
 
   let Predicates = [IsBigEndian] in {
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVSXDSP (COPY_TO_REGCLASS $S, VSFRC)))>;
-  def : Pat<(f32 (PPCfcfids
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
-            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 0)))))),
-            (f32 (XSCVUXDSP (COPY_TO_REGCLASS $S, VSFRC)))>;
-  def : Pat<(f32 (PPCfcfidus
-                   (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
-            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El0SS1,
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS $S1, VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1SS1,
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El0US1,
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS $S1, VSFRC)))>;
+  def : Pat<DWToSPExtractConv.El1US1,
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S1, $S1, 2), VSFRC)))>;
   }
 
   // Instructions for converting float to i64 feeding a store.
@@ -3294,7 +3306,27 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
       def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddr:$src)))),
                 (v2f64 (XXPERMDIs
                 (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC), 2))>;
-    }
+      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
+                             sub_64), xaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
+                             sub_64), xaddr:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
+                             sub_64), ixaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2), sub_64),
+                            ixaddr:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ixaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ixaddr:$src)>;
+    } // IsLittleEndian, HasP9Vector
 
     let Predicates = [IsBigEndian, HasP9Vector] in {
       def : Pat<(v2i64 (scalar_to_vector (i64 (load ixaddr:$src)))),
@@ -3306,7 +3338,27 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                 (v2f64 (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC))>;
       def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddr:$src)))),
                 (v2f64 (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC))>;
-    }
+      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
+                             sub_64), xaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
+                             sub_64), xaddr:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xaddr:$src),
+                (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xaddr:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 1)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
+                             sub_64), ixaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 1)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2),
+                             sub_64), ixaddr:$src)>;
+      def : Pat<(store (i64 (extractelt v2i64:$A, 0)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ixaddr:$src)>;
+      def : Pat<(store (f64 (extractelt v2f64:$A, 0)), ixaddr:$src),
+                (DFSTOREf64 (EXTRACT_SUBREG $A, sub_64), ixaddr:$src)>;
+    } // IsBigEndian, HasP9Vector
   }
 
   let Predicates = [IsBigEndian, HasP9Vector] in {
@@ -3814,6 +3866,45 @@ let AddedComplexity = 400 in {
                                               (XFLOADf32 xoaddr:$A), VSFRC)), 0))>;
   }
 
+  let Predicates = [IsBigEndian, HasP8Vector] in {
+    def : Pat<DWToSPExtractConv.BVU,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVUXDSP $S1), (XVCVUXDSP $S1), 3),
+                              (XXSLDWI (XVCVUXDSP $S2), (XVCVUXDSP $S2), 3)))>;
+    def : Pat<DWToSPExtractConv.BVS,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVSXDSP $S1), (XVCVSXDSP $S1), 3),
+                              (XXSLDWI (XVCVSXDSP $S2), (XVCVSXDSP $S2), 3)))>;
+    def : Pat<(store (i32 (extractelt v4i32:$A, 1)), xoaddr:$src),
+              (STIWX (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+    def : Pat<(store (f32 (extractelt v4f32:$A, 1)), xoaddr:$src),
+              (STIWX (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+
+    // Elements in a register on a BE system are in order <0, 1, 2, 3>.
+    // The store instructions store the second word from the left.
+    // So to align element zero, we need to modulo-left-shift by 3 words.
+    // Similar logic applies for elements 2 and 3.
+    foreach Idx = [ [0,3], [2,1], [3,2] ] in {
+      def : Pat<(store (i32 (extractelt v4i32:$A, !head(Idx))), xoaddr:$src),
+                (STIWX (EXTRACT_SUBREG (XXSLDWI $A, $A, !head(!tail(Idx))),
+                                       sub_64), xoaddr:$src)>;
+      def : Pat<(store (f32 (extractelt v4f32:$A, !head(Idx))), xoaddr:$src),
+                (STIWX (EXTRACT_SUBREG (XXSLDWI $A, $A, !head(!tail(Idx))),
+                                       sub_64), xoaddr:$src)>;
+    }
+  }
+
+  let Predicates = [HasP8Vector, IsBigEndian, NoP9Vector] in {
+    def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+    def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+    def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2), sub_64),
+                          xoaddr:$src)>;
+    def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2), sub_64),
+                          xoaddr:$src)>;
+   }
+
   // Big endian, available on all targets with VSX
   let Predicates = [IsBigEndian, HasVSX] in {
     def : Pat<(v2f64 (build_vector f64:$A, f64:$B)),
@@ -3841,6 +3932,45 @@ let AddedComplexity = 400 in {
                                    ExtDbl.B0U, ExtDbl.B1U)),
               (v4i32 (VMRGEW MrgWords.CVA0B0U, MrgWords.CVA1B1U))>;
   }
+
+  let Predicates = [IsLittleEndian, HasP8Vector] in {
+    def : Pat<DWToSPExtractConv.BVU,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVUXDSP $S2), (XVCVUXDSP $S2), 3),
+                              (XXSLDWI (XVCVUXDSP $S1), (XVCVUXDSP $S1), 3)))>;
+    def : Pat<DWToSPExtractConv.BVS,
+              (v4f32 (VPKUDUM (XXSLDWI (XVCVSXDSP $S2), (XVCVSXDSP $S2), 3),
+                              (XXSLDWI (XVCVSXDSP $S1), (XVCVSXDSP $S1), 3)))>;
+    def : Pat<(store (i32 (extractelt v4i32:$A, 2)), xoaddr:$src),
+              (STIWX (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+    def : Pat<(store (f32 (extractelt v4f32:$A, 2)), xoaddr:$src),
+              (STIWX (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+
+    // Elements in a register on a LE system are in order <3, 2, 1, 0>.
+    // The store instructions store the second word from the left.
+    // So to align element 3, we need to modulo-left-shift by 3 words.
+    // Similar logic applies for elements 0 and 1.
+    foreach Idx = [ [0,2], [1,1], [3,3] ] in {
+      def : Pat<(store (i32 (extractelt v4i32:$A, !head(Idx))), xoaddr:$src),
+                (STIWX (EXTRACT_SUBREG (XXSLDWI $A, $A, !head(!tail(Idx))),
+                                       sub_64), xoaddr:$src)>;
+      def : Pat<(store (f32 (extractelt v4f32:$A, !head(Idx))), xoaddr:$src),
+                (STIWX (EXTRACT_SUBREG (XXSLDWI $A, $A, !head(!tail(Idx))),
+                                       sub_64), xoaddr:$src)>;
+    }
+  }
+
+  let Predicates = [HasP8Vector, IsLittleEndian, NoP9Vector] in {
+    def : Pat<(store (i64 (extractelt v2i64:$A, 0)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2), sub_64),
+                          xoaddr:$src)>;
+    def : Pat<(store (f64 (extractelt v2f64:$A, 0)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG (XXPERMDI $A, $A, 2), sub_64),
+                          xoaddr:$src)>;
+    def : Pat<(store (i64 (extractelt v2i64:$A, 1)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+    def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xoaddr:$src),
+              (XFSTOREf64 (EXTRACT_SUBREG $A, sub_64), xoaddr:$src)>;
+   }
 
   let Predicates = [IsLittleEndian, HasVSX] in {
   // Little endian, available on all targets with VSX

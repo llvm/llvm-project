@@ -1,16 +1,17 @@
 ; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ;
-; Checks that we're creating two ranges, one that terminates immediately
-; and one that spans the rest of the function. This isn't necessarily the
-; best thing to do here (and also not necessarily correct, since the first
-; one has a bit_piece), but it is what is currently being emitted, any
-; change here needs to be intentional, so the test is very specific.
+; Checks that we're omitting the first range, as it is empty, and that we're
+; emitting one that spans the rest of the function. In this case, the first
+; range, which we omit, describes 8 bytes of the variable using DW_OP_litX,
+; whereas the second one only describes 4 bytes, so clobbering the whole 8 byte
+; fragment with the 4 bytes fragment isn't necessarily best thing to do here,
+; but it is what is currently being emitted. Any change here needs to be
+; intentional, so the test is very specific.
 ;
 ; CHECK: DW_TAG_inlined_subroutine
 ; CHECK: DW_TAG_variable
 ; CHECK:   DW_AT_location [DW_FORM_sec_offset] ({{.*}}
-; CHECK:      [0x00000004, 0x00000004): DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x8
-; CHECK:      [0x00000004, 0x00000014): DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK-NEXT: [0x00000004, 0x00000014): DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
 
 ; Created form the following test case (PR26163) with
 ; clang -cc1 -triple armv4t--freebsd11.0-gnueabi -emit-obj -debug-info-kind=standalone -O2 -x c test.c
@@ -69,7 +70,7 @@ entry:
 !llvm.module.flags = !{!22, !23, !24}
 !llvm.ident = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257891)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "/home/ubuntu/bugs")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "parse_config_file", scope: !5, file: !5, line: 22, type: !6, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !9)
@@ -93,7 +94,7 @@ entry:
 !22 = !{i32 2, !"Debug Info Version", i32 3}
 !23 = !{i32 1, !"wchar_size", i32 4}
 !24 = !{i32 1, !"min_enum_size", i32 4}
-!25 = !{!"clang version 3.9.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257891)"}
+!25 = !{!"clang version 3.9.0"}
 !26 = !DIExpression()
 !27 = !DILocation(line: 11, scope: !11, inlinedAt: !28)
 !28 = distinct !DILocation(line: 26, scope: !4)

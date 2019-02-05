@@ -1,9 +1,8 @@
 //===-- ObjDumper.h ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,6 +14,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 namespace object {
@@ -35,18 +35,30 @@ public:
   virtual void printFileHeaders() = 0;
   virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
-  virtual void printSymbols() = 0;
-  virtual void printDynamicSymbols() = 0;
+  virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) {
+    if (PrintSymbols)
+      printSymbols();
+    if (PrintDynamicSymbols)
+      printDynamicSymbols();
+  }
+  virtual void printProgramHeaders(bool PrintProgramHeaders,
+                                   cl::boolOrDefault PrintSectionMapping) {
+    if (PrintProgramHeaders)
+      printProgramHeaders();
+    if (PrintSectionMapping == cl::BOU_TRUE)
+      printSectionMapping();
+  }
+
   virtual void printUnwindInfo() = 0;
 
   // Only implemented for ELF at this time.
   virtual void printDynamicRelocations() { }
   virtual void printDynamicTable() { }
   virtual void printNeededLibraries() { }
-  virtual void printProgramHeaders() { }
   virtual void printSectionAsHex(StringRef SectionName) {}
   virtual void printHashTable() { }
   virtual void printGnuHashTable() { }
+  virtual void printHashSymbols() {}
   virtual void printLoadName() {}
   virtual void printVersionInfo() {}
   virtual void printGroupSections() {}
@@ -93,6 +105,12 @@ public:
 
 protected:
   ScopedPrinter &W;
+
+private:
+  virtual void printSymbols() {}
+  virtual void printDynamicSymbols() {}
+  virtual void printProgramHeaders() {}
+  virtual void printSectionMapping() {}
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,

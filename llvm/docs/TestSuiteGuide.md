@@ -17,7 +17,7 @@ Quickstart
 
    ```bash
    % mkdir venv
-   % virtualenv -p python2.7 venv
+   % virtualenv venv
    % . venv/bin/activate
    % pip install svn+http://llvm.org/svn/llvm-project/llvm/trunk/utils/lit
    % lit --version
@@ -27,7 +27,7 @@ Quickstart
 2. Check out the `test-suite` module with:
 
    ```bash
-   % svn co http://llvm.org/svn/llvm-project/test-suite/trunk test-suite
+   % git clone https://github.com/llvm/llvm-test-suite.git test-suite
    ```
 
 3. Create a build directory and use CMake to configure the suite. Use the

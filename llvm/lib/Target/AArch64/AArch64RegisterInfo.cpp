@@ -1,9 +1,8 @@
 //===- AArch64RegisterInfo.cpp - AArch64 Register Information -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -464,8 +463,16 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return;
   }
 
+  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE) {
+    MachineOperand &FI = MI.getOperand(FIOperandNum);
+    Offset = TFI->getNonLocalFrameIndexReference(MF, FrameIndex);
+    FI.ChangeToImmediate(Offset);
+    return;
+  }
+
   // Modify MI as necessary to handle as much of 'Offset' as possible
-  Offset = TFI->resolveFrameIndexReference(MF, FrameIndex, FrameReg);
+  Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
+
   if (rewriteAArch64FrameIndex(MI, FIOperandNum, FrameReg, Offset, TII))
     return;
 
@@ -518,4 +525,14 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case AArch64::FPR128_loRegClassID:
     return 16;
   }
+}
+
+unsigned AArch64RegisterInfo::getLocalAddressRegister(
+  const MachineFunction &MF) const {
+  const auto &MFI = MF.getFrameInfo();
+  if (!MF.hasEHFunclets() && !MFI.hasVarSizedObjects())
+    return AArch64::SP;
+  else if (needsStackRealignment(MF))
+    return getBaseRegister();
+  return getFrameRegister(MF);
 }

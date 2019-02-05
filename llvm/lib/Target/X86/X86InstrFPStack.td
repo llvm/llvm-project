@@ -1,9 +1,8 @@
 //===- X86InstrFPStack.td - FPU Instruction Set ------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -258,41 +257,41 @@ defm DIVR: FPBinary<fdiv, MRM7m, "divr", 0>;
 } // Defs = [FPSW]
 
 class FPST0rInst<Format fp, string asm>
-  : FPI<0xD8, fp, (outs), (ins RST:$op), asm>;
+  : FPI<0xD8, fp, (outs), (ins RSTi:$op), asm>;
 class FPrST0Inst<Format fp, string asm>
-  : FPI<0xDC, fp, (outs), (ins RST:$op), asm>;
+  : FPI<0xDC, fp, (outs), (ins RSTi:$op), asm>;
 class FPrST0PInst<Format fp, string asm>
-  : FPI<0xDE, fp, (outs), (ins RST:$op), asm>;
+  : FPI<0xDE, fp, (outs), (ins RSTi:$op), asm>;
 
 // NOTE: GAS and apparently all other AT&T style assemblers have a broken notion
 // of some of the 'reverse' forms of the fsub and fdiv instructions.  As such,
 // we have to put some 'r's in and take them out of weird places.
-let SchedRW = [WriteFAdd] in {
+let SchedRW = [WriteFAdd], Defs = [FPSW] in {
 def ADD_FST0r   : FPST0rInst <MRM0r, "fadd\t$op">;
-def ADD_FrST0   : FPrST0Inst <MRM0r, "fadd\t{%st(0), $op|$op, st(0)}">;
+def ADD_FrST0   : FPrST0Inst <MRM0r, "fadd\t{%st, $op|$op, st}">;
 def ADD_FPrST0  : FPrST0PInst<MRM0r, "faddp\t$op">;
 def SUBR_FST0r  : FPST0rInst <MRM5r, "fsubr\t$op">;
-def SUB_FrST0   : FPrST0Inst <MRM5r, "fsub{r}\t{%st(0), $op|$op, st(0)}">;
+def SUB_FrST0   : FPrST0Inst <MRM5r, "fsub{r}\t{%st, $op|$op, st}">;
 def SUB_FPrST0  : FPrST0PInst<MRM5r, "fsub{r}p\t$op">;
 def SUB_FST0r   : FPST0rInst <MRM4r, "fsub\t$op">;
-def SUBR_FrST0  : FPrST0Inst <MRM4r, "fsub{|r}\t{%st(0), $op|$op, st(0)}">;
+def SUBR_FrST0  : FPrST0Inst <MRM4r, "fsub{|r}\t{%st, $op|$op, st}">;
 def SUBR_FPrST0 : FPrST0PInst<MRM4r, "fsub{|r}p\t$op">;
 } // SchedRW
-let SchedRW = [WriteFCom] in {
+let SchedRW = [WriteFCom], Defs = [FPSW] in {
 def COM_FST0r   : FPST0rInst <MRM2r, "fcom\t$op">;
 def COMP_FST0r  : FPST0rInst <MRM3r, "fcomp\t$op">;
 } // SchedRW
-let SchedRW = [WriteFMul] in {
+let SchedRW = [WriteFMul], Defs = [FPSW] in {
 def MUL_FST0r   : FPST0rInst <MRM1r, "fmul\t$op">;
-def MUL_FrST0   : FPrST0Inst <MRM1r, "fmul\t{%st(0), $op|$op, st(0)}">;
+def MUL_FrST0   : FPrST0Inst <MRM1r, "fmul\t{%st, $op|$op, st}">;
 def MUL_FPrST0  : FPrST0PInst<MRM1r, "fmulp\t$op">;
 } // SchedRW
-let SchedRW = [WriteFDiv] in {
+let SchedRW = [WriteFDiv], Defs = [FPSW] in {
 def DIVR_FST0r  : FPST0rInst <MRM7r, "fdivr\t$op">;
-def DIV_FrST0   : FPrST0Inst <MRM7r, "fdiv{r}\t{%st(0), $op|$op, st(0)}">;
+def DIV_FrST0   : FPrST0Inst <MRM7r, "fdiv{r}\t{%st, $op|$op, st}">;
 def DIV_FPrST0  : FPrST0PInst<MRM7r, "fdiv{r}p\t$op">;
 def DIV_FST0r   : FPST0rInst <MRM6r, "fdiv\t$op">;
-def DIVR_FrST0  : FPrST0Inst <MRM6r, "fdiv{|r}\t{%st(0), $op|$op, st(0)}">;
+def DIVR_FrST0  : FPrST0Inst <MRM6r, "fdiv{|r}\t{%st, $op|$op, st}">;
 def DIVR_FPrST0 : FPrST0PInst<MRM6r, "fdiv{|r}p\t$op">;
 } // SchedRW
 
@@ -335,7 +334,7 @@ def TST_F  : FPI<0xD9, MRM_E4, (outs), (ins), "ftst">;
 
 // Versions of FP instructions that take a single memory operand.  Added for the
 //   disassembler; remove as they are included with patterns elsewhere.
-let SchedRW = [WriteFComLd] in {
+let SchedRW = [WriteFComLd], Defs = [FPSW] in {
 def FCOM32m  : FPI<0xD8, MRM2m, (outs), (ins f32mem:$src), "fcom{s}\t$src">;
 def FCOMP32m : FPI<0xD8, MRM3m, (outs), (ins f32mem:$src), "fcomp{s}\t$src">;
 
@@ -398,22 +397,22 @@ defm CMOVNP : FPCMov<X86_COND_NP>;
 
 let Predicates = [HasCMov] in {
 // These are not factored because there's no clean way to pass DA/DB.
-def CMOVB_F  : FPI<0xDA, MRM0r, (outs), (ins RST:$op),
-                  "fcmovb\t{$op, %st(0)|st(0), $op}">;
-def CMOVBE_F : FPI<0xDA, MRM2r, (outs), (ins RST:$op),
-                  "fcmovbe\t{$op, %st(0)|st(0), $op}">;
-def CMOVE_F  : FPI<0xDA, MRM1r, (outs), (ins RST:$op),
-                  "fcmove\t{$op, %st(0)|st(0), $op}">;
-def CMOVP_F  : FPI<0xDA, MRM3r, (outs), (ins RST:$op),
-                  "fcmovu\t{$op, %st(0)|st(0), $op}">;
-def CMOVNB_F : FPI<0xDB, MRM0r, (outs), (ins RST:$op),
-                  "fcmovnb\t{$op, %st(0)|st(0), $op}">;
-def CMOVNBE_F: FPI<0xDB, MRM2r, (outs), (ins RST:$op),
-                  "fcmovnbe\t{$op, %st(0)|st(0), $op}">;
-def CMOVNE_F : FPI<0xDB, MRM1r, (outs), (ins RST:$op),
-                  "fcmovne\t{$op, %st(0)|st(0), $op}">;
-def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RST:$op),
-                  "fcmovnu\t{$op, %st(0)|st(0), $op}">;
+def CMOVB_F  : FPI<0xDA, MRM0r, (outs), (ins RSTi:$op),
+                  "fcmovb\t{$op, %st|st, $op}">;
+def CMOVBE_F : FPI<0xDA, MRM2r, (outs), (ins RSTi:$op),
+                  "fcmovbe\t{$op, %st|st, $op}">;
+def CMOVE_F  : FPI<0xDA, MRM1r, (outs), (ins RSTi:$op),
+                  "fcmove\t{$op, %st|st, $op}">;
+def CMOVP_F  : FPI<0xDA, MRM3r, (outs), (ins RSTi:$op),
+                  "fcmovu\t{$op, %st|st, $op}">;
+def CMOVNB_F : FPI<0xDB, MRM0r, (outs), (ins RSTi:$op),
+                  "fcmovnb\t{$op, %st|st, $op}">;
+def CMOVNBE_F: FPI<0xDB, MRM2r, (outs), (ins RSTi:$op),
+                  "fcmovnbe\t{$op, %st|st, $op}">;
+def CMOVNE_F : FPI<0xDB, MRM1r, (outs), (ins RSTi:$op),
+                  "fcmovne\t{$op, %st|st, $op}">;
+def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RSTi:$op),
+                  "fcmovnu\t{$op, %st|st, $op}">;
 } // Predicates = [HasCMov]
 } // SchedRW
 
@@ -542,10 +541,10 @@ def ISTT_FP64m : FPI<0xDD, MRM1m, (outs), (ins i64mem:$dst), "fisttp{ll}\t$dst">
 
 // FP Stack manipulation instructions.
 let SchedRW = [WriteMove] in {
-def LD_Frr   : FPI<0xD9, MRM0r, (outs), (ins RST:$op), "fld\t$op">;
-def ST_Frr   : FPI<0xDD, MRM2r, (outs), (ins RST:$op), "fst\t$op">;
-def ST_FPrr  : FPI<0xDD, MRM3r, (outs), (ins RST:$op), "fstp\t$op">;
-def XCH_F    : FPI<0xD9, MRM1r, (outs), (ins RST:$op), "fxch\t$op">;
+def LD_Frr   : FPI<0xD9, MRM0r, (outs), (ins RSTi:$op), "fld\t$op">;
+def ST_Frr   : FPI<0xDD, MRM2r, (outs), (ins RSTi:$op), "fst\t$op">;
+def ST_FPrr  : FPI<0xDD, MRM3r, (outs), (ins RSTi:$op), "fstp\t$op">;
+def XCH_F    : FPI<0xD9, MRM1r, (outs), (ins RSTi:$op), "fxch\t$op">;
 }
 
 // Floating point constant loads.
@@ -605,23 +604,23 @@ def UCOM_FpIr80: FpI_<(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
 
 let Defs = [FPSW], Uses = [ST0] in {
 def UCOM_Fr    : FPI<0xDD, MRM4r,    // FPSW = cmp ST(0) with ST(i)
-                    (outs), (ins RST:$reg), "fucom\t$reg">;
+                    (outs), (ins RSTi:$reg), "fucom\t$reg">;
 def UCOM_FPr   : FPI<0xDD, MRM5r,    // FPSW = cmp ST(0) with ST(i), pop
-                    (outs), (ins RST:$reg), "fucomp\t$reg">;
+                    (outs), (ins RSTi:$reg), "fucomp\t$reg">;
 def UCOM_FPPr  : FPI<0xDA, MRM_E9,       // cmp ST(0) with ST(1), pop, pop
                     (outs), (ins), "fucompp">;
 }
 
 let Defs = [EFLAGS, FPSW], Uses = [ST0] in {
 def UCOM_FIr   : FPI<0xDB, MRM5r,     // CC = cmp ST(0) with ST(i)
-                    (outs), (ins RST:$reg), "fucomi\t$reg">;
+                    (outs), (ins RSTi:$reg), "fucomi\t$reg">;
 def UCOM_FIPr  : FPI<0xDF, MRM5r,     // CC = cmp ST(0) with ST(i), pop
-                    (outs), (ins RST:$reg), "fucompi\t$reg">;
+                    (outs), (ins RSTi:$reg), "fucompi\t$reg">;
 }
 
 let Defs = [EFLAGS, FPSW] in {
-def COM_FIr : FPI<0xDB, MRM6r, (outs), (ins RST:$reg), "fcomi\t$reg">;
-def COM_FIPr : FPI<0xDF, MRM6r, (outs), (ins RST:$reg), "fcompi\t$reg">;
+def COM_FIr : FPI<0xDB, MRM6r, (outs), (ins RSTi:$reg), "fcomi\t$reg">;
+def COM_FIPr : FPI<0xDF, MRM6r, (outs), (ins RSTi:$reg), "fcompi\t$reg">;
 }
 } // SchedRW
 
@@ -645,8 +644,8 @@ def FLDCW16m  : I<0xD9, MRM5m,                   // X87 control world = [mem16]
 let SchedRW = [WriteMicrocoded] in {
 let Defs = [FPSW] in {
 def FNINIT : I<0xDB, MRM_E3, (outs), (ins), "fninit", []>;
-def FFREE : FPI<0xDD, MRM0r, (outs), (ins RST:$reg), "ffree\t$reg">;
-def FFREEP : FPI<0xDF, MRM0r, (outs), (ins RST:$reg), "ffreep\t$reg">;
+def FFREE : FPI<0xDD, MRM0r, (outs), (ins RSTi:$reg), "ffree\t$reg">;
+def FFREEP : FPI<0xDF, MRM0r, (outs), (ins RSTi:$reg), "ffreep\t$reg">;
 
 // Clear exceptions
 def FNCLEX : I<0xDB, MRM_E2, (outs), (ins), "fnclex", []>;

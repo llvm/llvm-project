@@ -1,9 +1,8 @@
 //===- DbiStream.cpp - PDB Dbi Stream (Stream 3) Access -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -127,8 +126,10 @@ Error DbiStream::reload(PDBFile *Pdb) {
     return EC;
   if (auto EC = initializeSectionMapData())
     return EC;
-  if (auto EC = initializeFpoRecords(Pdb))
+  if (auto EC = initializeOldFpoRecords(Pdb))
     return EC;
+  if (auto EC = initializeNewFpoRecords(Pdb))
+     return EC;
 
   if (Reader.bytesRemaining() > 0)
     return make_error<RawError>(raw_error_code::corrupt_file,
@@ -201,8 +202,16 @@ FixedStreamArray<object::coff_section> DbiStream::getSectionHeaders() const {
   return SectionHeaders;
 }
 
-FixedStreamArray<object::FpoData> DbiStream::getFpoRecords() {
-  return FpoRecords;
+bool DbiStream::hasOldFpoRecords() const { return OldFpoStream != nullptr; }
+
+FixedStreamArray<object::FpoData> DbiStream::getOldFpoRecords() const {
+  return OldFpoRecords;
+}
+
+bool DbiStream::hasNewFpoRecords() const { return NewFpoStream != nullptr; }
+
+const DebugFrameDataSubsectionRef &DbiStream::getNewFpoRecords() const {
+  return NewFpoRecords;
 }
 
 const DbiModuleList &DbiStream::modules() const { return Modules; }
@@ -247,21 +256,14 @@ Error DbiStream::initializeSectionContributionData() {
 
 // Initializes this->SectionHeaders.
 Error DbiStream::initializeSectionHeadersData(PDBFile *Pdb) {
-  if (!Pdb)
+  Expected<std::unique_ptr<msf::MappedBlockStream>> ExpectedStream =
+      createIndexedStreamForHeaderType(Pdb, DbgHeaderType::SectionHdr);
+  if (auto EC = ExpectedStream.takeError())
+    return EC;
+
+  auto &SHS = *ExpectedStream;
+  if (!SHS)
     return Error::success();
-
-  if (DbgStreams.size() == 0)
-    return Error::success();
-
-  uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::SectionHdr);
-  if (StreamNum == kInvalidStreamIndex)
-    return Error::success();
-
-  if (StreamNum >= Pdb->getNumStreams())
-    return make_error<RawError>(raw_error_code::no_stream);
-
-  auto SHS = MappedBlockStream::createIndexedStream(
-      Pdb->getMsfLayout(), Pdb->getMsfBuffer(), StreamNum, Pdb->getAllocator());
 
   size_t StreamLen = SHS->getLength();
   if (StreamLen % sizeof(object::coff_section))
@@ -279,37 +281,67 @@ Error DbiStream::initializeSectionHeadersData(PDBFile *Pdb) {
 }
 
 // Initializes this->Fpos.
-Error DbiStream::initializeFpoRecords(PDBFile *Pdb) {
-  if (!Pdb)
+Error DbiStream::initializeOldFpoRecords(PDBFile *Pdb) {
+  Expected<std::unique_ptr<msf::MappedBlockStream>> ExpectedStream =
+      createIndexedStreamForHeaderType(Pdb, DbgHeaderType::FPO);
+  if (auto EC = ExpectedStream.takeError())
+    return EC;
+
+  auto &FS = *ExpectedStream;
+  if (!FS)
     return Error::success();
-
-  if (DbgStreams.size() == 0)
-    return Error::success();
-
-  uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::NewFPO);
-
-  // This means there is no FPO data.
-  if (StreamNum == kInvalidStreamIndex)
-    return Error::success();
-
-  if (StreamNum >= Pdb->getNumStreams())
-    return make_error<RawError>(raw_error_code::no_stream);
-
-  auto FS = MappedBlockStream::createIndexedStream(
-      Pdb->getMsfLayout(), Pdb->getMsfBuffer(), StreamNum, Pdb->getAllocator());
 
   size_t StreamLen = FS->getLength();
   if (StreamLen % sizeof(object::FpoData))
     return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Corrupted New FPO stream.");
+                                "Corrupted Old FPO stream.");
 
   size_t NumRecords = StreamLen / sizeof(object::FpoData);
   BinaryStreamReader Reader(*FS);
-  if (auto EC = Reader.readArray(FpoRecords, NumRecords))
+  if (auto EC = Reader.readArray(OldFpoRecords, NumRecords))
     return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Corrupted New FPO stream.");
-  FpoStream = std::move(FS);
+                                "Corrupted Old FPO stream.");
+  OldFpoStream = std::move(FS);
   return Error::success();
+}
+
+Error DbiStream::initializeNewFpoRecords(PDBFile *Pdb) {
+  Expected<std::unique_ptr<msf::MappedBlockStream>> ExpectedStream =
+      createIndexedStreamForHeaderType(Pdb, DbgHeaderType::NewFPO);
+  if (auto EC = ExpectedStream.takeError())
+    return EC;
+
+  auto &FS = *ExpectedStream;
+  if (!FS)
+    return Error::success();
+
+  if (auto EC = NewFpoRecords.initialize(*FS))
+    return EC;
+
+  NewFpoStream = std::move(FS);
+  return Error::success();
+}
+
+Expected<std::unique_ptr<msf::MappedBlockStream>>
+DbiStream::createIndexedStreamForHeaderType(PDBFile *Pdb,
+                                            DbgHeaderType Type) const {
+  if (!Pdb)
+    return nullptr;
+
+  if (DbgStreams.empty())
+    return nullptr;
+
+  uint32_t StreamNum = getDebugStreamIndex(Type);
+
+  // This means there is no such stream
+  if (StreamNum == kInvalidStreamIndex)
+    return nullptr;
+
+  if (StreamNum >= Pdb->getNumStreams())
+    return make_error<RawError>(raw_error_code::no_stream);
+
+  return MappedBlockStream::createIndexedStream(
+      Pdb->getMsfLayout(), Pdb->getMsfBuffer(), StreamNum, Pdb->getAllocator());
 }
 
 BinarySubstreamRef DbiStream::getSectionContributionData() const {

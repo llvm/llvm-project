@@ -1,9 +1,8 @@
 //===-- llvm/CodeGen/GlobalISel/MachineIRBuilder.cpp - MIBuilder--*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -17,6 +16,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfo.h"
@@ -45,6 +45,8 @@ void MachineIRBuilder::setInstr(MachineInstr &MI) {
   setMBB(*MI.getParent());
   State.II = MI.getIterator();
 }
+
+void MachineIRBuilder::setCSEInfo(GISelCSEInfo *Info) { State.CSEInfo = Info; }
 
 void MachineIRBuilder::setInsertPt(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator II) {
@@ -241,13 +243,28 @@ MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     const ConstantInt &Val) {
   LLT Ty = Res.getLLTTy(*getMRI());
-
-  assert((Ty.isScalar() || Ty.isPointer()) && "invalid operand type");
+  LLT EltTy = Ty.getScalarType();
 
   const ConstantInt *NewVal = &Val;
-  if (Ty.getSizeInBits() != Val.getBitWidth())
-    NewVal = ConstantInt::get(getMF().getFunction().getContext(),
-                              Val.getValue().sextOrTrunc(Ty.getSizeInBits()));
+  if (EltTy.getSizeInBits() != Val.getBitWidth()) {
+    NewVal = ConstantInt::get(
+      getMF().getFunction().getContext(),
+      Val.getValue().sextOrTrunc(EltTy.getSizeInBits()));
+  }
+
+  if (Ty.isVector()) {
+    unsigned EltReg = getMRI()->createGenericVirtualRegister(EltTy);
+    buildInstr(TargetOpcode::G_CONSTANT)
+      .addDef(EltReg)
+      .addCImm(NewVal);
+
+    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
+    Res.addDefToMIB(*getMRI(), MIB);
+
+    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
+      MIB.addUse(EltReg);
+    return MIB;
+  }
 
   auto MIB = buildInstr(TargetOpcode::G_CONSTANT);
   Res.addDefToMIB(*getMRI(), MIB);
@@ -265,7 +282,24 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      const ConstantFP &Val) {
-  assert(Res.getLLTTy(*getMRI()).isScalar() && "invalid operand type");
+  LLT Ty = Res.getLLTTy(*getMRI());
+
+  assert(!Ty.isPointer() && "invalid operand type");
+
+  if (Ty.isVector()) {
+    unsigned EltReg
+      = getMRI()->createGenericVirtualRegister(Ty.getElementType());
+    buildInstr(TargetOpcode::G_FCONSTANT)
+      .addDef(EltReg)
+      .addFPImm(&Val);
+
+    auto MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
+    Res.addDefToMIB(*getMRI(), MIB);
+
+    for (unsigned I = 0, E = Ty.getNumElements(); I != E; ++I)
+      MIB.addUse(EltReg);
+    return MIB;
+  }
 
   auto MIB = buildInstr(TargetOpcode::G_FCONSTANT);
   Res.addDefToMIB(*getMRI(), MIB);
@@ -340,6 +374,25 @@ MachineInstrBuilder MachineIRBuilder::buildSExt(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildZExt(const DstOp &Res,
                                                 const SrcOp &Op) {
   return buildInstr(TargetOpcode::G_ZEXT, Res, Op);
+}
+
+unsigned MachineIRBuilder::getBoolExtOp(bool IsVec, bool IsFP) const {
+  const auto *TLI = getMF().getSubtarget().getTargetLowering();
+  switch (TLI->getBooleanContents(IsVec, IsFP)) {
+  case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+    return TargetOpcode::G_SEXT;
+  case TargetLoweringBase::ZeroOrOneBooleanContent:
+    return TargetOpcode::G_ZEXT;
+  default:
+    return TargetOpcode::G_ANYEXT;
+  }
+}
+
+MachineInstrBuilder MachineIRBuilder::buildBoolExt(const DstOp &Res,
+                                                   const SrcOp &Op,
+                                                   bool IsFP) {
+  unsigned ExtOp = getBoolExtOp(getMRI()->getType(Op.getReg()).isVector(), IsFP);
+  return buildInstr(ExtOp, Res, Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
@@ -941,7 +994,7 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
            "type mismatch in input list");
     assert(SrcOps.size() * SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
-           "input scalars do not exactly cover the outpur vector register");
+           "input scalars do not exactly cover the output vector register");
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR_TRUNC: {
@@ -974,7 +1027,7 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
            "type mismatch in input list");
     assert(SrcOps.size() * SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
                DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
-           "input vectors do not exactly cover the outpur vector register");
+           "input vectors do not exactly cover the output vector register");
     break;
   }
   case TargetOpcode::G_UADDE: {

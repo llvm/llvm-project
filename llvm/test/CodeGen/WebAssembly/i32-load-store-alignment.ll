@@ -38,7 +38,7 @@ define i32 @ldi32_a4(i32 *%p) {
   ret i32 %v
 }
 
-; The default alignment in LLVM is the same as the defualt alignment in wasm.
+; The default alignment in LLVM is the same as the default alignment in wasm.
 
 ; CHECK-LABEL: ldi32:
 ; CHECK-NEXT: .functype ldi32 (i32) -> (i32){{$}}
@@ -142,7 +142,7 @@ define void @sti32_a4(i32 *%p, i32 %v) {
   ret void
 }
 
-; The default alignment in LLVM is the same as the defualt alignment in wasm.
+; The default alignment in LLVM is the same as the default alignment in wasm.
 
 ; CHECK-LABEL: sti32:
 ; CHECK-NEXT: .functype sti32 (i32, i32) -> (){{$}}

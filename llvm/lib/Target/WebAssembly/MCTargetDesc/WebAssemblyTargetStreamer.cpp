@@ -1,9 +1,8 @@
 //==-- WebAssemblyTargetStreamer.cpp - WebAssembly Target Streamer Methods --=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -47,7 +46,7 @@ static void printTypes(formatted_raw_ostream &OS,
       First = false;
     else
       OS << ", ";
-    OS << WebAssembly::TypeToString(Type);
+    OS << WebAssembly::typeToString(Type);
   }
   OS << '\n';
 }
@@ -76,7 +75,7 @@ void WebAssemblyTargetAsmStreamer::emitParamList(
   for (auto &Ty : Params) {
     if (&Ty != &Params[0])
       OS << ", ";
-    OS << WebAssembly::TypeToString(Ty);
+    OS << WebAssembly::typeToString(Ty);
   }
 }
 
@@ -86,7 +85,7 @@ void WebAssemblyTargetAsmStreamer::emitReturnList(
   for (auto &Ty : Returns) {
     if (&Ty != &Returns[0])
       OS << ", ";
-    OS << WebAssembly::TypeToString(Ty);
+    OS << WebAssembly::typeToString(Ty);
   }
 }
 
@@ -99,10 +98,10 @@ void WebAssemblyTargetAsmStreamer::emitFunctionType(const MCSymbolWasm *Sym) {
 
 void WebAssemblyTargetAsmStreamer::emitGlobalType(const MCSymbolWasm *Sym) {
   assert(Sym->isGlobal());
-  OS << "\t.globaltype\t" << Sym->getName() << ", " <<
-        WebAssembly::TypeToString(
-          static_cast<wasm::ValType>(Sym->getGlobalType().Type)) <<
-        '\n';
+  OS << "\t.globaltype\t" << Sym->getName() << ", "
+     << WebAssembly::typeToString(
+            static_cast<wasm::ValType>(Sym->getGlobalType().Type))
+     << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitEventType(const MCSymbolWasm *Sym) {
@@ -113,8 +112,15 @@ void WebAssemblyTargetAsmStreamer::emitEventType(const MCSymbolWasm *Sym) {
 }
 
 void WebAssemblyTargetAsmStreamer::emitImportModule(const MCSymbolWasm *Sym,
-                                                    StringRef ModuleName) {
-  OS << "\t.import_module\t" << Sym->getName() << ", " << ModuleName << '\n';
+                                                    StringRef ImportModule) {
+  OS << "\t.import_module\t" << Sym->getName() << ", "
+                             << ImportModule << '\n';
+}
+
+void WebAssemblyTargetAsmStreamer::emitImportName(const MCSymbolWasm *Sym,
+                                                  StringRef ImportName) {
+  OS << "\t.import_name\t" << Sym->getName() << ", "
+                           << ImportName << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {

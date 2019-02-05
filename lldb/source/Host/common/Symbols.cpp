@@ -1,9 +1,8 @@
 //===-- Symbols.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -247,6 +246,8 @@ ModuleSpec Symbols::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
   return result;
 }
 
+// Keep "symbols.enable-external-lookup" description in sync with this function.
+
 FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
   FileSpec symbol_file_spec = module_spec.GetSymbolFileSpec();
   if (symbol_file_spec.IsAbsolute() &&
@@ -270,30 +271,33 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
       debug_file_search_paths.AppendIfUnique(file_spec);
     }
 
-    // Add current working directory.
-    {
-      FileSpec file_spec(".");
-      FileSystem::Instance().Resolve(file_spec);
-      debug_file_search_paths.AppendIfUnique(file_spec);
-    }
+    if (ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup()) {
+
+      // Add current working directory.
+      {
+        FileSpec file_spec(".");
+        FileSystem::Instance().Resolve(file_spec);
+        debug_file_search_paths.AppendIfUnique(file_spec);
+      }
 
 #ifndef _WIN32
 #if defined(__NetBSD__)
-    // Add /usr/libdata/debug directory.
-    {
-      FileSpec file_spec("/usr/libdata/debug");
-      FileSystem::Instance().Resolve(file_spec);
-      debug_file_search_paths.AppendIfUnique(file_spec);
-    }
+      // Add /usr/libdata/debug directory.
+      {
+        FileSpec file_spec("/usr/libdata/debug");
+        FileSystem::Instance().Resolve(file_spec);
+        debug_file_search_paths.AppendIfUnique(file_spec);
+      }
 #else
-    // Add /usr/lib/debug directory.
-    {
-      FileSpec file_spec("/usr/lib/debug");
-      FileSystem::Instance().Resolve(file_spec);
-      debug_file_search_paths.AppendIfUnique(file_spec);
-    }
+      // Add /usr/lib/debug directory.
+      {
+        FileSpec file_spec("/usr/lib/debug");
+        FileSystem::Instance().Resolve(file_spec);
+        debug_file_search_paths.AppendIfUnique(file_spec);
+      }
 #endif
 #endif // _WIN32
+    }
 
     std::string uuid_str;
     const UUID &module_uuid = module_spec.GetUUID();

@@ -1,9 +1,8 @@
 //===- InstructionSimplify.cpp - Fold instruction operands ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -4941,7 +4940,15 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   case Intrinsic::log2:
     // log2(exp2(x)) -> x
     if (Q.CxtI->hasAllowReassoc() &&
-        match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X)))) return X;
+        (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) ||
+         match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(2.0),
+                                                m_Value(X))))) return X;
+    break;
+  case Intrinsic::log10:
+    // log10(pow(10.0, x)) -> x
+    if (Q.CxtI->hasAllowReassoc() &&
+        match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0),
+                                               m_Value(X)))) return X;
     break;
   default:
     break;

@@ -1,4 +1,6 @@
 add_llvm_library(LLVMGlobalISel
+        CSEInfo.cpp
+        CSEMIRBuilder.cpp
         CallLowering.cpp
         GlobalISel.cpp
         Combiner.cpp

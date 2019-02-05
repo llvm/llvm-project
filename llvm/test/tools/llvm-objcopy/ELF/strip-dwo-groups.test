@@ -1,6 +1,6 @@
 # RUN: cp %p/Inputs/groups.o %t
-# RUN: llvm-objcopy -strip-dwo %t
-# RUN: llvm-readobj -elf-section-groups %t | FileCheck %s
+# RUN: llvm-objcopy --strip-dwo %t
+# RUN: llvm-readobj --elf-section-groups %t | FileCheck %s
 
 // Source code of groups.o:
 //
@@ -18,11 +18,11 @@
 //
 // clang -g -gsplit-dwarf -std=c++11 -c groups.cpp -o groups.o
 
-// `llvm-objcopy -strip-dwo` strips out dwo sections, as a result, the index of 
+// `llvm-objcopy --strip-dwo` strips out dwo sections, as a result, the index of 
 // the symbol table, the indices of the symbols and the indices of the sections 
 // which go after the removed ones will change. Consequently, the fields 
 // Link, Info and the content of .group need to be updated. In the past 
-// `llvm-objcopy -strip-dwo` used to produce invalid binaries with 
+// `llvm-objcopy --strip-dwo` used to produce invalid binaries with 
 // broken .group section, this test verifies the correctness of 
 // Link, Info and the content of this section.
 

@@ -1,9 +1,8 @@
 //===-------------------------- DwarfInstructions.hpp ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //
 //  Processor specific interpretation of DWARF unwind info.
@@ -82,12 +81,11 @@ typename A::pint_t DwarfInstructions<A, R>::getSavedRegister(
     const RegisterLocation &savedReg) {
   switch (savedReg.location) {
   case CFI_Parser<A>::kRegisterInCFA:
-    return addressSpace.getRegister(cfa + (pint_t)savedReg.value);
+    return (pint_t)addressSpace.getRegister(cfa + (pint_t)savedReg.value);
 
   case CFI_Parser<A>::kRegisterAtExpression:
-    return addressSpace.getRegister(
-        evaluateExpression((pint_t)savedReg.value, addressSpace,
-                            registers, cfa));
+    return (pint_t)addressSpace.getRegister(evaluateExpression(
+        (pint_t)savedReg.value, addressSpace, registers, cfa));
 
   case CFI_Parser<A>::kRegisterIsExpression:
     return evaluateExpression((pint_t)savedReg.value, addressSpace,
@@ -159,7 +157,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
                                &cieInfo) == NULL) {
     PrologInfo prolog;
     if (CFI_Parser<A>::parseFDEInstructions(addressSpace, fdeInfo, cieInfo, pc,
-                                            &prolog)) {
+                                            R::getArch(), &prolog)) {
       // get pointer to cfa (architecture specific)
       pint_t cfa = getCFA(addressSpace, prolog, registers);
 
@@ -204,7 +202,8 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       // return address needs to be authenticated before the return address is
       // restored. autia1716 is used instead of autia as autia1716 assembles
       // to a NOP on pre-v8.3a architectures.
-      if (prolog.savedRegisters[UNW_ARM64_RA_SIGN_STATE].value) {
+      if ((R::getArch() == REGISTERS_ARM64) &&
+          prolog.savedRegisters[UNW_ARM64_RA_SIGN_STATE].value) {
 #if !defined(_LIBUNWIND_IS_NATIVE_ONLY)
         return UNW_ECROSSRASIGNING;
 #else
@@ -220,6 +219,16 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
           asm("hint 0xc" : "+r"(x17) : "r"(x16)); // autia1716
         returnAddress = x17;
 #endif
+      }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_SPARC)
+      if (R::getArch() == REGISTERS_SPARC) {
+        // Skip call site instruction and delay slot
+        returnAddress += 8;
+        // Skip unimp instruction if function returns a struct
+        if ((addressSpace.get32(returnAddress) & 0xC1C00000) == 0)
+          returnAddress += 4;
       }
 #endif
 

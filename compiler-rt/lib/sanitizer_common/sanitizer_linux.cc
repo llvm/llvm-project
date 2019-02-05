@@ -1,9 +1,8 @@
 //===-- sanitizer_linux.cc ------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -453,6 +452,8 @@ uptr internal_execve(const char *filename, char *const argv[],
 
 // ----------------- sanitizer_common.h
 bool FileExists(const char *filename) {
+  if (ShouldMockFailureToOpen(filename))
+    return false;
   struct stat st;
 #if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   if (internal_syscall(SYSCALL(newfstatat), AT_FDCWD, filename, &st, 0))
@@ -1008,6 +1009,8 @@ static uptr GetKernelAreaSize() {
   // Firstly check if there are writable segments
   // mapped to top gigabyte (e.g. stack).
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+  if (proc_maps.Error())
+    return 0;
   MemoryMappedSegment segment;
   while (proc_maps.Next(&segment)) {
     if ((segment.end >= 3 * gbyte) && segment.IsWritable()) return 0;
@@ -1073,11 +1076,9 @@ uptr GetMaxUserVirtualAddress() {
   return addr;
 }
 
+#if !SANITIZER_ANDROID
 uptr GetPageSize() {
-// Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
-#if SANITIZER_ANDROID
-  return 4096;
-#elif SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
   return EXEC_PAGESIZE;
 #elif SANITIZER_USE_GETAUXVAL
   return getauxval(AT_PAGESZ);
@@ -1093,6 +1094,7 @@ uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #endif
 }
+#endif // !SANITIZER_ANDROID
 
 #if !SANITIZER_OPENBSD
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {

@@ -1,9 +1,8 @@
 //===-- CodeGenFunction.h - Per-Function state for LLVM CodeGen -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -48,7 +47,6 @@ class Module;
 class SwitchInst;
 class Twine;
 class Value;
-class CallSite;
 }
 
 namespace clang {
@@ -131,6 +129,7 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
   SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
+  SANITIZER_CHECK(AlignmentAssumption, alignment_assumption, 0)                \
   SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)
 
 enum SanitizerHandler {
@@ -1835,6 +1834,9 @@ public:
   void EmitLambdaBlockInvokeBody();
   void EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD);
   void EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD);
+  void EmitLambdaVLACapture(const VariableArrayType *VAT, LValue LV) {
+    EmitStoreThroughLValue(RValue::get(VLASizeMap[VAT->getSizeExpr()]), LV);
+  }
   void EmitAsanPrologueOrEpilogue(bool Prologue);
 
   /// Emit the unified return block, trying to avoid its emission when
@@ -2617,10 +2619,12 @@ public:
   bool sanitizePerformTypeCheck() const;
 
   /// Emit a check that \p V is the address of storage of the
-  /// appropriate size and alignment for an object of type \p Type.
+  /// appropriate size and alignment for an object of type \p Type
+  /// (or if ArraySize is provided, for an array of that bound).
   void EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc, llvm::Value *V,
                      QualType Type, CharUnits Alignment = CharUnits::Zero(),
-                     SanitizerSet SkippedChecks = SanitizerSet());
+                     SanitizerSet SkippedChecks = SanitizerSet(),
+                     llvm::Value *ArraySize = nullptr);
 
   /// Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
@@ -2632,12 +2636,6 @@ public:
                                        bool isInc, bool isPre);
   ComplexPairTy EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
                                          bool isInc, bool isPre);
-
-  void EmitAlignmentAssumption(llvm::Value *PtrValue, unsigned Alignment,
-                               llvm::Value *OffsetValue = nullptr) {
-    Builder.CreateAlignmentAssumption(CGM.getDataLayout(), PtrValue, Alignment,
-                                      OffsetValue);
-  }
 
   /// Converts Location to a DebugLoc, if debug information is enabled.
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Location);
@@ -2802,11 +2800,27 @@ public:
   PeepholeProtection protectFromPeepholes(RValue rvalue);
   void unprotectFromPeepholes(PeepholeProtection protection);
 
-  void EmitAlignmentAssumption(llvm::Value *PtrValue, llvm::Value *Alignment,
-                               llvm::Value *OffsetValue = nullptr) {
-    Builder.CreateAlignmentAssumption(CGM.getDataLayout(), PtrValue, Alignment,
-                                      OffsetValue);
-  }
+  void EmitAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
+                                    SourceLocation Loc,
+                                    SourceLocation AssumptionLoc,
+                                    llvm::Value *Alignment,
+                                    llvm::Value *OffsetValue,
+                                    llvm::Value *TheCheck,
+                                    llvm::Instruction *Assumption);
+
+  void EmitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
+                               SourceLocation Loc, SourceLocation AssumptionLoc,
+                               llvm::Value *Alignment,
+                               llvm::Value *OffsetValue = nullptr);
+
+  void EmitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
+                               SourceLocation Loc, SourceLocation AssumptionLoc,
+                               unsigned Alignment,
+                               llvm::Value *OffsetValue = nullptr);
+
+  void EmitAlignmentAssumption(llvm::Value *PtrValue, const Expr *E,
+                               SourceLocation AssumptionLoc, unsigned Alignment,
+                               llvm::Value *OffsetValue = nullptr);
 
   //===--------------------------------------------------------------------===//
   //                             Statement Emission
@@ -3549,7 +3563,6 @@ public:
 
   LValue EmitCXXConstructLValue(const CXXConstructExpr *E);
   LValue EmitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *E);
-  LValue EmitLambdaLValue(const LambdaExpr *E);
   LValue EmitCXXTypeidLValue(const CXXTypeidExpr *E);
   LValue EmitCXXUuidofLValue(const CXXUuidofExpr *E);
 
@@ -3569,10 +3582,10 @@ public:
   /// LLVM arguments and the types they were derived from.
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::Instruction **callOrInvoke, SourceLocation Loc);
+                  llvm::CallBase **callOrInvoke, SourceLocation Loc);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::Instruction **callOrInvoke = nullptr) {
+                  llvm::CallBase **callOrInvoke = nullptr) {
     return EmitCall(CallInfo, Callee, ReturnValue, Args, callOrInvoke,
                     SourceLocation());
   }
@@ -3599,14 +3612,14 @@ public:
   SmallVector<llvm::OperandBundleDef, 1>
   getBundlesForFunclet(llvm::Value *Callee);
 
-  llvm::CallSite EmitCallOrInvoke(llvm::Value *Callee,
-                                  ArrayRef<llvm::Value *> Args,
-                                  const Twine &Name = "");
-  llvm::CallSite EmitRuntimeCallOrInvoke(llvm::Value *callee,
-                                         ArrayRef<llvm::Value*> args,
-                                         const Twine &name = "");
-  llvm::CallSite EmitRuntimeCallOrInvoke(llvm::Value *callee,
-                                         const Twine &name = "");
+  llvm::CallBase *EmitCallOrInvoke(llvm::Value *Callee,
+                                   ArrayRef<llvm::Value *> Args,
+                                   const Twine &Name = "");
+  llvm::CallBase *EmitRuntimeCallOrInvoke(llvm::Value *callee,
+                                          ArrayRef<llvm::Value *> args,
+                                          const Twine &name = "");
+  llvm::CallBase *EmitRuntimeCallOrInvoke(llvm::Value *callee,
+                                          const Twine &name = "");
   void EmitNoreturnRuntimeCallOrInvoke(llvm::Value *callee,
                                        ArrayRef<llvm::Value*> args);
 
@@ -3971,16 +3984,14 @@ public:
 
   void EmitCXXThrowExpr(const CXXThrowExpr *E, bool KeepInsertionPoint = true);
 
-  void EmitLambdaExpr(const LambdaExpr *E, AggValueSlot Dest);
-
   RValue EmitAtomicExpr(AtomicExpr *E);
 
   //===--------------------------------------------------------------------===//
   //                         Annotations Emission
   //===--------------------------------------------------------------------===//
 
-  /// Emit an annotation call (intrinsic or builtin).
-  llvm::Value *EmitAnnotationCall(llvm::Value *AnnotationFn,
+  /// Emit an annotation call (intrinsic).
+  llvm::Value *EmitAnnotationCall(llvm::Function *AnnotationFn,
                                   llvm::Value *AnnotatedVal,
                                   StringRef AnnotationStr,
                                   SourceLocation Location);
@@ -4073,8 +4084,8 @@ public:
   /// passing to a runtime sanitizer handler.
   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
 
-  /// Create a basic block that will call a handler function in a
-  /// sanitizer runtime with the provided arguments, and create a conditional
+  /// Create a basic block that will either trap or call a handler function in
+  /// the UBSan runtime with the provided arguments, and create a conditional
   /// branch to it.
   void EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerMask>> Checked,
                  SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
@@ -4166,14 +4177,16 @@ private:
   /// If EmittedExpr is non-null, this will use that instead of re-emitting E.
   llvm::Value *evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                llvm::IntegerType *ResType,
-                                               llvm::Value *EmittedE);
+                                               llvm::Value *EmittedE,
+                                               bool IsDynamic);
 
   /// Emits the size of E, as required by __builtin_object_size. This
   /// function is aware of pass_object_size parameters, and will act accordingly
   /// if E is a parameter with the pass_object_size attribute.
   llvm::Value *emitBuiltinObjectSize(const Expr *E, unsigned Type,
                                      llvm::IntegerType *ResType,
-                                     llvm::Value *EmittedE);
+                                     llvm::Value *EmittedE,
+                                     bool IsDynamic);
 
 public:
 #ifndef NDEBUG

@@ -255,7 +255,7 @@ void PrimaryExpressions(Ts... a) {
       // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:8> col:8 implicit 'V *'
       // CHECK-NEXT: CXXMethodDecl
       // CHECK-NEXT: CompoundStmt
-      // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' this
+      // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' implicit this
 
       [*this]{};
       // CHECK: LambdaExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:7, col:15>
@@ -272,7 +272,7 @@ void PrimaryExpressions(Ts... a) {
       // CHECK-NEXT: CompoundStmt
       // CHECK-NEXT: ParenListExpr 0x{{[^ ]*}} <col:8> 'NULL TYPE'
       // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:8> '<dependent type>' prefix '*' cannot overflow
-      // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' this
+      // CHECK-NEXT: CXXThisExpr 0x{{[^ ]*}} <col:8> 'V *' implicit this
     }
   };
 
@@ -290,9 +290,27 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: Destructor
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:6, col:8> col:3 operator() 'auto () const' inline
   // CHECK-NEXT: CompoundStmt
-  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:8> col:3 implicit constexpr operator auto (*)() 'auto (*() const)()' inline
+  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:8> col:3 implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:8> col:3 implicit __invoke 'auto ()' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:7, col:8>
+
+  [](int a, ...){};
+  // CHECK: LambdaExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> '(lambda at {{.*}}:[[@LINE-1]]:3)'
+  // CHECK-NEXT: CXXRecordDecl 0x{{[^ ]*}} <col:3> col:3 implicit class definition
+  // CHECK-NEXT: DefinitionData lambda
+  // CHECK-NEXT: DefaultConstructor
+  // CHECK-NEXT: CopyConstructor
+  // CHECK-NEXT: MoveConstructor
+  // CHECK-NEXT: CopyAssignment
+  // CHECK-NEXT: MoveAssignment
+  // CHECK-NEXT: Destructor
+  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:16, col:18> col:3 operator() 'auto (int, ...) const' inline
+  // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:6, col:10> col:10 a 'int'
+  // CHECK-NEXT: CompoundStmt
+  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:18> col:3 implicit constexpr operator auto (*)(int, ...) 'auto (*() const noexcept)(int, ...)' inline
+  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:18> col:3 implicit __invoke 'auto (int, ...)' static inline
+  // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:6, col:10> col:10 a 'int'
+  // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:17, col:18>
 
   [a...]{};
   // CHECK: LambdaExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:10> '(lambda at {{.*}}:[[@LINE-1]]:3)'
@@ -437,7 +455,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: Destructor
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:8, col:19> col:3 constexpr operator() 'auto () const' inline
   // CHECK-NEXT: CompoundStmt
-  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr operator auto (*)() 'auto (*() const)()' inline
+  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit __invoke 'auto ()' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
 
@@ -453,7 +471,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: Destructor
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:8, col:17> col:3 operator() 'auto ()' inline
   // CHECK-NEXT: CompoundStmt
-  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:17> col:3 implicit constexpr operator auto (*)() 'auto (*() const)()' inline
+  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:17> col:3 implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:17> col:3 implicit __invoke 'auto ()' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:16, col:17>
 
@@ -469,7 +487,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: Destructor
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:8, col:18> col:3 operator() 'auto () const noexcept' inline
   // CHECK-NEXT: CompoundStmt
-  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:18> col:3 implicit constexpr operator auto (*)() noexcept 'auto (*() const)() noexcept' inline
+  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:18> col:3 implicit constexpr operator auto (*)() noexcept 'auto (*() const noexcept)() noexcept' inline
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:18> col:3 implicit __invoke 'auto () noexcept' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:17, col:18>
 
@@ -487,7 +505,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <col:17, col:24>
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:24> 'int' 0
-  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:27> col:3 implicit constexpr operator int (*)() 'auto (*() const)() -> int' inline
+  // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:27> col:3 implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:27> col:3 implicit __invoke 'auto () -> int' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:15, col:27>
   // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <col:17, col:24>

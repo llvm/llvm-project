@@ -1,0 +1,32 @@
+import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+if (llvm_install_binutils_symlinks) {
+  symlink_or_copy("size") {
+    deps = [
+      ":llvm-size",
+    ]
+    source = "llvm-size"
+    output = "$root_out_dir/bin/size"
+  }
+}
+
+# //:llvm-size depends on this symlink target, see comment in //BUILD.gn.
+group("symlinks") {
+  deps = [
+    ":llvm-size",
+  ]
+  if (llvm_install_binutils_symlinks) {
+    deps += [ ":size" ]
+  }
+}
+
+executable("llvm-size") {
+  deps = [
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "llvm-size.cpp",
+  ]
+}

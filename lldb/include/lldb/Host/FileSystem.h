@@ -1,9 +1,8 @@
 //===-- FileSystem.h --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,7 @@
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/DataBufferLLVM.h"
+#include "lldb/Utility/FileCollector.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
@@ -31,8 +31,15 @@ public:
   static const char *DEV_NULL;
   static const char *PATH_CONVERSION_ERROR;
 
-  FileSystem() : m_fs(llvm::vfs::getRealFileSystem()) {}
-  FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs) : m_fs(fs) {}
+  FileSystem()
+      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr),
+        m_mapped(false) {}
+  FileSystem(FileCollector &collector)
+      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(&collector),
+        m_mapped(false) {}
+  FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
+             bool mapped = false)
+      : m_fs(fs), m_mapped(mapped) {}
 
   FileSystem(const FileSystem &fs) = delete;
   FileSystem &operator=(const FileSystem &fs) = delete;
@@ -40,6 +47,8 @@ public:
   static FileSystem &Instance();
 
   static void Initialize();
+  static void Initialize(FileCollector &collector);
+  static llvm::Error Initialize(const FileSpec &mapping);
   static void Initialize(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
   static void Terminate();
 
@@ -168,9 +177,14 @@ public:
   std::error_code GetRealPath(const llvm::Twine &path,
                               llvm::SmallVectorImpl<char> &output) const;
 
+  llvm::ErrorOr<std::string> GetExternalPath(const llvm::Twine &path);
+  llvm::ErrorOr<std::string> GetExternalPath(const FileSpec &file_spec);
+
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
+  FileCollector *m_collector;
+  bool m_mapped;
 };
 } // namespace lldb_private
 

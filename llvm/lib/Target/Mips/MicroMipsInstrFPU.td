@@ -1,9 +1,8 @@
 //==- MicroMipsInstrFPU.td - microMIPS FPU Instruction Info -*- tablegen -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -124,7 +123,7 @@ multiclass ABSS_MMM<string opstr, InstrItinClass Itin,
 defm FSQRT : ABSS_MMM<"sqrt.d", II_SQRT_D, fsqrt>, ROUND_W_FM_MM<1, 0x28>;
 defm FABS : ABSS_MMM<"abs.d", II_SQRT_D, fabs>, ABS_FM_MM<1, 0xd>;
 
-let DecoderNamespace = "MicroMips" in {
+let DecoderNamespace = "MicroMips", AdditionalPredicates = [UseAbs] in {
   def FABS_S_MM : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS, fabs>,
                   ABS_FM_MM<0, 0xd>, ISA_MICROMIPS;
 }

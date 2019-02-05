@@ -2,6 +2,9 @@
 #define FILESYSTEM_TEST_HELPER_HPP
 
 #include "filesystem_include.hpp"
+
+#include <unistd.h> // for ftruncate
+
 #include <cassert>
 #include <cstdio> // for printf
 #include <string>
@@ -147,13 +150,46 @@ struct scoped_test_env
         return raw;
     }
 
-    std::string create_file(std::string filename, std::size_t size = 0) {
+    // Purposefully using a size potentially larger than off_t here so we can
+    // test the behavior of libc++fs when it is built with _FILE_OFFSET_BITS=64
+    // but the caller is not (std::filesystem also uses uintmax_t rather than
+    // off_t). On a 32-bit system this allows us to create a file larger than
+    // 2GB.
+    std::string create_file(std::string filename, uintmax_t size = 0) {
+#if defined(__LP64__)
+        auto large_file_fopen = fopen;
+        auto large_file_ftruncate = ftruncate;
+        using large_file_offset_t = off_t;
+#else
+        auto large_file_fopen = fopen64;
+        auto large_file_ftruncate = ftruncate64;
+        using large_file_offset_t = off64_t;
+#endif
+
         filename = sanitize_path(std::move(filename));
-        std::string out_str(size, 'a');
-        {
-            std::ofstream out(filename.c_str());
-            out << out_str;
+
+        if (size > std::numeric_limits<large_file_offset_t>::max()) {
+            fprintf(stderr, "create_file(%s, %ju) too large\n",
+                    filename.c_str(), size);
+            abort();
         }
+
+        FILE* file = large_file_fopen(filename.c_str(), "we");
+        if (file == nullptr) {
+            fprintf(stderr, "fopen %s failed: %s\n", filename.c_str(),
+                    strerror(errno));
+            abort();
+        }
+
+        if (large_file_ftruncate(
+                fileno(file), static_cast<large_file_offset_t>(size)) == -1) {
+            fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
+                    size, strerror(errno));
+            fclose(file);
+            abort();
+        }
+
+        fclose(file);
         return filename;
     }
 

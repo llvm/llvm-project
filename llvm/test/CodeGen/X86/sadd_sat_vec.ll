@@ -26,8 +26,14 @@ declare <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16>, <32 x i16>)
 declare <16 x i1> @llvm.sadd.sat.v16i1(<16 x i1>, <16 x i1>)
 declare <16 x i4> @llvm.sadd.sat.v16i4(<16 x i4>, <16 x i4>)
 
-declare <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32>, <4 x i32>)
 declare <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32>, <2 x i32>)
+declare <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32>, <4 x i32>)
+declare <8 x i32> @llvm.sadd.sat.v8i32(<8 x i32>, <8 x i32>)
+declare <16 x i32> @llvm.sadd.sat.v16i32(<16 x i32>, <16 x i32>)
+declare <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64>, <2 x i64>)
+declare <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64>, <4 x i64>)
+declare <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64>, <8 x i64>)
+
 declare <4 x i24> @llvm.sadd.sat.v4i24(<4 x i24>, <4 x i24>)
 declare <2 x i128> @llvm.sadd.sat.v2i128(<2 x i128>, <2 x i128>)
 
@@ -651,6 +657,200 @@ define <16 x i1> @v16i1(<16 x i1> %x, <16 x i1> %y) nounwind {
 
 ; Expanded
 
+define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
+; SSE2-LABEL: v2i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psllq $32, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movq %xmm2, %rax
+; SSE2-NEXT:    psllq $32, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movq %xmm2, %rcx
+; SSE2-NEXT:    xorl %edx, %edx
+; SSE2-NEXT:    movq %rcx, %rsi
+; SSE2-NEXT:    addq %rax, %rsi
+; SSE2-NEXT:    setns %dl
+; SSE2-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSE2-NEXT:    addq %r8, %rdx
+; SSE2-NEXT:    addq %rax, %rcx
+; SSE2-NEXT:    cmovoq %rdx, %rcx
+; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    movq %xmm0, %rsi
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movq %rsi, %rdx
+; SSE2-NEXT:    addq %rax, %rdx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addq %r8, %rdi
+; SSE2-NEXT:    addq %rax, %rsi
+; SSE2-NEXT:    cmovoq %rdi, %rsi
+; SSE2-NEXT:    movq %rsi, %xmm1
+; SSE2-NEXT:    movq %rcx, %xmm0
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,3,2,3]
+; SSE2-NEXT:    psrad $31, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: v2i32:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    psllq $32, %xmm1
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm2, %rax
+; SSSE3-NEXT:    psllq $32, %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm2, %rcx
+; SSSE3-NEXT:    xorl %edx, %edx
+; SSSE3-NEXT:    movq %rcx, %rsi
+; SSSE3-NEXT:    addq %rax, %rsi
+; SSSE3-NEXT:    setns %dl
+; SSSE3-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSSE3-NEXT:    addq %r8, %rdx
+; SSSE3-NEXT:    addq %rax, %rcx
+; SSSE3-NEXT:    cmovoq %rdx, %rcx
+; SSSE3-NEXT:    movq %xmm1, %rax
+; SSSE3-NEXT:    movq %xmm0, %rsi
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movq %rsi, %rdx
+; SSSE3-NEXT:    addq %rax, %rdx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addq %r8, %rdi
+; SSSE3-NEXT:    addq %rax, %rsi
+; SSSE3-NEXT:    cmovoq %rdi, %rsi
+; SSSE3-NEXT:    movq %rsi, %xmm1
+; SSSE3-NEXT:    movq %rcx, %xmm0
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,3,2,3]
+; SSSE3-NEXT:    psrad $31, %xmm1
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: v2i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    psllq $32, %xmm1
+; SSE41-NEXT:    movq %xmm1, %rax
+; SSE41-NEXT:    psllq $32, %xmm0
+; SSE41-NEXT:    movq %xmm0, %rcx
+; SSE41-NEXT:    xorl %edx, %edx
+; SSE41-NEXT:    movq %rcx, %rsi
+; SSE41-NEXT:    addq %rax, %rsi
+; SSE41-NEXT:    setns %dl
+; SSE41-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSE41-NEXT:    addq %r8, %rdx
+; SSE41-NEXT:    addq %rax, %rcx
+; SSE41-NEXT:    cmovoq %rdx, %rcx
+; SSE41-NEXT:    pextrq $1, %xmm1, %rax
+; SSE41-NEXT:    pextrq $1, %xmm0, %rsi
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movq %rsi, %rdx
+; SSE41-NEXT:    addq %rax, %rdx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addq %r8, %rdi
+; SSE41-NEXT:    addq %rax, %rsi
+; SSE41-NEXT:    cmovoq %rdi, %rsi
+; SSE41-NEXT:    movq %rsi, %xmm1
+; SSE41-NEXT:    movq %rcx, %xmm0
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE41-NEXT:    psrad $31, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: v2i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rax
+; AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    movq %rcx, %rsi
+; AVX1-NEXT:    addq %rax, %rsi
+; AVX1-NEXT:    setns %dl
+; AVX1-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX1-NEXT:    addq %r8, %rdx
+; AVX1-NEXT:    addq %rax, %rcx
+; AVX1-NEXT:    cmovoq %rdx, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movq %rsi, %rdx
+; AVX1-NEXT:    addq %rax, %rdx
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addq %r8, %rdi
+; AVX1-NEXT:    addq %rax, %rsi
+; AVX1-NEXT:    cmovoq %rdi, %rsi
+; AVX1-NEXT:    vmovq %rsi, %xmm0
+; AVX1-NEXT:    vmovq %rcx, %xmm1
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v2i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsllq $32, %xmm1, %xmm1
+; AVX2-NEXT:    vmovq %xmm1, %rax
+; AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    movq %rcx, %rsi
+; AVX2-NEXT:    addq %rax, %rsi
+; AVX2-NEXT:    setns %dl
+; AVX2-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    addq %r8, %rdx
+; AVX2-NEXT:    addq %rax, %rcx
+; AVX2-NEXT:    cmovoq %rdx, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movq %rsi, %rdx
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addq %r8, %rdi
+; AVX2-NEXT:    addq %rax, %rsi
+; AVX2-NEXT:    cmovoq %rdi, %rsi
+; AVX2-NEXT:    vmovq %rsi, %xmm0
+; AVX2-NEXT:    vmovq %rcx, %xmm1
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v2i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsllq $32, %xmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm1, %rax
+; AVX512-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    xorl %edx, %edx
+; AVX512-NEXT:    movq %rcx, %rsi
+; AVX512-NEXT:    addq %rax, %rsi
+; AVX512-NEXT:    setns %dl
+; AVX512-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    addq %r8, %rdx
+; AVX512-NEXT:    addq %rax, %rcx
+; AVX512-NEXT:    cmovoq %rdx, %rcx
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movq %rsi, %rdx
+; AVX512-NEXT:    addq %rax, %rdx
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addq %r8, %rdi
+; AVX512-NEXT:    addq %rax, %rsi
+; AVX512-NEXT:    cmovoq %rdi, %rsi
+; AVX512-NEXT:    vmovq %rsi, %xmm0
+; AVX512-NEXT:    vmovq %rcx, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vpsraq $32, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %z = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> %x, <2 x i32> %y)
+  ret <2 x i32> %z
+}
+
 define <4 x i32> @v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; SSE2-LABEL: v4i32:
 ; SSE2:       # %bb.0:
@@ -849,13 +1049,1777 @@ define <4 x i32> @v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
   ret <4 x i32> %z
 }
 
-define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
-; SSE2-LABEL: v2i32:
+define <8 x i32> @v8i32(<8 x i32> %x, <8 x i32> %y) nounwind {
+; SSE2-LABEL: v8i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psllq $32, %xmm1
+; SSE2-NEXT:    pushq %rbp
+; SSE2-NEXT:    pushq %rbx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,2,3]
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,2,3]
+; SSE2-NEXT:    movd %xmm4, %r8d
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %r8d, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r8d
+; SSE2-NEXT:    cmovol %ecx, %r8d
+; SSE2-NEXT:    movd %xmm3, %eax
+; SSE2-NEXT:    movd %xmm1, %r9d
+; SSE2-NEXT:    xorl %edx, %edx
+; SSE2-NEXT:    movl %r9d, %esi
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    setns %dl
+; SSE2-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r9d
+; SSE2-NEXT:    cmovol %edx, %r9d
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,0,1]
+; SSE2-NEXT:    movd %xmm4, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movd %xmm4, %r10d
+; SSE2-NEXT:    xorl %esi, %esi
+; SSE2-NEXT:    movl %r10d, %edi
+; SSE2-NEXT:    addl %eax, %edi
+; SSE2-NEXT:    setns %sil
+; SSE2-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r10d
+; SSE2-NEXT:    cmovol %esi, %r10d
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE2-NEXT:    movd %xmm3, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %r11d
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movl %r11d, %esi
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r11d
+; SSE2-NEXT:    cmovol %edi, %r11d
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %edx
+; SSE2-NEXT:    xorl %esi, %esi
+; SSE2-NEXT:    movl %edx, %edi
+; SSE2-NEXT:    addl %eax, %edi
+; SSE2-NEXT:    setns %sil
+; SSE2-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    cmovol %esi, %edx
+; SSE2-NEXT:    movd %xmm2, %esi
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movl %ecx, %eax
+; SSE2-NEXT:    addl %esi, %eax
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %esi, %ecx
+; SSE2-NEXT:    cmovol %edi, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %esi
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movl %esi, %ebx
+; SSE2-NEXT:    addl %eax, %ebx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    cmovol %edi, %esi
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    movd %xmm0, %edi
+; SSE2-NEXT:    xorl %ebx, %ebx
+; SSE2-NEXT:    movl %edi, %ebp
+; SSE2-NEXT:    addl %eax, %ebp
+; SSE2-NEXT:    setns %bl
+; SSE2-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %edi
+; SSE2-NEXT:    cmovol %ebx, %edi
+; SSE2-NEXT:    movd %edi, %xmm0
+; SSE2-NEXT:    movd %esi, %xmm1
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    movd %ecx, %xmm0
+; SSE2-NEXT:    movd %edx, %xmm2
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movd %r11d, %xmm1
+; SSE2-NEXT:    movd %r10d, %xmm2
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-NEXT:    movd %r9d, %xmm1
+; SSE2-NEXT:    movd %r8d, %xmm3
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    popq %rbx
+; SSE2-NEXT:    popq %rbp
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: v8i32:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pushq %rbp
+; SSSE3-NEXT:    pushq %rbx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm4, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm4, %r8d
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %r8d, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r8d
+; SSSE3-NEXT:    cmovol %ecx, %r8d
+; SSSE3-NEXT:    movd %xmm3, %eax
+; SSSE3-NEXT:    movd %xmm1, %r9d
+; SSSE3-NEXT:    xorl %edx, %edx
+; SSSE3-NEXT:    movl %r9d, %esi
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    setns %dl
+; SSSE3-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r9d
+; SSSE3-NEXT:    cmovol %edx, %r9d
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm4, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm4, %r10d
+; SSSE3-NEXT:    xorl %esi, %esi
+; SSSE3-NEXT:    movl %r10d, %edi
+; SSSE3-NEXT:    addl %eax, %edi
+; SSSE3-NEXT:    setns %sil
+; SSSE3-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r10d
+; SSSE3-NEXT:    cmovol %esi, %r10d
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm3, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %r11d
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movl %r11d, %esi
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r11d
+; SSSE3-NEXT:    cmovol %edi, %r11d
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %edx
+; SSSE3-NEXT:    xorl %esi, %esi
+; SSSE3-NEXT:    movl %edx, %edi
+; SSSE3-NEXT:    addl %eax, %edi
+; SSSE3-NEXT:    setns %sil
+; SSSE3-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    cmovol %esi, %edx
+; SSSE3-NEXT:    movd %xmm2, %esi
+; SSSE3-NEXT:    movd %xmm0, %ecx
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movl %ecx, %eax
+; SSSE3-NEXT:    addl %esi, %eax
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %esi, %ecx
+; SSSE3-NEXT:    cmovol %edi, %ecx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %esi
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movl %esi, %ebx
+; SSSE3-NEXT:    addl %eax, %ebx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    cmovol %edi, %esi
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm0, %edi
+; SSSE3-NEXT:    xorl %ebx, %ebx
+; SSSE3-NEXT:    movl %edi, %ebp
+; SSSE3-NEXT:    addl %eax, %ebp
+; SSSE3-NEXT:    setns %bl
+; SSSE3-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %edi
+; SSSE3-NEXT:    cmovol %ebx, %edi
+; SSSE3-NEXT:    movd %edi, %xmm0
+; SSSE3-NEXT:    movd %esi, %xmm1
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSSE3-NEXT:    movd %ecx, %xmm0
+; SSSE3-NEXT:    movd %edx, %xmm2
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    movd %r11d, %xmm1
+; SSSE3-NEXT:    movd %r10d, %xmm2
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSSE3-NEXT:    movd %r9d, %xmm1
+; SSSE3-NEXT:    movd %r8d, %xmm3
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSSE3-NEXT:    popq %rbx
+; SSSE3-NEXT:    popq %rbp
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: v8i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pushq %rbp
+; SSE41-NEXT:    pushq %rbx
+; SSE41-NEXT:    pextrd $3, %xmm3, %eax
+; SSE41-NEXT:    pextrd $3, %xmm1, %r8d
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %r8d, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r8d
+; SSE41-NEXT:    cmovol %ecx, %r8d
+; SSE41-NEXT:    pextrd $2, %xmm3, %eax
+; SSE41-NEXT:    pextrd $2, %xmm1, %r9d
+; SSE41-NEXT:    xorl %edx, %edx
+; SSE41-NEXT:    movl %r9d, %esi
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    setns %dl
+; SSE41-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r9d
+; SSE41-NEXT:    cmovol %edx, %r9d
+; SSE41-NEXT:    movd %xmm3, %eax
+; SSE41-NEXT:    movd %xmm1, %r10d
+; SSE41-NEXT:    xorl %esi, %esi
+; SSE41-NEXT:    movl %r10d, %edi
+; SSE41-NEXT:    addl %eax, %edi
+; SSE41-NEXT:    setns %sil
+; SSE41-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r10d
+; SSE41-NEXT:    cmovol %esi, %r10d
+; SSE41-NEXT:    pextrd $1, %xmm3, %eax
+; SSE41-NEXT:    pextrd $1, %xmm1, %r11d
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movl %r11d, %esi
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r11d
+; SSE41-NEXT:    cmovol %edi, %r11d
+; SSE41-NEXT:    pextrd $3, %xmm2, %eax
+; SSE41-NEXT:    pextrd $3, %xmm0, %edx
+; SSE41-NEXT:    xorl %esi, %esi
+; SSE41-NEXT:    movl %edx, %edi
+; SSE41-NEXT:    addl %eax, %edi
+; SSE41-NEXT:    setns %sil
+; SSE41-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    cmovol %esi, %edx
+; SSE41-NEXT:    pextrd $2, %xmm2, %esi
+; SSE41-NEXT:    pextrd $2, %xmm0, %ecx
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movl %ecx, %eax
+; SSE41-NEXT:    addl %esi, %eax
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %esi, %ecx
+; SSE41-NEXT:    cmovol %edi, %ecx
+; SSE41-NEXT:    movd %xmm2, %eax
+; SSE41-NEXT:    movd %xmm0, %esi
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movl %esi, %ebx
+; SSE41-NEXT:    addl %eax, %ebx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    cmovol %edi, %esi
+; SSE41-NEXT:    pextrd $1, %xmm2, %eax
+; SSE41-NEXT:    pextrd $1, %xmm0, %edi
+; SSE41-NEXT:    xorl %ebx, %ebx
+; SSE41-NEXT:    movl %edi, %ebp
+; SSE41-NEXT:    addl %eax, %ebp
+; SSE41-NEXT:    setns %bl
+; SSE41-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %edi
+; SSE41-NEXT:    cmovol %ebx, %edi
+; SSE41-NEXT:    movd %esi, %xmm0
+; SSE41-NEXT:    pinsrd $1, %edi, %xmm0
+; SSE41-NEXT:    pinsrd $2, %ecx, %xmm0
+; SSE41-NEXT:    pinsrd $3, %edx, %xmm0
+; SSE41-NEXT:    movd %r10d, %xmm1
+; SSE41-NEXT:    pinsrd $1, %r11d, %xmm1
+; SSE41-NEXT:    pinsrd $2, %r9d, %xmm1
+; SSE41-NEXT:    pinsrd $3, %r8d, %xmm1
+; SSE41-NEXT:    popq %rbx
+; SSE41-NEXT:    popq %rbp
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    pushq %rbp
+; AVX1-NEXT:    pushq %rbx
+; AVX1-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm0, %r8d
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %r8d, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r8d
+; AVX1-NEXT:    cmovol %ecx, %r8d
+; AVX1-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm0, %r9d
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    movl %r9d, %esi
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    setns %dl
+; AVX1-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r9d
+; AVX1-NEXT:    cmovol %edx, %r9d
+; AVX1-NEXT:    vmovd %xmm1, %eax
+; AVX1-NEXT:    vmovd %xmm0, %r10d
+; AVX1-NEXT:    xorl %esi, %esi
+; AVX1-NEXT:    movl %r10d, %edi
+; AVX1-NEXT:    addl %eax, %edi
+; AVX1-NEXT:    setns %sil
+; AVX1-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r10d
+; AVX1-NEXT:    cmovol %esi, %r10d
+; AVX1-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX1-NEXT:    vpextrd $1, %xmm0, %r11d
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movl %r11d, %esi
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r11d
+; AVX1-NEXT:    cmovol %edi, %r11d
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpextrd $3, %xmm0, %edx
+; AVX1-NEXT:    xorl %esi, %esi
+; AVX1-NEXT:    movl %edx, %edi
+; AVX1-NEXT:    addl %eax, %edi
+; AVX1-NEXT:    setns %sil
+; AVX1-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    cmovol %esi, %edx
+; AVX1-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX1-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movl %ecx, %eax
+; AVX1-NEXT:    addl %esi, %eax
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %esi, %ecx
+; AVX1-NEXT:    cmovol %edi, %ecx
+; AVX1-NEXT:    vmovd %xmm1, %eax
+; AVX1-NEXT:    vmovd %xmm0, %esi
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movl %esi, %ebx
+; AVX1-NEXT:    addl %eax, %ebx
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    cmovol %edi, %esi
+; AVX1-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX1-NEXT:    vpextrd $1, %xmm0, %edi
+; AVX1-NEXT:    xorl %ebx, %ebx
+; AVX1-NEXT:    movl %edi, %ebp
+; AVX1-NEXT:    addl %eax, %ebp
+; AVX1-NEXT:    setns %bl
+; AVX1-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %edi
+; AVX1-NEXT:    cmovol %ebx, %edi
+; AVX1-NEXT:    vmovd %esi, %xmm0
+; AVX1-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %r10d, %xmm1
+; AVX1-NEXT:    vpinsrd $1, %r11d, %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $3, %r8d, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    popq %rbx
+; AVX1-NEXT:    popq %rbp
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    pushq %rbp
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX2-NEXT:    vpextrd $3, %xmm0, %r8d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %r8d, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r8d
+; AVX2-NEXT:    cmovol %ecx, %r8d
+; AVX2-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX2-NEXT:    vpextrd $2, %xmm0, %r9d
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    movl %r9d, %esi
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    setns %dl
+; AVX2-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r9d
+; AVX2-NEXT:    cmovol %edx, %r9d
+; AVX2-NEXT:    vmovd %xmm1, %eax
+; AVX2-NEXT:    vmovd %xmm0, %r10d
+; AVX2-NEXT:    xorl %esi, %esi
+; AVX2-NEXT:    movl %r10d, %edi
+; AVX2-NEXT:    addl %eax, %edi
+; AVX2-NEXT:    setns %sil
+; AVX2-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r10d
+; AVX2-NEXT:    cmovol %esi, %r10d
+; AVX2-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX2-NEXT:    vpextrd $1, %xmm0, %r11d
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movl %r11d, %esi
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r11d
+; AVX2-NEXT:    cmovol %edi, %r11d
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vpextrd $3, %xmm0, %edx
+; AVX2-NEXT:    xorl %esi, %esi
+; AVX2-NEXT:    movl %edx, %edi
+; AVX2-NEXT:    addl %eax, %edi
+; AVX2-NEXT:    setns %sil
+; AVX2-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    cmovol %esi, %edx
+; AVX2-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX2-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addl %esi, %eax
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %esi, %ecx
+; AVX2-NEXT:    cmovol %edi, %ecx
+; AVX2-NEXT:    vmovd %xmm1, %eax
+; AVX2-NEXT:    vmovd %xmm0, %esi
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movl %esi, %ebx
+; AVX2-NEXT:    addl %eax, %ebx
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    cmovol %edi, %esi
+; AVX2-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX2-NEXT:    vpextrd $1, %xmm0, %edi
+; AVX2-NEXT:    xorl %ebx, %ebx
+; AVX2-NEXT:    movl %edi, %ebp
+; AVX2-NEXT:    addl %eax, %ebp
+; AVX2-NEXT:    setns %bl
+; AVX2-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %edi
+; AVX2-NEXT:    cmovol %ebx, %edi
+; AVX2-NEXT:    vmovd %esi, %xmm0
+; AVX2-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %r10d, %xmm1
+; AVX2-NEXT:    vpinsrd $1, %r11d, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $3, %r8d, %xmm1, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    popq %rbp
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rbp
+; AVX512-NEXT:    pushq %rbx
+; AVX512-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512-NEXT:    vpextrd $3, %xmm0, %r8d
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %r8d, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r8d
+; AVX512-NEXT:    cmovol %ecx, %r8d
+; AVX512-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX512-NEXT:    vpextrd $2, %xmm0, %r9d
+; AVX512-NEXT:    xorl %edx, %edx
+; AVX512-NEXT:    movl %r9d, %esi
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    setns %dl
+; AVX512-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r9d
+; AVX512-NEXT:    cmovol %edx, %r9d
+; AVX512-NEXT:    vmovd %xmm1, %eax
+; AVX512-NEXT:    vmovd %xmm0, %r10d
+; AVX512-NEXT:    xorl %esi, %esi
+; AVX512-NEXT:    movl %r10d, %edi
+; AVX512-NEXT:    addl %eax, %edi
+; AVX512-NEXT:    setns %sil
+; AVX512-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r10d
+; AVX512-NEXT:    cmovol %esi, %r10d
+; AVX512-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512-NEXT:    vpextrd $1, %xmm0, %r11d
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movl %r11d, %esi
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r11d
+; AVX512-NEXT:    cmovol %edi, %r11d
+; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX512-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vpextrd $3, %xmm0, %edx
+; AVX512-NEXT:    xorl %esi, %esi
+; AVX512-NEXT:    movl %edx, %edi
+; AVX512-NEXT:    addl %eax, %edi
+; AVX512-NEXT:    setns %sil
+; AVX512-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    cmovol %esi, %edx
+; AVX512-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX512-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movl %ecx, %eax
+; AVX512-NEXT:    addl %esi, %eax
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %esi, %ecx
+; AVX512-NEXT:    cmovol %edi, %ecx
+; AVX512-NEXT:    vmovd %xmm1, %eax
+; AVX512-NEXT:    vmovd %xmm0, %esi
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movl %esi, %ebx
+; AVX512-NEXT:    addl %eax, %ebx
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    cmovol %edi, %esi
+; AVX512-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512-NEXT:    vpextrd $1, %xmm0, %edi
+; AVX512-NEXT:    xorl %ebx, %ebx
+; AVX512-NEXT:    movl %edi, %ebp
+; AVX512-NEXT:    addl %eax, %ebp
+; AVX512-NEXT:    setns %bl
+; AVX512-NEXT:    addl $2147483647, %ebx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %edi
+; AVX512-NEXT:    cmovol %ebx, %edi
+; AVX512-NEXT:    vmovd %esi, %xmm0
+; AVX512-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %r10d, %xmm1
+; AVX512-NEXT:    vpinsrd $1, %r11d, %xmm1, %xmm1
+; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
+; AVX512-NEXT:    vpinsrd $3, %r8d, %xmm1, %xmm1
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    popq %rbx
+; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    retq
+  %z = call <8 x i32> @llvm.sadd.sat.v8i32(<8 x i32> %x, <8 x i32> %y)
+  ret <8 x i32> %z
+}
+
+define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
+; SSE2-LABEL: v16i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rbp
+; SSE2-NEXT:    pushq %r15
+; SSE2-NEXT:    pushq %r14
+; SSE2-NEXT:    pushq %r13
+; SSE2-NEXT:    pushq %r12
+; SSE2-NEXT:    pushq %rbx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm5[1,1,2,3]
+; SSE2-NEXT:    movd %xmm8, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[1,1,2,3]
+; SSE2-NEXT:    movd %xmm8, %esi
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %esi, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    cmovol %ecx, %esi
+; SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE2-NEXT:    movd %xmm5, %eax
+; SSE2-NEXT:    movd %xmm1, %esi
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %esi, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    cmovol %ecx, %esi
+; SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm5[2,3,0,1]
+; SSE2-NEXT:    movd %xmm8, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movd %xmm8, %esi
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %esi, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    cmovol %ecx, %esi
+; SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[3,1,2,3]
+; SSE2-NEXT:    movd %xmm5, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %esi
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %esi, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    cmovol %ecx, %esi
+; SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %r14d
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %r14d, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r14d
+; SSE2-NEXT:    cmovol %ecx, %r14d
+; SSE2-NEXT:    movd %xmm6, %eax
+; SSE2-NEXT:    movd %xmm2, %r15d
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %r15d, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r15d
+; SSE2-NEXT:    cmovol %ecx, %r15d
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %r12d
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %r12d, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r12d
+; SSE2-NEXT:    cmovol %ecx, %r12d
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %r13d
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %r13d, %esi
+; SSE2-NEXT:    addl %eax, %esi
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r13d
+; SSE2-NEXT:    cmovol %ecx, %r13d
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %r11d
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %r11d, %edi
+; SSE2-NEXT:    addl %eax, %edi
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r11d
+; SSE2-NEXT:    cmovol %ecx, %r11d
+; SSE2-NEXT:    movd %xmm7, %eax
+; SSE2-NEXT:    movd %xmm3, %ebx
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %ebx, %edi
+; SSE2-NEXT:    addl %eax, %edi
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %ebx
+; SSE2-NEXT:    cmovol %ecx, %ebx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %ebp
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %ebp, %edi
+; SSE2-NEXT:    addl %eax, %edi
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %ebp
+; SSE2-NEXT:    cmovol %ecx, %ebp
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %r10d
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movl %r10d, %edi
+; SSE2-NEXT:    addl %eax, %edi
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %r10d
+; SSE2-NEXT:    cmovol %ecx, %r10d
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %r9d
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movl %r9d, %eax
+; SSE2-NEXT:    addl %ecx, %eax
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %ecx, %r9d
+; SSE2-NEXT:    cmovol %edi, %r9d
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    movd %xmm0, %esi
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movl %esi, %ecx
+; SSE2-NEXT:    addl %edx, %ecx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %edx, %esi
+; SSE2-NEXT:    cmovol %edi, %esi
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movl %ecx, %edx
+; SSE2-NEXT:    addl %eax, %edx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %eax, %ecx
+; SSE2-NEXT:    cmovol %edi, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[3,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %r8d
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movl %eax, %edx
+; SSE2-NEXT:    addl %r8d, %edx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE2-NEXT:    addl %r8d, %eax
+; SSE2-NEXT:    cmovol %edi, %eax
+; SSE2-NEXT:    movd %eax, %xmm8
+; SSE2-NEXT:    movd %ecx, %xmm5
+; SSE2-NEXT:    movd %esi, %xmm0
+; SSE2-NEXT:    movd %r9d, %xmm9
+; SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 4-byte Reload
+; SSE2-NEXT:    # xmm10 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 4-byte Reload
+; SSE2-NEXT:    # xmm4 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; SSE2-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 4-byte Reload
+; SSE2-NEXT:    # xmm11 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %r13d, %xmm12
+; SSE2-NEXT:    movd %r12d, %xmm6
+; SSE2-NEXT:    movd %r15d, %xmm2
+; SSE2-NEXT:    movd %r14d, %xmm13
+; SSE2-NEXT:    movd %r10d, %xmm14
+; SSE2-NEXT:    movd %ebp, %xmm7
+; SSE2-NEXT:    movd %ebx, %xmm3
+; SSE2-NEXT:    movd %r11d, %xmm15
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm8[0],xmm5[1],xmm8[1]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm9[0],xmm0[1],xmm9[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm5[0]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm10[0],xmm4[1],xmm10[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm11[0],xmm1[1],xmm11[1]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm4[0]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm12[0],xmm6[1],xmm12[1]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm13[0],xmm2[1],xmm13[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm6[0]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm14[0],xmm7[1],xmm14[1]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm15[0],xmm3[1],xmm15[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm7[0]
+; SSE2-NEXT:    popq %rbx
+; SSE2-NEXT:    popq %r12
+; SSE2-NEXT:    popq %r13
+; SSE2-NEXT:    popq %r14
+; SSE2-NEXT:    popq %r15
+; SSE2-NEXT:    popq %rbp
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: v16i32:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pushq %rbp
+; SSSE3-NEXT:    pushq %r15
+; SSSE3-NEXT:    pushq %r14
+; SSSE3-NEXT:    pushq %r13
+; SSSE3-NEXT:    pushq %r12
+; SSSE3-NEXT:    pushq %rbx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm8 = xmm5[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm8, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm8, %esi
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %esi, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    cmovol %ecx, %esi
+; SSSE3-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSSE3-NEXT:    movd %xmm5, %eax
+; SSSE3-NEXT:    movd %xmm1, %esi
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %esi, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    cmovol %ecx, %esi
+; SSSE3-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm8 = xmm5[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm8, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm8, %esi
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %esi, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    cmovol %ecx, %esi
+; SSSE3-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm5, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %esi
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %esi, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    cmovol %ecx, %esi
+; SSSE3-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %r14d
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %r14d, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r14d
+; SSSE3-NEXT:    cmovol %ecx, %r14d
+; SSSE3-NEXT:    movd %xmm6, %eax
+; SSSE3-NEXT:    movd %xmm2, %r15d
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %r15d, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r15d
+; SSSE3-NEXT:    cmovol %ecx, %r15d
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %r12d
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %r12d, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r12d
+; SSSE3-NEXT:    cmovol %ecx, %r12d
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %r13d
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %r13d, %esi
+; SSSE3-NEXT:    addl %eax, %esi
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r13d
+; SSSE3-NEXT:    cmovol %ecx, %r13d
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %r11d
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %r11d, %edi
+; SSSE3-NEXT:    addl %eax, %edi
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r11d
+; SSSE3-NEXT:    cmovol %ecx, %r11d
+; SSSE3-NEXT:    movd %xmm7, %eax
+; SSSE3-NEXT:    movd %xmm3, %ebx
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %ebx, %edi
+; SSSE3-NEXT:    addl %eax, %edi
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %ebx
+; SSSE3-NEXT:    cmovol %ecx, %ebx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %ebp
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %ebp, %edi
+; SSSE3-NEXT:    addl %eax, %edi
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %ebp
+; SSSE3-NEXT:    cmovol %ecx, %ebp
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %r10d
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movl %r10d, %edi
+; SSSE3-NEXT:    addl %eax, %edi
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %r10d
+; SSSE3-NEXT:    cmovol %ecx, %r10d
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %ecx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %r9d
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movl %r9d, %eax
+; SSSE3-NEXT:    addl %ecx, %eax
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %ecx, %r9d
+; SSSE3-NEXT:    cmovol %edi, %r9d
+; SSSE3-NEXT:    movd %xmm4, %edx
+; SSSE3-NEXT:    movd %xmm0, %esi
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movl %esi, %ecx
+; SSSE3-NEXT:    addl %edx, %ecx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %edx, %esi
+; SSSE3-NEXT:    cmovol %edi, %esi
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSSE3-NEXT:    movd %xmm1, %ecx
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movl %ecx, %edx
+; SSSE3-NEXT:    addl %eax, %edx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %eax, %ecx
+; SSSE3-NEXT:    cmovol %edi, %ecx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[3,1,2,3]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %r8d
+; SSSE3-NEXT:    movd %xmm0, %eax
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movl %eax, %edx
+; SSSE3-NEXT:    addl %r8d, %edx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSSE3-NEXT:    addl %r8d, %eax
+; SSSE3-NEXT:    cmovol %edi, %eax
+; SSSE3-NEXT:    movd %eax, %xmm8
+; SSSE3-NEXT:    movd %ecx, %xmm5
+; SSSE3-NEXT:    movd %esi, %xmm0
+; SSSE3-NEXT:    movd %r9d, %xmm9
+; SSSE3-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 4-byte Reload
+; SSSE3-NEXT:    # xmm10 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 4-byte Reload
+; SSSE3-NEXT:    # xmm4 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; SSSE3-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 4-byte Reload
+; SSSE3-NEXT:    # xmm11 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movd %r13d, %xmm12
+; SSSE3-NEXT:    movd %r12d, %xmm6
+; SSSE3-NEXT:    movd %r15d, %xmm2
+; SSSE3-NEXT:    movd %r14d, %xmm13
+; SSSE3-NEXT:    movd %r10d, %xmm14
+; SSSE3-NEXT:    movd %ebp, %xmm7
+; SSSE3-NEXT:    movd %ebx, %xmm3
+; SSSE3-NEXT:    movd %r11d, %xmm15
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm8[0],xmm5[1],xmm8[1]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm9[0],xmm0[1],xmm9[1]
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm5[0]
+; SSSE3-NEXT:    unpcklps {{.*#+}} xmm4 = xmm4[0],xmm10[0],xmm4[1],xmm10[1]
+; SSSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm11[0],xmm1[1],xmm11[1]
+; SSSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm4[0]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm12[0],xmm6[1],xmm12[1]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm13[0],xmm2[1],xmm13[1]
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm6[0]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm14[0],xmm7[1],xmm14[1]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm15[0],xmm3[1],xmm15[1]
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm7[0]
+; SSSE3-NEXT:    popq %rbx
+; SSSE3-NEXT:    popq %r12
+; SSSE3-NEXT:    popq %r13
+; SSSE3-NEXT:    popq %r14
+; SSSE3-NEXT:    popq %r15
+; SSSE3-NEXT:    popq %rbp
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: v16i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pushq %rbp
+; SSE41-NEXT:    pushq %r15
+; SSE41-NEXT:    pushq %r14
+; SSE41-NEXT:    pushq %r13
+; SSE41-NEXT:    pushq %r12
+; SSE41-NEXT:    pushq %rbx
+; SSE41-NEXT:    pextrd $3, %xmm5, %eax
+; SSE41-NEXT:    pextrd $3, %xmm1, %esi
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %esi, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    cmovol %ecx, %esi
+; SSE41-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE41-NEXT:    pextrd $2, %xmm5, %eax
+; SSE41-NEXT:    pextrd $2, %xmm1, %esi
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %esi, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    cmovol %ecx, %esi
+; SSE41-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE41-NEXT:    movd %xmm5, %eax
+; SSE41-NEXT:    movd %xmm1, %esi
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %esi, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    cmovol %ecx, %esi
+; SSE41-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE41-NEXT:    pextrd $1, %xmm5, %eax
+; SSE41-NEXT:    pextrd $1, %xmm1, %esi
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %esi, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    cmovol %ecx, %esi
+; SSE41-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE41-NEXT:    pextrd $3, %xmm6, %eax
+; SSE41-NEXT:    pextrd $3, %xmm2, %r14d
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %r14d, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r14d
+; SSE41-NEXT:    cmovol %ecx, %r14d
+; SSE41-NEXT:    pextrd $2, %xmm6, %eax
+; SSE41-NEXT:    pextrd $2, %xmm2, %r15d
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %r15d, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r15d
+; SSE41-NEXT:    cmovol %ecx, %r15d
+; SSE41-NEXT:    movd %xmm6, %eax
+; SSE41-NEXT:    movd %xmm2, %r12d
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %r12d, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r12d
+; SSE41-NEXT:    cmovol %ecx, %r12d
+; SSE41-NEXT:    pextrd $1, %xmm6, %eax
+; SSE41-NEXT:    pextrd $1, %xmm2, %r13d
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %r13d, %esi
+; SSE41-NEXT:    addl %eax, %esi
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r13d
+; SSE41-NEXT:    cmovol %ecx, %r13d
+; SSE41-NEXT:    pextrd $3, %xmm7, %eax
+; SSE41-NEXT:    pextrd $3, %xmm3, %r11d
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %r11d, %edi
+; SSE41-NEXT:    addl %eax, %edi
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r11d
+; SSE41-NEXT:    cmovol %ecx, %r11d
+; SSE41-NEXT:    pextrd $2, %xmm7, %eax
+; SSE41-NEXT:    pextrd $2, %xmm3, %ebx
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %ebx, %edi
+; SSE41-NEXT:    addl %eax, %edi
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %ebx
+; SSE41-NEXT:    cmovol %ecx, %ebx
+; SSE41-NEXT:    movd %xmm7, %eax
+; SSE41-NEXT:    movd %xmm3, %ebp
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %ebp, %edi
+; SSE41-NEXT:    addl %eax, %edi
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %ebp
+; SSE41-NEXT:    cmovol %ecx, %ebp
+; SSE41-NEXT:    pextrd $1, %xmm7, %eax
+; SSE41-NEXT:    pextrd $1, %xmm3, %r10d
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movl %r10d, %edi
+; SSE41-NEXT:    addl %eax, %edi
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %r10d
+; SSE41-NEXT:    cmovol %ecx, %r10d
+; SSE41-NEXT:    pextrd $3, %xmm4, %ecx
+; SSE41-NEXT:    pextrd $3, %xmm0, %r9d
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movl %r9d, %eax
+; SSE41-NEXT:    addl %ecx, %eax
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %ecx, %r9d
+; SSE41-NEXT:    cmovol %edi, %r9d
+; SSE41-NEXT:    pextrd $2, %xmm4, %edx
+; SSE41-NEXT:    pextrd $2, %xmm0, %esi
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movl %esi, %ecx
+; SSE41-NEXT:    addl %edx, %ecx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %edx, %esi
+; SSE41-NEXT:    cmovol %edi, %esi
+; SSE41-NEXT:    movd %xmm4, %eax
+; SSE41-NEXT:    movd %xmm0, %ecx
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movl %ecx, %edx
+; SSE41-NEXT:    addl %eax, %edx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %eax, %ecx
+; SSE41-NEXT:    cmovol %edi, %ecx
+; SSE41-NEXT:    pextrd $1, %xmm4, %r8d
+; SSE41-NEXT:    pextrd $1, %xmm0, %eax
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movl %eax, %edx
+; SSE41-NEXT:    addl %r8d, %edx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; SSE41-NEXT:    addl %r8d, %eax
+; SSE41-NEXT:    cmovol %edi, %eax
+; SSE41-NEXT:    movd %ecx, %xmm0
+; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE41-NEXT:    pinsrd $2, %esi, %xmm0
+; SSE41-NEXT:    pinsrd $3, %r9d, %xmm0
+; SSE41-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Folded Reload
+; SSE41-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    pinsrd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Folded Reload
+; SSE41-NEXT:    pinsrd $2, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Folded Reload
+; SSE41-NEXT:    pinsrd $3, {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Folded Reload
+; SSE41-NEXT:    movd %r12d, %xmm2
+; SSE41-NEXT:    pinsrd $1, %r13d, %xmm2
+; SSE41-NEXT:    pinsrd $2, %r15d, %xmm2
+; SSE41-NEXT:    pinsrd $3, %r14d, %xmm2
+; SSE41-NEXT:    movd %ebp, %xmm3
+; SSE41-NEXT:    pinsrd $1, %r10d, %xmm3
+; SSE41-NEXT:    pinsrd $2, %ebx, %xmm3
+; SSE41-NEXT:    pinsrd $3, %r11d, %xmm3
+; SSE41-NEXT:    popq %rbx
+; SSE41-NEXT:    popq %r12
+; SSE41-NEXT:    popq %r13
+; SSE41-NEXT:    popq %r14
+; SSE41-NEXT:    popq %r15
+; SSE41-NEXT:    popq %rbp
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: v16i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    pushq %rbp
+; AVX1-NEXT:    pushq %r15
+; AVX1-NEXT:    pushq %r14
+; AVX1-NEXT:    pushq %r13
+; AVX1-NEXT:    pushq %r12
+; AVX1-NEXT:    pushq %rbx
+; AVX1-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm1, %esi
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %esi, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    cmovol %ecx, %esi
+; AVX1-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX1-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %esi, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    cmovol %ecx, %esi
+; AVX1-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX1-NEXT:    vmovd %xmm3, %eax
+; AVX1-NEXT:    vmovd %xmm1, %esi
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %esi, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    cmovol %ecx, %esi
+; AVX1-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX1-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX1-NEXT:    vpextrd $1, %xmm1, %esi
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %esi, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    cmovol %ecx, %esi
+; AVX1-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; AVX1-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpextrd $3, %xmm1, %r14d
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %r14d, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r14d
+; AVX1-NEXT:    cmovol %ecx, %r14d
+; AVX1-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm1, %r15d
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %r15d, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r15d
+; AVX1-NEXT:    cmovol %ecx, %r15d
+; AVX1-NEXT:    vmovd %xmm3, %eax
+; AVX1-NEXT:    vmovd %xmm1, %r12d
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %r12d, %edx
+; AVX1-NEXT:    addl %eax, %edx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r12d
+; AVX1-NEXT:    cmovol %ecx, %r12d
+; AVX1-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX1-NEXT:    vpextrd $1, %xmm1, %r13d
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %r13d, %esi
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r13d
+; AVX1-NEXT:    cmovol %ecx, %r13d
+; AVX1-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX1-NEXT:    vpextrd $3, %xmm0, %r11d
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %r11d, %edi
+; AVX1-NEXT:    addl %eax, %edi
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r11d
+; AVX1-NEXT:    cmovol %ecx, %r11d
+; AVX1-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX1-NEXT:    vpextrd $2, %xmm0, %ebx
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %ebx, %edi
+; AVX1-NEXT:    addl %eax, %edi
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %ebx
+; AVX1-NEXT:    cmovol %ecx, %ebx
+; AVX1-NEXT:    vmovd %xmm2, %eax
+; AVX1-NEXT:    vmovd %xmm0, %ebp
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %ebp, %edi
+; AVX1-NEXT:    addl %eax, %edi
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %ebp
+; AVX1-NEXT:    cmovol %ecx, %ebp
+; AVX1-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX1-NEXT:    vpextrd $1, %xmm0, %r10d
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movl %r10d, %edi
+; AVX1-NEXT:    addl %eax, %edi
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %r10d
+; AVX1-NEXT:    cmovol %ecx, %r10d
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
+; AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpextrd $3, %xmm0, %r8d
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movl %r8d, %eax
+; AVX1-NEXT:    addl %ecx, %eax
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %ecx, %r8d
+; AVX1-NEXT:    cmovol %edi, %r8d
+; AVX1-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX1-NEXT:    vpextrd $2, %xmm0, %edx
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movl %edx, %ecx
+; AVX1-NEXT:    addl %esi, %ecx
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %esi, %edx
+; AVX1-NEXT:    cmovol %edi, %edx
+; AVX1-NEXT:    vmovd %xmm1, %eax
+; AVX1-NEXT:    vmovd %xmm0, %ecx
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movl %ecx, %esi
+; AVX1-NEXT:    addl %eax, %esi
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %eax, %ecx
+; AVX1-NEXT:    cmovol %edi, %ecx
+; AVX1-NEXT:    vpextrd $1, %xmm1, %r9d
+; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movl %eax, %esi
+; AVX1-NEXT:    addl %r9d, %esi
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX1-NEXT:    addl %r9d, %eax
+; AVX1-NEXT:    cmovol %edi, %eax
+; AVX1-NEXT:    vmovd %ecx, %xmm0
+; AVX1-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; AVX1-NEXT:    vpinsrd $3, %r8d, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %ebp, %xmm1
+; AVX1-NEXT:    vpinsrd $1, %r10d, %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $2, %ebx, %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $3, %r11d, %xmm1, %xmm1
+; AVX1-NEXT:    vmovd %r12d, %xmm2
+; AVX1-NEXT:    vpinsrd $1, %r13d, %xmm2, %xmm2
+; AVX1-NEXT:    vpinsrd $2, %r15d, %xmm2, %xmm2
+; AVX1-NEXT:    vpinsrd $3, %r14d, %xmm2, %xmm2
+; AVX1-NEXT:    vmovd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 4-byte Folded Reload
+; AVX1-NEXT:    # xmm3 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpinsrd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX1-NEXT:    vpinsrd $2, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX1-NEXT:    vpinsrd $3, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm1
+; AVX1-NEXT:    popq %rbx
+; AVX1-NEXT:    popq %r12
+; AVX1-NEXT:    popq %r13
+; AVX1-NEXT:    popq %r14
+; AVX1-NEXT:    popq %r15
+; AVX1-NEXT:    popq %rbp
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v16i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    pushq %rbp
+; AVX2-NEXT:    pushq %r15
+; AVX2-NEXT:    pushq %r14
+; AVX2-NEXT:    pushq %r13
+; AVX2-NEXT:    pushq %r12
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX2-NEXT:    vpextrd $3, %xmm1, %esi
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %esi, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    cmovol %ecx, %esi
+; AVX2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX2-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %esi, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    cmovol %ecx, %esi
+; AVX2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    vmovd %xmm3, %eax
+; AVX2-NEXT:    vmovd %xmm1, %esi
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %esi, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    cmovol %ecx, %esi
+; AVX2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX2-NEXT:    vpextrd $1, %xmm1, %esi
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %esi, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    cmovol %ecx, %esi
+; AVX2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm3
+; AVX2-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vpextrd $3, %xmm1, %r14d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %r14d, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r14d
+; AVX2-NEXT:    cmovol %ecx, %r14d
+; AVX2-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX2-NEXT:    vpextrd $2, %xmm1, %r15d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %r15d, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r15d
+; AVX2-NEXT:    cmovol %ecx, %r15d
+; AVX2-NEXT:    vmovd %xmm3, %eax
+; AVX2-NEXT:    vmovd %xmm1, %r12d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %r12d, %edx
+; AVX2-NEXT:    addl %eax, %edx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r12d
+; AVX2-NEXT:    cmovol %ecx, %r12d
+; AVX2-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX2-NEXT:    vpextrd $1, %xmm1, %r13d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %r13d, %esi
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r13d
+; AVX2-NEXT:    cmovol %ecx, %r13d
+; AVX2-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX2-NEXT:    vpextrd $3, %xmm0, %r11d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %r11d, %edi
+; AVX2-NEXT:    addl %eax, %edi
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r11d
+; AVX2-NEXT:    cmovol %ecx, %r11d
+; AVX2-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX2-NEXT:    vpextrd $2, %xmm0, %ebx
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %ebx, %edi
+; AVX2-NEXT:    addl %eax, %edi
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %ebx
+; AVX2-NEXT:    cmovol %ecx, %ebx
+; AVX2-NEXT:    vmovd %xmm2, %eax
+; AVX2-NEXT:    vmovd %xmm0, %ebp
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %ebp, %edi
+; AVX2-NEXT:    addl %eax, %edi
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %ebp
+; AVX2-NEXT:    cmovol %ecx, %ebp
+; AVX2-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX2-NEXT:    vpextrd $1, %xmm0, %r10d
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movl %r10d, %edi
+; AVX2-NEXT:    addl %eax, %edi
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %r10d
+; AVX2-NEXT:    cmovol %ecx, %r10d
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vpextrd $3, %xmm0, %r8d
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movl %r8d, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %ecx, %r8d
+; AVX2-NEXT:    cmovol %edi, %r8d
+; AVX2-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX2-NEXT:    vpextrd $2, %xmm0, %edx
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movl %edx, %ecx
+; AVX2-NEXT:    addl %esi, %ecx
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %esi, %edx
+; AVX2-NEXT:    cmovol %edi, %edx
+; AVX2-NEXT:    vmovd %xmm1, %eax
+; AVX2-NEXT:    vmovd %xmm0, %ecx
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movl %ecx, %esi
+; AVX2-NEXT:    addl %eax, %esi
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    cmovol %edi, %ecx
+; AVX2-NEXT:    vpextrd $1, %xmm1, %r9d
+; AVX2-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movl %eax, %esi
+; AVX2-NEXT:    addl %r9d, %esi
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX2-NEXT:    addl %r9d, %eax
+; AVX2-NEXT:    cmovol %edi, %eax
+; AVX2-NEXT:    vmovd %ecx, %xmm0
+; AVX2-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrd $3, %r8d, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %ebp, %xmm1
+; AVX2-NEXT:    vpinsrd $1, %r10d, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $2, %ebx, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $3, %r11d, %xmm1, %xmm1
+; AVX2-NEXT:    vmovd %r12d, %xmm2
+; AVX2-NEXT:    vpinsrd $1, %r13d, %xmm2, %xmm2
+; AVX2-NEXT:    vpinsrd $2, %r15d, %xmm2, %xmm2
+; AVX2-NEXT:    vpinsrd $3, %r14d, %xmm2, %xmm2
+; AVX2-NEXT:    vmovd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 4-byte Folded Reload
+; AVX2-NEXT:    # xmm3 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpinsrd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX2-NEXT:    vpinsrd $2, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX2-NEXT:    vpinsrd $3, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    popq %r12
+; AVX2-NEXT:    popq %r13
+; AVX2-NEXT:    popq %r14
+; AVX2-NEXT:    popq %r15
+; AVX2-NEXT:    popq %rbp
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v16i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rbp
+; AVX512-NEXT:    pushq %r15
+; AVX512-NEXT:    pushq %r14
+; AVX512-NEXT:    pushq %r13
+; AVX512-NEXT:    pushq %r12
+; AVX512-NEXT:    pushq %rbx
+; AVX512-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512-NEXT:    vpextrd $3, %xmm0, %esi
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %esi, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    cmovol %ecx, %esi
+; AVX512-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX512-NEXT:    vpextrd $2, %xmm0, %esi
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %esi, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    cmovol %ecx, %esi
+; AVX512-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-NEXT:    vmovd %xmm1, %eax
+; AVX512-NEXT:    vmovd %xmm0, %esi
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %esi, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    cmovol %ecx, %esi
+; AVX512-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512-NEXT:    vpextrd $1, %xmm0, %esi
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %esi, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    cmovol %ecx, %esi
+; AVX512-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX512-NEXT:    vpextrd $3, %xmm3, %r14d
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %r14d, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r14d
+; AVX512-NEXT:    cmovol %ecx, %r14d
+; AVX512-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512-NEXT:    vpextrd $2, %xmm3, %r15d
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %r15d, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r15d
+; AVX512-NEXT:    cmovol %ecx, %r15d
+; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    vmovd %xmm3, %r12d
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %r12d, %edx
+; AVX512-NEXT:    addl %eax, %edx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r12d
+; AVX512-NEXT:    cmovol %ecx, %r12d
+; AVX512-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512-NEXT:    vpextrd $1, %xmm3, %r13d
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %r13d, %esi
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r13d
+; AVX512-NEXT:    cmovol %ecx, %r13d
+; AVX512-NEXT:    vextracti32x4 $2, %zmm1, %xmm2
+; AVX512-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; AVX512-NEXT:    vpextrd $3, %xmm3, %r11d
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %r11d, %edi
+; AVX512-NEXT:    addl %eax, %edi
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r11d
+; AVX512-NEXT:    cmovol %ecx, %r11d
+; AVX512-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512-NEXT:    vpextrd $2, %xmm3, %ebx
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %ebx, %edi
+; AVX512-NEXT:    addl %eax, %edi
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %ebx
+; AVX512-NEXT:    cmovol %ecx, %ebx
+; AVX512-NEXT:    vmovd %xmm2, %eax
+; AVX512-NEXT:    vmovd %xmm3, %ebp
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %ebp, %edi
+; AVX512-NEXT:    addl %eax, %edi
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %ebp
+; AVX512-NEXT:    cmovol %ecx, %ebp
+; AVX512-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512-NEXT:    vpextrd $1, %xmm3, %r10d
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movl %r10d, %edi
+; AVX512-NEXT:    addl %eax, %edi
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %r10d
+; AVX512-NEXT:    cmovol %ecx, %r10d
+; AVX512-NEXT:    vextracti32x4 $3, %zmm1, %xmm1
+; AVX512-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vpextrd $3, %xmm0, %r8d
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movl %r8d, %eax
+; AVX512-NEXT:    addl %ecx, %eax
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %ecx, %r8d
+; AVX512-NEXT:    cmovol %edi, %r8d
+; AVX512-NEXT:    vpextrd $2, %xmm1, %esi
+; AVX512-NEXT:    vpextrd $2, %xmm0, %edx
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movl %edx, %ecx
+; AVX512-NEXT:    addl %esi, %ecx
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %esi, %edx
+; AVX512-NEXT:    cmovol %edi, %edx
+; AVX512-NEXT:    vmovd %xmm1, %eax
+; AVX512-NEXT:    vmovd %xmm0, %ecx
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movl %ecx, %esi
+; AVX512-NEXT:    addl %eax, %esi
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %eax, %ecx
+; AVX512-NEXT:    cmovol %edi, %ecx
+; AVX512-NEXT:    vpextrd $1, %xmm1, %r9d
+; AVX512-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movl %eax, %esi
+; AVX512-NEXT:    addl %r9d, %esi
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
+; AVX512-NEXT:    addl %r9d, %eax
+; AVX512-NEXT:    cmovol %edi, %eax
+; AVX512-NEXT:    vmovd %ecx, %xmm0
+; AVX512-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrd $3, %r8d, %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %ebp, %xmm1
+; AVX512-NEXT:    vpinsrd $1, %r10d, %xmm1, %xmm1
+; AVX512-NEXT:    vpinsrd $2, %ebx, %xmm1, %xmm1
+; AVX512-NEXT:    vpinsrd $3, %r11d, %xmm1, %xmm1
+; AVX512-NEXT:    vmovd %r12d, %xmm2
+; AVX512-NEXT:    vpinsrd $1, %r13d, %xmm2, %xmm2
+; AVX512-NEXT:    vpinsrd $2, %r15d, %xmm2, %xmm2
+; AVX512-NEXT:    vpinsrd $3, %r14d, %xmm2, %xmm2
+; AVX512-NEXT:    vmovd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 4-byte Folded Reload
+; AVX512-NEXT:    # xmm3 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpinsrd $1, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX512-NEXT:    vpinsrd $2, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX512-NEXT:    vpinsrd $3, {{[-0-9]+}}(%r{{[sb]}}p), %xmm3, %xmm3 # 4-byte Folded Reload
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
+; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    popq %rbx
+; AVX512-NEXT:    popq %r12
+; AVX512-NEXT:    popq %r13
+; AVX512-NEXT:    popq %r14
+; AVX512-NEXT:    popq %r15
+; AVX512-NEXT:    popq %rbp
+; AVX512-NEXT:    retq
+  %z = call <16 x i32> @llvm.sadd.sat.v16i32(<16 x i32> %x, <16 x i32> %y)
+  ret <16 x i32> %z
+}
+
+define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
+; SSE2-LABEL: v2i64:
+; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
 ; SSE2-NEXT:    movq %xmm2, %rax
-; SSE2-NEXT:    psllq $32, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    movq %xmm2, %rcx
 ; SSE2-NEXT:    xorl %edx, %edx
@@ -875,21 +2839,15 @@ define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; SSE2-NEXT:    addq %r8, %rdi
 ; SSE2-NEXT:    addq %rax, %rsi
 ; SSE2-NEXT:    cmovoq %rdi, %rsi
-; SSE2-NEXT:    movq %rsi, %xmm1
-; SSE2-NEXT:    movq %rcx, %xmm0
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,3,2,3]
-; SSE2-NEXT:    psrad $31, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movq %rsi, %xmm0
+; SSE2-NEXT:    movq %rcx, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
-; SSSE3-LABEL: v2i32:
+; SSSE3-LABEL: v2i64:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    psllq $32, %xmm1
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
 ; SSSE3-NEXT:    movq %xmm2, %rax
-; SSSE3-NEXT:    psllq $32, %xmm0
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; SSSE3-NEXT:    movq %xmm2, %rcx
 ; SSSE3-NEXT:    xorl %edx, %edx
@@ -909,20 +2867,14 @@ define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; SSSE3-NEXT:    addq %r8, %rdi
 ; SSSE3-NEXT:    addq %rax, %rsi
 ; SSSE3-NEXT:    cmovoq %rdi, %rsi
-; SSSE3-NEXT:    movq %rsi, %xmm1
-; SSSE3-NEXT:    movq %rcx, %xmm0
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,3,2,3]
-; SSSE3-NEXT:    psrad $31, %xmm1
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    movq %rsi, %xmm0
+; SSSE3-NEXT:    movq %rcx, %xmm1
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSSE3-NEXT:    retq
 ;
-; SSE41-LABEL: v2i32:
+; SSE41-LABEL: v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    psllq $32, %xmm1
 ; SSE41-NEXT:    movq %xmm1, %rax
-; SSE41-NEXT:    psllq $32, %xmm0
 ; SSE41-NEXT:    movq %xmm0, %rcx
 ; SSE41-NEXT:    xorl %edx, %edx
 ; SSE41-NEXT:    movq %rcx, %rsi
@@ -944,313 +2896,949 @@ define <2 x i32> @v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
 ; SSE41-NEXT:    movq %rsi, %xmm1
 ; SSE41-NEXT:    movq %rcx, %xmm0
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE41-NEXT:    psrad $31, %xmm0
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: v2i32:
+; AVX-LABEL: v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq %xmm1, %rax
+; AVX-NEXT:    vmovq %xmm0, %rcx
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    movq %rcx, %rsi
+; AVX-NEXT:    addq %rax, %rsi
+; AVX-NEXT:    setns %dl
+; AVX-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX-NEXT:    addq %r8, %rdx
+; AVX-NEXT:    addq %rax, %rcx
+; AVX-NEXT:    cmovoq %rdx, %rcx
+; AVX-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX-NEXT:    xorl %edi, %edi
+; AVX-NEXT:    movq %rsi, %rdx
+; AVX-NEXT:    addq %rax, %rdx
+; AVX-NEXT:    setns %dil
+; AVX-NEXT:    addq %r8, %rdi
+; AVX-NEXT:    addq %rax, %rsi
+; AVX-NEXT:    cmovoq %rdi, %rsi
+; AVX-NEXT:    vmovq %rsi, %xmm0
+; AVX-NEXT:    vmovq %rcx, %xmm1
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX-NEXT:    retq
+  %z = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> %x, <2 x i64> %y)
+  ret <2 x i64> %z
+}
+
+define <4 x i64> @v4i64(<4 x i64> %x, <4 x i64> %y) nounwind {
+; SSE2-LABEL: v4i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,0,1]
+; SSE2-NEXT:    movq %xmm4, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movq %xmm4, %r9
+; SSE2-NEXT:    xorl %esi, %esi
+; SSE2-NEXT:    movq %r9, %rdx
+; SSE2-NEXT:    addq %rcx, %rdx
+; SSE2-NEXT:    setns %sil
+; SSE2-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSE2-NEXT:    addq %r8, %rsi
+; SSE2-NEXT:    addq %rcx, %r9
+; SSE2-NEXT:    cmovoq %rsi, %r9
+; SSE2-NEXT:    movq %xmm3, %rsi
+; SSE2-NEXT:    movq %xmm1, %rdx
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movq %rdx, %rcx
+; SSE2-NEXT:    addq %rsi, %rcx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addq %r8, %rdi
+; SSE2-NEXT:    addq %rsi, %rdx
+; SSE2-NEXT:    cmovoq %rdi, %rdx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %rcx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movq %rax, %rsi
+; SSE2-NEXT:    addq %rcx, %rsi
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addq %r8, %rdi
+; SSE2-NEXT:    addq %rcx, %rax
+; SSE2-NEXT:    cmovoq %rdi, %rax
+; SSE2-NEXT:    movq %xmm2, %r10
+; SSE2-NEXT:    movq %xmm0, %rcx
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movq %rcx, %rsi
+; SSE2-NEXT:    addq %r10, %rsi
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addq %r8, %rdi
+; SSE2-NEXT:    addq %r10, %rcx
+; SSE2-NEXT:    cmovoq %rdi, %rcx
+; SSE2-NEXT:    movq %rcx, %xmm0
+; SSE2-NEXT:    movq %rax, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movq %rdx, %xmm1
+; SSE2-NEXT:    movq %r9, %xmm2
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: v4i64:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm4, %rcx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm4, %r9
+; SSSE3-NEXT:    xorl %esi, %esi
+; SSSE3-NEXT:    movq %r9, %rdx
+; SSSE3-NEXT:    addq %rcx, %rdx
+; SSSE3-NEXT:    setns %sil
+; SSSE3-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSSE3-NEXT:    addq %r8, %rsi
+; SSSE3-NEXT:    addq %rcx, %r9
+; SSSE3-NEXT:    cmovoq %rsi, %r9
+; SSSE3-NEXT:    movq %xmm3, %rsi
+; SSSE3-NEXT:    movq %xmm1, %rdx
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movq %rdx, %rcx
+; SSSE3-NEXT:    addq %rsi, %rcx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addq %r8, %rdi
+; SSSE3-NEXT:    addq %rsi, %rdx
+; SSSE3-NEXT:    cmovoq %rdi, %rdx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %rcx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %rax
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movq %rax, %rsi
+; SSSE3-NEXT:    addq %rcx, %rsi
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addq %r8, %rdi
+; SSSE3-NEXT:    addq %rcx, %rax
+; SSSE3-NEXT:    cmovoq %rdi, %rax
+; SSSE3-NEXT:    movq %xmm2, %r10
+; SSSE3-NEXT:    movq %xmm0, %rcx
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movq %rcx, %rsi
+; SSSE3-NEXT:    addq %r10, %rsi
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addq %r8, %rdi
+; SSSE3-NEXT:    addq %r10, %rcx
+; SSSE3-NEXT:    cmovoq %rdi, %rcx
+; SSSE3-NEXT:    movq %rcx, %xmm0
+; SSSE3-NEXT:    movq %rax, %xmm1
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    movq %rdx, %xmm1
+; SSSE3-NEXT:    movq %r9, %xmm2
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: v4i64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq %xmm3, %rcx
+; SSE41-NEXT:    movq %xmm1, %r9
+; SSE41-NEXT:    xorl %esi, %esi
+; SSE41-NEXT:    movq %r9, %rdx
+; SSE41-NEXT:    addq %rcx, %rdx
+; SSE41-NEXT:    setns %sil
+; SSE41-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSE41-NEXT:    addq %r8, %rsi
+; SSE41-NEXT:    addq %rcx, %r9
+; SSE41-NEXT:    cmovoq %rsi, %r9
+; SSE41-NEXT:    pextrq $1, %xmm3, %rsi
+; SSE41-NEXT:    pextrq $1, %xmm1, %rdx
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movq %rdx, %rcx
+; SSE41-NEXT:    addq %rsi, %rcx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addq %r8, %rdi
+; SSE41-NEXT:    addq %rsi, %rdx
+; SSE41-NEXT:    cmovoq %rdi, %rdx
+; SSE41-NEXT:    movq %xmm2, %rcx
+; SSE41-NEXT:    movq %xmm0, %rax
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movq %rax, %rsi
+; SSE41-NEXT:    addq %rcx, %rsi
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addq %r8, %rdi
+; SSE41-NEXT:    addq %rcx, %rax
+; SSE41-NEXT:    cmovoq %rdi, %rax
+; SSE41-NEXT:    pextrq $1, %xmm2, %r10
+; SSE41-NEXT:    pextrq $1, %xmm0, %rcx
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movq %rcx, %rsi
+; SSE41-NEXT:    addq %r10, %rsi
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addq %r8, %rdi
+; SSE41-NEXT:    addq %r10, %rcx
+; SSE41-NEXT:    cmovoq %rdi, %rcx
+; SSE41-NEXT:    movq %rcx, %xmm1
+; SSE41-NEXT:    movq %rax, %xmm0
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    movq %rdx, %xmm2
+; SSE41-NEXT:    movq %r9, %xmm1
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    vmovq %xmm1, %rdx
+; AVX1-NEXT:    vmovq %xmm0, %r9
+; AVX1-NEXT:    xorl %esi, %esi
+; AVX1-NEXT:    movq %r9, %rcx
+; AVX1-NEXT:    addq %rdx, %rcx
+; AVX1-NEXT:    setns %sil
+; AVX1-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX1-NEXT:    addq %r8, %rsi
+; AVX1-NEXT:    addq %rdx, %r9
+; AVX1-NEXT:    cmovoq %rsi, %r9
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movq %rcx, %rdx
+; AVX1-NEXT:    addq %rsi, %rdx
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addq %r8, %rdi
+; AVX1-NEXT:    addq %rsi, %rcx
+; AVX1-NEXT:    cmovoq %rdi, %rcx
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rdx
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movq %rax, %rsi
+; AVX1-NEXT:    addq %rdx, %rsi
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addq %r8, %rdi
+; AVX1-NEXT:    addq %rdx, %rax
+; AVX1-NEXT:    cmovoq %rdi, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r10
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movq %rdx, %rsi
+; AVX1-NEXT:    addq %r10, %rsi
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addq %r8, %rdi
+; AVX1-NEXT:    addq %r10, %rdx
+; AVX1-NEXT:    cmovoq %rdi, %rdx
+; AVX1-NEXT:    vmovq %rdx, %xmm0
+; AVX1-NEXT:    vmovq %rax, %xmm1
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovq %rcx, %xmm1
+; AVX1-NEXT:    vmovq %r9, %xmm2
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq %xmm1, %rdx
+; AVX2-NEXT:    vmovq %xmm0, %r9
+; AVX2-NEXT:    xorl %esi, %esi
+; AVX2-NEXT:    movq %r9, %rcx
+; AVX2-NEXT:    addq %rdx, %rcx
+; AVX2-NEXT:    setns %sil
+; AVX2-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    addq %r8, %rsi
+; AVX2-NEXT:    addq %rdx, %r9
+; AVX2-NEXT:    cmovoq %rsi, %r9
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    addq %rsi, %rdx
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addq %r8, %rdi
+; AVX2-NEXT:    addq %rsi, %rcx
+; AVX2-NEXT:    cmovoq %rdi, %rcx
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vmovq %xmm1, %rdx
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movq %rax, %rsi
+; AVX2-NEXT:    addq %rdx, %rsi
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addq %r8, %rdi
+; AVX2-NEXT:    addq %rdx, %rax
+; AVX2-NEXT:    cmovoq %rdi, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm1, %r10
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    addq %r10, %rsi
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addq %r8, %rdi
+; AVX2-NEXT:    addq %r10, %rdx
+; AVX2-NEXT:    cmovoq %rdi, %rdx
+; AVX2-NEXT:    vmovq %rdx, %xmm0
+; AVX2-NEXT:    vmovq %rax, %xmm1
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX2-NEXT:    vmovq %rcx, %xmm1
+; AVX2-NEXT:    vmovq %r9, %xmm2
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq %xmm1, %rdx
+; AVX512-NEXT:    vmovq %xmm0, %r9
+; AVX512-NEXT:    xorl %esi, %esi
+; AVX512-NEXT:    movq %r9, %rcx
+; AVX512-NEXT:    addq %rdx, %rcx
+; AVX512-NEXT:    setns %sil
+; AVX512-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    addq %r8, %rsi
+; AVX512-NEXT:    addq %rdx, %r9
+; AVX512-NEXT:    cmovoq %rsi, %r9
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rsi
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movq %rcx, %rdx
+; AVX512-NEXT:    addq %rsi, %rdx
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addq %r8, %rdi
+; AVX512-NEXT:    addq %rsi, %rcx
+; AVX512-NEXT:    cmovoq %rdi, %rcx
+; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm1, %rdx
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movq %rax, %rsi
+; AVX512-NEXT:    addq %rdx, %rsi
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addq %r8, %rdi
+; AVX512-NEXT:    addq %rdx, %rax
+; AVX512-NEXT:    cmovoq %rdi, %rax
+; AVX512-NEXT:    vpextrq $1, %xmm1, %r10
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movq %rdx, %rsi
+; AVX512-NEXT:    addq %r10, %rsi
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addq %r8, %rdi
+; AVX512-NEXT:    addq %r10, %rdx
+; AVX512-NEXT:    cmovoq %rdi, %rdx
+; AVX512-NEXT:    vmovq %rdx, %xmm0
+; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vmovq %rcx, %xmm1
+; AVX512-NEXT:    vmovq %r9, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+  %z = call <4 x i64> @llvm.sadd.sat.v4i64(<4 x i64> %x, <4 x i64> %y)
+  ret <4 x i64> %z
+}
+
+define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
+; SSE2-LABEL: v8i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %r15
+; SSE2-NEXT:    pushq %r14
+; SSE2-NEXT:    pushq %rbx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm5[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,0,1]
+; SSE2-NEXT:    movq %xmm8, %r9
+; SSE2-NEXT:    xorl %ecx, %ecx
+; SSE2-NEXT:    movq %r9, %rdx
+; SSE2-NEXT:    addq %rax, %rdx
+; SSE2-NEXT:    setns %cl
+; SSE2-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSE2-NEXT:    addq %r8, %rcx
+; SSE2-NEXT:    addq %rax, %r9
+; SSE2-NEXT:    cmovoq %rcx, %r9
+; SSE2-NEXT:    movq %xmm5, %rax
+; SSE2-NEXT:    movq %xmm1, %r10
+; SSE2-NEXT:    xorl %edx, %edx
+; SSE2-NEXT:    movq %r10, %rsi
+; SSE2-NEXT:    addq %rax, %rsi
+; SSE2-NEXT:    setns %dl
+; SSE2-NEXT:    addq %r8, %rdx
+; SSE2-NEXT:    addq %rax, %r10
+; SSE2-NEXT:    cmovoq %rdx, %r10
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %r11
+; SSE2-NEXT:    xorl %edx, %edx
+; SSE2-NEXT:    movq %r11, %rdi
+; SSE2-NEXT:    addq %rax, %rdi
+; SSE2-NEXT:    setns %dl
+; SSE2-NEXT:    addq %r8, %rdx
+; SSE2-NEXT:    addq %rax, %r11
+; SSE2-NEXT:    cmovoq %rdx, %r11
+; SSE2-NEXT:    movq %xmm6, %rax
+; SSE2-NEXT:    movq %xmm2, %r14
+; SSE2-NEXT:    xorl %edx, %edx
+; SSE2-NEXT:    movq %r14, %rdi
+; SSE2-NEXT:    addq %rax, %rdi
+; SSE2-NEXT:    setns %dl
+; SSE2-NEXT:    addq %r8, %rdx
+; SSE2-NEXT:    addq %rax, %r14
+; SSE2-NEXT:    cmovoq %rdx, %r14
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %r15
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movq %r15, %rdx
+; SSE2-NEXT:    addq %rax, %rdx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addq %r8, %rdi
+; SSE2-NEXT:    addq %rax, %r15
+; SSE2-NEXT:    cmovoq %rdi, %r15
+; SSE2-NEXT:    movq %xmm7, %rdx
+; SSE2-NEXT:    movq %xmm3, %rax
+; SSE2-NEXT:    xorl %edi, %edi
+; SSE2-NEXT:    movq %rax, %rbx
+; SSE2-NEXT:    addq %rdx, %rbx
+; SSE2-NEXT:    setns %dil
+; SSE2-NEXT:    addq %r8, %rdi
+; SSE2-NEXT:    addq %rdx, %rax
+; SSE2-NEXT:    cmovoq %rdi, %rax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %rdx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    movq %xmm1, %rcx
+; SSE2-NEXT:    xorl %ebx, %ebx
+; SSE2-NEXT:    movq %rcx, %rdi
+; SSE2-NEXT:    addq %rdx, %rdi
+; SSE2-NEXT:    setns %bl
+; SSE2-NEXT:    addq %r8, %rbx
+; SSE2-NEXT:    addq %rdx, %rcx
+; SSE2-NEXT:    cmovoq %rbx, %rcx
+; SSE2-NEXT:    movq %xmm4, %rdx
+; SSE2-NEXT:    movq %xmm0, %rsi
+; SSE2-NEXT:    xorl %ebx, %ebx
+; SSE2-NEXT:    movq %rsi, %rdi
+; SSE2-NEXT:    addq %rdx, %rdi
+; SSE2-NEXT:    setns %bl
+; SSE2-NEXT:    addq %r8, %rbx
+; SSE2-NEXT:    addq %rdx, %rsi
+; SSE2-NEXT:    cmovoq %rbx, %rsi
+; SSE2-NEXT:    movq %rsi, %xmm0
+; SSE2-NEXT:    movq %rcx, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movq %r10, %xmm1
+; SSE2-NEXT:    movq %r9, %xmm2
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    movq %r14, %xmm2
+; SSE2-NEXT:    movq %r11, %xmm3
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE2-NEXT:    movq %rax, %xmm3
+; SSE2-NEXT:    movq %r15, %xmm4
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; SSE2-NEXT:    popq %rbx
+; SSE2-NEXT:    popq %r14
+; SSE2-NEXT:    popq %r15
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: v8i64:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pushq %r15
+; SSSE3-NEXT:    pushq %r14
+; SSSE3-NEXT:    pushq %rbx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm8 = xmm5[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm8, %rax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm8, %r9
+; SSSE3-NEXT:    xorl %ecx, %ecx
+; SSSE3-NEXT:    movq %r9, %rdx
+; SSSE3-NEXT:    addq %rax, %rdx
+; SSSE3-NEXT:    setns %cl
+; SSSE3-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSSE3-NEXT:    addq %r8, %rcx
+; SSSE3-NEXT:    addq %rax, %r9
+; SSSE3-NEXT:    cmovoq %rcx, %r9
+; SSSE3-NEXT:    movq %xmm5, %rax
+; SSSE3-NEXT:    movq %xmm1, %r10
+; SSSE3-NEXT:    xorl %edx, %edx
+; SSSE3-NEXT:    movq %r10, %rsi
+; SSSE3-NEXT:    addq %rax, %rsi
+; SSSE3-NEXT:    setns %dl
+; SSSE3-NEXT:    addq %r8, %rdx
+; SSSE3-NEXT:    addq %rax, %r10
+; SSSE3-NEXT:    cmovoq %rdx, %r10
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm6[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %rax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %r11
+; SSSE3-NEXT:    xorl %edx, %edx
+; SSSE3-NEXT:    movq %r11, %rdi
+; SSSE3-NEXT:    addq %rax, %rdi
+; SSSE3-NEXT:    setns %dl
+; SSSE3-NEXT:    addq %r8, %rdx
+; SSSE3-NEXT:    addq %rax, %r11
+; SSSE3-NEXT:    cmovoq %rdx, %r11
+; SSSE3-NEXT:    movq %xmm6, %rax
+; SSSE3-NEXT:    movq %xmm2, %r14
+; SSSE3-NEXT:    xorl %edx, %edx
+; SSSE3-NEXT:    movq %r14, %rdi
+; SSSE3-NEXT:    addq %rax, %rdi
+; SSSE3-NEXT:    setns %dl
+; SSSE3-NEXT:    addq %r8, %rdx
+; SSSE3-NEXT:    addq %rax, %r14
+; SSSE3-NEXT:    cmovoq %rdx, %r14
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %rax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %r15
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movq %r15, %rdx
+; SSSE3-NEXT:    addq %rax, %rdx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addq %r8, %rdi
+; SSSE3-NEXT:    addq %rax, %r15
+; SSSE3-NEXT:    cmovoq %rdi, %r15
+; SSSE3-NEXT:    movq %xmm7, %rdx
+; SSSE3-NEXT:    movq %xmm3, %rax
+; SSSE3-NEXT:    xorl %edi, %edi
+; SSSE3-NEXT:    movq %rax, %rbx
+; SSSE3-NEXT:    addq %rdx, %rbx
+; SSSE3-NEXT:    setns %dil
+; SSSE3-NEXT:    addq %r8, %rdi
+; SSSE3-NEXT:    addq %rdx, %rax
+; SSSE3-NEXT:    cmovoq %rdi, %rax
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %rdx
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSSE3-NEXT:    movq %xmm1, %rcx
+; SSSE3-NEXT:    xorl %ebx, %ebx
+; SSSE3-NEXT:    movq %rcx, %rdi
+; SSSE3-NEXT:    addq %rdx, %rdi
+; SSSE3-NEXT:    setns %bl
+; SSSE3-NEXT:    addq %r8, %rbx
+; SSSE3-NEXT:    addq %rdx, %rcx
+; SSSE3-NEXT:    cmovoq %rbx, %rcx
+; SSSE3-NEXT:    movq %xmm4, %rdx
+; SSSE3-NEXT:    movq %xmm0, %rsi
+; SSSE3-NEXT:    xorl %ebx, %ebx
+; SSSE3-NEXT:    movq %rsi, %rdi
+; SSSE3-NEXT:    addq %rdx, %rdi
+; SSSE3-NEXT:    setns %bl
+; SSSE3-NEXT:    addq %r8, %rbx
+; SSSE3-NEXT:    addq %rdx, %rsi
+; SSSE3-NEXT:    cmovoq %rbx, %rsi
+; SSSE3-NEXT:    movq %rsi, %xmm0
+; SSSE3-NEXT:    movq %rcx, %xmm1
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    movq %r10, %xmm1
+; SSSE3-NEXT:    movq %r9, %xmm2
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSSE3-NEXT:    movq %r14, %xmm2
+; SSSE3-NEXT:    movq %r11, %xmm3
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSSE3-NEXT:    movq %rax, %xmm3
+; SSSE3-NEXT:    movq %r15, %xmm4
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; SSSE3-NEXT:    popq %rbx
+; SSSE3-NEXT:    popq %r14
+; SSSE3-NEXT:    popq %r15
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: v8i64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pushq %r15
+; SSE41-NEXT:    pushq %r14
+; SSE41-NEXT:    pushq %rbx
+; SSE41-NEXT:    movq %xmm5, %rax
+; SSE41-NEXT:    movq %xmm1, %r9
+; SSE41-NEXT:    xorl %ecx, %ecx
+; SSE41-NEXT:    movq %r9, %rdx
+; SSE41-NEXT:    addq %rax, %rdx
+; SSE41-NEXT:    setns %cl
+; SSE41-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; SSE41-NEXT:    addq %r8, %rcx
+; SSE41-NEXT:    addq %rax, %r9
+; SSE41-NEXT:    cmovoq %rcx, %r9
+; SSE41-NEXT:    pextrq $1, %xmm5, %rax
+; SSE41-NEXT:    pextrq $1, %xmm1, %r10
+; SSE41-NEXT:    xorl %edx, %edx
+; SSE41-NEXT:    movq %r10, %rsi
+; SSE41-NEXT:    addq %rax, %rsi
+; SSE41-NEXT:    setns %dl
+; SSE41-NEXT:    addq %r8, %rdx
+; SSE41-NEXT:    addq %rax, %r10
+; SSE41-NEXT:    cmovoq %rdx, %r10
+; SSE41-NEXT:    movq %xmm6, %rax
+; SSE41-NEXT:    movq %xmm2, %r11
+; SSE41-NEXT:    xorl %edx, %edx
+; SSE41-NEXT:    movq %r11, %rdi
+; SSE41-NEXT:    addq %rax, %rdi
+; SSE41-NEXT:    setns %dl
+; SSE41-NEXT:    addq %r8, %rdx
+; SSE41-NEXT:    addq %rax, %r11
+; SSE41-NEXT:    cmovoq %rdx, %r11
+; SSE41-NEXT:    pextrq $1, %xmm6, %rax
+; SSE41-NEXT:    pextrq $1, %xmm2, %r14
+; SSE41-NEXT:    xorl %edx, %edx
+; SSE41-NEXT:    movq %r14, %rdi
+; SSE41-NEXT:    addq %rax, %rdi
+; SSE41-NEXT:    setns %dl
+; SSE41-NEXT:    addq %r8, %rdx
+; SSE41-NEXT:    addq %rax, %r14
+; SSE41-NEXT:    cmovoq %rdx, %r14
+; SSE41-NEXT:    movq %xmm7, %rax
+; SSE41-NEXT:    movq %xmm3, %r15
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movq %r15, %rdx
+; SSE41-NEXT:    addq %rax, %rdx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addq %r8, %rdi
+; SSE41-NEXT:    addq %rax, %r15
+; SSE41-NEXT:    cmovoq %rdi, %r15
+; SSE41-NEXT:    pextrq $1, %xmm7, %rdx
+; SSE41-NEXT:    pextrq $1, %xmm3, %rax
+; SSE41-NEXT:    xorl %edi, %edi
+; SSE41-NEXT:    movq %rax, %rbx
+; SSE41-NEXT:    addq %rdx, %rbx
+; SSE41-NEXT:    setns %dil
+; SSE41-NEXT:    addq %r8, %rdi
+; SSE41-NEXT:    addq %rdx, %rax
+; SSE41-NEXT:    cmovoq %rdi, %rax
+; SSE41-NEXT:    movq %xmm4, %rdx
+; SSE41-NEXT:    movq %xmm0, %rcx
+; SSE41-NEXT:    xorl %ebx, %ebx
+; SSE41-NEXT:    movq %rcx, %rdi
+; SSE41-NEXT:    addq %rdx, %rdi
+; SSE41-NEXT:    setns %bl
+; SSE41-NEXT:    addq %r8, %rbx
+; SSE41-NEXT:    addq %rdx, %rcx
+; SSE41-NEXT:    cmovoq %rbx, %rcx
+; SSE41-NEXT:    pextrq $1, %xmm4, %rdx
+; SSE41-NEXT:    pextrq $1, %xmm0, %rsi
+; SSE41-NEXT:    xorl %ebx, %ebx
+; SSE41-NEXT:    movq %rsi, %rdi
+; SSE41-NEXT:    addq %rdx, %rdi
+; SSE41-NEXT:    setns %bl
+; SSE41-NEXT:    addq %r8, %rbx
+; SSE41-NEXT:    addq %rdx, %rsi
+; SSE41-NEXT:    cmovoq %rbx, %rsi
+; SSE41-NEXT:    movq %rsi, %xmm1
+; SSE41-NEXT:    movq %rcx, %xmm0
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    movq %r10, %xmm2
+; SSE41-NEXT:    movq %r9, %xmm1
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE41-NEXT:    movq %r14, %xmm3
+; SSE41-NEXT:    movq %r11, %xmm2
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE41-NEXT:    movq %rax, %xmm4
+; SSE41-NEXT:    movq %r15, %xmm3
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; SSE41-NEXT:    popq %rbx
+; SSE41-NEXT:    popq %r14
+; SSE41-NEXT:    popq %r15
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: v8i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    pushq %r15
+; AVX1-NEXT:    pushq %r14
+; AVX1-NEXT:    pushq %rbx
+; AVX1-NEXT:    vmovq %xmm3, %rax
+; AVX1-NEXT:    vmovq %xmm1, %r9
+; AVX1-NEXT:    xorl %ecx, %ecx
+; AVX1-NEXT:    movq %r9, %rdx
+; AVX1-NEXT:    addq %rax, %rdx
+; AVX1-NEXT:    setns %cl
+; AVX1-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX1-NEXT:    addq %r8, %rcx
+; AVX1-NEXT:    addq %rax, %r9
+; AVX1-NEXT:    cmovoq %rcx, %r9
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r10
 ; AVX1-NEXT:    xorl %edx, %edx
-; AVX1-NEXT:    movq %rcx, %rsi
+; AVX1-NEXT:    movq %r10, %rsi
 ; AVX1-NEXT:    addq %rax, %rsi
 ; AVX1-NEXT:    setns %dl
-; AVX1-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
 ; AVX1-NEXT:    addq %r8, %rdx
-; AVX1-NEXT:    addq %rax, %rcx
-; AVX1-NEXT:    cmovoq %rdx, %rcx
-; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX1-NEXT:    addq %rax, %r10
+; AVX1-NEXT:    cmovoq %rdx, %r10
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; AVX1-NEXT:    vmovq %xmm3, %rax
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %r11
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    movq %r11, %rdi
+; AVX1-NEXT:    addq %rax, %rdi
+; AVX1-NEXT:    setns %dl
+; AVX1-NEXT:    addq %r8, %rdx
+; AVX1-NEXT:    addq %rax, %r11
+; AVX1-NEXT:    cmovoq %rdx, %r11
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rax
+; AVX1-NEXT:    vpextrq $1, %xmm1, %r14
+; AVX1-NEXT:    xorl %edx, %edx
+; AVX1-NEXT:    movq %r14, %rdi
+; AVX1-NEXT:    addq %rax, %rdi
+; AVX1-NEXT:    setns %dl
+; AVX1-NEXT:    addq %r8, %rdx
+; AVX1-NEXT:    addq %rax, %r14
+; AVX1-NEXT:    cmovoq %rdx, %r14
+; AVX1-NEXT:    vmovq %xmm2, %rax
+; AVX1-NEXT:    vmovq %xmm0, %r15
 ; AVX1-NEXT:    xorl %edi, %edi
-; AVX1-NEXT:    movq %rsi, %rdx
+; AVX1-NEXT:    movq %r15, %rdx
 ; AVX1-NEXT:    addq %rax, %rdx
 ; AVX1-NEXT:    setns %dil
 ; AVX1-NEXT:    addq %r8, %rdi
-; AVX1-NEXT:    addq %rax, %rsi
-; AVX1-NEXT:    cmovoq %rdi, %rsi
+; AVX1-NEXT:    addq %rax, %r15
+; AVX1-NEXT:    cmovoq %rdi, %r15
+; AVX1-NEXT:    vpextrq $1, %xmm2, %rdx
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    xorl %edi, %edi
+; AVX1-NEXT:    movq %rax, %rbx
+; AVX1-NEXT:    addq %rdx, %rbx
+; AVX1-NEXT:    setns %dil
+; AVX1-NEXT:    addq %r8, %rdi
+; AVX1-NEXT:    addq %rdx, %rax
+; AVX1-NEXT:    cmovoq %rdi, %rax
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rdx
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rcx
+; AVX1-NEXT:    xorl %ebx, %ebx
+; AVX1-NEXT:    movq %rcx, %rdi
+; AVX1-NEXT:    addq %rdx, %rdi
+; AVX1-NEXT:    setns %bl
+; AVX1-NEXT:    addq %r8, %rbx
+; AVX1-NEXT:    addq %rdx, %rcx
+; AVX1-NEXT:    cmovoq %rbx, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX1-NEXT:    xorl %ebx, %ebx
+; AVX1-NEXT:    movq %rsi, %rdi
+; AVX1-NEXT:    addq %rdx, %rdi
+; AVX1-NEXT:    setns %bl
+; AVX1-NEXT:    addq %r8, %rbx
+; AVX1-NEXT:    addq %rdx, %rsi
+; AVX1-NEXT:    cmovoq %rbx, %rsi
 ; AVX1-NEXT:    vmovq %rsi, %xmm0
 ; AVX1-NEXT:    vmovq %rcx, %xmm1
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; AVX1-NEXT:    vmovq %rax, %xmm1
+; AVX1-NEXT:    vmovq %r15, %xmm2
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovq %r14, %xmm1
+; AVX1-NEXT:    vmovq %r11, %xmm2
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX1-NEXT:    vmovq %r10, %xmm2
+; AVX1-NEXT:    vmovq %r9, %xmm3
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    popq %rbx
+; AVX1-NEXT:    popq %r14
+; AVX1-NEXT:    popq %r15
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: v2i32:
+; AVX2-LABEL: v8i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX2-NEXT:    vmovq %xmm1, %rax
-; AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    pushq %r15
+; AVX2-NEXT:    pushq %r14
+; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    vmovq %xmm1, %r9
+; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movq %r9, %rdx
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    setns %cl
+; AVX2-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    addq %r8, %rcx
+; AVX2-NEXT:    addq %rax, %r9
+; AVX2-NEXT:    cmovoq %rcx, %r9
+; AVX2-NEXT:    vpextrq $1, %xmm3, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm1, %r10
 ; AVX2-NEXT:    xorl %edx, %edx
-; AVX2-NEXT:    movq %rcx, %rsi
+; AVX2-NEXT:    movq %r10, %rsi
 ; AVX2-NEXT:    addq %rax, %rsi
 ; AVX2-NEXT:    setns %dl
-; AVX2-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
 ; AVX2-NEXT:    addq %r8, %rdx
-; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    cmovoq %rdx, %rcx
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX2-NEXT:    addq %rax, %r10
+; AVX2-NEXT:    cmovoq %rdx, %r10
+; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm3
+; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2-NEXT:    vmovq %xmm1, %r11
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    movq %r11, %rdi
+; AVX2-NEXT:    addq %rax, %rdi
+; AVX2-NEXT:    setns %dl
+; AVX2-NEXT:    addq %r8, %rdx
+; AVX2-NEXT:    addq %rax, %r11
+; AVX2-NEXT:    cmovoq %rdx, %r11
+; AVX2-NEXT:    vpextrq $1, %xmm3, %rax
+; AVX2-NEXT:    vpextrq $1, %xmm1, %r14
+; AVX2-NEXT:    xorl %edx, %edx
+; AVX2-NEXT:    movq %r14, %rdi
+; AVX2-NEXT:    addq %rax, %rdi
+; AVX2-NEXT:    setns %dl
+; AVX2-NEXT:    addq %r8, %rdx
+; AVX2-NEXT:    addq %rax, %r14
+; AVX2-NEXT:    cmovoq %rdx, %r14
+; AVX2-NEXT:    vmovq %xmm2, %rax
+; AVX2-NEXT:    vmovq %xmm0, %r15
 ; AVX2-NEXT:    xorl %edi, %edi
-; AVX2-NEXT:    movq %rsi, %rdx
+; AVX2-NEXT:    movq %r15, %rdx
 ; AVX2-NEXT:    addq %rax, %rdx
 ; AVX2-NEXT:    setns %dil
 ; AVX2-NEXT:    addq %r8, %rdi
-; AVX2-NEXT:    addq %rax, %rsi
-; AVX2-NEXT:    cmovoq %rdi, %rsi
+; AVX2-NEXT:    addq %rax, %r15
+; AVX2-NEXT:    cmovoq %rdi, %r15
+; AVX2-NEXT:    vpextrq $1, %xmm2, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX2-NEXT:    xorl %edi, %edi
+; AVX2-NEXT:    movq %rax, %rbx
+; AVX2-NEXT:    addq %rdx, %rbx
+; AVX2-NEXT:    setns %dil
+; AVX2-NEXT:    addq %r8, %rdi
+; AVX2-NEXT:    addq %rdx, %rax
+; AVX2-NEXT:    cmovoq %rdi, %rax
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; AVX2-NEXT:    vmovq %xmm1, %rdx
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rcx
+; AVX2-NEXT:    xorl %ebx, %ebx
+; AVX2-NEXT:    movq %rcx, %rdi
+; AVX2-NEXT:    addq %rdx, %rdi
+; AVX2-NEXT:    setns %bl
+; AVX2-NEXT:    addq %r8, %rbx
+; AVX2-NEXT:    addq %rdx, %rcx
+; AVX2-NEXT:    cmovoq %rbx, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX2-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX2-NEXT:    xorl %ebx, %ebx
+; AVX2-NEXT:    movq %rsi, %rdi
+; AVX2-NEXT:    addq %rdx, %rdi
+; AVX2-NEXT:    setns %bl
+; AVX2-NEXT:    addq %r8, %rbx
+; AVX2-NEXT:    addq %rdx, %rsi
+; AVX2-NEXT:    cmovoq %rbx, %rsi
 ; AVX2-NEXT:    vmovq %rsi, %xmm0
 ; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vmovq %rax, %xmm1
+; AVX2-NEXT:    vmovq %r15, %xmm2
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovq %r14, %xmm1
+; AVX2-NEXT:    vmovq %r11, %xmm2
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX2-NEXT:    vmovq %r10, %xmm2
+; AVX2-NEXT:    vmovq %r9, %xmm3
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX2-NEXT:    popq %rbx
+; AVX2-NEXT:    popq %r14
+; AVX2-NEXT:    popq %r15
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: v2i32:
+; AVX512-LABEL: v8i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllq $32, %xmm1, %xmm1
+; AVX512-NEXT:    pushq %r15
+; AVX512-NEXT:    pushq %r14
+; AVX512-NEXT:    pushq %rbx
 ; AVX512-NEXT:    vmovq %xmm1, %rax
-; AVX512-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    vmovq %xmm0, %r9
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    movq %r9, %rdx
+; AVX512-NEXT:    addq %rax, %rdx
+; AVX512-NEXT:    setns %cl
+; AVX512-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    addq %r8, %rcx
+; AVX512-NEXT:    addq %rax, %r9
+; AVX512-NEXT:    cmovoq %rcx, %r9
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512-NEXT:    vpextrq $1, %xmm0, %r10
 ; AVX512-NEXT:    xorl %edx, %edx
-; AVX512-NEXT:    movq %rcx, %rsi
+; AVX512-NEXT:    movq %r10, %rsi
 ; AVX512-NEXT:    addq %rax, %rsi
 ; AVX512-NEXT:    setns %dl
-; AVX512-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
 ; AVX512-NEXT:    addq %r8, %rdx
-; AVX512-NEXT:    addq %rax, %rcx
-; AVX512-NEXT:    cmovoq %rdx, %rcx
-; AVX512-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX512-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX512-NEXT:    addq %rax, %r10
+; AVX512-NEXT:    cmovoq %rdx, %r10
+; AVX512-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX512-NEXT:    vmovq %xmm2, %rax
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX512-NEXT:    vmovq %xmm3, %r11
+; AVX512-NEXT:    xorl %edx, %edx
+; AVX512-NEXT:    movq %r11, %rdi
+; AVX512-NEXT:    addq %rax, %rdi
+; AVX512-NEXT:    setns %dl
+; AVX512-NEXT:    addq %r8, %rdx
+; AVX512-NEXT:    addq %rax, %r11
+; AVX512-NEXT:    cmovoq %rdx, %r11
+; AVX512-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX512-NEXT:    vpextrq $1, %xmm3, %r14
+; AVX512-NEXT:    xorl %edx, %edx
+; AVX512-NEXT:    movq %r14, %rdi
+; AVX512-NEXT:    addq %rax, %rdi
+; AVX512-NEXT:    setns %dl
+; AVX512-NEXT:    addq %r8, %rdx
+; AVX512-NEXT:    addq %rax, %r14
+; AVX512-NEXT:    cmovoq %rdx, %r14
+; AVX512-NEXT:    vextracti32x4 $2, %zmm1, %xmm2
+; AVX512-NEXT:    vmovq %xmm2, %rax
+; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; AVX512-NEXT:    vmovq %xmm3, %r15
 ; AVX512-NEXT:    xorl %edi, %edi
-; AVX512-NEXT:    movq %rsi, %rdx
+; AVX512-NEXT:    movq %r15, %rdx
 ; AVX512-NEXT:    addq %rax, %rdx
 ; AVX512-NEXT:    setns %dil
 ; AVX512-NEXT:    addq %r8, %rdi
-; AVX512-NEXT:    addq %rax, %rsi
-; AVX512-NEXT:    cmovoq %rdi, %rsi
+; AVX512-NEXT:    addq %rax, %r15
+; AVX512-NEXT:    cmovoq %rdi, %r15
+; AVX512-NEXT:    vpextrq $1, %xmm2, %rdx
+; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
+; AVX512-NEXT:    xorl %edi, %edi
+; AVX512-NEXT:    movq %rax, %rbx
+; AVX512-NEXT:    addq %rdx, %rbx
+; AVX512-NEXT:    setns %dil
+; AVX512-NEXT:    addq %r8, %rdi
+; AVX512-NEXT:    addq %rdx, %rax
+; AVX512-NEXT:    cmovoq %rdi, %rax
+; AVX512-NEXT:    vextracti32x4 $3, %zmm1, %xmm1
+; AVX512-NEXT:    vmovq %xmm1, %rdx
+; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, %rcx
+; AVX512-NEXT:    xorl %ebx, %ebx
+; AVX512-NEXT:    movq %rcx, %rdi
+; AVX512-NEXT:    addq %rdx, %rdi
+; AVX512-NEXT:    setns %bl
+; AVX512-NEXT:    addq %r8, %rbx
+; AVX512-NEXT:    addq %rdx, %rcx
+; AVX512-NEXT:    cmovoq %rbx, %rcx
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rdx
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rsi
+; AVX512-NEXT:    xorl %ebx, %ebx
+; AVX512-NEXT:    movq %rsi, %rdi
+; AVX512-NEXT:    addq %rdx, %rdi
+; AVX512-NEXT:    setns %bl
+; AVX512-NEXT:    addq %r8, %rbx
+; AVX512-NEXT:    addq %rdx, %rsi
+; AVX512-NEXT:    cmovoq %rbx, %rsi
 ; AVX512-NEXT:    vmovq %rsi, %xmm0
 ; AVX512-NEXT:    vmovq %rcx, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    vpsraq $32, %xmm0, %xmm0
+; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vmovq %r15, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    vmovq %r14, %xmm1
+; AVX512-NEXT:    vmovq %r11, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vmovq %r10, %xmm2
+; AVX512-NEXT:    vmovq %r9, %xmm3
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    popq %rbx
+; AVX512-NEXT:    popq %r14
+; AVX512-NEXT:    popq %r15
 ; AVX512-NEXT:    retq
-  %z = call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> %x, <2 x i32> %y)
-  ret <2 x i32> %z
-}
-
-define <4 x i24> @v4i24(<4 x i24> %x, <4 x i24> %y) nounwind {
-; SSE2-LABEL: v4i24:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pslld $8, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,2,3]
-; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    pslld $8, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
-; SSE2-NEXT:    movd %xmm2, %r8d
-; SSE2-NEXT:    xorl %edx, %edx
-; SSE2-NEXT:    movl %r8d, %esi
-; SSE2-NEXT:    addl %ecx, %esi
-; SSE2-NEXT:    setns %dl
-; SSE2-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
-; SSE2-NEXT:    addl %ecx, %r8d
-; SSE2-NEXT:    cmovol %edx, %r8d
-; SSE2-NEXT:    movd %xmm1, %edx
-; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    xorl %esi, %esi
-; SSE2-NEXT:    movl %ecx, %edi
-; SSE2-NEXT:    addl %edx, %edi
-; SSE2-NEXT:    setns %sil
-; SSE2-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
-; SSE2-NEXT:    addl %edx, %ecx
-; SSE2-NEXT:    cmovol %esi, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
-; SSE2-NEXT:    movd %xmm2, %edx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSE2-NEXT:    movd %xmm2, %eax
-; SSE2-NEXT:    xorl %edi, %edi
-; SSE2-NEXT:    movl %eax, %esi
-; SSE2-NEXT:    addl %edx, %esi
-; SSE2-NEXT:    setns %dil
-; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; SSE2-NEXT:    addl %edx, %eax
-; SSE2-NEXT:    cmovol %edi, %eax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; SSE2-NEXT:    movd %xmm1, %r9d
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; SSE2-NEXT:    movd %xmm0, %edx
-; SSE2-NEXT:    xorl %edi, %edi
-; SSE2-NEXT:    movl %edx, %esi
-; SSE2-NEXT:    addl %r9d, %esi
-; SSE2-NEXT:    setns %dil
-; SSE2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; SSE2-NEXT:    addl %r9d, %edx
-; SSE2-NEXT:    cmovol %edi, %edx
-; SSE2-NEXT:    movd %edx, %xmm0
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    movd %r8d, %xmm2
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    psrad $8, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: v4i24:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pslld $8, %xmm1
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,2,3]
-; SSSE3-NEXT:    movd %xmm2, %ecx
-; SSSE3-NEXT:    pslld $8, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,2,3]
-; SSSE3-NEXT:    movd %xmm2, %r8d
-; SSSE3-NEXT:    xorl %edx, %edx
-; SSSE3-NEXT:    movl %r8d, %esi
-; SSSE3-NEXT:    addl %ecx, %esi
-; SSSE3-NEXT:    setns %dl
-; SSSE3-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
-; SSSE3-NEXT:    addl %ecx, %r8d
-; SSSE3-NEXT:    cmovol %edx, %r8d
-; SSSE3-NEXT:    movd %xmm1, %edx
-; SSSE3-NEXT:    movd %xmm0, %ecx
-; SSSE3-NEXT:    xorl %esi, %esi
-; SSSE3-NEXT:    movl %ecx, %edi
-; SSSE3-NEXT:    addl %edx, %edi
-; SSSE3-NEXT:    setns %sil
-; SSSE3-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
-; SSSE3-NEXT:    addl %edx, %ecx
-; SSSE3-NEXT:    cmovol %esi, %ecx
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
-; SSSE3-NEXT:    movd %xmm2, %edx
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
-; SSSE3-NEXT:    movd %xmm2, %eax
-; SSSE3-NEXT:    xorl %edi, %edi
-; SSSE3-NEXT:    movl %eax, %esi
-; SSSE3-NEXT:    addl %edx, %esi
-; SSSE3-NEXT:    setns %dil
-; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; SSSE3-NEXT:    addl %edx, %eax
-; SSSE3-NEXT:    cmovol %edi, %eax
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; SSSE3-NEXT:    movd %xmm1, %r9d
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; SSSE3-NEXT:    movd %xmm0, %edx
-; SSSE3-NEXT:    xorl %edi, %edi
-; SSSE3-NEXT:    movl %edx, %esi
-; SSSE3-NEXT:    addl %r9d, %esi
-; SSSE3-NEXT:    setns %dil
-; SSSE3-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; SSSE3-NEXT:    addl %r9d, %edx
-; SSSE3-NEXT:    cmovol %edi, %edx
-; SSSE3-NEXT:    movd %edx, %xmm0
-; SSSE3-NEXT:    movd %eax, %xmm1
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSSE3-NEXT:    movd %ecx, %xmm0
-; SSSE3-NEXT:    movd %r8d, %xmm2
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSSE3-NEXT:    psrad $8, %xmm0
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: v4i24:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pslld $8, %xmm1
-; SSE41-NEXT:    pextrd $3, %xmm1, %ecx
-; SSE41-NEXT:    pslld $8, %xmm0
-; SSE41-NEXT:    pextrd $3, %xmm0, %r8d
-; SSE41-NEXT:    xorl %edx, %edx
-; SSE41-NEXT:    movl %r8d, %esi
-; SSE41-NEXT:    addl %ecx, %esi
-; SSE41-NEXT:    setns %dl
-; SSE41-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
-; SSE41-NEXT:    addl %ecx, %r8d
-; SSE41-NEXT:    cmovol %edx, %r8d
-; SSE41-NEXT:    pextrd $2, %xmm1, %edx
-; SSE41-NEXT:    pextrd $2, %xmm0, %ecx
-; SSE41-NEXT:    xorl %esi, %esi
-; SSE41-NEXT:    movl %ecx, %edi
-; SSE41-NEXT:    addl %edx, %edi
-; SSE41-NEXT:    setns %sil
-; SSE41-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
-; SSE41-NEXT:    addl %edx, %ecx
-; SSE41-NEXT:    cmovol %esi, %ecx
-; SSE41-NEXT:    movd %xmm1, %edx
-; SSE41-NEXT:    movd %xmm0, %eax
-; SSE41-NEXT:    xorl %edi, %edi
-; SSE41-NEXT:    movl %eax, %esi
-; SSE41-NEXT:    addl %edx, %esi
-; SSE41-NEXT:    setns %dil
-; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; SSE41-NEXT:    addl %edx, %eax
-; SSE41-NEXT:    cmovol %edi, %eax
-; SSE41-NEXT:    pextrd $1, %xmm1, %r9d
-; SSE41-NEXT:    pextrd $1, %xmm0, %edx
-; SSE41-NEXT:    xorl %edi, %edi
-; SSE41-NEXT:    movl %edx, %esi
-; SSE41-NEXT:    addl %r9d, %esi
-; SSE41-NEXT:    setns %dil
-; SSE41-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; SSE41-NEXT:    addl %r9d, %edx
-; SSE41-NEXT:    cmovol %edi, %edx
-; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    pinsrd $1, %edx, %xmm0
-; SSE41-NEXT:    pinsrd $2, %ecx, %xmm0
-; SSE41-NEXT:    pinsrd $3, %r8d, %xmm0
-; SSE41-NEXT:    psrad $8, %xmm0
-; SSE41-NEXT:    retq
-;
-; AVX-LABEL: v4i24:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpslld $8, %xmm1, %xmm1
-; AVX-NEXT:    vpextrd $3, %xmm1, %ecx
-; AVX-NEXT:    vpslld $8, %xmm0, %xmm0
-; AVX-NEXT:    vpextrd $3, %xmm0, %r9d
-; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    movl %r9d, %esi
-; AVX-NEXT:    addl %ecx, %esi
-; AVX-NEXT:    setns %dl
-; AVX-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
-; AVX-NEXT:    addl %ecx, %r9d
-; AVX-NEXT:    cmovol %edx, %r9d
-; AVX-NEXT:    vpextrd $2, %xmm1, %edx
-; AVX-NEXT:    vpextrd $2, %xmm0, %ecx
-; AVX-NEXT:    xorl %esi, %esi
-; AVX-NEXT:    movl %ecx, %edi
-; AVX-NEXT:    addl %edx, %edi
-; AVX-NEXT:    setns %sil
-; AVX-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
-; AVX-NEXT:    addl %edx, %ecx
-; AVX-NEXT:    cmovol %esi, %ecx
-; AVX-NEXT:    vmovd %xmm1, %r8d
-; AVX-NEXT:    vmovd %xmm0, %edx
-; AVX-NEXT:    xorl %edi, %edi
-; AVX-NEXT:    movl %edx, %esi
-; AVX-NEXT:    addl %r8d, %esi
-; AVX-NEXT:    setns %dil
-; AVX-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; AVX-NEXT:    addl %r8d, %edx
-; AVX-NEXT:    cmovol %edi, %edx
-; AVX-NEXT:    vpextrd $1, %xmm1, %r8d
-; AVX-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX-NEXT:    xorl %esi, %esi
-; AVX-NEXT:    movl %eax, %edi
-; AVX-NEXT:    addl %r8d, %edi
-; AVX-NEXT:    setns %sil
-; AVX-NEXT:    addl $2147483647, %esi # imm = 0x7FFFFFFF
-; AVX-NEXT:    addl %r8d, %eax
-; AVX-NEXT:    cmovol %esi, %eax
-; AVX-NEXT:    vmovd %edx, %xmm0
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrd $3, %r9d, %xmm0, %xmm0
-; AVX-NEXT:    vpsrad $8, %xmm0, %xmm0
-; AVX-NEXT:    retq
-  %z = call <4 x i24> @llvm.sadd.sat.v4i24(<4 x i24> %x, <4 x i24> %y)
-  ret <4 x i24> %z
+  %z = call <8 x i64> @llvm.sadd.sat.v8i64(<8 x i64> %x, <8 x i64> %y)
+  ret <8 x i64> %z
 }
 
 define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {

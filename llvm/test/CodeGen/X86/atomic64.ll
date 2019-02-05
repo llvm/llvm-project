@@ -1,6 +1,7 @@
 ; RUN: llc < %s -O0 -mtriple=x86_64-- -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X64
 
 @sc64 = external global i64
+@fsc64 = external global double
 
 define void @atomic_fetch_add64() nounwind {
 ; X64-LABEL:   atomic_fetch_add64:
@@ -225,6 +226,19 @@ define void @atomic_fetch_swap64(i64 %x) nounwind {
 ; X64-LABEL:   atomic_fetch_swap64:
 ; X32-LABEL:   atomic_fetch_swap64:
   %t1 = atomicrmw xchg i64* @sc64, i64 %x acquire
+; X64-NOT:   lock
+; X64:       xchgq
+; X32:       lock
+; X32:       xchg8b
+  ret void
+; X64:       ret
+; X32:       ret
+}
+
+define void @atomic_fetch_swapf64(double %x) nounwind {
+; X64-LABEL:   atomic_fetch_swapf64:
+; X32-LABEL:   atomic_fetch_swapf64:
+  %t1 = atomicrmw xchg double* @fsc64, double %x acquire
 ; X64-NOT:   lock
 ; X64:       xchgq
 ; X32:       lock

@@ -1,9 +1,8 @@
 //===- GlobalsModRef.cpp - Simple Mod/Ref Analysis for Globals ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -255,11 +254,11 @@ FunctionModRefBehavior GlobalsAAResult::getModRefBehavior(const Function *F) {
 }
 
 FunctionModRefBehavior
-GlobalsAAResult::getModRefBehavior(ImmutableCallSite CS) {
+GlobalsAAResult::getModRefBehavior(const CallBase *Call) {
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
-  if (!CS.hasOperandBundles())
-    if (const Function *F = CS.getCalledFunction())
+  if (!Call->hasOperandBundles())
+    if (const Function *F = Call->getCalledFunction())
       if (FunctionInfo *FI = getFunctionInfo(F)) {
         if (!isModOrRefSet(FI->getModRefInfo()))
           Min = FMRB_DoesNotAccessMemory;
@@ -267,7 +266,7 @@ GlobalsAAResult::getModRefBehavior(ImmutableCallSite CS) {
           Min = FMRB_OnlyReadsMemory;
       }
 
-  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(CS) & Min);
+  return FunctionModRefBehavior(AAResultBase::getModRefBehavior(Call) & Min);
 }
 
 /// Returns the function info for the function, or null if we don't have
@@ -366,14 +365,14 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
     } else if (Operator::getOpcode(I) == Instruction::BitCast) {
       if (AnalyzeUsesOfPointer(I, Readers, Writers, OkayStoreDest))
         return true;
-    } else if (auto CS = CallSite(I)) {
+    } else if (auto *Call = dyn_cast<CallBase>(I)) {
       // Make sure that this is just the function being called, not that it is
       // passing into the function.
-      if (CS.isDataOperand(&U)) {
+      if (Call->isDataOperand(&U)) {
         // Detect calls to free.
-        if (CS.isArgOperand(&U) && isFreeCall(I, &TLI)) {
+        if (Call->isArgOperand(&U) && isFreeCall(I, &TLI)) {
           if (Writers)
-            Writers->insert(CS->getParent()->getParent());
+            Writers->insert(Call->getParent()->getParent());
         } else {
           return true; // Argument of an unknown call.
         }
@@ -576,15 +575,15 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
         // We handle calls specially because the graph-relevant aspects are
         // handled above.
-        if (auto CS = CallSite(&I)) {
-          if (isAllocationFn(&I, &TLI) || isFreeCall(&I, &TLI)) {
+        if (auto *Call = dyn_cast<CallBase>(&I)) {
+          if (isAllocationFn(Call, &TLI) || isFreeCall(Call, &TLI)) {
             // FIXME: It is completely unclear why this is necessary and not
             // handled by the above graph code.
             FI.addModRefInfo(ModRefInfo::ModRef);
-          } else if (Function *Callee = CS.getCalledFunction()) {
+          } else if (Function *Callee = Call->getCalledFunction()) {
             // The callgraph doesn't include intrinsic calls.
             if (Callee->isIntrinsic()) {
-              if (isa<DbgInfoIntrinsic>(I))
+              if (isa<DbgInfoIntrinsic>(Call))
                 // Don't let dbg intrinsics affect alias info.
                 continue;
 
@@ -885,16 +884,16 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
   return AAResultBase::alias(LocA, LocB);
 }
 
-ModRefInfo GlobalsAAResult::getModRefInfoForArgument(ImmutableCallSite CS,
+ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
                                                      const GlobalValue *GV) {
-  if (CS.doesNotAccessMemory())
+  if (Call->doesNotAccessMemory())
     return ModRefInfo::NoModRef;
   ModRefInfo ConservativeResult =
-      CS.onlyReadsMemory() ? ModRefInfo::Ref : ModRefInfo::ModRef;
+      Call->onlyReadsMemory() ? ModRefInfo::Ref : ModRefInfo::ModRef;
 
   // Iterate through all the arguments to the called function. If any argument
   // is based on GV, return the conservative result.
-  for (auto &A : CS.args()) {
+  for (auto &A : Call->args()) {
     SmallVector<Value*, 4> Objects;
     GetUnderlyingObjects(A, Objects, DL);
 
@@ -914,7 +913,7 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(ImmutableCallSite CS,
   return ModRefInfo::NoModRef;
 }
 
-ModRefInfo GlobalsAAResult::getModRefInfo(ImmutableCallSite CS,
+ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
                                           const MemoryLocation &Loc) {
   ModRefInfo Known = ModRefInfo::ModRef;
 
@@ -923,15 +922,15 @@ ModRefInfo GlobalsAAResult::getModRefInfo(ImmutableCallSite CS,
   if (const GlobalValue *GV =
           dyn_cast<GlobalValue>(GetUnderlyingObject(Loc.Ptr, DL)))
     if (GV->hasLocalLinkage())
-      if (const Function *F = CS.getCalledFunction())
+      if (const Function *F = Call->getCalledFunction())
         if (NonAddressTakenGlobals.count(GV))
           if (const FunctionInfo *FI = getFunctionInfo(F))
             Known = unionModRef(FI->getModRefInfoForGlobal(*GV),
-                                getModRefInfoForArgument(CS, GV));
+                                getModRefInfoForArgument(Call, GV));
 
   if (!isModOrRefSet(Known))
     return ModRefInfo::NoModRef; // No need to query other mod/ref analyses
-  return intersectModRef(Known, AAResultBase::getModRefInfo(CS, Loc));
+  return intersectModRef(Known, AAResultBase::getModRefInfo(Call, Loc));
 }
 
 GlobalsAAResult::GlobalsAAResult(const DataLayout &DL,

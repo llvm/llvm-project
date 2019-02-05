@@ -1,9 +1,8 @@
 //===- InlineAlways.cpp - Code to inline always_inline functions ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -146,11 +145,20 @@ InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallSite CS) {
   Function *Callee = CS.getCalledFunction();
 
   // Only inline direct calls to functions with always-inline attributes
-  // that are viable for inlining. FIXME: We shouldn't even get here for
-  // declarations.
-  if (Callee && !Callee->isDeclaration() &&
-      CS.hasFnAttr(Attribute::AlwaysInline) && isInlineViable(*Callee))
-    return InlineCost::getAlways("always inliner");
+  // that are viable for inlining.
+  if (!Callee)
+    return InlineCost::getNever("indirect call");
 
-  return InlineCost::getNever("always inliner");
+  // FIXME: We shouldn't even get here for declarations.
+  if (Callee->isDeclaration())
+    return InlineCost::getNever("no definition");
+
+  if (!CS.hasFnAttr(Attribute::AlwaysInline))
+    return InlineCost::getNever("no alwaysinline attribute");
+
+  auto IsViable = isInlineViable(*Callee);
+  if (!IsViable)
+    return InlineCost::getNever(IsViable.message);
+
+  return InlineCost::getAlways("always inliner");
 }

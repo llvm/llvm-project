@@ -1,9 +1,8 @@
 //===--- FileIndex.cpp - Indexes for files. ------------------------ C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,13 +23,12 @@
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
 static std::pair<SymbolSlab, RefSlab>
 indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-             ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST) {
+             llvm::ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST) {
   SymbolCollector::Options CollectorOpts;
   // FIXME(ioeric): we might also want to collect include headers. We would need
   // to make sure all includes are canonicalized (with CanonicalIncludes), which
@@ -116,7 +114,7 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
   std::vector<Symbol> SymsStorage;
   switch (DuplicateHandle) {
   case DuplicateHandling::Merge: {
-    DenseMap<SymbolID, Symbol> Merged;
+    llvm::DenseMap<SymbolID, Symbol> Merged;
     for (const auto &Slab : SymbolSlabs) {
       for (const auto &Sym : *Slab) {
         auto I = Merged.try_emplace(Sym.ID, Sym);
@@ -143,9 +141,9 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
   }
 
   std::vector<Ref> RefsStorage; // Contiguous ranges for each SymbolID.
-  DenseMap<SymbolID, ArrayRef<Ref>> AllRefs;
+  llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> AllRefs;
   {
-    DenseMap<SymbolID, SmallVector<Ref, 4>> MergedRefs;
+    llvm::DenseMap<SymbolID, llvm::SmallVector<Ref, 4>> MergedRefs;
     size_t Count = 0;
     for (const auto &RefSlab : RefSlabs)
       for (const auto &Sym : *RefSlab) {
@@ -161,8 +159,8 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
       llvm::copy(SymRefs, back_inserter(RefsStorage));
       AllRefs.try_emplace(
           Sym.first,
-          ArrayRef<Ref>(&RefsStorage[RefsStorage.size() - SymRefs.size()],
-                        SymRefs.size()));
+          llvm::ArrayRef<Ref>(&RefsStorage[RefsStorage.size() - SymRefs.size()],
+                              SymRefs.size()));
     }
   }
 
@@ -177,13 +175,13 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
   switch (Type) {
   case IndexType::Light:
     return llvm::make_unique<MemIndex>(
-        make_pointee_range(AllSymbols), std::move(AllRefs),
+        llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage), std::move(SymsStorage)),
         StorageSize);
   case IndexType::Heavy:
     return llvm::make_unique<dex::Dex>(
-        make_pointee_range(AllSymbols), std::move(AllRefs),
+        llvm::make_pointee_range(AllSymbols), std::move(AllRefs),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage), std::move(SymsStorage)),
         StorageSize);

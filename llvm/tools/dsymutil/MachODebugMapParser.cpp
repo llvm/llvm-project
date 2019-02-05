@@ -1,9 +1,8 @@
 //===- tools/dsymutil/MachODebugMapParser.cpp - Parse STABS debug maps ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -163,7 +162,8 @@ std::unique_ptr<DebugMap>
 MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
   loadMainBinarySymbols(MainBinary);
-  Result = make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath);
+  ArrayRef<uint8_t> UUID = MainBinary.getUuid();
+  Result = make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath, UUID);
   MainBinaryStrings = MainBinary.getStringTableData();
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();

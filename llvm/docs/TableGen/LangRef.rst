@@ -102,6 +102,12 @@ wide variety of meanings:
                :!isa    !dag     !le      !lt        !ge
                :!gt     !ne
 
+TableGen also has !cond operator that needs a slightly different
+syntax compared to other "bang operators":
+
+.. productionlist::
+   CondOperator: !cond
+
 
 Syntax
 ======
@@ -140,7 +146,7 @@ considered to define the class if any of the following is true:
 #. The :token:`Body` in the :token:`ObjectBody` is present and is not empty.
 #. The :token:`BaseClassList` in the :token:`ObjectBody` is present.
 
-You can declare an empty class by giving and empty :token:`TemplateArgList`
+You can declare an empty class by giving an empty :token:`TemplateArgList`
 and an empty :token:`ObjectBody`. This can serve as a restricted form of
 forward declaration: note that records deriving from the forward-declared
 class will inherit no fields from it since the record expansion is done
@@ -315,6 +321,8 @@ The initial :token:`DagArg` is called the "operator" of the dag.
 
 .. productionlist::
    SimpleValue: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
+              :| `CondOperator` "(" `CondVal` ("," `CondVal`)* ")"
+   CondVal: `Value` ":" `Value`
 
 Bodies
 ------

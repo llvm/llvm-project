@@ -1,9 +1,8 @@
 //===- RegisterCoalescer.cpp - Generic Register Coalescing Interface ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -176,7 +175,7 @@ namespace {
     /// If one def has many copy like uses, and those copy uses are all
     /// rematerialized, the live interval update needed for those
     /// rematerializations will be delayed and done all at once instead
-    /// of being done multiple times. This is to save compile cost becuase
+    /// of being done multiple times. This is to save compile cost because
     /// live interval update is costly.
     void lateLiveIntervalUpdate();
 
@@ -1910,6 +1909,13 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
     }
     LI.removeEmptySubRanges();
   }
+
+  // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
+  // interval. Since CP.getSrcReg() is in ToBeUpdated set and its live interval
+  // is not up-to-date, need to update the merged live interval here.
+  if (ToBeUpdated.count(CP.getSrcReg()))
+    ShrinkMainRange = true;
+
   if (ShrinkMainRange) {
     LiveInterval &LI = LIS->getInterval(CP.getDstReg());
     shrinkToUses(&LI);
@@ -2501,8 +2507,10 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
         // We normally expect IMPLICIT_DEF values to be live only until the end
         // of their block. If the value is really live longer and gets pruned in
         // another block, this flag is cleared again.
+        //
+        // Clearing the valid lanes is deferred until it is sure this can be
+        // erased.
         V.ErasableImplicitDef = true;
-        V.ValidLanes &= ~V.WriteLanes;
       }
     }
   }
@@ -2557,20 +2565,25 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   Other.computeAssignment(V.OtherVNI->id, *this);
   Val &OtherV = Other.Vals[V.OtherVNI->id];
 
-  // Check if OtherV is an IMPLICIT_DEF that extends beyond its basic block.
-  // This shouldn't normally happen, but ProcessImplicitDefs can leave such
-  // IMPLICIT_DEF instructions behind, and there is nothing wrong with it
-  // technically.
-  //
-  // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
-  // to erase the IMPLICIT_DEF instruction.
-  if (OtherV.ErasableImplicitDef && DefMI &&
-      DefMI->getParent() != Indexes->getMBBFromIndex(V.OtherVNI->def)) {
-    LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
-                      << " extends into "
-                      << printMBBReference(*DefMI->getParent())
-                      << ", keeping it.\n");
-    OtherV.ErasableImplicitDef = false;
+  if (OtherV.ErasableImplicitDef) {
+    // Check if OtherV is an IMPLICIT_DEF that extends beyond its basic block.
+    // This shouldn't normally happen, but ProcessImplicitDefs can leave such
+    // IMPLICIT_DEF instructions behind, and there is nothing wrong with it
+    // technically.
+    //
+    // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
+    // to erase the IMPLICIT_DEF instruction.
+    if (DefMI &&
+        DefMI->getParent() != Indexes->getMBBFromIndex(V.OtherVNI->def)) {
+      LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
+                 << " extends into "
+                 << printMBBReference(*DefMI->getParent())
+                 << ", keeping it.\n");
+      OtherV.ErasableImplicitDef = false;
+    } else {
+      // We deferred clearing these lanes in case we needed to save them
+      OtherV.ValidLanes &= ~OtherV.WriteLanes;
+    }
   }
 
   // Allow overlapping PHI values. Any real interference would show up in a
@@ -2612,6 +2625,12 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     V.Identical = true;
     return CR_Erase;
   }
+
+  // The remaining checks apply to the lanes, which aren't tracked here.  This
+  // was already decided to be OK via the following CR_Replace condition.
+  // CR_Replace.
+  if (SubRangeJoin)
+    return CR_Replace;
 
   // If the lanes written by this instruction were all undef in OtherVNI, it is
   // still safe to join the live ranges. This can't be done with a simple value
@@ -2694,8 +2713,18 @@ void JoinVals::computeAssignment(unsigned ValNo, JoinVals &Other) {
     Val &OtherV = Other.Vals[V.OtherVNI->id];
     // We cannot erase an IMPLICIT_DEF if we don't have valid values for all
     // its lanes.
-    if ((OtherV.WriteLanes & ~V.ValidLanes).any() && TrackSubRegLiveness)
+    if (OtherV.ErasableImplicitDef &&
+        TrackSubRegLiveness &&
+        (OtherV.WriteLanes & ~V.ValidLanes).any()) {
+      LLVM_DEBUG(dbgs() << "Cannot erase implicit_def with missing values\n");
+
       OtherV.ErasableImplicitDef = false;
+      // The valid lanes written by the implicit_def were speculatively cleared
+      // before, so make this more conservative. It may be better to track this,
+      // I haven't found a testcase where it matters.
+      OtherV.ValidLanes = LaneBitmask::getAll();
+    }
+
     OtherV.Pruned = true;
     LLVM_FALLTHROUGH;
   }

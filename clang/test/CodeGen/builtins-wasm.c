@@ -1,9 +1,6 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -fno-lax-vector-conversions \
-// RUN:   -O3 -emit-llvm -o - %s \
-// RUN:   | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
-// RUN: %clang_cc1 -triple wasm64-unknown-unknown -fno-lax-vector-conversions \
-// RUN:   -O3 -emit-llvm -o - %s \
-// RUN:   | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +unimplemented-simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -fno-lax-vector-conversions -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
+// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +unimplemented-simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -fno-lax-vector-conversions -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
+// RUN: not %clang_cc1 -triple wasm64-unknown-unknown -target-feature +nontrapping-fptoint -target-feature +exception-handling -fno-lax-vector-conversions -O3 -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefixes MISSING-SIMD
 
 // SIMD convenience types
 typedef char i8x16 __attribute((vector_size(16)));
@@ -27,30 +24,6 @@ __SIZE_TYPE__ memory_grow(__SIZE_TYPE__ delta) {
   return __builtin_wasm_memory_grow(0, delta);
   // WEBASSEMBLY32: call i32 @llvm.wasm.memory.grow.i32(i32 0, i32 %{{.*}})
   // WEBASSEMBLY64: call i64 @llvm.wasm.memory.grow.i64(i32 0, i64 %{{.*}})
-}
-
-__SIZE_TYPE__ mem_size(void) {
-  return __builtin_wasm_mem_size(0);
-  // WEBASSEMBLY32: call {{i.*}} @llvm.wasm.mem.size.i32(i32 0)
-  // WEBASSEMBLY64: call {{i.*}} @llvm.wasm.mem.size.i64(i32 0)
-}
-
-__SIZE_TYPE__ mem_grow(__SIZE_TYPE__ delta) {
-  return __builtin_wasm_mem_grow(0, delta);
-  // WEBASSEMBLY32: call i32 @llvm.wasm.mem.grow.i32(i32 0, i32 %{{.*}})
-  // WEBASSEMBLY64: call i64 @llvm.wasm.mem.grow.i64(i32 0, i64 %{{.*}})
-}
-
-__SIZE_TYPE__ current_memory(void) {
-  return __builtin_wasm_current_memory();
-  // WEBASSEMBLY32: call {{i.*}} @llvm.wasm.current.memory.i32()
-  // WEBASSEMBLY64: call {{i.*}} @llvm.wasm.current.memory.i64()
-}
-
-__SIZE_TYPE__ grow_memory(__SIZE_TYPE__ delta) {
-  return __builtin_wasm_grow_memory(delta);
-  // WEBASSEMBLY32: call i32 @llvm.wasm.grow.memory.i32(i32 %{{.*}})
-  // WEBASSEMBLY64: call i64 @llvm.wasm.grow.memory.i64(i64 %{{.*}})
 }
 
 void throw(unsigned int tag, void *obj) {
@@ -158,6 +131,7 @@ double max_f64(double x, double y) {
 
 int extract_lane_s_i8x16(i8x16 v) {
   return __builtin_wasm_extract_lane_s_i8x16(v, 13);
+  // MISSING-SIMD: error: '__builtin_wasm_extract_lane_s_i8x16' needs target feature simd128
   // WEBASSEMBLY: extractelement <16 x i8> %v, i32 13
   // WEBASSEMBLY-NEXT: sext
   // WEBASSEMBLY-NEXT: ret

@@ -42,7 +42,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!6, !7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0 (http://llvm.org/git/clang d19a95e94dc57c5a72fd25d64f26134aa7d25fa0) (http://llvm.org/git/llvm.git 313924e6ff8a332063f61d3fda03812c220762f6)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 4.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
 !1 = !DIFile(filename: "source-interleave-x86_64.c", directory: "SRC_COMPDIR")
 !2 = !{}
 !3 = !{!4}
@@ -50,7 +50,7 @@ attributes #1 = { nounwind readnone }
 !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
-!8 = !{!"clang version 4.0.0 (http://llvm.org/git/clang d19a95e94dc57c5a72fd25d64f26134aa7d25fa0) (http://llvm.org/git/llvm.git 313924e6ff8a332063f61d3fda03812c220762f6)"}
+!8 = !{!"clang version 4.0.0"}
 !9 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, retainedNodes: !2)
 !10 = !DISubroutineType(types: !11)
 !11 = !{!5}

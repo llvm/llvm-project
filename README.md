@@ -7,7 +7,7 @@ Home for Intel LLVM-based projects:
  - SYCL* Compiler and Runtimes - compiler and runtime libraries for SYCL ([https://www.khronos.org/sycl/](https://www.khronos.org/sycl/)). See **sycl** branch.
 
 ## License
-See [LICENSE.txt](https://github.com/intel/llvm/blob/intel/llvm/LICENSE.TXT) and [LICENSE2.txt](https://github.com/intel/llvm/blob/intel/llvm/LICENSE2.TXT) for details.
+See [LICENSE.txt](https://github.com/intel/llvm/blob/intel/llvm/LICENSE.TXT) for details.
 
 
 ## Contributing

@@ -1,9 +1,8 @@
 //===-- VOP3Instructions.td - Vector Instruction Defintions ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -463,7 +462,14 @@ def V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CL
 let FPDPRounding = 1 in {
 def V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
 let Uses = [M0, EXEC] in {
-def V_INTERP_P2_F16 : VOP3Interp <"v_interp_p2_f16", VOP3_INTERP16<[f16, f32, i32, f32]>>;
+def V_INTERP_P2_F16 : VOP3Interp <"v_interp_p2_f16", VOP3_INTERP16<[f16, f32, i32, f32]>,
+       [(set f16:$vdst, (AMDGPUinterp_p2_f16 f32:$src0, (i32 imm:$attrchan),
+                                                        (i32 imm:$attr),
+                                                        (i32 imm:$src0_modifiers),
+                                                        (f32 VRegSrc_32:$src2),
+                                                        (i32 imm:$src2_modifiers),
+                                                        (i1 imm:$high),
+                                                        (i1 imm:$clamp)))]>;
 } // End Uses = [M0, EXEC]
 } // End FPDPRounding = 1
 } // End renamedInGFX9 = 1
@@ -478,8 +484,22 @@ def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f1
 } // End SubtargetPredicate = isGFX9
 
 let Uses = [M0, EXEC], FPDPRounding = 1 in {
-def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>>;
-def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>>;
+def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>,
+       [(set f32:$vdst, (AMDGPUinterp_p1ll_f16 f32:$src0, (i32 imm:$attrchan),
+                                                          (i32 imm:$attr),
+                                                          (i32 imm:$src0_modifiers),
+                                                          (i1 imm:$high),
+                                                          (i1 imm:$clamp),
+                                                          (i32 imm:$omod)))]>;
+def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>,
+       [(set f32:$vdst, (AMDGPUinterp_p1lv_f16 f32:$src0, (i32 imm:$attrchan),
+                                                          (i32 imm:$attr),
+                                                          (i32 imm:$src0_modifiers),
+                                                          (f32 VRegSrc_32:$src2),
+                                                          (i32 imm:$src2_modifiers),
+                                                          (i1 imm:$high),
+                                                          (i1 imm:$clamp),
+                                                          (i32 imm:$omod)))]>;
 } // End Uses = [M0, EXEC], FPDPRounding = 1
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1

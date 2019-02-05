@@ -1,9 +1,8 @@
 //===--- FileManager.h - File System Probing and Caching --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -70,15 +69,14 @@ class FileEntry {
   bool IsNamedPipe;
   bool InPCH;
   bool IsValid;               // Is this \c FileEntry initialized and valid?
-  bool DeferredOpen;          // Created by getFile(OpenFile=0); may open later.
 
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
 
 public:
   FileEntry()
-      : UniqueID(0, 0), IsNamedPipe(false), InPCH(false), IsValid(false),
-        DeferredOpen(false) {}
+      : UniqueID(0, 0), IsNamedPipe(false), InPCH(false), IsValid(false)
+  {}
 
   FileEntry(const FileEntry &) = delete;
   FileEntry &operator=(const FileEntry &) = delete;

@@ -496,3 +496,149 @@ define <3 x float> @shuf_frem_const_op1(<3 x float> %x) {
   ret <3 x float> %r
 }
 
+;; TODO: getelementptr tests below show missing simplifications for
+;; vector demanded elements on vector geps.
+
+define i32* @gep_vbase_w_s_idx(<2 x i32*> %base) {
+; CHECK-LABEL: @gep_vbase_w_s_idx(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASE:%.*]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %gep = getelementptr i32, <2 x i32*> %base, i64 1
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+define i32* @gep_splat_base_w_s_idx(i32* %base) {
+; CHECK-LABEL: @gep_splat_base_w_s_idx(
+; CHECK-NEXT:    [[BASEVEC2:%.*]] = insertelement <2 x i32*> undef, i32* [[BASE:%.*]], i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASEVEC2]], i64 1
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %basevec1 = insertelement <2 x i32*> undef, i32* %base, i32 0
+  %basevec2 = shufflevector <2 x i32*> %basevec1, <2 x i32*> undef, <2 x i32> zeroinitializer
+  %gep = getelementptr i32, <2 x i32*> %basevec2, i64 1
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+
+define i32* @gep_splat_base_w_cv_idx(i32* %base) {
+; CHECK-LABEL: @gep_splat_base_w_cv_idx(
+; CHECK-NEXT:    [[BASEVEC2:%.*]] = insertelement <2 x i32*> undef, i32* [[BASE:%.*]], i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASEVEC2]], <2 x i64> <i64 undef, i64 1>
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %basevec1 = insertelement <2 x i32*> undef, i32* %base, i32 0
+  %basevec2 = shufflevector <2 x i32*> %basevec1, <2 x i32*> undef, <2 x i32> zeroinitializer
+  %gep = getelementptr i32, <2 x i32*> %basevec2, <2 x i64> <i64 0, i64 1>
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+define i32* @gep_splat_base_w_vidx(i32* %base, <2 x i64> %idxvec) {
+; CHECK-LABEL: @gep_splat_base_w_vidx(
+; CHECK-NEXT:    [[BASEVEC2:%.*]] = insertelement <2 x i32*> undef, i32* [[BASE:%.*]], i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASEVEC2]], <2 x i64> [[IDXVEC:%.*]]
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %basevec1 = insertelement <2 x i32*> undef, i32* %base, i32 0
+  %basevec2 = shufflevector <2 x i32*> %basevec1, <2 x i32*> undef, <2 x i32> zeroinitializer
+  %gep = getelementptr i32, <2 x i32*> %basevec2, <2 x i64> %idxvec
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+
+@GLOBAL = internal global i32 zeroinitializer
+
+define i32* @gep_cvbase_w_s_idx(<2 x i32*> %base, i64 %raw_addr) {
+; CHECK-LABEL: @gep_cvbase_w_s_idx(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> <i32* undef, i32* @GLOBAL>, i64 [[RAW_ADDR:%.*]]
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %gep = getelementptr i32, <2 x i32*> <i32* @GLOBAL, i32* @GLOBAL>, i64 %raw_addr
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+define i32* @gep_cvbase_w_cv_idx(<2 x i32*> %base, i64 %raw_addr) {
+; CHECK-LABEL: @gep_cvbase_w_cv_idx(
+; CHECK-NEXT:    ret i32* extractelement (<2 x i32*> getelementptr (i32, <2 x i32*> <i32* @GLOBAL, i32* @GLOBAL>, <2 x i64> <i64 0, i64 1>), i32 1)
+;
+  %gep = getelementptr i32, <2 x i32*> <i32* @GLOBAL, i32* @GLOBAL>, <2 x i64> <i64 0, i64 1>
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+
+define i32* @gep_sbase_w_cv_idx(i32* %base) {
+; CHECK-LABEL: @gep_sbase_w_cv_idx(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[BASE:%.*]], <2 x i64> <i64 undef, i64 1>
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %gep = getelementptr i32, i32* %base, <2 x i64> <i64 0, i64 1>
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+define i32* @gep_sbase_w_splat_idx(i32* %base, i64 %idx) {
+; CHECK-LABEL: @gep_sbase_w_splat_idx(
+; CHECK-NEXT:    [[IDXVEC2:%.*]] = insertelement <2 x i64> undef, i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[BASE:%.*]], <2 x i64> [[IDXVEC2]]
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %idxvec1 = insertelement <2 x i64> undef, i64 %idx, i32 0
+  %idxvec2 = shufflevector <2 x i64> %idxvec1, <2 x i64> undef, <2 x i32> zeroinitializer
+  %gep = getelementptr i32, i32* %base, <2 x i64> %idxvec2
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+define i32* @gep_splat_both(i32* %base, i64 %idx) {
+; CHECK-LABEL: @gep_splat_both(
+; CHECK-NEXT:    [[BASEVEC2:%.*]] = insertelement <2 x i32*> undef, i32* [[BASE:%.*]], i32 1
+; CHECK-NEXT:    [[IDXVEC2:%.*]] = insertelement <2 x i64> undef, i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASEVEC2]], <2 x i64> [[IDXVEC2]]
+; CHECK-NEXT:    [[EE:%.*]] = extractelement <2 x i32*> [[GEP]], i32 1
+; CHECK-NEXT:    ret i32* [[EE]]
+;
+  %basevec1 = insertelement <2 x i32*> undef, i32* %base, i32 0
+  %basevec2 = shufflevector <2 x i32*> %basevec1, <2 x i32*> undef, <2 x i32> zeroinitializer
+  %idxvec1 = insertelement <2 x i64> undef, i64 %idx, i32 0
+  %idxvec2 = shufflevector <2 x i64> %idxvec1, <2 x i64> undef, <2 x i32> zeroinitializer
+  %gep = getelementptr i32, <2 x i32*> %basevec2, <2 x i64> %idxvec2
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+
+define <2 x i32*> @gep_all_lanes_undef(i32* %base, i64 %idx) {;
+; CHECK-LABEL: @gep_all_lanes_undef(
+; CHECK-NEXT:    [[BASEVEC:%.*]] = insertelement <2 x i32*> undef, i32* [[BASE:%.*]], i32 0
+; CHECK-NEXT:    [[IDXVEC:%.*]] = insertelement <2 x i64> undef, i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x i32*> [[BASEVEC]], <2 x i64> [[IDXVEC]]
+; CHECK-NEXT:    ret <2 x i32*> [[GEP]]
+;
+  %basevec = insertelement <2 x i32*> undef, i32* %base, i32 0
+  %idxvec = insertelement <2 x i64> undef, i64 %idx, i32 1
+  %gep = getelementptr i32, <2 x i32*> %basevec, <2 x i64> %idxvec
+  ret <2 x i32*> %gep
+}
+
+define i32* @gep_demanded_lane_undef(i32* %base, i64 %idx) {
+; CHECK-LABEL: @gep_demanded_lane_undef(
+; CHECK-NEXT:    ret i32* undef
+;
+  %basevec = insertelement <2 x i32*> undef, i32* %base, i32 0
+  %idxvec = insertelement <2 x i64> undef, i64 %idx, i32 1
+  %gep = getelementptr i32, <2 x i32*> %basevec, <2 x i64> %idxvec
+  %ee = extractelement <2 x i32*> %gep, i32 1
+  ret i32* %ee
+}
+

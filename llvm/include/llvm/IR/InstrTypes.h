@@ -1,9 +1,8 @@
 //===- llvm/InstrTypes.h - Important Instruction subclasses -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -28,6 +27,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/OperandTraits.h"
@@ -45,6 +45,10 @@
 #include <vector>
 
 namespace llvm {
+
+namespace Intrinsic {
+enum ID : unsigned;
+}
 
 //===----------------------------------------------------------------------===//
 //                          UnaryInstruction Class
@@ -1040,12 +1044,69 @@ public:
     return I->getOpcode() == Instruction::Call ||
            I->getOpcode() == Instruction::Invoke;
   }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
 
   FunctionType *getFunctionType() const { return FTy; }
 
   void mutateFunctionType(FunctionType *FTy) {
     Value::mutateType(FTy->getReturnType());
     this->FTy = FTy;
+  }
+
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  /// data_operands_begin/data_operands_end - Return iterators iterating over
+  /// the call / invoke argument list and bundle operands.  For invokes, this is
+  /// the set of instruction operands except the invoke target and the two
+  /// successor blocks; and for calls this is the set of instruction operands
+  /// except the call target.
+  User::op_iterator data_operands_begin() { return op_begin(); }
+  User::const_op_iterator data_operands_begin() const {
+    return const_cast<CallBase *>(this)->data_operands_begin();
+  }
+  User::op_iterator data_operands_end() {
+    // Walk from the end of the operands over the called operand and any
+    // subclass operands.
+    return op_end() - getNumSubclassExtraOperands() - 1;
+  }
+  User::const_op_iterator data_operands_end() const {
+    return const_cast<CallBase *>(this)->data_operands_end();
+  }
+  iterator_range<User::op_iterator> data_ops() {
+    return make_range(data_operands_begin(), data_operands_end());
+  }
+  iterator_range<User::const_op_iterator> data_ops() const {
+    return make_range(data_operands_begin(), data_operands_end());
+  }
+  bool data_operands_empty() const {
+    return data_operands_end() == data_operands_begin();
+  }
+  unsigned data_operands_size() const {
+    return std::distance(data_operands_begin(), data_operands_end());
+  }
+
+  bool isDataOperand(const Use *U) const {
+    assert(this == U->getUser() &&
+           "Only valid to query with a use of this instruction!");
+    return data_operands_begin() <= U && U < data_operands_end();
+  }
+  bool isDataOperand(Value::const_user_iterator UI) const {
+    return isDataOperand(&UI.getUse());
+  }
+
+  /// Given a value use iterator, return the data operand corresponding to it.
+  /// Iterator must actually correspond to a data operand.
+  unsigned getDataOperandNo(Value::const_user_iterator UI) const {
+    return getDataOperandNo(&UI.getUse());
+  }
+
+  /// Given a use for a data operand, get the data operand number that
+  /// corresponds to it.
+  unsigned getDataOperandNo(const Use *U) const {
+    assert(isDataOperand(U) && "Data operand # out of range!");
+    return U - data_operands_begin();
   }
 
   /// Return the iterator pointing to the beginning of the argument list.
@@ -1056,25 +1117,33 @@ public:
 
   /// Return the iterator pointing to the end of the argument list.
   User::op_iterator arg_end() {
-    // Walk from the end of the operands over the called operand, the subclass
-    // operands, and any operands for bundles to find the end of the argument
+    // From the end of the data operands, walk backwards past the bundle
     // operands.
-    return op_end() - getNumTotalBundleOperands() -
-           getNumSubclassExtraOperands() - 1;
+    return data_operands_end() - getNumTotalBundleOperands();
   }
   User::const_op_iterator arg_end() const {
     return const_cast<CallBase *>(this)->arg_end();
   }
 
   /// Iteration adapter for range-for loops.
+  iterator_range<User::op_iterator> args() {
+    return make_range(arg_begin(), arg_end());
+  }
+  iterator_range<User::const_op_iterator> args() const {
+    return make_range(arg_begin(), arg_end());
+  }
+  bool arg_empty() const { return arg_end() == arg_begin(); }
+  unsigned arg_size() const { return arg_end() - arg_begin(); }
+
+  // Legacy API names that duplicate the above and will be removed once users
+  // are migrated.
   iterator_range<User::op_iterator> arg_operands() {
     return make_range(arg_begin(), arg_end());
   }
   iterator_range<User::const_op_iterator> arg_operands() const {
     return make_range(arg_begin(), arg_end());
   }
-
-  unsigned getNumArgOperands() const { return arg_end() - arg_begin(); }
+  unsigned getNumArgOperands() const { return arg_size(); }
 
   Value *getArgOperand(unsigned i) const {
     assert(i < getNumArgOperands() && "Out of bounds!");
@@ -1096,7 +1165,20 @@ public:
     return User::getOperandUse(i);
   }
 
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+  bool isArgOperand(const Use *U) const {
+    assert(this == U->getUser() &&
+           "Only valid to query with a use of this instruction!");
+    return arg_begin() <= U && U < arg_end();
+  }
+  bool isArgOperand(Value::const_user_iterator UI) const {
+    return isArgOperand(&UI.getUse());
+  }
+
+  /// Returns true if this CallSite passes the given Value* as an argument to
+  /// the called function.
+  bool hasArgument(const Value *V) const {
+    return llvm::any_of(args(), [V](const Value *Arg) { return Arg == V; });
+  }
 
   Value *getCalledOperand() const { return Op<CalledOperandOpEndIdx>(); }
 
@@ -1113,13 +1195,45 @@ public:
     return dyn_cast_or_null<Function>(getCalledOperand());
   }
 
+  /// Return true if the callsite is an indirect call.
+  bool isIndirectCall() const;
+
+  /// Determine whether the passed iterator points to the callee operand's Use.
+  bool isCallee(Value::const_user_iterator UI) const {
+    return isCallee(&UI.getUse());
+  }
+
+  /// Determine whether this Use is the callee operand's Use.
+  bool isCallee(const Use *U) const { return &getCalledOperandUse() == U; }
+
+  /// Helper to get the caller (the parent function).
+  Function *getCaller();
+  const Function *getCaller() const {
+    return const_cast<CallBase *>(this)->getCaller();
+  }
+
+  /// Tests if this call site must be tail call optimized. Only a CallInst can
+  /// be tail call optimized.
+  bool isMustTailCall() const;
+
+  /// Tests if this call site is marked as a tail call.
+  bool isTailCall() const;
+
+  /// Returns the intrinsic ID of the intrinsic called or
+  /// Intrinsic::not_intrinsic if the called function is not an intrinsic, or if
+  /// this is an indirect call.
+  Intrinsic::ID getIntrinsicID() const;
+
   void setCalledOperand(Value *V) { Op<CalledOperandOpEndIdx>() = V; }
 
   /// Sets the function called, including updating the function type.
-  void setCalledFunction(Value *Fn) {
-    setCalledFunction(
-        cast<FunctionType>(cast<PointerType>(Fn->getType())->getElementType()),
-        Fn);
+  void setCalledFunction(Function *Fn) {
+    setCalledFunction(Fn->getFunctionType(), Fn);
+  }
+
+  /// Sets the function called, including updating the function type.
+  void setCalledFunction(FunctionCallee Fn) {
+    setCalledFunction(Fn.getFunctionType(), Fn.getCallee());
   }
 
   /// Sets the function called, including updating to the specified function
@@ -1128,6 +1242,9 @@ public:
     this->FTy = FTy;
     assert(FTy == cast<FunctionType>(
                       cast<PointerType>(Fn->getType())->getElementType()));
+    // This function doesn't mutate the return type, only the function
+    // type. Seems broken, but I'm just gonna stick an assert in for now.
+    assert(getType() == FTy->getReturnType());
     setCalledOperand(Fn);
   }
 
@@ -1141,6 +1258,9 @@ public:
     setInstructionSubclassData((getSubclassDataFromInstruction() & 3) |
                                (ID << 2));
   }
+
+  /// Check if this call is an inline asm statement.
+  bool isInlineAsm() const { return isa<InlineAsm>(getCalledOperand()); }
 
   /// \name Attribute API
   ///
@@ -1304,6 +1424,55 @@ public:
     return bundleOperandHasAttr(i - 1, Kind);
   }
 
+  /// Determine whether this data operand is not captured.
+  // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
+  // better indicate that this may return a conservative answer.
+  bool doesNotCapture(unsigned OpNo) const {
+    return dataOperandHasImpliedAttr(OpNo + 1, Attribute::NoCapture);
+  }
+
+  /// Determine whether this argument is passed by value.
+  bool isByValArgument(unsigned ArgNo) const {
+    return paramHasAttr(ArgNo, Attribute::ByVal);
+  }
+
+  /// Determine whether this argument is passed in an alloca.
+  bool isInAllocaArgument(unsigned ArgNo) const {
+    return paramHasAttr(ArgNo, Attribute::InAlloca);
+  }
+
+  /// Determine whether this argument is passed by value or in an alloca.
+  bool isByValOrInAllocaArgument(unsigned ArgNo) const {
+    return paramHasAttr(ArgNo, Attribute::ByVal) ||
+           paramHasAttr(ArgNo, Attribute::InAlloca);
+  }
+
+  /// Determine if there are is an inalloca argument. Only the last argument can
+  /// have the inalloca attribute.
+  bool hasInAllocaArgument() const {
+    return !arg_empty() && paramHasAttr(arg_size() - 1, Attribute::InAlloca);
+  }
+
+  // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
+  // better indicate that this may return a conservative answer.
+  bool doesNotAccessMemory(unsigned OpNo) const {
+    return dataOperandHasImpliedAttr(OpNo + 1, Attribute::ReadNone);
+  }
+
+  // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
+  // better indicate that this may return a conservative answer.
+  bool onlyReadsMemory(unsigned OpNo) const {
+    return dataOperandHasImpliedAttr(OpNo + 1, Attribute::ReadOnly) ||
+           dataOperandHasImpliedAttr(OpNo + 1, Attribute::ReadNone);
+  }
+
+  // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
+  // better indicate that this may return a conservative answer.
+  bool doesNotReadMemory(unsigned OpNo) const {
+    return dataOperandHasImpliedAttr(OpNo + 1, Attribute::WriteOnly) ||
+           dataOperandHasImpliedAttr(OpNo + 1, Attribute::ReadNone);
+  }
+
   /// Extract the alignment of the return value.
   unsigned getRetAlignment() const { return Attrs.getRetAlignment(); }
 
@@ -1323,6 +1492,11 @@ public:
   uint64_t getDereferenceableOrNullBytes(unsigned i) const {
     return Attrs.getDereferenceableOrNullBytes(i);
   }
+
+  /// Return true if the return value is known to be not null.
+  /// This may be because it has the nonnull attribute, or because at least
+  /// one byte is dereferenceable and the pointer is in addrspace(0).
+  bool isReturnNonNull() const;
 
   /// Determine if the return value is marked with NoAlias attribute.
   bool returnDoesNotAlias() const {
@@ -1475,6 +1649,16 @@ public:
   bool isBundleOperand(unsigned Idx) const {
     return hasOperandBundles() && Idx >= getBundleOperandsStartIndex() &&
            Idx < getBundleOperandsEndIndex();
+  }
+
+  /// Returns true if the use is a bundle operand.
+  bool isBundleOperand(const Use *U) const {
+    assert(this == U->getUser() &&
+           "Only valid to query with a use of this instruction!");
+    return hasOperandBundles() && isBundleOperand(U - op_begin());
+  }
+  bool isBundleOperand(Value::const_user_iterator UI) const {
+    return isBundleOperand(&UI.getUse());
   }
 
   /// Return the total number operands (not operand bundles) used by

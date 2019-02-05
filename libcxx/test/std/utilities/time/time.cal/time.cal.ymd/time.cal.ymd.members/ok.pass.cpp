@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
@@ -43,6 +42,37 @@ int main()
     static_assert(!year_month_day{year{-32768}, January, day{} }.ok(), ""); // Bad year & day
 
     static_assert( year_month_day{year{2019},   January, day{1}}.ok(), ""); // All OK
+
+//  Some months have a 31st
+    static_assert( year_month_day{year{2020},   month{ 1}, day{31}}.ok(), "");
+    static_assert(!year_month_day{year{2020},   month{ 2}, day{31}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 3}, day{31}}.ok(), "");
+    static_assert(!year_month_day{year{2020},   month{ 4}, day{31}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 5}, day{31}}.ok(), "");
+    static_assert(!year_month_day{year{2020},   month{ 6}, day{31}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 7}, day{31}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 8}, day{31}}.ok(), "");
+    static_assert(!year_month_day{year{2020},   month{ 9}, day{31}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{10}, day{31}}.ok(), "");
+    static_assert(!year_month_day{year{2020},   month{11}, day{31}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{12}, day{31}}.ok(), "");
+
+//  Everyone except FEB has a 30th
+    static_assert( year_month_day{year{2020},   month{ 1}, day{30}}.ok(), "");
+    static_assert(!year_month_day{year{2020},   month{ 2}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 3}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 4}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 5}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 6}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 7}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 8}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{ 9}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{10}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{11}, day{30}}.ok(), "");
+    static_assert( year_month_day{year{2020},   month{12}, day{30}}.ok(), "");
+
+    static_assert(!year_month_day{year{2019},   std::chrono::February, day{29}}.ok(), ""); // Not a leap year
+    static_assert( year_month_day{year{2020},   std::chrono::February, day{29}}.ok(), ""); // Ok; 2020 is a leap year
 
     for (unsigned i = 0; i <= 50; ++i)
     {

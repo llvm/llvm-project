@@ -1,9 +1,8 @@
 #===-- CMakeLists.txt ----------------------------------------------------===##
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is dual licensed under the MIT and the University of Illinois Open
-# Source Licenses. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===----------------------------------------------------------------------===##
 cmake_minimum_required(VERSION 3.4.3)
@@ -47,7 +46,7 @@ if (PARALLELSTL_USE_PARALLEL_POLICIES)
         endif()
     endif()
 else()
-    target_add_definitions(ParallelSTL INTERFACE PSTL_USE_PARALLEL_POLICIES=0)
+    target_compile_definitions(ParallelSTL INTERFACE PSTL_USE_PARALLEL_POLICIES=0)
 endif()
 
 target_include_directories(ParallelSTL

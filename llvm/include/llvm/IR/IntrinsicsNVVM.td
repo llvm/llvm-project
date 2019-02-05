@@ -1,9 +1,8 @@
 //===- IntrinsicsNVVM.td - Defines NVVM intrinsics ---------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -3674,9 +3673,17 @@ multiclass PTXReadSRegIntrinsic_v4i32<string regname> {
 class PTXReadSRegIntrinsic_r32<string name>
   : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
     GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
-
 class PTXReadSRegIntrinsic_r64<string name>
   : Intrinsic<[llvm_i64_ty], [], [IntrNoMem]>,
+    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+
+// Intrinsics to read registers with non-constant values. E.g. the values that
+// do change over the kernel lifetime. Such reads should not be CSE'd.
+class PTXReadNCSRegIntrinsic_r32<string name>
+  : Intrinsic<[llvm_i32_ty], [], [IntrInaccessibleMemOnly]>,
+    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
+class PTXReadNCSRegIntrinsic_r64<string name>
+  : Intrinsic<[llvm_i64_ty], [], [IntrInaccessibleMemOnly]>,
     GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
 defm int_nvvm_read_ptx_sreg_tid : PTXReadSRegIntrinsic_v4i32<"tid">;
@@ -3704,13 +3711,13 @@ def int_nvvm_read_ptx_sreg_lanemask_ge :
 def int_nvvm_read_ptx_sreg_lanemask_gt :
     PTXReadSRegIntrinsic_r32<"lanemask_gt">;
 
-def int_nvvm_read_ptx_sreg_clock : PTXReadSRegIntrinsic_r32<"clock">;
-def int_nvvm_read_ptx_sreg_clock64 : PTXReadSRegIntrinsic_r64<"clock64">;
+def int_nvvm_read_ptx_sreg_clock : PTXReadNCSRegIntrinsic_r32<"clock">;
+def int_nvvm_read_ptx_sreg_clock64 : PTXReadNCSRegIntrinsic_r64<"clock64">;
 
-def int_nvvm_read_ptx_sreg_pm0 : PTXReadSRegIntrinsic_r32<"pm0">;
-def int_nvvm_read_ptx_sreg_pm1 : PTXReadSRegIntrinsic_r32<"pm1">;
-def int_nvvm_read_ptx_sreg_pm2 : PTXReadSRegIntrinsic_r32<"pm2">;
-def int_nvvm_read_ptx_sreg_pm3 : PTXReadSRegIntrinsic_r32<"pm3">;
+def int_nvvm_read_ptx_sreg_pm0 : PTXReadNCSRegIntrinsic_r32<"pm0">;
+def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic_r32<"pm1">;
+def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic_r32<"pm2">;
+def int_nvvm_read_ptx_sreg_pm3 : PTXReadNCSRegIntrinsic_r32<"pm3">;
 
 def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
 

@@ -1,9 +1,8 @@
 //===-- SIRegisterInfo.td - SI Register defs ---------------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -459,15 +458,15 @@ def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16]
 // Requires 2 s_mov_b64 to copy
 let CopyCost = 2 in {
 
-def SGPR_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v16i8, v2i64], 32, (add SGPR_128Regs)> {
+def SGPR_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64], 32, (add SGPR_128Regs)> {
   let AllocationPriority = 10;
 }
 
-def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v16i8, v2i64], 32, (add TTMP_128Regs)> {
+def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64], 32, (add TTMP_128Regs)> {
   let isAllocatable = 0;
 }
 
-def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v16i8, v2i64, v2f64], 32,
+def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
   (add SGPR_128, TTMP_128)> {
   let AllocationPriority = 10;
 }

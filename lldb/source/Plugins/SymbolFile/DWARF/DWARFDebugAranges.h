@@ -1,9 +1,8 @@
 //===-- DWARFDebugAranges.h -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +18,7 @@ class SymbolFileDWARF;
 
 class DWARFDebugAranges {
 protected:
-  typedef lldb_private::RangeDataArray<dw_addr_t, uint32_t, dw_offset_t, 1>
+  typedef lldb_private::RangeDataVector<dw_addr_t, uint32_t, dw_offset_t>
       RangeToDIE;
 
 public:

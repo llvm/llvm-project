@@ -14,7 +14,7 @@
 ; GCN-NOT: s32
 ; GCN: buffer_store_dword [[LOAD1]], off, s[0:3], s5 offset:20{{$}}
 ; GCN-NOT: s32
-define void @void_func_byval_struct(%struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg0, %struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg1) #1 {
+define hidden void @void_func_byval_struct(%struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg0, %struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg1) #1 {
 entry:
   %arrayidx = getelementptr inbounds %struct.ByValStruct, %struct.ByValStruct addrspace(5)* %arg0, i32 0, i32 0, i32 0
   %tmp = load volatile i32, i32 addrspace(5)* %arrayidx, align 4
@@ -193,7 +193,7 @@ entry:
 ; GCN-NOT: s32
 ; GCN: buffer_store_dword [[LOAD1]], off, s[0:3], s5 offset:24{{$}}
 ; GCN-NOT: s32
-define void @void_func_byval_struct_align8(%struct.ByValStruct addrspace(5)* byval noalias nocapture align 8 %arg0, %struct.ByValStruct addrspace(5)* byval noalias nocapture align 8 %arg1) #1 {
+define hidden void @void_func_byval_struct_align8(%struct.ByValStruct addrspace(5)* byval noalias nocapture align 8 %arg0, %struct.ByValStruct addrspace(5)* byval noalias nocapture align 8 %arg1) #1 {
 entry:
   %arrayidx = getelementptr inbounds %struct.ByValStruct, %struct.ByValStruct addrspace(5)* %arg0, i32 0, i32 0, i32 0
   %tmp = load volatile i32, i32 addrspace(5)* %arrayidx, align 8

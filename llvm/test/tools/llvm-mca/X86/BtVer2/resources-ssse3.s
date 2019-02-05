@@ -124,28 +124,28 @@ psignw      (%rax), %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   palignr	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        phaddd	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   phaddd	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        phaddd	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *                   phaddd	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        phaddd	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.00    *                   phaddd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        phaddsw	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   phaddsw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        phaddsw	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *                   phaddsw	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        phaddsw	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.00    *                   phaddsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        phaddw	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   phaddw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        phaddw	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *                   phaddw	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        phaddw	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.00    *                   phaddw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        phsubd	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   phsubd	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        phsubd	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *                   phsubd	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        phsubd	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.00    *                   phsubd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        phsubsw	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   phsubsw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        phsubsw	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *                   phsubsw	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        phsubsw	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.00    *                   phsubsw	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        phsubw	%mm0, %mm2
 # CHECK-NEXT:  1      6     1.00    *                   phsubw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        phsubw	%xmm0, %xmm2
-# CHECK-NEXT:  1      6     1.00    *                   phsubw	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        phsubw	%xmm0, %xmm2
+# CHECK-NEXT:  1      7     1.00    *                   phsubw	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        pmaddubsw	%mm0, %mm2
 # CHECK-NEXT:  1      7     1.00    *                   pmaddubsw	(%rax), %mm2
 # CHECK-NEXT:  1      2     1.00                        pmaddubsw	%xmm0, %xmm2

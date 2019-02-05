@@ -1,9 +1,8 @@
 //===-- IRForTarget.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -310,12 +309,14 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
   lldb_private::ExecutionContext exe_ctx(target_sp, true);
-  if (m_result_type.GetBitSize(exe_ctx.GetBestExecutionContextScope()) == 0) {
+  llvm::Optional<uint64_t> bit_size =
+      m_result_type.GetBitSize(exe_ctx.GetBestExecutionContextScope());
+  if (!bit_size) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
 
     if (log)
-      log->Printf("Result type has size 0");
+      log->Printf("Result type has unknown size");
 
     m_error_stream.Printf("Error [IRForTarget]: Size of result type '%s' "
                           "couldn't be determined\n",
@@ -334,7 +335,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   if (log)
     log->Printf("Creating a new result global: \"%s\" with size 0x%" PRIx64,
-                m_result_name.GetCString(), m_result_type.GetByteSize(nullptr));
+                m_result_name.GetCString(),
+                m_result_type.GetByteSize(nullptr).getValueOr(0));
 
   // Construct a new result global and set up its metadata
 
@@ -1367,7 +1369,9 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       value_type = global_variable->getType();
     }
 
-    const uint64_t value_size = compiler_type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(nullptr);
+    if (!value_size)
+      return false;
     lldb::offset_t value_alignment =
         (compiler_type.GetTypeBitAlign() + 7ull) / 8ull;
 
@@ -1378,13 +1382,13 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
                   lldb_private::ClangUtil::GetQualType(compiler_type)
                       .getAsString()
                       .c_str(),
-                  PrintType(value_type).c_str(), value_size, value_alignment);
+                  PrintType(value_type).c_str(), *value_size, value_alignment);
     }
 
     if (named_decl &&
         !m_decl_map->AddValueToStruct(
             named_decl, lldb_private::ConstString(name.c_str()), llvm_value_ptr,
-            value_size, value_alignment)) {
+            *value_size, value_alignment)) {
       if (!global_variable->hasExternalLinkage())
         return true;
       else

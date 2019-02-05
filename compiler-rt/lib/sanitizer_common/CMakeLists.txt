@@ -38,7 +38,9 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_suppressions.cc
   sanitizer_tls_get_addr.cc
   sanitizer_thread_registry.cc
-  sanitizer_win.cc)
+  sanitizer_type_traits.cc
+  sanitizer_win.cc
+  )
 
 if(UNIX AND NOT APPLE AND NOT OS_NAME MATCHES "SunOS")
   list(APPEND SANITIZER_SOURCES_NOTERMINATION
@@ -62,13 +64,15 @@ set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_linux_libcdep.cc
   sanitizer_mac_libcdep.cc
   sanitizer_posix_libcdep.cc
-  sanitizer_stoptheworld_linux_libcdep.cc)
+  sanitizer_stoptheworld_linux_libcdep.cc
+  )
 
 set(SANITIZER_COVERAGE_SOURCES
   sancov_flags.cc
   sanitizer_coverage_fuchsia.cc
   sanitizer_coverage_libcdep_new.cc
-  sanitizer_coverage_win_sections.cc)
+  sanitizer_coverage_win_sections.cc
+  )
 
 set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_allocator_report.cc
@@ -86,7 +90,8 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_report.cc
   sanitizer_symbolizer_win.cc
   sanitizer_unwind_linux_libcdep.cc
-  sanitizer_unwind_win.cc)
+  sanitizer_unwind_win.cc
+  )
 
 # Explicitly list all sanitizer_common headers. Not all of these are
 # included in sanitizer_common source files, but we need to depend on
@@ -187,15 +192,13 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_win.h
   sanitizer_win_defs.h
   sanitizer_win_dll_thunk.h
-  sanitizer_win_weak_interception.h)
+  sanitizer_win_weak_interception.h
+  )
 
 include_directories(..)
 
-set(SANITIZER_COMMON_DEFINITIONS)
-
-include(CheckIncludeFile)
-append_have_file_definition(rpc/xdr.h HAVE_RPC_XDR_H SANITIZER_COMMON_DEFINITIONS)
-append_have_file_definition(tirpc/rpc/xdr.h HAVE_TIRPC_RPC_XDR_H SANITIZER_COMMON_DEFINITIONS)
+set(SANITIZER_COMMON_DEFINITIONS
+  HAVE_RPC_XDR_H=${HAVE_RPC_XDR_H})
 
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF SANITIZER_CFLAGS)

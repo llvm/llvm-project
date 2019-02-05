@@ -42,7 +42,19 @@ else()
   list(APPEND LLDB_PLUGINS lldbPluginObjectFileELF)
 endif()
 
-add_lldb_tool(lldb-server INCLUDE_IN_SUITE
+if(IOS)
+  if(LLDB_CODESIGN_IDENTITY)
+    # Use explicit LLDB identity
+    set(LLVM_CODESIGNING_IDENTITY ${LLDB_CODESIGN_IDENTITY})
+  else()
+    # Use explicit LLVM identity or default to lldb_codesign if empty
+    if(NOT LLVM_CODESIGNING_IDENTITY)
+      set(LLVM_CODESIGNING_IDENTITY lldb_codesign)
+    endif()
+  endif()
+endif()
+
+add_lldb_tool(lldb-server
     Acceptor.cpp
     lldb-gdbserver.cpp
     lldb-platform.cpp

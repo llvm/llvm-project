@@ -5,8 +5,8 @@
 # RUN: llvm-ar rc %t.a %t.o
 # RUN: not ld.lld --gdb-index -e main %t2.o %t.a -o %t 2>&1 | FileCheck --check-prefix=ARCHIVE %s
 
-# CHECK: ld.lld: error: {{.*}}gdb-index-invalid-ranges.s.tmp.o: decoding address ranges: invalid range list entry at offset 0x10
-# ARCHIVE: ld.lld: error: gdb-index-invalid-ranges.s.tmp.o: in archive {{.*}}gdb-index-invalid-ranges.s.tmp.a: decoding address ranges: invalid range list entry at offset 0x10
+# CHECK: ld.lld: error: {{.*}}gdb-index-invalid-ranges.s.tmp.o:(.debug_info): decoding address ranges: invalid range list entry at offset 0x10
+# ARCHIVE: ld.lld: error: {{.*}}gdb-index-invalid-ranges.s.tmp.a(gdb-index-invalid-ranges.s.tmp.o):(.debug_info): decoding address ranges: invalid range list entry at offset 0x10
 
 .section .text.foo1,"ax",@progbits
 .globl f1

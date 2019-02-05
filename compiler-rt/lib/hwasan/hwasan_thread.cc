@@ -25,10 +25,13 @@ static u32 RandomSeed() {
   return seed;
 }
 
+void Thread::InitRandomState() {
+  random_state_ = flags()->random_tags ? RandomSeed() : unique_id_;
+}
+
 void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
   static u64 unique_id;
   unique_id_ = unique_id++;
-  random_state_ = flags()->random_tags ? RandomSeed() : unique_id_;
   if (auto sz = flags()->heap_history_size)
     heap_allocations_ = HeapAllocationsRingBuffer::New(sz);
 
@@ -43,27 +46,18 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
   // ScopedTaggingDisable needs GetCurrentThread to be set up.
   ScopedTaggingDisabler disabler;
 
-  // If this process is "init" (pid 1), /proc may not be mounted yet.
-  if (IsMainThread() && !FileExists("/proc/self/maps")) {
-    stack_top_ = stack_bottom_ = 0;
-    tls_begin_ = tls_end_ = 0;
-  } else {
-    uptr tls_size;
-    uptr stack_size;
-    GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size,
-                         &tls_begin_, &tls_size);
-    stack_top_ = stack_bottom_ + stack_size;
-    tls_end_ = tls_begin_ + tls_size;
+  uptr tls_size;
+  uptr stack_size;
+  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
+                       &tls_size);
+  stack_top_ = stack_bottom_ + stack_size;
+  tls_end_ = tls_begin_ + tls_size;
 
+  if (stack_bottom_) {
     int local;
     CHECK(AddrIsInStack((uptr)&local));
     CHECK(MemIsApp(stack_bottom_));
     CHECK(MemIsApp(stack_top_ - 1));
-
-    if (stack_bottom_) {
-      CHECK(MemIsApp(stack_bottom_));
-      CHECK(MemIsApp(stack_top_ - 1));
-    }
   }
 
   if (flags()->verbose_threads) {

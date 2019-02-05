@@ -1,9 +1,8 @@
 //===- DumpOutputStyle.cpp ------------------------------------ *- C++ --*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -1011,17 +1010,12 @@ Error DumpOutputStyle::dumpOldFpo(PDBFile &File) {
   ExitOnError Err("Error dumping old fpo data:");
   auto &Dbi = Err(File.getPDBDbiStream());
 
-  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::FPO);
-  if (Index == kInvalidStreamIndex) {
+  if (!Dbi.hasOldFpoRecords()) {
     printStreamNotPresent("FPO");
     return Error::success();
   }
 
-  std::unique_ptr<MappedBlockStream> OldFpo = File.createIndexedStream(Index);
-  BinaryStreamReader Reader(*OldFpo);
-  FixedStreamArray<object::FpoData> Records;
-  Err(Reader.readArray(Records,
-                       Reader.bytesRemaining() / sizeof(object::FpoData)));
+  const FixedStreamArray<object::FpoData>& Records = Dbi.getOldFpoRecords();
 
   P.printLine("  RVA    | Code | Locals | Params | Prolog | Saved Regs | Use "
               "BP | Has SEH | Frame Type");
@@ -1043,18 +1037,12 @@ Error DumpOutputStyle::dumpNewFpo(PDBFile &File) {
   ExitOnError Err("Error dumping new fpo data:");
   auto &Dbi = Err(File.getPDBDbiStream());
 
-  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::NewFPO);
-  if (Index == kInvalidStreamIndex) {
+  if (!Dbi.hasNewFpoRecords()) {
     printStreamNotPresent("New FPO");
     return Error::success();
   }
 
-  std::unique_ptr<MappedBlockStream> NewFpo = File.createIndexedStream(Index);
-
-  DebugFrameDataSubsectionRef FDS;
-  if (auto EC = FDS.initialize(*NewFpo))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Invalid new fpo stream");
+  const DebugFrameDataSubsectionRef& FDS = Dbi.getNewFpoRecords();
 
   P.printLine("  RVA    | Code | Locals | Params | Stack | Prolog | Saved Regs "
               "| Has SEH | Has C++EH | Start | Program");
@@ -1413,6 +1401,15 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   if (DumpExtras) {
     P.NewLine();
+
+    P.formatLine("Header Version: {0}",
+                 static_cast<uint32_t>(Stream.getTpiVersion()));
+    P.formatLine("Hash Stream Index: {0}", Stream.getTypeHashStreamIndex());
+    P.formatLine("Aux Hash Stream Index: {0}",
+                 Stream.getTypeHashStreamAuxIndex());
+    P.formatLine("Hash Key Size: {0}", Stream.getHashKeySize());
+    P.formatLine("Num Hash Buckets: {0}", Stream.getNumHashBuckets());
+
     auto IndexOffsets = Stream.getTypeIndexOffsets();
     P.formatLine("Type Index Offsets:");
     for (const auto &IO : IndexOffsets) {

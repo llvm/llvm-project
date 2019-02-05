@@ -1,4 +1,4 @@
-; RUN: opt -hotcoldsplit -S < %s | FileCheck %s
+; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -14,12 +14,18 @@ if.then:
 
 if.else:
   call void @sink()
-  call void @sink()
-  call void @sink()
+  ret void
+}
+
+; CHECK: define {{.*}} @foo{{.*}}#[[outlined_func_attr:[0-9]+]]
+define void @foo() cold {
   ret void
 }
 
 declare void @sink() cold
 
-; CHECK: define {{.*}} @fun.cold.1{{.*}}#[[outlined_func_attr:[0-9]+]]
-; CHECK: attributes #[[outlined_func_attr]] = { {{.*}}minsize
+; CHECK: define {{.*}} @fun.cold.1{{.*}}#[[outlined_func_attr]]
+
+; CHECK: attributes #[[outlined_func_attr]] = {
+; CHECK-SAME: cold
+; CHECK-SAME: minsize

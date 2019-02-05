@@ -1,0 +1,89 @@
+RUN: lldb-test object-file %p/Inputs/sections.syms -contents | FileCheck %s
+
+CHECK: Showing 6 sections
+
+CHECK:        Index: 0
+CHECK-NEXT:   ID: 0x1
+CHECK-NEXT:   Name: MODULE
+CHECK-NEXT:   Type: regular
+CHECK-NEXT:   Permissions: ---
+CHECK-NEXT:   Thread specific: no
+CHECK-NEXT:   VM address: 0
+CHECK-NEXT:   VM size: 0
+CHECK-NEXT:   File size: 64
+CHECK-NEXT:   Data:  (
+CHECK-NEXT:       0000: 4D4F4455 4C45204C 696E7578 20783836 5F363420 30303030 30303030 32344235  |MODULE Linux x86_64 0000000024B5|
+CHECK-NEXT:       0020: 44313939 46304637 36364646 46464646 35444333 30206C69 6E75782E 6F75740A  |D199F0F766FFFFFF5DC30 linux.out.|
+CHECK-NEXT:   )
+
+CHECK:        Index: 1
+CHECK-NEXT:   ID: 0x2
+CHECK-NEXT:   Name: INFO
+CHECK-NEXT:   Type: regular
+CHECK-NEXT:   Permissions: ---
+CHECK-NEXT:   Thread specific: no
+CHECK-NEXT:   VM address: 0
+CHECK-NEXT:   VM size: 0
+CHECK-NEXT:   File size: 46
+CHECK-NEXT:   Data:  (
+CHECK-NEXT:       0000: 494E464F 20434F44 455F4944 20303030 30303030 30423532 34393944 31463046  |INFO CODE_ID 00000000B52499D1F0F|
+CHECK-NEXT:       0020: 37363646 46464646 46354443 330A                                          |766FFFFFF5DC3.|
+CHECK-NEXT:   )
+
+CHECK:        Index: 2
+CHECK-NEXT:   ID: 0x3
+CHECK-NEXT:   Name: FILE
+CHECK-NEXT:   Type: regular
+CHECK-NEXT:   Permissions: ---
+CHECK-NEXT:   Thread specific: no
+CHECK-NEXT:   VM address: 0
+CHECK-NEXT:   VM size: 0
+CHECK-NEXT:   File size: 16
+CHECK-NEXT:   Data:  (
+CHECK-NEXT:       0000: 46494C45 2030202F 746D702F 612E630A                                      |FILE 0 /tmp/a.c.|
+CHECK-NEXT:   )
+
+CHECK:        Index: 3
+CHECK-NEXT:   ID: 0x4
+CHECK-NEXT:   Name: FUNC
+CHECK-NEXT:   Type: regular
+CHECK-NEXT:   Permissions: ---
+CHECK-NEXT:   Thread specific: no
+CHECK-NEXT:   VM address: 0
+CHECK-NEXT:   VM size: 0
+CHECK-NEXT:   File size: 66
+CHECK-NEXT:   Data:  (
+CHECK-NEXT:       0000: 46554E43 20313031 30203130 2030205F 73746172 740A3130 31302034 20342030  |FUNC 1010 10 0 _start.1010 4 4 0|
+CHECK-NEXT:       0020: 0A313031 34203520 3520300A 31303139 20352036 20300A31 30316520 32203720  |.1014 5 5 0.1019 5 6 0.101e 2 7 |
+CHECK-NEXT:       0040: 300A                                                                     |0.|
+CHECK-NEXT:   )
+
+CHECK:        Index: 4
+CHECK-NEXT:   ID: 0x5
+CHECK-NEXT:   Name: PUBLIC
+CHECK-NEXT:   Type: regular
+CHECK-NEXT:   Permissions: ---
+CHECK-NEXT:   Thread specific: no
+CHECK-NEXT:   VM address: 0
+CHECK-NEXT:   VM size: 0
+CHECK-NEXT:   File size: 21
+CHECK-NEXT:   Data:  (
+CHECK-NEXT:       0000: 5055424C 49432031 30313020 30205F73 74617274 0A                          |PUBLIC 1010 0 _start.|
+CHECK-NEXT:   )
+
+CHECK:        Index: 5
+CHECK-NEXT:   ID: 0x6
+CHECK-NEXT:   Name: STACK
+CHECK-NEXT:   Type: regular
+CHECK-NEXT:   Permissions: ---
+CHECK-NEXT:   Thread specific: no
+CHECK-NEXT:   VM address: 0
+CHECK-NEXT:   VM size: 0
+CHECK-NEXT:   File size: 136
+CHECK-NEXT:   Data:  (
+CHECK-NEXT:       0000: 53544143 4B204346 4920494E 49542031 30313020 3130202E 6366613A 20247273  |STACK CFI INIT 1010 10 .cfa: $rs|
+CHECK-NEXT:       0020: 70203820 2B202E72 613A202E 63666120 2D38202B 205E0A53 5441434B 20434649  |p 8 + .ra: .cfa -8 + ^.STACK CFI|
+CHECK-NEXT:       0040: 20313031 31202472 62703A20 2E636661 202D3136 202B205E 202E6366 613A2024  | 1011 $rbp: .cfa -16 + ^ .cfa: $|
+CHECK-NEXT:       0060: 72737020 3136202B 0A535441 434B2043 46492031 30313420 2E636661 3A202472  |rsp 16 +.STACK CFI 1014 .cfa: $r|
+CHECK-NEXT:       0080: 62702031 36202B0A                                                        |bp 16 +.|
+CHECK-NEXT:   )

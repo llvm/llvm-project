@@ -1,9 +1,8 @@
 //===- GISelWorkList.h - Worklist for GISel passes ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,7 @@
 
 namespace llvm {
 
+class MachineInstr;
 class MachineFunction;
 
 // Worklist which mostly works similar to InstCombineWorkList, but on
@@ -25,23 +25,15 @@ class MachineFunction;
 // erasing an element doesn't move all elements over one place - instead just
 // nulls out the element of the vector.
 //
-// This worklist operates on instructions within a particular function. This is
-// important for acquiring the rights to modify/replace instructions a
-// GISelChangeObserver reports as the observer doesn't have the right to make
-// changes to the instructions it sees so we use our access to the
-// MachineFunction to establish that it's ok to add a given instruction to the
-// worklist.
-//
 // FIXME: Does it make sense to factor out common code with the
 // instcombinerWorkList?
 template<unsigned N>
 class GISelWorkList {
-  MachineFunction *MF;
   SmallVector<MachineInstr *, N> Worklist;
   DenseMap<MachineInstr *, unsigned> WorklistMap;
 
 public:
-  GISelWorkList(MachineFunction *MF) : MF(MF) {}
+  GISelWorkList() {}
 
   bool empty() const { return WorklistMap.empty(); }
 
@@ -49,27 +41,8 @@ public:
 
   /// Add the specified instruction to the worklist if it isn't already in it.
   void insert(MachineInstr *I) {
-    // It would be safe to add this instruction to the worklist regardless but
-    // for consistency with the const version, check that the instruction we're
-    // adding would have been accepted if we were given a const pointer instead.
-    insert(const_cast<const MachineInstr *>(I));
-  }
-
-  void insert(const MachineInstr *I) {
-    // Confirm we'd be able to find the non-const pointer we want to schedule if
-    // we wanted to. We have the right to schedule work that may modify any
-    // instruction in MF.
-    assert(I->getParent() && "Expected parent BB");
-    assert(I->getParent()->getParent() && "Expected parent function");
-    assert((!MF || I->getParent()->getParent() == MF) &&
-           "Expected parent function to be current function or not given");
-
-    // But don't actually do the search since we can derive it from the const
-    // pointer.
-    MachineInstr *NonConstI = const_cast<MachineInstr *>(I);
-    if (WorklistMap.try_emplace(NonConstI, Worklist.size()).second) {
-      Worklist.push_back(NonConstI);
-    }
+    if (WorklistMap.try_emplace(I, Worklist.size()).second)
+      Worklist.push_back(I);
   }
 
   /// Remove I from the worklist if it exists.
@@ -81,6 +54,11 @@ public:
     Worklist[It->second] = nullptr;
 
     WorklistMap.erase(It);
+  }
+
+  void clear() {
+    Worklist.clear();
+    WorklistMap.clear();
   }
 
   MachineInstr *pop_back_val() {

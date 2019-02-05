@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: mkdir %t
 
-; RUN: llvm-rc /FO %t/tag-icon-cursor.res %p/Inputs/tag-icon-cursor.rc
+; RUN: llvm-rc /FO %t/tag-icon-cursor.res -- %p/Inputs/tag-icon-cursor.rc
 ; RUN: llvm-readobj %t/tag-icon-cursor.res | FileCheck %s
 
 ; CHECK: Resource type (int): 1

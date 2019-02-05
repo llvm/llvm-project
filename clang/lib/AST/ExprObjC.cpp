@@ -1,9 +1,8 @@
 //===- ExprObjC.cpp - (ObjC) Expression AST Node Implementation -----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -291,6 +290,32 @@ void ObjCMessageExpr::getSelectorLocs(
     SmallVectorImpl<SourceLocation> &SelLocs) const {
   for (unsigned i = 0, e = getNumSelectorLocs(); i != e; ++i)
     SelLocs.push_back(getSelectorLoc(i));
+}
+
+
+QualType ObjCMessageExpr::getCallReturnType(ASTContext &Ctx) const {
+  if (const ObjCMethodDecl *MD = getMethodDecl()) {
+    QualType QT = MD->getReturnType();
+    if (QT == Ctx.getObjCInstanceType()) {
+      // instancetype corresponds to expression types.
+      return getType();
+    }
+    return QT;
+  }
+
+  // Expression type might be different from an expected call return type,
+  // as expression type would never be a reference even if call returns a
+  // reference. Reconstruct the original expression type.
+  QualType QT = getType();
+  switch (getValueKind()) {
+  case VK_LValue:
+    return Ctx.getLValueReferenceType(QT);
+  case VK_XValue:
+    return Ctx.getRValueReferenceType(QT);
+  case VK_RValue:
+    return QT;
+  }
+  llvm_unreachable("Unsupported ExprValueKind");
 }
 
 SourceRange ObjCMessageExpr::getReceiverRange() const {

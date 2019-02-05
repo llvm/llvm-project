@@ -1,9 +1,8 @@
 //===--------------------- Pipeline.cpp -------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -83,13 +82,13 @@ void Pipeline::appendStage(std::unique_ptr<Stage> S) {
 }
 
 void Pipeline::notifyCycleBegin() {
-  LLVM_DEBUG(dbgs() << "[E] Cycle begin: " << Cycles << '\n');
+  LLVM_DEBUG(dbgs() << "\n[E] Cycle begin: " << Cycles << '\n');
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleBegin();
 }
 
 void Pipeline::notifyCycleEnd() {
-  LLVM_DEBUG(dbgs() << "[E] Cycle end: " << Cycles << "\n\n");
+  LLVM_DEBUG(dbgs() << "[E] Cycle end: " << Cycles << "\n");
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleEnd();
 }

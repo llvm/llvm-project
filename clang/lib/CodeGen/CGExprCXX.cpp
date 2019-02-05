@@ -1,9 +1,8 @@
 //===--- CGExprCXX.cpp - Emit LLVM Code for C++ expressions ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,7 +18,6 @@
 #include "ConstantEmitter.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
@@ -56,7 +54,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
   }
 
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
-  RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, Args.size(), MD);
+  RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, Args.size());
   unsigned PrefixSize = Args.size() - 1;
 
   // And the rest of the call args.
@@ -454,8 +452,7 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
   // Push the this ptr.
   Args.add(RValue::get(ThisPtrForCall), ThisType);
 
-  RequiredArgs required =
-      RequiredArgs::forPrototypePlus(FPT, 1, /*FD=*/nullptr);
+  RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, 1);
 
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
@@ -866,7 +863,7 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
     // can be ignored because the result shouldn't be used if
     // allocation fails.
     if (typeSizeMultiplier != 1) {
-      llvm::Value *umul_with_overflow
+      llvm::Function *umul_with_overflow
         = CGF.CGM.getIntrinsic(llvm::Intrinsic::umul_with_overflow, CGF.SizeTy);
 
       llvm::Value *tsmV =
@@ -906,7 +903,7 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
     if (cookieSize != 0) {
       sizeWithoutCookie = size;
 
-      llvm::Value *uadd_with_overflow
+      llvm::Function *uadd_with_overflow
         = CGF.CGM.getIntrinsic(llvm::Intrinsic::uadd_with_overflow, CGF.SizeTy);
 
       llvm::Value *cookieSizeV = llvm::ConstantInt::get(CGF.SizeTy, cookieSize);
@@ -1293,7 +1290,7 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
                                 const FunctionDecl *CalleeDecl,
                                 const FunctionProtoType *CalleeType,
                                 const CallArgList &Args) {
-  llvm::Instruction *CallOrInvoke;
+  llvm::CallBase *CallOrInvoke;
   llvm::Constant *CalleePtr = CGF.CGM.GetAddrOfFunction(CalleeDecl);
   CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
   RValue RV =
@@ -1309,15 +1306,8 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
   llvm::Function *Fn = dyn_cast<llvm::Function>(CalleePtr);
   if (CalleeDecl->isReplaceableGlobalAllocationFunction() &&
       Fn && Fn->hasFnAttribute(llvm::Attribute::NoBuiltin)) {
-    // FIXME: Add addAttribute to CallSite.
-    if (llvm::CallInst *CI = dyn_cast<llvm::CallInst>(CallOrInvoke))
-      CI->addAttribute(llvm::AttributeList::FunctionIndex,
-                       llvm::Attribute::Builtin);
-    else if (llvm::InvokeInst *II = dyn_cast<llvm::InvokeInst>(CallOrInvoke))
-      II->addAttribute(llvm::AttributeList::FunctionIndex,
-                       llvm::Attribute::Builtin);
-    else
-      llvm_unreachable("unexpected kind of call instruction");
+    CallOrInvoke->addAttribute(llvm::AttributeList::FunctionIndex,
+                               llvm::Attribute::Builtin);
   }
 
   return RV;
@@ -1656,9 +1646,10 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // Emit a null check on the allocation result if the allocation
   // function is allowed to return null (because it has a non-throwing
   // exception spec or is the reserved placement new) and we have an
-  // interesting initializer.
-  bool nullCheck = E->shouldNullCheckAllocation(getContext()) &&
-    (!allocType.isPODType(getContext()) || E->hasInitializer());
+  // interesting initializer will be running sanitizers on the initialization.
+  bool nullCheck = E->shouldNullCheckAllocation() &&
+                   (!allocType.isPODType(getContext()) || E->hasInitializer() ||
+                    sanitizePerformTypeCheck());
 
   llvm::BasicBlock *nullCheckBB = nullptr;
   llvm::BasicBlock *contBB = nullptr;
@@ -1714,10 +1705,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
                      result.getAlignment());
 
   // Emit sanitizer checks for pointer value now, so that in the case of an
-  // array it was checked only once and not at each constructor call.
+  // array it was checked only once and not at each constructor call. We may
+  // have already checked that the pointer is non-null.
+  // FIXME: If we have an array cookie and a potentially-throwing allocator,
+  // we'll null check the wrong pointer here.
+  SanitizerSet SkippedChecks;
+  SkippedChecks.set(SanitizerKind::Null, nullCheck);
   EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall,
-      E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-      result.getPointer(), allocType);
+                E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+                result.getPointer(), allocType, result.getAlignment(),
+                SkippedChecks, numElements);
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
@@ -2251,22 +2248,4 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   }
 
   return Value;
-}
-
-void CodeGenFunction::EmitLambdaExpr(const LambdaExpr *E, AggValueSlot Slot) {
-  LValue SlotLV = MakeAddrLValue(Slot.getAddress(), E->getType());
-
-  CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();
-  for (LambdaExpr::const_capture_init_iterator i = E->capture_init_begin(),
-                                               e = E->capture_init_end();
-       i != e; ++i, ++CurField) {
-    // Emit initialization
-    LValue LV = EmitLValueForFieldInitialization(SlotLV, *CurField);
-    if (CurField->hasCapturedVLAType()) {
-      auto VAT = CurField->getCapturedVLAType();
-      EmitStoreThroughLValue(RValue::get(VLASizeMap[VAT->getSizeExpr()]), LV);
-    } else {
-      EmitInitializerForField(*CurField, LV, *i);
-    }
-  }
 }

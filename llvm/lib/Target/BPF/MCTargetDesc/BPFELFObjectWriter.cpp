@@ -1,9 +1,8 @@
 //===-- BPFELFObjectWriter.cpp - BPF ELF Writer ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -57,8 +56,16 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     // already been fulfilled by applyFixup(). No
     // further relocation is needed.
     if (const MCSymbolRefExpr *A = Target.getSymA()) {
-      if (A->getSymbol().isTemporary())
-        return ELF::R_BPF_NONE;
+      if (A->getSymbol().isTemporary()) {
+        MCSection &Section = A->getSymbol().getSection();
+        const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
+        assert(SectionELF && "Null section for reloc symbol");
+
+        // The reloc symbol should be in text section.
+        unsigned Flags = SectionELF->getFlags();
+        if ((Flags & ELF::SHF_ALLOC) && (Flags & ELF::SHF_EXECINSTR))
+          return ELF::R_BPF_NONE;
+      }
     }
     return ELF::R_BPF_64_32;
   }

@@ -1,0 +1,45 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("IRTests") {
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/AsmParser",
+    "//llvm/lib/IR",
+    "//llvm/lib/Passes",
+    "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "AsmWriterTest.cpp",
+    "AttributesTest.cpp",
+    "BasicBlockTest.cpp",
+    "CFGBuilder.cpp",
+    "ConstantRangeTest.cpp",
+    "ConstantsTest.cpp",
+    "DebugInfoTest.cpp",
+    "DebugTypeODRUniquingTest.cpp",
+    "DomTreeUpdaterTest.cpp",
+    "DominatorTreeBatchUpdatesTest.cpp",
+    "DominatorTreeTest.cpp",
+    "FunctionTest.cpp",
+    "IRBuilderTest.cpp",
+    "InstructionsTest.cpp",
+    "IntrinsicsTest.cpp",
+    "LegacyPassManagerTest.cpp",
+    "MDBuilderTest.cpp",
+    "ManglerTest.cpp",
+    "MetadataTest.cpp",
+    "ModuleTest.cpp",
+    "PassBuilderCallbacksTest.cpp",
+    "PassManagerTest.cpp",
+    "PatternMatch.cpp",
+    "TypesTest.cpp",
+    "UseTest.cpp",
+    "UserTest.cpp",
+    "ValueHandleTest.cpp",
+    "ValueMapTest.cpp",
+    "ValueTest.cpp",
+    "VerifierTest.cpp",
+    "WaymarkTest.cpp",
+  ]
+}

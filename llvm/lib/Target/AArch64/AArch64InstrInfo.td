@@ -1,9 +1,8 @@
 //=- AArch64InstrInfo.td - Describe the AArch64 Instructions -*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -114,10 +113,10 @@ def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
                        AssemblerPredicate<"FeatureAltFPCmp", "altnzcv">;
 def HasFRInt3264     : Predicate<"Subtarget->hasFRInt3264()">,
                        AssemblerPredicate<"FeatureFRInt3264", "frint3264">;
-def HasSpecCtrl      : Predicate<"Subtarget->hasSpecCtrl()">,
-                       AssemblerPredicate<"FeatureSpecCtrl", "specctrl">;
-def HasPredCtrl      : Predicate<"Subtarget->hasPredCtrl()">,
-                       AssemblerPredicate<"FeaturePredCtrl", "predctrl">;
+def HasSB            : Predicate<"Subtarget->hasSB()">,
+                       AssemblerPredicate<"FeatureSB", "sb">;
+def HasPredRes      : Predicate<"Subtarget->hasPredRes()">,
+                       AssemblerPredicate<"FeaturePredRes", "predres">;
 def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
                        AssemblerPredicate<"FeatureCacheDeepPersist", "ccdp">;
 def HasBTI           : Predicate<"Subtarget->hasBTI()">,
@@ -132,6 +131,10 @@ def UseAlternateSExtLoadCVTF32
 def UseNegativeImmediates
     : Predicate<"false">, AssemblerPredicate<"!FeatureNoNegativeImmediates",
                                              "NegativeImmediates">;
+
+def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
+                                  SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                       SDTCisInt<1>]>>;
 
 
 //===----------------------------------------------------------------------===//
@@ -520,6 +523,14 @@ def SPACE : Pseudo<(outs GPR64:$Rd), (ins i32imm:$size, GPR64:$Rn),
                    [(set GPR64:$Rd, (int_aarch64_space imm:$size, GPR64:$Rn))]>,
             Sched<[]>;
 
+let hasSideEffects = 1, isCodeGenOnly = 1 in {
+  def SpeculationSafeValueX
+      : Pseudo<(outs GPR64:$dst), (ins GPR64:$src), []>, Sched<[]>;
+  def SpeculationSafeValueW
+      : Pseudo<(outs GPR32:$dst), (ins GPR32:$src), []>, Sched<[]>;
+}
+
+
 //===----------------------------------------------------------------------===//
 // System instructions.
 //===----------------------------------------------------------------------===//
@@ -733,7 +744,7 @@ def AXFLAG : PstateWriteSimple<(ins), "axflag", "">, Sched<[WriteSys]> {
 def SB : SimpleSystemI<0, (ins), "sb", "">, Sched<[]> {
   let Inst{20-5} = 0b0001100110000111;
   let Unpredictable{11-8} = 0b1111;
-  let Predicates = [HasSpecCtrl];
+  let Predicates = [HasSB];
   let hasSideEffects = 1;
 }
 
@@ -751,6 +762,13 @@ def MSRpstateImm4 : MSRpstateImm0_15;
 // TPIDR_EL0.
 def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
                        [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[WriteSys]>;
+
+let Uses = [ X9 ], Defs = [ X16, X17, LR, NZCV ] in {
+def HWASAN_CHECK_MEMACCESS : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
+  [(int_hwasan_check_memaccess X9, GPR64noip:$ptr, (i32 imm:$accessinfo))]>,
+  Sched<[]>;
+}
 
 // The cycle counter PMC register is PMCCNTR_EL0.
 let Predicates = [HasPerfMon] in
@@ -6792,6 +6810,9 @@ def : Pat<(AArch64tcret tglobaladdr:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;
 def : Pat<(AArch64tcret texternalsym:$dst, (i32 timm:$FPDiff)),
           (TCRETURNdi texternalsym:$dst, imm:$FPDiff)>;
+
+def MOVMCSym : Pseudo<(outs GPR64:$dst), (ins i64imm:$sym), []>, Sched<[]>;
+def : Pat<(i64 (AArch64LocalRecover mcsym:$sym)), (MOVMCSym mcsym:$sym)>;
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

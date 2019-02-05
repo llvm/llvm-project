@@ -4,6 +4,8 @@
 # RUN:     | llvm-objdump -riscv-no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
+.equ CONST, 31
+
 # CHECK-ASM-AND-OBJ: lwu zero, 4(ra)
 # CHECK-ASM: encoding: [0x03,0xe0,0x40,0x00]
 lwu x0, 4(x1)
@@ -49,6 +51,9 @@ srli x24, x25, 0
 # CHECK-ASM-AND-OBJ: srai s10, s11, 31
 # CHECK-ASM: encoding: [0x13,0xdd,0xfd,0x41]
 srai x26, x27, 31
+# CHECK-ASM-AND-OBJ: srai s10, s11, 31
+# CHECK-ASM: encoding: [0x13,0xdd,0xfd,0x41]
+srai x26, x27, CONST
 
 # CHECK-ASM-AND-OBJ: addiw t3, t4, -2048
 # CHECK-ASM: encoding: [0x1b,0x8e,0x0e,0x80]
@@ -75,6 +80,9 @@ sraiw s0, s1, 0
 # CHECK-ASM-AND-OBJ: sraiw a0, a1, 31
 # CHECK-ASM: encoding: [0x1b,0xd5,0xf5,0x41]
 sraiw a0, a1, 31
+# CHECK-ASM-AND-OBJ: sraiw a0, a1, 31
+# CHECK-ASM: encoding: [0x1b,0xd5,0xf5,0x41]
+sraiw a0, a1, CONST
 
 # CHECK-ASM-AND-OBJ: addw a2, a3, a4
 # CHECK-ASM: encoding: [0x3b,0x86,0xe6,0x00]

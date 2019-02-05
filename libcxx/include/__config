@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===--------------------------- __config ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,7 +32,7 @@
 #  define _GNUC_VER_NEW 0
 #endif
 
-#define _LIBCPP_VERSION 8000
+#define _LIBCPP_VERSION 9000
 
 #ifndef _LIBCPP_ABI_VERSION
 #  define _LIBCPP_ABI_VERSION 1
@@ -353,6 +352,18 @@
 #  endif // __linux__
 #endif
 
+#ifndef _LIBCPP_CXX03_LANG
+# define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
+#elif defined(_LIBCPP_COMPILER_CLANG)
+# define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#else
+// This definition is potentially buggy, but it's only taken with GCC in C++03,
+// which we barely support anyway. See llvm.org/PR39713
+# define _LIBCPP_ALIGNOF(_Tp) __alignof(_Tp)
+#endif
+
+#define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
+
 #if defined(_LIBCPP_COMPILER_CLANG)
 
 // _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
@@ -367,7 +378,7 @@
 #  define _ALIGNAS_TYPE(x) alignas(x)
 #  define _ALIGNAS(x) alignas(x)
 #else
-#  define _ALIGNAS_TYPE(x) __attribute__((__aligned__(__alignof(x))))
+#  define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 #  define _ALIGNAS(x) __attribute__((__aligned__(x)))
 #endif
 
@@ -494,7 +505,7 @@ typedef __char32_t char32_t;
 #elif defined(_LIBCPP_COMPILER_GCC)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#define _ALIGNAS_TYPE(x) __attribute__((__aligned__(__alignof(x))))
+#define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
@@ -607,7 +618,7 @@ typedef __char32_t char32_t;
 #elif defined(_LIBCPP_COMPILER_IBM)
 
 #define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#define _ALIGNAS_TYPE(x) __attribute__((__aligned__(__alignof(x))))
+#define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 #define _ATTRIBUTE(x) __attribute__((x))
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
@@ -974,17 +985,18 @@ template <unsigned> struct __static_assert_check {};
 #define _DECLARE_C99_LDBL_MATH 1
 #endif
 
+#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+#  define _LIBCPP_DEFER_NEW_TO_VCRUNTIME
+#endif
+
 // If we are getting operator new from the MSVC CRT, then allocation overloads
 // for align_val_t were added in 19.12, aka VS 2017 version 15.3.
 #if defined(_LIBCPP_MSVCRT) && defined(_MSC_VER) && _MSC_VER < 1912
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
-#elif defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
-#  define _LIBCPP_DEFER_NEW_TO_VCRUNTIME
-#  if !defined(__cpp_aligned_new)
-     // We're defering to Microsoft's STL to provide aligned new et al. We don't
-     // have it unless the language feature test macro is defined.
-#    define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
-#  endif
+#elif defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME) && !defined(__cpp_aligned_new)
+   // We're defering to Microsoft's STL to provide aligned new et al. We don't
+   // have it unless the language feature test macro is defined.
+#  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #endif
 
 #if defined(__APPLE__)
@@ -1423,6 +1435,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #    endif
 #  endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #endif // _LIBCPP_NO_AUTO_LINK
+
+#define _LIBCPP_UNUSED_VAR(x) ((void)(x))
 
 #endif // __cplusplus
 

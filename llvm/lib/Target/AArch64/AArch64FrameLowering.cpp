@@ -1,9 +1,8 @@
 //===- AArch64FrameLowering.cpp - AArch64 Frame Lowering -------*- C++ -*-====//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -919,6 +918,19 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     if (NeedsWinCFI)
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
           .setMIFlag(MachineInstr::FrameSetup);
+
+    // SEH funclets are passed the frame pointer in X1.  If the parent
+    // function uses the base register, then the base register is used
+    // directly, and is not retrieved from X1.
+    if (F.hasPersonalityFn()) {
+      EHPersonality Per = classifyEHPersonality(F.getPersonalityFn());
+      if (isAsynchronousEHPersonality(Per)) {
+        BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), AArch64::FP)
+            .addReg(AArch64::X1).setMIFlag(MachineInstr::FrameSetup);
+        MBB.addLiveIn(AArch64::X1);
+      }
+    }
+
     return;
   }
 
@@ -1453,19 +1465,44 @@ int AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF,
   return resolveFrameIndexReference(MF, FI, FrameReg);
 }
 
-int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
-                                                     int FI, unsigned &FrameReg,
-                                                     bool PreferFP) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const AArch64RegisterInfo *RegInfo = static_cast<const AArch64RegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
-  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+int AArch64FrameLowering::getNonLocalFrameIndexReference(
+  const MachineFunction &MF, int FI) const {
+  return getSEHFrameIndexOffset(MF, FI);
+}
+
+static int getFPOffset(const MachineFunction &MF, int FI) {
+  const auto &MFI = MF.getFrameInfo();
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
-  int FPOffset = MFI.getObjectOffset(FI) + FixedObject + 16;
-  int Offset = MFI.getObjectOffset(FI) + MFI.getStackSize();
+  return MFI.getObjectOffset(FI) + FixedObject + 16;
+}
+
+static int getStackOffset(const MachineFunction &MF, int FI) {
+  const auto &MFI = MF.getFrameInfo();
+  return MFI.getObjectOffset(FI) + MFI.getStackSize();
+}
+
+int AArch64FrameLowering::getSEHFrameIndexOffset(const MachineFunction &MF,
+                                                 int FI) const {
+  const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
+      MF.getSubtarget().getRegisterInfo());
+  return RegInfo->getLocalAddressRegister(MF) == AArch64::FP ?
+         getFPOffset(MF, FI) : getStackOffset(MF, FI);
+}
+
+int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
+                                                     int FI, unsigned &FrameReg,
+                                                     bool PreferFP) const {
+  const auto &MFI = MF.getFrameInfo();
+  const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
+      MF.getSubtarget().getRegisterInfo());
+  const auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  int FPOffset = getFPOffset(MF, FI);
+  int Offset = getStackOffset(MF, FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
   bool isCSR = !isFixed && MFI.getObjectOffset(FI) >=
                                -((int)AFI->getCalleeSavedStackSize());
@@ -1517,6 +1554,7 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
         // Funclets access the locals contained in the parent's stack frame
         // via the frame pointer, so we have to use the FP in the parent
         // function.
+        (void) Subtarget;
         assert(
             Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv()) &&
             "Funclets should only be present on Win64");
@@ -1759,8 +1797,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
           static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
           static_cast<char>(-8) & 0x7f, // addend (sleb128)
       };
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, CFIInst));
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
+          nullptr, StringRef(CFIInst, sizeof(CFIInst))));
       BuildMI(MBB, MI, DL, TII.get(AArch64::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlag(MachineInstr::FrameSetup);

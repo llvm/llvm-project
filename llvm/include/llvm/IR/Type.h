@@ -1,9 +1,8 @@
 //===- llvm/Type.h - Classes for handling data types ------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -465,28 +464,6 @@ template <> struct isa_impl<PointerType, Type> {
   static inline bool doit(const Type &Ty) {
     return Ty.getTypeID() == Type::PointerTyID;
   }
-};
-
-//===----------------------------------------------------------------------===//
-// Provide specializations of GraphTraits to be able to treat a type as a
-// graph of sub types.
-
-template <> struct GraphTraits<Type *> {
-  using NodeRef = Type *;
-  using ChildIteratorType = Type::subtype_iterator;
-
-  static NodeRef getEntryNode(Type *T) { return T; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->subtype_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->subtype_end(); }
-};
-
-template <> struct GraphTraits<const Type*> {
-  using NodeRef = const Type *;
-  using ChildIteratorType = Type::subtype_iterator;
-
-  static NodeRef getEntryNode(NodeRef T) { return T; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->subtype_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->subtype_end(); }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

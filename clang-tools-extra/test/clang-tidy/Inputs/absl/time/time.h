@@ -55,6 +55,19 @@ int64_t ToInt64Milliseconds(Duration d);
 int64_t ToInt64Microseconds(Duration d);
 int64_t ToInt64Nanoseconds(Duration d);
 
+int64_t ToUnixHours(Time t);
+int64_t ToUnixMinutes(Time t);
+int64_t ToUnixSeconds(Time t);
+int64_t ToUnixMillis(Time t);
+int64_t ToUnixMicros(Time t);
+int64_t ToUnixNanos(Time t);
+Time FromUnixHours(int64_t);
+Time FromUnixMinutes(int64_t);
+Time FromUnixSeconds(int64_t);
+Time FromUnixMillis(int64_t);
+Time FromUnixMicros(int64_t);
+Time FromUnixNanos(int64_t);
+
 // Relational Operators
 constexpr bool operator<(Duration lhs, Duration rhs);
 constexpr bool operator>(Duration lhs, Duration rhs);

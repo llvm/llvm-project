@@ -17,61 +17,50 @@
 OpenMP Support
 ==================
 
+Clang supports the following OpenMP 5.0 features
+
+* The `reduction`-based clauses in the `task` and `target`-based directives.
+
+* Support relational-op != (not-equal) as one of the canonical forms of random
+  access iterator.
+
+* Support for mapping of the lambdas in target regions.
+
+* Parsing/sema analysis for the requires directive.
+
+* Nested declare target directives.
+
+* Make the `this` pointer implicitly mapped as `map(this[:1])`.
+
+* The `close` *map-type-modifier*.
+
 Clang fully supports OpenMP 4.5. Clang supports offloading to X86_64, AArch64,
 PPC64[LE] and has `basic support for Cuda devices`_.
-
-Standalone directives
-=====================
-
-* #pragma omp [for] simd: :good:`Complete`.
 
 * #pragma omp declare simd: :partial:`Partial`.  We support parsing/semantic
   analysis + generation of special attributes for X86 target, but still
   missing the LLVM pass for vectorization.
 
-* #pragma omp taskloop [simd]: :good:`Complete`.
-
-* #pragma omp target [enter|exit] data: :good:`Complete`.
-
-* #pragma omp target update: :good:`Complete`.
-
-* #pragma omp target: :good:`Complete`.
-
-* #pragma omp declare target: :good:`Complete`.
-
-* #pragma omp teams: :good:`Complete`.
-
-* #pragma omp distribute [simd]: :good:`Complete`.
-
-* #pragma omp distribute parallel for [simd]: :good:`Complete`.
-
-Combined directives
-===================
-
-* #pragma omp parallel for simd: :good:`Complete`.
-
-* #pragma omp target parallel: :good:`Complete`.
-
-* #pragma omp target parallel for [simd]: :good:`Complete`.
-
-* #pragma omp target simd: :good:`Complete`.
-
-* #pragma omp target teams: :good:`Complete`.
-
-* #pragma omp teams distribute [simd]: :good:`Complete`.
-
-* #pragma omp target teams distribute [simd]: :good:`Complete`.
-
-* #pragma omp teams distribute parallel for [simd]: :good:`Complete`.
-
-* #pragma omp target teams distribute parallel for [simd]: :good:`Complete`.
-
-Clang does not support any constructs/updates from upcoming OpenMP 5.0 except
-for `reduction`-based clauses in the `task` and `target`-based directives.
-
 In addition, the LLVM OpenMP runtime `libomp` supports the OpenMP Tools
-Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and mac OS.
-ows, and mac OS.
+Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS.
+
+General improvements
+--------------------
+- New collapse clause scheme to avoid expensive remainder operations.
+  Compute loop index variables after collapsing a loop nest via the
+  collapse clause by replacing the expensive remainder operation with
+  multiplications and additions.
+
+- The default schedules for the `distribute` and `for` constructs in a
+  parallel region and in SPMD mode have changed to ensure coalesced
+  accesses. For the `distribute` construct, a static schedule is used
+  with a chunk size equal to the number of threads per team (default
+  value of threads or as specified by the `thread_limit` clause if
+  present). For the `for` construct, the schedule is static with chunk
+  size of one.
+  
+- Simplified SPMD code generation for `distribute parallel for` when
+  the new default schedules are applicable.
 
 .. _basic support for Cuda devices:
 
@@ -109,10 +98,18 @@ are stored in the global memory. In `Cuda` mode local variables are not shared
 between the threads and it is user responsibility to share the required data
 between the threads in the parallel regions.
 
+Collapsed loop nest counter
+---------------------------
+
+When using the collapse clause on a loop nest the default behaviour is to
+automatically extend the representation of the loop counter to 64 bits for
+the cases where the sizes of the collapsed loops are not known at compile
+time. To prevent this conservative choice and use at most 32 bits,
+compile your program with the `-fopenmp-optimistic-collapse`.
+
+
 Features not supported or with limited support for Cuda devices
 ---------------------------------------------------------------
-
-- Reductions across the teams are not supported yet.
 
 - Cancellation constructs are not supported.
 

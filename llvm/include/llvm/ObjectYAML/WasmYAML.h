@@ -1,9 +1,8 @@
 //===- WasmYAML.h - Wasm YAMLIO implementation ------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -123,6 +122,11 @@ struct NameEntry {
   StringRef Name;
 };
 
+struct ProducerEntry {
+  std::string Name;
+  std::string Version;
+};
+
 struct SegmentInfo {
   uint32_t Index;
   StringRef Name;
@@ -222,6 +226,19 @@ struct LinkingSection : CustomSection {
   std::vector<SegmentInfo> SegmentInfos;
   std::vector<InitFunction> InitFunctions;
   std::vector<Comdat> Comdats;
+};
+
+struct ProducersSection : CustomSection {
+  ProducersSection() : CustomSection("producers") {}
+
+  static bool classof(const Section *S) {
+    auto C = dyn_cast<CustomSection>(S);
+    return C && C->Name == "producers";
+  }
+
+  std::vector<ProducerEntry> Languages;
+  std::vector<ProducerEntry> Tools;
+  std::vector<ProducerEntry> SDKs;
 };
 
 struct TypeSection : Section {
@@ -366,6 +383,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Function)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::LocalDecl)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Relocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::NameEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::ProducerEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SegmentInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SymbolInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::InitFunction)
@@ -442,6 +460,10 @@ template <> struct MappingTraits<WasmYAML::Relocation> {
 
 template <> struct MappingTraits<WasmYAML::NameEntry> {
   static void mapping(IO &IO, WasmYAML::NameEntry &NameEntry);
+};
+
+template <> struct MappingTraits<WasmYAML::ProducerEntry> {
+  static void mapping(IO &IO, WasmYAML::ProducerEntry &ProducerEntry);
 };
 
 template <> struct MappingTraits<WasmYAML::SegmentInfo> {

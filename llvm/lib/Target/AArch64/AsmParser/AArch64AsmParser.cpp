@@ -1,9 +1,8 @@
 //==- AArch64AsmParser.cpp - Parse AArch64 assembly to MCInst instructions -==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -165,6 +164,7 @@ private:
                       OperandVector &Operands);
 
   bool parseDirectiveArch(SMLoc L);
+  bool parseDirectiveArchExtension(SMLoc L);
   bool parseDirectiveCPU(SMLoc L);
   bool parseDirectiveInst(SMLoc L);
 
@@ -2825,12 +2825,13 @@ static const struct Extension {
     {"simd", {AArch64::FeatureNEON}},
     {"ras", {AArch64::FeatureRAS}},
     {"lse", {AArch64::FeatureLSE}},
-    {"predctrl", {AArch64::FeaturePredCtrl}},
+    {"predres", {AArch64::FeaturePredRes}},
     {"ccdp", {AArch64::FeatureCacheDeepPersist}},
     {"mte", {AArch64::FeatureMTE}},
     {"tlb-rmi", {AArch64::FeatureTLB_RMI}},
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
+    {"sve", {AArch64::FeatureSVE}},
     // FIXME: Unsupported extensions
     {"pan", {}},
     {"lor", {}},
@@ -5033,6 +5034,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCFINegateRAState();
   else if (IDVal == ".cfi_b_key_frame")
     parseDirectiveCFIBKeyFrame();
+  else if (IDVal == ".arch_extension")
+    parseDirectiveArchExtension(Loc);
   else if (IsMachO) {
     if (IDVal == MCLOHDirectiveName())
       parseDirectiveLOH(IDVal, Loc);
@@ -5151,6 +5154,50 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
     }
   }
   return false;
+}
+
+/// parseDirectiveArchExtension
+///   ::= .arch_extension [no]feature
+bool AArch64AsmParser::parseDirectiveArchExtension(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+
+  if (getLexer().isNot(AsmToken::Identifier))
+    return Error(getLexer().getLoc(), "expected architecture extension name");
+
+  const AsmToken &Tok = Parser.getTok();
+  StringRef Name = Tok.getString();
+  SMLoc ExtLoc = Tok.getLoc();
+  Lex();
+
+  if (parseToken(AsmToken::EndOfStatement,
+                 "unexpected token in '.arch_extension' directive"))
+    return true;
+
+  bool EnableFeature = true;
+  if (Name.startswith_lower("no")) {
+    EnableFeature = false;
+    Name = Name.substr(2);
+  }
+
+  MCSubtargetInfo &STI = copySTI();
+  FeatureBitset Features = STI.getFeatureBits();
+  for (const auto &Extension : ExtensionMap) {
+    if (Extension.Name != Name)
+      continue;
+
+    if (Extension.Features.none())
+      return Error(ExtLoc, "unsupported architectural extension: " + Name);
+
+    FeatureBitset ToggleFeatures = EnableFeature
+                                       ? (~Features & Extension.Features)
+                                       : (Features & Extension.Features);
+    uint64_t Features =
+        ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
+    setAvailableFeatures(Features);
+    return false;
+  }
+
+  return Error(ExtLoc, "unknown architectural extension: " + Name);
 }
 
 static SMLoc incrementLoc(SMLoc L, int Offset) {

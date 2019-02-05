@@ -1,9 +1,8 @@
 //===- FileCheck.cpp - Check that File's Contents match what is expected --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -901,16 +900,24 @@ static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
                        StringMap<StringRef> &VariableTable, size_t MatchPos,
                        size_t MatchLen, const FileCheckRequest &Req,
                        std::vector<FileCheckDiag> *Diags) {
+  bool PrintDiag = true;
   if (ExpectedMatch) {
     if (!Req.Verbose)
       return;
     if (!Req.VerboseVerbose && Pat.getCheckTy() == Check::CheckEOF)
       return;
+    // Due to their verbosity, we don't print verbose diagnostics here if we're
+    // gathering them for a different rendering, but we always print other
+    // diagnostics.
+    PrintDiag = !Diags;
   }
   SMRange MatchRange = ProcessMatchResult(
       ExpectedMatch ? FileCheckDiag::MatchFoundAndExpected
                     : FileCheckDiag::MatchFoundButExcluded,
       SM, Loc, Pat.getCheckTy(), Buffer, MatchPos, MatchLen, Diags);
+  if (!PrintDiag)
+    return;
+
   std::string Message = formatv("{0}: {1} string found in input",
                                 Pat.getCheckTy().getDescription(Prefix),
                                 (ExpectedMatch ? "expected" : "excluded"))
@@ -941,27 +948,37 @@ static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
                          StringRef Buffer, StringMap<StringRef> &VariableTable,
                          bool VerboseVerbose,
                          std::vector<FileCheckDiag> *Diags) {
-  if (!ExpectedMatch && !VerboseVerbose)
+  bool PrintDiag = true;
+  if (!ExpectedMatch) {
+    if (!VerboseVerbose)
+      return;
+    // Due to their verbosity, we don't print verbose diagnostics here if we're
+    // gathering them for a different rendering, but we always print other
+    // diagnostics.
+    PrintDiag = !Diags;
+  }
+
+  // If the current position is at the end of a line, advance to the start of
+  // the next line.
+  Buffer = Buffer.substr(Buffer.find_first_not_of(" \t\n\r"));
+  SMRange SearchRange = ProcessMatchResult(
+      ExpectedMatch ? FileCheckDiag::MatchNoneButExpected
+                    : FileCheckDiag::MatchNoneAndExcluded,
+      SM, Loc, Pat.getCheckTy(), Buffer, 0, Buffer.size(), Diags);
+  if (!PrintDiag)
     return;
 
-  // Otherwise, we have an error, emit an error message.
+  // Print "not found" diagnostic.
   std::string Message = formatv("{0}: {1} string not found in input",
                                 Pat.getCheckTy().getDescription(Prefix),
                                 (ExpectedMatch ? "expected" : "excluded"))
                             .str();
   if (Pat.getCount() > 1)
     Message += formatv(" ({0} out of {1})", MatchedCount, Pat.getCount()).str();
-
   SM.PrintMessage(
       Loc, ExpectedMatch ? SourceMgr::DK_Error : SourceMgr::DK_Remark, Message);
 
-  // Print the "scanning from here" line.  If the current position is at the
-  // end of a line, advance to the start of the next line.
-  Buffer = Buffer.substr(Buffer.find_first_not_of(" \t\n\r"));
-  SMRange SearchRange = ProcessMatchResult(
-      ExpectedMatch ? FileCheckDiag::MatchNoneButExpected
-                    : FileCheckDiag::MatchNoneAndExcluded,
-      SM, Loc, Pat.getCheckTy(), Buffer, 0, Buffer.size(), Diags);
+  // Print the "scanning from here" line.
   SM.PrintMessage(SearchRange.Start, SourceMgr::DK_Note, "scanning from here");
 
   // Allow the pattern to print additional information if desired.
@@ -1276,13 +1293,17 @@ FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
         break;
       }
       if (Req.VerboseVerbose) {
-        SMLoc OldStart = SMLoc::getFromPointer(Buffer.data() + MI->Pos);
-        SMLoc OldEnd = SMLoc::getFromPointer(Buffer.data() + MI->End);
-        SMRange OldRange(OldStart, OldEnd);
-        SM.PrintMessage(OldStart, SourceMgr::DK_Note,
-                        "match discarded, overlaps earlier DAG match here",
-                        {OldRange});
-        if (Diags)
+        // Due to their verbosity, we don't print verbose diagnostics here if
+        // we're gathering them for a different rendering, but we always print
+        // other diagnostics.
+        if (!Diags) {
+          SMLoc OldStart = SMLoc::getFromPointer(Buffer.data() + MI->Pos);
+          SMLoc OldEnd = SMLoc::getFromPointer(Buffer.data() + MI->End);
+          SMRange OldRange(OldStart, OldEnd);
+          SM.PrintMessage(OldStart, SourceMgr::DK_Note,
+                          "match discarded, overlaps earlier DAG match here",
+                          {OldRange});
+        } else
           Diags->rbegin()->MatchTy = FileCheckDiag::MatchFoundButDiscarded;
       }
       MatchPos = MI->End;

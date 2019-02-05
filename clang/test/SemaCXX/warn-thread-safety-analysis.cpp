@@ -239,7 +239,7 @@ void sls_fun_bad_1() {
 }
 
 void sls_fun_bad_2() {
-  sls_mu.Lock();
+  sls_mu.Lock(); // expected-note{{mutex acquired here}}
   sls_mu.Lock(); // \
     // expected-warning{{acquiring mutex 'sls_mu' that is already held}}
   sls_mu.Unlock();
@@ -365,7 +365,7 @@ void aa_fun_bad_1() {
 }
 
 void aa_fun_bad_2() {
-  glock.globalLock();
+  glock.globalLock(); // expected-note{{mutex acquired here}}
   glock.globalLock(); // \
     // expected-warning{{acquiring mutex 'aa_mu' that is already held}}
   glock.globalUnlock();
@@ -1691,7 +1691,7 @@ struct TestScopedLockable {
   }
 
   void foo3() {
-    MutexLock mulock_a(&mu1);
+    MutexLock mulock_a(&mu1); // expected-note{{mutex acquired here}}
     MutexLock mulock_b(&mu1); // \
       // expected-warning {{acquiring mutex 'mu1' that is already held}}
   }
@@ -2710,14 +2710,14 @@ void doubleUnlock() {
 }
 
 void doubleLock1() {
-  RelockableExclusiveMutexLock scope(&mu);
+  RelockableExclusiveMutexLock scope(&mu); // expected-note{{mutex acquired here}}
   scope.Lock(); // expected-warning {{acquiring mutex 'mu' that is already held}}
 }
 
 void doubleLock2() {
   RelockableExclusiveMutexLock scope(&mu);
   scope.Unlock();
-  scope.Lock();
+  scope.Lock(); // expected-note{{mutex acquired here}}
   scope.Lock(); // expected-warning {{acquiring mutex 'mu' that is already held}}
 }
 
@@ -2754,7 +2754,7 @@ public:
 };
 
 void relockShared2() {
-  MemberLock lock;
+  MemberLock lock; // expected-note{{mutex acquired here}}
   lock.Lock(); // expected-warning {{acquiring mutex 'lock.mutex' that is already held}}
 }
 
@@ -2861,7 +2861,7 @@ void join() EXCLUSIVE_LOCKS_REQUIRED(mu) {
 
 void doubleLock() EXCLUSIVE_LOCKS_REQUIRED(mu) {
   MutexUnlock scope(&mu);
-  scope.Lock();
+  scope.Lock(); // expected-note{{mutex acquired here}}
   scope.Lock(); // expected-warning {{acquiring mutex 'mu' that is already held}}
 }
 
@@ -3164,7 +3164,7 @@ void Foo::test7() {
 
 
 void Foo::test8() {
-  mu_->Lock();
+  mu_->Lock();          // expected-note 2 {{mutex acquired here}}
   mu_.get()->Lock();    // expected-warning {{acquiring mutex 'mu_' that is already held}}
   (*mu_).Lock();        // expected-warning {{acquiring mutex 'mu_' that is already held}}
   mu_.get()->Unlock();
@@ -3298,7 +3298,7 @@ void test0() {
   foo.lock();
   foo.unlock();
 
-  foo.lock();
+  foo.lock();     // expected-note{{mutex acquired here}}
   foo.lock();     // expected-warning {{acquiring mutex 'foo' that is already held}}
   foo.unlock();
   foo.unlock();   // expected-warning {{releasing mutex 'foo' that was not held}}
@@ -3311,7 +3311,7 @@ void test1() {
   foo.a = 0;
   foo.unlock1();
 
-  foo.lock1();
+  foo.lock1();    // expected-note{{mutex acquired here}}
   foo.lock1();    // expected-warning {{acquiring mutex 'foo.mu1_' that is already held}}
   foo.a = 0;
   foo.unlock1();
@@ -3325,7 +3325,7 @@ int test2() {
   int d1 = foo.a;
   foo.unlock1();
 
-  foo.slock1();
+  foo.slock1();    // expected-note{{mutex acquired here}}
   foo.slock1();    // expected-warning {{acquiring mutex 'foo.mu1_' that is already held}}
   int d2 = foo.a;
   foo.unlock1();
@@ -3342,7 +3342,7 @@ void test3() {
   foo.c = 0;
   foo.unlock3();
 
-  foo.lock3();
+  foo.lock3(); // expected-note 3 {{mutex acquired here}}
   foo.lock3(); // \
     // expected-warning {{acquiring mutex 'foo.mu1_' that is already held}} \
     // expected-warning {{acquiring mutex 'foo.mu2_' that is already held}} \
@@ -3366,7 +3366,7 @@ void testlots() {
   foo.c = 0;
   foo.unlocklots();
 
-  foo.locklots();
+  foo.locklots(); // expected-note 3 {{mutex acquired here}}
   foo.locklots(); // \
     // expected-warning {{acquiring mutex 'foo.mu1_' that is already held}} \
     // expected-warning {{acquiring mutex 'foo.mu2_' that is already held}} \
@@ -3524,7 +3524,7 @@ void test() {
   LockAllGraphs();
   g2.mu_.Unlock();
 
-  LockAllGraphs();
+  LockAllGraphs(); // expected-note{{mutex acquired here}}
   g1.mu_.Lock();  // expected-warning {{acquiring mutex 'g1.mu_' that is already held}}
   g1.mu_.Unlock();
 }

@@ -1,9 +1,8 @@
 //===-- sanitizer_malloc_mac.inc --------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -40,6 +39,8 @@ struct sanitizer_malloc_introspection_t : public malloc_introspection_t {
   // Used to track changes to the allocator that will affect
   // zone enumeration.
   u64 allocator_enumeration_version;
+  uptr allocator_ptr;
+  uptr allocator_size;
 };
 
 u64 GetMallocZoneAllocatorEnumerationVersion() {
@@ -281,13 +282,48 @@ void __sanitizer_mz_free_definite_size(
 }
 #endif
 
-kern_return_t mi_enumerator(task_t task, void *,
-                            unsigned type_mask, vm_address_t zone_address,
-                            memory_reader_t reader,
+#ifndef COMMON_MALLOC_HAS_ZONE_ENUMERATOR
+#error "COMMON_MALLOC_HAS_ZONE_ENUMERATOR must be defined"
+#endif
+static_assert((COMMON_MALLOC_HAS_ZONE_ENUMERATOR) == 0 ||
+                  (COMMON_MALLOC_HAS_ZONE_ENUMERATOR) == 1,
+              "COMMON_MALLOC_HAS_ZONE_ENUMERATOR must be 0 or 1");
+
+#if COMMON_MALLOC_HAS_ZONE_ENUMERATOR
+// Forward declare and expect the implementation to provided by
+// includer.
+kern_return_t mi_enumerator(task_t task, void *, unsigned type_mask,
+                            vm_address_t zone_address, memory_reader_t reader,
+                            vm_range_recorder_t recorder);
+#else
+// Provide stub implementation that fails.
+kern_return_t mi_enumerator(task_t task, void *, unsigned type_mask,
+                            vm_address_t zone_address, memory_reader_t reader,
                             vm_range_recorder_t recorder) {
-  // Should enumerate all the pointers we have.  Seems like a lot of work.
+  // Not supported.
   return KERN_FAILURE;
 }
+#endif
+
+#ifndef COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT
+#error "COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT must be defined"
+#endif
+static_assert((COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT) == 0 ||
+                  (COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT) == 1,
+              "COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT must be 0 or 1");
+#if COMMON_MALLOC_HAS_EXTRA_INTROSPECTION_INIT
+// Forward declare and expect the implementation to provided by
+// includer.
+void mi_extra_init(
+    sanitizer_malloc_introspection_t *mi);
+#else
+void mi_extra_init(
+    sanitizer_malloc_introspection_t *mi) {
+  // Just zero initialize the fields.
+  mi->allocator_ptr = 0;
+  mi->allocator_size = 0;
+}
+#endif
 
 size_t mi_good_size(malloc_zone_t *zone, size_t size) {
   // I think it's always safe to return size, but we maybe could do better.
@@ -346,6 +382,9 @@ void InitMallocZoneFields() {
   // Set current allocator enumeration version.
   sanitizer_zone_introspection.allocator_enumeration_version =
       GetMallocZoneAllocatorEnumerationVersion();
+
+  // Perform any sanitizer specific initialization.
+  mi_extra_init(&sanitizer_zone_introspection);
 
   internal_memset(&sanitizer_zone, 0, sizeof(malloc_zone_t));
 

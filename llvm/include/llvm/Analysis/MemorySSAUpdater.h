@@ -1,9 +1,8 @@
 //===- MemorySSAUpdater.h - Memory SSA Updater-------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,6 +34,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/BasicBlock.h"
@@ -221,14 +221,14 @@ public:
   /// associated with it is erased from the program.  For example, if a store or
   /// load is simply erased (not replaced), removeMemoryAccess should be called
   /// on the MemoryAccess for that store/load.
-  void removeMemoryAccess(MemoryAccess *);
+  void removeMemoryAccess(MemoryAccess *, bool OptimizePhis = false);
 
   /// Remove MemoryAccess for a given instruction, if a MemoryAccess exists.
   /// This should be called when an instruction (load/store) is deleted from
   /// the program.
-  void removeMemoryAccess(const Instruction *I) {
+  void removeMemoryAccess(const Instruction *I, bool OptimizePhis = false) {
     if (MemoryAccess *MA = MSSA->getMemoryAccess(I))
-      removeMemoryAccess(MA);
+      removeMemoryAccess(MA, OptimizePhis);
   }
 
   /// Remove all MemoryAcceses in a set of BasicBlocks about to be deleted.

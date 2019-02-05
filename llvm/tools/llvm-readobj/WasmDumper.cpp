@@ -1,9 +1,8 @@
 //===-- WasmDumper.cpp - Wasm-specific object file dumper -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -49,8 +48,6 @@ public:
   void printFileHeaders() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printSymbols() override;
-  void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
   void printUnwindInfo() override { llvm_unreachable("unimplemented"); }
   void printStackMap() const override { llvm_unreachable("unimplemented"); }
 
@@ -59,6 +56,9 @@ protected:
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc);
 
 private:
+  void printSymbols() override;
+  void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
+
   const WasmObjectFile *Obj;
 };
 

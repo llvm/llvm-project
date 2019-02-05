@@ -468,6 +468,37 @@ void test_lifetime_extended_temporaries() {
 }
 
 
+// FIXME: The destructor for 'a' shouldn't be there because it's deleted
+// in the union.
+// CHECK-LABEL: void foo()
+// CHECK:  [B2 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:  [B1]
+// WARNINGS-NEXT:    1:  (CXXConstructExpr, struct pr37688_deleted_union_destructor::A)
+// ANALYZER-NEXT:    1:  (CXXConstructExpr, [B1.2], struct pr37688_deleted_union_destructor::A)
+// CHECK-NEXT:    2: pr37688_deleted_union_destructor::A a;
+// CHECK-NEXT:    3: [B1.2].~A() (Implicit destructor)
+// CHECK-NEXT:    Preds (1): B2
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:  [B0 (EXIT)]
+// CHECK-NEXT:    Preds (1): B1
+
+namespace pr37688_deleted_union_destructor {
+struct S { ~S(); };
+struct A {
+  ~A() noexcept {}
+  union {
+    struct {
+      S s;
+    } ss;
+  };
+};
+void foo() {
+  A a;
+}
+} // end namespace pr37688_deleted_union_destructor
+
+
 // CHECK-LABEL: template<> int *PR18472<int>()
 // CHECK: [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1

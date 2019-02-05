@@ -1,14 +1,31 @@
 //===- MinGW/Driver.cpp ---------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// GNU ld style linker driver for COFF currently supporting mingw-w64.
-///
+//
+// MinGW is a GNU development environment for Windows. It consists of GNU
+// tools such as GCC and GNU ld. Unlike Cygwin, there's no POSIX-compatible
+// layer, as it aims to be a native development toolchain.
+//
+// lld/MinGW is a drop-in replacement for GNU ld/MinGW.
+//
+// Being a native development tool, a MinGW linker is not very different from
+// Microsoft link.exe, so a MinGW linker can be implemented as a thin wrapper
+// for lld/COFF. This driver takes Unix-ish command line options, translates
+// them to Windows-ish ones, and then passes them to lld/COFF.
+//
+// When this driver calls the lld/COFF driver, it passes a hidden option
+// "-lldmingw" along with other user-supplied options, to run the lld/COFF
+// linker in "MinGW mode".
+//
+// There are subtle differences between MS link.exe and GNU ld/MinGW, and GNU
+// ld/MinGW implements a few GNU-specific features. Such features are directly
+// implemented in lld/COFF and enabled only when the linker is running in MinGW
+// mode.
+//
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Driver.h"
