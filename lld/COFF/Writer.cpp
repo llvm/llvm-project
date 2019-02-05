@@ -344,14 +344,14 @@ getThunk(DenseMap<uint64_t, Defined *> &LastThunks, Defined *Target, uint64_t P,
 // After adding thunks, we verify that all relocations are in range (with
 // no extra margin requirements). If this failed, we restart (throwing away
 // the previously created thunks) and retry with a wider margin.
-static bool createThunks(std::vector<Chunk *> &Chunks, int Margin) {
+static bool createThunks(OutputSection *OS, int Margin) {
   bool AddressesChanged = false;
   DenseMap<uint64_t, Defined *> LastThunks;
   size_t ThunksSize = 0;
   // Recheck Chunks.size() each iteration, since we can insert more
   // elements into it.
-  for (size_t I = 0; I != Chunks.size(); ++I) {
-    SectionChunk *SC = dyn_cast_or_null<SectionChunk>(Chunks[I]);
+  for (size_t I = 0; I != OS->Chunks.size(); ++I) {
+    SectionChunk *SC = dyn_cast_or_null<SectionChunk>(OS->Chunks[I]);
     if (!SC)
       continue;
     size_t ThunkInsertionSpot = I + 1;
@@ -388,7 +388,8 @@ static bool createThunks(std::vector<Chunk *> &Chunks, int Margin) {
         Chunk *ThunkChunk = Thunk->getChunk();
         ThunkChunk->setRVA(
             ThunkInsertionRVA); // Estimate of where it will be located.
-        Chunks.insert(Chunks.begin() + ThunkInsertionSpot, ThunkChunk);
+        ThunkChunk->setOutputSection(OS);
+        OS->Chunks.insert(OS->Chunks.begin() + ThunkInsertionSpot, ThunkChunk);
         ThunkInsertionSpot++;
         ThunksSize += ThunkChunk->getSize();
         ThunkInsertionRVA += ThunkChunk->getSize();
@@ -477,7 +478,7 @@ void Writer::finalizeAddresses() {
     // to avoid things going out of range due to the added thunks.
     bool AddressesChanged = false;
     for (OutputSection *Sec : OutputSections)
-      AddressesChanged |= createThunks(Sec->Chunks, Margin);
+      AddressesChanged |= createThunks(Sec, Margin);
     // If the verification above thought we needed thunks, we should have
     // added some.
     assert(AddressesChanged);
