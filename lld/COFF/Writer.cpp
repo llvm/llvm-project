@@ -306,16 +306,31 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
 // Check whether the target address S is in range from a relocation
 // of type RelType at address P.
 static bool isInRange(uint16_t RelType, uint64_t S, uint64_t P, int Margin) {
-  assert(Config->Machine == ARMNT);
-  int64_t Diff = AbsoluteDifference(S, P + 4) + Margin;
-  switch (RelType) {
-  case IMAGE_REL_ARM_BRANCH20T:
-    return isInt<21>(Diff);
-  case IMAGE_REL_ARM_BRANCH24T:
-  case IMAGE_REL_ARM_BLX23T:
-    return isInt<25>(Diff);
-  default:
-    return true;
+  if (Config->Machine == ARMNT) {
+    int64_t Diff = AbsoluteDifference(S, P + 4) + Margin;
+    switch (RelType) {
+    case IMAGE_REL_ARM_BRANCH20T:
+      return isInt<21>(Diff);
+    case IMAGE_REL_ARM_BRANCH24T:
+    case IMAGE_REL_ARM_BLX23T:
+      return isInt<25>(Diff);
+    default:
+      return true;
+    }
+  } else if (Config->Machine == ARM64) {
+    int64_t Diff = AbsoluteDifference(S, P) + Margin;
+    switch (RelType) {
+    case IMAGE_REL_ARM64_BRANCH26:
+      return isInt<28>(Diff);
+    case IMAGE_REL_ARM64_BRANCH19:
+      return isInt<21>(Diff);
+    case IMAGE_REL_ARM64_BRANCH14:
+      return isInt<16>(Diff);
+    default:
+      return true;
+    }
+  } else {
+    llvm_unreachable("Unexpected architecture");
   }
 }
 
@@ -327,7 +342,17 @@ getThunk(DenseMap<uint64_t, Defined *> &LastThunks, Defined *Target, uint64_t P,
   Defined *&LastThunk = LastThunks[Target->getRVA()];
   if (LastThunk && isInRange(Type, LastThunk->getRVA(), P, Margin))
     return {LastThunk, false};
-  RangeExtensionThunk *C = make<RangeExtensionThunk>(Target);
+  Chunk *C;
+  switch (Config->Machine) {
+  case ARMNT:
+    C = make<RangeExtensionThunkARM>(Target);
+    break;
+  case ARM64:
+    C = make<RangeExtensionThunkARM64>(Target);
+    break;
+  default:
+    llvm_unreachable("Unexpected architecture");
+  }
   Defined *D = make<DefinedSynthetic>("", C);
   LastThunk = D;
   return {D, true};
@@ -429,7 +454,7 @@ static bool verifyRanges(const std::vector<Chunk *> Chunks) {
 // Assign addresses and add thunks if necessary.
 void Writer::finalizeAddresses() {
   assignAddresses();
-  if (Config->Machine != ARMNT)
+  if (Config->Machine != ARMNT && Config->Machine != ARM64)
     return;
 
   size_t OrigNumChunks = 0;
