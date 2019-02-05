@@ -27,7 +27,9 @@ constexpr P f()
   return p;
 }
 
-int main() {
+int main(int, char**) {
   constexpr P p = f();
   static_assert(*(p.operator->())==2,"");
+
+  return 0;
 }

@@ -56,7 +56,9 @@ void test_basic() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_basic();
   test_buffer_usage();
+
+  return 0;
 }

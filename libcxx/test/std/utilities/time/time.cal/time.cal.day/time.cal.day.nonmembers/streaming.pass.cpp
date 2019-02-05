@@ -48,8 +48,10 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
    using day = std::chrono::day;
    std::cout << day{1};
+
+  return 0;
 }

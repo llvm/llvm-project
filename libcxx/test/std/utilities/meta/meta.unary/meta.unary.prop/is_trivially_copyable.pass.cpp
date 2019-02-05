@@ -65,7 +65,7 @@ public:
     C();
 };
 
-int main()
+int main(int, char**)
 {
     test_is_trivially_copyable<int> ();
     test_is_trivially_copyable<const int> ();
@@ -76,4 +76,6 @@ int main()
     test_is_not_trivially_copyable<int&> ();
     test_is_not_trivially_copyable<const A&> ();
     test_is_not_trivially_copyable<B> ();
+
+  return 0;
 }

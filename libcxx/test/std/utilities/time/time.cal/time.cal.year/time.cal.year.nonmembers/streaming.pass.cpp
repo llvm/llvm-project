@@ -46,9 +46,11 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
    using year = std::chrono::year;
 
    std::cout << year{2018};
+
+  return 0;
 }

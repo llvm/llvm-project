@@ -31,7 +31,7 @@ void test ( const CharT *s, size_t sz ) {
     }
 }
 
-int main () {
+int main(int, char**) {
 
     test ( "QBCDE", 5 );
     test ( "QBCDE", 2 );
@@ -82,4 +82,6 @@ int main () {
     }
 #endif
 #endif
+
+  return 0;
 }

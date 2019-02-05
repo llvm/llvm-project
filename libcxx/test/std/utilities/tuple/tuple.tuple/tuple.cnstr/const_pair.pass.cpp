@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<long, char> T0;
@@ -42,4 +42,6 @@ int main()
         static_assert(std::get<1>(t1) == short('a'), "");
     }
 #endif
+
+  return 0;
 }

@@ -23,7 +23,7 @@
 #include "test_allocator.h"
 #include "Counter.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef MoveOnly V;
@@ -185,4 +185,6 @@ int main()
         assert(Counter_base::gConstructed == 0);
     }
 
+
+  return 0;
 }

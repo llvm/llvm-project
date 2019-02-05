@@ -2115,6 +2115,18 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   if (N0.getOpcode() == ISD::SUB && N1 == N0.getOperand(1))
     return N0.getOperand(0);
 
+  // fold ((A-B)+(C-A)) -> (C-B)
+  if (N0.getOpcode() == ISD::SUB && N1.getOpcode() == ISD::SUB &&
+      N0.getOperand(0) == N1.getOperand(1))
+    return DAG.getNode(ISD::SUB, DL, VT, N1.getOperand(0),
+                       N0.getOperand(1));
+
+  // fold ((A-B)+(B-C)) -> (A-C)
+  if (N0.getOpcode() == ISD::SUB && N1.getOpcode() == ISD::SUB &&
+      N0.getOperand(1) == N1.getOperand(0))
+    return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0),
+                       N1.getOperand(1));
+
   // fold (A+(B-(A+C))) to (B-C)
   if (N1.getOpcode() == ISD::SUB && N1.getOperand(1).getOpcode() == ISD::ADD &&
       N0 == N1.getOperand(1).getOperand(0))
@@ -15644,7 +15656,9 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
     Offset = DAG.getNode(
         ISD::MUL, DL, PtrType, Offset,
         DAG.getConstant(VecEltVT.getStoreSize(), DL, PtrType));
-    MPI = OriginalLoad->getPointerInfo();
+    // Discard the pointer info except the address space because the memory
+    // operand can't represent this new access since the offset is variable.
+    MPI = MachinePointerInfo(OriginalLoad->getPointerInfo().getAddrSpace());
   }
   NewPtr = DAG.getNode(ISD::ADD, DL, PtrType, NewPtr, Offset);
 

@@ -41,7 +41,7 @@ struct X
     int test() && {return 6;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         const optional<X> opt; ((void)opt);
@@ -69,4 +69,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

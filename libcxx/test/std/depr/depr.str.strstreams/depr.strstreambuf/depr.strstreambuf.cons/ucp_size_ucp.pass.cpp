@@ -16,7 +16,7 @@
 #include <cassert>
 #include <cstring>
 
-int main()
+int main(int, char**)
 {
     {
         unsigned char buf[] = "abcd";
@@ -93,4 +93,6 @@ int main()
         assert(sb.snextc() == 'j');
         assert(sb.snextc() == EOF);
     }
+
+  return 0;
 }

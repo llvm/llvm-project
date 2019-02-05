@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::poisson_distribution<> D;
@@ -24,4 +24,6 @@ int main()
         D::result_type m = d.max();
         assert(m == std::numeric_limits<int>::max());
     }
+
+  return 0;
 }

@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     // Use a builtin type so we don't get ADL lookup.
     typedef double T[17][29];
@@ -39,4 +39,6 @@ int main()
        std::iter_swap(t1, t2);
        std::swap_ranges(t1, t1 + 17, t2);
     }
+
+  return 0;
 }

@@ -62,27 +62,6 @@ bool DispatchStage::canDispatch(const InstRef &IR) const {
   return checkRCU(IR) && checkPRF(IR) && checkNextStage(IR);
 }
 
-void DispatchStage::updateRAWDependencies(ReadState &RS,
-                                          const MCSubtargetInfo &STI) {
-  SmallVector<WriteRef, 4> DependentWrites;
-
-  // Collect all the dependent writes, and update RS internal state.
-  PRF.addRegisterRead(RS, DependentWrites);
-
-  // We know that this read depends on all the writes in DependentWrites.
-  // For each write, check if we have ReadAdvance information, and use it
-  // to figure out in how many cycles this read becomes available.
-  const ReadDescriptor &RD = RS.getDescriptor();
-  const MCSchedModel &SM = STI.getSchedModel();
-  const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
-  for (WriteRef &WR : DependentWrites) {
-    WriteState &WS = *WR.getWriteState();
-    unsigned WriteResID = WS.getWriteResourceID();
-    int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
-    WS.addUser(&RS, ReadAdvance);
-  }
-}
-
 Error DispatchStage::dispatch(InstRef IR) {
   assert(!CarryOver && "Cannot dispatch another instruction!");
   Instruction &IS = *IR.getInstruction();
@@ -121,7 +100,7 @@ Error DispatchStage::dispatch(InstRef IR) {
   // eliminated at register renaming stage.
   if (!IsEliminated) {
     for (ReadState &RS : IS.getUses())
-      updateRAWDependencies(RS, STI);
+      PRF.addRegisterRead(RS, STI);
   }
 
   // By default, a dependency-breaking zero-idiom is expected to be optimized

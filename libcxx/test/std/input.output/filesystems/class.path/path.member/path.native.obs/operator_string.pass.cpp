@@ -23,7 +23,7 @@
 #include "filesystem_test_helper.hpp"
 
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   using string_type = path::string_type;
@@ -42,4 +42,6 @@ int main()
     assert(s == value);
     assert(p == value);
   }
+
+  return 0;
 }

@@ -25,7 +25,7 @@ test(const C& x, const typename C::allocator_type& a)
     assert(c.get_allocator() == a);
 }
 
-int main()
+int main(int, char**)
 {
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
@@ -47,4 +47,6 @@ int main()
                                                           min_allocator<int>());
     }
 #endif
+
+  return 0;
 }

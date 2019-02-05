@@ -24,7 +24,7 @@ struct A{};
 constexpr int iArr1[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
           int iArr2[] = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-int main ()
+int main(int, char**)
 {
     static_assert( noexcept(std::span<int>   ().empty()), "");
     static_assert( noexcept(std::span<int, 0>().empty()), "");
@@ -69,4 +69,6 @@ int main ()
     std::string s;
     assert( ((std::span<std::string>(&s, (std::ptrdiff_t) 0)).empty()));
     assert(!((std::span<std::string>(&s, 1).empty())));
+
+  return 0;
 }

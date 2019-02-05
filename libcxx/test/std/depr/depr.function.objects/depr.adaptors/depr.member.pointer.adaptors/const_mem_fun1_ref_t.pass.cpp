@@ -23,11 +23,13 @@ struct A
     double a4(unsigned i) const {return i-1;}
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::const_mem_fun1_ref_t<double, A, unsigned> F;
     static_assert((std::is_base_of<std::binary_function<A, unsigned, double>, F>::value), "");
     const F f(&A::a4);
     const A a = A();
     assert(f(a, 6) == 5);
+
+  return 0;
 }

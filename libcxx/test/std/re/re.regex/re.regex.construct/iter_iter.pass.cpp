@@ -28,7 +28,7 @@ test(Iter first, Iter last, unsigned mc)
     assert(r.mark_count() == mc);
 }
 
-int main()
+int main(int, char**)
 {
     typedef forward_iterator<std::string::const_iterator> F;
     std::string s1("\\(a\\)");
@@ -40,4 +40,6 @@ int main()
     test(F(s2.begin()), F(s2.end()), 0);
     test(F(s3.begin()), F(s3.end()), 0);
     test(F(s4.begin()), F(s4.end()), 2);
+
+  return 0;
 }

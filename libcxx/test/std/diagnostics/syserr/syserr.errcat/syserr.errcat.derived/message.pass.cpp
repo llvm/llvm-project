@@ -18,7 +18,7 @@
 
 #include <stdio.h>
 
-int main()
+int main(int, char**)
 {
     const std::error_category& e_cat1 = std::generic_category();
     const std::error_category& e_cat2 = std::system_category();
@@ -30,4 +30,6 @@ int main()
     assert(!m3.empty());
     assert(m1 == m2);
     assert(m1 != m3);
+
+  return 0;
 }

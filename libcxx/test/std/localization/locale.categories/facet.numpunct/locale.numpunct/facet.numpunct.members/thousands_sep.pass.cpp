@@ -15,7 +15,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -28,4 +28,6 @@ int main()
         const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
         assert(np.thousands_sep() == L',');
     }
+
+  return 0;
 }

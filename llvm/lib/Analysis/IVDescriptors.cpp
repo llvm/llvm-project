@@ -1009,7 +1009,7 @@ bool InductionDescriptor::isInductionPHI(PHINode *Phi, const Loop *TheLoop,
   // If we started from an UnknownSCEV, and managed to build an addRecurrence
   // only after enabling Assume with PSCEV, this means we may have encountered
   // cast instructions that required adding a runtime check in order to
-  // guarantee the correctness of the AddRecurence respresentation of the
+  // guarantee the correctness of the AddRecurrence respresentation of the
   // induction.
   if (PhiScev != AR && SymbolicPhi) {
     SmallVector<Instruction *, 2> Casts;

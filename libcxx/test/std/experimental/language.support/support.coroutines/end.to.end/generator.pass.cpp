@@ -95,8 +95,10 @@ void test_mini_generator() {
   assert(sum == 10);
 }
 
-int main() {
+int main(int, char**) {
   test_count();
   test_range();
   test_mini_generator();
+
+  return 0;
 }

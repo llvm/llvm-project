@@ -28,7 +28,7 @@ const int iArr2[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
 
 struct A {};
 
-int main ()
+int main(int, char**)
 {
     std::as_writeable_bytes(std::span<const int>());            // expected-error {{no matching function for call to 'as_writeable_bytes'}}
     std::as_writeable_bytes(std::span<const long>());           // expected-error {{no matching function for call to 'as_writeable_bytes'}}
@@ -44,4 +44,6 @@ int main ()
 
     std::as_writeable_bytes(std::span<const int>   (iArr2, 1));     // expected-error {{no matching function for call to 'as_writeable_bytes'}}
     std::as_writeable_bytes(std::span<const int, 1>(iArr2 + 5, 1)); // expected-error {{no matching function for call to 'as_writeable_bytes'}}
+
+  return 0;
 }

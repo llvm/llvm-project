@@ -17,8 +17,10 @@
 
 #include <shared_mutex>
 
-int main()
+int main(int, char**)
 {
     std::shared_mutex m0;
     std::shared_mutex m1(m0); // expected-error {{call to deleted constructor of 'std::shared_mutex'}}
+
+  return 0;
 }

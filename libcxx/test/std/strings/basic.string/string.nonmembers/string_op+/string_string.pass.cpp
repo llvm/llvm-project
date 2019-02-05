@@ -58,7 +58,7 @@ void test3(S&& lhs, S&& rhs, const S& x) {
 
 #endif
 
-int main() {
+int main(int, char**) {
   {
     typedef std::string S;
     test0(S(""), S(""), S(""));
@@ -245,4 +245,6 @@ int main() {
           S("abcdefghijklmnopqrst12345678901234567890"));
   }
 #endif // TEST_STD_VER >= 11
+
+  return 0;
 }

@@ -44,7 +44,7 @@ body: |
     G_BR %bb.3.exit
   bb.2.else:
     successors: %bb.3(0x80000000)
-    %6:_(s32) = G_CONSTANT i8 1
+    %6:_(s32) = G_CONSTANT i32 1
     %7:_(s8) = G_TRUNC %6
     G_BR %bb.3.exit
   bb.3.exit:

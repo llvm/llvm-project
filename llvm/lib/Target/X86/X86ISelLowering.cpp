@@ -32071,6 +32071,14 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR)
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
+    // Share broadcast with the longest vector and extract low subvector (free).
+    for (SDNode *User : Src->uses())
+      if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
+          User->getValueSizeInBits(0) > VT.getSizeInBits()) {
+        return extractSubVector(SDValue(User, 0), 0, DAG, DL,
+                                VT.getSizeInBits());
+      }
+
     return SDValue();
   }
   case X86ISD::PSHUFD:
@@ -32830,6 +32838,27 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
     break;
   }
+  case X86ISD::BLENDV: {
+    APInt SelUndef, SelZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, SelUndef,
+                                   SelZero, TLO, Depth + 1))
+      return true;
+
+    // TODO: Use SelZero to adjust LHS/RHS DemandedElts.
+    APInt LHSUndef, LHSZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, LHSUndef,
+                                   LHSZero, TLO, Depth + 1))
+      return true;
+
+    APInt RHSUndef, RHSZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(2), DemandedElts, RHSUndef,
+                                   RHSZero, TLO, Depth + 1))
+      return true;
+
+    KnownZero = LHSZero & RHSZero;
+    KnownUndef = LHSUndef & RHSUndef;
+    break;
+  }
   case X86ISD::VBROADCAST: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
@@ -33070,6 +33099,13 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     break;
   }
+  case X86ISD::PCMPGT:
+    // icmp sgt(0, R) == ashr(R, BitWidth-1).
+    // iff we only need the sign bit then we can use R directly.
+    if (OriginalDemandedBits.isSignMask() &&
+        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
+      return TLO.CombineTo(Op, Op.getOperand(1));
+    break;
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
@@ -40493,8 +40529,7 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   // make the transformation for non-constant splats as well, but it's unclear
   // that would be a benefit as it would not eliminate any operations, just
   // perform one more step in scalar code before moving to the vector unit.
-  if (BuildVectorSDNode *BV =
-          dyn_cast<BuildVectorSDNode>(N->getOperand(0)->getOperand(1))) {
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(N->getOperand(0).getOperand(1))) {
     // Bail out if the vector isn't a constant.
     if (!BV->isConstant())
       return SDValue();
@@ -42999,6 +43034,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     // flags -> EFLAGS
     if (StringRef("{flags}").equals_lower(Constraint))
       return std::make_pair(X86::EFLAGS, &X86::CCRRegClass);
+
+    // dirflag -> DF
+    if (StringRef("{dirflag}").equals_lower(Constraint))
+      return std::make_pair(X86::DF, &X86::DFCCRRegClass);
+
+    // fpsr -> FPSW
+    if (StringRef("{fpsr}").equals_lower(Constraint))
+      return std::make_pair(X86::FPSW, &X86::FPCCRRegClass);
 
     // 'A' means [ER]AX + [ER]DX.
     if (Constraint == "A") {

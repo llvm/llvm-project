@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::fisher_f_distribution<> D;
@@ -36,4 +36,6 @@ int main()
         assert(d.m() == 14.5);
         assert(d.n() == 5.25);
     }
+
+  return 0;
 }

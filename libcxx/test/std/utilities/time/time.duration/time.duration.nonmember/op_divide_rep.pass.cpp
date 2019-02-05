@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::chrono::nanoseconds ns(15);
@@ -34,4 +34,6 @@ int main()
     static_assert(ns2.count() == 3, "");
     }
 #endif
+
+  return 0;
 }

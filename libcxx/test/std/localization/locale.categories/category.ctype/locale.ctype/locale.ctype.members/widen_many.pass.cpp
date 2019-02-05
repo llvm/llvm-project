@@ -17,7 +17,7 @@
 #include <vector>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -34,4 +34,6 @@ int main()
         assert(v[4] == L'a');
         assert(v[5] == L'1');
     }
+
+  return 0;
 }

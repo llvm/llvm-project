@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using month_weekday   = std::chrono::month_weekday;
     using month           = std::chrono::month;
@@ -82,4 +82,6 @@ int main()
                 month_weekday{month{2}, weekday_indexed{weekday{i}, 2}},
                 month_weekday{month{2}, weekday_indexed{weekday{j}, 2}},
                 i == j)));
+
+  return 0;
 }

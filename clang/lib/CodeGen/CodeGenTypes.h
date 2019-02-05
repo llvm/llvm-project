@@ -182,6 +182,10 @@ public:
   /// Convert clang calling convention to LLVM callilng convention.
   unsigned ClangCallConvToLLVMCallConv(CallingConv CC);
 
+  /// Derives the 'this' type for codegen purposes, i.e. ignoring method CVR
+  /// qualification.
+  CanQualType DeriveThisType(const CXXRecordDecl *RD, const CXXMethodDecl *MD);
+
   /// ConvertType - Convert type T into a llvm::Type.
   llvm::Type *ConvertType(QualType T);
 

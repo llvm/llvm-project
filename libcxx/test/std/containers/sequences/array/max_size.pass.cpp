@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::array<int, 2> C;
@@ -32,4 +32,6 @@ int main()
     ASSERT_NOEXCEPT(c.max_size());
     assert(c.max_size() == 0);
     }
+
+  return 0;
 }

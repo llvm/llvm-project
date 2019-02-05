@@ -13,7 +13,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l;
     assert(!std::isgraph(' ', l));
@@ -27,4 +27,6 @@ int main()
     assert( std::isgraph('f', l));
     assert( std::isgraph('9', l));
     assert( std::isgraph('+', l));
+
+  return 0;
 }

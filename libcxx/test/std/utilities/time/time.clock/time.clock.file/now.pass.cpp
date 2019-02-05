@@ -22,7 +22,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::file_clock C;
     ASSERT_NOEXCEPT(C::now());
@@ -31,4 +31,6 @@ int main()
     assert(t1.time_since_epoch().count() != 0);
     assert(C::time_point::min() < t1);
     assert(C::time_point::max() > t1);
+
+  return 0;
 }

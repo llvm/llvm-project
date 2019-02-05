@@ -16,7 +16,7 @@
 #include "test_macros.h"
 #include "../../rep.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::chrono::duration_values<int>::zero() == 0);
     assert(std::chrono::duration_values<Rep>::zero() == 0);
@@ -31,4 +31,6 @@ int main()
     ASSERT_NOEXCEPT(std::chrono::duration_values<int>::zero());
     ASSERT_NOEXCEPT(std::chrono::duration_values<Rep>::zero());
 #endif
+
+  return 0;
 }

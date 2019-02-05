@@ -33,7 +33,7 @@ struct Implicit {
   Implicit(int x) : value(x) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<long> T0;
@@ -86,4 +86,6 @@ int main()
         std::tuple<Implicit> t2 = {std::allocator_arg, std::allocator<void>{}, t1};
         assert(std::get<0>(t2).value == 42);
     }
+
+  return 0;
 }

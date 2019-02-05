@@ -46,7 +46,7 @@ test()
     assert(!std::lexicographical_compare(Iter1(ib+1), Iter1(ib+3),  Iter2(ia),   Iter2(ia+sa)));
 }
 
-int main()
+int main(int, char**)
 {
     test<input_iterator<const int*>, input_iterator<const int*> >();
     test<input_iterator<const int*>, forward_iterator<const int*> >();
@@ -81,4 +81,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

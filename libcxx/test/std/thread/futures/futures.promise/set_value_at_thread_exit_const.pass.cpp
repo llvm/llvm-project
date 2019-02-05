@@ -24,7 +24,7 @@ void func(std::promise<int> p)
     p.set_value_at_thread_exit(i);
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::promise<int> p;
@@ -32,4 +32,6 @@ int main()
         std::thread(func, std::move(p)).detach();
         assert(f.get() == 5);
     }
+
+  return 0;
 }

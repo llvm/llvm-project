@@ -79,6 +79,12 @@ Improvements to clang-tidy
   Checks for casts of ``absl::Duration`` conversion functions, and recommends
   the right conversion function instead.
 
+- New :doc:`abseil-duration-unnecessary-conversion
+  <clang-tidy/checks/abseil-duration-unnecessary-conversion>` check.
+
+  Finds and fixes cases where ``absl::Duration`` values are being converted to
+  numeric types and back again.
+
 - New :doc:`google-readability-avoid-underscore-in-googletest-name
   <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
   check.

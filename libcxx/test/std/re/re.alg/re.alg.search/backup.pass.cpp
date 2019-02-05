@@ -21,7 +21,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     // This regex_iterator uses regex_search(__wrap_iter<_Iter> __first, ...)
     // Test for https://bugs.llvm.org/show_bug.cgi?id=16240 fixed in r185273.
@@ -60,4 +60,6 @@ int main()
         ++it;
         assert(it == end);
     }
+
+  return 0;
 }

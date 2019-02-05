@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "constexpr_char_traits.hpp"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view SV;
@@ -100,4 +100,6 @@ int main()
     static_assert ( svNot.starts_with("def"), "" );
     }
 #endif
+
+  return 0;
 }

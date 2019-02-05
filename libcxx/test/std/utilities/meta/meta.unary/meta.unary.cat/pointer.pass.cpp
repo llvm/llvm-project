@@ -46,7 +46,7 @@ void test_pointer()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_pointer<void*>();
     test_pointer<int*>();
@@ -55,4 +55,6 @@ int main()
 
 //  LWG#2582
     static_assert(!std::is_pointer<incomplete_type>::value, "");
+
+  return 0;
 }

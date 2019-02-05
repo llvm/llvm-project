@@ -31,7 +31,7 @@ struct B
 
 bool B::constructed = false;
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::scoped_allocator_adaptor<A1<B>> A;
@@ -65,4 +65,6 @@ int main()
         assert(A3<S>::destroy_called);
     }
 
+
+  return 0;
 }

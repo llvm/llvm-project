@@ -27,7 +27,7 @@ constexpr bool test_constexpr()
 #endif
 
 
-int main()
+int main(int, char**)
 {
     assert(std::char_traits<char>::length("") == 0);
     assert(std::char_traits<char>::length("a") == 1);
@@ -38,4 +38,6 @@ int main()
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "" );
 #endif
+
+  return 0;
 }

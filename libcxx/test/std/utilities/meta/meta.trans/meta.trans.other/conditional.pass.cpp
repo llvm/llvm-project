@@ -14,7 +14,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::conditional<true, char, int>::type, char>::value), "");
     static_assert((std::is_same<std::conditional<false, char, int>::type, int>::value), "");
@@ -22,4 +22,6 @@ int main()
     static_assert((std::is_same<std::conditional_t<true, char, int>, char>::value), "");
     static_assert((std::is_same<std::conditional_t<false, char, int>, int>::value), "");
 #endif
+
+  return 0;
 }

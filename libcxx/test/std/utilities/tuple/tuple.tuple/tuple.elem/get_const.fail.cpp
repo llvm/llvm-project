@@ -20,7 +20,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<double&, std::string, int> T;
@@ -37,4 +37,6 @@ int main()
 
         std::get<1>(t) = "four";
     }
+
+  return 0;
 }

@@ -20,7 +20,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::array<int, 5> C;
@@ -141,4 +141,6 @@ int main()
         static_assert ( *std::crbegin(c) == 4, "" );
     }
 #endif
+
+  return 0;
 }

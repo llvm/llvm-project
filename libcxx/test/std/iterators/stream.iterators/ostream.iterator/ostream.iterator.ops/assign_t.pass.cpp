@@ -26,7 +26,7 @@
 #pragma warning(disable: 4244) // conversion from 'X' to 'Y', possible loss of data
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         std::ostringstream outf;
@@ -52,4 +52,6 @@ int main()
         i = 2.4;
         assert(outf.str() == L"2, ");
     }
+
+  return 0;
 }

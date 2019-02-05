@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     try {
         std::regex re("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?aaaaaaaaaaaaaaaaaaaa");
@@ -35,4 +35,5 @@ int main()
     } catch (const std::regex_error &e) {
       assert(e.code() == std::regex_constants::error_complexity);
     }
+    return 0;
 }

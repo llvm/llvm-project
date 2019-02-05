@@ -325,7 +325,7 @@ void test_sfinae() {
   }
 }
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   for (auto const & TC : Cases) {
@@ -384,4 +384,6 @@ int main()
     doConcatECharTest<char32_t>(TC);
   }
   test_sfinae();
+
+  return 0;
 }

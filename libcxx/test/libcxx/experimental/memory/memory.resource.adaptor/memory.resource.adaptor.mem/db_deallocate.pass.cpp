@@ -26,7 +26,7 @@ int AssertCount = 0;
 
 namespace ex = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     using Alloc = NullAllocator<char>;
 
@@ -41,4 +41,6 @@ int main()
     assert(AssertCount == 0);
     m1.deallocate(nullptr, maxSize + 1);
     assert(AssertCount >= 1);
+
+  return 0;
 }

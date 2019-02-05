@@ -32,7 +32,7 @@ test(It l, It r, bool x)
     assert((r1 != r2) == x);
 }
 
-int main()
+int main(int, char**)
 {
     char s[] = "1234567890";
     test(input_iterator<char*>(s), input_iterator<char*>(s), false);
@@ -58,4 +58,6 @@ int main()
     static_assert( (it2 != it3), "");
     }
 #endif
+
+  return 0;
 }

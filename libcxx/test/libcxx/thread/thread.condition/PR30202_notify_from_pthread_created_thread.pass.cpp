@@ -45,7 +45,7 @@ void* func(void*)
     return nullptr;
 }
 
-int main()
+int main(int, char**)
 {
     {
     std::unique_lock<std::mutex> lk(mut);
@@ -72,4 +72,6 @@ int main()
     assert(t1-t0 > ms(250));
     t.join();
     }
+
+  return 0;
 }

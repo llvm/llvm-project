@@ -275,7 +275,7 @@ void test_emplace_sfinae_constraints() {
     }
 }
 
-int main() {
+int main(int, char**) {
     test_emplace_type<small>();
     test_emplace_type<large>();
     test_emplace_type<small_throws_on_copy>();
@@ -288,4 +288,6 @@ int main() {
     test_emplace_throws<SmallThrows>();
     test_emplace_throws<LargeThrows>();
 #endif
+
+  return 0;
 }

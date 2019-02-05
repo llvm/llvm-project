@@ -10,8 +10,10 @@
 
 #include <ctime>
 
-int main() {
+int main(int, char**) {
     // localtime is not thread-safe.
     std::time_t t = 0;
     std::localtime(&t);
+
+  return 0;
 }

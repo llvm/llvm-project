@@ -37,11 +37,13 @@ void test_lvalue_ref()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_lvalue_ref<int&>();
     test_lvalue_ref<const int&>();
 
 //  LWG#2582
     static_assert(!std::is_lvalue_reference<incomplete_type>::value, "");
+
+  return 0;
 }

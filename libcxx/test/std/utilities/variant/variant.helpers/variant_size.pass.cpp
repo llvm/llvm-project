@@ -36,8 +36,10 @@ template <class V, size_t E> void test() {
                 "");
 };
 
-int main() {
+int main(int, char**) {
   test<std::variant<>, 0>();
   test<std::variant<void *>, 1>();
   test<std::variant<long, long, void *, double>, 4>();
+
+  return 0;
 }

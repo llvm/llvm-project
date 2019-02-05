@@ -37,10 +37,12 @@ public:
     double getd() const {return d_;}
 };
 
-int main()
+int main(int, char**)
 {
     std::list<A> c1;
     std::list<A> c2;
     std::list<A>::iterator i = c1.emplace(c2.cbegin(), 2, 3.5);
     assert(false);
+
+  return 0;
 }

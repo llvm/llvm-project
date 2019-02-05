@@ -366,7 +366,7 @@ void test3()
     test(S("hnbrcplsjfgiktoedmaq"), "qprlsfojamgndekthibc", 21, 20, S::npos);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -389,4 +389,6 @@ int main()
     static_assert (sv2.find_first_of( "lecar", 0, 5) == 0, "" );
     }
 #endif
+
+  return 0;
 }

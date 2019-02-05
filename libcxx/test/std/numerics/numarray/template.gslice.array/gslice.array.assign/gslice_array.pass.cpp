@@ -15,7 +15,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     int a1[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11,
                 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
@@ -77,4 +77,6 @@ int main()
     assert(v1[38] == 38);
     assert(v1[39] == 39);
     assert(v1[40] == 40);
+
+  return 0;
 }

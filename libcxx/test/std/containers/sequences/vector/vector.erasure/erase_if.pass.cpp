@@ -66,7 +66,7 @@ void test()
     test0(S({1,2,3}), False, S({1,2,3}));
 }
 
-int main()
+int main(int, char**)
 {
     test<std::vector<int>>();
     test<std::vector<int, min_allocator<int>>> ();
@@ -74,4 +74,6 @@ int main()
 
     test<std::vector<long>>();
     test<std::vector<double>>();
+
+  return 0;
 }

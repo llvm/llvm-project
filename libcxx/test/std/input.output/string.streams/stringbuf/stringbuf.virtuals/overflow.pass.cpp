@@ -34,7 +34,7 @@ struct testbuf
     void pbump(int n) {base::pbump(n);}
 };
 
-int main()
+int main(int, char**)
 {
     {  // sanity check
     testbuf<char> tb("");
@@ -97,4 +97,6 @@ int main()
         assert(sb.sputc('2') == '2');
         assert(sb.str() == "abc12");
     }
+
+  return 0;
 }

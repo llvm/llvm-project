@@ -75,7 +75,7 @@ public:
 
 #endif
 
-int main()
+int main(int, char**)
 {
     test<input_iterator<const int*>, output_iterator<int*> >();
     test<input_iterator<const int*>, forward_iterator<int*> >();
@@ -112,4 +112,6 @@ int main()
     Y y[3] = {Y(1), Y(2), Y(3)};
     std::adjacent_difference(x, x+3, y);
 #endif
+
+  return 0;
 }

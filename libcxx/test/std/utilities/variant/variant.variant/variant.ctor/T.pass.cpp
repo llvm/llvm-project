@@ -126,8 +126,10 @@ void test_T_ctor_basic() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_T_ctor_basic();
   test_T_ctor_noexcept();
   test_T_ctor_sfinae();
+
+  return 0;
 }

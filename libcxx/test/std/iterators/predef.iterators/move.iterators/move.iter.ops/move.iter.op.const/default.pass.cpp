@@ -27,7 +27,7 @@ test()
     (void)r;
 }
 
-int main()
+int main(int, char**)
 {
     test<input_iterator<char*> >();
     test<forward_iterator<char*> >();
@@ -41,4 +41,6 @@ int main()
     (void)it;
     }
 #endif
+
+  return 0;
 }

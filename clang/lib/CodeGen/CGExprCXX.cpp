@@ -40,13 +40,11 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
          isa<CXXOperatorCallExpr>(CE));
   assert(MD->isInstance() &&
          "Trying to emit a member or operator call expr on a static method!");
-  ASTContext &C = CGF.getContext();
 
   // Push the this ptr.
   const CXXRecordDecl *RD =
       CGF.CGM.getCXXABI().getThisArgumentTypeForMethod(MD);
-  Args.add(RValue::get(This),
-           RD ? C.getPointerType(C.getTypeDeclType(RD)) : C.VoidPtrTy);
+  Args.add(RValue::get(This), CGF.getTypes().DeriveThisType(RD, MD));
 
   // If there is an implicit parameter (e.g. VTT), emit it.
   if (ImplicitParam) {
@@ -326,9 +324,6 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       CallLoc, This.getPointer(), C.getRecordType(CalleeDecl->getParent()),
       /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
-  // FIXME: Uses of 'MD' past this point need to be audited. We may need to use
-  // 'CalleeDecl' instead.
-
   // C++ [class.virtual]p12:
   //   Explicit qualification with the scope operator (5.1) suppresses the
   //   virtual call mechanism.
@@ -337,7 +332,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   // because then we know what the type is.
   bool UseVirtualCall = CanUseVirtualCall && !DevirtualizedMethod;
 
-  if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(MD)) {
+  if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl)) {
     assert(CE->arg_begin() == CE->arg_end() &&
            "Destructor shouldn't have explicit parameters");
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
@@ -347,25 +342,28 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           cast<CXXMemberCallExpr>(CE));
     } else {
       CGCallee Callee;
-      if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)
-        Callee = BuildAppleKextVirtualCall(MD, Qualifier, Ty);
+      if (getLangOpts().AppleKext && Dtor->isVirtual() && HasQualifier)
+        Callee = BuildAppleKextVirtualCall(Dtor, Qualifier, Ty);
       else if (!DevirtualizedMethod)
         Callee = CGCallee::forDirect(
             CGM.getAddrOfCXXStructor(Dtor, StructorType::Complete, FInfo, Ty),
             GlobalDecl(Dtor, Dtor_Complete));
       else {
-        const CXXDestructorDecl *DDtor =
-          cast<CXXDestructorDecl>(DevirtualizedMethod);
         Callee = CGCallee::forDirect(
-            CGM.GetAddrOfFunction(GlobalDecl(DDtor, Dtor_Complete), Ty),
-            GlobalDecl(DDtor, Dtor_Complete));
+            CGM.GetAddrOfFunction(GlobalDecl(Dtor, Dtor_Complete), Ty),
+            GlobalDecl(Dtor, Dtor_Complete));
       }
-      EmitCXXMemberOrOperatorCall(
-          CalleeDecl, Callee, ReturnValue, This.getPointer(),
-          /*ImplicitParam=*/nullptr, QualType(), CE, nullptr);
+
+      EmitCXXDestructorCall(Dtor, Callee, This.getPointer(),
+                            /*ImplicitParam=*/nullptr,
+                            /*ImplicitParamTy=*/QualType(), nullptr,
+                            getFromDtorType(Dtor_Complete));
     }
     return RValue::get(nullptr);
   }
+
+  // FIXME: Uses of 'MD' past this point need to be audited. We may need to use
+  // 'CalleeDecl' instead.
 
   CGCallee Callee;
   if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {

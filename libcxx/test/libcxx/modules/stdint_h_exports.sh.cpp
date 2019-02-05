@@ -14,6 +14,8 @@
 
 #include <stdint.h>
 
-int main() {
+int main(int, char**) {
   int8_t x; ((void)x);
+
+  return 0;
 }

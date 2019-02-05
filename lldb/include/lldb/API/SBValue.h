@@ -306,6 +306,13 @@ public:
   bool GetExpressionPath(lldb::SBStream &description,
                          bool qualify_cxx_base_classes);
 
+  lldb::SBValue EvaluateExpression(const char *expr) const;
+  lldb::SBValue EvaluateExpression(const char *expr,
+                                   const SBExpressionOptions &options) const;
+  lldb::SBValue EvaluateExpression(const char *expr,
+                                   const SBExpressionOptions &options,
+                                   const char *name) const;
+
   SBValue(const lldb::ValueObjectSP &value_sp);
 
   //------------------------------------------------------------------

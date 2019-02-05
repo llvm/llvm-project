@@ -46,13 +46,16 @@ void test_nullptr()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_nullptr<std::nullptr_t>();
 
 //  LWG#2582
     static_assert(!std::is_null_pointer<incomplete_type>::value, "");
+    return 0;
 }
 #else
-int main() {}
+int main(int, char**) {
+  return 0;
+}
 #endif

@@ -42,11 +42,13 @@ test()
     test(Iter(ia), Iter(ia+sa), 10, 31);
 }
 
-int main()
+int main(int, char**)
 {
     test<input_iterator<const int*> >();
     test<forward_iterator<const int*> >();
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
+
+  return 0;
 }

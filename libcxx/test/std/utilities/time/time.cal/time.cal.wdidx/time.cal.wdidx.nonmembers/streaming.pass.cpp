@@ -26,10 +26,12 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using weekday_indexed = std::chrono::weekday_indexed;
     using weekday         = std::chrono::weekday;
 
     std::cout << weekday_indexed{weekday{3}};
+
+  return 0;
 }

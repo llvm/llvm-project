@@ -42,7 +42,7 @@ test_exceptions(S s, It first, It last)
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -219,4 +219,6 @@ int main()
     s.append(MoveIt(It(std::begin(p))), MoveIt(It(std::end(p) - 1)));
     assert(s == "ABCD");
   }
+
+  return 0;
 }

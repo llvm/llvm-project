@@ -56,11 +56,13 @@ test(typename C::size_type n)
     test2<C> ( n );
 }
 
-int main()
+int main(int, char**)
 {
     test<std::vector<bool> >(50);
 #if TEST_STD_VER >= 11
     test<std::vector<bool, min_allocator<bool>> >(50);
     test2<std::vector<bool, test_allocator<bool>> >( 100, test_allocator<bool>(23));
 #endif
+
+  return 0;
 }

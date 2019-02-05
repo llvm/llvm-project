@@ -50,7 +50,7 @@ test()
     return std::move(opt).value().test();
 }
 
-int main()
+int main(int, char**)
 {
     {
         optional<X> opt; ((void)opt);
@@ -76,4 +76,6 @@ int main()
     }
 #endif
     static_assert(test() == 7, "");
+
+  return 0;
 }

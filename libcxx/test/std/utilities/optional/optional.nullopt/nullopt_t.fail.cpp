@@ -18,7 +18,9 @@
 
 #include <optional>
 
-int main()
+int main(int, char**)
 {
     std::nullopt_t n = {};
+
+  return 0;
 }

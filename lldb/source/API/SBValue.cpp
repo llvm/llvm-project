@@ -1294,6 +1294,87 @@ bool SBValue::GetExpressionPath(SBStream &description,
   return false;
 }
 
+lldb::SBValue SBValue::EvaluateExpression(const char* expr) const {
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return SBValue();
+
+  lldb::TargetSP target_sp = value_sp->GetTargetSP();
+  if (!target_sp)
+    return SBValue();
+
+  lldb::SBExpressionOptions options;
+  options.SetFetchDynamicValue(target_sp->GetPreferDynamicValue());
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+
+  return EvaluateExpression(expr, options, nullptr);
+}
+
+lldb::SBValue
+SBValue::EvaluateExpression(const char *expr,
+                            const SBExpressionOptions &options) const {
+  return EvaluateExpression(expr, options, nullptr);
+}
+
+lldb::SBValue SBValue::EvaluateExpression(const char *expr,
+                                          const SBExpressionOptions &options,
+                                          const char *name) const {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+
+  if (!expr || expr[0] == '\0') {
+    LLDB_LOG(log,
+             "SBValue::EvaluateExpression called with an empty expression");
+    return SBValue();
+  }
+
+  LLDB_LOG(log, "SBValue()::EvaluateExpression (expr=\"{0}\")...", expr);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp) {
+    LLDB_LOG(log, "SBValue::EvaluateExpression () => error: could not "
+                  "reconstruct value object for this SBValue");
+    return SBValue();
+  }
+
+  lldb::TargetSP target_sp = value_sp->GetTargetSP();
+  if (!target_sp) {
+    LLDB_LOG(
+        log,
+        "SBValue::EvaluateExpression () => error: could not retrieve target");
+    return SBValue();
+  }
+
+  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  ExecutionContext exe_ctx(target_sp.get());
+
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (!frame) {
+    LLDB_LOG(log, "SBValue::EvaluateExpression () => error: could not retrieve "
+                  "current stack frame");
+    return SBValue();
+  }
+
+  ValueObjectSP res_val_sp;
+  ExpressionResults expr_res = target_sp->EvaluateExpression(
+      expr, frame, res_val_sp, options.ref(), nullptr, value_sp.get());
+
+  if (name)
+    res_val_sp->SetName(ConstString(name));
+
+  LLDB_LOG(log,
+           "SBValue(Name=\"{0}\")::EvaluateExpression (expr=\"{1}\") => "
+           "SBValue(Success={2}) (execution result={3})",
+           value_sp->GetName(), expr, res_val_sp->GetError().Success(),
+           expr_res);
+
+  SBValue result;
+  result.SetSP(res_val_sp, options.GetFetchDynamicValue());
+  return result;
+}
+
 bool SBValue::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
 

@@ -26,7 +26,7 @@
 
 namespace coro = std::experimental;
 
-int main()
+int main(int, char**)
 {
   {
     using H = coro::coroutine_handle<>;
@@ -42,4 +42,6 @@ int main()
     // expected-error@experimental/coroutine:* 1 {{coroutine_handle<promise_type>::from_address cannot be called with non-void pointers}}
     H::from_address((int*)nullptr); // expected-note {{requested here}}
   }
+
+  return 0;
 }

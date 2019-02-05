@@ -68,7 +68,7 @@ test()
         test(Iter(v.data()), Iter(v.data()+v.size()), x);
 }
 
-int main()
+int main(int, char**)
 {
     int d[] = {3, 2, 1, 0};
     for (int* e = d; e <= d+4; ++e)
@@ -83,4 +83,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

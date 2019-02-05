@@ -35,16 +35,16 @@ body:             |
     ; CHECK: Bad machine code: addrspacecast types must be pointers
     %8:_(<2 x p0>) = G_ADDRSPACE_CAST %2
 
-    ; CHECK: Bad machine code: pointer casts must be all-vector or all-scalar
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
     %9:_(<2 x p1>) = G_ADDRSPACE_CAST %1
 
-    ; CHECK: Bad machine code: pointer casts must be all-vector or all-scalar
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
     %10:_(p1) = G_ADDRSPACE_CAST %3
 
-    ; CHECK: Bad machine code: pointer casts must preserve number of elements
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
     %11:_(<4 x p1>) = G_ADDRSPACE_CAST %3
 
-    ; CHECK: Bad machine code: pointer casts must preserve number of elements
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
     %12:_(<4 x p1>) = G_IMPLICIT_DEF
     %13:_(<2 x p0>) = G_ADDRSPACE_CAST %12
 

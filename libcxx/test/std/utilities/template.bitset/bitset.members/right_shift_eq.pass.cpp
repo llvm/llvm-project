@@ -46,7 +46,7 @@ void test_right_shift()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_right_shift<0>();
     test_right_shift<1>();
@@ -57,4 +57,6 @@ int main()
     test_right_shift<64>();
     test_right_shift<65>();
     test_right_shift<1000>();
+
+  return 0;
 }

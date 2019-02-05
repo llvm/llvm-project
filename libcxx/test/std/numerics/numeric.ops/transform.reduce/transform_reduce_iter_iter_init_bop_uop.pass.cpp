@@ -91,7 +91,7 @@ void test_move_only_types()
         [](const MoveOnly& target) { return MoveOnly{target.get() * 10}; }).get());
 }
 
-int main()
+int main(int, char**)
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -117,4 +117,6 @@ int main()
     }
 
     test_move_only_types();
+
+  return 0;
 }

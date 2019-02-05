@@ -155,6 +155,9 @@ enum OptionHidden {   // Control whether -help shows this option
 // enabled, and used, the value for the flag comes from the suffix of the
 // argument.
 //
+// AlwaysPrefix - Only allow the behavior enabled by the Prefix flag and reject
+// the Option=Value form.
+//
 // Grouping - With this option enabled, multiple letter options are allowed to
 // bunch together with only a single hyphen for the whole group.  This allows
 // emulation of the behavior that ls uses for example: ls -la === ls -l -a
@@ -164,7 +167,8 @@ enum FormattingFlags {
   NormalFormatting = 0x00, // Nothing special
   Positional = 0x01,       // Is a positional argument, no '-' required
   Prefix = 0x02,           // Can this option directly prefix its value?
-  Grouping = 0x03          // Can this option group with other options?
+  AlwaysPrefix = 0x03,     // Can this option only directly prefix its value?
+  Grouping = 0x04          // Can this option group with other options?
 };
 
 enum MiscFlags {             // Miscellaneous flags to adjust argument
@@ -264,7 +268,7 @@ class Option {
   // detail representing the non-value
   unsigned Value : 2;
   unsigned HiddenFlag : 2; // enum OptionHidden
-  unsigned Formatting : 2; // enum FormattingFlags
+  unsigned Formatting : 3; // enum FormattingFlags
   unsigned Misc : 3;
   unsigned Position = 0;       // Position of last occurrence of the option
   unsigned AdditionalVals = 0; // Greater than 0 for multi-valued option.

@@ -15,8 +15,10 @@
 #include <future>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_convertible<std::future_error*,
                                        std::logic_error*>::value), "");
+
+  return 0;
 }

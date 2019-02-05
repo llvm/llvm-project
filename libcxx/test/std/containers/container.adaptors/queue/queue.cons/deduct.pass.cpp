@@ -33,7 +33,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 
 //  Test the explicit deduction guides
@@ -87,4 +87,6 @@ int main()
     assert(que.back() == 3);
     }
 
+
+  return 0;
 }

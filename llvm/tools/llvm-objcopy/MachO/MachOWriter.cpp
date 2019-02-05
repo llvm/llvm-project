@@ -343,9 +343,7 @@ Error MachOWriter::write() {
   writeLoadCommands();
   writeSections();
   writeTail();
-  if (auto E = B.commit())
-    return E;
-  return Error::success();
+  return B.commit();
 }
 
 } // end namespace macho

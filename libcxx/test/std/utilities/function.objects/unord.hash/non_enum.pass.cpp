@@ -22,7 +22,7 @@
 
 struct X {};
 
-int main()
+int main(int, char**)
 {
     using H = std::hash<X>;
     static_assert(!std::is_default_constructible<H>::value, "");
@@ -34,4 +34,6 @@ int main()
     static_assert(!std::is_invocable<H, X&>::value, "");
     static_assert(!std::is_invocable<H, X const&>::value, "");
 #endif
+
+  return 0;
 }

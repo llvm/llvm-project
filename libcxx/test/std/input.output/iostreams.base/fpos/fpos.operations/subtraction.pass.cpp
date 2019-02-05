@@ -15,7 +15,7 @@
 #include <ios>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::fpos<std::mbstate_t> P;
     P p(11);
@@ -24,4 +24,6 @@ int main()
     assert(q == P(5));
     p -= o;
     assert(p == q);
+
+  return 0;
 }

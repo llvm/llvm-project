@@ -360,7 +360,7 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, S("abcdefghijklmnopqrst"), 0);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -383,4 +383,6 @@ int main()
     assert(s.compare(0, 1, {"abc", 1}) < 0);
     }
 #endif
+
+  return 0;
 }

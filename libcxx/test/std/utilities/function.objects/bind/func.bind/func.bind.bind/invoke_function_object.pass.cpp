@@ -38,7 +38,7 @@ struct BadUnaryFunction
     }
 };
 
-int main()
+int main(int, char**)
 {
     // Check that BadUnaryFunction::operator()(S const &) is not
     // instantiated when checking if BadUnaryFunction is a nested bind
@@ -47,4 +47,6 @@ int main()
     b(0);
     auto b2 = std::bind<long>(DummyUnaryFunction(), BadUnaryFunction());
     b2(0);
+
+  return 0;
 }

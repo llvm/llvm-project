@@ -20,7 +20,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex phone_numbers("\\d{3}-(\\d{4})");
@@ -125,4 +125,6 @@ int main()
         ++i;
         assert(i == std::cregex_token_iterator());
     }
+
+  return 0;
 }

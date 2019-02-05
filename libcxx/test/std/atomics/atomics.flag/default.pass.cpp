@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     std::atomic_flag f;
     f.clear();
@@ -32,4 +32,6 @@ int main()
         assert(!zero.test_and_set());
         zero.~A();
     }
+
+  return 0;
 }

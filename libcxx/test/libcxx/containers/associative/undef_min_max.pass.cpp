@@ -15,7 +15,9 @@
 
 #include <map>
 
-int main() {
+int main(int, char**) {
   std::map<int, int> m;
   ((void)m);
+
+  return 0;
 }

@@ -8,7 +8,6 @@
 
 #include "PlatformPOSIX.h"
 
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -22,11 +21,11 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"

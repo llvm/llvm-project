@@ -16,7 +16,7 @@
 #include <type_traits>
 #include <limits>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::months D;
     typedef D::rep Rep;
@@ -25,4 +25,6 @@ int main()
     static_assert(std::is_integral<Rep>::value, "");
     static_assert(std::numeric_limits<Rep>::digits >= 20, "");
     static_assert(std::is_same_v<Period, std::ratio_divide<std::chrono::years::period, std::ratio<12>>>, "");
+
+  return 0;
 }

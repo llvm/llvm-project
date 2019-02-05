@@ -43,7 +43,7 @@ test()
     return (*std::move(opt)).test();
 }
 
-int main()
+int main(int, char**)
 {
     {
         optional<X> opt; ((void)opt);
@@ -69,4 +69,6 @@ int main()
         assert(false);
     }
 #endif  // _LIBCPP_DEBUG
+
+  return 0;
 }

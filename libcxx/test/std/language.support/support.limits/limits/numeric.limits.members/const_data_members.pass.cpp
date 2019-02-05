@@ -68,7 +68,7 @@ void test(const T &) {}
 
 struct other {};
 
-int main()
+int main(int, char**)
 {
     // bool
     TEST_NUMERIC_LIMITS(bool)
@@ -205,4 +205,6 @@ int main()
     TEST_NUMERIC_LIMITS(const other)
     TEST_NUMERIC_LIMITS(volatile other)
     TEST_NUMERIC_LIMITS(const volatile other)
+
+  return 0;
 }

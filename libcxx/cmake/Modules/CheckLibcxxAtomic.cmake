@@ -24,7 +24,7 @@ function(check_cxx_atomics varname)
 #include <atomic>
 std::atomic<uintptr_t> x;
 std::atomic<uintmax_t> y;
-int main() {
+int main(int, char**) {
   return x + y;
 }
 " ${varname})

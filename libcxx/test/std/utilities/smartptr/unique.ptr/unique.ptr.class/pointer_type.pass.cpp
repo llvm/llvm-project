@@ -54,7 +54,9 @@ void test_basic() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_basic</*IsArray*/ false>();
   test_basic<true>();
+
+  return 0;
 }

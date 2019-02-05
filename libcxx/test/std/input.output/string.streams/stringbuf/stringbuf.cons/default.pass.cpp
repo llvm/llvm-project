@@ -31,7 +31,7 @@ struct testbuf
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::stringbuf buf;
@@ -49,4 +49,6 @@ int main()
         testbuf<wchar_t> buf;
         buf.check();
     }
+
+  return 0;
 }

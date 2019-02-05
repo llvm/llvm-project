@@ -20,7 +20,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l(LOCALE_en_US_UTF_8);
@@ -108,4 +108,6 @@ int main()
             assert(!f.is(F::upper, L'\x00DA'));
         }
     }
+
+  return 0;
 }

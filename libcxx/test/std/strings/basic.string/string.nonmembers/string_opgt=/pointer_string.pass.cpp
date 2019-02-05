@@ -23,7 +23,7 @@ test(const typename S::value_type* lhs, const S& rhs, bool x)
     assert((lhs >= rhs) == x);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -65,4 +65,6 @@ int main()
     test("abcdefghijklmnopqrst", S("abcdefghijklmnopqrst"), true);
     }
 #endif
+
+  return 0;
 }

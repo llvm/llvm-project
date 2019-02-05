@@ -18,11 +18,13 @@
 
 struct testbuf : public std::streambuf {};
 
-int main()
+int main(int, char**)
 {
     testbuf sb;
     std::ios ios(&sb);
     std::ios_base& r = std::showpoint(ios);
     assert(&r == &ios);
     assert(ios.flags() & std::ios::showpoint);
+
+  return 0;
 }

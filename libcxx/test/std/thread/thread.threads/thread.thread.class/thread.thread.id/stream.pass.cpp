@@ -20,9 +20,11 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::thread::id id0 = std::this_thread::get_id();
     std::ostringstream os;
     os << id0;
+
+  return 0;
 }

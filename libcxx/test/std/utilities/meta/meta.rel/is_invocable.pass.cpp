@@ -46,7 +46,7 @@ struct Sink {
   void operator()(Args&&...) const {}
 };
 
-int main() {
+int main(int, char**) {
   using AbominableFunc = void(...) const;
 
   //  Non-callable things
@@ -241,4 +241,5 @@ int main() {
   static_assert(std::is_invocable_r_v<void, Fn>, "");
   static_assert(!std::is_invocable_r_v<int, Fn>, "");
 }
+  return 0;
 }

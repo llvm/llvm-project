@@ -32,13 +32,13 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyMCInstLower {
 
   MCSymbol *GetGlobalAddressSymbol(const MachineOperand &MO) const;
   MCSymbol *GetExternalSymbolSymbol(const MachineOperand &MO) const;
-  MCOperand LowerSymbolOperand(MCSymbol *Sym, int64_t Offset, bool IsFunc,
+  MCOperand lowerSymbolOperand(MCSymbol *Sym, int64_t Offset, bool IsFunc,
                                bool IsGlob, bool IsEvent) const;
 
 public:
   WebAssemblyMCInstLower(MCContext &ctx, WebAssemblyAsmPrinter &printer)
       : Ctx(ctx), Printer(printer) {}
-  void Lower(const MachineInstr *MI, MCInst &OutMI) const;
+  void lower(const MachineInstr *MI, MCInst &OutMI) const;
 };
 } // end namespace llvm
 

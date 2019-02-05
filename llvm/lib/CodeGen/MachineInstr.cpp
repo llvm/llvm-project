@@ -25,6 +25,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -49,9 +50,9 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -2101,4 +2102,55 @@ void MachineInstr::changeDebugValuesDefReg(unsigned Reg) {
   // Propagate Reg to debug value instructions.
   for (auto *DBI : DbgValues)
     DBI->getOperand(0).setReg(Reg);
+}
+
+using MMOList = SmallVector<const MachineMemOperand *, 2>;
+
+static unsigned getSpillSlotSize(MMOList &Accesses,
+                                 const MachineFrameInfo &MFI) {
+  unsigned Size = 0;
+  for (auto A : Accesses)
+    if (MFI.isSpillSlotObjectIndex(
+            cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
+                ->getFrameIndex()))
+      Size += A->getSize();
+  return Size;
+}
+
+Optional<unsigned>
+MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
+  int FI;
+  if (TII->isStoreToStackSlotPostFE(*this, FI)) {
+    const MachineFrameInfo &MFI = getMF()->getFrameInfo();
+    if (MFI.isSpillSlotObjectIndex(FI))
+      return (*memoperands_begin())->getSize();
+  }
+  return None;
+}
+
+Optional<unsigned>
+MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
+  MMOList Accesses;
+  if (TII->hasStoreToStackSlot(*this, Accesses))
+    return getSpillSlotSize(Accesses, getMF()->getFrameInfo());
+  return None;
+}
+
+Optional<unsigned>
+MachineInstr::getRestoreSize(const TargetInstrInfo *TII) const {
+  int FI;
+  if (TII->isLoadFromStackSlotPostFE(*this, FI)) {
+    const MachineFrameInfo &MFI = getMF()->getFrameInfo();
+    if (MFI.isSpillSlotObjectIndex(FI))
+      return (*memoperands_begin())->getSize();
+  }
+  return None;
+}
+
+Optional<unsigned>
+MachineInstr::getFoldedRestoreSize(const TargetInstrInfo *TII) const {
+  MMOList Accesses;
+  if (TII->hasLoadFromStackSlot(*this, Accesses))
+    return getSpillSlotSize(Accesses, getMF()->getFrameInfo());
+  return None;
 }

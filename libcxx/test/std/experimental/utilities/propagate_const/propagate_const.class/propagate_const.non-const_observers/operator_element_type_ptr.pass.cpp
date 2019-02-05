@@ -18,7 +18,7 @@
 
 using std::experimental::propagate_const;
 
-int main() {
+int main(int, char**) {
 
   typedef propagate_const<XWithImplicitIntStarConversion> P;
 
@@ -31,4 +31,6 @@ int main() {
   *ptr_1 = 2;
 
   assert(*ptr_1==2);
+
+  return 0;
 }

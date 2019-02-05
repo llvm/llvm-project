@@ -15,10 +15,12 @@
 #include <string_view>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using namespace std;
 
     string_view foo  =   ""sv;
     assert(foo.length() == 0);
+
+  return 0;
 }

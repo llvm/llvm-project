@@ -24,7 +24,7 @@ test()
     static_assert((std::is_same<Dc, De>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<std::chrono::duration<int, std::ratio<1, 100> >,
          std::chrono::duration<long, std::ratio<1, 1000> >,
@@ -38,4 +38,6 @@ int main()
     test<std::chrono::duration<double, std::ratio<21, 1> >,
          std::chrono::duration<short, std::ratio<15, 1> >,
          std::chrono::duration<double, std::ratio<3, 1> > >();
+
+  return 0;
 }

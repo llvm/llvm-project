@@ -31,7 +31,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using weekday = std::chrono::weekday;
     ASSERT_NOEXCEPT(++(std::declval<weekday&>())  );
@@ -49,4 +49,6 @@ int main()
         assert((static_cast<unsigned>(wd++) == euclidian_addition<unsigned, 0, 6>(i, 1)));
         assert((static_cast<unsigned>(wd)   == euclidian_addition<unsigned, 0, 6>(i, 2)));
     }
+
+  return 0;
 }

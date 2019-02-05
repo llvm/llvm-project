@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::normal_distribution<> D;
@@ -36,4 +36,6 @@ int main()
         assert(d.mean() == 14.5);
         assert(d.stddev() == 5.25);
     }
+
+  return 0;
 }

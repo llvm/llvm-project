@@ -49,10 +49,12 @@ MyFuture test_coro() {
   co_return;
 }
 
-int main()
+int main(int, char**)
 {
   MyFuture f = test_coro();
   while (!f.p.done())
     f.p.resume();
   f.p.destroy();
+
+  return 0;
 }

@@ -35,8 +35,10 @@ test(const std::basic_string<CharT>& s)
     assert(os.str() == s);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::string("123"));
     test(std::wstring(L"123"));
+
+  return 0;
 }

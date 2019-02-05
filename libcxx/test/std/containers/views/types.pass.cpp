@@ -96,11 +96,13 @@ void test()
 
 struct A{};
 
-int main ()
+int main(int, char**)
 {
     test<int>();
     test<long>();
     test<double>();
     test<std::string>();
     test<A>();
+
+  return 0;
 }

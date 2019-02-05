@@ -375,6 +375,8 @@ class TypePromotionTransaction;
         SmallVectorImpl<Instruction *> &SpeculativelyMovedExts);
     bool splitBranchCondition(Function &F);
     bool simplifyOffsetableRelocate(Instruction &I);
+
+    bool tryToSinkFreeOperands(Instruction *I);
   };
 
 } // end anonymous namespace
@@ -1147,55 +1149,54 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
+static void replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
+                                        Instruction *InsertPt,
+                                        Intrinsic::ID IID) {
+  IRBuilder<> Builder(InsertPt);
+  Value *MathOV = Builder.CreateBinaryIntrinsic(IID, BO->getOperand(0),
+                                                BO->getOperand(1));
+  Value *Math = Builder.CreateExtractValue(MathOV, 0, "math");
+  Value *OV = Builder.CreateExtractValue(MathOV, 1, "ov");
+  BO->replaceAllUsesWith(Math);
+  Cmp->replaceAllUsesWith(OV);
+  BO->eraseFromParent();
+  Cmp->eraseFromParent();
+}
+
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
 static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
                                       const DataLayout &DL) {
   Value *A, *B;
-  Instruction *AddI;
-  if (!match(Cmp,
-             m_UAddWithOverflow(m_Value(A), m_Value(B), m_Instruction(AddI))))
+  BinaryOperator *Add;
+  if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add))))
     return false;
 
   // Allow the transform as long as we have an integer type that is not
   // obviously illegal and unsupported.
-  Type *Ty = AddI->getType();
+  Type *Ty = Add->getType();
   if (!isa<IntegerType>(Ty))
     return false;
   EVT CodegenVT = TLI.getValueType(DL, Ty);
   if (!CodegenVT.isSimple() && TLI.isOperationExpand(ISD::UADDO, CodegenVT))
     return false;
 
-  // We don't want to move around uses of condition values this late, so we we
+  // We don't want to move around uses of condition values this late, so we
   // check if it is legal to create the call to the intrinsic in the basic
-  // block containing the icmp:
-  if (AddI->getParent() != Cmp->getParent() && !AddI->hasOneUse())
+  // block containing the icmp.
+  if (Add->getParent() != Cmp->getParent() && !Add->hasOneUse())
     return false;
 
 #ifndef NDEBUG
   // Someday m_UAddWithOverflow may get smarter, but this is a safe assumption
   // for now:
-  if (AddI->hasOneUse())
-    assert(*AddI->user_begin() == Cmp && "expected!");
+  if (Add->hasOneUse())
+    assert(*Add->user_begin() == Cmp && "expected!");
 #endif
 
-  Module *M = Cmp->getModule();
-  Function *F = Intrinsic::getDeclaration(M, Intrinsic::uadd_with_overflow, Ty);
-  Instruction *InsertPt = AddI->hasOneUse() ? Cmp : AddI;
-  DebugLoc Loc = Cmp->getDebugLoc();
-  Instruction *UAddWithOverflow = CallInst::Create(F, {A, B}, "uadd.overflow",
-                                                   InsertPt);
-  UAddWithOverflow->setDebugLoc(Loc);
-  Instruction *UAdd = ExtractValueInst::Create(UAddWithOverflow, 0, "uadd",
-                                               InsertPt);
-  UAdd->setDebugLoc(Loc);
-  Instruction *Overflow = ExtractValueInst::Create(UAddWithOverflow, 1,
-                                                   "overflow", InsertPt);
-  Overflow->setDebugLoc(Loc);
-  Cmp->replaceAllUsesWith(Overflow);
-  AddI->replaceAllUsesWith(UAdd);
-  Cmp->eraseFromParent();
-  AddI->eraseFromParent();
+  Instruction *InPt = Add->hasOneUse() ? cast<Instruction>(Cmp)
+                                       : cast<Instruction>(Add);
+  replaceMathCmpWithIntrinsic(Add, Cmp, InPt, Intrinsic::uadd_with_overflow);
   return true;
 }
 
@@ -1753,6 +1754,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       InsertedInsts.insert(ExtVal);
       return true;
     }
+
     case Intrinsic::launder_invariant_group:
     case Intrinsic::strip_invariant_group: {
       Value *ArgVal = II->getArgOperand(0);
@@ -5974,6 +5976,48 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   return MadeChange;
 }
 
+bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
+  // If the operands of I can be folded into a target instruction together with
+  // I, duplicate and sink them.
+  SmallVector<Use *, 4> OpsToSink;
+  if (!TLI || !TLI->shouldSinkOperands(I, OpsToSink))
+    return false;
+
+  // OpsToSink can contain multiple uses in a use chain (e.g.
+  // (%u1 with %u1 = shufflevector), (%u2 with %u2 = zext %u1)). The dominating
+  // uses must come first, which means they are sunk first, temporarily creating
+  // invalid IR. This will be fixed once their dominated users are sunk and
+  // updated.
+  BasicBlock *TargetBB = I->getParent();
+  bool Changed = false;
+  SmallVector<Use *, 4> ToReplace;
+  for (Use *U : OpsToSink) {
+    auto *UI = cast<Instruction>(U->get());
+    if (UI->getParent() == TargetBB || isa<PHINode>(UI))
+      continue;
+    ToReplace.push_back(U);
+  }
+
+  SmallPtrSet<Instruction *, 4> MaybeDead;
+  for (Use *U : ToReplace) {
+    auto *UI = cast<Instruction>(U->get());
+    Instruction *NI = UI->clone();
+    MaybeDead.insert(UI);
+    LLVM_DEBUG(dbgs() << "Sinking " << *UI << " to user " << *I << "\n");
+    NI->insertBefore(I);
+    InsertedInsts.insert(NI);
+    U->set(NI);
+    Changed = true;
+  }
+
+  // Remove instructions that are dead after sinking.
+  for (auto *I : MaybeDead)
+    if (!I->hasNUsesOrMore(1))
+      I->eraseFromParent();
+
+  return Changed;
+}
+
 bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
   if (!TLI || !DL)
     return false;
@@ -6787,6 +6831,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     }
     return false;
   }
+
+  if (tryToSinkFreeOperands(I))
+    return true;
 
   if (CallInst *CI = dyn_cast<CallInst>(I))
     return optimizeCallInst(CI, ModifiedDT);

@@ -14,7 +14,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::exception, std::logic_error>::value),
                  "std::is_base_of<std::exception, std::logic_error>::value");
@@ -38,4 +38,6 @@ int main()
     e2 = e;
     assert(e2.what() == msg);
     }
+
+  return 0;
 }

@@ -51,10 +51,12 @@ void test(Container& c)
     }
 }
 
-int main()
+int main(int, char**)
 {
     std::unordered_set<int> m;
     test(m);
     std::unordered_set<int, std::hash<int>, std::equal_to<int>, min_allocator<int>> m2;
     test(m2);
+
+  return 0;
 }

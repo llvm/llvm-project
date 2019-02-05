@@ -27,7 +27,7 @@ test(S s, const typename S::value_type* str, typename S::size_type n, S expected
     assert(s == expected);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -85,4 +85,6 @@ int main()
     s_long.append(s_long.data(), s_long.size());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
     }
+
+  return 0;
 }

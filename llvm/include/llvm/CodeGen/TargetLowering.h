@@ -836,6 +836,7 @@ public:
     default:
       llvm_unreachable("Unexpected fixed point operation.");
     case ISD::SMULFIX:
+    case ISD::UMULFIX:
       Supported = isSupportedFixedPointOperation(Op, VT, Scale);
       break;
     }
@@ -2276,6 +2277,16 @@ public:
   /// Return true if sign-extension from FromTy to ToTy is cheaper than
   /// zero-extension.
   virtual bool isSExtCheaperThanZExt(EVT FromTy, EVT ToTy) const {
+    return false;
+  }
+
+  /// Return true if sinking I's operands to the same basic block as I is
+  /// profitable, e.g. because the operands can be folded into a target
+  /// instruction during instruction selection. After calling the function
+  /// \p Ops contains the Uses to sink ordered by dominance (dominating users
+  /// come first).
+  virtual bool shouldSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const {
     return false;
   }
 

@@ -13,7 +13,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l;
     assert(!std::isdigit(' ', l));
@@ -27,4 +27,6 @@ int main()
     assert(!std::isdigit('f', l));
     assert( std::isdigit('9', l));
     assert(!std::isdigit('+', l));
+
+  return 0;
 }

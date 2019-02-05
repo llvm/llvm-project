@@ -264,7 +264,7 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 20, 0, S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -289,4 +289,6 @@ int main()
     assert(s == "a");
     }
 #endif
+
+  return 0;
 }

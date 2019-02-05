@@ -30,7 +30,7 @@
 
 using std::experimental::pmr::memory_resource;
 
-int main()
+int main(int, char**)
 {
     NullResource R(42);
     auto& P = R.getController();
@@ -70,4 +70,6 @@ int main()
         assert(P.dealloc_count == 2);
         assert(P.checkDealloc(p, s, a));
     }
+
+  return 0;
 }

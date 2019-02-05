@@ -36,7 +36,7 @@ struct MyHash : std::hash<T> {};
 template <class T>
 struct MyPred : std::equal_to<T> {};
 
-int main()
+int main(int, char**)
 {
     using V = char;
     using DH = std::hash<V>;
@@ -81,4 +81,6 @@ int main()
         pmr::unordered_multiset<int> m;
         assert(m.get_allocator().resource() == pmr::get_default_resource());
     }
+
+  return 0;
 }

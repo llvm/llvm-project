@@ -20,7 +20,7 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::error_code e_code1(5, std::generic_category());
     std::error_code e_code2(5, std::system_category());
@@ -102,4 +102,6 @@ int main()
     assert(e_condition4 != e_condition2);
     assert(e_condition4 != e_condition3);
     assert(e_condition4 == e_condition4);
+
+  return 0;
 }

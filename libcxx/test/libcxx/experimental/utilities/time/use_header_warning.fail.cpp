@@ -14,4 +14,6 @@
 
 // expected-error@experimental/chrono:* {{"<experimental/chrono> has been removed. Use <chrono> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

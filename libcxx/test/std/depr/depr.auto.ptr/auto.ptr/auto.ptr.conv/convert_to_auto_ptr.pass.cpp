@@ -31,7 +31,9 @@ test()
     std::auto_ptr<A> ap2(source());
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

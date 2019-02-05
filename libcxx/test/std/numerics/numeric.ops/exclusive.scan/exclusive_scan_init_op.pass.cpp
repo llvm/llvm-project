@@ -59,7 +59,7 @@ test()
         }
 }
 
-int main()
+int main(int, char**)
 {
 //  All the iterator categories
     test<input_iterator        <const int*> >();
@@ -85,4 +85,6 @@ int main()
         assert(res[i] == j);
     }
     }
+
+  return 0;
 }

@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "../../rep.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::chrono::duration_values<int>::max() ==
            std::numeric_limits<int>::max());
@@ -42,4 +42,6 @@ int main()
     ASSERT_NOEXCEPT(std::chrono::duration_values<double>::max());
     ASSERT_NOEXCEPT(std::chrono::duration_values<Rep>::max());
 #endif
+
+  return 0;
 }

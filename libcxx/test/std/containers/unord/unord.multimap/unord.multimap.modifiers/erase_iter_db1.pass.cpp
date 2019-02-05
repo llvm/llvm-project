@@ -17,7 +17,7 @@
 #include <unordered_map>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::pair<int, int> P;
@@ -31,8 +31,10 @@ int main()
 
 #else
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }
 
 #endif

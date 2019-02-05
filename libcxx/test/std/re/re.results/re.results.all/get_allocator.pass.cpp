@@ -28,8 +28,10 @@ test(const Allocator& a)
     assert(m.get_allocator() == a);
 }
 
-int main()
+int main(int, char**)
 {
     test<char>(test_allocator<std::sub_match<const char*> >(3));
     test<wchar_t>(test_allocator<std::sub_match<const wchar_t*> >(3));
+
+  return 0;
 }

@@ -253,7 +253,7 @@ body: |
 
     ; CHECK-LABEL: name: extract_vector_elt_0_v2i1_i1
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s1>) = G_IMPLICIT_DEF
-    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i32 0
+    ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
     ; CHECK: [[UV:%[0-9]+]]:_(s1), [[UV1:%[0-9]+]]:_(s1) = G_UNMERGE_VALUES [[DEF]](<2 x s1>)
     ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[UV]](s1)
     ; CHECK: [[SEXT1:%[0-9]+]]:_(s32) = G_SEXT [[UV1]](s1)
@@ -263,7 +263,7 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[EVEC]](s32)
     ; CHECK: $vgpr0 = COPY [[COPY]](s32)
     %0:_(<2 x s1>) = G_IMPLICIT_DEF
-    %1:_(s1) = G_CONSTANT i32 0
+    %1:_(s1) = G_CONSTANT i1 false
     %2:_(s1) = G_EXTRACT_VECTOR_ELT %0, %1
     %3:_(s32) = G_ANYEXT %2
     $vgpr0 = COPY %3

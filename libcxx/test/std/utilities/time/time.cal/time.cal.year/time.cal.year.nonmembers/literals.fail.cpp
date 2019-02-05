@@ -20,8 +20,10 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using std::chrono::year;
     year d1 = 1234y; // expected-error-re {{no matching literal operator for call to 'operator""y' {{.*}}}}
+
+  return 0;
 }

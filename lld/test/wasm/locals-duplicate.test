@@ -269,40 +269,40 @@
 ; RELOC-NEXT:         Functions:       [ 0, 1, 2, 9, 10, 11 ]
 ; RELOC-NEXT:   - Type:            CODE
 ; RELOC-NEXT:     Relocations:
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           18
 ; RELOC-NEXT:         Offset:          0x00000013
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           3
 ; RELOC-NEXT:         Offset:          0x0000001C
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           19
 ; RELOC-NEXT:         Offset:          0x00000025
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           16
 ; RELOC-NEXT:         Offset:          0x0000002E
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           0
 ; RELOC-NEXT:         Offset:          0x00000037
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           17
 ; RELOC-NEXT:         Offset:          0x00000040
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           10
 ; RELOC-NEXT:         Offset:          0x00000058
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           22
 ; RELOC-NEXT:         Offset:          0x00000061
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; RELOC-NEXT:         Index:           23
 ; RELOC-NEXT:         Offset:          0x0000006A
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           8
 ; RELOC-NEXT:         Offset:          0x00000073
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           20
 ; RELOC-NEXT:         Offset:          0x0000007C
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           21
 ; RELOC-NEXT:         Offset:          0x00000085
 ; RELOC-NEXT:     Functions:

@@ -87,7 +87,7 @@ test(S s1, const typename S::allocator_type& a)
     assert(s2.get_allocator() == a);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -127,4 +127,6 @@ int main()
     }
 #endif
 #endif
+
+  return 0;
 }

@@ -26,8 +26,10 @@ test(C c)
     assert(&r == &i);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::list<int>());
     test(nasty_list<int>());
+
+  return 0;
 }

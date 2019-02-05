@@ -166,7 +166,7 @@ void test_cast_function_pointer() {
     assert(fn_ptr == test_fn);
 }
 
-int main() {
+int main(int, char**) {
     test_cast_is_noexcept();
     test_cast_return_type();
     test_cast_nullptr();
@@ -175,4 +175,6 @@ int main() {
     test_cast<large>();
     test_cast_non_copyable_type();
     test_cast_function_pointer();
+
+  return 0;
 }

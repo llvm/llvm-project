@@ -279,7 +279,8 @@ void Watchpoint::SetCondition(const char *condition) {
     Status error;
     m_condition_ap.reset(m_target.GetUserExpressionForLanguage(
         condition, llvm::StringRef(), lldb::eLanguageTypeUnknown,
-        UserExpression::eResultTypeAny, EvaluateExpressionOptions(), error));
+        UserExpression::eResultTypeAny, EvaluateExpressionOptions(),
+        nullptr, error));
     if (error.Fail()) {
       // FIXME: Log something...
       m_condition_ap.reset();

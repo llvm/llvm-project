@@ -53,7 +53,7 @@ public:
     double getd() const {return d_;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<A> c;
@@ -144,4 +144,6 @@ int main()
         assert(c.size() == 2);
         assert(is_contiguous_container_asan_correct(c));
     }
+
+  return 0;
 }

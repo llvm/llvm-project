@@ -22,7 +22,7 @@
 
 #include "allocators.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::scoped_allocator_adaptor<A1<int>> A;
@@ -113,4 +113,6 @@ int main()
              std::scoped_allocator_adaptor<A1<int>>,
              std::scoped_allocator_adaptor<A2<int>>>::value, "");
     }
+
+  return 0;
 }

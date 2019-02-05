@@ -210,8 +210,10 @@ void test_upper_and_lower_bound() {
     }
 }
 
-int main() {
+int main(int, char**) {
     test_passing();
     test_failing();
     test_upper_and_lower_bound();
+
+  return 0;
 }

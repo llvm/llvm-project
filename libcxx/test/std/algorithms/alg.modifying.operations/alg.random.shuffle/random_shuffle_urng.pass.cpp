@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     int ia[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     int ia1[] = {2, 7, 1, 4, 3, 6, 5, 10, 9, 8};
@@ -31,4 +31,6 @@ int main()
     std::shuffle(ia, ia+sa, std::move(g));
     LIBCPP_ASSERT(std::equal(ia, ia+sa, ia2));
     assert(std::is_permutation(ia, ia+sa, ia2));
+
+  return 0;
 }

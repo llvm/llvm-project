@@ -16,9 +16,11 @@
 
 #include <chrono>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock Clock;
     typedef std::chrono::milliseconds Duration;
     std::chrono::time_point<Clock, Duration> t = Duration(3);
+
+  return 0;
 }

@@ -25,8 +25,10 @@ struct test
     test() {}
 };
 
-int main()
+int main(int, char**)
 {
     test<char> t;
     assert(t.in_avail() == 0);
+
+  return 0;
 }

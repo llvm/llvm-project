@@ -25,7 +25,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_map<int, std::string> C;
@@ -417,4 +417,6 @@ int main()
         assert(i->second == "four");
     }
 #endif
+
+  return 0;
 }

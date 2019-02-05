@@ -10,7 +10,7 @@
 // RUN: %build
 // RUN: not %run
 
-int main()
+int main(int, char**)
 {
   return 1;
 }

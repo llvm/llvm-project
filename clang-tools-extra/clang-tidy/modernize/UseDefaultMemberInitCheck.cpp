@@ -273,7 +273,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
 
 void UseDefaultMemberInitCheck::checkExistingInit(
     const MatchFinder::MatchResult &Result, const CXXCtorInitializer *Init) {
-  const FieldDecl *Field = Init->getMember();
+  const FieldDecl *Field = Init->getAnyMember();
 
   if (!sameValue(Field->getInClassInitializer(), Init->getInit()))
     return;

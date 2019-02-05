@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::logical_or<int> F;
     const F f = F();
@@ -47,4 +47,6 @@ int main()
     constexpr bool bar = std::logical_or<> () (36.0, 36);
     static_assert ( bar, "" );
 #endif
+
+  return 0;
 }

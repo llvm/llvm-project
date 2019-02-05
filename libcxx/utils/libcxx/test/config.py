@@ -547,10 +547,10 @@ class Configuration(object):
         self.cxx.flags += ['-v']
         sysroot = self.get_lit_conf('sysroot')
         if sysroot:
-            self.cxx.flags += ['--sysroot', sysroot]
+            self.cxx.flags += ['--sysroot=' + sysroot]
         gcc_toolchain = self.get_lit_conf('gcc_toolchain')
         if gcc_toolchain:
-            self.cxx.flags += ['-gcc-toolchain', gcc_toolchain]
+            self.cxx.flags += ['--gcc-toolchain=' + gcc_toolchain]
         # NOTE: the _DEBUG definition must preceed the triple check because for
         # the Windows build of libc++, the forced inclusion of a header requires
         # that _DEBUG is defined.  Incorrect ordering will result in -target
@@ -559,8 +559,8 @@ class Configuration(object):
             self.cxx.compile_flags += ['-D_DEBUG']
         if self.use_target:
             if not self.cxx.addFlagIfSupported(
-                    ['-target', self.config.target_triple]):
-                self.lit_config.warning('use_target is true but -target is '\
+                    ['--target=' + self.config.target_triple]):
+                self.lit_config.warning('use_target is true but --target is '\
                         'not supported by the compiler')
         if self.use_deployment:
             arch, name, version = self.config.deployment

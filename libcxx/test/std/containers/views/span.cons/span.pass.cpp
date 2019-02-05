@@ -121,7 +121,7 @@ bool testConversionSpan()
 
 struct A{};
 
-int main ()
+int main(int, char**)
 {
     static_assert(testConstexprSpan<int>(),    "");
     static_assert(testConstexprSpan<long>(),   "");
@@ -138,4 +138,6 @@ int main ()
 //  assert((testConversionSpan<unsigned char, char>()));
 
     checkCV();
+
+  return 0;
 }

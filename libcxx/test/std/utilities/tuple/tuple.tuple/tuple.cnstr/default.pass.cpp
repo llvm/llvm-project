@@ -44,7 +44,7 @@ struct IllFormedDefault {
     int value;
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::tuple<> t;
@@ -106,4 +106,6 @@ int main()
         IllFormedDefault v(0);
         std::tuple<IllFormedDefault> t(v);
     }
+
+  return 0;
 }

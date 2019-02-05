@@ -75,22 +75,22 @@ entry:
 ; CHECK-NEXT:         Functions:       [ 0 ]
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000009
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000012
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_LEB
+; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
 ; CHECK-NEXT:         Index:           5
 ; CHECK-NEXT:         Offset:          0x0000001E
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TYPE_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000024
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_MEMORY_ADDR_LEB
+; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_LEB
 ; CHECK-NEXT:         Index:           7
 ; CHECK-NEXT:         Offset:          0x00000031
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TYPE_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000037
 ; CHECK-NEXT:     Functions:
@@ -111,10 +111,10 @@ entry:
 ; CHECK-NEXT:         Body:            410028029080808000118080808000000B
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x0000000F
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000018
 ; CHECK-NEXT:     Segments:

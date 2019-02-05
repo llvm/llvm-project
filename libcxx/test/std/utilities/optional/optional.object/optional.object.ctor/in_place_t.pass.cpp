@@ -58,7 +58,7 @@ public:
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         constexpr optional<int> opt(in_place, 5);
@@ -144,4 +144,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

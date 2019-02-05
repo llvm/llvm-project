@@ -63,7 +63,7 @@ struct ImplicitT {
   int value;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<std::unique_ptr<Derived>, int> P1;
@@ -173,4 +173,6 @@ int main()
         static_assert(p2.second.value == 43, "");
     }
 #endif
+
+  return 0;
 }

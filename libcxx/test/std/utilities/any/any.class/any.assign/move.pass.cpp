@@ -104,7 +104,7 @@ void test_move_assign_noexcept() {
       );
 }
 
-int main() {
+int main(int, char**) {
     test_move_assign_noexcept();
     test_move_assign<small1, small2>();
     test_move_assign<large1, large2>();
@@ -112,4 +112,6 @@ int main() {
     test_move_assign<large, small>();
     test_move_assign_empty<small>();
     test_move_assign_empty<large>();
+
+  return 0;
 }

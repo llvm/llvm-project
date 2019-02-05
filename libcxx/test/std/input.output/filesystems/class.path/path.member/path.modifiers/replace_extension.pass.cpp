@@ -51,7 +51,7 @@ const ReplaceExtensionTestcase NoArgCases[] =
     , {"foo..cpp", "foo.", ""}
 };
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   for (auto const & TC : TestCases) {
@@ -68,4 +68,6 @@ int main()
     assert(p == TC.expect);
     assert(&Ref == &p);
   }
+
+  return 0;
 }

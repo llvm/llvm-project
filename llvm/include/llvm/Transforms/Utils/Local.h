@@ -341,6 +341,18 @@ void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 /// Returns true if any debug users were updated.
 bool salvageDebugInfo(Instruction &I);
 
+/// Implementation of salvageDebugInfo, applying only to instructions in
+/// \p Insns, rather than all debug users of \p I.
+bool salvageDebugInfoForDbgValues(Instruction &I,
+                                  ArrayRef<DbgVariableIntrinsic *> Insns);
+
+/// Given an instruction \p I and DIExpression \p DIExpr operating on it, write
+/// the effects of \p I into the returned DIExpression, or return nullptr if
+/// it cannot be salvaged. \p StackVal: whether DW_OP_stack_value should be
+/// appended to the expression.
+DIExpression *salvageDebugInfoImpl(Instruction &I, DIExpression *DIExpr,
+                                   bool StackVal);
+
 /// Point debug users of \p From to \p To or salvage them. Use this function
 /// only when replacing all uses of \p From with \p To, with a guarantee that
 /// \p From is going to be deleted.

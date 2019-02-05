@@ -14,4 +14,6 @@
 
 // expected-error@experimental/tuple:* {{"<experimental/tuple> has been removed. Use <tuple> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

@@ -28,7 +28,7 @@
 using std::any;
 using std::any_cast;
 
-int main()
+int main(int, char**)
 {
 
     { // test noexcept
@@ -44,4 +44,6 @@ int main()
         assert(any_cast<int>(a1) == 2);
         assert(any_cast<int>(a2) == 1);
     }
+
+  return 0;
 }

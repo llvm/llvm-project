@@ -15,7 +15,9 @@
 
 struct S {int i;};
 
-int main()
+int main(int, char**)
 {
     std::as_const(S{});
+
+  return 0;
 }

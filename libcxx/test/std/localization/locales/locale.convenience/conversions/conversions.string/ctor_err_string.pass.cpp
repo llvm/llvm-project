@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::codecvt_utf8<wchar_t> Codecvt;
     typedef std::wstring_convert<Codecvt> Myconv;
@@ -70,4 +70,6 @@ int main()
         std::wstring ws = myconv.from_bytes('\xA5');
         assert(ws == L"wide error");
     }
+
+  return 0;
 }

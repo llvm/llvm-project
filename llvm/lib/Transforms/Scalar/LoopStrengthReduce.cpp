@@ -3967,9 +3967,27 @@ void LSRInstance::GenerateTruncates(LSRUse &LU, unsigned LUIdx, Formula Base) {
     if (SrcTy != DstTy && TTI.isTruncateFree(SrcTy, DstTy)) {
       Formula F = Base;
 
-      if (F.ScaledReg) F.ScaledReg = SE.getAnyExtendExpr(F.ScaledReg, SrcTy);
-      for (const SCEV *&BaseReg : F.BaseRegs)
-        BaseReg = SE.getAnyExtendExpr(BaseReg, SrcTy);
+      // Sometimes SCEV is able to prove zero during ext transform. It may
+      // happen if SCEV did not do all possible transforms while creating the
+      // initial node (maybe due to depth limitations), but it can do them while
+      // taking ext.
+      if (F.ScaledReg) {
+        const SCEV *NewScaledReg = SE.getAnyExtendExpr(F.ScaledReg, SrcTy);
+        if (NewScaledReg->isZero())
+         continue;
+        F.ScaledReg = NewScaledReg;
+      }
+      bool HasZeroBaseReg = false;
+      for (const SCEV *&BaseReg : F.BaseRegs) {
+        const SCEV *NewBaseReg = SE.getAnyExtendExpr(BaseReg, SrcTy);
+        if (NewBaseReg->isZero()) {
+          HasZeroBaseReg = true;
+          break;
+        }
+        BaseReg = NewBaseReg;
+      }
+      if (HasZeroBaseReg)
+        continue;
 
       // TODO: This assumes we've done basic processing on all uses and
       // have an idea what the register usage is.

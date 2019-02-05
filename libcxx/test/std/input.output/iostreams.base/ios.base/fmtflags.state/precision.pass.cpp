@@ -25,8 +25,10 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     const test t;
     assert(t.precision() == 6);
+
+  return 0;
 }

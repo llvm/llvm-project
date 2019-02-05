@@ -65,7 +65,7 @@ test(S s, typename S::size_type res_arg)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -131,4 +131,6 @@ int main()
     }
     }
 #endif
+
+  return 0;
 }

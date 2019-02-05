@@ -93,6 +93,7 @@ let Uses = [SP32, SP64], isCall = 1 in {
   defm "" : SIMD_CALL<v4f32, "v128.">;
   defm "" : SIMD_CALL<v2f64, "v128.">;
 
+  let IsCanonical = 1 in {
   defm CALL_VOID : I<(outs), (ins function32_op:$callee, variable_ops),
                      (outs), (ins function32_op:$callee),
                      [(WebAssemblycall0 (i32 imm:$callee))],
@@ -113,6 +114,7 @@ let Uses = [SP32, SP64], isCall = 1 in {
                               [],
                               "call_indirect\t", "call_indirect\t$type",
                               0x11>;
+  }
 } // Uses = [SP32,SP64], isCall = 1
 
 // Patterns for matching a direct call to a global address.

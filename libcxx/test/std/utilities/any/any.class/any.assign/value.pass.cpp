@@ -202,7 +202,7 @@ void test_sfinae_constraints() {
     }
 }
 
-int main() {
+int main(int, char**) {
     test_assign_value<small1, small2>();
     test_assign_value<large1, large2>();
     test_assign_value<small, large>();
@@ -213,4 +213,6 @@ int main() {
     test_assign_throws<large_throws_on_copy>();
     test_assign_throws<throws_on_move, /* Move = */ true>();
     test_sfinae_constraints();
+
+  return 0;
 }

@@ -12,4 +12,6 @@
 // since they require calling the implementation specific "__invoke" and
 // "__invoke_constexpr" functions.
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

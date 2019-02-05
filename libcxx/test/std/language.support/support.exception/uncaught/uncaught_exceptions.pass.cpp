@@ -41,7 +41,7 @@ struct Outer {
     int d_;
 };
 
-int main () {
+int main(int, char**) {
     assert(std::uncaught_exceptions() == 0);
     {
     Outer o(0);
@@ -58,4 +58,6 @@ int main () {
         }
     }
     assert(std::uncaught_exceptions() == 0);
+
+  return 0;
 }

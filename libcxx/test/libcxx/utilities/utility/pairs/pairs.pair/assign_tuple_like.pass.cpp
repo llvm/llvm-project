@@ -27,7 +27,7 @@
 #pragma clang diagnostic ignored "-Wmissing-braces"
 #endif
 
-int main()
+int main(int, char**)
 {
     using C = TestTypes::TestType;
     {
@@ -100,4 +100,6 @@ int main()
        assert(p.first.value == 42);
        assert(p.second.value == -42);
     }
+
+  return 0;
 }

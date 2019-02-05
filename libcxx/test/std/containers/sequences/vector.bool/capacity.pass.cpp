@@ -16,7 +16,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<bool> v;
@@ -40,4 +40,6 @@ int main()
         assert(v.capacity() >= 101);
     }
 #endif
+
+  return 0;
 }

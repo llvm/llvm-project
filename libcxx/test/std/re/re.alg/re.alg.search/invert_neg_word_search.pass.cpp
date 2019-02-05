@@ -20,7 +20,7 @@
 
 
 // PR34310
-int main()
+int main(int, char**)
 {
   assert(std::regex_search("HelloWorld", std::regex("[^\\W]")));
   assert(std::regex_search("_", std::regex("[^\\W]")));

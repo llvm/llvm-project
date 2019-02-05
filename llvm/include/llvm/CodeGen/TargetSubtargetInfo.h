@@ -189,9 +189,6 @@ public:
   /// TargetLowering preference). It does not yet disable the postRA scheduler.
   virtual bool enableMachineScheduler() const;
 
-  /// Support printing of [latency:throughput] comment in output .S file.
-  virtual bool supportPrintSchedInfo() const { return false; }
-
   /// True if the machine scheduler should disable the TLI preference
   /// for preRA scheduling with the source level scheduler.
   virtual bool enableMachineSchedDefaultSched() const { return true; }
@@ -284,10 +281,6 @@ public:
   /// Please use MachineRegisterInfo::subRegLivenessEnabled() instead where
   /// possible.
   virtual bool enableSubRegLiveness() const { return false; }
-
-  /// Returns string representation of scheduler comment
-  std::string getSchedInfoStr(const MachineInstr &MI) const;
-  std::string getSchedInfoStr(MCInst const &MCI) const override;
 
   /// This is called after a .mir file was loaded.
   virtual void mirFileLoaded(MachineFunction &MF) const;

@@ -74,12 +74,15 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: cttz_zero_undef_s16_s16
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[TRUNC]](s16)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ_ZERO_UNDEF]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; CHECK: $vgpr0 = COPY [[AND]](s32)
+    ; CHECK: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[AND]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[CTTZ_ZERO_UNDEF]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C1]]
+    ; CHECK: $vgpr0 = COPY [[AND1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_CTTZ_ZERO_UNDEF %1

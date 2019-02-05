@@ -11,6 +11,4 @@
 #error "arc should be enabled"
 #endif
 
-int main()
-{
-}
+int main(int, char**) { return 0; }

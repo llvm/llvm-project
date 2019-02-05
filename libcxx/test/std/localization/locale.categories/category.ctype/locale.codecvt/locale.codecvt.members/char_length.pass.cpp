@@ -17,7 +17,7 @@
 
 typedef std::codecvt<char, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const F& f = std::use_facet<F>(l);
@@ -28,4 +28,6 @@ int main()
     assert(f.length(mbs, from, from+10, 10) == 10);
     assert(f.length(mbs, from, from+10, 11) == 10);
     assert(f.length(mbs, from, from+10, 100) == 10);
+
+  return 0;
 }

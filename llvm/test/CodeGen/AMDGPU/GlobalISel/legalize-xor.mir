@@ -31,7 +31,7 @@ body: |
     ; CHECK: S_NOP 0, implicit [[XOR]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
-    %2:_(s32) = G_CONSTANT i64 0
+    %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(ne), %0, %2
     %4:_(s1) = G_ICMP intpred(ne), %1, %2
     %5:_(s32) = G_XOR %0, %1

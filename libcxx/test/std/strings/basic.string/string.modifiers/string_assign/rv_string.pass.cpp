@@ -27,7 +27,7 @@ test(S s, S str, S expected)
     assert(s == expected);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -77,4 +77,6 @@ int main()
          S("12345678901234567890"));
     }
 #endif
+
+  return 0;
 }

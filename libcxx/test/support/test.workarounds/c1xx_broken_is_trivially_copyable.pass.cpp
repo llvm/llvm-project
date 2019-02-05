@@ -25,10 +25,12 @@ struct S {
   S& operator=(S&&) = delete;
 };
 
-int main() {
+int main(int, char**) {
 #if defined(TEST_WORKAROUND_C1XX_BROKEN_IS_TRIVIALLY_COPYABLE)
   static_assert(!std::is_trivially_copyable<S>::value, "");
 #else
   static_assert(std::is_trivially_copyable<S>::value, "");
 #endif
+
+  return 0;
 }
