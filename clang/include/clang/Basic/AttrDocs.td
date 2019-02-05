@@ -3716,6 +3716,19 @@ ensure that this class cannot be subclassed.
   }];
 }
 
+def ObjCNonLazyClassDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+This attribute can be added to an Objective-C ``@interface`` declaration to
+add the class to the list of non-lazily initialized classes. A non-lazy class
+will be initialized eagerly when the Objective-C runtime is loaded.  This is
+required for certain system classes which have instances allocated in
+non-standard ways, such as the classes for blocks and constant strings.  Adding
+this attribute is essentially equivalent to providing a trivial `+load` method 
+but avoids the (fairly small) load-time overheads associated with defining and
+calling such a method.
+  }];
+}
 
 def SelectAnyDocs : Documentation {
   let Category = DocCatType;

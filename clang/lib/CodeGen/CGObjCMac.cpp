@@ -6262,9 +6262,10 @@ CGObjCNonFragileABIMac::BuildClassObject(const ObjCInterfaceDecl *CI,
   return GV;
 }
 
-bool
-CGObjCNonFragileABIMac::ImplementationIsNonLazy(const ObjCImplDecl *OD) const {
-  return OD->getClassMethod(GetNullarySelector("load")) != nullptr;
+bool CGObjCNonFragileABIMac::ImplementationIsNonLazy(
+    const ObjCImplDecl *OD) const {
+  return OD->getClassMethod(GetNullarySelector("load")) != nullptr ||
+         OD->getClassInterface()->hasAttr<ObjCNonLazyClassAttr>();
 }
 
 void CGObjCNonFragileABIMac::GetClassSizeInfo(const ObjCImplementationDecl *OID,
