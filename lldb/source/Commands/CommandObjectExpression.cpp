@@ -381,7 +381,7 @@ int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   Status error;
   lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(exe_ctx,
       code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
-      options, error));
+      options, nullptr, error));
   if (error.Fail())
     return 0;
 

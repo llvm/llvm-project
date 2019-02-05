@@ -2345,7 +2345,8 @@ UserExpression *Target::GetUserExpressionForLanguage(
     ExecutionContext &exe_ctx,
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
-    const EvaluateExpressionOptions &options, Status &error) {
+    const EvaluateExpressionOptions &options,
+    ValueObject *ctx_obj, Status &error) {
   Status type_system_error;
 
   ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
@@ -2369,7 +2370,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   }
 
   user_expr = type_system->GetUserExpression(expr, prefix, language,
-                                             desired_type, options);
+                                             desired_type, options, ctx_obj);
   if (!user_expr)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2627,7 +2628,8 @@ Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
 ExpressionResults Target::EvaluateExpression(
     llvm::StringRef expr, ExecutionContextScope *exe_scope,
     lldb::ValueObjectSP &result_valobj_sp,
-    const EvaluateExpressionOptions &options, std::string *fixed_expression) {
+    const EvaluateExpressionOptions &options, std::string *fixed_expression,
+    ValueObject *ctx_obj) {
   result_valobj_sp.reset();
 
   ExpressionResults execution_results = eExpressionSetupError;
@@ -2668,7 +2670,9 @@ ExpressionResults Target::EvaluateExpression(
     execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
                                                  result_valobj_sp, error,
                                                  0, // Line Number
-                                                 fixed_expression);
+                                                 fixed_expression,
+                                                 nullptr, // Module
+                                                 ctx_obj);
   }
 
   m_suppress_stop_hooks = old_suppress_value;

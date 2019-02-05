@@ -491,7 +491,8 @@ public:
   GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
                     lldb::LanguageType language,
                     Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options) {
+                    const EvaluateExpressionOptions &options,
+                    ValueObject *ctx_obj) {
     return nullptr;
   }
 

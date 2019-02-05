@@ -10401,13 +10401,14 @@ ClangASTContextForExpressions::ClangASTContextForExpressions(Target &target)
 UserExpression *ClangASTContextForExpressions::GetUserExpression(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
-    const EvaluateExpressionOptions &options) {
+    const EvaluateExpressionOptions &options,
+    ValueObject *ctx_obj) {
   TargetSP target_sp = m_target_wp.lock();
   if (!target_sp)
     return nullptr;
 
   return new ClangUserExpression(*target_sp.get(), expr, prefix, language,
-                                 desired_type, options);
+                                 desired_type, options, ctx_obj);
 }
 
 FunctionCaller *ClangASTContextForExpressions::GetFunctionCaller(

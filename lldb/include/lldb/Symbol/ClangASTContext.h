@@ -1087,7 +1087,8 @@ public:
   GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
                     lldb::LanguageType language,
                     Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options) override;
+                    const EvaluateExpressionOptions &options,
+                    ValueObject *ctx_obj) override;
 
   FunctionCaller *GetFunctionCaller(const CompilerType &return_type,
                                     const Address &function_address,

@@ -44,7 +44,8 @@ public:
                uint32_t language_flags,
                const EvaluateExpressionOptions &options,
                const Expression::SwiftGenericInfo &generic_info,
-               ExecutionContext &exe_ctx, uint32_t &first_body_line) const;
+               ExecutionContext &exe_ctx, bool add_locals,
+               uint32_t &first_body_line) const;
 
   static bool
   SaveExpressionTextToTempFile(llvm::StringRef text,

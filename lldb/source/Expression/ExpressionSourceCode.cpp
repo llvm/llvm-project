@@ -285,7 +285,7 @@ bool ExpressionSourceCode::GetText(
     std::string &text, lldb::LanguageType wrapping_language,
     uint32_t language_flags, const EvaluateExpressionOptions &options,
     const Expression::SwiftGenericInfo &generic_info, ExecutionContext &exe_ctx,
-    uint32_t &first_body_line) const {
+    bool add_locals, uint32_t &first_body_line) const {
   first_body_line = 0;
 
   const char *target_specific_defines = "typedef signed char BOOL;\n";
@@ -364,12 +364,13 @@ bool ExpressionSourceCode::GetText(
       }
     }
 
-    ConstString object_name;
-    if (Language::LanguageIsCPlusPlus(frame->GetLanguage())) {
-      if (target->GetInjectLocalVariables(&exe_ctx)) {
-        lldb::VariableListSP var_list_sp =
-            frame->GetInScopeVariableList(false, true);
-        AddLocalVariableDecls(var_list_sp, lldb_local_var_decls, m_body);
+    if (add_locals) {
+      if (Language::LanguageIsCPlusPlus(frame->GetLanguage())) {
+        if (target->GetInjectLocalVariables(&exe_ctx)) {
+          lldb::VariableListSP var_list_sp =
+              frame->GetInScopeVariableList(false, true);
+          AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
+        }
       }
     }
   }
