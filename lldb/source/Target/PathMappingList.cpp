@@ -201,26 +201,46 @@ bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) co
 
 bool PathMappingList::FindFile(const FileSpec &orig_spec,
                                FileSpec &new_spec) const {
-  if (!m_pairs.empty()) {
-    char orig_path[PATH_MAX];
-    const size_t orig_path_len =
-        orig_spec.GetPath(orig_path, sizeof(orig_path));
-    if (orig_path_len > 0) {
-      const_iterator pos, end = m_pairs.end();
-      for (pos = m_pairs.begin(); pos != end; ++pos) {
-        const size_t prefix_len = pos->first.GetLength();
+  if (m_pairs.empty())
+    return false;
+  
+  std::string orig_path = orig_spec.GetPath();
+    
+  if (orig_path.empty())
+    return false;
+      
+  bool orig_is_relative = orig_spec.IsRelative();
 
-        if (orig_path_len >= prefix_len) {
-          if (::strncmp(pos->first.GetCString(), orig_path, prefix_len) == 0) {
-            new_spec.SetFile(pos->second.GetCString(), FileSpec::Style::native);
-            new_spec.AppendPathComponent(orig_path + prefix_len);
-            if (FileSystem::Instance().Exists(new_spec))
-              return true;
-          }
-        }
+  const_iterator pos, end = m_pairs.end();
+  for (pos = m_pairs.begin(); pos != end; ++pos) {
+    llvm::StringRef orig_ref(orig_path);
+    llvm::StringRef prefix_ref = pos->first.GetStringRef();
+    if (orig_ref.size() >= prefix_ref.size()) {
+      // We consider a relative prefix or one of just "." to
+      // mean "only apply to relative paths".
+      bool prefix_is_relative = false;
+      
+      if (prefix_ref == ".") {
+        prefix_is_relative = true;
+        // Remove the "." since it will have been removed from the
+        // FileSpec paths already.
+        prefix_ref = prefix_ref.drop_front();
+      } else {
+        FileSpec prefix_spec(prefix_ref, FileSpec::Style::native);
+        prefix_is_relative = prefix_spec.IsRelative();
+      }
+      if (prefix_is_relative != orig_is_relative)
+        continue;
+
+      if (orig_ref.consume_front(prefix_ref)) {
+        new_spec.SetFile(pos->second.GetCString(), FileSpec::Style::native);
+        new_spec.AppendPathComponent(orig_ref);
+        if (FileSystem::Instance().Exists(new_spec))
+          return true;
       }
     }
   }
+  
   new_spec.Clear();
   return false;
 }
