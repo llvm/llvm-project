@@ -65,10 +65,12 @@ const char *g_lldb_local_vars_namespace_cstr = "$__lldb_local_vars";
 ClangExpressionDeclMap::ClangExpressionDeclMap(
     bool keep_result_in_memory,
     Materializer::PersistentVariableDelegate *result_delegate,
-    ExecutionContext &exe_ctx)
+    ExecutionContext &exe_ctx,
+    ValueObject *ctx_obj)
     : ClangASTSource(exe_ctx.GetTargetSP()), m_found_entities(),
       m_struct_members(), m_keep_result_in_memory(keep_result_in_memory),
-      m_result_delegate(result_delegate), m_parser_vars(), m_struct_vars() {
+      m_result_delegate(result_delegate), m_parser_vars(), m_struct_vars(),
+      m_ctx_obj(ctx_obj) {
   EnableStructVars();
 }
 
@@ -927,6 +929,21 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     static ConstString g_lldb_class_name("$__lldb_class");
 
     if (name == g_lldb_class_name) {
+      if (m_ctx_obj) {
+        Status status;
+        lldb::ValueObjectSP ctx_obj_ptr = m_ctx_obj->AddressOf(status);
+        if (!ctx_obj_ptr || status.Fail())
+          return;
+
+        AddThisType(context, TypeFromUser(m_ctx_obj->GetCompilerType()),
+                    current_id);
+
+        m_struct_vars->m_object_pointer_type =
+            TypeFromUser(ctx_obj_ptr->GetCompilerType());
+
+        return;
+      }
+
       // Clang is looking for the type of "this"
 
       if (frame == NULL)
@@ -1019,6 +1036,21 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
     static ConstString g_lldb_objc_class_name("$__lldb_objc_class");
     if (name == g_lldb_objc_class_name) {
+      if (m_ctx_obj) {
+        Status status;
+        lldb::ValueObjectSP ctx_obj_ptr = m_ctx_obj->AddressOf(status);
+        if (!ctx_obj_ptr || status.Fail())
+          return;
+
+        AddOneType(context, TypeFromUser(m_ctx_obj->GetCompilerType()),
+                    current_id);
+
+        m_struct_vars->m_object_pointer_type =
+            TypeFromUser(ctx_obj_ptr->GetCompilerType());
+
+        return;
+      }
+
       // Clang is looking for the type of "*self"
 
       if (!frame)
@@ -2124,7 +2156,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 }
 
 void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
-                                         TypeFromUser &ut,
+                                         const TypeFromUser &ut,
                                          unsigned int current_id) {
   CompilerType copied_clang_type = GuardedCopyType(ut);
 
@@ -2198,7 +2230,7 @@ void ClangExpressionDeclMap::AddThisType(NameSearchContext &context,
 }
 
 void ClangExpressionDeclMap::AddOneType(NameSearchContext &context,
-                                        TypeFromUser &ut,
+                                        const TypeFromUser &ut,
                                         unsigned int current_id) {
   CompilerType copied_clang_type = GuardedCopyType(ut);
 

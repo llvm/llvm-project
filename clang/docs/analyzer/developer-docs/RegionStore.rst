@@ -1,11 +1,14 @@
+============
+Region Store
+============
 The analyzer "Store" represents the contents of memory regions. It is an opaque
-functional data structure stored in each ProgramState; the only class that can
-modify the store is its associated StoreManager.
+functional data structure stored in each ``ProgramState``; the only class that
+can modify the store is its associated StoreManager.
 
 Currently (Feb. 2013), the only StoreManager implementation being used is
-RegionStoreManager. This store records bindings to memory regions using a "base
-region + offset" key. (This allows `*p` and `p[0]` to map to the same location,
-among other benefits.)
+``RegionStoreManager``. This store records bindings to memory regions using a
+"base region + offset" key. (This allows ``*p`` and ``p[0]`` to map to the same
+location, among other benefits.)
 
 Regions are grouped into "clusters", which roughly correspond to "regions with
 the same base region". This allows certain operations to be more efficient,
@@ -14,50 +17,55 @@ such as invalidation.
 Regions that do not have a known offset use a special "symbolic" offset. These
 keys store both the original region, and the "concrete offset region" -- the
 last region whose offset is entirely concrete. (For example, in the expression
-`foo.bar[1][i].baz`, the concrete offset region is the array `foo.bar[1]`,
-since that has a known offset from the start of the top-level `foo` struct.)
+``foo.bar[1][i].baz``, the concrete offset region is the array ``foo.bar[1]``,
+since that has a known offset from the start of the top-level ``foo`` struct.)
 
 
 Binding Invalidation
-====================
+--------------------
 
 Supporting both concrete and symbolic offsets makes things a bit tricky. Here's
 an example:
 
-    foo[0] = 0;
-    foo[1] = 1;
-    foo[i] = i;
+.. code-block:: cpp
 
-After the third assignment, nothing can be said about the value of `foo[0]`,
-because `foo[i]` may have overwritten it! Thus, *binding to a region with a
+  foo[0] = 0;
+  foo[1] = 1;
+  foo[i] = i;
+
+After the third assignment, nothing can be said about the value of ``foo[0]``,
+because ``foo[i]`` may have overwritten it! Thus, *binding to a region with a
 symbolic offset invalidates the entire concrete offset region.* We know
-`foo[i]` is somewhere within `foo`, so we don't have to invalidate anything
-else, but we do have to be conservative about all other bindings within `foo`.
+``foo[i]`` is somewhere within ``foo``, so we don't have to invalidate
+anything else, but we do have to be conservative about all other bindings within
+``foo``.
 
 Continuing the example:
 
-    foo[i] = i;
-    foo[0] = 0;
+.. code-block:: cpp
 
-After this latest assignment, nothing can be said about the value of `foo[i]`,
-because `foo[0]` may have overwritten it! *Binding to a region R with a
+  foo[i] = i;
+  foo[0] = 0;
+
+After this latest assignment, nothing can be said about the value of ``foo[i]``,
+because ``foo[0]`` may have overwritten it! *Binding to a region R with a
 concrete offset invalidates any symbolic offset bindings whose concrete offset
-region is a super-region **or** sub-region of R.* All we know about `foo[i]` is
-that it is somewhere within `foo`, so changing *anything* within `foo` might
-change `foo[i]`, and changing *all* of `foo` (or its base region) will
-*definitely* change `foo[i]`.
+region is a super-region **or** sub-region of R.* All we know about ``foo[i]``
+is that it is somewhere within ``foo``, so changing *anything* within ``foo``
+might change ``foo[i]``, and changing *all* of ``foo`` (or its base region) will
+*definitely* change ``foo[i]``.
 
-This logic could be improved by using the current constraints on `i`, at the
+This logic could be improved by using the current constraints on ``i``, at the
 cost of speed. The latter case could also be improved by matching region kinds,
-i.e. changing `foo[0].a` is unlikely to affect `foo[i].b`, no matter what `i`
-is.
+i.e. changing ``foo[0].a`` is unlikely to affect ``foo[i].b``, no matter what
+``i`` is.
 
-For more detail, read through RegionStoreManager::removeSubRegionBindings in
+For more detail, read through ``RegionStoreManager::removeSubRegionBindings`` in
 RegionStore.cpp.
 
 
 ObjCIvarRegions
-===============
+---------------
 
 Objective-C instance variables require a bit of special handling. Like struct
 fields, they are not base regions, and when their parent object region is
@@ -76,7 +84,7 @@ offsets start from the base region!
 
 
 Region Invalidation
-===================
+-------------------
 
 Unlike binding invalidation, region invalidation occurs when the entire
 contents of a region may have changed---say, because it has been passed to a
@@ -89,8 +97,8 @@ arithmetic.
 Region invalidation typically does even more than this, however. Because it
 usually represents the complete escape of a region from the analyzer's model,
 its *contents* must also be transitively invalidated. (For example, if a region
-'p' of type 'int **' is invalidated, the contents of '*p' and '**p' may have
-changed as well.) The algorithm that traverses this transitive closure of
+``p`` of type ``int **`` is invalidated, the contents of ``*p`` and ``**p`` may
+have changed as well.) The algorithm that traverses this transitive closure of
 accessible regions is known as ClusterAnalysis, and is also used for finding
 all live bindings in the store (in order to throw away the dead ones). The name
 "ClusterAnalysis" predates the cluster-based organization of bindings, but
@@ -100,7 +108,7 @@ model of program behavior.
 
 
 Default Bindings
-================
+----------------
 
 Most bindings in RegionStore are simple scalar values -- integers and pointers.
 These are known as "Direct" bindings. However, RegionStore supports a second
@@ -114,6 +122,8 @@ this value is used as the value of the original region. The search ends when
 the base region is reached, at which point the RegionStore will pick an
 appropriate default value for the region (usually a symbolic value, but
 sometimes zero, for static data, or "uninitialized", for stack variables).
+
+.. code-block:: cpp
 
   int manyInts[10];
   manyInts[1] = 42;   // Creates a Direct binding for manyInts[1].
@@ -132,7 +142,7 @@ for the sub-aggregate at offset 0.
 
 
 Lazy Bindings (LazyCompoundVal)
-===============================
+-------------------------------
 
 RegionStore implements an optimization for copying aggregates (structs and
 arrays) called "lazy bindings", implemented using a special SVal called
@@ -158,14 +168,16 @@ LazyCompoundVal region, and look up *that* region in the previous store.
 
 Here's a concrete example:
 
-    CGPoint p;
-    p.x = 42;       // A Direct binding is made to the FieldRegion 'p.x'.
-    CGPoint p2 = p; // A LazyCompoundVal is created for 'p', along with a
-                    // snapshot of the current store state. This value is then
-                    // used as a Default binding for the VarRegion 'p2'.
-    return p2.x;    // The binding for FieldRegion 'p2.x' is requested.
-                    // There is no Direct binding, so we look for a Default
-                    // binding to 'p2' and find the LCV.
-                    // Because it's a LCV, we look at our requested region
-                    // and see that it's the '.x' field. We ask for the value
-                    // of 'p.x' within the snapshot, and get back 42.
+.. code-block:: cpp
+
+  CGPoint p;
+  p.x = 42;       // A Direct binding is made to the FieldRegion 'p.x'.
+  CGPoint p2 = p; // A LazyCompoundVal is created for 'p', along with a
+                  // snapshot of the current store state. This value is then
+                  // used as a Default binding for the VarRegion 'p2'.
+  return p2.x;    // The binding for FieldRegion 'p2.x' is requested.
+                  // There is no Direct binding, so we look for a Default
+                  // binding to 'p2' and find the LCV.
+                  // Because it's a LCV, we look at our requested region
+                  // and see that it's the '.x' field. We ask for the value
+                  // of 'p.x' within the snapshot, and get back 42.

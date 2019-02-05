@@ -4403,7 +4403,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
       // Avoid incompatibility with ASan which relies on the `noreturn`
       // attribute to insert handler calls.
-      if (SanOpts.has(SanitizerKind::Address)) {
+      if (SanOpts.hasOneOf(SanitizerKind::Address |
+                           SanitizerKind::KernelAddress)) {
         SanitizerScope SanScope(this);
         llvm::IRBuilder<>::InsertPointGuard IPGuard(Builder);
         Builder.SetInsertPoint(CI);

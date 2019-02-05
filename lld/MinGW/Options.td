@@ -22,6 +22,8 @@ def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 def map: S<"Map">, HelpText<"Output a linker map">;
 def map_eq: J<"Map=">, Alias<map>;
+def no_insert_timestamp: F<"no-insert-timestamp">,
+    HelpText<"Don't include PE header timestamp">;
 def no_whole_archive: F<"no-whole-archive">,
     HelpText<"No longer include all object files for following archives">;
 def large_address_aware: Flag<["--"], "large-address-aware">,
