@@ -59,13 +59,15 @@ ParsedAST TestTU::build() const {
 
 SymbolSlab TestTU::headerSymbols() const {
   auto AST = build();
-  return indexHeaderSymbols(AST.getASTContext(), AST.getPreprocessorPtr());
+  return indexHeaderSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
+                            AST.getCanonicalIncludes());
 }
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
   auto Idx = llvm::make_unique<FileIndex>(/*UseDex=*/true);
-  Idx->updatePreamble(Filename, AST.getASTContext(), AST.getPreprocessorPtr());
+  Idx->updatePreamble(Filename, AST.getASTContext(), AST.getPreprocessorPtr(),
+                      AST.getCanonicalIncludes());
   Idx->updateMain(Filename, AST);
   return std::move(Idx);
 }

@@ -60,6 +60,6 @@ define void @call(i32) {
 ; CHECK-NEXT:         Functions:       [ 1, 2 ]
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
+; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000006

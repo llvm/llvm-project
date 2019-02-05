@@ -190,7 +190,9 @@ OPTIONS
 
 .. option:: -mode=[latency|uops|inverse_throughput|analysis]
 
- Specify the run mode.
+ Specify the run mode. Note that if you pick `analysis` mode, you also need
+ to specify at least one of the `-analysis-clusters-output-file=` and
+ `-analysis-inconsistencies-output-file=`.
 
 .. option:: -num-repetitions=<Number of repetition>
 
@@ -205,12 +207,12 @@ OPTIONS
 .. option:: -analysis-clusters-output-file=</path/to/file>
 
  If provided, write the analysis clusters as CSV to this file. "-" prints to
- stdout.
+ stdout. By default, this analysis is not run.
 
 .. option:: -analysis-inconsistencies-output-file=</path/to/file>
 
  If non-empty, write inconsistencies found during analysis to this file. `-`
- prints to stdout.
+ prints to stdout. By default, this analysis is not run.
 
 .. option:: -analysis-numpoints=<dbscan numPoints parameter>
 

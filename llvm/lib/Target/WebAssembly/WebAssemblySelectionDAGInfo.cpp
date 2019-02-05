@@ -16,4 +16,4 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-selectiondag-info"
 
-WebAssemblySelectionDAGInfo::~WebAssemblySelectionDAGInfo() {}
+WebAssemblySelectionDAGInfo::~WebAssemblySelectionDAGInfo() = default; // anchor

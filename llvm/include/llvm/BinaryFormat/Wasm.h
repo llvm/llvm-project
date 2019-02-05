@@ -309,13 +309,13 @@ enum class ValType {
 };
 
 struct WasmSignature {
-  SmallVector<wasm::ValType, 1> Returns;
-  SmallVector<wasm::ValType, 4> Params;
+  SmallVector<ValType, 1> Returns;
+  SmallVector<ValType, 4> Params;
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State = Plain;
 
-  WasmSignature(SmallVector<wasm::ValType, 1> &&InReturns,
-                SmallVector<wasm::ValType, 4> &&InParams)
+  WasmSignature(SmallVector<ValType, 1> &&InReturns,
+                SmallVector<ValType, 4> &&InParams)
       : Returns(InReturns), Params(InParams) {}
   WasmSignature() = default;
 };
@@ -338,7 +338,7 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
   return !(LHS == RHS);
 }
 
-std::string toString(wasm::WasmSymbolType type);
+std::string toString(WasmSymbolType type);
 std::string relocTypetoString(uint32_t type);
 
 } // end namespace wasm

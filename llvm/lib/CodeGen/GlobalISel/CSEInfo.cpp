@@ -157,14 +157,14 @@ void GISelCSEInfo::countOpcodeHit(unsigned Opc) {
 void GISelCSEInfo::recordNewInstruction(MachineInstr *MI) {
   if (shouldCSE(MI->getOpcode())) {
     TemporaryInsts.insert(MI);
-    LLVM_DEBUG(dbgs() << "CSEInfo: Recording new MI" << *MI << "\n";);
+    LLVM_DEBUG(dbgs() << "CSEInfo: Recording new MI " << *MI);
   }
 }
 
 void GISelCSEInfo::handleRecordedInst(MachineInstr *MI) {
   assert(shouldCSE(MI->getOpcode()) && "Invalid instruction for CSE");
   auto *UMI = InstrMapping.lookup(MI);
-  LLVM_DEBUG(dbgs() << "CSEInfo: Handling recorded MI" << *MI << "\n";);
+  LLVM_DEBUG(dbgs() << "CSEInfo: Handling recorded MI " << *MI);
   if (UMI) {
     // Invalidate this MI.
     invalidateUniqueMachineInstr(UMI);
@@ -223,7 +223,7 @@ void GISelCSEInfo::analyze(MachineFunction &MF) {
     for (MachineInstr &MI : MBB) {
       if (!shouldCSE(MI.getOpcode()))
         continue;
-      LLVM_DEBUG(dbgs() << "CSEInfo::Add MI: " << MI << "\n";);
+      LLVM_DEBUG(dbgs() << "CSEInfo::Add MI: " << MI);
       insertInstr(&MI);
     }
   }

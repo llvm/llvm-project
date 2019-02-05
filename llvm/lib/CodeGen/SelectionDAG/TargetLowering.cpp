@@ -5415,7 +5415,9 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
 
 SDValue
 TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
-  assert(Node->getOpcode() == ISD::SMULFIX && "Expected opcode to be SMULFIX.");
+  assert((Node->getOpcode() == ISD::SMULFIX ||
+          Node->getOpcode() == ISD::UMULFIX) &&
+         "Expected opcode to be SMULFIX or UMULFIX.");
 
   SDLoc dl(Node);
   SDValue LHS = Node->getOperand(0);
@@ -5430,26 +5432,36 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
   }
 
+  unsigned VTSize = VT.getScalarSizeInBits();
+  bool Signed = Node->getOpcode() == ISD::SMULFIX;
+
+  assert(((Signed && Scale < VTSize) || (!Signed && Scale <= VTSize)) &&
+         "Expected scale to be less than the number of bits if signed or at "
+         "most the number of bits if unsigned.");
   assert(LHS.getValueType() == RHS.getValueType() &&
          "Expected both operands to be the same type");
-  assert(Scale < VT.getScalarSizeInBits() &&
-         "Expected scale to be less than the number of bits.");
 
   // Get the upper and lower bits of the result.
   SDValue Lo, Hi;
-  if (isOperationLegalOrCustom(ISD::SMUL_LOHI, VT)) {
-    SDValue Result =
-        DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(VT, VT), LHS, RHS);
+  unsigned LoHiOp = Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
+  unsigned HiOp = Signed ? ISD::MULHS : ISD::MULHU;
+  if (isOperationLegalOrCustom(LoHiOp, VT)) {
+    SDValue Result = DAG.getNode(LoHiOp, dl, DAG.getVTList(VT, VT), LHS, RHS);
     Lo = Result.getValue(0);
     Hi = Result.getValue(1);
-  } else if (isOperationLegalOrCustom(ISD::MULHS, VT)) {
+  } else if (isOperationLegalOrCustom(HiOp, VT)) {
     Lo = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
-    Hi = DAG.getNode(ISD::MULHS, dl, VT, LHS, RHS);
+    Hi = DAG.getNode(HiOp, dl, VT, LHS, RHS);
   } else if (VT.isVector()) {
     return SDValue();
   } else {
-    report_fatal_error("Unable to expand signed fixed point multiplication.");
+    report_fatal_error("Unable to expand fixed point multiplication.");
   }
+
+  if (Scale == VTSize)
+    // Result is just the top half since we'd be shifting by the width of the
+    // operand.
+    return Hi;
 
   // The result will need to be shifted right by the scale since both operands
   // are scaled. The result is given to us in 2 halves, so we only want part of

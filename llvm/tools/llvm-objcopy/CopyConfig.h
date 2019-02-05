@@ -14,9 +14,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 // Necessary for llvm::DebugCompressionType::None
 #include "llvm/Target/TargetOptions.h"
-#include <string>
 #include <vector>
 
 namespace llvm {
@@ -81,7 +81,7 @@ struct CopyConfig {
   std::vector<StringRef> SymbolsToRemove;
   std::vector<StringRef> SymbolsToWeaken;
   std::vector<StringRef> ToRemove;
-  std::vector<std::string> SymbolsToKeepGlobal;
+  std::vector<StringRef> SymbolsToKeepGlobal;
 
   // Map options
   StringMap<SectionRename> SectionsToRename;
@@ -112,6 +112,7 @@ struct CopyConfig {
 // will contain one or more CopyConfigs.
 struct DriverConfig {
   SmallVector<CopyConfig, 1> CopyConfigs;
+  BumpPtrAllocator Alloc;
 };
 
 // ParseObjcopyOptions returns the config and sets the input arguments. If a

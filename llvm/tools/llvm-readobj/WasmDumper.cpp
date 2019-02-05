@@ -80,11 +80,11 @@ void WasmDumper::printRelocation(const SectionRef &Section,
 
   bool HasAddend = false;
   switch (RelocType) {
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-  case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-  case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+  case wasm::R_WASM_MEMORY_ADDR_LEB:
+  case wasm::R_WASM_MEMORY_ADDR_SLEB:
+  case wasm::R_WASM_MEMORY_ADDR_I32:
+  case wasm::R_WASM_FUNCTION_OFFSET_I32:
+  case wasm::R_WASM_SECTION_OFFSET_I32:
     HasAddend = true;
     break;
   default:
@@ -219,7 +219,7 @@ namespace llvm {
 std::error_code createWasmDumper(const object::ObjectFile *Obj,
                                  ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result) {
-  const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(Obj);
+  const auto *WasmObj = dyn_cast<WasmObjectFile>(Obj);
   assert(WasmObj && "createWasmDumper called with non-wasm object");
 
   Result.reset(new WasmDumper(WasmObj, Writer));

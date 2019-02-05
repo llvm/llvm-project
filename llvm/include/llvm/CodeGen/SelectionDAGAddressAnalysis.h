@@ -59,6 +59,9 @@ public:
 
   /// Parses tree in Ptr for base, index, offset addresses.
   static BaseIndexOffset match(const LSBaseSDNode *N, const SelectionDAG &DAG);
+
+  void print(raw_ostream& OS) const;
+  void dump() const;
 };
 
 } // end namespace llvm

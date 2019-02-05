@@ -19,8 +19,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/StringSaver.h"
 #include <memory>
-#include <string>
 
 namespace llvm {
 namespace objcopy {
@@ -225,8 +225,10 @@ static const MachineInfo &getOutputFormatMachineInfo(StringRef Format) {
   return Iter->getValue();
 }
 
-static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
+static void addGlobalSymbolsFromFile(std::vector<StringRef> &Symbols,
+                                     BumpPtrAllocator &Alloc,
                                      StringRef Filename) {
+  StringSaver Saver(Alloc);
   SmallVector<StringRef, 16> Lines;
   auto BufOrErr = MemoryBuffer::getFile(Filename);
   if (!BufOrErr)
@@ -238,7 +240,7 @@ static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
     // it's not empty.
     auto TrimmedLine = Line.split('#').first.trim();
     if (!TrimmedLine.empty())
-      Symbols.push_back(TrimmedLine.str());
+      Symbols.push_back(Saver.save(TrimmedLine));
   }
 }
 
@@ -246,6 +248,7 @@ static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
 DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
+  DriverConfig DC;
   ObjcopyOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -401,7 +404,8 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
     Config.SymbolsToKeepGlobal.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
-    addGlobalSymbolsFromFile(Config.SymbolsToKeepGlobal, Arg->getValue());
+    addGlobalSymbolsFromFile(Config.SymbolsToKeepGlobal, DC.Alloc,
+                             Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
     Config.SymbolsToGlobalize.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
@@ -426,7 +430,6 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   if (Config.DecompressDebugSections && !zlib::isAvailable())
     error("LLVM was not compiled with LLVM_ENABLE_ZLIB: cannot decompress.");
 
-  DriverConfig DC;
   DC.CopyConfigs.push_back(std::move(Config));
   return DC;
 }

@@ -71,7 +71,7 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
                     << MF.getName() << '\n');
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  auto &LIS = getAnalysis<LiveIntervals>();
 
   // We don't preserve SSA form.
   MRI.leaveSSA();
@@ -80,8 +80,8 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
 
   // Split multiple-VN LiveIntervals into multiple LiveIntervals.
   SmallVector<LiveInterval *, 4> SplitLIs;
-  for (unsigned i = 0, e = MRI.getNumVirtRegs(); i < e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
+    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(Reg))
       continue;
 

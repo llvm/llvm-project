@@ -307,13 +307,13 @@ insl	(%dx), %es:(%rdi)
 // CHECK: fxch %st(1)
 // CHECK: fucom %st(1)
 // CHECK: fucomp %st(1)
-// CHECK: faddp %st(1)
-// CHECK: faddp	%st(0)
-// CHECK: fsubp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fdivp %st(1)
-// CHECK: fdivrp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: faddp %st, %st(0)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
 
 fxch
 fucom
@@ -456,8 +456,8 @@ mov %rdx, %db15
 // CHECK: encoding: [0x44,0x0f,0x23,0xfa]
 
 // rdar://8456371 - Handle commutable instructions written backward.
-// CHECK: 	faddp	%st(1)
-// CHECK:	fmulp	%st(2)
+// CHECK: 	faddp	%st, %st(1)
+// CHECK:	fmulp	%st, %st(2)
 faddp %st, %st(1)
 fmulp %st, %st(2)
 
@@ -1391,12 +1391,12 @@ clac
 // CHECK: encoding: [0x0f,0x01,0xcb]
 stac
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fdivp %st(1)
-// CHECK: fdivrp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
 faddp %st, %st(1)
 fmulp %st, %st(1)
 fsubp %st, %st(1)
@@ -1404,12 +1404,12 @@ fsubrp %st, %st(1)
 fdivp %st, %st(1)
 fdivrp %st, %st(1)
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fdivp %st(1)
-// CHECK: fdivrp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
 faddp %st(1), %st
 fmulp %st(1), %st
 fsubp %st(1), %st
@@ -1417,12 +1417,12 @@ fsubrp %st(1), %st
 fdivp %st(1), %st
 fdivrp %st(1), %st
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fdivp %st(1)
-// CHECK: fdivrp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
 faddp %st(1)
 fmulp %st(1)
 fsubp %st(1)
@@ -1430,12 +1430,12 @@ fsubrp %st(1)
 fdivp %st(1)
 fdivrp %st(1)
 
-// CHECK: faddp %st(1)
-// CHECK: fmulp %st(1)
-// CHECK: fsubp %st(1)
-// CHECK: fsubrp %st(1)
-// CHECK: fdivp %st(1)
-// CHECK: fdivrp %st(1)
+// CHECK: faddp %st, %st(1)
+// CHECK: fmulp %st, %st(1)
+// CHECK: fsubp %st, %st(1)
+// CHECK: fsubrp %st, %st(1)
+// CHECK: fdivp %st, %st(1)
+// CHECK: fdivrp %st, %st(1)
 faddp
 fmulp
 fsubp

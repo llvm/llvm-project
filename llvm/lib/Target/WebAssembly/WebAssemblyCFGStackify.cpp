@@ -108,7 +108,7 @@ FunctionPass *llvm::createWebAssemblyCFGStackify() {
 /// code) for a branch instruction to both branch to a block and fallthrough
 /// to it, so we check the actual branch operands to see if there are any
 /// explicit mentions.
-static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred,
+static bool explicitlyBranchesTo(MachineBasicBlock *Pred,
                                  MachineBasicBlock *MBB) {
   for (MachineInstr &MI : Pred->terminators())
     for (MachineOperand &MO : MI.explicit_operands())
@@ -123,7 +123,7 @@ static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred,
 // ones that should go after the marker. In this function, AfterSet is only
 // used for sanity checking.
 static MachineBasicBlock::iterator
-GetEarliestInsertPos(MachineBasicBlock *MBB,
+getEarliestInsertPos(MachineBasicBlock *MBB,
                      const SmallPtrSet<const MachineInstr *, 4> &BeforeSet,
                      const SmallPtrSet<const MachineInstr *, 4> &AfterSet) {
   auto InsertPos = MBB->end();
@@ -147,7 +147,7 @@ GetEarliestInsertPos(MachineBasicBlock *MBB,
 // ones that should go after the marker. In this function, BeforeSet is only
 // used for sanity checking.
 static MachineBasicBlock::iterator
-GetLatestInsertPos(MachineBasicBlock *MBB,
+getLatestInsertPos(MachineBasicBlock *MBB,
                    const SmallPtrSet<const MachineInstr *, 4> &BeforeSet,
                    const SmallPtrSet<const MachineInstr *, 4> &AfterSet) {
   auto InsertPos = MBB->begin();
@@ -222,7 +222,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   for (MachineBasicBlock *Pred : MBB.predecessors()) {
     if (Pred->getNumber() < MBBNumber) {
       Header = Header ? MDT.findNearestCommonDominator(Header, Pred) : Pred;
-      if (ExplicitlyBranchesTo(Pred, &MBB)) {
+      if (explicitlyBranchesTo(Pred, &MBB)) {
         IsBranchedTo = true;
         if (Pred->getFirstTerminator()->getOpcode() == WebAssembly::BR_ON_EXN) {
           IsBrOnExn = true;
@@ -322,7 +322,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
     ReturnType = WebAssembly::ExprType::I32;
   }
 
-  auto InsertPos = GetLatestInsertPos(Header, BeforeSet, AfterSet);
+  auto InsertPos = getLatestInsertPos(Header, BeforeSet, AfterSet);
   MachineInstr *Begin =
       BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
               TII.get(WebAssembly::BLOCK))
@@ -355,7 +355,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   }
 
   // Mark the end of the block.
-  InsertPos = GetEarliestInsertPos(&MBB, BeforeSet, AfterSet);
+  InsertPos = getEarliestInsertPos(&MBB, BeforeSet, AfterSet);
   MachineInstr *End = BuildMI(MBB, InsertPos, MBB.findPrevDebugLoc(InsertPos),
                               TII.get(WebAssembly::END_BLOCK));
   registerScope(Begin, End);
@@ -405,7 +405,7 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   }
 
   // Mark the beginning of the loop.
-  auto InsertPos = GetEarliestInsertPos(&MBB, BeforeSet, AfterSet);
+  auto InsertPos = getEarliestInsertPos(&MBB, BeforeSet, AfterSet);
   MachineInstr *Begin = BuildMI(MBB, InsertPos, MBB.findDebugLoc(InsertPos),
                                 TII.get(WebAssembly::LOOP))
                             .addImm(int64_t(WebAssembly::ExprType::Void));
@@ -422,7 +422,7 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
 
   // Mark the end of the loop (using arbitrary debug location that branched to
   // the loop end as its location).
-  InsertPos = GetEarliestInsertPos(AfterLoop, BeforeSet, AfterSet);
+  InsertPos = getEarliestInsertPos(AfterLoop, BeforeSet, AfterSet);
   DebugLoc EndDL = (*AfterLoop->pred_rbegin())->findBranchDebugLoc();
   MachineInstr *End =
       BuildMI(*AfterLoop, InsertPos, EndDL, TII.get(WebAssembly::END_LOOP));
@@ -451,7 +451,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   for (auto *Pred : MBB.predecessors()) {
     if (Pred->getNumber() < MBBNumber) {
       Header = Header ? MDT.findNearestCommonDominator(Header, Pred) : Pred;
-      assert(!ExplicitlyBranchesTo(Pred, &MBB) &&
+      assert(!explicitlyBranchesTo(Pred, &MBB) &&
              "Explicit branch to an EH pad!");
     }
   }
@@ -559,7 +559,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   }
 
   // Add the TRY.
-  auto InsertPos = GetLatestInsertPos(Header, BeforeSet, AfterSet);
+  auto InsertPos = getLatestInsertPos(Header, BeforeSet, AfterSet);
   MachineInstr *Begin =
       BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
               TII.get(WebAssembly::TRY))
@@ -595,7 +595,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   }
 
   // Mark the end of the TRY.
-  InsertPos = GetEarliestInsertPos(AfterTry, BeforeSet, AfterSet);
+  InsertPos = getEarliestInsertPos(AfterTry, BeforeSet, AfterSet);
   MachineInstr *End =
       BuildMI(*AfterTry, InsertPos, Bottom->findBranchDebugLoc(),
               TII.get(WebAssembly::END_TRY));
@@ -609,7 +609,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
 }
 
 static unsigned
-GetDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
+getDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
          const MachineBasicBlock *MBB) {
   unsigned Depth = 0;
   for (auto X : reverse(Stack)) {
@@ -635,19 +635,19 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
   if (MFI.getResults().empty())
     return;
 
-  WebAssembly::ExprType retType;
+  WebAssembly::ExprType RetType;
   switch (MFI.getResults().front().SimpleTy) {
   case MVT::i32:
-    retType = WebAssembly::ExprType::I32;
+    RetType = WebAssembly::ExprType::I32;
     break;
   case MVT::i64:
-    retType = WebAssembly::ExprType::I64;
+    RetType = WebAssembly::ExprType::I64;
     break;
   case MVT::f32:
-    retType = WebAssembly::ExprType::F32;
+    RetType = WebAssembly::ExprType::F32;
     break;
   case MVT::f64:
-    retType = WebAssembly::ExprType::F64;
+    RetType = WebAssembly::ExprType::F64;
     break;
   case MVT::v16i8:
   case MVT::v8i16:
@@ -655,10 +655,10 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
   case MVT::v2i64:
   case MVT::v4f32:
   case MVT::v2f64:
-    retType = WebAssembly::ExprType::V128;
+    RetType = WebAssembly::ExprType::V128;
     break;
   case MVT::ExceptRef:
-    retType = WebAssembly::ExprType::ExceptRef;
+    RetType = WebAssembly::ExprType::ExceptRef;
     break;
   default:
     llvm_unreachable("unexpected return type");
@@ -669,11 +669,11 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
       if (MI.isPosition() || MI.isDebugInstr())
         continue;
       if (MI.getOpcode() == WebAssembly::END_BLOCK) {
-        EndToBegin[&MI]->getOperand(0).setImm(int32_t(retType));
+        EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       }
       if (MI.getOpcode() == WebAssembly::END_LOOP) {
-        EndToBegin[&MI]->getOperand(0).setImm(int32_t(retType));
+        EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       }
       // Something other than an `end`. We're done.
@@ -684,7 +684,7 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
 
 // WebAssembly functions end with an end instruction, as if the function body
 // were a block.
-static void AppendEndToFunction(MachineFunction &MF,
+static void appendEndToFunction(MachineFunction &MF,
                                 const WebAssemblyInstrInfo &TII) {
   BuildMI(MF.back(), MF.back().end(),
           MF.back().findPrevDebugLoc(MF.back().end()),
@@ -753,7 +753,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
             MI.RemoveOperand(MI.getNumOperands() - 1);
           for (auto MO : Ops) {
             if (MO.isMBB())
-              MO = MachineOperand::CreateImm(GetDepth(Stack, MO.getMBB()));
+              MO = MachineOperand::CreateImm(getDepth(Stack, MO.getMBB()));
             MI.addOperand(MF, MO);
           }
         }
@@ -798,7 +798,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getSubtarget<WebAssemblySubtarget>()
            .getTargetTriple()
            .isOSBinFormatELF())
-    AppendEndToFunction(MF, TII);
+    appendEndToFunction(MF, TII);
 
   return true;
 }

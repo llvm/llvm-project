@@ -100,9 +100,7 @@ void X86AsmPrinter::StackMapShadowTracker::emitShadowPadding(
 }
 
 void X86AsmPrinter::EmitAndCountInstruction(MCInst &Inst) {
-  OutStreamer->EmitInstruction(Inst, getSubtargetInfo(),
-                               EnablePrintSchedInfo &&
-                                   !(Inst.getFlags() & X86::NO_SCHED_INFO));
+  OutStreamer->EmitInstruction(Inst, getSubtargetInfo());
   SMShadowTracker.count(Inst, getSubtargetInfo(), CodeEmitter.get());
 }
 
@@ -1860,8 +1858,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 64> Mask;
       DecodePSHUFBMask(C, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
     }
     break;
   }
@@ -1933,8 +1930,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodeVPERMILPMask(C, ElSize, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, SrcIdx, SrcIdx, Mask));
     }
     break;
   }
@@ -1965,8 +1961,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodeVPERMIL2PMask(C, (unsigned)CtrlOp.getImm(), ElSize, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask));
     }
     break;
   }
@@ -1983,8 +1978,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       SmallVector<int, 16> Mask;
       DecodeVPPERMMask(C, Width, Mask);
       if (!Mask.empty())
-        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask),
-                                !EnablePrintSchedInfo);
+        OutStreamer->AddComment(getShuffleComment(MI, 1, 2, Mask));
     }
     break;
   }
@@ -2001,7 +1995,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
       if (auto *CF = dyn_cast<ConstantFP>(C)) {
         CS << "0x" << CF->getValueAPF().bitcastToAPInt().toString(16, false);
-        OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+        OutStreamer->AddComment(CS.str());
       }
     }
     break;
@@ -2098,7 +2092,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
           }
         }
         CS << "]";
-        OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+        OutStreamer->AddComment(CS.str());
       } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
         CS << "<";
         for (int l = 0; l != NumLanes; ++l) {
@@ -2110,7 +2104,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
           }
         }
         CS << ">";
-        OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+        OutStreamer->AddComment(CS.str());
       }
     }
     break;
@@ -2197,14 +2191,12 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
         printConstant(C, CS);
       }
       CS << "]";
-      OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+      OutStreamer->AddComment(CS.str());
     }
   }
 
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
-  if (MI->getAsmPrinterFlag(MachineInstr::NoSchedComment))
-    TmpInst.setFlags(TmpInst.getFlags() | X86::NO_SCHED_INFO);
 
   // Stackmap shadows cannot include branch targets, so we can count the bytes
   // in a call towards the shadow, but must ensure that the no thread returns

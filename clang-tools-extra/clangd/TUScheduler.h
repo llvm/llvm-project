@@ -12,6 +12,7 @@
 #include "ClangdUnit.h"
 #include "Function.h"
 #include "Threading.h"
+#include "index/CanonicalIncludes.h"
 #include "llvm/ADT/StringMap.h"
 #include <future>
 
@@ -91,7 +92,8 @@ public:
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
   virtual void onPreambleAST(PathRef Path, ASTContext &Ctx,
-                             std::shared_ptr<clang::Preprocessor> PP) {}
+                             std::shared_ptr<clang::Preprocessor> PP,
+                             const CanonicalIncludes &) {}
   /// Called on the AST built for the file itself. Note that preamble AST nodes
   /// are not deserialized and should be processed in the onPreambleAST call
   /// instead.

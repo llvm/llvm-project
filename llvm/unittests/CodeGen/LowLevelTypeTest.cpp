@@ -15,18 +15,6 @@
 
 using namespace llvm;
 
-// Define a pretty printer to help debugging when things go wrong.
-namespace llvm {
-std::ostream &
-operator<<(std::ostream &OS, const llvm::LLT Ty) {
-  std::string Repr;
-  raw_string_ostream SS{Repr};
-  Ty.print(SS);
-  OS << SS.str();
-  return OS;
-}
-}
-
 namespace {
 
 TEST(LowLevelTypeTest, Scalar) {
