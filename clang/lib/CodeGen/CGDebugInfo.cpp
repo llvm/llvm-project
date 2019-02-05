@@ -451,8 +451,8 @@ CGDebugInfo::createFile(StringRef FileName,
     for (; CurDirIt != CurDirE && *CurDirIt == *FileIt; ++CurDirIt, ++FileIt)
       llvm::sys::path::append(DirBuf, *CurDirIt);
     if (std::distance(llvm::sys::path::begin(CurDir), CurDirIt) == 1) {
-      // The common prefix only the root; stripping it would cause
-      // LLVM diagnostic locations to be more confusing.
+      // Don't strip the common prefix if it is only the root "/"
+      // since that would make LLVM diagnostic locations confusing.
       Dir = {};
       File = RemappedFile;
     } else {
