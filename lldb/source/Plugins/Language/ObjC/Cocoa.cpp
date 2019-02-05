@@ -27,6 +27,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/bit.h"
 
 #include "llvm/ADT/APInt.h"
 
@@ -751,24 +752,18 @@ bool lldb_private::formatters::NSURLSummaryProvider(
 ///   distantFuture, except within about 1e-25 second of the reference date.
 const int TAGGED_DATE_EXPONENT_BIAS = 0x3ef;
 
-typedef union {
-  struct {
-    uint64_t fraction:52;  // unsigned
-    uint64_t exponent:11;  // signed
-    uint64_t sign:1;
-  } repr;
-  uint64_t i;
-  double d;
-} DoubleBits;
-typedef union {
-  struct {
-    uint64_t fraction:52;  // unsigned
-    uint64_t exponent:7;   // signed
-    uint64_t sign:1;
-    uint64_t unused:4;  // placeholder for pointer tag bits
-  } repr;
-  uint64_t i;
-} TaggedDoubleBits;
+struct DoubleBits {
+  uint64_t fraction : 52; // unsigned
+  uint64_t exponent : 11; // signed
+  uint64_t sign : 1;
+};
+
+struct TaggedDoubleBits {
+  uint64_t fraction : 52; // unsigned
+  uint64_t exponent : 7;  // signed
+  uint64_t sign : 1;
+  uint64_t unused : 4; // placeholder for pointer tag bits
+};
 
 static uint64_t decodeExponent(uint64_t exp) {
   // Tagged exponent field is 7-bit signed. Sign-extend the value to 64 bits
@@ -776,24 +771,24 @@ static uint64_t decodeExponent(uint64_t exp) {
   return llvm::SignExtend64<7>(exp) + TAGGED_DATE_EXPONENT_BIAS;
 }
 
-static uint64_t decodeTaggedTimeInterval(uint64_t encodedTimeInterval) {
+static double decodeTaggedTimeInterval(uint64_t encodedTimeInterval) {
   if (encodedTimeInterval == 0)
     return 0.0;
   if (encodedTimeInterval == std::numeric_limits<uint64_t>::max())
     return (uint64_t)-0.0;
 
-  TaggedDoubleBits encodedBits = {};
-  encodedBits.i = encodedTimeInterval;
-  DoubleBits decodedBits;
+  TaggedDoubleBits encodedBits =
+      llvm::bit_cast<TaggedDoubleBits>(encodedTimeInterval);
+  assert(encodedBits.unused == 0);
 
   // Sign and fraction are represented exactly.
   // Exponent is encoded.
-  assert(encodedBits.repr.unused == 0);
-  decodedBits.repr.sign = encodedBits.repr.sign;
-  decodedBits.repr.fraction = encodedBits.repr.fraction;
-  decodedBits.repr.exponent = decodeExponent(encodedBits.repr.exponent);
+  DoubleBits decodedBits;
+  decodedBits.sign = encodedBits.sign;
+  decodedBits.fraction = encodedBits.fraction;
+  decodedBits.exponent = decodeExponent(encodedBits.exponent);
 
-  return decodedBits.d;
+  return llvm::bit_cast<double>(decodedBits);
 }
 
 bool lldb_private::formatters::NSDateSummaryProvider(
@@ -870,7 +865,8 @@ bool lldb_private::formatters::NSDateSummaryProvider(
 
   // Accomodate for the __NSTaggedDate format introduced in Foundation 1600.
   if (class_name == g___NSTaggedDate) {
-    auto *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(process_sp->GetObjCLanguageRuntime());
+    auto *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
+        process_sp->GetObjCLanguageRuntime());
     if (runtime && runtime->GetFoundationVersion() >= 1600)
       date_value = decodeTaggedTimeInterval(value_bits << 4);
   }
