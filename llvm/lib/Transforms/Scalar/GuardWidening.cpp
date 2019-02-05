@@ -380,7 +380,8 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
 
     assert((i == (e - 1)) == (GuardInst->getParent() == CurBB) && "Bad DFS?");
 
-    if (i == (e - 1) && CurBB->getTerminator() != GuardInst) {
+    if (GuardInst->getParent() == CurBB &&
+        CurBB->getTerminator() != GuardInst) {
       // Corner case: make sure we're only looking at guards strictly dominating
       // GuardInst when visiting GuardInst->getParent().
       auto NewEnd = std::find(I, E, GuardInst);

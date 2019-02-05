@@ -183,22 +183,22 @@
 # CHECK: cmovel %eax, %edx
 0x66 0x0f 0x44 0xd0
 
-# CHECK: fmul %st
+# CHECK: fmul %st(0)
 0xd8 0xc8
 
-# CHECK: fadd %st
+# CHECK: fadd %st(0)
 0xd8 0xc0
 
-# CHECK: fsub %st
+# CHECK: fsub %st(0)
 0xd8 0xe0
 
-# CHECK: fsubr %st
+# CHECK: fsubr %st(0)
 0xd8 0xe8
 
-# CHECK: fdivr %st
+# CHECK: fdivr %st(0)
 0xd8 0xf8
 
-# CHECK: fdiv %st
+# CHECK: fdiv %st(0)
 0xd8 0xf0
 
 # CHECK: movl %cs, %eax

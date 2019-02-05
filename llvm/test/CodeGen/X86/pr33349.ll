@@ -18,7 +18,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; KNL-NEXT:    testb $1, %al
 ; KNL-NEXT:    fld1
 ; KNL-NEXT:    fldz
-; KNL-NEXT:    fld %st
+; KNL-NEXT:    fld %st(0)
 ; KNL-NEXT:    fcmovne %st(2), %st
 ; KNL-NEXT:    testb $1, %cl
 ; KNL-NEXT:    fld %st(1)
@@ -54,7 +54,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    testb $1, %al
 ; SKX-NEXT:    fld1
 ; SKX-NEXT:    fldz
-; SKX-NEXT:    fld %st
+; SKX-NEXT:    fld %st(0)
 ; SKX-NEXT:    fcmovne %st(2), %st
 ; SKX-NEXT:    testb $1, %cl
 ; SKX-NEXT:    fld %st(1)

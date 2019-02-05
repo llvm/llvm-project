@@ -538,6 +538,9 @@ def RST : RegisterClass<"X86", [f80, f64, f32], 32, (sequence "ST%u", 0, 7)> {
   let isAllocatable = 0;
 }
 
+// Helper to allow %st to print as %st(0) when its encoded in the instruction.
+def RSTi : RegisterOperand<RST, "printSTiRegOperand">;
+
 // Generic vector registers: VR64 and VR128.
 // Ensure that float types are declared first - only float is legal on SSE1.
 def VR64: RegisterClass<"X86", [x86mmx], 64, (sequence "MM%u", 0, 7)>;

@@ -404,7 +404,7 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ; GNU:       # %bb.0:
 ; GNU-NEXT:    subq $40, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
-; GNU-NEXT:    fld %st
+; GNU-NEXT:    fld %st(0)
 ; GNU-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
 ; GNU-NEXT:    callq __powl_finite
@@ -417,7 +417,7 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ; WIN-NEXT:    subq $80, %rsp
 ; WIN-NEXT:    movq %rcx, %rsi
 ; WIN-NEXT:    fldt (%rdx)
-; WIN-NEXT:    fld %st
+; WIN-NEXT:    fld %st(0)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
@@ -435,7 +435,7 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ; MAC:       ## %bb.0:
 ; MAC-NEXT:    subq $40, %rsp
 ; MAC-NEXT:    fldt {{[0-9]+}}(%rsp)
-; MAC-NEXT:    fld %st
+; MAC-NEXT:    fld %st(0)
 ; MAC-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; MAC-NEXT:    fstpt (%rsp)
 ; MAC-NEXT:    callq _powl

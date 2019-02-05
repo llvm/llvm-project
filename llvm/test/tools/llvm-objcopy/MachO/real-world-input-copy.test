@@ -1,4 +1,3 @@
-REQUIRES: system-darwin
 # RUN: llvm-mc -assemble -triple i386-apple-darwin9 -filetype=obj %p/Inputs/macho.32.s -o %t.32.o
 # RUN: llvm-objcopy %t.32.o %t.32.copy.o
 # RUN: cmp %t.32.o %t.32.copy.o
@@ -6,3 +5,5 @@ REQUIRES: system-darwin
 # RUN: llvm-mc -assemble -triple x86_64-apple-darwin9 -filetype=obj %p/Inputs/macho.64.s -o %t.64.o
 # RUN: llvm-objcopy %t.64.o %t.64.copy.o
 # RUN: cmp %t.64.o %t.64.copy.o
+
+# REQUIRES: x86-registered-target

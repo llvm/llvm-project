@@ -900,7 +900,7 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X32-NEXT:    fstp %st(1)
 ; X32-NEXT:    fldz
 ; X32-NEXT:  .LBB17_3: # %if.then
-; X32-NEXT:    fstp %st
+; X32-NEXT:    fstp %st(0)
 ; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl %eax, (%esp)

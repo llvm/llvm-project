@@ -183,11 +183,11 @@ smovq // CHECK: movsq
 // CHECK: movb (%eax), %al
         gs;movb 0(%eax), %al
 
-// CHECK: fadd %st
+// CHECK: fadd %st(0)
 // CHECK: fadd %st(1)
 // CHECK: fadd %st(7)
 
-fadd %st
+fadd %st(0)
 fadd %st(1)
 fadd %st(7)
 
@@ -308,7 +308,7 @@ insl	(%dx), %es:(%rdi)
 // CHECK: fucom %st(1)
 // CHECK: fucomp %st(1)
 // CHECK: faddp %st(1)
-// CHECK: faddp	%st
+// CHECK: faddp	%st(0)
 // CHECK: fsubp %st(1)
 // CHECK: fsubrp %st(1)
 // CHECK: fmulp %st(1)

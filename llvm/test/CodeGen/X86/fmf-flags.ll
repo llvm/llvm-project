@@ -60,7 +60,7 @@ define double @not_so_fast_mul_add(double %x) {
 ; X86-LABEL: not_so_fast_mul_add:
 ; X86:       # %bb.0:
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; X86-NEXT:    fld %st
+; X86-NEXT:    fld %st(0)
 ; X86-NEXT:    fmull {{\.LCPI.*}}
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fmull {{\.LCPI.*}}
