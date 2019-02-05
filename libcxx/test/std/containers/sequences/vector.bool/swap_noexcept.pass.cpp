@@ -52,7 +52,7 @@ struct some_alloc2
     typedef std::true_type is_always_equal;
 };
 
-int main()
+int main(int, char**)
 {
 #if defined(_LIBCPP_VERSION)
     {
@@ -89,4 +89,6 @@ int main()
     }
 #endif // _LIBCPP_VERSION
 #endif
+
+  return 0;
 }

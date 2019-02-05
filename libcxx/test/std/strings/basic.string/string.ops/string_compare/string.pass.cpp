@@ -32,7 +32,7 @@ test(const S& s, const S& str, int x)
     assert(sign(s.compare(str)) == sign(x));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -81,4 +81,6 @@ int main()
     assert(s.compare({"abc", 1}) < 0);
     }
 #endif
+
+  return 0;
 }

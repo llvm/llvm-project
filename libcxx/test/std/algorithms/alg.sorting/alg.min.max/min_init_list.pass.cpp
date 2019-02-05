@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     int i = std::min({2, 3, 1});
     assert(i == 1);
@@ -40,4 +40,6 @@ int main()
     static_assert(std::min({3, 2, 1}) == 1, "");
     }
 #endif
+
+  return 0;
 }

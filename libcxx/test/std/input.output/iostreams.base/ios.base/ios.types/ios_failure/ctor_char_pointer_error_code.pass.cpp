@@ -17,7 +17,7 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::string what_arg("io test message");
@@ -37,4 +37,6 @@ int main()
         assert(what_message.find(std::iostream_category().message(static_cast<int>
             (std::io_errc::stream))) != std::string::npos);
     }
+
+  return 0;
 }

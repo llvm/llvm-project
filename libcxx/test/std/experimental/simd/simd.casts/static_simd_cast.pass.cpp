@@ -37,4 +37,6 @@ static_assert(
         ex::simd<float, ex::simd_abi::scalar>>::value,
     "");
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

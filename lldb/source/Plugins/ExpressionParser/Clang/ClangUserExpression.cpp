@@ -59,13 +59,15 @@ using namespace lldb_private;
 ClangUserExpression::ClangUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
     llvm::StringRef prefix, lldb::LanguageType language,
-    ResultType desired_type, const EvaluateExpressionOptions &options)
+    ResultType desired_type, const EvaluateExpressionOptions &options,
+    ValueObject *ctx_obj)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
                          options),
       m_type_system_helper(*m_target_wp.lock().get(),
                            options.GetExecutionPolicy() ==
                                eExecutionPolicyTopLevel),
-      m_result_delegate(exe_scope.CalculateTarget()) {
+      m_result_delegate(exe_scope.CalculateTarget()),
+      m_ctx_obj(ctx_obj) {
   switch (m_language) {
   case lldb::eLanguageTypeC_plus_plus:
     m_allow_cxx = true;
@@ -130,7 +132,27 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     return;
   }
 
-  if (clang::CXXMethodDecl *method_decl =
+  if (m_ctx_obj) {
+    switch (m_ctx_obj->GetObjectRuntimeLanguage()) {
+    case lldb::eLanguageTypeC:
+    case lldb::eLanguageTypeC89:
+    case lldb::eLanguageTypeC99:
+    case lldb::eLanguageTypeC11:
+    case lldb::eLanguageTypeC_plus_plus:
+    case lldb::eLanguageTypeC_plus_plus_03:
+    case lldb::eLanguageTypeC_plus_plus_11:
+    case lldb::eLanguageTypeC_plus_plus_14:
+      m_in_cplusplus_method = true;
+      break;
+    case lldb::eLanguageTypeObjC:
+    case lldb::eLanguageTypeObjC_plus_plus:
+      m_in_objectivec_method = true;
+      break;
+    default:
+      break;
+    }
+    m_needs_object_ptr = true;
+  } else if (clang::CXXMethodDecl *method_decl =
           ClangASTContext::DeclContextGetAsCXXMethodDecl(decl_context)) {
     if (m_allow_cxx && method_decl->isInstance()) {
       if (m_enforce_valid_object) {
@@ -396,7 +418,8 @@ void ClangUserExpression::UpdateLanguageForExpr(
       m_expr_lang = lldb::eLanguageTypeC;
 
     if (!source_code->GetText(m_transformed_text, m_expr_lang,
-                              m_in_static_method, exe_ctx)) {
+                              m_in_static_method, exe_ctx,
+                              !m_ctx_obj)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -733,7 +756,15 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     Status object_ptr_error;
 
-    object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
+    if (m_ctx_obj) {
+      AddressType address_type;
+      object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
+      if (object_ptr == LLDB_INVALID_ADDRESS ||
+          address_type != eAddressTypeLoad)
+        object_ptr_error.SetErrorString("Can't get context object's "
+                                        "debuggee address");
+    } else
+      object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
 
     if (!object_ptr_error.Success()) {
       exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(
@@ -776,9 +807,11 @@ lldb::ExpressionVariableSP ClangUserExpression::GetResultAfterDematerialization(
 void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx,
     Materializer::PersistentVariableDelegate &delegate,
-    bool keep_result_in_memory) {
+    bool keep_result_in_memory,
+    ValueObject *ctx_obj) {
   m_expr_decl_map_up.reset(
-      new ClangExpressionDeclMap(keep_result_in_memory, &delegate, exe_ctx));
+      new ClangExpressionDeclMap(keep_result_in_memory, &delegate, exe_ctx,
+                                 ctx_obj));
 }
 
 clang::ASTConsumer *

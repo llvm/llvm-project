@@ -21,8 +21,10 @@
 
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   {
     std::get_temporary_buffer<int>(1); // intentional memory leak.
   }
+
+  return 0;
 }

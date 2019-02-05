@@ -29,7 +29,7 @@ struct B
     }
 };
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -42,4 +42,6 @@ int main()
         assert(!std::uncaught_exception());
     }
     assert(!std::uncaught_exception());
+
+  return 0;
 }

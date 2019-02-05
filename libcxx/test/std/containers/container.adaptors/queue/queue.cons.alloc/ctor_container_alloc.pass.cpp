@@ -44,7 +44,7 @@ struct test
     test_allocator<int> get_allocator() {return c.get_allocator();}
 };
 
-int main()
+int main(int, char**)
 {
     C d = make<C>(5);
     test q(d, test_allocator<int>(4));
@@ -55,4 +55,6 @@ int main()
         assert(q.front() == d[i]);
         q.pop();
     }
+
+  return 0;
 }

@@ -47,7 +47,7 @@ def main():
         use_shell = True
 
     git_dir = subprocess.check_output([git, 'rev-parse', '--git-dir'],
-                                      cwd=LLVM_DIR, shell=use_shell).strip()
+                                      cwd=LLVM_DIR, shell=use_shell).decode().strip()
     if not os.path.isdir(git_dir):
         print('.git dir not found at "%s"' % git_dir, file=sys.stderr)
         return 1

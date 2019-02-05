@@ -64,8 +64,10 @@ test2()
     where(E::used_block);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
+
+  return 0;
 }

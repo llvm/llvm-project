@@ -18,7 +18,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::list<MoveOnly> l1;
@@ -40,4 +40,6 @@ int main()
     assert(l1.front() == MoveOnly(1));
     assert(l1.back() == MoveOnly(2));
     }
+
+  return 0;
 }

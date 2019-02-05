@@ -2280,6 +2280,16 @@ public:
     return false;
   }
 
+  /// Return true if sinking I's operands to the same basic block as I is
+  /// profitable, e.g. because the operands can be folded into a target
+  /// instruction during instruction selection. After calling the function
+  /// \p Ops contains the Uses to sink ordered by dominance (dominating users
+  /// come first).
+  virtual bool shouldSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const {
+    return false;
+  }
+
   /// Return true if the target supplies and combines to a paired load
   /// two loaded values of type LoadedType next to each other in memory.
   /// RequiredAlignment gives the minimal alignment constraints that must be met

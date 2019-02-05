@@ -59,7 +59,7 @@ struct A
     A& operator=(const A&);
 };
 
-int main()
+int main(int, char**)
 {
     test_has_trivial_assign<int&>();
     test_has_trivial_assign<Union>();
@@ -76,4 +76,6 @@ int main()
     test_has_not_trivial_assign<Abstract>();
     test_has_not_trivial_assign<const Empty>();
 
+
+  return 0;
 }

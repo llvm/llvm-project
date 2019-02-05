@@ -14,6 +14,8 @@ public:
   Duration &operator/=(float r);
   Duration &operator/=(double r);
   template <typename T> Duration &operator/=(T r);
+
+  Duration &operator+(Duration d);
 };
 
 template <typename T> Duration operator*(Duration lhs, T rhs);

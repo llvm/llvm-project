@@ -28,7 +28,7 @@ test(It i)
     assert(r.base() == i);
 }
 
-int main()
+int main(int, char**)
 {
     char s[] = "123";
     test(input_iterator<char*>(s));
@@ -44,4 +44,6 @@ int main()
     static_assert(it.base() == p);
     }
 #endif
+
+  return 0;
 }

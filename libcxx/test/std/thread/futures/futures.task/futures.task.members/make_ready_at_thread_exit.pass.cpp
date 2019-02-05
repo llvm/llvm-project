@@ -80,7 +80,7 @@ void func3(std::packaged_task<double(int, char)> p)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::packaged_task<double(int, char)> p(A(5));
@@ -115,4 +115,6 @@ int main()
         t.join();
     }
 #endif
+
+  return 0;
 }

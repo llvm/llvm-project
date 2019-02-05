@@ -20,7 +20,7 @@
 #include "archetypes.hpp"
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P1;
@@ -48,4 +48,6 @@ int main()
        assert(p.second.value == -42);
     }
 #endif
+
+  return 0;
 }

@@ -13,7 +13,7 @@
 #include <queue>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::queue<int> q;
     assert(q.size() == 0);
@@ -33,4 +33,6 @@ int main()
     assert(q.back() == 3);
     q.pop();
     assert(q.size() == 0);
+
+  return 0;
 }

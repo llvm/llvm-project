@@ -48,7 +48,7 @@ void test_return_type()
     static_assert( std::is_same_v<Init, decltype(std::reduce(p, p, Init{}))> );
 }
 
-int main()
+int main(int, char**)
 {
     test_return_type<char, int>();
     test_return_type<int, int>();
@@ -63,4 +63,6 @@ int main()
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
+
+  return 0;
 }

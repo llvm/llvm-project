@@ -25,7 +25,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::digits == expected, "digits test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, 1>();
     test<char, std::numeric_limits<char>::is_signed ? 7 : 8>();
@@ -54,4 +54,6 @@ int main()
     test<float, FLT_MANT_DIG>();
     test<double, DBL_MANT_DIG>();
     test<long double, LDBL_MANT_DIG>();
+
+  return 0;
 }

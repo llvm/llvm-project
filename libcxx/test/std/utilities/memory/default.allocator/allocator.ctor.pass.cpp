@@ -25,7 +25,7 @@
 #include "test_macros.h"
 
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::allocator<char> AC;
@@ -46,4 +46,6 @@ int main()
     (void) a3;
     }
 
+
+  return 0;
 }

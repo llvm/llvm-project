@@ -307,7 +307,7 @@ private:
   }
 };
 
-int main()
+int main(int, char**)
 {
   using Alloc = test_allocator<int>;
   {
@@ -323,4 +323,6 @@ int main()
     SequenceContainerChecks<
         std::deque<int, Alloc>, CT_Deque>::run();
   }
+
+  return 0;
 }

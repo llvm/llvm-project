@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multiset<int> C;
@@ -259,4 +259,6 @@ int main()
         j = c.cend(b);
         assert(std::distance(i, j) == 0);
     }
+
+  return 0;
 }

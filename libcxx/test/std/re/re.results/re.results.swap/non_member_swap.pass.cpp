@@ -35,7 +35,9 @@ test()
     assert(m2 == m1_save);
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

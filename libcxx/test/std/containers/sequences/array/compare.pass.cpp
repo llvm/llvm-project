@@ -28,7 +28,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main()
+int main(int, char**)
 {
   {
     typedef int T;
@@ -58,4 +58,6 @@ int main()
   static_assert(testComparisons6(a2, a1, false, false), "");
   }
 #endif
+
+  return 0;
 }

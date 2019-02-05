@@ -3,6 +3,8 @@
   define void @test_s8() { ret void }
   define void @test_s16() { ret void }
   define void @test_s32() { ret void }
+
+  define void @test_gep() { ret void }
 ...
 ---
 name:            test_s8
@@ -81,4 +83,34 @@ body:             |
 
     BX_RET 14, $noreg
     ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_gep
+# CHECK-LABEL: name: test_gep
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[PTR:%[0-9]+]]:gprnopc = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[OFF:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(p0) = G_GEP %0, %1(s32)
+    ; CHECK: [[GEP:%[0-9]+]]:gprnopc = t2ADDrr [[PTR]], [[OFF]], 14, $noreg, $noreg
+
+    $r0 = COPY %2(p0)
+    ; CHECK: $r0 = COPY [[GEP]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...

@@ -38,10 +38,12 @@ test()
     ((void)result); // Prevent unused warning
 }
 
-int main()
+int main(int, char**)
 {
     test<0>();
     test<10>();
     test<100>();
     test<1000>();
+
+  return 0;
 }

@@ -30,7 +30,7 @@
 
 namespace pmr = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     using K = int;
     using V = char;
@@ -65,4 +65,6 @@ int main()
         pmr::multimap<int, int> m;
         assert(m.get_allocator().resource() == pmr::get_default_resource());
     }
+
+  return 0;
 }

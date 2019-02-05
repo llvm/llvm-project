@@ -39,7 +39,7 @@ public:
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -157,4 +157,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

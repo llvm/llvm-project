@@ -2974,7 +2974,7 @@ GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
 
 /// CreateRuntimeFunction - Create a new runtime function with the specified
 /// type and name.
-llvm::Constant *
+llvm::FunctionCallee
 CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
                                      llvm::AttributeList ExtraAttrs,
                                      bool Local) {
@@ -3000,15 +3000,7 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
     }
   }
 
-  return C;
-}
-
-/// CreateBuiltinFunction - Create a new builtin function with the specified
-/// type and name.
-llvm::Constant *
-CodeGenModule::CreateBuiltinFunction(llvm::FunctionType *FTy, StringRef Name,
-                                     llvm::AttributeList ExtraAttrs) {
-  return CreateRuntimeFunction(FTy, Name, ExtraAttrs, true);
+  return {FTy, C};
 }
 
 /// isTypeConstant - Determine whether an object of this type can be emitted

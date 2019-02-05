@@ -28,7 +28,7 @@ void test_set_all()
         assert(v[i]);
 }
 
-int main()
+int main(int, char**)
 {
     test_set_all<0>();
     test_set_all<1>();
@@ -39,4 +39,6 @@ int main()
     test_set_all<64>();
     test_set_all<65>();
     test_set_all<1000>();
+
+  return 0;
 }

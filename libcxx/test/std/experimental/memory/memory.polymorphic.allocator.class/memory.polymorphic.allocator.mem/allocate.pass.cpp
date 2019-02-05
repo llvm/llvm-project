@@ -80,7 +80,7 @@ void testAllocForSizeThrows() {
 }
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-int main()
+int main(int, char**)
 {
     {
         ex::polymorphic_allocator<int> a;
@@ -108,4 +108,6 @@ int main()
         testAllocForSizeThrows<13>();
     }
 #endif
+
+  return 0;
 }

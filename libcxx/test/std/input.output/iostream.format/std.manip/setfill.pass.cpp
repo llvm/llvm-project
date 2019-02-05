@@ -21,7 +21,7 @@ struct testbuf
     testbuf() {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -35,4 +35,6 @@ int main()
         os << std::setfill(L'*');
         assert(os.fill() == L'*');
     }
+
+  return 0;
 }

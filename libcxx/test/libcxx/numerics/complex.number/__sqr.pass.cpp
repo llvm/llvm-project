@@ -72,9 +72,11 @@ test()
     assert(inf2.real() < 0);
 }
 
-int main()
+int main(int, char**)
 {
     test<float>();
     test<double>();
     test<long double>();
+
+  return 0;
 }

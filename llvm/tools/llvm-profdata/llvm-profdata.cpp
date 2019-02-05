@@ -642,7 +642,7 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
     for (uint32_t V = 0; V < NV; V++) {
       OS << "\t[ " << format("%2u", I) << ", ";
       if (Symtab == nullptr)
-        OS << format("%4u", VD[V].Value);
+        OS << format("%4" PRIu64, VD[V].Value);
       else
         OS << Symtab->getFuncName(VD[V].Value);
       OS << ", " << format("%10" PRId64, VD[V].Count) << " ] ("

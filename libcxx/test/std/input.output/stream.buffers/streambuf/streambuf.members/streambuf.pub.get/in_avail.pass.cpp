@@ -38,7 +38,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         test<char> t;
@@ -48,4 +48,6 @@ int main()
         t.setg(in, in+2, in+5);
         assert(t.in_avail() == 3);
     }
+
+  return 0;
 }

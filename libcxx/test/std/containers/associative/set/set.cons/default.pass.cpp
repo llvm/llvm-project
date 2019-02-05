@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::set<int> m;
@@ -50,4 +50,6 @@ int main()
     assert(m.begin() == m.end());
     }
 #endif
+
+  return 0;
 }

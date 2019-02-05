@@ -24,7 +24,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<double, int> C;
@@ -152,4 +152,6 @@ int main()
         assert(r->first == 5.5);
         assert(r->second == 4);
     }
+
+  return 0;
 }

@@ -53,7 +53,7 @@ struct B
 };
 
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
   {
@@ -77,4 +77,6 @@ int main()
     Alloc b;
     assert(std::allocator_traits<Alloc >::allocate(b, 11, nullptr) == reinterpret_cast<VT*>(static_cast<std::uintptr_t>(0xFEADBEEF)));
   }
+
+  return 0;
 }

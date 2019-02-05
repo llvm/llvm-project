@@ -29,7 +29,7 @@ inline bool CheckDebugThrows(Array& Arr) {
   return false;
 }
 
-int main()
+int main(int, char**)
 {
   {
     typedef std::array<int, 0> C;
@@ -45,4 +45,6 @@ int main()
     assert(CheckDebugThrows(c));
     assert(CheckDebugThrows(cc));
   }
+
+  return 0;
 }

@@ -73,7 +73,7 @@ void testUnorderedSet() {
   }
 }
 
-int main() {
+int main(int, char**) {
   {
     typedef std::unordered_map<int, int> Map;
     typedef std::pair<const int, int> ValueTp;
@@ -150,4 +150,6 @@ int main() {
     testUnorderedSet<Set, ValueTp, min_pointer<const ValueTp>>();
   }
 #endif
+
+  return 0;
 }

@@ -72,7 +72,7 @@ enum Enum {zero, one};
 typedef void (*FunctionPtr)();
 
 
-int main()
+int main(int, char**)
 {
 //  Arithmetic types (3.9.1), enumeration types, pointer types, pointer to member types (3.9.2),
 //    std::nullptr_t, and cv-qualified versions of these types (3.9.3)
@@ -110,4 +110,6 @@ int main()
     test_is_not_scalar<NotEmpty>();
     test_is_not_scalar<Abstract>();
     test_is_not_scalar<int(int)>();
+
+  return 0;
 }

@@ -31,7 +31,7 @@ void test(int N)
     delete [] ia;
 }
 
-int main()
+int main(int, char**)
 {
     test(0);
     test(1);
@@ -39,4 +39,6 @@ int main()
     test(3);
     test(10);
     test(1000);
+
+  return 0;
 }

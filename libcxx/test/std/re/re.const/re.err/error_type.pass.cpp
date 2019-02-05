@@ -35,7 +35,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::regex_constants::error_collate != 0);
     assert(std::regex_constants::error_ctype != 0);
@@ -140,4 +140,6 @@ int main()
     assert(std::regex_constants::error_badrepeat != std::regex_constants::error_stack);
 
     assert(std::regex_constants::error_complexity != std::regex_constants::error_stack);
+
+  return 0;
 }

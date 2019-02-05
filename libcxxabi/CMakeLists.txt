@@ -231,12 +231,22 @@ include(HandleLibcxxabiFlags)
 
 # Configure target flags
 add_target_flags_if(LIBCXXABI_BUILD_32_BITS "-m32")
-add_target_flags_if(LIBCXXABI_TARGET_TRIPLE
-          "--target=${LIBCXXABI_TARGET_TRIPLE}")
-add_target_flags_if(LIBCXXABI_GCC_TOOLCHAIN
-         "--gcc-toolchain=${LIBCXXABI_GCC_TOOLCHAIN}")
-add_target_flags_if(LIBCXXABI_SYSROOT
-          "--sysroot=${LIBCXXABI_SYSROOT}")
+
+if(LIBCXXABI_TARGET_TRIPLE)
+  add_target_flags("--target=${LIBCXXABI_TARGET_TRIPLE}")
+elseif(CMAKE_CXX_COMPILER_TARGET)
+  set(LIBCXXABI_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
+endif()
+if(LIBCXX_GCC_TOOLCHAIN)
+  add_target_flags("--gcc-toolchain=${LIBCXXABI_GCC_TOOLCHAIN}")
+elseif(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN)
+  set(LIBCXXABI_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}")
+endif()
+if(LIBCXXABI_SYSROOT)
+  add_target_flags("--sysroot=${LIBCXXABI_SYSROOT}")
+elseif(CMAKE_SYSROOT)
+  set(LIBCXXABI_SYSROOT "${CMAKE_SYSROOT}")
+endif()
 
 if (LIBCXXABI_TARGET_TRIPLE)
   set(TARGET_TRIPLE "${LIBCXXABI_TARGET_TRIPLE}")

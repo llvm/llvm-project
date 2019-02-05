@@ -70,7 +70,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_floating_point<float>();
     test_is_floating_point<double>();
@@ -99,4 +99,6 @@ int main()
     test_is_not_floating_point<Enum>();
     test_is_not_floating_point<FunctionPtr>();
     test_is_not_floating_point<incomplete_type>();
+
+  return 0;
 }

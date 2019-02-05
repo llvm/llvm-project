@@ -51,7 +51,7 @@ void do_insert_const_lvalue_test()
     assert(r->second == 4);
 }
 
-int main()
+int main(int, char**)
 {
     do_insert_const_lvalue_test<std::unordered_multimap<double, int> >();
 #if TEST_STD_VER >= 11
@@ -61,4 +61,6 @@ int main()
         do_insert_const_lvalue_test<C>();
     }
 #endif
+
+  return 0;
 }

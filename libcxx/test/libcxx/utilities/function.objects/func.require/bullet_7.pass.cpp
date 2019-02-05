@@ -247,7 +247,7 @@ void runTestCase() {
     runFunctorTestCase <Sig, Arity, LValueCaster, ArgCaster>();
 };
 
-int main() {
+int main(int, char**) {
     typedef void*& R;
     typedef ArgType A;
     typedef A const CA;
@@ -323,4 +323,6 @@ int main() {
     runFunctorTestCase11<R(A&&) const volatile &&, 1, MoveCVCaster,       MC>();
     }
 #endif
+
+  return 0;
 }

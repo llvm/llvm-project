@@ -30,7 +30,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::shared_ptr<int> p(new int(4));
@@ -56,4 +56,6 @@ int main()
         assert(*v == 4);
         assert(*w == 2);
     }
+
+  return 0;
 }

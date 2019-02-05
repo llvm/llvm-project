@@ -12,7 +12,9 @@
 
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     typedef std::enable_if<false>::type A;
+
+  return 0;
 }

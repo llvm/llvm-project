@@ -22,7 +22,7 @@ constexpr std::byte test(std::byte b) {
     }
 
 
-int main () {
+int main(int, char**) {
     constexpr std::byte b100{static_cast<std::byte>(100)};
     constexpr std::byte b115{static_cast<std::byte>(115)};
 
@@ -33,4 +33,6 @@ int main () {
     static_assert(std::to_integer<int>(b115 >> 3) ==  14, "");
     static_assert(std::to_integer<int>(b115 >> 6) ==   1, "");
 
+
+  return 0;
 }

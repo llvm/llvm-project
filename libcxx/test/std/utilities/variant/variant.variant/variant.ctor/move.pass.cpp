@@ -331,10 +331,12 @@ void test_constexpr_move_ctor() {
 #endif // > C++17
 }
 
-int main() {
+int main(int, char**) {
   test_move_ctor_basic();
   test_move_ctor_valueless_by_exception();
   test_move_noexcept();
   test_move_ctor_sfinae();
   test_constexpr_move_ctor();
+
+  return 0;
 }

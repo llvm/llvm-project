@@ -26,7 +26,7 @@ struct A
 
 int A::constructed = 0;
 
-int main()
+int main(int, char**)
 {
     {
         std::exception_ptr p;
@@ -60,4 +60,6 @@ int main()
         assert(A::constructed == 0);
     }
     assert(A::constructed == 0);
+
+  return 0;
 }

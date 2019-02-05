@@ -49,7 +49,7 @@ struct throw_hasher
 };
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         std::unordered_multiset<int> src{1, 3, 5};
@@ -150,4 +150,5 @@ int main()
             first.merge(std::move(second));
         }
     }
+    return 0;
 }

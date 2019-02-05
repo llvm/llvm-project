@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month = std::chrono::month;
 
@@ -42,4 +42,6 @@ int main()
         month m(i);
         assert(static_cast<unsigned>(m) == i);
     }
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 #include "min_allocator.h"
 
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<int> c;
@@ -37,4 +37,6 @@ int main()
         assert(c.size() == 0);
     }
 #endif
+
+  return 0;
 }

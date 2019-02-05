@@ -35,7 +35,7 @@ class NotAnItertor {};
 template <typename T>
 struct NotAnAllocator { typedef T value_type; };
 
-int main()
+int main(int, char**)
 {
     { // Not an iterator at all
     std::basic_string s1{NotAnItertor{}, NotAnItertor{}, std::allocator<char>{}}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'basic_string'}}
@@ -52,4 +52,6 @@ int main()
     std::basic_string s1{s, s+10, NotAnAllocator<wchar_t>{}}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'basic_string'}}
     }
 
+
+  return 0;
 }

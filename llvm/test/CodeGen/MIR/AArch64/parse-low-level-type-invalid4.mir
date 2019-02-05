@@ -1,0 +1,10 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# When a low-level type is 0 bits
+---
+name: test_scalar_size_0
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:10: invalid size for scalar type
+    %0:_(s0) = G_IMPLICIT_DEF
+...

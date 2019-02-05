@@ -39,7 +39,7 @@ void func2(std::packaged_task<double(int, char)> p)
     p(3, 'a');
 }
 
-int main()
+int main(int, char**)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
@@ -64,4 +64,6 @@ int main()
         std::thread(func2, std::move(p)).detach();
         assert(f.get() == 105.0);
     }
+
+  return 0;
 }

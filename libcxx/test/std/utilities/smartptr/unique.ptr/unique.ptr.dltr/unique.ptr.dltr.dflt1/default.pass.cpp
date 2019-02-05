@@ -25,11 +25,13 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     std::default_delete<A[]> d;
     A* p = new A[3];
     assert(A::count == 3);
     d(p);
     assert(A::count == 0);
+
+  return 0;
 }

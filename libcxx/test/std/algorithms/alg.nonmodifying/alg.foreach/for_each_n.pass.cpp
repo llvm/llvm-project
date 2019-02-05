@@ -40,7 +40,7 @@ struct for_each_test
     void operator()(int& i) {++i; ++count;}
 };
 
-int main()
+int main(int, char**)
 {
     typedef input_iterator<int*> Iter;
     int ia[] = {0, 1, 2, 3, 4, 5};
@@ -76,4 +76,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

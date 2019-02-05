@@ -29,10 +29,12 @@ make(int n)
 }
 
 
-int main()
+int main(int, char**)
 {
     std::priority_queue<MoveOnly> qo(std::less<MoveOnly>(), make<std::vector<MoveOnly> >(5));
     std::priority_queue<MoveOnly> q = std::move(qo);
     assert(q.size() == 5);
     assert(q.top() == MoveOnly(4));
+
+  return 0;
 }

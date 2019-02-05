@@ -65,7 +65,7 @@ test()
     assert(!std::includes(Iter1(ia), Iter1(ia+sa), Iter2(id), Iter2(id+4), std::less<int>()));
 }
 
-int main()
+int main(int, char**)
 {
     test<input_iterator<const int*>, input_iterator<const int*> >();
     test<input_iterator<const int*>, forward_iterator<const int*> >();
@@ -100,4 +100,6 @@ int main()
 #if TEST_STD_VER > 17
    static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

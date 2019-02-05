@@ -37,7 +37,7 @@ struct test_buf
     virtual int_type overflow(int_type c = traits_type::eof()) {return base::overflow(c);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ofstream bs("overflow.dat");
@@ -96,4 +96,6 @@ int main()
         assert(f.get() == -1);
     }
     std::remove("overflow.dat");
+
+  return 0;
 }

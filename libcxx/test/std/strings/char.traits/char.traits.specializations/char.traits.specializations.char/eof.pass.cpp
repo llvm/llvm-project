@@ -15,7 +15,9 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::char_traits<char>::eof() == EOF);
+
+  return 0;
 }

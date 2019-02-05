@@ -25,7 +25,7 @@
 
 #include "any_helpers.h"
 
-int main()
+int main(int, char**)
 {
     using std::any;
     using std::any_cast;
@@ -67,4 +67,6 @@ int main()
         assertEmpty<large>(a);
         assert(large::count == 0);
     }
+
+  return 0;
 }

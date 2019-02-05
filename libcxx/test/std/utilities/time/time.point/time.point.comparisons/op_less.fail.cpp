@@ -32,7 +32,7 @@
 
 #include "../../clock.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock Clock1;
     typedef Clock                     Clock2;
@@ -44,4 +44,6 @@ int main()
     T1 t1(Duration1(3));
     T2 t2(Duration2(3000));
     t1 < t2;
+
+  return 0;
 }

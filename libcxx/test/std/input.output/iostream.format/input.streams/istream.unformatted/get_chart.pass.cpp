@@ -37,7 +37,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("          ");
@@ -99,4 +99,6 @@ int main()
         assert(c == L'c');
         assert(is.gcount() == 1);
     }
+
+  return 0;
 }

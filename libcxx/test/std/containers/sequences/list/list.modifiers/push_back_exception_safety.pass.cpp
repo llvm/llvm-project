@@ -57,7 +57,7 @@ CMyClass::~CMyClass() {
     assert(fMagicValue == kFinishedConstructionMagicValue);
 }
 
-int main()
+int main(int, char**)
 {
     CMyClass instance;
     std::list<CMyClass> vec;
@@ -70,4 +70,6 @@ int main()
     }
     catch (...) {
     }
+
+  return 0;
 }

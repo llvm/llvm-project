@@ -32,10 +32,12 @@ void test_allocators()
 }
 
 
-int main()
+int main(int, char**)
 {
 //	test_allocators<void>();
 	test_allocators<char>();
 	test_allocators<int>();
 	test_allocators<std::string>();
+
+  return 0;
 }

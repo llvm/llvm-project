@@ -49,7 +49,7 @@ constexpr_test(It i, It x)
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     const char* s = "1234567890";
@@ -74,4 +74,6 @@ int main()
     }
 #endif
 
+
+  return 0;
 }

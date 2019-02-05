@@ -14,8 +14,10 @@
 
 #include <chrono>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::time_point<std::chrono::system_clock, int> T;
     T t;
+
+  return 0;
 }

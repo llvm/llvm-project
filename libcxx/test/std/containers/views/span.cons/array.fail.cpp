@@ -34,7 +34,7 @@ const          int  carr[] = {4,5,6};
       volatile int  varr[] = {7,8,9};
 const volatile int cvarr[] = {1,3,5};
 
-int main ()
+int main(int, char**)
 {
 //  Size wrong
     {
@@ -68,4 +68,6 @@ int main ()
     std::span<      volatile int,3> s6{ carr};  // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 3>'}}
     std::span<      volatile int,3> s7{cvarr};  // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 3>'}}
     }
+
+  return 0;
 }

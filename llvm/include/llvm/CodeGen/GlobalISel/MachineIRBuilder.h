@@ -66,6 +66,7 @@ class DstOp {
 public:
   enum class DstType { Ty_LLT, Ty_Reg, Ty_RC };
   DstOp(unsigned R) : Reg(R), Ty(DstType::Ty_Reg) {}
+  DstOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(DstType::Ty_Reg) {}
   DstOp(const LLT &T) : LLTTy(T), Ty(DstType::Ty_LLT) {}
   DstOp(const TargetRegisterClass *TRC) : RC(TRC), Ty(DstType::Ty_RC) {}
 
@@ -125,6 +126,7 @@ class SrcOp {
 public:
   enum class SrcType { Ty_Reg, Ty_MIB, Ty_Predicate };
   SrcOp(unsigned R) : Reg(R), Ty(SrcType::Ty_Reg) {}
+  SrcOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(SrcType::Ty_Reg) {}
   SrcOp(const MachineInstrBuilder &MIB) : SrcMIB(MIB), Ty(SrcType::Ty_MIB) {}
   SrcOp(const CmpInst::Predicate P) : Pred(P), Ty(SrcType::Ty_Predicate) {}
 

@@ -15,7 +15,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER > 14
     typedef std::bool_constant<true> _t;
@@ -30,4 +30,6 @@ int main()
     static_assert((std::is_same<_f::type, _f>::value), "");
     static_assert((_f() == false), "");
 #endif
+
+  return 0;
 }

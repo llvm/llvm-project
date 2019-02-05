@@ -23,7 +23,7 @@
 #include <sstream>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::basic_istream<char>, std::basic_istringstream<char> >::value), "");
     static_assert((std::is_same<std::basic_istringstream<char>::char_type, char>::value), "");
@@ -32,4 +32,6 @@ int main()
     static_assert((std::is_same<std::basic_istringstream<char>::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::basic_istringstream<char>::off_type, std::char_traits<char>::off_type>::value), "");
     static_assert((std::is_same<std::basic_istringstream<char>::allocator_type, std::allocator<char> >::value), "");
+
+  return 0;
 }

@@ -32,7 +32,7 @@
 #include <ios>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::ios_base::boolalpha);
     assert(std::ios_base::dec);
@@ -77,4 +77,6 @@ int main()
                                       | std::ios_base::hex));
     assert(std::ios_base::floatfield == (std::ios_base::scientific
                                        | std::ios_base::fixed));
+
+  return 0;
 }

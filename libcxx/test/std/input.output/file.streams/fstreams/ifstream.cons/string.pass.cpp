@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ifstream fs(std::string("test.dat"));
@@ -36,4 +36,6 @@ int main()
     // std::wifstream(const std::string&, std::ios_base::openmode) is tested in
     // test/std/input.output/file.streams/fstreams/ofstream.cons/string.pass.cpp
     // which creates writable files.
+
+  return 0;
 }

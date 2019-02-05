@@ -589,6 +589,32 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                bool DebugLogging) {
   ModulePassManager MPM(DebugLogging);
 
+  bool HasSampleProfile = PGOOpt && !PGOOpt->SampleProfileFile.empty();
+
+  // In ThinLTO mode, when flattened profile is used, all the available
+  // profile information will be annotated in PreLink phase so there is
+  // no need to load the profile again in PostLink.
+  bool LoadSampleProfile =
+      HasSampleProfile &&
+      !(FlattenedProfileUsed && Phase == ThinLTOPhase::PostLink);
+
+  // During the ThinLTO backend phase we perform early indirect call promotion
+  // here, before globalopt. Otherwise imported available_externally functions
+  // look unreferenced and are removed. If we are going to load the sample
+  // profile then defer until later.
+  // TODO: See if we can move later and consolidate with the location where
+  // we perform ICP when we are loading a sample profile.
+  // TODO: We pass HasSampleProfile (whether there was a sample profile file
+  // passed to the compile) to the SamplePGO flag of ICP. This is used to
+  // determine whether the new direct calls are annotated with prof metadata.
+  // Ideally this should be determined from whether the IR is annotated with
+  // sample profile, and not whether the a sample profile was provided on the
+  // command line. E.g. for flattened profiles where we will not be reloading
+  // the sample profile in the ThinLTO backend, we ideally shouldn't have to
+  // provide the sample profile file.
+  if (Phase == ThinLTOPhase::PostLink && !LoadSampleProfile)
+    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */, HasSampleProfile));
+
   // Do basic inference of function attributes from known properties of system
   // libraries and other oracles.
   MPM.addPass(InferFunctionAttrsPass());
@@ -609,21 +635,16 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // More details about SamplePGO design can be found in:
   // https://research.google.com/pubs/pub45290.html
   // FIXME: revisit how SampleProfileLoad/Inliner/ICP is structured.
-  if (PGOOpt && !PGOOpt->SampleProfileFile.empty() &&
-      Phase == ThinLTOPhase::PostLink)
+  if (LoadSampleProfile)
     EarlyFPM.addPass(InstCombinePass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(EarlyFPM)));
 
-  if (PGOOpt && !PGOOpt->SampleProfileFile.empty()) {
+  if (LoadSampleProfile) {
     // Annotate sample profile right after early FPM to ensure freshness of
     // the debug info.
-    // In ThinLTO mode, when flattened profile is used, all the available
-    // profile information will be annotated in PreLink phase so there is
-    // no need to load the profile again in PostLink.
-    if (!(FlattenedProfileUsed && Phase == ThinLTOPhase::PostLink))
-      MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile,
-                                          PGOOpt->ProfileRemappingFile,
-                                          Phase == ThinLTOPhase::PreLink));
+    MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile,
+                                        PGOOpt->ProfileRemappingFile,
+                                        Phase == ThinLTOPhase::PreLink));
     // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
     // for the profile annotation to be accurate in the ThinLTO backend.
     if (Phase != ThinLTOPhase::PreLink)
@@ -632,7 +653,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       // imported available_externally functions look unreferenced and are
       // removed.
       MPM.addPass(PGOIndirectCallPromotion(Phase == ThinLTOPhase::PostLink,
-                                           true));
+                                           true /* SamplePGO */));
   }
 
   // Interprocedural constant propagation now that basic cleanup has occurred
@@ -990,15 +1011,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
-  // During the ThinLTO backend phase we perform early indirect call promotion
-  // here, before globalopt. Otherwise imported available_externally functions
-  // look unreferenced and are removed.
-  // FIXME: move this into buildModuleSimplificationPipeline to merge the logic
-  //        with SamplePGO.
-  if (!PGOOpt || PGOOpt->SampleProfileFile.empty())
-    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */,
-                                         false /* SamplePGO */));
-
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, ThinLTOPhase::PostLink,
                                                 DebugLogging));
@@ -1333,6 +1345,34 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     }
   }
   return UnrollOpts;
+}
+
+Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
+  MemorySanitizerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "recover") {
+      Result.Recover = true;
+    } else if (ParamName == "kernel") {
+      Result.Kernel = true;
+    } else if (ParamName.consume_front("track-origins=")) {
+      if (ParamName.getAsInteger(0, Result.TrackOrigins))
+        return make_error<StringError>(
+            formatv("invalid argument to MemorySanitizer pass track-origins "
+                    "parameter: '{0}' ",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid MemorySanitizer pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 } // namespace

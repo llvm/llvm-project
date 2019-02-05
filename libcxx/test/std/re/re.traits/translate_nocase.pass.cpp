@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "platform_support.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex_traits<char> t;
@@ -61,4 +61,6 @@ int main()
         assert(t.translate_nocase(L'\xDA') == L'\xFA');
         assert(t.translate_nocase(L'\xFA') == L'\xFA');
     }
+
+  return 0;
 }

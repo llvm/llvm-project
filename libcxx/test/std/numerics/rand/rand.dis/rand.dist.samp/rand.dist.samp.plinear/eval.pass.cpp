@@ -354,7 +354,7 @@ test6()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
@@ -362,4 +362,6 @@ int main()
     test4();
     test5();
     test6();
+
+  return 0;
 }

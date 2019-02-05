@@ -36,7 +36,7 @@ void test_return_type() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_return_type<std::stack<int> > ();
     test_return_type<std::stack<int, std::vector<int> > > ();
@@ -57,4 +57,6 @@ int main()
 #endif
     assert(q.size() == 3);
     assert(q.top() == Emplaceable(3, 4.5));
+
+  return 0;
 }

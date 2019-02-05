@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     const std::chrono::minutes m(3);
@@ -43,4 +43,6 @@ int main()
     static_assert( (std::is_same< decltype(-one),     D1>::value), "");
     static_assert( (std::is_same< decltype(+one),     D1>::value), "");
     }
+
+  return 0;
 }

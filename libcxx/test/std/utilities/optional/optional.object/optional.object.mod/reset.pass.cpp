@@ -26,7 +26,7 @@ struct X
 
 bool X::dtor_called = false;
 
-int main()
+int main(int, char**)
 {
     {
         optional<int> opt;
@@ -55,4 +55,6 @@ int main()
         assert(static_cast<bool>(opt) == false);
         X::dtor_called = false;
     }
+
+  return 0;
 }

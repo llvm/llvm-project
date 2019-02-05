@@ -18,7 +18,9 @@
 
 #include <chrono>
 
-int main()
+int main(int, char**)
 {
     std::chrono::duration_cast<int>(std::chrono::milliseconds(3));
+
+  return 0;
 }

@@ -56,7 +56,7 @@ test(It first, It last, const A& a)
     assert(s2.capacity() >= s2.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -116,4 +116,6 @@ int main()
     test(input_iterator<const char*>(s), input_iterator<const char*>(s+50), A());
     }
 #endif
+
+  return 0;
 }

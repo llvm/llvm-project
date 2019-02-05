@@ -47,7 +47,7 @@ struct A{};
 bool called = false;
 void operator>>(std::istream&, A&&){ called = true; }
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("   123");
@@ -68,4 +68,6 @@ int main()
         assert(&out == &ss);
         assert(called);
     }
+
+  return 0;
 }

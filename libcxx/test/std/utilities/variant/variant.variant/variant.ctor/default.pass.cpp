@@ -122,9 +122,11 @@ void test_default_ctor_basic() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_default_ctor_basic();
   test_default_ctor_sfinae();
   test_default_ctor_noexcept();
   test_default_ctor_throws();
+
+  return 0;
 }

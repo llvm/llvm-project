@@ -15,7 +15,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -29,4 +29,6 @@ int main()
         assert(f.widen('a') == L'a');
         assert(f.widen('1') == L'1');
     }
+
+  return 0;
 }

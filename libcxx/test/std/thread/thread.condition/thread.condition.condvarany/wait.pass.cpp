@@ -41,7 +41,7 @@ void f()
     assert(test2 != 0);
 }
 
-int main()
+int main(int, char**)
 {
     L1 lk(m0);
     std::thread t(f);
@@ -53,4 +53,6 @@ int main()
     lk.unlock();
     cv.notify_one();
     t.join();
+
+  return 0;
 }

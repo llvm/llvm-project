@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef int V;
@@ -173,4 +173,6 @@ int main()
     }
     }
 #endif
+
+  return 0;
 }

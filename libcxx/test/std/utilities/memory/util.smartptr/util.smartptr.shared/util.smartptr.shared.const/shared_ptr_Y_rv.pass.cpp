@@ -54,7 +54,7 @@ struct C
 
 int C::count = 0;
 
-int main()
+int main(int, char**)
 {
     static_assert(( std::is_convertible<std::shared_ptr<A>, std::shared_ptr<B> >::value), "");
     static_assert((!std::is_convertible<std::shared_ptr<B>, std::shared_ptr<A> >::value), "");
@@ -109,4 +109,6 @@ int main()
     }
     assert(B::count == 0);
     assert(A::count == 0);
+
+  return 0;
 }

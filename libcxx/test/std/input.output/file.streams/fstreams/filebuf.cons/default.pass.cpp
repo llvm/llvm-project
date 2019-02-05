@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::filebuf f;
@@ -26,4 +26,6 @@ int main()
         std::wfilebuf f;
         assert(!f.is_open());
     }
+
+  return 0;
 }

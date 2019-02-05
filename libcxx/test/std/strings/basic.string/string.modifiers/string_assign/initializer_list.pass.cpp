@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::string s("123");
@@ -31,4 +31,6 @@ int main()
         s.assign({'a', 'b', 'c'});
         assert(s == "abc");
     }
+
+  return 0;
 }

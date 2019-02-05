@@ -37,7 +37,7 @@ struct test_buf
     virtual int_type underflow() {return base::underflow();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ifstream bs("underflow.dat");
@@ -80,4 +80,6 @@ int main()
         assert(f.sbumpc() == 0x4E53);
         assert(f.sbumpc() == test_buf::traits_type::eof());
     }
+
+  return 0;
 }

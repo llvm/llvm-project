@@ -44,7 +44,7 @@ static_assert(std::is_same<decltype(coro::noop_coroutine()), coro::noop_coroutin
 // // 18.11.2.10 noop address
 // constexpr void* address() const noexcept;
 
-int main()
+int main(int, char**)
 {
   auto h = coro::noop_coroutine();
   coro::coroutine_handle<> base = h;
@@ -65,10 +65,12 @@ int main()
   assert(h.address() == base.address());
   assert(h.address() != nullptr);
   assert(coro::coroutine_handle<>::from_address(h.address()) == base);
+
+  return 0;
 }
 
 #else
 
-int main() {}
+int main(int, char**) { return 0; }
 
 #endif //  __has_builtin(__builtin_coro_noop)

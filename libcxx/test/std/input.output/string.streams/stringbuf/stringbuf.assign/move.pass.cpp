@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::stringbuf buf1("testing");
@@ -54,4 +54,6 @@ int main()
         buf = move(buf1);
         assert(buf.str() == L"testing");
     }
+
+  return 0;
 }

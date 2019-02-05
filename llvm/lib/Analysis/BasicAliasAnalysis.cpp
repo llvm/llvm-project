@@ -884,7 +884,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
           getBestAAResults().alias(MemoryLocation(*CI), MemoryLocation(Object));
       if (AR != MustAlias)
         IsMustAlias = false;
-      // Operand doesnt alias 'Object', continue looking for other aliases
+      // Operand doesn't alias 'Object', continue looking for other aliases
       if (AR == NoAlias)
         continue;
       // Operand aliases 'Object', but call doesn't modify it. Strengthen
@@ -1019,7 +1019,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   // heap state at the point the guard is issued needs to be consistent in case
   // the guard invokes the "deopt" continuation.
 
-  // NB! This function is *not* commutative, so we specical case two
+  // NB! This function is *not* commutative, so we special case two
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(Call1, Intrinsic::experimental_guard))

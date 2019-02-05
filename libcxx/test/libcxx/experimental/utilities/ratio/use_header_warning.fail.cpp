@@ -14,4 +14,6 @@
 
 // expected-error@experimental/ratio:* {{"<experimental/ratio> has been removed. Use <ratio> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

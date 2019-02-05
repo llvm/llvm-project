@@ -171,7 +171,7 @@ private:
   /// specified, nullptr otherwise.
   ///
   void emitSPMDParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                            llvm::Value *OutlinedFn,
+                            llvm::Function *OutlinedFn,
                             ArrayRef<llvm::Value *> CapturedVars,
                             const Expr *IfCond);
 
@@ -228,7 +228,7 @@ public:
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
-  llvm::Value *
+  llvm::Function *
   emitParallelOutlinedFunction(const OMPExecutableDirective &D,
                                const VarDecl *ThreadIDVar,
                                OpenMPDirectiveKind InnermostKind,
@@ -243,7 +243,7 @@ public:
   /// \param InnermostKind Kind of innermost directive (for simple directives it
   /// is a directive itself, for combined - its innermost directive).
   /// \param CodeGen Code generation sequence for the \a D directive.
-  llvm::Value *
+  llvm::Function *
   emitTeamsOutlinedFunction(const OMPExecutableDirective &D,
                             const VarDecl *ThreadIDVar,
                             OpenMPDirectiveKind InnermostKind,
@@ -258,7 +258,7 @@ public:
   /// variables used in \a OutlinedFn function.
   ///
   void emitTeamsCall(CodeGenFunction &CGF, const OMPExecutableDirective &D,
-                     SourceLocation Loc, llvm::Value *OutlinedFn,
+                     SourceLocation Loc, llvm::Function *OutlinedFn,
                      ArrayRef<llvm::Value *> CapturedVars) override;
 
   /// Emits code for parallel or serial call of the \a OutlinedFn with
@@ -271,7 +271,7 @@ public:
   /// \param IfCond Condition in the associated 'if' clause, if it was
   /// specified, nullptr otherwise.
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                        llvm::Value *OutlinedFn,
+                        llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
                         const Expr *IfCond) override;
 
@@ -321,7 +321,7 @@ public:
   /// implementation.  Specialized for the NVPTX device.
   /// \param Function OpenMP runtime function.
   /// \return Specified function.
-  llvm::Constant *createNVPTXRuntimeFunction(unsigned Function);
+  llvm::FunctionCallee createNVPTXRuntimeFunction(unsigned Function);
 
   /// Translates the native parameter of outlined function if this is required
   /// for target.
@@ -340,7 +340,7 @@ public:
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
   void emitOutlinedFunctionCall(
-      CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *OutlinedFn,
+      CodeGenFunction &CGF, SourceLocation Loc, llvm::FunctionCallee OutlinedFn,
       ArrayRef<llvm::Value *> Args = llvm::None) const override;
 
   /// Emits OpenMP-specific function prolog.

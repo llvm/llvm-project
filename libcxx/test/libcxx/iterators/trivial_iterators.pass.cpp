@@ -90,7 +90,7 @@ operator!=(const my_input_iterator<T>& x, const my_input_iterator<U>& y)
 }
 
 
-int main()
+int main(int, char**)
 {
 //  basic tests
     static_assert(( std::__libcpp_is_trivial_iterator<char *>::value), "");
@@ -184,4 +184,6 @@ int main()
     static_assert(( std::__libcpp_is_trivial_iterator<std::initializer_list<char>::const_iterator>        ::value), "");
 #endif
 
+
+  return 0;
 }

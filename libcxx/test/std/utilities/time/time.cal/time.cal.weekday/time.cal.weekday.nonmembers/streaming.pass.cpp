@@ -47,9 +47,11 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
    using weekday = std::chrono::weekday;
 
    std::cout << weekday{3};
+
+  return 0;
 }

@@ -131,6 +131,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
               {s32, p0, 32},
               {p0, p0, 32}});
 
+  getActionDefinitionsBuilder(G_GEP).legalFor({{p0, s32}});
+
   if (ST.isThumb()) {
     // FIXME: merge with the code for non-Thumb.
     computeTables();
@@ -160,8 +162,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   }
-
-  getActionDefinitionsBuilder(G_GEP).legalFor({{p0, s32}});
 
   getActionDefinitionsBuilder(G_SELECT).legalForCartesianProduct({s32, p0},
                                                                  {s1});

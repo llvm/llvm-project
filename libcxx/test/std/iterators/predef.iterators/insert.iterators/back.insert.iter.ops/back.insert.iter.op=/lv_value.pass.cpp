@@ -39,7 +39,9 @@ public:
         {return x.data_ == y.data_;}
 };
 
-int main()
+int main(int, char**)
 {
     test(std::vector<Copyable>());
+
+  return 0;
 }

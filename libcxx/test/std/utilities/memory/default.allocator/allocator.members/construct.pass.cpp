@@ -53,7 +53,7 @@ public:
 };
 #endif // TEST_STD_VER >= 11
 
-int main()
+int main(int, char**)
 {
     {
     std::allocator<A> a;
@@ -139,4 +139,6 @@ int main()
     assert(move_only_constructed == 0);
     }
 #endif
+
+  return 0;
 }

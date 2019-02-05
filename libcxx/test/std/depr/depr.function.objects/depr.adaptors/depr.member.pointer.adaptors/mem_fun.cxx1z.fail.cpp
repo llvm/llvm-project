@@ -27,8 +27,10 @@ struct A
     double a4(unsigned i) const {return i-1;}
 };
 
-int main()
+int main(int, char**)
 {
     A a;
     assert(std::mem_fun(&A::a1)(&a) == 5);
+
+  return 0;
 }

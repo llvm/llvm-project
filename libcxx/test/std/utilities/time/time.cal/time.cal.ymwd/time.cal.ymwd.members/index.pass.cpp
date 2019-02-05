@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year               = std::chrono::year;
     using month              = std::chrono::month;
@@ -37,4 +37,6 @@ int main()
         year_month_weekday ymwd0(year{1234}, month{2}, weekday_indexed{weekday{2}, i});
         assert(ymwd0.index() == i);
     }
+
+  return 0;
 }

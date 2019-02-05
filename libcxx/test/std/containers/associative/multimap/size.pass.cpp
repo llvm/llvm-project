@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::multimap<int, double> M;
@@ -55,4 +55,6 @@ int main()
     assert(m.size() == 0);
     }
 #endif
+
+  return 0;
 }

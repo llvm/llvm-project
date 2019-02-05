@@ -15,8 +15,10 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     const std::error_code ec(6, std::generic_category());
     assert(ec.category() == std::generic_category());
+
+  return 0;
 }

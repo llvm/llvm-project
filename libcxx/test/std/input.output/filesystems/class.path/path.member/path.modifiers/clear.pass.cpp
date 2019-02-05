@@ -24,7 +24,7 @@
 #include "filesystem_test_helper.hpp"
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   {
     path p;
@@ -40,4 +40,6 @@ int main() {
     p2.clear();
     assert(p2.empty());
   }
+
+  return 0;
 }

@@ -13,4 +13,5 @@ define weak void @f() {
 ; CHECK-NEXT:     Name: f
 ; CHECK-NEXT:     Type: FUNCTION (0x0)
 ; CHECK-NEXT:     Flags: 0x1
+; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }

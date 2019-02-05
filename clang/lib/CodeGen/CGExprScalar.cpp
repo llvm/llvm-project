@@ -3110,7 +3110,8 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   llvm::Type *argTypes[] = { CGF.Int64Ty, CGF.Int64Ty, Int8Ty, Int8Ty };
   llvm::FunctionType *handlerTy =
       llvm::FunctionType::get(CGF.Int64Ty, argTypes, true);
-  llvm::Value *handler = CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
+  llvm::FunctionCallee handler =
+      CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
 
   // Sign extend the args to 64-bit, so that we can use the same handler for
   // all types of overflow.

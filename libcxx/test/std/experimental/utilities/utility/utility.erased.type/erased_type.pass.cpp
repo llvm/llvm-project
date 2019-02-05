@@ -10,8 +10,10 @@
 
 #include <experimental/utility>
 
-int main()
+int main(int, char**)
 {
   std::experimental::erased_type e;
   ((void)e);
+
+  return 0;
 }

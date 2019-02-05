@@ -39,7 +39,7 @@ void test(int N)
         assert(*j == N-1-i);
 }
 
-int main()
+int main(int, char**)
 {
     for (int i = 0; i < 40; ++i)
         test<std::forward_list<int> >(i);
@@ -47,4 +47,6 @@ int main()
     for (int i = 0; i < 40; ++i)
         test<std::forward_list<int, min_allocator<int>> >(i);
 #endif
+
+  return 0;
 }

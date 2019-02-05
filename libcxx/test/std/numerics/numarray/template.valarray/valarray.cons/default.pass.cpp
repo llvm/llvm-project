@@ -22,7 +22,7 @@ struct S {
 
 bool S::ctor_called = false;
 
-int main()
+int main(int, char**)
 {
     {
         std::valarray<int> v;
@@ -45,4 +45,6 @@ int main()
         assert(v.size() == 0);
         assert(!S::ctor_called);
     }
+
+  return 0;
 }

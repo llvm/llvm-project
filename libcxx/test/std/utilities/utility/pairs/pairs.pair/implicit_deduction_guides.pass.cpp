@@ -39,7 +39,7 @@
 // (6)  explicit pair(pair<U1, U2> const&) -> pair<U1, U2>
 // (7)  pair(pair<U1, U2> &&) -> pair<U1, U2>
 // (8)  explicit pair(pair<U1, U2> &&) -> pair<U1, U2>
-int main()
+int main(int, char**)
 {
   using E = ExplicitTestTypes::TestType;
   static_assert(!std::is_convertible<E const&, E>::value, "");
@@ -76,4 +76,6 @@ int main()
     std::pair p1(std::move(p));
     ASSERT_SAME_TYPE(decltype(p1), std::pair<std::string, E>);
   }
+
+  return 0;
 }

@@ -125,4 +125,6 @@ static_assert(!ex::is_simd_v<ex::simd_mask<int>>, "");
 static_assert(!ex::is_simd_v<ex::simd_mask<float>>, "");
 static_assert(!ex::is_simd_v<UserType>, "");
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

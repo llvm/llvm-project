@@ -19,7 +19,7 @@ struct A
     ~A() {--A_constructed;}
 };
 
-int main()
+int main(int, char**)
 {
     const std::size_t Size = 3;
     // placement new might require additional space.
@@ -30,4 +30,6 @@ int main()
     assert((char*)ap >= buf);
     assert((char*)ap < (buf + ExtraSize));
     assert(A_constructed == Size);
+
+  return 0;
 }

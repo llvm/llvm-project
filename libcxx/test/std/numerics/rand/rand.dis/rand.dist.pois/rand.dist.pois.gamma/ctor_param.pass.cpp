@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::gamma_distribution<> D;
@@ -26,4 +26,6 @@ int main()
         assert(d.alpha() == 0.25);
         assert(d.beta() == 10);
     }
+
+  return 0;
 }

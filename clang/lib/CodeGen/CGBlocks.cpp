@@ -2284,7 +2284,7 @@ public:
     unsigned flags = (Flags | BLOCK_BYREF_CALLER).getBitMask();
 
     llvm::Value *flagsVal = llvm::ConstantInt::get(CGF.Int32Ty, flags);
-    llvm::Value *fn = CGF.CGM.getBlockObjectAssign();
+    llvm::FunctionCallee fn = CGF.CGM.getBlockObjectAssign();
 
     llvm::Value *args[] = { destField.getPointer(), srcValue, flagsVal };
     CGF.EmitNounwindRuntimeCall(fn, args);
@@ -2931,7 +2931,7 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
 
 void CodeGenFunction::BuildBlockRelease(llvm::Value *V, BlockFieldFlags flags,
                                         bool CanThrow) {
-  llvm::Value *F = CGM.getBlockObjectDispose();
+  llvm::FunctionCallee F = CGM.getBlockObjectDispose();
   llvm::Value *args[] = {
     Builder.CreateBitCast(V, Int8PtrTy),
     llvm::ConstantInt::get(Int32Ty, flags.getBitMask())
@@ -2987,7 +2987,7 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
   CGM.setDSOLocal(GV);
 }
 
-llvm::Constant *CodeGenModule::getBlockObjectDispose() {
+llvm::FunctionCallee CodeGenModule::getBlockObjectDispose() {
   if (BlockObjectDispose)
     return BlockObjectDispose;
 
@@ -2995,11 +2995,12 @@ llvm::Constant *CodeGenModule::getBlockObjectDispose() {
   llvm::FunctionType *fty
     = llvm::FunctionType::get(VoidTy, args, false);
   BlockObjectDispose = CreateRuntimeFunction(fty, "_Block_object_dispose");
-  configureBlocksRuntimeObject(*this, BlockObjectDispose);
+  configureBlocksRuntimeObject(
+      *this, cast<llvm::Constant>(BlockObjectDispose.getCallee()));
   return BlockObjectDispose;
 }
 
-llvm::Constant *CodeGenModule::getBlockObjectAssign() {
+llvm::FunctionCallee CodeGenModule::getBlockObjectAssign() {
   if (BlockObjectAssign)
     return BlockObjectAssign;
 
@@ -3007,7 +3008,8 @@ llvm::Constant *CodeGenModule::getBlockObjectAssign() {
   llvm::FunctionType *fty
     = llvm::FunctionType::get(VoidTy, args, false);
   BlockObjectAssign = CreateRuntimeFunction(fty, "_Block_object_assign");
-  configureBlocksRuntimeObject(*this, BlockObjectAssign);
+  configureBlocksRuntimeObject(
+      *this, cast<llvm::Constant>(BlockObjectAssign.getCallee()));
   return BlockObjectAssign;
 }
 

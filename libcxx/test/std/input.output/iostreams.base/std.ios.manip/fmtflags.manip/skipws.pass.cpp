@@ -18,11 +18,13 @@
 
 struct testbuf : public std::streambuf {};
 
-int main()
+int main(int, char**)
 {
     testbuf sb;
     std::ios ios(&sb);
     std::ios_base& r = std::skipws(ios);
     assert(&r == &ios);
     assert(ios.flags() & std::ios::skipws);
+
+  return 0;
 }

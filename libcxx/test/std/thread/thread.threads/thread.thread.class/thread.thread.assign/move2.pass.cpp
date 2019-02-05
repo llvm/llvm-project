@@ -51,7 +51,7 @@ void f1()
     std::_Exit(0);
 }
 
-int main()
+int main(int, char**)
 {
     std::set_terminate(f1);
     {
@@ -61,4 +61,6 @@ int main()
         t0 = std::move(t1);
         assert(false);
     }
+
+  return 0;
 }

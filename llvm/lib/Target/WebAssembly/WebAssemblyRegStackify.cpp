@@ -789,11 +789,11 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr *Insert = &*MII;
       // Don't nest anything inside an inline asm, because we don't have
       // constraints for $push inputs.
-      if (Insert->getOpcode() == TargetOpcode::INLINEASM)
+      if (Insert->isInlineAsm())
         continue;
 
       // Ignore debugging intrinsics.
-      if (Insert->getOpcode() == TargetOpcode::DBG_VALUE)
+      if (Insert->isDebugValue())
         continue;
 
       // Iterate through the inputs in reverse order, since we'll be pulling
@@ -821,7 +821,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
 
         // Don't nest an INLINE_ASM def into anything, because we don't have
         // constraints for $pop outputs.
-        if (Def->getOpcode() == TargetOpcode::INLINEASM)
+        if (Def->isInlineAsm())
           continue;
 
         // Argument instructions represent live-in registers and not real

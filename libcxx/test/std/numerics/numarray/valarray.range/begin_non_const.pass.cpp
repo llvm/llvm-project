@@ -17,7 +17,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -27,4 +27,6 @@ int main()
         *begin(v) = 10;
         assert(v[0] == 10);
     }
+
+  return 0;
 }

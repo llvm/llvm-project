@@ -40,7 +40,7 @@ test(S s)
     S::allocator_type::throw_after = INT_MAX;
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::basic_string<char, std::char_traits<char>, test_allocator<char> > S;
@@ -60,4 +60,6 @@ int main()
     assert(s.capacity() > 0);
     }
 #endif
+
+  return 0;
 }

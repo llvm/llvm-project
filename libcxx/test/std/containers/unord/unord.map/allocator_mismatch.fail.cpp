@@ -11,7 +11,9 @@
 
 #include <unordered_map>
 
-int main()
+int main(int, char**)
 {
     std::unordered_map<int, int, std::hash<int>, std::less<int>, std::allocator<long> > m;
+
+  return 0;
 }

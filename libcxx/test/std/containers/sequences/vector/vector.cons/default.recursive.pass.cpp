@@ -17,6 +17,8 @@ struct X
     std::vector<X> q;
 };
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

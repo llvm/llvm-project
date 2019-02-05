@@ -228,7 +228,6 @@ private:
   const WasmSection &getWasmSection(DataRefImpl Ref) const;
   const wasm::WasmRelocation &getWasmRelocation(DataRefImpl Ref) const;
 
-  const uint8_t *getPtr(size_t Offset) const;
   Error parseSection(WasmSection &Sec);
   Error parseCustomSection(WasmSection &Sec, ReadContext &Ctx);
 

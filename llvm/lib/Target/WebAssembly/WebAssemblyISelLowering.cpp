@@ -243,6 +243,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
   setMaxAtomicSizeInBitsSupported(64);
+
+  if (Subtarget->hasBulkMemory()) {
+    // Using memory.copy is always better than using multiple loads and stores
+    MaxStoresPerMemcpy = 1;
+    MaxStoresPerMemcpyOptSize = 1;
+  }
 }
 
 TargetLowering::AtomicExpansionKind

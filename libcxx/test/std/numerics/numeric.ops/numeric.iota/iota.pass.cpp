@@ -28,10 +28,12 @@ test()
         assert(ia[i] == ir[i]);
 }
 
-int main()
+int main(int, char**)
 {
     test<forward_iterator<int*> >();
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+
+  return 0;
 }

@@ -80,7 +80,7 @@ struct B
 };
 
 
-int main()
+int main(int, char**)
 {
     test_has_not_has_unique_object_representations<void>();
     test_has_not_has_unique_object_representations<Empty>();
@@ -102,4 +102,6 @@ int main()
     test_has_unique_object_representations<char[3]>();
     test_has_unique_object_representations<char[]>();
 
+
+  return 0;
 }

@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P1;
@@ -49,4 +49,6 @@ int main()
     }
 #endif
 
+
+  return 0;
 }

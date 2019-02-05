@@ -54,7 +54,7 @@ protected:
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -66,4 +66,6 @@ int main()
         std::wostream(&sb) << L"123";
         assert(sb.str() == L"123");
     }
+
+  return 0;
 }

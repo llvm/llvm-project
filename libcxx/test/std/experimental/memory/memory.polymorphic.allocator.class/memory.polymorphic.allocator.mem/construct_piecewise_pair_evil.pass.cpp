@@ -120,7 +120,7 @@ void test_evil()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_evil<WidgetV0, WidgetV0>();
     test_evil<WidgetV0, WidgetV1>();
@@ -138,4 +138,6 @@ int main()
     test_evil<WidgetV3, WidgetV1>();
     test_evil<WidgetV3, WidgetV2>();
     test_evil<WidgetV3, WidgetV3>();
+
+  return 0;
 }

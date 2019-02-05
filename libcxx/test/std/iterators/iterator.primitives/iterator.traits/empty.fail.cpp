@@ -63,7 +63,7 @@ struct NotAnIteratorNoCategory
 //     typedef std::forward_iterator_tag iterator_category;
 };
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::iterator_traits<NotAnIteratorEmpty> T;
@@ -118,4 +118,6 @@ int main()
     typedef T::reference         RT; // expected-error-re {{no type named 'reference' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     typedef T::iterator_category CT; // expected-error-re {{no type named 'iterator_category' in 'std::{{.+}}::iterator_traits<{{.+}}>}}
     }
+
+  return 0;
 }

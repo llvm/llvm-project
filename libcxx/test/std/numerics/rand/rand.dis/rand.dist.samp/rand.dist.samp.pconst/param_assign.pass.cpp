@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_constant_distribution<> D;
@@ -30,4 +30,6 @@ int main()
         p1 = p0;
         assert(p1 == p0);
     }
+
+  return 0;
 }

@@ -204,7 +204,7 @@ void test_deleter_value_category() {
 }
 
 
-int main() {
+int main(int, char**) {
   {
     test_sfinae</*IsArray*/false>();
     test_noexcept<false>();
@@ -215,4 +215,6 @@ int main() {
     test_noexcept<true>();
     test_deleter_value_category<true>();
   }
+
+  return 0;
 }

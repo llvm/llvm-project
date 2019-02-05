@@ -53,7 +53,7 @@ void do_insert_cv_test()
     assert(*r.first == 3);
 }
 
-int main()
+int main(int, char**)
 {
     do_insert_cv_test<std::set<int> >();
 #if TEST_STD_VER >= 11
@@ -62,4 +62,6 @@ int main()
         do_insert_cv_test<M>();
     }
 #endif
+
+  return 0;
 }

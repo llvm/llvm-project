@@ -22,7 +22,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::string l1("123");
@@ -43,8 +43,10 @@ int main()
 
 #else
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }
 
 #endif

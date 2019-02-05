@@ -45,10 +45,12 @@ void test_void()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_void<void>();
 
 //  LWG#2582
     static_assert(!std::is_void<incomplete_type>::value, "");
+
+  return 0;
 }

@@ -16,7 +16,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -70,4 +70,6 @@ int main()
         assert(distance(c.begin(), c.end()) == 0);
     }
 #endif
+
+  return 0;
 }

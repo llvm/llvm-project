@@ -21,7 +21,7 @@ bool g(int x, int y)
     return x == y;
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -121,4 +121,6 @@ int main()
         assert(c1 == c2);
     }
 #endif
+
+  return 0;
 }

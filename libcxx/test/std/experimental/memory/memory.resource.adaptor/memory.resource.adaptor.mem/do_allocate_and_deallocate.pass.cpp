@@ -106,9 +106,11 @@ void check_alloc_max_size() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     check_allocate_deallocate<CountingAllocator<char>>();
     check_allocate_deallocate<MinAlignedAllocator<char>>();
     check_alloc_max_size();
+
+  return 0;
 }

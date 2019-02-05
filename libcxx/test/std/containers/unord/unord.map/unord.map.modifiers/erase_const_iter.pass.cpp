@@ -30,7 +30,7 @@ struct TemplateConstructor
 bool operator==(const TemplateConstructor&, const TemplateConstructor&) { return false; }
 struct Hash { size_t operator() (const TemplateConstructor &) const { return 0; } };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_map<int, std::string> C;
@@ -89,4 +89,6 @@ int main()
             m.erase(it);
     }
 #endif
+
+  return 0;
 }

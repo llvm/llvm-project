@@ -163,6 +163,16 @@ public:
     return false;
   }
 
+  static unsigned getMergeOpcode(LLT OpTy, LLT DestTy) {
+    if (OpTy.isVector() && DestTy.isVector())
+      return TargetOpcode::G_CONCAT_VECTORS;
+
+    if (OpTy.isVector() && !DestTy.isVector())
+      return TargetOpcode::G_BUILD_VECTOR;
+
+    return TargetOpcode::G_MERGE_VALUES;
+  }
+
   bool tryCombineMerges(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts) {
 
@@ -171,16 +181,10 @@ public:
 
     unsigned NumDefs = MI.getNumOperands() - 1;
 
-    unsigned MergingOpcode;
     LLT OpTy = MRI.getType(MI.getOperand(NumDefs).getReg());
     LLT DestTy = MRI.getType(MI.getOperand(0).getReg());
-    if (OpTy.isVector() && DestTy.isVector())
-      MergingOpcode = TargetOpcode::G_CONCAT_VECTORS;
-    else if (OpTy.isVector() && !DestTy.isVector())
-      MergingOpcode = TargetOpcode::G_BUILD_VECTOR;
-    else
-      MergingOpcode = TargetOpcode::G_MERGE_VALUES;
 
+    unsigned MergingOpcode = getMergeOpcode(OpTy, DestTy);
     MachineInstr *MergeI =
         getOpcodeDef(MergingOpcode, MI.getOperand(NumDefs).getReg(), MRI);
 
@@ -249,6 +253,65 @@ public:
     return true;
   }
 
+  static bool isMergeLikeOpcode(unsigned Opc) {
+    switch (Opc) {
+    case TargetOpcode::G_MERGE_VALUES:
+    case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_CONCAT_VECTORS:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool tryCombineExtract(MachineInstr &MI,
+                         SmallVectorImpl<MachineInstr *> &DeadInsts) {
+    assert(MI.getOpcode() == TargetOpcode::G_EXTRACT);
+
+    // Try to use the source registers from a G_MERGE_VALUES
+    //
+    // %2 = G_MERGE_VALUES %0, %1
+    // %3 = G_EXTRACT %2, N
+    // =>
+    //
+    // for N < %2.getSizeInBits() / 2
+    //     %3 = G_EXTRACT %0, N
+    //
+    // for N >= %2.getSizeInBits() / 2
+    //    %3 = G_EXTRACT %1, (N - %0.getSizeInBits()
+
+    unsigned Src = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+    MachineInstr *MergeI = MRI.getVRegDef(Src);
+    if (!MergeI || !isMergeLikeOpcode(MergeI->getOpcode()))
+      return false;
+
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    LLT SrcTy = MRI.getType(Src);
+
+    // TODO: Do we need to check if the resulting extract is supported?
+    unsigned ExtractDstSize = DstTy.getSizeInBits();
+    unsigned Offset = MI.getOperand(2).getImm();
+    unsigned NumMergeSrcs = MergeI->getNumOperands() - 1;
+    unsigned MergeSrcSize = SrcTy.getSizeInBits() / NumMergeSrcs;
+    unsigned MergeSrcIdx = Offset / MergeSrcSize;
+
+    // Compute the offset of the last bit the extract needs.
+    unsigned EndMergeSrcIdx = (Offset + ExtractDstSize - 1) / MergeSrcSize;
+
+    // Can't handle the case where the extract spans multiple inputs.
+    if (MergeSrcIdx != EndMergeSrcIdx)
+      return false;
+
+    // TODO: We could modify MI in place in most cases.
+    Builder.setInstr(MI);
+    Builder.buildExtract(
+      MI.getOperand(0).getReg(),
+      MergeI->getOperand(MergeSrcIdx + 1).getReg(),
+      Offset - MergeSrcIdx * MergeSrcSize);
+    markInstAndDefDead(MI, *MergeI, DeadInsts);
+    return true;
+  }
+
   /// Try to combine away MI.
   /// Returns true if it combined away the MI.
   /// Adds instructions that are dead as a result of the combine
@@ -266,6 +329,8 @@ public:
       return tryCombineSExt(MI, DeadInsts);
     case TargetOpcode::G_UNMERGE_VALUES:
       return tryCombineMerges(MI, DeadInsts);
+    case TargetOpcode::G_EXTRACT:
+      return tryCombineExtract(MI, DeadInsts);
     case TargetOpcode::G_TRUNC: {
       bool Changed = false;
       for (auto &Use : MRI.use_instructions(MI.getOperand(0).getReg()))
@@ -276,6 +341,23 @@ public:
   }
 
 private:
+
+  static unsigned getArtifactSrcReg(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case TargetOpcode::COPY:
+    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_UNMERGE_VALUES:
+      return MI.getOperand(MI.getNumOperands() - 1).getReg();
+    case TargetOpcode::G_EXTRACT:
+      return MI.getOperand(1).getReg();
+    default:
+      llvm_unreachable("Not a legalization artifact happen");
+    }
+  }
+
   /// Mark MI as dead. If a def of one of MI's operands, DefMI, would also be
   /// dead due to MI being killed, then mark DefMI as dead too.
   /// Some of the combines (extends(trunc)), try to walk through redundant
@@ -296,8 +378,8 @@ private:
     // and as a result, %3, %2, %1 are dead.
     MachineInstr *PrevMI = &MI;
     while (PrevMI != &DefMI) {
-      unsigned PrevRegSrc =
-          PrevMI->getOperand(PrevMI->getNumOperands() - 1).getReg();
+      unsigned PrevRegSrc = getArtifactSrcReg(*PrevMI);
+
       MachineInstr *TmpDef = MRI.getVRegDef(PrevRegSrc);
       if (MRI.hasOneUse(PrevRegSrc)) {
         if (TmpDef != &DefMI) {
