@@ -19,7 +19,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::set<int> C;
@@ -49,4 +49,6 @@ int main()
     assert(*++i == V(5));
     assert(*++i == V(6));
     }
+
+  return 0;
 }

@@ -110,21 +110,60 @@ set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
-foreach(proj ${LLVM_ENABLE_PROJECTS})
-  set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
-  if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
-    message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
-  endif()
-  string(TOUPPER "${proj}" upper_proj)
-  STRING(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
-  set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
-  # There is a widely spread opinion that clang-tools-extra should be merged
-  # into clang. The following simulates it by always enabling clang-tools-extra
-  # when enabling clang.
-  if (proj STREQUAL "clang")
-    set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../clang-tools-extra")
-  endif()
-endforeach()
+
+# LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
+# `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
+# several reasons:
+#
+# * As an indicator that the `LLVM_ENABLE_PROJECTS` list is now the single
+# source of truth for which projects to build. This means we will ignore user
+# supplied `LLVM_TOOL_<project>_BUILD` CMake cache variables and overwrite
+# them.
+#
+# * The case where the user previously had `LLVM_ENABLE_PROJECTS` set to a
+# non-empty list but now the user wishes to disable building all other projects
+# by setting `LLVM_ENABLE_PROJECTS` to an empty string. In that case we still
+# need to set the `LLVM_TOOL_${upper_proj}_BUILD` variables so that we disable
+# building all the projects that were previously enabled.
+set(LLVM_ENABLE_PROJECTS_USED OFF CACHE BOOL "")
+mark_as_advanced(LLVM_ENABLE_PROJECTS_USED)
+
+if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
+  set(LLVM_ENABLE_PROJECTS_USED ON CACHE BOOL "" FORCE)
+  foreach(proj ${LLVM_ALL_PROJECTS})
+    string(TOUPPER "${proj}" upper_proj)
+    string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
+    if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
+      message(STATUS "${proj} project is enabled")
+      set(SHOULD_ENABLE_PROJECT TRUE)
+      set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+      if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
+        message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
+      endif()
+      set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+      # There is a widely spread opinion that clang-tools-extra should be merged
+      # into clang. The following simulates it by always enabling clang-tools-extra
+      # when enabling clang.
+      if (proj STREQUAL "clang")
+        set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../clang-tools-extra")
+      endif()
+    else()
+      message(STATUS "${proj} project is disabled")
+      set(SHOULD_ENABLE_PROJECT FALSE)
+    endif()
+    # Force `LLVM_TOOL_${upper_proj}_BUILD` variables to have values that
+    # corresponds with `LLVM_ENABLE_PROJECTS`. This prevents the user setting
+    # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point
+    # we should deprecate allowing users to set these variables by turning them
+    # into normal CMake variables rather than cache variables.
+    set(LLVM_TOOL_${upper_proj}_BUILD
+      ${SHOULD_ENABLE_PROJECT}
+      CACHE
+      BOOL "Whether to build ${upper_proj} as part of LLVM" FORCE
+    )
+  endforeach()
+endif()
+unset(SHOULD_ENABLE_PROJECT)
 
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")

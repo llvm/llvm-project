@@ -15,7 +15,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::bernoulli_distribution D;
@@ -24,4 +24,6 @@ int main()
         D d(p);
         assert(d.p() == 0.25);
     }
+
+  return 0;
 }

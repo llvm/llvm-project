@@ -23,7 +23,7 @@ struct testbuf
     testbuf() {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -49,4 +49,6 @@ int main()
         assert(os.precision() == 6);
         assert(os.getloc().name() == "C");
     }
+
+  return 0;
 }

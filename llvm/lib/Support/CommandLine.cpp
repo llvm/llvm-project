@@ -425,10 +425,15 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
     return I != Sub.OptionsMap.end() ? I->second : nullptr;
   }
 
-  // If the argument before the = is a valid option name, we match.  If not,
-  // return Arg unmolested.
+  // If the argument before the = is a valid option name and the option allows
+  // non-prefix form (ie is not AlwaysPrefix), we match.  If not, signal match
+  // failure by returning nullptr.
   auto I = Sub.OptionsMap.find(Arg.substr(0, EqualPos));
   if (I == Sub.OptionsMap.end())
+    return nullptr;
+
+  auto O = I->second;
+  if (O->getFormattingFlag() == cl::AlwaysPrefix)
     return nullptr;
 
   Value = Arg.substr(EqualPos + 1);
@@ -538,7 +543,9 @@ static inline bool ProvideOption(Option *Handler, StringRef ArgName,
   switch (Handler->getValueExpectedFlag()) {
   case ValueRequired:
     if (!Value.data()) { // No value specified?
-      if (i + 1 >= argc)
+      // If no other argument or the option only supports prefix form, we
+      // cannot look at the next argument.
+      if (i + 1 >= argc || Handler->getFormattingFlag() == cl::AlwaysPrefix)
         return Handler->error("requires a value!");
       // Steal the next argument, like for '-o filename'
       assert(argv && "null check");
@@ -596,7 +603,8 @@ static inline bool isGrouping(const Option *O) {
   return O->getFormattingFlag() == cl::Grouping;
 }
 static inline bool isPrefixedOrGrouping(const Option *O) {
-  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix;
+  return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
+         O->getFormattingFlag() == cl::AlwaysPrefix;
 }
 
 // getOptionPred - Check to see if there are any options that satisfy the
@@ -646,7 +654,8 @@ HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
   // If the option is a prefixed option, then the value is simply the
   // rest of the name...  so fall through to later processing, by
   // setting up the argument name flags and value fields.
-  if (PGOpt->getFormattingFlag() == cl::Prefix) {
+  if (PGOpt->getFormattingFlag() == cl::Prefix ||
+      PGOpt->getFormattingFlag() == cl::AlwaysPrefix) {
     Value = Arg.substr(Length);
     Arg = Arg.substr(0, Length);
     assert(OptionsMap.count(Arg) && OptionsMap.find(Arg)->second == PGOpt);

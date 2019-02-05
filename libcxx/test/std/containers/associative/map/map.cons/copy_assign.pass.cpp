@@ -108,7 +108,7 @@ bool balanced_allocs() {
     }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<const int, double> V;
@@ -337,4 +337,6 @@ int main()
     }
     assert(balanced_allocs());
 #endif
+
+  return 0;
 }

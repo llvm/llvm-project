@@ -27,7 +27,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -43,4 +43,6 @@ int main()
         assert(test_allocator<A>::count == 0);
         assert(test_allocator<A>::alloc_count == 0);
     }
+
+  return 0;
 }

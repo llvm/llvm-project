@@ -92,7 +92,9 @@ void test_basic() {
   assert(&ref3 == &std::get<InitList>(v));
 }
 
-int main() {
+int main(int, char**) {
   test_basic();
   test_emplace_sfinae();
+
+  return 0;
 }

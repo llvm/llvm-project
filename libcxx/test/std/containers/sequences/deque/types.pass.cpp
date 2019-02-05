@@ -71,7 +71,7 @@ test()
         typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<int, test_allocator<int> >();
     test<int*, std::allocator<int*> >();
@@ -100,4 +100,6 @@ int main()
             typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
 #endif
+
+  return 0;
 }

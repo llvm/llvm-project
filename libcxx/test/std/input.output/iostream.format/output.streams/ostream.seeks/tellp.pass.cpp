@@ -38,7 +38,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ostream os((std::streambuf*)0);
@@ -50,4 +50,6 @@ int main()
         assert(os.tellp() == 10);
         assert(seekoff_called == 1);
     }
+
+  return 0;
 }

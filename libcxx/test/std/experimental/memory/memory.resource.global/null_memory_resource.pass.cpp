@@ -108,10 +108,12 @@ void test_deallocate()
     assert(globalMemCounter.checkDeleteArrayCalledEq(0));
 }
 
-int main()
+int main(int, char**)
 {
     test_return();
     test_equality();
     test_allocate();
     test_deallocate();
+
+  return 0;
 }

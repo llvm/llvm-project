@@ -373,7 +373,8 @@ def SI_RETURN : SPseudoInstSI <
 // This version is only needed so we can fill in the output regiter in
 // the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
-  (outs), (ins SSrc_b64:$src0), [(AMDGPUcall i64:$src0)]> {
+  (outs), (ins SSrc_b64:$src0, unknown:$callee),
+  [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
   let Size = 4;
   let isCall = 1;
   let SchedRW = [WriteBranch];
@@ -391,20 +392,9 @@ def SI_CALL : SPseudoInstSI <
 }
 
 // Tail call handling pseudo
-def SI_TCRETURN_ISEL : SPseudoInstSI<(outs),
-  (ins SSrc_b64:$src0, i32imm:$fpdiff),
-  [(AMDGPUtc_return i64:$src0, i32:$fpdiff)]> {
-  let isCall = 1;
-  let isTerminator = 1;
-  let isReturn = 1;
-  let isBarrier = 1;
-  let SchedRW = [WriteBranch];
-  let usesCustomInserter = 1;
-}
-
-def SI_TCRETURN : SPseudoInstSI <
-  (outs),
-  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff)> {
+def SI_TCRETURN : SPseudoInstSI <(outs),
+  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff),
+  [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
   let Size = 4;
   let isCall = 1;
   let isTerminator = 1;

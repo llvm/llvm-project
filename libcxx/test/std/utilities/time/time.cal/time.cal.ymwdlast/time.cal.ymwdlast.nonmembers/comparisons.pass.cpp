@@ -22,7 +22,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using year                    = std::chrono::year;
     using month                   = std::chrono::month;
@@ -110,4 +110,6 @@ int main()
             year_month_weekday_last{year{i}, January, weekday_last{Tuesday}},
             year_month_weekday_last{year{j}, January, weekday_last{Tuesday}},
             i == j)));
+
+  return 0;
 }

@@ -103,7 +103,7 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" // for tmpnam
 #endif
 
-int main()
+int main(int, char**)
 {
     FILE* fp = 0;
     fpos_t fpos = fpos_t();
@@ -165,4 +165,6 @@ int main()
     static_assert((std::is_same<decltype(feof(fp)), int>::value), "");
     static_assert((std::is_same<decltype(ferror(fp)), int>::value), "");
     static_assert((std::is_same<decltype(perror("")), void>::value), "");
+
+  return 0;
 }

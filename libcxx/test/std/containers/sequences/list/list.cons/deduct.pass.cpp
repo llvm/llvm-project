@@ -29,7 +29,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 
 //  Test the explicit deduction guides
@@ -99,4 +99,6 @@ int main()
     static_assert(std::is_same_v<decltype(lst)::allocator_type, std::allocator<long double>>, "");
     assert(lst.size() == 0);
     }
+
+  return 0;
 }

@@ -15,6 +15,8 @@
 #include <any>
 #include <type_traits>
 
-int main () {
+int main(int, char**) {
     static_assert(!std::is_literal_type<std::any>::value, "");
+
+  return 0;
 }

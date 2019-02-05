@@ -159,15 +159,12 @@ public:
 // PartialSection represents a group of chunks that contribute to an
 // OutputSection. Collating a collection of PartialSections of same name and
 // characteristics constitutes the OutputSection.
-class PartialSection {
+class PartialSectionKey {
 public:
-  PartialSection(StringRef N, uint32_t Chars)
-      : Name(N), Characteristics(Chars) {}
   StringRef Name;
   unsigned Characteristics;
-  std::vector<Chunk *> Chunks;
 
-  bool operator<(const PartialSection &Other) const {
+  bool operator<(const PartialSectionKey &Other) const {
     int C = Name.compare(Other.Name);
     if (C == 1)
       return false;
@@ -177,10 +174,13 @@ public:
   }
 };
 
-struct PartialLess {
-  bool operator()(PartialSection *L, PartialSection *R) const {
-    return *L < *R;
-  }
+class PartialSection {
+public:
+  PartialSection(StringRef N, uint32_t Chars)
+      : Name(N), Characteristics(Chars) {}
+  StringRef Name;
+  unsigned Characteristics;
+  std::vector<Chunk *> Chunks;
 };
 
 // The writer writes a SymbolTable result to a file.
@@ -234,7 +234,7 @@ private:
   uint32_t getSizeOfInitializedData();
 
   std::unique_ptr<FileOutputBuffer> &Buffer;
-  std::set<PartialSection *, PartialLess> PartialSections;
+  std::map<PartialSectionKey, PartialSection *> PartialSections;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
   std::vector<llvm::object::coff_symbol16> OutputSymtab;
@@ -628,7 +628,8 @@ bool Writer::fixGnuImportChunks() {
 
   // Make sure all .idata$* section chunks are mapped as RDATA in order to
   // be sorted into the same sections as our own synthesized .idata chunks.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     if (!PSec->Name.startswith(".idata"))
       continue;
     if (PSec->Characteristics == RDATA)
@@ -642,7 +643,8 @@ bool Writer::fixGnuImportChunks() {
   bool HasIdata = false;
   // Sort all .idata$* chunks, grouping chunks from the same library,
   // with alphabetical ordering of the object fils within a library.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     if (!PSec->Name.startswith(".idata"))
       continue;
 
@@ -773,8 +775,8 @@ void Writer::createSections() {
 
   // Process an /order option.
   if (!Config->Order.empty())
-    for (PartialSection *PSec : PartialSections)
-      sortBySectionOrder(PSec->Chunks);
+    for (auto It : PartialSections)
+      sortBySectionOrder(It.second->Chunks);
 
   if (HasIdata)
     locateImportTables();
@@ -783,7 +785,8 @@ void Writer::createSections() {
   // '$' and all following characters in input section names are
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     StringRef Name = getOutputSectionName(PSec->Name);
     uint32_t OutChars = PSec->Characteristics;
 
@@ -1771,19 +1774,16 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &V) {
 
 PartialSection *Writer::createPartialSection(StringRef Name,
                                              uint32_t OutChars) {
-  PartialSection *PSec = findPartialSection(Name, OutChars);
+  PartialSection *&PSec = PartialSections[{Name, OutChars}];
   if (PSec)
     return PSec;
   PSec = make<PartialSection>(Name, OutChars);
-  PartialSections.insert(PSec);
   return PSec;
 }
 
 PartialSection *Writer::findPartialSection(StringRef Name, uint32_t OutChars) {
-  auto It = find_if(PartialSections, [&](PartialSection *P) {
-    return P->Name == Name && P->Characteristics == OutChars;
-  });
+  auto It = PartialSections.find({Name, OutChars});
   if (It != PartialSections.end())
-    return *It;
+    return It->second;
   return nullptr;
 }

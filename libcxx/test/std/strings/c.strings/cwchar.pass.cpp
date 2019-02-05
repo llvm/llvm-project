@@ -31,7 +31,7 @@
 #error WEOF not defined
 #endif
 
-int main()
+int main(int, char**)
 {
     std::mbstate_t mb = {};
     std::size_t s = 0;
@@ -128,4 +128,6 @@ int main()
     ASSERT_SAME_TYPE(int,                decltype(std::vwprintf(L"", va)));
     ASSERT_SAME_TYPE(int,                decltype(std::wprintf(L"")));
 #endif
+
+  return 0;
 }

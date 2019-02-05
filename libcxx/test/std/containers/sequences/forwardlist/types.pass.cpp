@@ -31,7 +31,7 @@
 
 struct A { std::forward_list<A> v; }; // incomplete type support
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::forward_list<char> C;
@@ -72,4 +72,6 @@ int main()
         typename std::iterator_traits<typename C::const_iterator>::difference_type>::value), "");
     }
 #endif
+
+  return 0;
 }

@@ -37,7 +37,7 @@ constexpr int carr3[] = {7,8};
 std::string strs[] = {"ABC", "DEF", "GHI"};
 
 
-int main ()
+int main(int, char**)
 {
 
 //  constexpr dynamically sized assignment
@@ -289,4 +289,6 @@ int main ()
             for (size_t j = i; j < std::size(spans); ++j)
                 assert((doAssign(spans[i], spans[j])));
     }
+
+  return 0;
 }

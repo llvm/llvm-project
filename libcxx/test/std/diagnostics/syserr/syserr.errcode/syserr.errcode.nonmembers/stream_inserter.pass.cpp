@@ -18,9 +18,11 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::ostringstream out;
     out << std::error_code(std::io_errc::stream);
     assert(out.str() == "iostream:1");
+
+  return 0;
 }

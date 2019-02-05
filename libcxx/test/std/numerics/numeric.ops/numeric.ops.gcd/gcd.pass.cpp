@@ -91,7 +91,7 @@ constexpr bool do_test(int = 0)
     return accumulate;
 }
 
-int main()
+int main(int, char**)
 {
     auto non_cce = std::rand(); // a value that can't possibly be constexpr
 
@@ -141,4 +141,6 @@ int main()
     static_assert(std::is_same_v<decltype(res), std::int64_t>, "");
     assert(res == 2);
     }
+
+  return 0;
 }

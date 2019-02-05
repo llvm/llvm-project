@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::negative_binomial_distribution<> D;
@@ -25,4 +25,6 @@ int main()
         D d(p);
         assert(d.param() == p);
     }
+
+  return 0;
 }

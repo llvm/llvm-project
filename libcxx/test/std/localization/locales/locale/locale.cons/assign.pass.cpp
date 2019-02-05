@@ -56,7 +56,7 @@ void check(const std::locale& loc)
     assert((std::has_facet<std::messages<wchar_t> >(loc)));
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::locale loc(LOCALE_ru_RU_UTF_8);
@@ -67,4 +67,6 @@ int main()
         check(loc2);
     }
     assert(globalMemCounter.checkOutstandingNewEq(0));
+
+  return 0;
 }

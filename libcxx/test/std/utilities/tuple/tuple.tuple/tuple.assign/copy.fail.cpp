@@ -19,7 +19,7 @@
 
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<MoveOnly> T;
@@ -27,4 +27,6 @@ int main()
         T t;
         t = t0;
     }
+
+  return 0;
 }

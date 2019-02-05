@@ -18,7 +18,7 @@
 #include <thread>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::thread::id id0;
     std::thread::id id1;
@@ -28,4 +28,6 @@ int main()
     id1 = std::this_thread::get_id();
     assert(!(id1 == id0));
     assert( (id1 != id0));
+
+  return 0;
 }

@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "../../euclidian.h"
 
-int main()
+int main(int, char**)
 {
     using weekday         = std::chrono::weekday;
     using weekday_last    = std::chrono::weekday_last;
@@ -55,4 +55,6 @@ int main()
         assert(wdi.index() == j);
         assert(wdi.ok());
     }
+
+  return 0;
 }

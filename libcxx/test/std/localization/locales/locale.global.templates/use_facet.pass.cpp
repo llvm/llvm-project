@@ -30,7 +30,7 @@ struct my_facet
 
 std::locale::id my_facet::id;
 
-int main()
+int main(int, char**)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try
@@ -53,4 +53,6 @@ int main()
         assert(facet_count == 1);
     }
     assert(facet_count == 0);
+
+  return 0;
 }

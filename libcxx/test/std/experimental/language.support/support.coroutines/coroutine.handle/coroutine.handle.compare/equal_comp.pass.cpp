@@ -44,7 +44,7 @@ void do_test(uintptr_t LHSVal, uintptr_t RHSVal) {
   }
 }
 
-int main()
+int main(int, char**)
 {
   std::pair<uintptr_t, uintptr_t> const TestCases[] = {
       {0, 0},
@@ -56,4 +56,6 @@ int main()
     do_test<coro::coroutine_handle<>>(TC.first, TC.second);
     do_test<coro::coroutine_handle<int>>(TC.first, TC.second);
   }
+
+  return 0;
 }

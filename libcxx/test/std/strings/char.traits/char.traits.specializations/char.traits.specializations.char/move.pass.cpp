@@ -15,7 +15,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     char s1[] = {1, 2, 3};
     assert(std::char_traits<char>::move(s1, s1+1, 2) == s1);
@@ -29,4 +29,6 @@ int main()
     assert(s1[2] == char(3));
     assert(std::char_traits<char>::move(NULL, s1, 0) == NULL);
     assert(std::char_traits<char>::move(s1, NULL, 0) == s1);
+
+  return 0;
 }

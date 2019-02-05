@@ -42,7 +42,7 @@ void operator ()() const {}
 #endif
 
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::istream_iterator<int> T;
@@ -61,4 +61,6 @@ int main()
     test_trivial<S>()();
     test_trivial<std::string>()();
 #endif
+
+  return 0;
 }

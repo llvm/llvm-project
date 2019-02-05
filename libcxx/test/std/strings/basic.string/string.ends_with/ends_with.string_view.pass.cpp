@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -68,4 +68,6 @@ int main()
     assert (!sNot.ends_with(sv5));
     assert ( sNot.ends_with(svNot));
     }
+
+  return 0;
 }

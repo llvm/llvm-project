@@ -277,7 +277,7 @@ struct TestClock {
 template <class IntType, class Period = std::micro>
 using TestFileTimeT = time_point<TestClock<duration<IntType, Period> > >;
 
-int main() {
+int main(int, char**) {
   { assert((test_case<file_time_type, time_t, struct timespec>::test())); }
   {
     assert((test_case<TestFileTimeT<int64_t>, int64_t,
@@ -303,4 +303,6 @@ int main() {
                       TestTimeSpec<int32_t, int32_t> >::test()));
   }
 #endif
+
+  return 0;
 }

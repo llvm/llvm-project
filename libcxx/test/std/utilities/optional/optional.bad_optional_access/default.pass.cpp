@@ -23,8 +23,10 @@
 #include <optional>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     using std::bad_optional_access;
     bad_optional_access ex;
+
+  return 0;
 }

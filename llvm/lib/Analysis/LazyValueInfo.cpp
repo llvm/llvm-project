@@ -624,7 +624,7 @@ bool LazyValueInfoImpl::solveBlockValueImpl(ValueLatticeElement &Res,
   // and the like to prove non-nullness, but it's not clear that's worth it
   // compile time wise.  The context-insensitive value walk done inside
   // isKnownNonZero gets most of the profitable cases at much less expense.
-  // This does mean that we have a sensativity to where the defining
+  // This does mean that we have a sensitivity to where the defining
   // instruction is placed, even if it could legally be hoisted much higher.
   // That is unfortunate.
   PointerType *PT = dyn_cast<PointerType>(BBI->getType());

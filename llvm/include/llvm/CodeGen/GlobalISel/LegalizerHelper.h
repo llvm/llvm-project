@@ -167,9 +167,11 @@ private:
   fewerElementsVectorSelect(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
   LegalizeResult
-  fewerElementsVectorLoadStore(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
+  reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
   LegalizeResult narrowScalarMul(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+
+  LegalizeResult narrowScalarSelect(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 

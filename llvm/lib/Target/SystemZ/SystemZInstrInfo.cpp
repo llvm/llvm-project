@@ -1505,7 +1505,7 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 }
 
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
-  if (MI.getOpcode() == TargetOpcode::INLINEASM) {
+  if (MI.isInlineAsm()) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());

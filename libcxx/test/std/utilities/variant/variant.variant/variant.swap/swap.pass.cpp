@@ -589,10 +589,12 @@ void test_swap_noexcept() {
 template class std::variant<int, NotSwappable>;
 #endif
 
-int main() {
+int main(int, char**) {
   test_swap_valueless_by_exception();
   test_swap_same_alternative();
   test_swap_different_alternatives();
   test_swap_sfinae();
   test_swap_noexcept();
+
+  return 0;
 }

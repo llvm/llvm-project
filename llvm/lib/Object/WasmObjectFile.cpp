@@ -255,7 +255,7 @@ WasmObjectFile::WasmObjectFile(MemoryBufferRef Buffer, Error &Err)
   }
 
   ReadContext Ctx;
-  Ctx.Start = getPtr(0);
+  Ctx.Start = reinterpret_cast<const uint8_t *>(getData().data());
   Ctx.Ptr = Ctx.Start + 4;
   Ctx.End = Ctx.Start + getData().size();
 
@@ -1171,10 +1171,6 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
     return make_error<GenericBinaryError>("Data section ended prematurely",
                                           object_error::parse_failed);
   return Error::success();
-}
-
-const uint8_t *WasmObjectFile::getPtr(size_t Offset) const {
-  return reinterpret_cast<const uint8_t *>(getData().data() + Offset);
 }
 
 const wasm::WasmObjectHeader &WasmObjectFile::getHeader() const {

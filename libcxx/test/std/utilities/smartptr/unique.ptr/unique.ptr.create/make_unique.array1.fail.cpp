@@ -10,7 +10,9 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     auto up1 = std::make_unique<std::string[]>("error"); // doesn't compile - no bound
+
+  return 0;
 }

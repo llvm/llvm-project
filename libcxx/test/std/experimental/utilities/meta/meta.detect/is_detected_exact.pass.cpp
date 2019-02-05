@@ -40,9 +40,11 @@ void test() {
     static_assert( b == ex::is_detected_exact_v<int, callFoo, T>, "" );
 }
 
-int main () {
+int main(int, char**) {
     test<yesFoo, true>();
     test<noFoo, false>();
     test<wrongFoo, false>();
     test<convertibleFoo, false>();
+
+  return 0;
 }

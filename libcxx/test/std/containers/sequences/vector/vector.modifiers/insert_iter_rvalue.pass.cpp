@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<MoveOnly> v(100);
@@ -62,4 +62,6 @@ int main()
         for (++j; j < 101; ++j)
             assert(v[j] == MoveOnly());
     }
+
+  return 0;
 }

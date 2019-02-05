@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::discrete_distribution<> D;
@@ -27,4 +27,6 @@ int main()
         param_type p = p0;
         assert(p == p0);
     }
+
+  return 0;
 }

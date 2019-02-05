@@ -16,7 +16,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     int a1[] = {1, 2, 3};
     int a2[] = {4, 5, 6};
@@ -334,4 +334,6 @@ int main()
         assert(*i == 2);
     }
 #endif
+
+  return 0;
 }

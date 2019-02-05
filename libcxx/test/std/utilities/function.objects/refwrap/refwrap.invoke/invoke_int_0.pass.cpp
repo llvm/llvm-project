@@ -69,7 +69,9 @@ struct A_void_1
     }
 };
 
-int main()
+int main(int, char**)
 {
     test_int_0();
+
+  return 0;
 }

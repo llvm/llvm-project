@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::minstd_rand0 Engine;
@@ -30,4 +30,6 @@ int main()
 
         assert(a.base() == e);
     }
+
+  return 0;
 }

@@ -31,7 +31,7 @@ using namespace std::literals;
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 
 //  Test the explicit deduction guides
@@ -133,4 +133,6 @@ int main()
     assert(re.flags() == std::regex_constants::grep);
     assert(re.mark_count() == 0);
     }
+
+  return 0;
 }

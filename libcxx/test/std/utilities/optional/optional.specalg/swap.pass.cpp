@@ -109,7 +109,7 @@ void test_swap_sfinae() {
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_swap_sfinae();
     {
@@ -348,4 +348,6 @@ int main()
         assert(*opt2 == 2);
     }
 #endif // TEST_HAS_NO_EXCEPTIONS
+
+  return 0;
 }

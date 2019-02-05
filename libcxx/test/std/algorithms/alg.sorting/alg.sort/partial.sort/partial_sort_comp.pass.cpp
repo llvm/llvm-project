@@ -66,7 +66,7 @@ test_larger_sorts(int N)
     test_larger_sorts(N, N);
 }
 
-int main()
+int main(int, char**)
 {
     {
     int i = 0;
@@ -92,4 +92,6 @@ int main()
         assert(*v[i] == i);
     }
 #endif
+
+  return 0;
 }

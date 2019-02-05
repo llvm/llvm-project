@@ -15,7 +15,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     int a1[] = {4, 8, 1, 0, 5, 7, 2, 3, 6, 11, 10, 9};
@@ -33,4 +33,6 @@ int main()
     assert((c1 == std::list<int, min_allocator<int>>(a2, a2+sizeof(a2)/sizeof(a2[0]))));
     }
 #endif
+
+  return 0;
 }

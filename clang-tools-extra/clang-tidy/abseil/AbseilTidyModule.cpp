@@ -16,6 +16,7 @@
 #include "DurationFactoryFloatCheck.h"
 #include "DurationFactoryScaleCheck.h"
 #include "DurationSubtractionCheck.h"
+#include "DurationUnnecessaryConversionCheck.h"
 #include "FasterStrsplitDelimiterCheck.h"
 #include "NoInternalDependenciesCheck.h"
 #include "NoNamespaceCheck.h"
@@ -45,6 +46,8 @@ public:
         "abseil-duration-factory-scale");
     CheckFactories.registerCheck<DurationSubtractionCheck>(
         "abseil-duration-subtraction");
+    CheckFactories.registerCheck<DurationUnnecessaryConversionCheck>(
+        "abseil-duration-unnecessary-conversion");
     CheckFactories.registerCheck<FasterStrsplitDelimiterCheck>(
         "abseil-faster-strsplit-delimiter");
     CheckFactories.registerCheck<NoInternalDependenciesCheck>(

@@ -54,7 +54,7 @@ void do_insert_hint_test()
     assert(r->second == 4.5);
 }
 
-int main()
+int main(int, char**)
 {
     do_insert_hint_test<std::multimap<int, double> >();
 #if TEST_STD_VER >= 11
@@ -63,4 +63,6 @@ int main()
         do_insert_hint_test<M>();
     }
 #endif
+
+  return 0;
 }

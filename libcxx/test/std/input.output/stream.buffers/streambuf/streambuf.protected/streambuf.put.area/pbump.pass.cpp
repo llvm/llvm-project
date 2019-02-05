@@ -41,7 +41,7 @@ struct test
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         test<char> t;
@@ -57,4 +57,6 @@ int main()
         t.pbump(3);
         t.pbump(1);
     }
+
+  return 0;
 }

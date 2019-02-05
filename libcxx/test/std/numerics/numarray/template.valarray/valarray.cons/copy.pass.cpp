@@ -16,7 +16,7 @@
 #include <cassert>
 #include <cstddef>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -52,4 +52,6 @@ int main()
                 assert(v2[i][j] == v[i][j]);
         }
     }
+
+  return 0;
 }

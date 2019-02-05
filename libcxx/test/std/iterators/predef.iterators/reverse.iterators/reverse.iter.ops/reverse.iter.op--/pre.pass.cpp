@@ -30,7 +30,7 @@ test(It i, It x)
     assert(&rr == &r);
 }
 
-int main()
+int main(int, char**)
 {
     const char* s = "123";
     test(bidirectional_iterator<const char*>(s+1), bidirectional_iterator<const char*>(s+2));
@@ -50,4 +50,6 @@ int main()
         static_assert(*(--std::make_reverse_iterator(p)) == '1', "");
     }
 #endif
+
+  return 0;
 }

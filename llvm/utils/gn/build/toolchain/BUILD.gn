@@ -234,9 +234,11 @@ toolchain("win") {
   }
 
   tool("solink") {
-    dllfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
-    libfile = "$dllfile.lib"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile {{libs}} /pdb:$dllfile.pdb {{inputs}}"
+    outprefix = "{{output_dir}}/{{target_output_name}}"
+    dllfile = "$outprefix{{output_extension}}"
+    libfile = "$outprefix.lib"
+    pdbfile = "$outprefix.pdb"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile /pdb:$pdbfile {{libs}} {{inputs}}"
     description = "LINK $dllfile"
     link_output = libfile
     depend_output = libfile
@@ -259,8 +261,10 @@ toolchain("win") {
   # standalone loadable modules used for unit-testing LLVM's dynamic library
   # loading code.
   tool("solink_module") {
-    dllfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
-    command = "$link /nologo /dll {{ldflags}} /out:$dllfile {{libs}} /pdb:$dllfile.pdb {{inputs}}"
+    outprefix = "{{output_dir}}/{{target_output_name}}"
+    dllfile = "$outprefix{{output_extension}}"
+    pdbfile = "$outprefix.pdb"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{libs}} {{inputs}}"
     description = "LINK_MODULE $dllfile"
     outputs = [
       dllfile,
@@ -272,8 +276,10 @@ toolchain("win") {
   }
 
   tool("link") {
-    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
-    command = "$link /nologo {{ldflags}} /out:$outfile {{libs}} /pdb:$outfile.pdb {{inputs}}"
+    outprefix = "{{output_dir}}/{{target_output_name}}"
+    outfile = "$outprefix{{output_extension}}"
+    pdbfile = "$outprefix.pdb"
+    command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{libs}} {{inputs}}"
     description = "LINK $outfile"
     outputs = [
       outfile,

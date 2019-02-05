@@ -114,7 +114,9 @@ void test_sfinae() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_sfinae();
   // FIXME: add tests
+
+  return 0;
 }

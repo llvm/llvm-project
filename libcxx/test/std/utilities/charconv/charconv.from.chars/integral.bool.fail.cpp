@@ -18,7 +18,7 @@
 
 #include <charconv>
 
-int main()
+int main(int, char**)
 {
     using std::from_chars;
     char buf[] = "01001";
@@ -26,4 +26,6 @@ int main()
 
     from_chars(buf, buf + sizeof(buf), lv);      // expected-error {{call to deleted function}}
     from_chars(buf, buf + sizeof(buf), lv, 16);  // expected-error {{call to deleted function}}
+
+  return 0;
 }

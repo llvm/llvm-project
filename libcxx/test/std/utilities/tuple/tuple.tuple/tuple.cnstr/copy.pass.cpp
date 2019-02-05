@@ -22,7 +22,7 @@
 
 struct Empty {};
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<> T;
@@ -66,4 +66,6 @@ int main()
         ((void)e); // Prevent unused warning
     }
 #endif
+
+  return 0;
 }

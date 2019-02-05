@@ -176,9 +176,11 @@ void test_ctor_with_different_value_type() {
 }
 
 
-int main() {
+int main(int, char**) {
   basic_test_cases();
   emplaceable_concept_tests(); // See PR34898
   test_ctor_under_alloc();
   test_ctor_with_different_value_type();
+
+  return 0;
 }

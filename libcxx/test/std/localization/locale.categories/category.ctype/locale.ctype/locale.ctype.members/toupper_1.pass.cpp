@@ -15,7 +15,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -29,4 +29,6 @@ int main()
         assert(f.toupper(L'a') == L'A');
         assert(f.toupper(L'1') == L'1');
     }
+
+  return 0;
 }

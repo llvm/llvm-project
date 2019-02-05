@@ -35,7 +35,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 
 //  Test the explicit deduction guides
@@ -90,4 +90,6 @@ int main()
     assert(stk.top() == 3);
     }
 
+
+  return 0;
 }

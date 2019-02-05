@@ -25,11 +25,13 @@ struct X
     void operator()() {}
 };
 
-int main()
+int main(int, char**)
 {
     X x;
     std::function<void()> f(x);
+
+  return 0;
 }
 #else
-int main () {}
+int main(int, char**) { return 0; }
 #endif

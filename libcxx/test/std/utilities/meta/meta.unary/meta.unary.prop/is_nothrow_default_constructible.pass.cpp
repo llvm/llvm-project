@@ -67,7 +67,7 @@ struct DThrows
 };
 #endif
 
-int main()
+int main(int, char**)
 {
     test_has_not_nothrow_default_constructor<void>();
     test_has_not_nothrow_default_constructor<int&>();
@@ -84,4 +84,6 @@ int main()
     test_is_nothrow_default_constructible<const int*>();
     test_is_nothrow_default_constructible<char[3]>();
     test_is_nothrow_default_constructible<bit_zero>();
+
+  return 0;
 }

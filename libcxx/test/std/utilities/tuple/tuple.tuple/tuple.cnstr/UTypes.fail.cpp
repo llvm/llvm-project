@@ -42,9 +42,11 @@ public:
     bool operator< (const MoveOnly& x) const {return data_ <  x.data_;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::tuple<MoveOnly> t = 1;
     }
+
+  return 0;
 }

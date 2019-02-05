@@ -45,7 +45,7 @@ public:
         : F(nm, refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     char str[200];
     output_iterator<char*> iter;
@@ -77,4 +77,6 @@ int main()
         assert((ex == "Today is Samedi which is abbreviated Sam.")||
                (ex == "Today is samedi which is abbreviated sam." ));
     }
+
+  return 0;
 }

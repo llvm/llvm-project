@@ -54,10 +54,12 @@ void test(Container& c)
     }
 }
 
-int main()
+int main(int, char**)
 {
     std::unordered_map<int, int> m;
     test(m);
     std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, min_allocator<std::pair<const int, int>>> m2;
     test(m2);
+
+  return 0;
 }

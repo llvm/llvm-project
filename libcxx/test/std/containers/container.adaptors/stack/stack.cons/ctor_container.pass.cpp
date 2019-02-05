@@ -24,7 +24,7 @@ make(int n)
     return c;
 }
 
-int main()
+int main(int, char**)
 {
     std::deque<int> d = make<std::deque<int> >(5);
     std::stack<int> q(d);
@@ -34,4 +34,6 @@ int main()
         assert(q.top() == d[d.size() - i - 1]);
         q.pop();
     }
+
+  return 0;
 }

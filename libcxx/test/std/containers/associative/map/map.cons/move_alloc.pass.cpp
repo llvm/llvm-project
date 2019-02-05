@@ -24,7 +24,7 @@
 #include "min_allocator.h"
 #include "Counter.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
@@ -268,4 +268,6 @@ int main()
         assert(m3.key_comp() == C(5));
         LIBCPP_ASSERT(m1.empty());
     }
+
+  return 0;
 }

@@ -49,7 +49,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::wostream os((std::wstreambuf*)0);
@@ -84,4 +84,6 @@ int main()
         assert(sb.str() == L"a    ");
         assert(os.width() == 0);
     }
+
+  return 0;
 }

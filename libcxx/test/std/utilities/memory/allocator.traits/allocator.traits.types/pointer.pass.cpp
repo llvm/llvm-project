@@ -43,11 +43,13 @@ private:
     typedef void pointer;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::allocator_traits<A<char> >::pointer, Ptr<char> >::value), "");
     static_assert((std::is_same<std::allocator_traits<B<char> >::pointer, char*>::value), "");
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::allocator_traits<C<char> >::pointer, char*>::value), "");
 #endif
+
+  return 0;
 }

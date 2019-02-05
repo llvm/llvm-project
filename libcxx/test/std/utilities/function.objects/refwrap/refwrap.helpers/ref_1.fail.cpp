@@ -22,7 +22,9 @@ struct A {};
 
 const A source() {return A();}
 
-int main()
+int main(int, char**)
 {
     std::reference_wrapper<const A> r = std::ref(source());
+
+  return 0;
 }

@@ -61,7 +61,7 @@ test()
     };
 }
 
-int main()
+int main(int, char**)
 {
     test_constexpr<optional<int>>();
     test_constexpr<optional<int*>>();
@@ -77,4 +77,6 @@ int main()
     test_constexpr<optional<NonLiteralTypes::NoCtors&>>();
     test_constexpr<optional<NonLiteralTypes::NoCtors&&>>();
 #endif
+
+  return 0;
 }

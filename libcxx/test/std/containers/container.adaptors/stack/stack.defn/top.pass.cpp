@@ -13,7 +13,7 @@
 #include <stack>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::stack<int> q;
     assert(q.size() == 0);
@@ -22,4 +22,6 @@ int main()
     q.push(3);
     int& ir = q.top();
     assert(ir == 3);
+
+  return 0;
 }

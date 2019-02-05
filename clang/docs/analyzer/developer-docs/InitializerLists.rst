@@ -1,3 +1,6 @@
+================
+Initializer List
+================
 This discussion took place in https://reviews.llvm.org/D35216
 "Escape symbols when creating std::initializer_list".
 
@@ -20,11 +23,11 @@ passed into initializer list expressions to immediately escape.
 This fix is overly conservative though. So i did a bit of investigation as to
 how model std::initializer_list better.
 
-According to the standard, std::initializer_list<T> is an object that has
-methods begin(), end(), and size(), where begin() returns a pointer to continuous
-array of size() objects of type T, and end() is equal to begin() plus size().
+According to the standard, ``std::initializer_list<T>`` is an object that has
+methods ``begin(), end(), and size()``, where ``begin()`` returns a pointer to continuous
+array of ``size()`` objects of type T, and end() is equal to begin() plus size().
 The standard does hint that it should be possible to implement
-std::initializer_list<T> as a pair of pointers, or as a pointer and a size
+``std::initializer_list<T>`` as a pair of pointers, or as a pointer and a size
 integer, however specific fields that the object would contain are an
 implementation detail.
 
@@ -33,21 +36,21 @@ Or, at least, it should be possible to explain to the analyzer that the list
 somehow "takes hold" of the values put into it. Initializer lists can also be
 copied, which is a separate story that i'm not trying to address here.
 
-The obvious approach to modeling std::initializer_list in a checker would be to
+The obvious approach to modeling ``std::initializer_list`` in a checker would be to
 construct a SymbolMetadata for the memory region of the initializer list object,
-which would be of type T* and represent begin(), so we'd trivially model begin()
+which would be of type ``T*`` and represent ``begin()``, so we'd trivially model ``begin()``
 as a function that returns this symbol. The array pointed to by that symbol
-would be bindLoc()ed to contain the list's contents (probably as a CompoundVal
+would be ``bindLoc()``ed to contain the list's contents (probably as a ``CompoundVal``
 to produce less bindings in the store). Extent of this array would represent
-size() and would be equal to the length of the list as written.
+``size()`` and would be equal to the length of the list as written.
 
 So this sounds good, however apparently it does nothing to address our false
-positives: when the list escapes, our RegionStoreManager is not magically
+positives: when the list escapes, our ``RegionStoreManager`` is not magically
 guessing that the metadata symbol attached to it, together with its contents,
 should also escape. In fact, it's impossible to trigger a pointer escape from
 within the checker.
 
-Approach (1): If only we enabled ProgramState::bindLoc(..., notifyChanges=true)
+Approach (1): If only we enabled ``ProgramState::bindLoc(..., notifyChanges=true)``
 to cause pointer escapes (not only region changes) (which sounds like the right
 thing to do anyway) such checker would be able to solve the false positives by
 triggering escapes when binding list elements to the list. However, it'd be as
@@ -71,7 +74,7 @@ to escape. This puts a stress on the checkers, but with a smart data map it
 wouldn't be a problem.
 
 Approach (4): We could allow checkers to trigger pointer escapes in arbitrary
-moments. If we allow doing this within checkPointerEscape callback itself, we
+moments. If we allow doing this within ``checkPointerEscape`` callback itself, we
 would be able to express facts like "when this region escapes, that metadata
 symbol attached to it should also escape". This sounds like an ultimate freedom,
 with maximum stress on the checkers - still not too much stress when we have
@@ -84,11 +87,10 @@ performance overhead, and clarity seems nice.
 
 At this point, I am a bit wondering about two questions.
 
-- When should something belong to a checker and when should something belong
-to the engine? Sometimes we model library aspects in the engine and model
-language constructs in checkers.
-- What is the checker programming model that we are aiming for? Maximum
-freedom or more easy checker development?
+* When should something belong to a checker and when should something belong to the engine? 
+  Sometimes we model library aspects in the engine and model language constructs in checkers.
+
+* What is the checker programming model that we are aiming for? Maximum freedom or more easy checker development?
 
 I think if we aim for maximum freedom, we do not need to worry about the
 potential stress on checkers, and we can introduce abstractions to mitigate that
@@ -100,36 +102,37 @@ of complicating the API.
 Right now I have no preference or objections between the alternatives but there
 are some random thoughts:
 
-- Maybe it would be great to have a guideline how to evolve the analyzer and
-follow it, so it can help us to decide in similar situations
-- I do care about performance in this case. The reason is that we have a
-limited performance budget. And I think we should not expect most of the checker
-writers to add modeling of language constructs. So, in my opinion, it is ok to
-have less nice/more verbose API for language modeling if we can have better
-performance this way, since it only needs to be done once, and is done by the
-framework developers.
+* Maybe it would be great to have a guideline how to evolve the analyzer and
+  follow it, so it can help us to decide in similar situations
+
+* I do care about performance in this case. The reason is that we have a
+  limited performance budget. And I think we should not expect most of the checker
+  writers to add modeling of language constructs. So, in my opinion, it is ok to
+  have less nice/more verbose API for language modeling if we can have better
+  performance this way, since it only needs to be done once, and is done by the
+  framework developers.
 
 **Artem:** These are some great questions, i guess it'd be better to discuss
 them more openly. As a quick dump of my current mood:
 
-- To me it seems obvious that we need to aim for a checker API that is both
-simple and powerful. This can probably by keeping the API as powerful as
-necessary while providing a layer of simple ready-made solutions on top of it.
-Probably a few reusable components for assembling checkers. And this layer
-should ideally be pleasant enough to work with, so that people would prefer to
-extend it when something is lacking, instead of falling back to the complex
-omnipotent API. I'm thinking of AST matchers vs. AST visitors as a roughly
-similar situation: matchers are not omnipotent, but they're so nice.
+* To me it seems obvious that we need to aim for a checker API that is both
+  simple and powerful. This can probably by keeping the API as powerful as
+  necessary while providing a layer of simple ready-made solutions on top of it.
+  Probably a few reusable components for assembling checkers. And this layer
+  should ideally be pleasant enough to work with, so that people would prefer to
+  extend it when something is lacking, instead of falling back to the complex
+  omnipotent API. I'm thinking of AST matchers vs. AST visitors as a roughly
+  similar situation: matchers are not omnipotent, but they're so nice.
 
-- Separation between core and checkers is usually quite strange. Once we have
-shared state traits, i generally wouldn't mind having region store or range
-constraint manager as checkers (though it's probably not worth it to transform
-them - just a mood). The main thing to avoid here would be the situation when
-the checker overwrites stuff written by the core because it thinks it has a
-better idea what's going on, so the core should provide a good default behavior.
+* Separation between core and checkers is usually quite strange. Once we have
+  shared state traits, i generally wouldn't mind having region store or range
+  constraint manager as checkers (though it's probably not worth it to transform
+  them - just a mood). The main thing to avoid here would be the situation when
+  the checker overwrites stuff written by the core because it thinks it has a
+  better idea what's going on, so the core should provide a good default behavior.
 
-- Yeah, i totally care about performance as well, and if i try to implement
-approach, i'd make sure it's good.
+* Yeah, i totally care about performance as well, and if i try to implement
+  approach, i'd make sure it's good.
 
 **Artem:**
 
@@ -159,7 +162,7 @@ with different identifiers. This wouldn't specify how the memory is reachable,
 but it would allow for transfer functions to get at those regions and it would
 allow for invalidation.
 
-For std::initializer_list this reachable region would the region for the backing
+For ``std::initializer_list`` this reachable region would the region for the backing
 array and the transfer functions for begin() and end() yield the beginning and
 end element regions for it.
 
@@ -185,7 +188,7 @@ invalidation for free.
 
 **Artem:**
 
-> In this case, I would be fine with some sort of AbstractStorageMemoryRegion
+> In this case, I would be fine with some sort of ``AbstractStorageMemoryRegion``
 > that meant "here is a memory region and somewhere reachable from here exists
 > another region of type T". Or even multiple regions with different
 > identifiers. This wouldn't specify how the memory is reachable, but it would
@@ -196,7 +199,7 @@ Yeah, this is what we can easily implement now as a
 symbolic-region-based-on-a-metadata-symbol (though we can make a new region
 class for that if we eg. want it typed). The problem is that the relation
 between such storage region and its parent object region is essentially
-immaterial, similarly to the relation between SymbolRegionValue and its parent
+immaterial, similarly to the relation between ``SymbolRegionValue`` and its parent
 region. Region contents are mutable: today the abstract storage is reachable
 from its parent object, tomorrow it's not, and maybe something else becomes
 reachable, something that isn't even abstract. So the parent region for the
@@ -213,28 +216,31 @@ change the data after the object is constructed - so this region's contents are
 essentially immutable. For the future, i feel as if it is a dead end.
 
 I'd like to consider another funny example. Suppose we're trying to model
-std::unique_ptr. Consider::
 
-  void bar(const std::unique_ptr<int> &x);
-
-  void foo(std::unique_ptr<int> &x) {
-    int *a = x.get();   // (a, 0, direct): &AbstractStorageRegion
-    *a = 1;             // (AbstractStorageRegion, 0, direct): 1 S32b
-    int *b = new int;
-    *b = 2;             // (SymRegion{conj_$0<int *>}, 0 ,direct): 2 S32b
-    x.reset(b);         // Checker map: x -> SymRegion{conj_$0<int *>}
-    bar(x);             // 'a' doesn't escape (the pointer was unique), 'b' does.
-    clang_analyzer_eval(*a == 1); // Making this true is up to the checker.
-    clang_analyzer_eval(*b == 2); // Making this unknown is up to the checker.
-  }
-
-The checker doesn't totally need to ensure that *a == 1 passes - even though the
-pointer was unique, it could theoretically have .get()-ed above and the code
+.. code-block:: cpp
+ 
+ std::unique_ptr. Consider::
+ 
+   void bar(const std::unique_ptr<int> &x);
+ 
+   void foo(std::unique_ptr<int> &x) {
+     int *a = x.get();   // (a, 0, direct): &AbstractStorageRegion
+     *a = 1;             // (AbstractStorageRegion, 0, direct): 1 S32b
+     int *b = new int;
+     *b = 2;             // (SymRegion{conj_$0<int *>}, 0 ,direct): 2 S32b
+     x.reset(b);         // Checker map: x -> SymRegion{conj_$0<int *>}
+     bar(x);             // 'a' doesn't escape (the pointer was unique), 'b' does.
+     clang_analyzer_eval(*a == 1); // Making this true is up to the checker.
+     clang_analyzer_eval(*b == 2); // Making this unknown is up to the checker.
+   }
+ 
+The checker doesn't totally need to ensure that ``*a == 1`` passes - even though the
+pointer was unique, it could theoretically have ``.get()``-ed above and the code
 could of course break the uniqueness invariant (though we'd probably want it).
-The checker can say that "even if *a did escape, it was not because it was
+The checker can say that "even if ``*a`` did escape, it was not because it was
 stuffed directly into bar()".
 
-The checker's direct responsibility, however, is to solve the *b == 2 thing
+The checker's direct responsibility, however, is to solve the ``*b == 2`` thing
 (which is in fact the problem we're dealing with in this patch - escaping the
 storage region of the object).
 
@@ -293,7 +299,7 @@ FunctionDecl's body in a body farm to have a local variable, even if such
 variable doesn't actually exist, even if it cannot be seen from outside the
 function call. I'm not seeing immediate practical difference between "it does
 actually exist" and "it doesn't actually exist, just a handy abstraction".
-Similarly, i think it's fine if we have a CXXRecordDecl with
+Similarly, i think it's fine if we have a ``CXXRecordDecl`` with
 implementation-defined contents, and try to farm up a member variable as a handy
 abstraction (we don't even need to know its name or offset, only that it's there
 somewhere).
@@ -303,18 +309,18 @@ somewhere).
 We've discussed it in person with Devin, and he provided more points to think
 about:
 
-- If the initializer list consists of non-POD data, constructors of list's
-objects need to take the sub-region of the list's region as this-region In the
-current (v2) version of this patch, these objects are constructed elsewhere and
-then trivial-copied into the list's metadata pointer region, which may be
-incorrect. This is our overall problem with C++ constructors, which manifests in
-this case as well. Additionally, objects would need to be constructed in the
-analyzer's core, which would not be able to predict that it needs to take a
-checker-specific region as this-region, which makes it harder, though it might
-be mitigated by sharing the checker state traits.
+* If the initializer list consists of non-POD data, constructors of list's
+  objects need to take the sub-region of the list's region as this-region In the
+  current (v2) version of this patch, these objects are constructed elsewhere and
+  then trivial-copied into the list's metadata pointer region, which may be
+  incorrect. This is our overall problem with C++ constructors, which manifests in
+  this case as well. Additionally, objects would need to be constructed in the
+  analyzer's core, which would not be able to predict that it needs to take a
+  checker-specific region as this-region, which makes it harder, though it might
+  be mitigated by sharing the checker state traits.
 
-- Because "ghost variables" are not material to the user, we need to somehow
-make super sure that they don't make it into the diagnostic messages.
+* Because "ghost variables" are not material to the user, we need to somehow
+  make super sure that they don't make it into the diagnostic messages.
 
 So, because this needs further digging into overall C++ support and rises too
 many questions, i'm delaying a better approach to this problem and will fall

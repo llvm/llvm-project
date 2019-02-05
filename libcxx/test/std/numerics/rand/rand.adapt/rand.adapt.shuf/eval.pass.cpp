@@ -86,9 +86,11 @@ test3()
     assert(e() == 500);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
     test3();
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 #include <ios>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::ios_base::badbit);
     assert(std::ios_base::eofbit);
@@ -32,4 +32,6 @@ int main()
     );
 
     assert(std::ios_base::goodbit == 0);
+
+  return 0;
 }

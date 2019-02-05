@@ -35,7 +35,7 @@ struct my_facet
 
 int my_facet::count = 0;
 
-int main()
+int main(int, char**)
 {
     my_facet* f = new my_facet;
     f->__add_shared();
@@ -49,4 +49,6 @@ int main()
     assert(my_facet::count == 1);
     f->__release_shared();
     assert(my_facet::count == 0);
+
+  return 0;
 }

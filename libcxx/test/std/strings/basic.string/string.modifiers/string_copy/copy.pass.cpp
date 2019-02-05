@@ -49,7 +49,7 @@ test(S str, typename S::value_type* s, typename S::size_type n,
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -177,4 +177,6 @@ int main()
     test(S("abcdefghijklmnopqrst"), s, 21, 0);
     }
 #endif
+
+  return 0;
 }

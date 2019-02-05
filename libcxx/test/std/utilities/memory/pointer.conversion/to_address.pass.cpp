@@ -99,7 +99,7 @@ struct pointer_traits<::P4>
 int n = 0;
 static_assert(std::to_address(&n) == &n);
 
-int main()
+int main(int, char**)
 {
     int i = 0;
     ASSERT_NOEXCEPT(std::to_address(&i));
@@ -116,4 +116,6 @@ int main()
     P4 p4(&i);
     ASSERT_NOEXCEPT(std::to_address(p4));
     assert(std::to_address(p4) == &i);
+
+  return 0;
 }

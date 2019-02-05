@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_linear_distribution<> D;
@@ -37,4 +37,6 @@ int main()
         P p2(b, b+4, p);
         assert(p1 != p2);
     }
+
+  return 0;
 }

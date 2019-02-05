@@ -57,7 +57,7 @@ int A::count = 0;
 int g(int) {return 0;}
 int h(int) {return 1;}
 
-int main()
+int main(int, char**)
 {
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
@@ -132,4 +132,6 @@ int main()
     }
     assert(A::count == 0);
     assert(globalMemCounter.checkOutstandingNewEq(0));
+
+  return 0;
 }

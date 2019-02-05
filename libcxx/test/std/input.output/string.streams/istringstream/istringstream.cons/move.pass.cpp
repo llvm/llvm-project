@@ -18,7 +18,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::istringstream ss0(" 123 456");
@@ -44,4 +44,6 @@ int main()
         ss >> i;
         assert(i == 456);
     }
+
+  return 0;
 }

@@ -22,7 +22,7 @@
 #include <codecvt>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::codecvt_utf16<wchar_t> C;
@@ -445,4 +445,6 @@ int main()
         r = c.length(m, n, n+2, 2);
         assert(r == 2);
     }
+
+  return 0;
 }

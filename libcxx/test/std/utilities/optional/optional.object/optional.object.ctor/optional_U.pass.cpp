@@ -61,7 +61,7 @@ struct Z
     Z(int) { TEST_THROW(6); }
 };
 
-int main()
+int main(int, char**)
 {
     {
         optional<short> rhs;
@@ -89,4 +89,6 @@ int main()
     }
 
     static_assert(!(std::is_constructible<optional<X>, optional<Z>>::value), "");
+
+  return 0;
 }

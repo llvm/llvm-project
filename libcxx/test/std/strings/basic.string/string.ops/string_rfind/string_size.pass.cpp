@@ -140,7 +140,7 @@ void test1()
     test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 0);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -161,4 +161,6 @@ int main()
     assert(s.rfind({"abc", 1}) == std::string::npos);
     }
 #endif
+
+  return 0;
 }

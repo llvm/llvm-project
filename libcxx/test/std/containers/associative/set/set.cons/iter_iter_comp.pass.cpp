@@ -19,7 +19,7 @@
 #include "test_iterators.h"
 #include "../../../test_compare.h"
 
-int main()
+int main(int, char**)
 {
     typedef int V;
     V ar[] =
@@ -43,4 +43,6 @@ int main()
     assert(*m.begin() == 1);
     assert(*next(m.begin()) == 2);
     assert(*next(m.begin(), 2) == 3);
+
+  return 0;
 }

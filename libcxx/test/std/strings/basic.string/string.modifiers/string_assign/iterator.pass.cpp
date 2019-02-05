@@ -43,7 +43,7 @@ test_exceptions(S s, It first, It last)
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -204,4 +204,6 @@ int main()
     s.assign(p, p + 4);
     assert(s == "ABCD");
     }
+
+  return 0;
 }

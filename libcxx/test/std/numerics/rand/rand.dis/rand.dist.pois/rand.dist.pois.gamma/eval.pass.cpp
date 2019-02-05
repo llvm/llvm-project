@@ -28,7 +28,7 @@ sqr(T x)
     return x * x;
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::gamma_distribution<> D;
@@ -147,4 +147,6 @@ int main()
         assert(std::abs((skew - x_skew) / x_skew) < 0.01);
         assert(std::abs((kurtosis - x_kurtosis) / x_kurtosis) < 0.01);
     }
+
+  return 0;
 }

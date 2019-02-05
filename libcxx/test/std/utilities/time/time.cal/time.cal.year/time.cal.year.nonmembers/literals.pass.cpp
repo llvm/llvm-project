@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     using namespace std::chrono;
@@ -40,4 +40,6 @@ int main()
     std::chrono::year y1 = 2020y;
     assert (y1 == std::chrono::year(2020));
     }
+
+  return 0;
 }

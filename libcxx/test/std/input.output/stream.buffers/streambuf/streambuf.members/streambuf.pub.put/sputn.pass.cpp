@@ -31,10 +31,12 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(xsputn_called == 0);
     assert(t.sputn(0, 0) == 5);
     assert(xsputn_called == 1);
+
+  return 0;
 }

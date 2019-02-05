@@ -34,7 +34,7 @@ void test ( const CharT *s1, const CharT  *s2, int expected ) {
     test1(sv1, sv2, expected);
 }
 
-int main () {
+int main(int, char**) {
 
     test("",                     "", 0);
     test("",                     "abcde", -5);
@@ -118,4 +118,6 @@ int main () {
     static_assert ( sv2.compare(sv3)  < 0, "" );
     }
 #endif
+
+  return 0;
 }

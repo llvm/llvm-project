@@ -34,7 +34,7 @@ test(S s0, const typename S::allocator_type& a)
 }
 
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -74,4 +74,6 @@ int main()
     test(S("1"), A());
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), A());
     }
+
+  return 0;
 }

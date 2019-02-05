@@ -15,7 +15,9 @@
 
 #include <streambuf>
 
-int main()
+int main(int, char**)
 {
     std::basic_streambuf<char> sb;
+
+  return 0;
 }

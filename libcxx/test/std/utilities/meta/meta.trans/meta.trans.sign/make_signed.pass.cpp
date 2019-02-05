@@ -42,7 +42,7 @@ void test_make_signed()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_make_signed< signed char, signed char >();
     test_make_signed< unsigned char, signed char >();
@@ -66,4 +66,6 @@ int main()
     test_make_signed< HugeEnum, __int128_t >();
 # endif
 #endif
+
+  return 0;
 }

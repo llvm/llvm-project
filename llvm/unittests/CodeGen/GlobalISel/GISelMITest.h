@@ -195,7 +195,9 @@ static inline bool CheckMachineFunction(const MachineFunction &MF,
                         SMLoc());
   Regex PrefixRE = FC.buildCheckPrefixRegex();
   std::vector<FileCheckString> CheckStrings;
-  FC.ReadCheckFile(SM, CheckFileText, PrefixRE, CheckStrings);
+  if (FC.ReadCheckFile(SM, CheckFileText, PrefixRE, CheckStrings))
+    return false;
+
   auto OutBuffer = OutputBuf->getBuffer();
   SM.AddNewSourceBuffer(std::move(OutputBuf), SMLoc());
   return FC.CheckInput(SM, OutBuffer, CheckStrings);

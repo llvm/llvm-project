@@ -23,7 +23,7 @@
 
 namespace ex = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     {
         static_assert(
@@ -45,4 +45,6 @@ int main()
         assert(a.resource() == &R1);
         assert(a2.resource() == ex::new_delete_resource());
     }
+
+  return 0;
 }

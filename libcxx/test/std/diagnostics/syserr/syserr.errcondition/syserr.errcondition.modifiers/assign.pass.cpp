@@ -15,7 +15,7 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::error_condition ec;
@@ -29,4 +29,6 @@ int main()
         assert(ec.value() == 8);
         assert(ec.category() == std::generic_category());
     }
+
+  return 0;
 }

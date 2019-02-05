@@ -24,7 +24,7 @@
 #include <cstddef>
 
 
-int main()
+int main(int, char**)
 {
 //  Test the explicit deduction guides
     {
@@ -49,4 +49,6 @@ int main()
 //      stack<allocator<int>, allocator<allocator<int>>>
     }
 
+
+  return 0;
 }

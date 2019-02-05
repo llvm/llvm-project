@@ -64,7 +64,7 @@ struct C
 
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<long> T0;
@@ -136,4 +136,6 @@ int main()
         std::tuple<Implicit> t2 = t1;
         assert(std::get<0>(t2).value == 42);
     }
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::seed_seq s= {5, 4, 3, 2, 1};
     assert(s.size() == 5);
@@ -29,4 +29,6 @@ int main()
     assert(b[2] == 3);
     assert(b[3] == 2);
     assert(b[4] == 1);
+
+  return 0;
 }

@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::stringbuf buf("testing");
@@ -30,4 +30,6 @@ int main()
         buf.str(L"another test");
         assert(buf.str() == L"another test");
     }
+
+  return 0;
 }

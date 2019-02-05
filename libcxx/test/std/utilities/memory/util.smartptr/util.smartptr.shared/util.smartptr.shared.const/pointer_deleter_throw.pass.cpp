@@ -34,7 +34,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     A* ptr = new A;
     globalMemCounter.throw_after = 0;
@@ -50,4 +50,6 @@ int main()
         assert(test_deleter<A>::dealloc_count == 1);
     }
     assert(globalMemCounter.checkOutstandingNewEq(0));
+
+  return 0;
 }

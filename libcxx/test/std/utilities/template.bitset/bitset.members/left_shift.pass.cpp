@@ -41,7 +41,7 @@ void test_left_shift()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_left_shift<0>();
     test_left_shift<1>();
@@ -52,4 +52,6 @@ int main()
     test_left_shift<64>();
     test_left_shift<65>();
     test_left_shift<1000>();
+
+  return 0;
 }

@@ -23,7 +23,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   for (std::regex_constants::syntax_option_type op :
        {std::regex::ECMAScript, std::regex::extended, std::regex::egrep,
         std::regex::awk}) {

@@ -63,7 +63,7 @@ struct C
     void operator=(C&);  // not const
 };
 
-int main()
+int main(int, char**)
 {
     test_is_copy_assignable<int> ();
     test_is_copy_assignable<int&> ();
@@ -81,4 +81,6 @@ int main()
 #endif
     test_is_not_copy_assignable<void> ();
     test_is_not_copy_assignable<C> ();
+
+  return 0;
 }

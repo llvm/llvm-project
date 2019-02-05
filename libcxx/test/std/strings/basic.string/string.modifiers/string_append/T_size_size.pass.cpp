@@ -71,7 +71,7 @@ test_npos(S s, SV sv, typename S::size_type pos, S expected)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -196,4 +196,6 @@ int main()
     s.append(sv, 0, std::string::npos);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ");
     }
+
+  return 0;
 }

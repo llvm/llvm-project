@@ -57,7 +57,7 @@
 #error FE_DFL_ENV not defined
 #endif
 
-int main()
+int main(int, char**)
 {
     fenv_t fenv = {};
     fexcept_t fex = 0;
@@ -72,4 +72,6 @@ int main()
     static_assert((std::is_same<decltype(feholdexcept(&fenv)), int>::value), "");
     static_assert((std::is_same<decltype(fesetenv(&fenv)), int>::value), "");
     static_assert((std::is_same<decltype(feupdateenv(&fenv)), int>::value), "");
+
+  return 0;
 }

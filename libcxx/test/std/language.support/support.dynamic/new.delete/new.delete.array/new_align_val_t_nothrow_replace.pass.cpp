@@ -86,7 +86,7 @@ void  operator delete[](void* p, std::align_val_t a) TEST_NOEXCEPT
     --new_called;
 }
 
-int main()
+int main(int, char**)
 {
     {
         A* ap = new (std::nothrow) A[2];
@@ -106,4 +106,6 @@ int main()
         assert(!new_called);
         assert(!B_constructed);
     }
+
+  return 0;
 }

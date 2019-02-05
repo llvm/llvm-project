@@ -25,11 +25,13 @@ typedef std::packaged_task<A(int, char)> PT;
 typedef volatile std::packaged_task<A(int, char)> VPT;
 
 
-int main()
+int main(int, char**)
 {
     VPT init{};
     auto const& c_init = init;
     PT p1{init}; // expected-error {{no matching constructor}}
     PT p2{c_init}; // expected-error {{no matching constructor}}
     PT p3{std::move(init)}; // expected-error {{no matching constructor for initialization of 'PT' (aka 'packaged_task<A (int, char)>')}}
+
+  return 0;
 }

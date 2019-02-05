@@ -16,7 +16,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex_traits<char> t;
@@ -122,4 +122,6 @@ int main()
             assert(t.value(c, 16) == -1);
         }
     }
+
+  return 0;
 }

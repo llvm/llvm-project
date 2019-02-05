@@ -25,7 +25,7 @@
 #include "min_allocator.h"
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, Emplaceable> C;
@@ -88,4 +88,6 @@ int main()
         assert(r->first == 3);
         LIBCPP_ASSERT(r->second == Emplaceable(5, 6));
     }
+
+  return 0;
 }

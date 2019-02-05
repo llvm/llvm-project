@@ -75,10 +75,12 @@ void test(Container& c)
     }
 }
 
-int main()
+int main(int, char**)
 {
     std::map<int, int> m;
     test(m);
     std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
     test(m2);
+
+  return 0;
 }

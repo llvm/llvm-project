@@ -40,7 +40,7 @@ protected:
     virtual std::string do_grouping() const {return std::string("\1\2\3");}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     std::ios ios(0);
@@ -102,4 +102,6 @@ int main()
         const long long expect = 0x8000000000000000LL;
         assert(v == expect);
     }
+
+  return 0;
 }

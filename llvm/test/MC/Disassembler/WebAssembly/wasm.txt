@@ -22,6 +22,10 @@
 # FIXME: WebAssemblyInstPrinter does not print immediates.
 0x11 0x80 0x01 0x00
 
+# CHECK: call 0
+# CHECK-NOT: except_ref.call 0
+0x10 0x00
+
 # CHECK: local.get 128
 0x20 0x80 0x01
 
@@ -29,8 +33,7 @@
 # CHECK: i64.trunc_sat_f64_u
 0xFC 0x07
 
-# v128.const is arbitrarily disassembled as v16i8
-# CHECK: v128.const 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+# CHECK: v128.const 50462976, 117835012, 185207048, 252579084
 0xFD 0x02 0x00 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09 0x0A 0x0B 0x0C 0x0D 0x0E 0x0F
 
 # CHECK: v8x16.shuffle 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
@@ -48,3 +51,7 @@
 # Check br_table, which has its own operand type.
 # CHECK: br_table {0, 1, 2}
 0x0E 0x02 0x00 0x01 0x02
+
+# This can mean end_block/end_loop/end_if/end_function/end_try..
+# CHECK: end
+0x0B

@@ -28,7 +28,7 @@
 using namespace clang;
 using namespace CodeGen;
 
-static llvm::Constant *getFreeExceptionFn(CodeGenModule &CGM) {
+static llvm::FunctionCallee getFreeExceptionFn(CodeGenModule &CGM) {
   // void __cxa_free_exception(void *thrown_exception);
 
   llvm::FunctionType *FTy =
@@ -37,7 +37,7 @@ static llvm::Constant *getFreeExceptionFn(CodeGenModule &CGM) {
   return CGM.CreateRuntimeFunction(FTy, "__cxa_free_exception");
 }
 
-static llvm::Constant *getUnexpectedFn(CodeGenModule &CGM) {
+static llvm::FunctionCallee getUnexpectedFn(CodeGenModule &CGM) {
   // void __cxa_call_unexpected(void *thrown_exception);
 
   llvm::FunctionType *FTy =
@@ -46,7 +46,7 @@ static llvm::Constant *getUnexpectedFn(CodeGenModule &CGM) {
   return CGM.CreateRuntimeFunction(FTy, "__cxa_call_unexpected");
 }
 
-llvm::Constant *CodeGenModule::getTerminateFn() {
+llvm::FunctionCallee CodeGenModule::getTerminateFn() {
   // void __terminate();
 
   llvm::FunctionType *FTy =
@@ -72,8 +72,8 @@ llvm::Constant *CodeGenModule::getTerminateFn() {
   return CreateRuntimeFunction(FTy, name);
 }
 
-static llvm::Constant *getCatchallRethrowFn(CodeGenModule &CGM,
-                                            StringRef Name) {
+static llvm::FunctionCallee getCatchallRethrowFn(CodeGenModule &CGM,
+                                                 StringRef Name) {
   llvm::FunctionType *FTy =
     llvm::FunctionType::get(CGM.VoidTy, CGM.Int8PtrTy, /*IsVarArgs=*/false);
 
@@ -238,8 +238,8 @@ const EHPersonality &EHPersonality::get(CodeGenFunction &CGF) {
   return get(CGF.CGM, dyn_cast_or_null<FunctionDecl>(FD));
 }
 
-static llvm::Constant *getPersonalityFn(CodeGenModule &CGM,
-                                        const EHPersonality &Personality) {
+static llvm::FunctionCallee getPersonalityFn(CodeGenModule &CGM,
+                                             const EHPersonality &Personality) {
   return CGM.CreateRuntimeFunction(llvm::FunctionType::get(CGM.Int32Ty, true),
                                    Personality.PersonalityFn,
                                    llvm::AttributeList(), /*Local=*/true);
@@ -247,12 +247,13 @@ static llvm::Constant *getPersonalityFn(CodeGenModule &CGM,
 
 static llvm::Constant *getOpaquePersonalityFn(CodeGenModule &CGM,
                                         const EHPersonality &Personality) {
-  llvm::Constant *Fn = getPersonalityFn(CGM, Personality);
+  llvm::FunctionCallee Fn = getPersonalityFn(CGM, Personality);
   llvm::PointerType* Int8PtrTy = llvm::PointerType::get(
       llvm::Type::getInt8Ty(CGM.getLLVMContext()),
       CGM.getDataLayout().getProgramAddressSpace());
 
-  return llvm::ConstantExpr::getBitCast(Fn, Int8PtrTy);
+  return llvm::ConstantExpr::getBitCast(cast<llvm::Constant>(Fn.getCallee()),
+                                        Int8PtrTy);
 }
 
 /// Check whether a landingpad instruction only uses C++ features.
@@ -343,12 +344,13 @@ void CodeGenModule::SimplifyPersonality() {
 
   // Create the C++ personality function and kill off the old
   // function.
-  llvm::Constant *CXXFn = getPersonalityFn(*this, CXX);
+  llvm::FunctionCallee CXXFn = getPersonalityFn(*this, CXX);
 
   // This can happen if the user is screwing with us.
-  if (Fn->getType() != CXXFn->getType()) return;
+  if (Fn->getType() != CXXFn.getCallee()->getType())
+    return;
 
-  Fn->replaceAllUsesWith(CXXFn);
+  Fn->replaceAllUsesWith(CXXFn.getCallee());
   Fn->eraseFromParent();
 }
 
@@ -1267,9 +1269,10 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
 namespace {
   struct CallEndCatchForFinally final : EHScopeStack::Cleanup {
     llvm::Value *ForEHVar;
-    llvm::Value *EndCatchFn;
-    CallEndCatchForFinally(llvm::Value *ForEHVar, llvm::Value *EndCatchFn)
-      : ForEHVar(ForEHVar), EndCatchFn(EndCatchFn) {}
+    llvm::FunctionCallee EndCatchFn;
+    CallEndCatchForFinally(llvm::Value *ForEHVar,
+                           llvm::FunctionCallee EndCatchFn)
+        : ForEHVar(ForEHVar), EndCatchFn(EndCatchFn) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       llvm::BasicBlock *EndCatchBB = CGF.createBasicBlock("finally.endcatch");
@@ -1288,15 +1291,15 @@ namespace {
   struct PerformFinally final : EHScopeStack::Cleanup {
     const Stmt *Body;
     llvm::Value *ForEHVar;
-    llvm::Value *EndCatchFn;
-    llvm::Value *RethrowFn;
+    llvm::FunctionCallee EndCatchFn;
+    llvm::FunctionCallee RethrowFn;
     llvm::Value *SavedExnVar;
 
     PerformFinally(const Stmt *Body, llvm::Value *ForEHVar,
-                   llvm::Value *EndCatchFn,
-                   llvm::Value *RethrowFn, llvm::Value *SavedExnVar)
-      : Body(Body), ForEHVar(ForEHVar), EndCatchFn(EndCatchFn),
-        RethrowFn(RethrowFn), SavedExnVar(SavedExnVar) {}
+                   llvm::FunctionCallee EndCatchFn,
+                   llvm::FunctionCallee RethrowFn, llvm::Value *SavedExnVar)
+        : Body(Body), ForEHVar(ForEHVar), EndCatchFn(EndCatchFn),
+          RethrowFn(RethrowFn), SavedExnVar(SavedExnVar) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       // Enter a cleanup to call the end-catch function if one was provided.
@@ -1358,12 +1361,11 @@ namespace {
 /// Enters a finally block for an implementation using zero-cost
 /// exceptions.  This is mostly general, but hard-codes some
 /// language/ABI-specific behavior in the catch-all sections.
-void CodeGenFunction::FinallyInfo::enter(CodeGenFunction &CGF,
-                                         const Stmt *body,
-                                         llvm::Constant *beginCatchFn,
-                                         llvm::Constant *endCatchFn,
-                                         llvm::Constant *rethrowFn) {
-  assert((beginCatchFn != nullptr) == (endCatchFn != nullptr) &&
+void CodeGenFunction::FinallyInfo::enter(CodeGenFunction &CGF, const Stmt *body,
+                                         llvm::FunctionCallee beginCatchFn,
+                                         llvm::FunctionCallee endCatchFn,
+                                         llvm::FunctionCallee rethrowFn) {
+  assert((!!beginCatchFn) == (!!endCatchFn) &&
          "begin/end catch functions not paired");
   assert(rethrowFn && "rethrow function is required");
 
@@ -1375,9 +1377,7 @@ void CodeGenFunction::FinallyInfo::enter(CodeGenFunction &CGF,
   // In the latter case we need to pass it the exception object.
   // But we can't use the exception slot because the @finally might
   // have a landing pad (which would overwrite the exception slot).
-  llvm::FunctionType *rethrowFnTy =
-    cast<llvm::FunctionType>(
-      cast<llvm::PointerType>(rethrowFn->getType())->getElementType());
+  llvm::FunctionType *rethrowFnTy = rethrowFn.getFunctionType();
   SavedExnVar = nullptr;
   if (rethrowFnTy->getNumParams())
     SavedExnVar = CGF.CreateTempAlloca(CGF.Int8PtrTy, "finally.exn");

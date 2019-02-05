@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::error_code ec = std::make_error_code(std::future_errc::broken_promise);
@@ -53,4 +53,6 @@ int main()
         assert(f.code() == std::make_error_code(std::future_errc::no_state));
     }
 #endif
+
+  return 0;
 }

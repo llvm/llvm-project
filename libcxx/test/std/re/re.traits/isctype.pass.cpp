@@ -20,7 +20,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex_traits<char> t;
@@ -280,4 +280,6 @@ int main()
         assert(!t.isctype(L'-', t.lookup_classname(s.begin(), s.end())));
         assert(!t.isctype(L'@', t.lookup_classname(s.begin(), s.end())));
     }
+
+  return 0;
 }

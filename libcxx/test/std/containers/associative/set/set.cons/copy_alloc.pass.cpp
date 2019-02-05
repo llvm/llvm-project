@@ -18,7 +18,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     typedef int V;
     V ar[] =
@@ -52,4 +52,6 @@ int main()
     assert(*mo.begin() == 1);
     assert(*next(mo.begin()) == 2);
     assert(*next(mo.begin(), 2) == 3);
+
+  return 0;
 }

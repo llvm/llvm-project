@@ -131,7 +131,7 @@ void test_make_any_throws()
 
 #endif
 
-int main() {
+int main(int, char**) {
     test_make_any_type<small>();
     test_make_any_type<large>();
     test_make_any_type<small_throws_on_copy>();
@@ -144,4 +144,6 @@ int main() {
     test_make_any_throws<LargeThrows>();
 
 #endif
+
+  return 0;
 }

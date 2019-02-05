@@ -48,7 +48,7 @@ protected:
     virtual std::string do_grouping() const {return std::string("\1\2\3");}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     std::ios ios(0);
@@ -278,4 +278,6 @@ int main()
         assert(err == ios.goodbit);
         assert(std::abs(v - 3.14159265358979e+10)/3.14159265358979e+10 < 1.e-8);
     }
+
+  return 0;
 }

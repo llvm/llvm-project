@@ -12,11 +12,13 @@
 
 #include <iostream>
 
-int main()
+int main(int, char**)
 {
 #if 0
     std::clog << "Hello World!\n";
 #else
     (void)std::clog;
 #endif
+
+  return 0;
 }

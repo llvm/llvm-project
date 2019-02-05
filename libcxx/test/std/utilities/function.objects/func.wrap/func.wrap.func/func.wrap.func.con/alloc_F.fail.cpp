@@ -22,7 +22,9 @@
 
 void foo(int) {}
 
-int main()
+int main(int, char**)
 {
     std::function<void(int)> f(std::allocator_arg, std::allocator<int>(), foo);
+
+  return 0;
 }

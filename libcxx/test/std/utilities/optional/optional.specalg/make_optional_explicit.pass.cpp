@@ -17,7 +17,7 @@
 #include <memory>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     using std::make_optional;
@@ -41,4 +41,6 @@ int main()
         auto opt = make_optional<std::string>(4, 'X');
         assert(*opt == "XXXX");
     }
+
+  return 0;
 }

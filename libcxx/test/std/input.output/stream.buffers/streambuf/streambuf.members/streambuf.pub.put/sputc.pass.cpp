@@ -42,7 +42,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         test t;
@@ -59,4 +59,6 @@ int main()
         assert(out[0] == 'A');
         assert(out[1] == 'B');
     }
+
+  return 0;
 }

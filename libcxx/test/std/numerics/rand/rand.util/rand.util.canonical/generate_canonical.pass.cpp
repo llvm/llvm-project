@@ -16,7 +16,7 @@
 
 #include "truncate_fp.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::minstd_rand0 E;
@@ -98,4 +98,6 @@ int main()
             (282475249 - E::min()) * (E::max() - E::min() + F(1))) /
             ((E::max() - E::min() + F(1)) * (E::max() - E::min() + F(1)))));
     }
+
+  return 0;
 }

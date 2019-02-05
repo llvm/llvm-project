@@ -16,7 +16,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -29,4 +29,6 @@ int main()
         const std::collate<wchar_t>& f = std::use_facet<std::collate<wchar_t> >(l);
         assert(f.transform(x.data(), x.data() + x.size()) == x);
     }
+
+  return 0;
 }

@@ -24,7 +24,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::has_quiet_NaN == expected, "has_quiet_NaN test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, false>();
     test<char, false>();
@@ -53,4 +53,6 @@ int main()
     test<float, true>();
     test<double, true>();
     test<long double, true>();
+
+  return 0;
 }

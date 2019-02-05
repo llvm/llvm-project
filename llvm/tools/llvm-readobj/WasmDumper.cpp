@@ -210,6 +210,15 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   W.printString("Name", Symbol.Info.Name);
   W.printEnum("Type", Symbol.Info.Kind, makeArrayRef(WasmSymbolTypes));
   W.printHex("Flags", Symbol.Info.Flags);
+  if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)
+    W.printString("Module", Symbol.Info.Module);
+  if (Symbol.Info.Kind != wasm::WASM_SYMBOL_TYPE_DATA) {
+    W.printHex("ElementIndex", Symbol.Info.ElementIndex);
+  } else if (!(Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)) {
+    W.printHex("Offset", Symbol.Info.DataRef.Offset);
+    W.printHex("Segment", Symbol.Info.DataRef.Segment);
+    W.printHex("Size", Symbol.Info.DataRef.Size);
+  }
 }
 
 } // namespace

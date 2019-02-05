@@ -52,11 +52,12 @@ struct DoTestsMetafunction {
     DoTestsMetafunction() { sink(SpecialMemberTest<TestTypes>{}...); }
 };
 
-int main() {
+int main(int, char**) {
     sink(
         ImplicitTypes::ApplyTypes<DoTestsMetafunction>{},
         ExplicitTypes::ApplyTypes<DoTestsMetafunction>{},
         NonLiteralTypes::ApplyTypes<DoTestsMetafunction>{},
         NonTrivialTypes::ApplyTypes<DoTestsMetafunction>{}
     );
+    return 0;
 }

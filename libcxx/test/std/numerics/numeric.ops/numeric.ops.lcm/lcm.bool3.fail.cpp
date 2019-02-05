@@ -18,7 +18,9 @@
 #include <numeric>
 
 
-int main()
+int main(int, char**)
 {
     std::lcm<volatile bool, int>(false, 4);
+
+  return 0;
 }

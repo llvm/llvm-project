@@ -648,7 +648,8 @@ void CodeGenVTables::addVTableComponent(
     auto getSpecialVirtualFn = [&](StringRef name) {
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-      llvm::Constant *fn = CGM.CreateRuntimeFunction(fnTy, name);
+      llvm::Constant *fn = cast<llvm::Constant>(
+          CGM.CreateRuntimeFunction(fnTy, name).getCallee());
       if (auto f = dyn_cast<llvm::Function>(fn))
         f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
       return llvm::ConstantExpr::getBitCast(fn, CGM.Int8PtrTy);

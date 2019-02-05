@@ -31,7 +31,7 @@ sqr(T x)
     return x*x;
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_constant_distribution<> D;
@@ -95,4 +95,6 @@ int main()
             }
         }
     }
+
+  return 0;
 }

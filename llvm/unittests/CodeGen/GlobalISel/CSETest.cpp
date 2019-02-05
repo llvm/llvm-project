@@ -25,6 +25,7 @@ TEST_F(GISelMITest, TestCSE) {
   CSEInfo.analyze(*MF);
   B.setCSEInfo(&CSEInfo);
   CSEMIRBuilder CSEB(B.getState());
+
   CSEB.setInsertPt(*EntryMBB, EntryMBB->begin());
   unsigned AddReg = MRI->createGenericVirtualRegister(s16);
   auto MIBAddCopy =
@@ -53,6 +54,18 @@ TEST_F(GISelMITest, TestCSE) {
   auto MIBFP0_1 = CSEB.buildFConstant(s32, 1.0);
   EXPECT_TRUE(&*MIBFP0 == &*MIBFP0_1);
   CSEInfo.print();
+
+  // Make sure buildConstant with a vector type doesn't crash, and the elements
+  // CSE.
+  auto Splat0 = CSEB.buildConstant(LLT::vector(2, s32), 0);
+  EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR, Splat0->getOpcode());
+  EXPECT_EQ(Splat0->getOperand(1).getReg(), Splat0->getOperand(2).getReg());
+  EXPECT_EQ(&*MIBCst, MRI->getVRegDef(Splat0->getOperand(1).getReg()));
+
+  auto FSplat = CSEB.buildFConstant(LLT::vector(2, s32), 1.0);
+  EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR, FSplat->getOpcode());
+  EXPECT_EQ(FSplat->getOperand(1).getReg(), FSplat->getOperand(2).getReg());
+  EXPECT_EQ(&*MIBFP0, MRI->getVRegDef(FSplat->getOperand(1).getReg()));
 
   // Check G_UNMERGE_VALUES
   auto MIBUnmerge = CSEB.buildUnmerge({s32, s32}, Copies[0]);

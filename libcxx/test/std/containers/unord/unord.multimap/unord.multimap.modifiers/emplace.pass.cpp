@@ -23,7 +23,7 @@
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, Emplaceable> C;
@@ -68,4 +68,6 @@ int main()
         assert(r->first == 5);
         assert(r->second == Emplaceable(6, 7));
     }
+
+  return 0;
 }

@@ -13,9 +13,11 @@
 
 #include <utility>
 
-int main()
+int main(int, char**)
 {
     std::initializer_list<int> x;
     (void)x;
+
+  return 0;
 }
 

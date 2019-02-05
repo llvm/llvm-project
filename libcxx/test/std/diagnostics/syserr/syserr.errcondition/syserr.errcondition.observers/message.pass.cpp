@@ -16,8 +16,10 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     const std::error_condition ec(6, std::generic_category());
     assert(ec.message() == std::generic_category().message(6));
+
+  return 0;
 }

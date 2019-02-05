@@ -26,7 +26,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
         std::weak_ptr<A> wp;
@@ -42,4 +42,6 @@ int main()
         assert(wp.use_count() == 0);
         assert(wp.expired() == (wp.use_count() == 0));
     }
+
+  return 0;
 }

@@ -74,7 +74,9 @@ void test_comparisons_simple() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_comparison_signatures();
   test_comparisons_simple();
+
+  return 0;
 }

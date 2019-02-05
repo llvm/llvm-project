@@ -24,7 +24,7 @@
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l("C");
@@ -70,4 +70,6 @@ int main()
             assert(np.grouping() == group);
         }
     }
+
+  return 0;
 }

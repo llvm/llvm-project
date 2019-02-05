@@ -50,7 +50,7 @@ void do_insert_const_lvalue_test()
     assert(r.second);
 }
 
-int main()
+int main(int, char**)
 {
     do_insert_const_lvalue_test<std::unordered_set<double> >();
 #if TEST_STD_VER >= 11
@@ -60,4 +60,6 @@ int main()
         do_insert_const_lvalue_test<C>();
     }
 #endif
+
+  return 0;
 }

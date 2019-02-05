@@ -25,7 +25,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using day       = std::chrono::day;
     using month     = std::chrono::month;
@@ -43,4 +43,6 @@ int main()
     static_assert( md1.month() == std::chrono::January, "");
     static_assert( md1.day()   == day{4},               "");
     static_assert( md1.ok(),                            "");
+
+  return 0;
 }

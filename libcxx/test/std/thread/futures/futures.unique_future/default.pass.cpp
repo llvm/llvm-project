@@ -17,7 +17,7 @@
 #include <future>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::future<int> f;
@@ -31,4 +31,6 @@ int main()
         std::future<void> f;
         assert(!f.valid());
     }
+
+  return 0;
 }

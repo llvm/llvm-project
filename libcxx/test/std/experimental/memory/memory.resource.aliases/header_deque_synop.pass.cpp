@@ -26,11 +26,13 @@
 
 namespace pmr = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     using StdDeque = std::deque<int, pmr::polymorphic_allocator<int>>;
     using PmrDeque = pmr::deque<int>;
     static_assert(std::is_same<StdDeque, PmrDeque>::value, "");
     PmrDeque d;
     assert(d.get_allocator().resource() == pmr::get_default_resource());
+
+  return 0;
 }

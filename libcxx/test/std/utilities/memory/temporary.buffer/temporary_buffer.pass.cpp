@@ -19,10 +19,12 @@
 #include <memory>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::pair<int*, std::ptrdiff_t> ip = std::get_temporary_buffer<int>(5);
     assert(ip.first);
     assert(ip.second == 5);
     std::return_temporary_buffer(ip.first);
+
+  return 0;
 }

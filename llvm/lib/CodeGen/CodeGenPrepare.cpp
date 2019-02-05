@@ -375,6 +375,8 @@ class TypePromotionTransaction;
         SmallVectorImpl<Instruction *> &SpeculativelyMovedExts);
     bool splitBranchCondition(Function &F);
     bool simplifyOffsetableRelocate(Instruction &I);
+
+    bool tryToSinkFreeOperands(Instruction *I);
   };
 
 } // end anonymous namespace
@@ -1752,6 +1754,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       InsertedInsts.insert(ExtVal);
       return true;
     }
+
     case Intrinsic::launder_invariant_group:
     case Intrinsic::strip_invariant_group: {
       Value *ArgVal = II->getArgOperand(0);
@@ -5973,6 +5976,48 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   return MadeChange;
 }
 
+bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
+  // If the operands of I can be folded into a target instruction together with
+  // I, duplicate and sink them.
+  SmallVector<Use *, 4> OpsToSink;
+  if (!TLI || !TLI->shouldSinkOperands(I, OpsToSink))
+    return false;
+
+  // OpsToSink can contain multiple uses in a use chain (e.g.
+  // (%u1 with %u1 = shufflevector), (%u2 with %u2 = zext %u1)). The dominating
+  // uses must come first, which means they are sunk first, temporarily creating
+  // invalid IR. This will be fixed once their dominated users are sunk and
+  // updated.
+  BasicBlock *TargetBB = I->getParent();
+  bool Changed = false;
+  SmallVector<Use *, 4> ToReplace;
+  for (Use *U : OpsToSink) {
+    auto *UI = cast<Instruction>(U->get());
+    if (UI->getParent() == TargetBB || isa<PHINode>(UI))
+      continue;
+    ToReplace.push_back(U);
+  }
+
+  SmallPtrSet<Instruction *, 4> MaybeDead;
+  for (Use *U : ToReplace) {
+    auto *UI = cast<Instruction>(U->get());
+    Instruction *NI = UI->clone();
+    MaybeDead.insert(UI);
+    LLVM_DEBUG(dbgs() << "Sinking " << *UI << " to user " << *I << "\n");
+    NI->insertBefore(I);
+    InsertedInsts.insert(NI);
+    U->set(NI);
+    Changed = true;
+  }
+
+  // Remove instructions that are dead after sinking.
+  for (auto *I : MaybeDead)
+    if (!I->hasNUsesOrMore(1))
+      I->eraseFromParent();
+
+  return Changed;
+}
+
 bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
   if (!TLI || !DL)
     return false;
@@ -6786,6 +6831,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     }
     return false;
   }
+
+  if (tryToSinkFreeOperands(I))
+    return true;
 
   if (CallInst *CI = dyn_cast<CallInst>(I))
     return optimizeCallInst(CI, ModifiedDT);

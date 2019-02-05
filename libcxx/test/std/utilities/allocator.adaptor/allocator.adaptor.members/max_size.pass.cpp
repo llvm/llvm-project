@@ -20,7 +20,7 @@
 
 #include "allocators.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::scoped_allocator_adaptor<A1<int>> A;
@@ -38,4 +38,6 @@ int main()
         assert(a.max_size() == 200);
     }
 
+
+  return 0;
 }
