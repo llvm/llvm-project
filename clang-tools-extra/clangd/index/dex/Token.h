@@ -62,11 +62,11 @@ struct Token {
     /// Example: "file:///path/to/clang-tools-extra/clangd/index/SymbolIndex.h"
     /// and some amount of its parents.
     ProximityURI,
+    /// Type of symbol (see `Symbol::Type`).
+    Type,
     /// Internal Token type for invalid/special tokens, e.g. empty tokens for
     /// llvm::DenseMap.
     Sentinel,
-    /// FIXME(kbobyrev): Add other Token Kinds
-    /// * Type with qualified type name or its USR
   };
 
   Token(Kind TokenKind, llvm::StringRef Data)
@@ -90,6 +90,9 @@ struct Token {
       break;
     case Kind::ProximityURI:
       OS << "U=";
+      break;
+    case Kind::Type:
+      OS << "Ty=";
       break;
     case Kind::Sentinel:
       OS << "?=";

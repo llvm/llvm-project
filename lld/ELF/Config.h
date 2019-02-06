@@ -81,7 +81,6 @@ struct VersionDefinition {
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Configuration {
-  std::atomic<bool> HasStaticTlsModel{false};
   uint8_t OSABI = 0;
   llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::StringMap<uint64_t> SectionStartMap;
@@ -254,6 +253,20 @@ struct Configuration {
   // little-endian written in the little-endian order, but I don't know
   // if that's true.)
   bool IsMips64EL;
+
+  // True if we need to set the DF_STATIC_TLS flag to an output file,
+  // which works as a hint to the dynamic loader that the file contains
+  // code compiled with the static TLS model. The thread-local variable
+  // compiled with the static TLS model is faster but less flexible, and
+  // it may not be loaded using dlopen().
+  //
+  // We set this flag to true when we see a relocation for the static TLS
+  // model. Once this becomes true, it will never become false.
+  //
+  // Since the flag is updated by multi-threaded code, we use std::atomic.
+  // (Writing to a variable is not considered thread-safe even if the
+  // varaible is boolean and we always set the same value from all threads.)
+  std::atomic<bool> HasStaticTlsModel{false};
 
   // Holds set of ELF header flags for the target.
   uint32_t EFlags = 0;

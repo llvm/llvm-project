@@ -77,6 +77,10 @@ public:
 private:
   void buildIndex();
   std::unique_ptr<Iterator> iterator(const Token &Tok) const;
+  std::unique_ptr<Iterator>
+  createFileProximityIterator(llvm::ArrayRef<std::string> ProximityPaths) const;
+  std::unique_ptr<Iterator>
+  createTypeBoostingIterator(llvm::ArrayRef<std::string> Types) const;
 
   /// Stores symbols sorted in the descending order of symbol quality..
   std::vector<const Symbol *> Symbols;
