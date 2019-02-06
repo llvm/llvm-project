@@ -1,9 +1,8 @@
 //===-- TweakTests.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -99,7 +98,7 @@ llvm::Expected<std::string> apply(StringRef ID, llvm::StringRef Input) {
   auto T = prepareTweak(ID, S);
   if (!T)
     return T.takeError();
-  auto Replacements = (*T)->apply(S);
+  auto Replacements = (*T)->apply(S, clang::format::getLLVMStyle());
   if (!Replacements)
     return Replacements.takeError();
   return applyAllReplacements(Code.code(), *Replacements);
@@ -128,12 +127,40 @@ TEST(TweakTest, SwapIfBranches) {
 
   llvm::StringLiteral Input = R"cpp(
     void test() {
-      ^if (true) { return 100; } else { continue; }
+      ^if (true) {
+        return 100;
+      } else {
+        continue;
+      }
     }
   )cpp";
   llvm::StringLiteral Output = R"cpp(
     void test() {
-      if (true) { continue; } else { return 100; }
+      if (true) {
+        continue;
+      } else {
+        return 100;
+      }
+    }
+  )cpp";
+  checkTransform(ID, Input, Output);
+
+  Input = R"cpp(
+    void test() {
+      ^if () {
+        return 100;
+      } else {
+        continue;
+      }
+    }
+  )cpp";
+  Output = R"cpp(
+    void test() {
+      if () {
+        continue;
+      } else {
+        return 100;
+      }
     }
   )cpp";
   checkTransform(ID, Input, Output);
@@ -145,7 +172,11 @@ TEST(TweakTest, SwapIfBranches) {
   )cpp";
   Output = R"cpp(
     void test() {
-      if () { continue; } else { return 100; }
+      if () {
+        continue;
+      } else {
+        return 100;
+      }
     }
   )cpp";
   checkTransform(ID, Input, Output);

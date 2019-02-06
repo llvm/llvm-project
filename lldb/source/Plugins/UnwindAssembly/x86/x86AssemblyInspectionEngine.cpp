@@ -364,8 +364,8 @@ bool x86AssemblyInspectionEngine::push_reg_p(int &regno) {
   uint8_t *p = m_cur_insn;
   int regno_prefix_bit = 0;
   // If we have a rex prefix byte, check to see if a B bit is set
-  if (m_wordsize == 8 && *p == 0x41) {
-    regno_prefix_bit = 1 << 3;
+  if (m_wordsize == 8 && (*p & 0xfe) == 0x40) {
+    regno_prefix_bit = (*p & 1) << 3;
     p++;
   }
   if (*p >= 0x50 && *p <= 0x57) {
@@ -562,8 +562,8 @@ bool x86AssemblyInspectionEngine::pop_reg_p(int &regno) {
   uint8_t *p = m_cur_insn;
   int regno_prefix_bit = 0;
   // If we have a rex prefix byte, check to see if a B bit is set
-  if (m_wordsize == 8 && *p == 0x41) {
-    regno_prefix_bit = 1 << 3;
+  if (m_wordsize == 8 && (*p & 0xfe) == 0x40) {
+    regno_prefix_bit = (*p & 1) << 3;
     p++;
   }
   if (*p >= 0x58 && *p <= 0x5f) {

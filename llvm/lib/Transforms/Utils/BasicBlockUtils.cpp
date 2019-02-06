@@ -47,30 +47,17 @@
 
 using namespace llvm;
 
-void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU) {
-  SmallVector<BasicBlock *, 1> BBs = {BB};
-  DeleteDeadBlocks(BBs, DTU);
-}
-
-void llvm::DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
-                            DomTreeUpdater *DTU) {
-#ifndef NDEBUG
-  // Make sure that all predecessors of each dead block is also dead.
-  SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
-  assert(Dead.size() == BBs.size() && "Duplicating blocks?");
-  for (auto *BB : Dead)
-    for (BasicBlock *Pred : predecessors(BB))
-      assert(Dead.count(Pred) && "All predecessors must be dead!");
-#endif
-
-  SmallVector<DominatorTree::UpdateType, 4> Updates;
+void llvm::DetatchDeadBlocks(
+    ArrayRef<BasicBlock *> BBs,
+    SmallVectorImpl<DominatorTree::UpdateType> *Updates) {
   for (auto *BB : BBs) {
     // Loop through all of our successors and make sure they know that one
     // of their predecessors is going away.
+    SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
     for (BasicBlock *Succ : successors(BB)) {
       Succ->removePredecessor(BB);
-      if (DTU)
-        Updates.push_back({DominatorTree::Delete, BB, Succ});
+      if (Updates && UniqueSuccessors.insert(Succ).second)
+        Updates->push_back({DominatorTree::Delete, BB, Succ});
     }
 
     // Zap all the instructions in the block.
@@ -91,6 +78,26 @@ void llvm::DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
            "The successor list of BB isn't empty before "
            "applying corresponding DTU updates.");
   }
+}
+
+void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU) {
+  DeleteDeadBlocks({BB}, DTU);
+}
+
+void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs,
+                            DomTreeUpdater *DTU) {
+#ifndef NDEBUG
+  // Make sure that all predecessors of each dead block is also dead.
+  SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
+  assert(Dead.size() == BBs.size() && "Duplicating blocks?");
+  for (auto *BB : Dead)
+    for (BasicBlock *Pred : predecessors(BB))
+      assert(Dead.count(Pred) && "All predecessors must be dead!");
+#endif
+
+  SmallVector<DominatorTree::UpdateType, 4> Updates;
+  DetatchDeadBlocks(BBs, DTU ? &Updates : nullptr);
+
   if (DTU)
     DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
 

@@ -5617,55 +5617,96 @@ SDValue SystemZTargetLowering::combineBSWAP(
 static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   // We have a SELECT_CCMASK or BR_CCMASK comparing the condition code
   // set by the CCReg instruction using the CCValid / CCMask masks,
-  // If the CCReg instruction is itself a (ICMP (SELECT_CCMASK)) testing
-  // the condition code set by some other instruction, see whether we
-  // can directly use that condition code.
-  bool Invert = false;
+  // If the CCReg instruction is itself a ICMP testing the condition
+  // code set by some other instruction, see whether we can directly
+  // use that condition code.
 
-  // Verify that we have an appropriate mask for a EQ or NE comparison.
+  // Verify that we have an ICMP against some constant.
   if (CCValid != SystemZ::CCMASK_ICMP)
     return false;
-  if (CCMask == SystemZ::CCMASK_CMP_NE)
-    Invert = !Invert;
-  else if (CCMask != SystemZ::CCMASK_CMP_EQ)
-    return false;
-
-  // Verify that we have an ICMP that is the user of a SELECT_CCMASK.
-  SDNode *ICmp = CCReg.getNode();
+  auto *ICmp = CCReg.getNode();
   if (ICmp->getOpcode() != SystemZISD::ICMP)
     return false;
-  SDNode *Select = ICmp->getOperand(0).getNode();
-  if (Select->getOpcode() != SystemZISD::SELECT_CCMASK)
+  auto *CompareLHS = ICmp->getOperand(0).getNode();
+  auto *CompareRHS = dyn_cast<ConstantSDNode>(ICmp->getOperand(1));
+  if (!CompareRHS)
     return false;
 
-  // Verify that the ICMP compares against one of select values.
-  auto *CompareVal = dyn_cast<ConstantSDNode>(ICmp->getOperand(1));
-  if (!CompareVal)
-    return false;
-  auto *TrueVal = dyn_cast<ConstantSDNode>(Select->getOperand(0));
-  if (!TrueVal)
-    return false;
-  auto *FalseVal = dyn_cast<ConstantSDNode>(Select->getOperand(1));
-  if (!FalseVal)
-    return false;
-  if (CompareVal->getZExtValue() == FalseVal->getZExtValue())
-    Invert = !Invert;
-  else if (CompareVal->getZExtValue() != TrueVal->getZExtValue())
-    return false;
+  // Optimize the case where CompareLHS is a SELECT_CCMASK.
+  if (CompareLHS->getOpcode() == SystemZISD::SELECT_CCMASK) {
+    // Verify that we have an appropriate mask for a EQ or NE comparison.
+    bool Invert = false;
+    if (CCMask == SystemZ::CCMASK_CMP_NE)
+      Invert = !Invert;
+    else if (CCMask != SystemZ::CCMASK_CMP_EQ)
+      return false;
 
-  // Compute the effective CC mask for the new branch or select.
-  auto *NewCCValid = dyn_cast<ConstantSDNode>(Select->getOperand(2));
-  auto *NewCCMask = dyn_cast<ConstantSDNode>(Select->getOperand(3));
-  if (!NewCCValid || !NewCCMask)
-    return false;
-  CCValid = NewCCValid->getZExtValue();
-  CCMask = NewCCMask->getZExtValue();
-  if (Invert)
-    CCMask ^= CCValid;
+    // Verify that the ICMP compares against one of select values.
+    auto *TrueVal = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(0));
+    if (!TrueVal)
+      return false;
+    auto *FalseVal = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(1));
+    if (!FalseVal)
+      return false;
+    if (CompareRHS->getZExtValue() == FalseVal->getZExtValue())
+      Invert = !Invert;
+    else if (CompareRHS->getZExtValue() != TrueVal->getZExtValue())
+      return false;
 
-  // Return the updated CCReg link.
-  CCReg = Select->getOperand(4);
-  return true;
+    // Compute the effective CC mask for the new branch or select.
+    auto *NewCCValid = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(2));
+    auto *NewCCMask = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(3));
+    if (!NewCCValid || !NewCCMask)
+      return false;
+    CCValid = NewCCValid->getZExtValue();
+    CCMask = NewCCMask->getZExtValue();
+    if (Invert)
+      CCMask ^= CCValid;
+
+    // Return the updated CCReg link.
+    CCReg = CompareLHS->getOperand(4);
+    return true;
+  }
+
+  // Optimize the case where CompareRHS is (SRA (SHL (IPM))).
+  if (CompareLHS->getOpcode() == ISD::SRA) {
+    auto *SRACount = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(1));
+    if (!SRACount || SRACount->getZExtValue() != 30)
+      return false;
+    auto *SHL = CompareLHS->getOperand(0).getNode();
+    if (SHL->getOpcode() != ISD::SHL)
+      return false;
+    auto *SHLCount = dyn_cast<ConstantSDNode>(SHL->getOperand(1));
+    if (!SHLCount || SHLCount->getZExtValue() != 30 - SystemZ::IPM_CC)
+      return false;
+    auto *IPM = SHL->getOperand(0).getNode();
+    if (IPM->getOpcode() != SystemZISD::IPM)
+      return false;
+
+    // Avoid introducing CC spills (because SRA would clobber CC).
+    if (!CompareLHS->hasOneUse())
+      return false;
+    // Verify that the ICMP compares against zero.
+    if (CompareRHS->getZExtValue() != 0)
+      return false;
+
+    // Compute the effective CC mask for the new branch or select.
+    switch (CCMask) {
+    case SystemZ::CCMASK_CMP_EQ: break;
+    case SystemZ::CCMASK_CMP_NE: break;
+    case SystemZ::CCMASK_CMP_LT: CCMask = SystemZ::CCMASK_CMP_GT; break;
+    case SystemZ::CCMASK_CMP_GT: CCMask = SystemZ::CCMASK_CMP_LT; break;
+    case SystemZ::CCMASK_CMP_LE: CCMask = SystemZ::CCMASK_CMP_GE; break;
+    case SystemZ::CCMASK_CMP_GE: CCMask = SystemZ::CCMASK_CMP_LE; break;
+    default: return false;
+    }
+
+    // Return the updated CCReg link.
+    CCReg = IPM->getOperand(0);
+    return true;
+  }
+
+  return false;
 }
 
 SDValue SystemZTargetLowering::combineBR_CCMASK(

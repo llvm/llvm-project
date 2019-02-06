@@ -17540,12 +17540,66 @@ static SDValue LowerI64IntToFP_AVX512DQ(SDValue Op, SelectionDAG &DAG,
                      DAG.getIntPtrConstant(0, dl));
 }
 
+static bool useVectorCast(unsigned Opcode, MVT FromVT, MVT ToVT,
+                          const X86Subtarget &Subtarget) {
+  switch (Opcode) {
+    case ISD::SINT_TO_FP:
+      // TODO: Handle wider types with AVX/AVX512.
+      if (!Subtarget.hasSSE2() || FromVT != MVT::v4i32)
+        return false;
+      // CVTDQ2PS or (V)CVTDQ2PD
+      return ToVT == MVT::v4f32 || (Subtarget.hasAVX() && ToVT == MVT::v4f64);
+
+    case ISD::UINT_TO_FP:
+      // TODO: Handle wider types and i64 elements.
+      if (!Subtarget.hasAVX512() || FromVT != MVT::v4i32)
+        return false;
+      // VCVTUDQ2PS or VCVTUDQ2PD
+      return ToVT == MVT::v4f32 || ToVT == MVT::v4f64;
+
+    default:
+      return false;
+  }
+}
+
+/// Given a scalar cast operation that is extracted from a vector, try to
+/// vectorize the cast op followed by extraction. This will avoid an expensive
+/// round-trip between XMM and GPR.
+static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
+  // TODO: The limitation for extracting from the 0-element is not required,
+  // but if we extract from some other element, it will require shuffling to
+  // get the result into the right place.
+  // TODO: This could be enhanced to handle smaller integer types by peeking
+  // through an extend.
+  SDValue Extract = Cast.getOperand(0);
+  MVT DestVT = Cast.getSimpleValueType();
+  if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isNullConstant(Extract.getOperand(1)))
+    return SDValue();
+
+  SDValue VecOp = Extract.getOperand(0);
+  MVT FromVT = VecOp.getSimpleValueType();
+  MVT ToVT = MVT::getVectorVT(DestVT, FromVT.getVectorNumElements());
+  if (!useVectorCast(Cast.getOpcode(), FromVT, ToVT, Subtarget))
+    return SDValue();
+
+  // cast (extract V, Y) --> extract (cast V), Y
+  SDLoc DL(Cast);
+  SDValue VCast = DAG.getNode(Cast.getOpcode(), DL, ToVT, VecOp);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestVT, VCast,
+                     Extract.getOperand(1));
+}
+
 SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   MVT SrcVT = Src.getSimpleValueType();
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
+
+  if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
+    return Extract;
 
   if (SrcVT.isVector()) {
     if (SrcVT == MVT::v2i32 && VT == MVT::v2f64) {
@@ -17908,6 +17962,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
   if (Op.getSimpleValueType().isVector())
     return lowerUINT_TO_FP_vec(Op, DAG, Subtarget);
+
+  if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
+    return Extract;
 
   MVT SrcVT = N0.getSimpleValueType();
   MVT DstVT = Op.getSimpleValueType();
@@ -42437,6 +42494,40 @@ bool X86TargetLowering::ExpandInlineAsm(CallInst *CI) const {
   return false;
 }
 
+static X86::CondCode parseConstraintCode(llvm::StringRef Constraint) {
+  X86::CondCode Cond = StringSwitch<X86::CondCode>(Constraint)
+                           .Case("{@cca}", X86::COND_A)
+                           .Case("{@ccae}", X86::COND_AE)
+                           .Case("{@ccb}", X86::COND_B)
+                           .Case("{@ccbe}", X86::COND_BE)
+                           .Case("{@ccc}", X86::COND_B)
+                           .Case("{@cce}", X86::COND_E)
+                           .Case("{@ccz}", X86::COND_NE)
+                           .Case("{@ccg}", X86::COND_G)
+                           .Case("{@ccge}", X86::COND_GE)
+                           .Case("{@ccl}", X86::COND_L)
+                           .Case("{@ccle}", X86::COND_LE)
+                           .Case("{@ccna}", X86::COND_BE)
+                           .Case("{@ccnae}", X86::COND_B)
+                           .Case("{@ccnb}", X86::COND_AE)
+                           .Case("{@ccnbe}", X86::COND_A)
+                           .Case("{@ccnc}", X86::COND_AE)
+                           .Case("{@ccne}", X86::COND_NE)
+                           .Case("{@ccnz}", X86::COND_NE)
+                           .Case("{@ccng}", X86::COND_LE)
+                           .Case("{@ccnge}", X86::COND_L)
+                           .Case("{@ccnl}", X86::COND_GE)
+                           .Case("{@ccnle}", X86::COND_G)
+                           .Case("{@ccno}", X86::COND_NO)
+                           .Case("{@ccnp}", X86::COND_P)
+                           .Case("{@ccns}", X86::COND_NS)
+                           .Case("{@cco}", X86::COND_O)
+                           .Case("{@ccp}", X86::COND_P)
+                           .Case("{@ccs}", X86::COND_S)
+                           .Default(X86::COND_INVALID);
+  return Cond;
+}
+
 /// Given a constraint letter, return the type of constraint for this target.
 X86TargetLowering::ConstraintType
 X86TargetLowering::getConstraintType(StringRef Constraint) const {
@@ -42497,7 +42588,8 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
         return C_RegisterClass;
       }
     }
-  }
+  } else if (parseConstraintCode(Constraint) != X86::COND_INVALID)
+    return C_Other;
   return TargetLowering::getConstraintType(Constraint);
 }
 
@@ -42666,6 +42758,33 @@ LowerXConstraint(EVT ConstraintVT) const {
   }
 
   return TargetLowering::LowerXConstraint(ConstraintVT);
+}
+
+// Lower @cc targets via setcc.
+SDValue X86TargetLowering::LowerAsmOutputForConstraint(
+    SDValue &Chain, SDValue *Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
+    SelectionDAG &DAG) const {
+  X86::CondCode Cond = parseConstraintCode(OpInfo.ConstraintCode);
+  if (Cond == X86::COND_INVALID)
+    return SDValue();
+  // Check that return type is valid.
+  if (OpInfo.ConstraintVT.isVector() || !OpInfo.ConstraintVT.isInteger() ||
+      OpInfo.ConstraintVT.getSizeInBits() < 8)
+    report_fatal_error("Flag output operand is of invalid type");
+
+  // Get EFLAGS register. Only update chain when copyfrom is glued.
+  SDValue EFlags;
+  if (Flag) {
+    EFlags = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32, *Flag);
+    Chain = EFlags.getValue(1);
+  } else
+    EFlags = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32);
+  // Extract CC code.
+  SDValue CC = getSETCC(Cond, EFlags, DL, DAG);
+  // Extend to 32-bits
+  SDValue Result = DAG.getNode(ISD::ZERO_EXTEND, DL, OpInfo.ConstraintVT, CC);
+
+  return Result;
 }
 
 /// Lower the specified operand into the Ops vector.
@@ -43023,6 +43142,9 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     }
   }
+
+  if (parseConstraintCode(Constraint) != X86::COND_INVALID)
+    return std::make_pair(0U, &X86::GR32RegClass);
 
   // Use the default implementation in TargetLowering to convert the register
   // constraint into a member of a register class.

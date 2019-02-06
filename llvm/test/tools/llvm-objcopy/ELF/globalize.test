@@ -4,6 +4,8 @@
 # RUN:   --globalize-symbol Weak \
 # RUN:   --globalize-symbol WeakUndef %t %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
+# RUN: llvm-objcopy --regex --globalize-symbol='.*' %t %t3
+# RUN: cmp %t2 %t3
 
 !ELF
 FileHeader:

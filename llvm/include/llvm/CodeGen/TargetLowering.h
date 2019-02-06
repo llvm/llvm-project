@@ -3658,6 +3658,12 @@ public:
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
 
+  // Lower custom output constraints. If invalid, return SDValue().
+  virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue *Flag,
+                                              SDLoc DL,
+                                              const AsmOperandInfo &OpInfo,
+                                              SelectionDAG &DAG) const;
+
   //===--------------------------------------------------------------------===//
   // Div utility functions
   //

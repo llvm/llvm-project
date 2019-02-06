@@ -229,8 +229,10 @@ private:
     // Now, all exit blocks that are not marked as live are dead.
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L.getExitBlocks(ExitBlocks);
+    SmallPtrSet<BasicBlock *, 8> UniqueDeadExits;
     for (auto *ExitBlock : ExitBlocks)
-      if (!LiveExitBlocks.count(ExitBlock))
+      if (!LiveExitBlocks.count(ExitBlock) &&
+          UniqueDeadExits.insert(ExitBlock).second)
         DeadExitBlocks.push_back(ExitBlock);
 
     // Whether or not the edge From->To will still be present in graph after the

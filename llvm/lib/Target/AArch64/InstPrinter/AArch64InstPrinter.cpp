@@ -69,6 +69,11 @@ void AArch64InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
       return;
     }
 
+  if (atomicBarrierDroppedOnZero(Opcode) &&
+      (MI->getOperand(0).getReg() == AArch64::XZR ||
+       MI->getOperand(0).getReg() == AArch64::WZR))
+    printAnnotation(O, "acquire semantics dropped since destination is zero");
+
   // SBFM/UBFM should print to a nicer aliased form if possible.
   if (Opcode == AArch64::SBFMXri || Opcode == AArch64::SBFMWri ||
       Opcode == AArch64::UBFMXri || Opcode == AArch64::UBFMWri) {
