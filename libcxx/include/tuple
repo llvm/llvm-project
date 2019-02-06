@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===--------------------------- tuple ------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -84,8 +83,8 @@ template <class T, class Tuple>
   constexpr T make_from_tuple(Tuple&& t); // C++17
 
 // 20.4.1.4, tuple helper classes:
-template <class T> class tuple_size; // undefined
-template <class... T> class tuple_size<tuple<T...>>;
+template <class T> struct tuple_size; // undefined
+template <class... T> struct tuple_size<tuple<T...>>;
 template <class T>
  inline constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17
 template <size_t I, class T> class tuple_element; // undefined

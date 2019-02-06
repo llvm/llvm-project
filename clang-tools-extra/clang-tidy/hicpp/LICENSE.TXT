@@ -1,8 +1,8 @@
 ------------------------------------------------------------------------------
 clang-tidy High-Integrity C++ Files
 ------------------------------------------------------------------------------
-All clang-tidy files are licensed under the LLVM license with the following
-additions:
+All clang-tidy files are licensed under the same terms as the rest of the LLVM
+project with the following additions:
 
 Any file referencing a High-Integrity C++ Coding guideline:
 

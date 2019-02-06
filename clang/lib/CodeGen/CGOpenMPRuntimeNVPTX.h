@@ -1,9 +1,8 @@
 //===----- CGOpenMPRuntimeNVPTX.h - Interface to OpenMP NVPTX Runtimes ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,7 +17,6 @@
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/StmtOpenMP.h"
-#include "llvm/IR/CallSite.h"
 
 namespace clang {
 namespace CodeGen {
@@ -57,6 +55,9 @@ private:
   ExecutionMode getExecutionMode() const;
 
   bool requiresFullRuntime() const { return RequiresFullRuntime; }
+
+  /// Get barrier to synchronize all threads in a block.
+  void syncCTAThreads(CodeGenFunction &CGF);
 
   /// Emit the worker function for the current target region.
   void emitWorkerFunction(WorkerFunctionState &WST);

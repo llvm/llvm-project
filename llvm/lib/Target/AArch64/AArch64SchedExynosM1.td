@@ -1,9 +1,8 @@
 //=- AArch64SchedExynosM1.td - Samsung Exynos M1 Sched Defs --*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -78,9 +77,8 @@ def M1WriteAC : SchedWriteRes<[M1UnitALU,
 def M1WriteAD : SchedWriteRes<[M1UnitALU,
                                M1UnitC]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
-def M1WriteAX : SchedWriteVariant<[SchedVar<ExynosExtPred, [M1WriteA1]>,
-                                   SchedVar<NoSchedPred,   [M1WriteAA]>]>;
-def M1WriteAY : SchedWriteVariant<[SchedVar<ExynosShiftPred, [M1WriteA1]>,
+def M1WriteAX : SchedWriteVariant<[SchedVar<ExynosArithPred, [M1WriteA1]>,
+                                   SchedVar<ExynosLogicPred, [M1WriteA1]>,
                                    SchedVar<NoSchedPred,     [M1WriteAA]>]>;
 def M1WriteC1 : SchedWriteRes<[M1UnitC]>   { let Latency = 1; }
 def M1WriteC2 : SchedWriteRes<[M1UnitC]>   { let Latency = 2; }
@@ -430,7 +428,7 @@ def : InstRW<[M1WriteAD], (instregex "^TBN?Z[WX]")>;
 
 // Arithmetic and logical integer instructions.
 def : InstRW<[M1WriteAX], (instregex ".+rx(64)?$")>;
-def : InstRW<[M1WriteAY], (instregex ".+rs$")>;
+def : InstRW<[M1WriteAX], (instregex ".+rs$")>;
 
 // Move instructions.
 def : InstRW<[M1WriteCOPY], (instrs COPY)>;

@@ -13,7 +13,12 @@ except ImportError:
     from urllib.parse import urlparse, unquote
 
 import posixpath
-import StringIO
+
+if sys.version_info.major >= 3:
+    from io import StringIO, BytesIO
+else:
+    from io import BytesIO, BytesIO as StringIO
+
 import re
 import shutil
 import threading
@@ -117,7 +122,7 @@ class ReporterThread(threading.Thread):
         except Reporter.ReportFailure as e:
             self.status = e.value
         except Exception as e:
-            s = StringIO.StringIO()
+            s = StringIO()
             import traceback
             print('<b>Unhandled Exception</b><br><pre>', file=s)
             traceback.print_exc(file=s)
@@ -275,7 +280,7 @@ class ScanViewRequestHandler(SimpleHTTPRequestHandler):
 
     def handle_exception(self, exc):
         import traceback
-        s = StringIO.StringIO()
+        s = StringIO()
         print("INTERNAL ERROR\n", file=s)
         traceback.print_exc(file=s)
         f = self.send_string(s.getvalue(), 'text/plain')
@@ -739,15 +744,16 @@ File Bug</h3>
         return f
 
     def send_string(self, s, ctype='text/html', headers=True, mtime=None):
+        encoded_s = s.encode()
         if headers:
             self.send_response(200)
             self.send_header("Content-type", ctype)
-            self.send_header("Content-Length", str(len(s)))
+            self.send_header("Content-Length", str(len(encoded_s)))
             if mtime is None:
                 mtime = self.dynamic_mtime
             self.send_header("Last-Modified", self.date_time_string(mtime))
             self.end_headers()
-        return StringIO.StringIO(s)
+        return BytesIO(encoded_s)
 
     def send_patched_file(self, path, ctype):
         # Allow a very limited set of variables. This is pretty gross.

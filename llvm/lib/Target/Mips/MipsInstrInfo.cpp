@@ -1,9 +1,8 @@
 //===- MipsInstrInfo.cpp - Mips Instruction Information -------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -653,6 +652,16 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
 
     MIB.addImm(0);
 
+    // If I has an MCSymbol operand (used by asm printer, to emit R_MIPS_JALR),
+    // add it to the new instruction.
+    for (unsigned J = I->getDesc().getNumOperands(), E = I->getNumOperands();
+         J < E; ++J) {
+      const MachineOperand &MO = I->getOperand(J);
+      if (MO.isMCSymbol() && (MO.getTargetFlags() & MipsII::MO_JALR))
+        MIB.addSym(MO.getMCSymbol(), MipsII::MO_JALR);
+    }
+
+
   } else {
     for (unsigned J = 0, E = I->getDesc().getNumOperands(); J < E; ++J) {
       if (BranchWithZeroOperand && (unsigned)ZeroOperandPosition == J)
@@ -825,7 +834,8 @@ MipsInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
     {MO_GOT_HI16,     "mips-got-hi16"},
     {MO_GOT_LO16,     "mips-got-lo16"},
     {MO_CALL_HI16,    "mips-call-hi16"},
-    {MO_CALL_LO16,    "mips-call-lo16"}
+    {MO_CALL_LO16,    "mips-call-lo16"},
+    {MO_JALR,         "mips-jalr"}
   };
   return makeArrayRef(Flags);
 }

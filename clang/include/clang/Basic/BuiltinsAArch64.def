@@ -1,9 +1,8 @@
 //==- BuiltinsAArch64.def - AArch64 Builtin function database ----*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -33,7 +32,7 @@ BUILTIN(__builtin_arm_clrex, "v", "")
 
 // Bit manipulation
 BUILTIN(__builtin_arm_rbit, "UiUi", "nc")
-BUILTIN(__builtin_arm_rbit64, "LUiLUi", "nc")
+BUILTIN(__builtin_arm_rbit64, "WUiWUi", "nc")
 
 // HINT
 BUILTIN(__builtin_arm_nop, "v", "")
@@ -50,8 +49,8 @@ BUILTIN(__builtin_arm_crc32h, "UiUiUs", "nc")
 BUILTIN(__builtin_arm_crc32ch, "UiUiUs", "nc")
 BUILTIN(__builtin_arm_crc32w, "UiUiUi", "nc")
 BUILTIN(__builtin_arm_crc32cw, "UiUiUi", "nc")
-BUILTIN(__builtin_arm_crc32d, "UiUiLUi", "nc")
-BUILTIN(__builtin_arm_crc32cd, "UiUiLUi", "nc")
+BUILTIN(__builtin_arm_crc32d, "UiUiWUi", "nc")
+BUILTIN(__builtin_arm_crc32cd, "UiUiWUi", "nc")
 
 // Memory barrier
 BUILTIN(__builtin_arm_dmb, "vUi", "nc")
@@ -63,10 +62,10 @@ BUILTIN(__builtin_arm_prefetch, "vvC*UiUiUiUi", "nc")
 
 // System Registers
 BUILTIN(__builtin_arm_rsr, "UicC*", "nc")
-BUILTIN(__builtin_arm_rsr64, "LUicC*", "nc")
+BUILTIN(__builtin_arm_rsr64, "WUicC*", "nc")
 BUILTIN(__builtin_arm_rsrp, "v*cC*", "nc")
 BUILTIN(__builtin_arm_wsr, "vcC*Ui", "nc")
-BUILTIN(__builtin_arm_wsr64, "vcC*LUi", "nc")
+BUILTIN(__builtin_arm_wsr64, "vcC*WUi", "nc")
 BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
 
 // MSVC

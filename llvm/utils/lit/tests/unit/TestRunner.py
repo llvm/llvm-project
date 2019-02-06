@@ -9,6 +9,7 @@ import os.path
 import tempfile
 
 import lit
+import lit.Test as Test
 from lit.TestRunner import ParserKind, IntegratedTestKeywordParser, \
                            parseIntegratedTestScript
 
@@ -57,9 +58,11 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
             IntegratedTestKeywordParser("MY_TAG.", ParserKind.TAG),
             IntegratedTestKeywordParser("MY_DNE_TAG.", ParserKind.TAG),
             IntegratedTestKeywordParser("MY_LIST:", ParserKind.LIST),
+            IntegratedTestKeywordParser("MY_BOOL:", ParserKind.BOOLEAN_EXPR),
             IntegratedTestKeywordParser("MY_RUN:", ParserKind.COMMAND),
             IntegratedTestKeywordParser("MY_CUSTOM:", ParserKind.CUSTOM,
-                                        custom_parse)
+                                        custom_parse),
+
         ]
 
     @staticmethod
@@ -101,6 +104,25 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         self.assertEqual(len(value), 2)  # there are only two run lines
         self.assertEqual(value[0].strip(), "%dbg(MY_RUN: at line 4)  baz")
         self.assertEqual(value[1].strip(), "%dbg(MY_RUN: at line 7)  foo  bar")
+
+    def test_boolean(self):
+        parsers = self.make_parsers()
+        self.parse_test(parsers)
+        bool_parser = self.get_parser(parsers, 'MY_BOOL:')
+        value = bool_parser.getValue()
+        self.assertEqual(len(value), 2)  # there are only two run lines
+        self.assertEqual(value[0].strip(), "a && (b)")
+        self.assertEqual(value[1].strip(), "d")
+
+    def test_boolean_unterminated(self):
+        parsers = self.make_parsers() + \
+            [IntegratedTestKeywordParser("MY_BOOL_UNTERMINATED:", ParserKind.BOOLEAN_EXPR)]
+        try:
+            self.parse_test(parsers)
+            self.fail('expected exception')
+        except ValueError as e:
+            self.assertIn("Test has unterminated MY_BOOL_UNTERMINATED: lines", str(e))
+
 
     def test_custom(self):
         parsers = self.make_parsers()

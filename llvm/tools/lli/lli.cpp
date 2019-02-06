@@ -1,9 +1,8 @@
 //===- lli.cpp - LLVM Interpreter / Dynamic compiler ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,7 +34,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/TypeBuilder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Object/Archive.h"
@@ -317,23 +315,18 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   M->setTargetTriple(TargetTripleStr);
 
   // Create an empty function named "__main".
-  Function *Result;
-  if (TargetTriple.isArch64Bit()) {
-    Result = Function::Create(
-      TypeBuilder<int64_t(void), false>::get(Context),
-      GlobalValue::ExternalLinkage, "__main", M.get());
-  } else {
-    Result = Function::Create(
-      TypeBuilder<int32_t(void), false>::get(Context),
-      GlobalValue::ExternalLinkage, "__main", M.get());
-  }
+  Type *ReturnTy;
+  if (TargetTriple.isArch64Bit())
+    ReturnTy = Type::getInt64Ty(Context);
+  else
+    ReturnTy = Type::getInt32Ty(Context);
+  Function *Result =
+      Function::Create(FunctionType::get(ReturnTy, {}, false),
+                       GlobalValue::ExternalLinkage, "__main", M.get());
+
   BasicBlock *BB = BasicBlock::Create(Context, "__main", Result);
   Builder.SetInsertPoint(BB);
-  Value *ReturnVal;
-  if (TargetTriple.isArch64Bit())
-    ReturnVal = ConstantInt::get(Context, APInt(64, 0));
-  else
-    ReturnVal = ConstantInt::get(Context, APInt(32, 0));
+  Value *ReturnVal = ConstantInt::get(ReturnTy, 0);
   Builder.CreateRet(ReturnVal);
 
   // Add this new module to the ExecutionEngine.
@@ -602,8 +595,8 @@ int main(int argc, char **argv, char * const *envp) {
   if (!RemoteMCJIT) {
     // If the program doesn't explicitly call exit, we will need the Exit
     // function later on to make an explicit call, so get the function now.
-    Constant *Exit = Mod->getOrInsertFunction("exit", Type::getVoidTy(Context),
-                                                      Type::getInt32Ty(Context));
+    FunctionCallee Exit = Mod->getOrInsertFunction(
+        "exit", Type::getVoidTy(Context), Type::getInt32Ty(Context));
 
     // Run static constructors.
     if (!ForceInterpreter) {
@@ -627,19 +620,21 @@ int main(int argc, char **argv, char * const *envp) {
 
     // If the program didn't call exit explicitly, we should call it now.
     // This ensures that any atexit handlers get called correctly.
-    if (Function *ExitF = dyn_cast<Function>(Exit)) {
-      std::vector<GenericValue> Args;
-      GenericValue ResultGV;
-      ResultGV.IntVal = APInt(32, Result);
-      Args.push_back(ResultGV);
-      EE->runFunction(ExitF, Args);
-      WithColor::error(errs(), argv[0]) << "exit(" << Result << ") returned!\n";
-      abort();
-    } else {
-      WithColor::error(errs(), argv[0])
-          << "exit defined with wrong prototype!\n";
-      abort();
+    if (Function *ExitF =
+            dyn_cast<Function>(Exit.getCallee()->stripPointerCasts())) {
+      if (ExitF->getFunctionType() == Exit.getFunctionType()) {
+        std::vector<GenericValue> Args;
+        GenericValue ResultGV;
+        ResultGV.IntVal = APInt(32, Result);
+        Args.push_back(ResultGV);
+        EE->runFunction(ExitF, Args);
+        WithColor::error(errs(), argv[0])
+            << "exit(" << Result << ") returned!\n";
+        abort();
+      }
     }
+    WithColor::error(errs(), argv[0]) << "exit defined with wrong prototype!\n";
+    abort();
   } else {
     // else == "if (RemoteMCJIT)"
 

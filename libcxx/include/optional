@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===-------------------------- optional ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -105,8 +104,8 @@ namespace std {
 
     // 23.6.3.3, assignment
     optional &operator=(nullopt_t) noexcept;
-    optional &operator=(const optional &);
-    optional &operator=(optional &&) noexcept(see below );
+    optional &operator=(const optional &);                // constexpr in C++20
+    optional &operator=(optional &&) noexcept(see below); // constexpr in C++20
     template <class U = T> optional &operator=(U &&);
     template <class U> optional &operator=(const optional<U> &);
     template <class U> optional &operator=(optional<U> &&);

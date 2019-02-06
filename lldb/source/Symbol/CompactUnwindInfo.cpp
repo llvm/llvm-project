@@ -1,9 +1,8 @@
 //===-- CompactUnwindInfo.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -183,8 +182,7 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
     if (function_info.encoding == 0)
       return false;
 
-    ArchSpec arch;
-    if (m_objfile.GetArchitecture(arch)) {
+    if (ArchSpec arch = m_objfile.GetArchitecture()) {
 
       Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
       if (log && log->GetVerbose()) {
@@ -338,8 +336,7 @@ void CompactUnwindInfo::ScanIndex(const ProcessSP &process_sp) {
     // };
 
     bool clear_address_zeroth_bit = false;
-    ArchSpec arch;
-    if (m_objfile.GetArchitecture(arch)) {
+    if (ArchSpec arch = m_objfile.GetArchitecture()) {
       if (arch.GetTriple().getArch() == llvm::Triple::arm ||
           arch.GetTriple().getArch() == llvm::Triple::thumb)
         clear_address_zeroth_bit = true;

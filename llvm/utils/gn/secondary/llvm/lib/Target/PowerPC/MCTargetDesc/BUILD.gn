@@ -1,0 +1,63 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("PPCGenInstrInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-instr-info" ]
+  td_file = "../PPC.td"
+}
+
+tablegen("PPCGenMCCodeEmitter") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-emitter" ]
+  td_file = "../PPC.td"
+}
+
+tablegen("PPCGenRegisterInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-register-info" ]
+  td_file = "../PPC.td"
+}
+
+tablegen("PPCGenSubtargetInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-subtarget" ]
+  td_file = "../PPC.td"
+}
+
+group("tablegen") {
+  visibility = [
+    ":MCTargetDesc",
+    "../InstPrinter",
+    "../TargetInfo",
+  ]
+  public_deps = [
+    ":PPCGenInstrInfo",
+    ":PPCGenMCCodeEmitter",
+    ":PPCGenRegisterInfo",
+    ":PPCGenSubtargetInfo",
+  ]
+}
+
+static_library("MCTargetDesc") {
+  output_name = "LLVMPowerPCDesc"
+  public_deps = [
+    ":tablegen",
+  ]
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/PowerPC/InstPrinter",
+    "//llvm/lib/Target/PowerPC/TargetInfo",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "PPCAsmBackend.cpp",
+    "PPCELFObjectWriter.cpp",
+    "PPCMCAsmInfo.cpp",
+    "PPCMCCodeEmitter.cpp",
+    "PPCMCExpr.cpp",
+    "PPCMCTargetDesc.cpp",
+    "PPCMachObjectWriter.cpp",
+    "PPCPredicates.cpp",
+  ]
+}

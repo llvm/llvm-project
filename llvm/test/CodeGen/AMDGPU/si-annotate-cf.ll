@@ -96,20 +96,20 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; FUNC-LABEL: {{^}}loop_land_info_assert:
 ; SI:      v_cmp_lt_i32_e64 [[CMP4:s\[[0-9:]+\]]], s{{[0-9]+}}, 4{{$}}
 ; SI:      s_and_b64        [[CMP4M:s\[[0-9]+:[0-9]+\]]], exec, [[CMP4]]
-; SI:      s_mov_b64        vcc, [[CMP4M]]
-; SI-NEXT: s_cbranch_vccnz  [[CONVEX_EXIT:BB[0-9_]+]]
-; SI-NEXT: s_branch         [[FOR_COND_PREHDR:BB[0-9_]+]]
+; SI:      s_branch         [[INFLOOP:BB[0-9]+_[0-9]+]]
+
+; SI:      [[CONVEX_EXIT:BB[0-9_]+]]
+; SI:      s_mov_b64        vcc,
+; SI-NEXT: s_cbranch_vccnz  [[ENDPGM:BB[0-9]+_[0-9]+]]
+; SI:      s_cbranch_vccnz  [[INFLOOP]]
 
 ; SI: ; %if.else
 ; SI:      buffer_store_dword
 
-; SI:      [[INFLOOP:BB[0-9]+_[0-9]+]]:
+; SI:      [[INFLOOP]]:
+; SI:      s_cbranch_vccnz [[CONVEX_EXIT]]
 
-; SI:      [[CONVEX_EXIT]]:
-; SI:      s_mov_b64        vcc,
-; SI-NEXT: s_cbranch_vccnz  [[ENDPGM:BB[0-9]+_[0-9]+]]
-; SI:      s_branch [[INFLOOP]]
-; SI-NEXT: [[FOR_COND_PREHDR]]:
+; SI: ; %for.cond.preheader
 ; SI:      s_cbranch_vccz [[ENDPGM]]
 
 ; SI:      [[ENDPGM]]:

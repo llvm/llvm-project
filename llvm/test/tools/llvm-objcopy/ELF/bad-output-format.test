@@ -1,0 +1,13 @@
+# RUN: yaml2obj %s > %t.o
+
+# RUN: not llvm-objcopy -O xyz %t.o %t.2.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-OUTPUT-FORMAT
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_386
+
+# BAD-OUTPUT-FORMAT: Invalid output format: 'xyz'.

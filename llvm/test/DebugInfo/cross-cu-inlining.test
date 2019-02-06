@@ -1,0 +1,8 @@
+RUN: llvm-symbolizer --obj=%p/Inputs/cross-cu-inlining.x86_64-macho.o 0x17 | FileCheck %s
+
+; func has been inlined into main by LTO. Check that the symbolizer is able
+; to resolve the cross-cu reference and retrieve func's name
+CHECK: func
+CHECK-NEXT: /tmp{{[/\\]}}cross-cu-inlining.c:16:3
+CHECK-NEXT: main
+CHECK-NEXT: /tmp{{[/\\]}}cross-cu-inlining.c:11:0

@@ -1,9 +1,8 @@
 //===- SampleProfile.cpp - Incorporate sample profiles into the IR --------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -218,6 +217,7 @@ protected:
   const FunctionSamples *findCalleeFunctionSamples(const Instruction &I) const;
   std::vector<const FunctionSamples *>
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
+  mutable DenseMap<const DILocation *, const FunctionSamples *> DILocation2SampleMap;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineCallInstruction(Instruction *I);
   bool inlineHotFunctions(Function &F,
@@ -318,6 +318,14 @@ protected:
 
   /// Optimization Remark Emitter used to emit diagnostic remarks.
   OptimizationRemarkEmitter *ORE = nullptr;
+
+  // Information recorded when we declined to inline a call site
+  // because we have determined it is too cold is accumulated for
+  // each callee function. Initially this is just the entry count.
+  struct NotInlinedProfileInfo {
+    uint64_t entryCount;
+  };
+  DenseMap<Function *, NotInlinedProfileInfo> notInlinedCallInfo;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -544,10 +552,10 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   if (!FS)
     return std::error_code();
 
-  // Ignore all intrinsics and branch instructions.
-  // Branch instruction usually contains debug info from sources outside of
+  // Ignore all intrinsics, phinodes and branch instructions.
+  // Branch and phinodes instruction usually contains debug info from sources outside of
   // the residing basic block, thus we ignore them during annotation.
-  if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst))
+  if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst) || isa<PHINode>(Inst))
     return std::error_code();
 
   // If a direct call/invoke instruction is inlined in profile
@@ -719,12 +727,14 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
 /// \returns the FunctionSamples pointer to the inlined instance.
 const FunctionSamples *
 SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
-  SmallVector<std::pair<LineLocation, StringRef>, 10> S;
   const DILocation *DIL = Inst.getDebugLoc();
   if (!DIL)
     return Samples;
 
-  return Samples->findFunctionSamples(DIL);
+  auto it = DILocation2SampleMap.try_emplace(DIL,nullptr);
+  if (it.second)
+    it.first->second = Samples->findFunctionSamples(DIL);
+  return it.first->second;
 }
 
 bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
@@ -776,6 +786,8 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
 bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
   DenseSet<Instruction *> PromotedInsns;
+
+  DenseMap<Instruction *, const FunctionSamples *> localNotInlinedCallSites;
   bool Changed = false;
   while (true) {
     bool LocalChanged = false;
@@ -788,6 +800,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         if ((isa<CallInst>(I) || isa<InvokeInst>(I)) &&
             !isa<IntrinsicInst>(I) && (FS = findCalleeFunctionSamples(I))) {
           Candidates.push_back(&I);
+          if (FS->getEntrySamples() > 0)
+            localNotInlinedCallSites.try_emplace(&I, FS);
           if (callsiteIsHot(FS, PSI))
             Hot = true;
         }
@@ -833,8 +847,10 @@ bool SampleProfileLoader::inlineHotFunctions(
             PromotedInsns.insert(I);
             // If profile mismatches, we should not attempt to inline DI.
             if ((isa<CallInst>(DI) || isa<InvokeInst>(DI)) &&
-                inlineCallInstruction(DI))
+                inlineCallInstruction(DI)) {
+              localNotInlinedCallSites.erase(I);
               LocalChanged = true;
+            }
           } else {
             LLVM_DEBUG(dbgs()
                        << "\nFailed to promote indirect call to "
@@ -843,8 +859,10 @@ bool SampleProfileLoader::inlineHotFunctions(
         }
       } else if (CalledFunction && CalledFunction->getSubprogram() &&
                  !CalledFunction->isDeclaration()) {
-        if (inlineCallInstruction(I))
+        if (inlineCallInstruction(I)) {
+          localNotInlinedCallSites.erase(I);
           LocalChanged = true;
+        }
       } else if (IsThinLTOPreLink) {
         findCalleeFunctionSamples(*I)->findInlinedFunctions(
             InlinedGUIDs, F.getParent(), PSI->getOrCompHotCountThreshold());
@@ -855,6 +873,18 @@ bool SampleProfileLoader::inlineHotFunctions(
     } else {
       break;
     }
+  }
+
+  // Accumulate not inlined callsite information into notInlinedSamples
+  for (const auto &Pair : localNotInlinedCallSites) {
+    Instruction *I = Pair.getFirst();
+    Function *Callee = CallSite(I).getCalledFunction();
+    if (!Callee || Callee->isDeclaration())
+      continue;
+    const FunctionSamples *FS = Pair.getSecond();
+    auto pair =
+        notInlinedCallInfo.try_emplace(Callee, NotInlinedProfileInfo{0});
+    pair.first->second.entryCount += FS->getEntrySamples();
   }
   return Changed;
 }
@@ -1598,6 +1628,12 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
       clearFunctionData();
       retval |= runOnFunction(F, AM);
     }
+
+  // Account for cold calls not inlined....
+  for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
+       notInlinedCallInfo)
+    updateProfileCallee(pair.first, pair.second.entryCount);
+
   return retval;
 }
 
@@ -1610,6 +1646,8 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
 }
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
+  
+  DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
   // conservatively by getEntryCount as the same as unknown (None). This is
   // to avoid newly added code to be treated as cold. If we have samples

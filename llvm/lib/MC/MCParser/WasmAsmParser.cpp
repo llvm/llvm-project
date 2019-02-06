@@ -1,9 +1,8 @@
 //===- WasmAsmParser.cpp - Wasm Assembly Parser -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // --
 //
@@ -22,6 +21,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
@@ -83,8 +83,16 @@ public:
   }
 
   bool parseSectionDirective(StringRef, SMLoc) {
-    // FIXME: .section currently no-op.
-    while (Lexer->isNot(AsmToken::EndOfStatement)) Parser->Lex();
+    StringRef Name;
+    if (Parser->parseIdentifier(Name))
+      return TokError("expected identifier in directive");
+    // FIXME: currently requiring this very fixed format.
+    if (Expect(AsmToken::Comma, ",") || Expect(AsmToken::String, "string") ||
+        Expect(AsmToken::Comma, ",") || Expect(AsmToken::At, "@") ||
+        Expect(AsmToken::EndOfStatement, "eol"))
+      return true;
+    auto WS = getContext().getWasmSection(Name, SectionKind::getText());
+    getStreamer().SwitchSection(WS);
     return false;
   }
 
@@ -95,15 +103,13 @@ public:
     if (Parser->parseIdentifier(Name))
       return TokError("expected identifier in directive");
     auto Sym = getContext().getOrCreateSymbol(Name);
-    if (Lexer->isNot(AsmToken::Comma))
-      return TokError("unexpected token in directive");
-    Lex();
+    if (Expect(AsmToken::Comma, ","))
+      return true;
     const MCExpr *Expr;
     if (Parser->parseExpression(Expr))
       return true;
-    if (Lexer->isNot(AsmToken::EndOfStatement))
-      return TokError("unexpected token in directive");
-    Lex();
+    if (Expect(AsmToken::EndOfStatement, "eol"))
+      return true;
     // MCWasmStreamer implements this.
     getStreamer().emitELFSize(Sym, Expr);
     return false;

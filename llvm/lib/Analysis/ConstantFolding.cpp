@@ -1,9 +1,8 @@
 //===-- ConstantFolding.cpp - Fold instructions into constants ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1629,6 +1628,18 @@ static bool isManifestConstant(const Constant *c) {
   return false;
 }
 
+static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
+  if (auto *CI = dyn_cast<ConstantInt>(Op)) {
+    C = &CI->getValue();
+    return true;
+  }
+  if (isa<UndefValue>(Op)) {
+    C = nullptr;
+    return true;
+  }
+  return false;
+}
+
 Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
                                  ArrayRef<Constant *> Operands,
                                  const TargetLibraryInfo *TLI,
@@ -1643,8 +1654,10 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
       return nullptr;
     }
     if (isa<UndefValue>(Operands[0])) {
-      // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN
-      if (IntrinsicID == Intrinsic::cos)
+      // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN.
+      // ctpop() is between 0 and bitwidth, pick 0 for undef.
+      if (IntrinsicID == Intrinsic::cos ||
+          IntrinsicID == Intrinsic::ctpop)
         return Constant::getNullValue(Ty);
       if (IntrinsicID == Intrinsic::bswap ||
           IntrinsicID == Intrinsic::bitreverse ||
@@ -1995,62 +2008,92 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
       return nullptr;
     }
 
-    if (auto *Op1 = dyn_cast<ConstantInt>(Operands[0])) {
-      if (auto *Op2 = dyn_cast<ConstantInt>(Operands[1])) {
+    if (Operands[0]->getType()->isIntegerTy() &&
+        Operands[1]->getType()->isIntegerTy()) {
+      const APInt *C0, *C1;
+      if (!getConstIntOrUndef(Operands[0], C0) ||
+          !getConstIntOrUndef(Operands[1], C1))
+        return nullptr;
+
+      switch (IntrinsicID) {
+      default: break;
+      case Intrinsic::smul_with_overflow:
+      case Intrinsic::umul_with_overflow:
+        // Even if both operands are undef, we cannot fold muls to undef
+        // in the general case. For example, on i2 there are no inputs
+        // that would produce { i2 -1, i1 true } as the result.
+        if (!C0 || !C1)
+          return Constant::getNullValue(Ty);
+        LLVM_FALLTHROUGH;
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::usub_with_overflow: {
+        if (!C0 || !C1)
+          return UndefValue::get(Ty);
+
+        APInt Res;
+        bool Overflow;
         switch (IntrinsicID) {
-        default: break;
+        default: llvm_unreachable("Invalid case");
         case Intrinsic::sadd_with_overflow:
+          Res = C0->sadd_ov(*C1, Overflow);
+          break;
         case Intrinsic::uadd_with_overflow:
+          Res = C0->uadd_ov(*C1, Overflow);
+          break;
         case Intrinsic::ssub_with_overflow:
+          Res = C0->ssub_ov(*C1, Overflow);
+          break;
         case Intrinsic::usub_with_overflow:
+          Res = C0->usub_ov(*C1, Overflow);
+          break;
         case Intrinsic::smul_with_overflow:
-        case Intrinsic::umul_with_overflow: {
-          APInt Res;
-          bool Overflow;
-          switch (IntrinsicID) {
-          default: llvm_unreachable("Invalid case");
-          case Intrinsic::sadd_with_overflow:
-            Res = Op1->getValue().sadd_ov(Op2->getValue(), Overflow);
-            break;
-          case Intrinsic::uadd_with_overflow:
-            Res = Op1->getValue().uadd_ov(Op2->getValue(), Overflow);
-            break;
-          case Intrinsic::ssub_with_overflow:
-            Res = Op1->getValue().ssub_ov(Op2->getValue(), Overflow);
-            break;
-          case Intrinsic::usub_with_overflow:
-            Res = Op1->getValue().usub_ov(Op2->getValue(), Overflow);
-            break;
-          case Intrinsic::smul_with_overflow:
-            Res = Op1->getValue().smul_ov(Op2->getValue(), Overflow);
-            break;
-          case Intrinsic::umul_with_overflow:
-            Res = Op1->getValue().umul_ov(Op2->getValue(), Overflow);
-            break;
-          }
-          Constant *Ops[] = {
-            ConstantInt::get(Ty->getContext(), Res),
-            ConstantInt::get(Type::getInt1Ty(Ty->getContext()), Overflow)
-          };
-          return ConstantStruct::get(cast<StructType>(Ty), Ops);
+          Res = C0->smul_ov(*C1, Overflow);
+          break;
+        case Intrinsic::umul_with_overflow:
+          Res = C0->umul_ov(*C1, Overflow);
+          break;
         }
-        case Intrinsic::uadd_sat:
-          return ConstantInt::get(Ty, Op1->getValue().uadd_sat(Op2->getValue()));
-        case Intrinsic::sadd_sat:
-          return ConstantInt::get(Ty, Op1->getValue().sadd_sat(Op2->getValue()));
-        case Intrinsic::usub_sat:
-          return ConstantInt::get(Ty, Op1->getValue().usub_sat(Op2->getValue()));
-        case Intrinsic::ssub_sat:
-          return ConstantInt::get(Ty, Op1->getValue().ssub_sat(Op2->getValue()));
-        case Intrinsic::cttz:
-          if (Op2->isOne() && Op1->isZero()) // cttz(0, 1) is undef.
-            return UndefValue::get(Ty);
-          return ConstantInt::get(Ty, Op1->getValue().countTrailingZeros());
-        case Intrinsic::ctlz:
-          if (Op2->isOne() && Op1->isZero()) // ctlz(0, 1) is undef.
-            return UndefValue::get(Ty);
-          return ConstantInt::get(Ty, Op1->getValue().countLeadingZeros());
-        }
+        Constant *Ops[] = {
+          ConstantInt::get(Ty->getContext(), Res),
+          ConstantInt::get(Type::getInt1Ty(Ty->getContext()), Overflow)
+        };
+        return ConstantStruct::get(cast<StructType>(Ty), Ops);
+      }
+      case Intrinsic::uadd_sat:
+      case Intrinsic::sadd_sat:
+        if (!C0 && !C1)
+          return UndefValue::get(Ty);
+        if (!C0 || !C1)
+          return Constant::getAllOnesValue(Ty);
+        if (IntrinsicID == Intrinsic::uadd_sat)
+          return ConstantInt::get(Ty, C0->uadd_sat(*C1));
+        else
+          return ConstantInt::get(Ty, C0->sadd_sat(*C1));
+      case Intrinsic::usub_sat:
+      case Intrinsic::ssub_sat:
+        if (!C0 && !C1)
+          return UndefValue::get(Ty);
+        if (!C0 || !C1)
+          return Constant::getNullValue(Ty);
+        if (IntrinsicID == Intrinsic::usub_sat)
+          return ConstantInt::get(Ty, C0->usub_sat(*C1));
+        else
+          return ConstantInt::get(Ty, C0->ssub_sat(*C1));
+      case Intrinsic::cttz:
+      case Intrinsic::ctlz:
+        assert(C1 && "Must be constant int");
+
+        // cttz(0, 1) and ctlz(0, 1) are undef.
+        if (C1->isOneValue() && (!C0 || C0->isNullValue()))
+          return UndefValue::get(Ty);
+        if (!C0)
+          return Constant::getNullValue(Ty);
+        if (IntrinsicID == Intrinsic::cttz)
+          return ConstantInt::get(Ty, C0->countTrailingZeros());
+        else
+          return ConstantInt::get(Ty, C0->countLeadingZeros());
       }
 
       return nullptr;
@@ -2136,26 +2179,33 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
   }
 
   if (IntrinsicID == Intrinsic::fshl || IntrinsicID == Intrinsic::fshr) {
-    auto *C0 = dyn_cast<ConstantInt>(Operands[0]);
-    auto *C1 = dyn_cast<ConstantInt>(Operands[1]);
-    auto *C2 = dyn_cast<ConstantInt>(Operands[2]);
-    if (!(C0 && C1 && C2))
+    const APInt *C0, *C1, *C2;
+    if (!getConstIntOrUndef(Operands[0], C0) ||
+        !getConstIntOrUndef(Operands[1], C1) ||
+        !getConstIntOrUndef(Operands[2], C2))
       return nullptr;
+
+    bool IsRight = IntrinsicID == Intrinsic::fshr;
+    if (!C2)
+      return Operands[IsRight ? 1 : 0];
+    if (!C0 && !C1)
+      return UndefValue::get(Ty);
 
     // The shift amount is interpreted as modulo the bitwidth. If the shift
     // amount is effectively 0, avoid UB due to oversized inverse shift below.
-    unsigned BitWidth = C0->getBitWidth();
-    unsigned ShAmt = C2->getValue().urem(BitWidth);
-    bool IsRight = IntrinsicID == Intrinsic::fshr;
+    unsigned BitWidth = C2->getBitWidth();
+    unsigned ShAmt = C2->urem(BitWidth);
     if (!ShAmt)
-      return IsRight ? C1 : C0;
+      return Operands[IsRight ? 1 : 0];
 
-    // (X << ShlAmt) | (Y >> LshrAmt)
-    const APInt &X = C0->getValue();
-    const APInt &Y = C1->getValue();
+    // (C0 << ShlAmt) | (C1 >> LshrAmt)
     unsigned LshrAmt = IsRight ? ShAmt : BitWidth - ShAmt;
     unsigned ShlAmt = !IsRight ? ShAmt : BitWidth - ShAmt;
-    return ConstantInt::get(Ty->getContext(), X.shl(ShlAmt) | Y.lshr(LshrAmt));
+    if (!C0)
+      return ConstantInt::get(Ty, C1->lshr(LshrAmt));
+    if (!C1)
+      return ConstantInt::get(Ty, C0->shl(ShlAmt));
+    return ConstantInt::get(Ty, C0->shl(ShlAmt) | C1->lshr(LshrAmt));
   }
 
   return nullptr;

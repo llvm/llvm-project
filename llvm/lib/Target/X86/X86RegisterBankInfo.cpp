@@ -1,9 +1,8 @@
 //===- X86RegisterBankInfo.cpp -----------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -174,17 +173,25 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_MUL:
-  case TargetOpcode::G_SHL:
-  case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_ASHR:
     return getSameOperandsMapping(MI, false);
-    break;
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
     return getSameOperandsMapping(MI, true);
-    break;
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+    unsigned NumOperands = MI.getNumOperands();
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+    auto Mapping = getValueMapping(getPartialMappingIdx(Ty, false), 3);
+    return getInstructionMapping(DefaultMappingID, 1, Mapping, NumOperands);
+
+  }
   default:
     break;
   }

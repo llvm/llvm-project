@@ -1,9 +1,8 @@
 //===- DemandedBits.cpp - Determine demanded bits -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -21,8 +20,7 @@
 
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -85,8 +83,9 @@ static bool isAlwaysLive(Instruction *I) {
 }
 
 void DemandedBits::determineLiveOperandBits(
-    const Instruction *UserI, const Instruction *I, unsigned OperandNo,
-    const APInt &AOut, APInt &AB, KnownBits &Known, KnownBits &Known2) {
+    const Instruction *UserI, const Value *Val, unsigned OperandNo,
+    const APInt &AOut, APInt &AB, KnownBits &Known, KnownBits &Known2,
+    bool &KnownBitsComputed) {
   unsigned BitWidth = AB.getBitWidth();
 
   // We're called once per operand, but for some instructions, we need to
@@ -97,7 +96,11 @@ void DemandedBits::determineLiveOperandBits(
   // provided here.
   auto ComputeKnownBits =
       [&](unsigned BitWidth, const Value *V1, const Value *V2) {
-        const DataLayout &DL = I->getModule()->getDataLayout();
+        if (KnownBitsComputed)
+          return;
+        KnownBitsComputed = true;
+
+        const DataLayout &DL = UserI->getModule()->getDataLayout();
         Known = KnownBits(BitWidth);
         computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
 
@@ -129,7 +132,7 @@ void DemandedBits::determineLiveOperandBits(
           // We need some output bits, so we need all bits of the
           // input to the left of, and including, the leftmost bit
           // known to be one.
-          ComputeKnownBits(BitWidth, I, nullptr);
+          ComputeKnownBits(BitWidth, Val, nullptr);
           AB = APInt::getHighBitsSet(BitWidth,
                  std::min(BitWidth, Known.countMaxLeadingZeros()+1));
         }
@@ -139,7 +142,7 @@ void DemandedBits::determineLiveOperandBits(
           // We need some output bits, so we need all bits of the
           // input to the right of, and including, the rightmost bit
           // known to be one.
-          ComputeKnownBits(BitWidth, I, nullptr);
+          ComputeKnownBits(BitWidth, Val, nullptr);
           AB = APInt::getLowBitsSet(BitWidth,
                  std::min(BitWidth, Known.countMaxTrailingZeros()+1));
         }
@@ -234,14 +237,11 @@ void DemandedBits::determineLiveOperandBits(
     // other operand are dead (unless they're both zero, in which
     // case they can't both be dead, so just mark the LHS bits as
     // dead).
-    if (OperandNo == 0) {
-      ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
+    ComputeKnownBits(BitWidth, UserI->getOperand(0), UserI->getOperand(1));
+    if (OperandNo == 0)
       AB &= ~Known2.Zero;
-    } else {
-      if (!isa<Instruction>(UserI->getOperand(0)))
-        ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
+    else
       AB &= ~(Known.Zero & ~Known2.Zero);
-    }
     break;
   case Instruction::Or:
     AB = AOut;
@@ -250,14 +250,11 @@ void DemandedBits::determineLiveOperandBits(
     // other operand are dead (unless they're both one, in which
     // case they can't both be dead, so just mark the LHS bits as
     // dead).
-    if (OperandNo == 0) {
-      ComputeKnownBits(BitWidth, I, UserI->getOperand(1));
+    ComputeKnownBits(BitWidth, UserI->getOperand(0), UserI->getOperand(1));
+    if (OperandNo == 0)
       AB &= ~Known2.One;
-    } else {
-      if (!isa<Instruction>(UserI->getOperand(0)))
-        ComputeKnownBits(BitWidth, UserI->getOperand(0), I);
+    else
       AB &= ~(Known.One & ~Known2.One);
-    }
     break;
   case Instruction::Xor:
   case Instruction::PHI:
@@ -314,8 +311,9 @@ void DemandedBits::performAnalysis() {
 
   Visited.clear();
   AliveBits.clear();
+  DeadUses.clear();
 
-  SmallVector<Instruction*, 128> Worklist;
+  SmallSetVector<Instruction*, 16> Worklist;
 
   // Collect the set of "root" instructions that are known live.
   for (Instruction &I : instructions(F)) {
@@ -330,7 +328,7 @@ void DemandedBits::performAnalysis() {
     Type *T = I.getType();
     if (T->isIntOrIntVectorTy()) {
       if (AliveBits.try_emplace(&I, T->getScalarSizeInBits(), 0).second)
-        Worklist.push_back(&I);
+        Worklist.insert(&I);
 
       continue;
     }
@@ -341,7 +339,7 @@ void DemandedBits::performAnalysis() {
         Type *T = J->getType();
         if (T->isIntOrIntVectorTy())
           AliveBits[J] = APInt::getAllOnesValue(T->getScalarSizeInBits());
-        Worklist.push_back(J);
+        Worklist.insert(J);
       }
     }
     // To save memory, we don't add I to the Visited set here. Instead, we
@@ -358,7 +356,8 @@ void DemandedBits::performAnalysis() {
     APInt AOut;
     if (UserI->getType()->isIntOrIntVectorTy()) {
       AOut = AliveBits[UserI];
-      LLVM_DEBUG(dbgs() << " Alive Out: " << AOut);
+      LLVM_DEBUG(dbgs() << " Alive Out: 0x"
+                        << Twine::utohexstr(AOut.getLimitedValue()));
     }
     LLVM_DEBUG(dbgs() << "\n");
 
@@ -366,26 +365,40 @@ void DemandedBits::performAnalysis() {
       Visited.insert(UserI);
 
     KnownBits Known, Known2;
+    bool KnownBitsComputed = false;
     // Compute the set of alive bits for each operand. These are anded into the
     // existing set, if any, and if that changes the set of alive bits, the
     // operand is added to the work-list.
     for (Use &OI : UserI->operands()) {
-      if (Instruction *I = dyn_cast<Instruction>(OI)) {
-        Type *T = I->getType();
-        if (T->isIntOrIntVectorTy()) {
-          unsigned BitWidth = T->getScalarSizeInBits();
-          APInt AB = APInt::getAllOnesValue(BitWidth);
-          if (UserI->getType()->isIntOrIntVectorTy() && !AOut &&
-              !isAlwaysLive(UserI)) {
-            AB = APInt(BitWidth, 0);
-          } else {
-            // If all bits of the output are dead, then all bits of the input
-            // Bits of each operand that are used to compute alive bits of the
-            // output are alive, all others are dead.
-            determineLiveOperandBits(UserI, I, OI.getOperandNo(), AOut, AB,
-                                     Known, Known2);
-          }
+      // We also want to detect dead uses of arguments, but will only store
+      // demanded bits for instructions.
+      Instruction *I = dyn_cast<Instruction>(OI);
+      if (!I && !isa<Argument>(OI))
+        continue;
 
+      Type *T = OI->getType();
+      if (T->isIntOrIntVectorTy()) {
+        unsigned BitWidth = T->getScalarSizeInBits();
+        APInt AB = APInt::getAllOnesValue(BitWidth);
+        if (UserI->getType()->isIntOrIntVectorTy() && !AOut &&
+            !isAlwaysLive(UserI)) {
+          // If all bits of the output are dead, then all bits of the input
+          // are also dead.
+          AB = APInt(BitWidth, 0);
+        } else {
+          // Bits of each operand that are used to compute alive bits of the
+          // output are alive, all others are dead.
+          determineLiveOperandBits(UserI, OI, OI.getOperandNo(), AOut, AB,
+                                   Known, Known2, KnownBitsComputed);
+
+          // Keep track of uses which have no demanded bits.
+          if (AB.isNullValue())
+            DeadUses.insert(&OI);
+          else
+            DeadUses.erase(&OI);
+        }
+
+        if (I) {
           // If we've added to the set of alive bits (or the operand has not
           // been previously visited), then re-queue the operand to be visited
           // again.
@@ -397,11 +410,11 @@ void DemandedBits::performAnalysis() {
           APInt ABNew = AB | ABPrev;
           if (ABNew != ABPrev || ABI == AliveBits.end()) {
             AliveBits[I] = std::move(ABNew);
-            Worklist.push_back(I);
+            Worklist.insert(I);
           }
-        } else if (!Visited.count(I)) {
-          Worklist.push_back(I);
         }
+      } else if (I && !Visited.count(I)) {
+        Worklist.insert(I);
       }
     }
   }
@@ -424,6 +437,31 @@ bool DemandedBits::isInstructionDead(Instruction *I) {
 
   return !Visited.count(I) && AliveBits.find(I) == AliveBits.end() &&
     !isAlwaysLive(I);
+}
+
+bool DemandedBits::isUseDead(Use *U) {
+  // We only track integer uses, everything else is assumed live.
+  if (!(*U)->getType()->isIntOrIntVectorTy())
+    return false;
+
+  // Uses by always-live instructions are never dead.
+  Instruction *UserI = cast<Instruction>(U->getUser());
+  if (isAlwaysLive(UserI))
+    return false;
+
+  performAnalysis();
+  if (DeadUses.count(U))
+    return true;
+
+  // If no output bits are demanded, no input bits are demanded and the use
+  // is dead. These uses might not be explicitly present in the DeadUses map.
+  if (UserI->getType()->isIntOrIntVectorTy()) {
+    auto Found = AliveBits.find(UserI);
+    if (Found != AliveBits.end() && Found->second.isNullValue())
+      return true;
+  }
+
+  return false;
 }
 
 void DemandedBits::print(raw_ostream &OS) {

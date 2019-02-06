@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv7-apple-ios -relocation-model=pic -disable-fp-elim -mcpu=cortex-a8 < %s
+; RUN: llc -mtriple=thumbv7-apple-ios -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8 < %s
 
 ; CodeGen SplitCriticalEdge() shouldn't try to break edge to a landing pad.
 ; rdar://11300144

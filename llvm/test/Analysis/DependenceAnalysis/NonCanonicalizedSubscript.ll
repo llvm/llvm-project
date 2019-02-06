@@ -1,3 +1,5 @@
+; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
+; RUN: | FileCheck %s -check-prefix=DELIN
 ; RUN: opt < %s -analyze -basicaa -da | FileCheck %s -check-prefix=DELIN
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -98,4 +100,4 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 3.7.0 (https://vaivaswatha@bitbucket.org/compilertree/amd_clang.git 93a05fb75ee3411d24e8b2b184fc766a5318403e) (https://vaivaswatha@bitbucket.org/compilertree/amd_llvm.git 166d93d26efc912b517739f64d054a435e8e95cd)"}
+!0 = !{!"clang version 3.7.0"}

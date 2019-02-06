@@ -2725,3 +2725,47 @@ entry:
   %2 = add <32 x i16> %1, <i16 -1, i16 2200, i16 50, i16 114, i16 77, i16 70, i16 -123, i16 -9800, i16 -635, i16 -19567, i16 22, i16 -100, i16 -2534, i16 -34, i16 -55, i16 -70, i16 -1, i16 2200, i16 50, i16 114, i16 77, i16 70, i16 -123, i16 -9805, i16 -635, i16 -19567, i16 22, i16 -100, i16 -2534, i16 -346, i16 -55, i16 -70>
   ret <32 x i16> %2
 }
+
+; PR40083
+define i64 @test30(<8 x i16> %x) {
+; SSE-LABEL: test30:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    psubusw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    movq %xmm0, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test30:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vpsubusw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    retq
+entry:
+  %0 = icmp ugt <8 x i16> %x, <i16 1, i16 -2200, i16 -50, i16 -114, i16 undef, i16 undef, i16 undef, i16 undef>
+  %1 = select <8 x i1> %0, <8 x i16> %x, <8 x i16> <i16 1, i16 -2200, i16 -50, i16 -114, i16 undef, i16 undef, i16 undef, i16 undef>
+  %2 = add <8 x i16> %1, <i16 -1, i16 2200, i16 50, i16 114, i16 undef, i16 undef, i16 undef, i16 undef>
+  %3 = bitcast <8 x i16> %2 to <2 x i64>
+  %4 = extractelement <2 x i64> %3, i32 0
+  ret i64 %4
+}
+
+; PR40083
+define i64 @test31(<2 x i64> %x) {
+; SSE-LABEL: test31:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psubusb {{.*}}(%rip), %xmm0
+; SSE-NEXT:    movq %xmm0, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test31:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubusb {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    retq
+  %t0 = bitcast <2 x i64> %x to <16 x i8>
+  %cmp = icmp ugt <16 x i8> %t0, <i8 70, i8 70, i8 70, i8 70, i8 70, i8 70, i8 70, i8 70, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>
+  %bop = add <16 x i8> %t0, <i8 -71, i8 -71, i8 -71, i8 -71, i8 -71, i8 -71, i8 -71, i8 -71, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>
+  %sel = select <16 x i1> %cmp, <16 x i8> %bop, <16 x i8> zeroinitializer
+  %bc = bitcast <16 x i8> %sel to <2 x i64>
+  %ext = extractelement <2 x i64> %bc, i32 0
+  ret i64 %ext
+}

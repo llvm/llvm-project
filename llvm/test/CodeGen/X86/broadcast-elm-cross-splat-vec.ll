@@ -95,8 +95,7 @@ define <16 x i8> @f16xi8_i64(<16 x i8> %a) {
 ;
 ; ALL32-LABEL: f16xi8_i64:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = [7.9499288951273625E-275,7.9499288951273625E-275]
-; ALL32-NEXT:    # xmm1 = mem[0,0]
+; ALL32-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [7.9499288951273625E-275,7.9499288951273625E-275]
 ; ALL32-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    retl
@@ -692,8 +691,7 @@ define <8 x i16> @f8xi16_i64(<8 x i16> %a) {
 ;
 ; ALL32-LABEL: f8xi16_i64:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = [4.1720559249406128E-309,4.1720559249406128E-309]
-; ALL32-NEXT:    # xmm1 = mem[0,0]
+; ALL32-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.1720559249406128E-309,4.1720559249406128E-309]
 ; ALL32-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    retl
@@ -1147,8 +1145,7 @@ define <4 x i32> @f4xi32_i64(<4 x i32> %a) {
 ;
 ; ALL32-LABEL: f4xi32_i64:
 ; ALL32:       # %bb.0:
-; ALL32-NEXT:    vmovddup {{.*#+}} xmm1 = [2.1219957909652723E-314,2.1219957909652723E-314]
-; ALL32-NEXT:    # xmm1 = mem[0,0]
+; ALL32-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2.1219957909652723E-314,2.1219957909652723E-314]
 ; ALL32-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; ALL32-NEXT:    retl
@@ -1624,7 +1621,8 @@ define <4 x float> @f4xf32_f64(<4 x float> %a) {
 ;
 ; ALL64-LABEL: f4xf32_f64:
 ; ALL64:       # %bb.0:
-; ALL64-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4575657222482165760,4575657222482165760]
+; ALL64-NEXT:    vmovddup {{.*#+}} xmm1 = [4575657222482165760,4575657222482165760]
+; ALL64-NEXT:    # xmm1 = mem[0,0]
 ; ALL64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; ALL64-NEXT:    vdivps %xmm0, %xmm1, %xmm0
 ; ALL64-NEXT:    retq

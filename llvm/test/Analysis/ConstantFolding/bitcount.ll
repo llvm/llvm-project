@@ -74,8 +74,7 @@ define i33 @ctlz_zero_undefined() {
 
 define i31 @ctpop_undef() {
 ; CHECK-LABEL: @ctpop_undef(
-; CHECK-NEXT:    [[X:%.*]] = call i31 @llvm.ctpop.i31(i31 undef)
-; CHECK-NEXT:    ret i31 [[X]]
+; CHECK-NEXT:    ret i31 0
 ;
   %x = call i31 @llvm.ctpop.i31(i31 undef)
   ret i31 %x
@@ -83,8 +82,7 @@ define i31 @ctpop_undef() {
 
 define i32 @cttz_undef_defined() {
 ; CHECK-LABEL: @cttz_undef_defined(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.cttz.i32(i32 undef, i1 false)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %x = call i32 @llvm.cttz.i32(i32 undef, i1 false)
   ret i32 %x
@@ -92,8 +90,7 @@ define i32 @cttz_undef_defined() {
 
 define i32 @cttz_undef_undefined() {
 ; CHECK-LABEL: @cttz_undef_undefined(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.cttz.i32(i32 undef, i1 true)
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 undef
 ;
   %x = call i32 @llvm.cttz.i32(i32 undef, i1 true)
   ret i32 %x
@@ -101,8 +98,7 @@ define i32 @cttz_undef_undefined() {
 
 define i33 @ctlz_undef_defined() {
 ; CHECK-LABEL: @ctlz_undef_defined(
-; CHECK-NEXT:    [[X:%.*]] = call i33 @llvm.ctlz.i33(i33 undef, i1 false)
-; CHECK-NEXT:    ret i33 [[X]]
+; CHECK-NEXT:    ret i33 0
 ;
   %x = call i33 @llvm.ctlz.i33(i33 undef, i1 false)
   ret i33 %x
@@ -110,8 +106,7 @@ define i33 @ctlz_undef_defined() {
 
 define i33 @ctlz_undef_undefined() {
 ; CHECK-LABEL: @ctlz_undef_undefined(
-; CHECK-NEXT:    [[X:%.*]] = call i33 @llvm.ctlz.i33(i33 undef, i1 true)
-; CHECK-NEXT:    ret i33 [[X]]
+; CHECK-NEXT:    ret i33 undef
 ;
   %x = call i33 @llvm.ctlz.i33(i33 undef, i1 true)
   ret i33 %x
@@ -127,8 +122,7 @@ define <2 x i31> @ctpop_vector() {
 
 define <2 x i31> @ctpop_vector_undef() {
 ; CHECK-LABEL: @ctpop_vector_undef(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i31> @llvm.ctpop.v2i31(<2 x i31> <i31 0, i31 undef>)
-; CHECK-NEXT:    ret <2 x i31> [[X]]
+; CHECK-NEXT:    ret <2 x i31> zeroinitializer
 ;
   %x = call <2 x i31> @llvm.ctpop.v2i31(<2 x i31> <i31 0, i31 undef>)
   ret <2 x i31> %x
@@ -144,8 +138,7 @@ define <2 x i32> @cttz_vector() {
 
 define <2 x i32> @cttz_vector_undef_defined() {
 ; CHECK-LABEL: @cttz_vector_undef_defined(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> <i32 0, i32 undef>, i1 false)
-; CHECK-NEXT:    ret <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> <i32 32, i32 0>
 ;
   %x = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> <i32 0, i32 undef>, i1 false)
   ret <2 x i32> %x
@@ -153,8 +146,7 @@ define <2 x i32> @cttz_vector_undef_defined() {
 
 define <2 x i32> @cttz_vector_undef_undefined() {
 ; CHECK-LABEL: @cttz_vector_undef_undefined(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> <i32 0, i32 undef>, i1 true)
-; CHECK-NEXT:    ret <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> undef
 ;
   %x = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> <i32 0, i32 undef>, i1 true)
   ret <2 x i32> %x
@@ -170,8 +162,7 @@ define <2 x i33> @ctlz_vector() {
 
 define <2 x i33> @ctlz_vector_undef_defined() {
 ; CHECK-LABEL: @ctlz_vector_undef_defined(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i33> @llvm.ctlz.v2i33(<2 x i33> <i33 0, i33 undef>, i1 false)
-; CHECK-NEXT:    ret <2 x i33> [[X]]
+; CHECK-NEXT:    ret <2 x i33> <i33 33, i33 0>
 ;
   %x = call <2 x i33> @llvm.ctlz.v2i33(<2 x i33> <i33 0, i33 undef>, i1 false)
   ret <2 x i33> %x
@@ -179,8 +170,7 @@ define <2 x i33> @ctlz_vector_undef_defined() {
 
 define <2 x i33> @ctlz_vector_undef_undefined() {
 ; CHECK-LABEL: @ctlz_vector_undef_undefined(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i33> @llvm.ctlz.v2i33(<2 x i33> <i33 0, i33 undef>, i1 true)
-; CHECK-NEXT:    ret <2 x i33> [[X]]
+; CHECK-NEXT:    ret <2 x i33> undef
 ;
   %x = call <2 x i33> @llvm.ctlz.v2i33(<2 x i33> <i33 0, i33 undef>, i1 true)
   ret <2 x i33> %x

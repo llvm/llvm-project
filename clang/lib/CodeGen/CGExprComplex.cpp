@@ -1,9 +1,8 @@
 //===--- CGExprComplex.cpp - Emit LLVM Code for Complex Exprs -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -631,9 +630,9 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
   llvm::Constant *Func = CGF.CGM.CreateBuiltinFunction(FTy, LibCallName);
   CGCallee Callee = CGCallee::forDirect(Func, FQTy->getAs<FunctionProtoType>());
 
-  llvm::Instruction *Call;
+  llvm::CallBase *Call;
   RValue Res = CGF.EmitCall(FuncInfo, Callee, ReturnValueSlot(), Args, &Call);
-  cast<llvm::CallInst>(Call)->setCallingConv(CGF.CGM.getRuntimeCC());
+  Call->setCallingConv(CGF.CGM.getRuntimeCC());
   return Res.getComplexVal();
 }
 

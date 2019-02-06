@@ -38,7 +38,7 @@ __try.cont:
 define internal i32 @"\01?filt$0@0@f@@"() #1 {
 entry:
   %0 = tail call i8* @llvm.frameaddress(i32 1)
-  %1 = tail call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void ()* @f to i8*), i8* %0)
+  %1 = tail call i8* @llvm.eh.recoverfp(i8* bitcast (void ()* @f to i8*), i8* %0)
   %2 = tail call i8* @llvm.localrecover(i8* bitcast (void ()* @f to i8*), i8* %1, i32 0)
   %__exception_code = bitcast i8* %2 to i32*
   %3 = getelementptr inbounds i8, i8* %0, i32 -20
@@ -55,7 +55,7 @@ entry:
 declare i8* @llvm.frameaddress(i32) #2
 
 ; Function Attrs: nounwind readnone
-declare i8* @llvm.x86.seh.recoverfp(i8*, i8*) #2
+declare i8* @llvm.eh.recoverfp(i8*, i8*) #2
 
 ; Function Attrs: nounwind readnone
 declare i8* @llvm.localrecover(i8*, i8*, i32) #2

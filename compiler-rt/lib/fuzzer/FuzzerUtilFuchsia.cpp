@@ -1,9 +1,8 @@
 //===- FuzzerUtilFuchsia.cpp - Misc utils for Fuchsia. --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // Misc utils implementation using Fuchsia/Zircon APIs.
@@ -287,6 +286,10 @@ void CrashHandler(zx_handle_t *Event) {
 }
 
 } // namespace
+
+bool Mprotect(void *Ptr, size_t Size, bool AllowReadWrite) {
+  return false;  // UNIMPLEMENTED
+}
 
 // Platform specific functions.
 void SetSignalHandler(const FuzzingOptions &Options) {

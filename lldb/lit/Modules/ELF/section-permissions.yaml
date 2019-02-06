@@ -14,7 +14,7 @@
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
-  Type:            ET_DYN
+  Type:            ET_REL
   Machine:         EM_X86_64
   Entry:           0x00000000000007A0
 Sections:

@@ -16,12 +16,19 @@ stream.
 
 COMMANDS
 --------
-At least one of the following commands are required, and some commands can be combined with other commands:
+At least one of the following commands are required, and some commands can be
+combined with other commands:
 
-.. option:: -disassemble
+.. option:: -d, -disassemble
 
-  Display assembler mnemonics for the machine instructions
- 
+  Display assembler mnemonics for the machine instructions. Disassembles all
+  text sections found in the input file(s).
+
+.. option:: -D, -disassemble-all
+
+  Display assembler mnemonics for the machine instructions. Disassembles all
+  sections found in the input file(s).
+
 .. option:: -help
 
   Display usage information and exit. Does not stack with other commands.
@@ -45,14 +52,14 @@ At least one of the following commands are required, and some commands can be co
 .. option:: -version
 
   Display the version of this program. Does not stack with other commands.
-  
+
 OPTIONS
 -------
 :program:`llvm-objdump` supports the following options:
 
 .. option:: -arch=<architecture>
 
-  Specify the architecture to disassemble. see -version for available
+  Specify the architecture to disassemble. see ``-version`` for available
   architectures.
 
 .. option:: -cfg
@@ -68,14 +75,15 @@ OPTIONS
 
   Print line information from debug info if available.
 
-.. option:: -macho
+.. option:: -m, -macho
 
-  Use Mach-O specific object file parser.
+  Use Mach-O specific object file parser. Commands and other options may behave
+  differently when used with ``-macho``.
 
 .. option:: -mattr=<a1,+a2,-a3,...>
 
   Target specific attributes.
-  
+
 .. option:: -mc-x86-disable-arith-relaxation
 
   Disable relaxation of arithmetic instruction for X86.
@@ -83,26 +91,26 @@ OPTIONS
 .. option:: -stats
 
   Enable statistics output from program.
-  
+
 .. option:: -triple=<string>
 
-  Target triple to disassemble for, see -version for available targets.
-  
+  Target triple to disassemble for, see ``-version`` for available targets.
+
 .. option:: -x86-asm-syntax=<style>
 
   When used with the ``-disassemble`` option, choose style of code to emit from
   X86 backend. Supported values are:
 
    .. option:: att
-   
+
     AT&T-style assembly
-   
+
    .. option:: intel
-   
+
     Intel-style assembly
 
-   
-  The default disassembly style is **att**. 
+
+  The default disassembly style is **att**.
 
 BUGS
 ----

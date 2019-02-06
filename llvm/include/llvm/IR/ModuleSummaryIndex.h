@@ -1,9 +1,8 @@
 //===- llvm/ModuleSummaryIndex.h - Module Summary Index ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -831,6 +830,13 @@ private:
   /// union.
   bool HaveGVs;
 
+  // True if the index was created for a module compiled with -fsplit-lto-unit.
+  bool EnableSplitLTOUnit;
+
+  // True if some of the modules were compiled with -fsplit-lto-unit and
+  // some were not. Set when the combined index is created during the thin link.
+  bool PartiallySplitLTOUnits = false;
+
   std::set<std::string> CfiFunctionDefs;
   std::set<std::string> CfiFunctionDecls;
 
@@ -850,7 +856,9 @@ private:
 
 public:
   // See HaveGVs variable comment.
-  ModuleSummaryIndex(bool HaveGVs) : HaveGVs(HaveGVs), Saver(Alloc) {}
+  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false)
+      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc) {
+  }
 
   bool haveGVs() const { return HaveGVs; }
 
@@ -939,6 +947,12 @@ public:
   void setSkipModuleByDistributedBackend() {
     SkipModuleByDistributedBackend = true;
   }
+
+  bool enableSplitLTOUnit() const { return EnableSplitLTOUnit; }
+  void setEnableSplitLTOUnit() { EnableSplitLTOUnit = true; }
+
+  bool partiallySplitLTOUnits() const { return PartiallySplitLTOUnits; }
+  void setPartiallySplitLTOUnits() { PartiallySplitLTOUnits = true; }
 
   bool isGlobalValueLive(const GlobalValueSummary *GVS) const {
     return !WithGlobalValueDeadStripping || GVS->isLive();

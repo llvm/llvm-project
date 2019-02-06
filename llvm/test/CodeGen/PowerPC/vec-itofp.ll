@@ -16,12 +16,12 @@ entry:
   ret void
 ; CHECK-P9-LABEL: @test8
 ; CHECK-P9: vperm
-; CHECK-P9: vperm
-; CHECK-P9: vperm
+; CHECK-P9: xvcvuxddp
 ; CHECK-P9: vperm
 ; CHECK-P9: xvcvuxddp
+; CHECK-P9: vperm
 ; CHECK-P9: xvcvuxddp
-; CHECK-P9: xvcvuxddp
+; CHECK-P9: vperm
 ; CHECK-P9: xvcvuxddp
 ; CHECK-P8-LABEL: @test8
 ; CHECK-P8: vperm
@@ -42,8 +42,8 @@ entry:
   ret void
 ; CHECK-P9-LABEL: @test4
 ; CHECK-P9: vperm
-; CHECK-P9: vperm
 ; CHECK-P9: xvcvuxddp
+; CHECK-P9: vperm
 ; CHECK-P9: xvcvuxddp
 ; CHECK-P8-LABEL: @test4
 ; CHECK-P8: vperm
@@ -113,16 +113,16 @@ entry:
   ret void
 ; CHECK-P9-LABEL: @stest8
 ; CHECK-P9: vperm
-; CHECK-P9: vperm
-; CHECK-P9: vperm
-; CHECK-P9: vperm
-; CHECK-P9: vextsh2d
-; CHECK-P9: vextsh2d
-; CHECK-P9: vextsh2d
 ; CHECK-P9: vextsh2d
 ; CHECK-P9: xvcvsxddp
+; CHECK-P9: vperm
+; CHECK-P9: vextsh2d
 ; CHECK-P9: xvcvsxddp
+; CHECK-P9: vperm
+; CHECK-P9: vextsh2d
 ; CHECK-P9: xvcvsxddp
+; CHECK-P9: vperm
+; CHECK-P9: vextsh2d
 ; CHECK-P9: xvcvsxddp
 }
 
@@ -134,10 +134,10 @@ entry:
   ret void
 ; CHECK-P9-LABEL: @stest4
 ; CHECK-P9: vperm
-; CHECK-P9: vperm
-; CHECK-P9: vextsh2d
 ; CHECK-P9: vextsh2d
 ; CHECK-P9: xvcvsxddp
+; CHECK-P9: vperm
+; CHECK-P9: vextsh2d
 ; CHECK-P9: xvcvsxddp
 }
 

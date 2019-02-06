@@ -1,9 +1,8 @@
 //===---- llvm/unittest/IR/PatternMatch.cpp - PatternMatch unit tests ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -398,7 +397,7 @@ TEST_F(PatternMatchTest, LoadStoreOps) {
   //  store i32 42, i32* %0
 
   Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
-  Value *LoadInst = IRB.CreateLoad(Alloca);
+  Value *LoadInst = IRB.CreateLoad(IRB.getInt32Ty(), Alloca);
   Value *FourtyTwo = IRB.getInt32(42);
   Value *StoreInst = IRB.CreateStore(FourtyTwo, Alloca);
   Value *MatchLoad, *MatchStoreVal, *MatchStorePointer;

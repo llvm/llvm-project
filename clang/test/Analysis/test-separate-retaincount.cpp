@@ -1,6 +1,16 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-disable-checker osx.cocoa.RetainCount -DNO_CF_OBJECT -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-disable-checker osx.OSObjectRetainCount -DNO_OS_OBJECT -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-config "osx.cocoa.RetainCount:CheckOSObject=false" -DNO_OS_OBJECT -verify %s
+// RUN: %clang_analyze_cc1 -DNO_CF_OBJECT -verify %s \
+// RUN:   -analyzer-checker=core,osx \
+// RUN:   -analyzer-disable-checker osx.cocoa.RetainCount
+//
+// RUN: %clang_analyze_cc1 -DNO_OS_OBJECT -verify %s \
+// RUN:   -analyzer-checker=core,osx \
+// RUN:   -analyzer-disable-checker osx.OSObjectRetainCount
+//
+// RUN: %clang_analyze_cc1 -DNO_OS_OBJECT -verify %s \
+// RUN:   -analyzer-checker=core,osx \
+// RUN:   -analyzer-config "osx.cocoa.RetainCount:CheckOSObject=false"
+
+#include "os_object_base.h"
 
 typedef const void * CFTypeRef;
 extern CFTypeRef CFRetain(CFTypeRef cf);
@@ -10,14 +20,6 @@ extern void CFRelease(CFTypeRef cf);
 extern CFTypeRef CFCreate() CF_RETURNS_RETAINED;
 
 using size_t = decltype(sizeof(int));
-
-struct OSObject {
-  virtual void retain();
-  virtual void release();
-
-  static void * operator new(size_t size);
-  virtual ~OSObject(){}
-};
 
 void cf_overrelease() {
   CFTypeRef cf = CFCreate();

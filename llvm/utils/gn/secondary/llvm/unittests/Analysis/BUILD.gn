@@ -1,0 +1,38 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("AnalysisTests") {
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/AsmParser",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "AliasAnalysisTest.cpp",
+    "AliasSetTrackerTest.cpp",
+    "BasicAliasAnalysisTest.cpp",
+    "BlockFrequencyInfoTest.cpp",
+    "BranchProbabilityInfoTest.cpp",
+    "CFGTest.cpp",
+    "CGSCCPassManagerTest.cpp",
+    "CallGraphTest.cpp",
+    "CaptureTrackingTest.cpp",
+    "DivergenceAnalysisTest.cpp",
+    "GlobalsModRefTest.cpp",
+    "LazyCallGraphTest.cpp",
+    "LoopInfoTest.cpp",
+    "MemoryBuiltinsTest.cpp",
+    "MemorySSATest.cpp",
+    "OrderedBasicBlockTest.cpp",
+    "OrderedInstructionsTest.cpp",
+    "PhiValuesTest.cpp",
+    "ProfileSummaryInfoTest.cpp",
+    "ScalarEvolutionTest.cpp",
+    "SparsePropagation.cpp",
+    "TBAATest.cpp",
+    "TargetLibraryInfoTest.cpp",
+    "UnrollAnalyzerTest.cpp",
+    "ValueLatticeTest.cpp",
+    "ValueTrackingTest.cpp",
+  ]
+}

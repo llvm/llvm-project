@@ -1,9 +1,8 @@
 //==- CheckObjCDealloc.cpp - Check ObjC -dealloc implementation --*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -757,15 +756,15 @@ ObjCDeallocChecker::ObjCDeallocChecker()
 
   MissingReleaseBugType.reset(
       new BugType(this, "Missing ivar release (leak)",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 
   ExtraReleaseBugType.reset(
       new BugType(this, "Extra ivar release",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 
   MistakenDeallocBugType.reset(
       new BugType(this, "Mistaken dealloc",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 }
 
 void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
@@ -1093,4 +1092,8 @@ void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {
     return;
 
   Mgr.registerChecker<ObjCDeallocChecker>();
+}
+
+bool ento::shouldRegisterObjCDeallocChecker(const LangOptions &LO) {
+  return true;
 }

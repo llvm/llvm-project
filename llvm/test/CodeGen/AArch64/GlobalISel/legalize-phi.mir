@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown-unknown -verify-machineinstrs -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple=aarch64-unknown-unknown -verify-machineinstrs -run-pass=legalizer %s -o - | FileCheck %s
 --- |
   ; ModuleID = '/tmp/test.ll'
   source_filename = "/tmp/test.ll"

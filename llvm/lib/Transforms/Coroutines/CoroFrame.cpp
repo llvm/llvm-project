@@ -1,9 +1,8 @@
 //===- CoroFrame.cpp - Builds and manipulates coroutine frame -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // This file contains classes used to discover if for a particular value
@@ -472,10 +471,10 @@ static Instruction *splitBeforeCatchSwitch(CatchSwitchInst *CatchSwitch) {
 static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
   auto *CB = Shape.CoroBegin;
   IRBuilder<> Builder(CB->getNextNode());
-  PointerType *FramePtrTy = Shape.FrameTy->getPointerTo();
+  StructType *FrameTy = Shape.FrameTy;
+  PointerType *FramePtrTy = FrameTy->getPointerTo();
   auto *FramePtr =
       cast<Instruction>(Builder.CreateBitCast(CB, FramePtrTy, "FramePtr"));
-  Type *FrameTy = FramePtrTy->getElementType();
 
   Value *CurrentValue = nullptr;
   BasicBlock *CurrentBlock = nullptr;
@@ -502,7 +501,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
                                                      Twine(".reload.addr"));
     return isa<AllocaInst>(CurrentValue)
                ? G
-               : Builder.CreateLoad(G,
+               : Builder.CreateLoad(FrameTy->getElementType(Index), G,
                                     CurrentValue->getName() + Twine(".reload"));
   };
 

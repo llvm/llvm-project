@@ -1,9 +1,8 @@
 //===-- scudo_allocator.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -588,11 +587,11 @@ NOINLINE void Allocator::performSanityChecks() {
 }
 
 // Opportunistic RSS limit check. This will update the RSS limit status, if
-// it can, every 100ms, otherwise it will just return the current one.
+// it can, every 250ms, otherwise it will just return the current one.
 NOINLINE bool Allocator::isRssLimitExceeded() {
   u64 LastCheck = atomic_load_relaxed(&RssLastCheckedAtNS);
   const u64 CurrentCheck = MonotonicNanoTime();
-  if (LIKELY(CurrentCheck < LastCheck + (100ULL * 1000000ULL)))
+  if (LIKELY(CurrentCheck < LastCheck + (250ULL * 1000000ULL)))
     return atomic_load_relaxed(&RssLimitExceeded);
   if (!atomic_compare_exchange_weak(&RssLastCheckedAtNS, &LastCheck,
                                     CurrentCheck, memory_order_relaxed))

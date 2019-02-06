@@ -1,0 +1,14 @@
+static_library("TargetInfo") {
+  output_name = "LLVMBPFInfo"
+  deps = [
+    "//llvm/lib/Support",
+
+    # MCTargetDesc depends on TargetInfo, so we can't depend on the full
+    # MCTargetDesc target here: it would form a cycle.
+    "//llvm/lib/Target/BPF/MCTargetDesc:tablegen",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "BPFTargetInfo.cpp",
+  ]
+}

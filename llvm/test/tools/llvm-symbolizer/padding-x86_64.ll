@@ -2,9 +2,9 @@
 ; Checks if symbolizer can correctly symbolize address in the padding between
 ; functions.
 ; RUN: llc  -o %t.o -filetype=obj -mtriple=x86_64-pc-linux  %s
-; RUN: echo 0x5 | llvm-symbolizer -obj=%t.o | FileCheck %s --check-prefix=FOO
-; RUN: echo 0xd | llvm-symbolizer -obj=%t.o | FileCheck %s --check-prefix=PADDING
-; RUN: echo 0x10 | llvm-symbolizer -obj=%t.o | FileCheck %s --check-prefix=MAIN
+; RUN: llvm-symbolizer 0x5 -obj=%t.o | FileCheck %s --check-prefix=FOO
+; RUN: llvm-symbolizer 0xd -obj=%t.o | FileCheck %s --check-prefix=PADDING
+; RUN: llvm-symbolizer 0x10 -obj=%t.o | FileCheck %s --check-prefix=MAIN
 
 ;FOO: foo
 ;PADDING: ??

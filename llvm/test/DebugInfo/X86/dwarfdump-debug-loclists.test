@@ -9,7 +9,7 @@
 # CHECK-NEXT:    [0x0000000000000700, 0x0000000000000710): DW_OP_breg5 RDI+0
 
 # CHECK:      .debug_loclists contents:
-# CHECK-NEXT: 0x00000000: locations list header: length = 0x0000002f, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# CHECK-NEXT: 0x00000000: locations list header: length = 0x0000002c, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 # CHECK-NEXT: 0x00000000:
 # CHECK-NEXT:   [0x0000000000000000, 0x0000000000000010): DW_OP_breg5 RDI+0
 # CHECK-NEXT:   [0x0000000000000530, 0x0000000000000540): DW_OP_breg6 RBP-8, DW_OP_deref
@@ -37,7 +37,7 @@
   .byte  4                       # DW_LLE_offset_pair
   .uleb128 0x0                   #   starting offset
   .uleb128 0x10                  #   ending offset
-  .short  2                      # Loc expr size
+  .byte  2                       # Loc expr size
   .byte  117                     # DW_OP_breg5
   .byte  0                       # 0
   
@@ -47,7 +47,7 @@
   .byte  4                       # DW_LLE_offset_pair
   .uleb128 0x30                  #   starting offset
   .uleb128 0x40                  #   ending offset
-  .short  3                      # Loc expr size
+  .byte  3                       # Loc expr size
   .byte  118                     # DW_OP_breg6
   .byte  120                     # -8
   .byte  6                       # DW_OP_deref
@@ -55,7 +55,7 @@
   .byte  8                       # DW_LLE_start_length
   .quad  0x700                   # Some address
   .uleb128 0x10                  #   length
-  .short  2                      # Loc expr size
+  .byte  2                       # Loc expr size
   .byte  117                     # DW_OP_breg5
   .byte  0                       # 0
   

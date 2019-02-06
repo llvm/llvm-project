@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,9 +15,8 @@
 // path proximate(const path& p, const path& base, error_code& ec);
 
 #include "filesystem_include.hpp"
+#include <string>
 #include <type_traits>
-#include <vector>
-#include <iostream>
 #include <cassert>
 
 #include "test_macros.h"
@@ -30,49 +28,90 @@
 
 TEST_SUITE(filesystem_proximate_path_test_suite)
 
-TEST_CASE(test_signature) {
-
+TEST_CASE(test_signature_0) {
+  fs::path p("");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(fs::current_path()));
 }
-int main() {
-  // clang-format off
-  struct {
-    std::string input;
-    std::string expect;
-  } TestCases[] = {
-      {"", fs::current_path()},
-      {".", fs::current_path()},
-      {StaticEnv::File, StaticEnv::File},
-      {StaticEnv::Dir, StaticEnv::Dir},
-      {StaticEnv::SymlinkToDir, StaticEnv::Dir},
-      {StaticEnv::SymlinkToDir / "dir2/.", StaticEnv::Dir / "dir2"},
-      // FIXME? If the trailing separator occurs in a part of the path that exists,
-      // it is ommitted. Otherwise it is added to the end of the result.
-      {StaticEnv::SymlinkToDir / "dir2/./", StaticEnv::Dir / "dir2"},
-      {StaticEnv::SymlinkToDir / "dir2/DNE/./", StaticEnv::Dir / "dir2/DNE/"},
-      {StaticEnv::SymlinkToDir / "dir2", StaticEnv::Dir2},
-      {StaticEnv::SymlinkToDir / "dir2/../dir2/DNE/..", StaticEnv::Dir2 / ""},
-      {StaticEnv::SymlinkToDir / "dir2/dir3/../DNE/DNE2", StaticEnv::Dir2 / "DNE/DNE2"},
-      {StaticEnv::Dir / "../dir1", StaticEnv::Dir},
-      {StaticEnv::Dir / "./.", StaticEnv::Dir},
-      {StaticEnv::Dir / "DNE/../foo", StaticEnv::Dir / "foo"}
-  };
-  // clang-format on
-  int ID = 0;
-  bool Failed = false;
-  for (auto& TC : TestCases) {
-    ++ID;
-    fs::path p(TC.input);
-    const fs::path output = fs::weakly_canonical(p);
-    if (output != TC.expect) {
-      Failed = true;
-      std::cerr << "TEST CASE #" << ID << " FAILED: \n";
-      std::cerr << "  Input: '" << TC.input << "'\n";
-      std::cerr << "  Expected: '" << TC.expect << "'\n";
-      std::cerr << "  Output: '" << output.native() << "'";
-      std::cerr << std::endl;
-    }
-  }
-  return Failed;
+
+TEST_CASE(test_signature_1) {
+  fs::path p(".");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(fs::current_path()));
+}
+
+TEST_CASE(test_signature_2) {
+  fs::path p(StaticEnv::File);
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::File));
+}
+
+TEST_CASE(test_signature_3) {
+  fs::path p(StaticEnv::Dir);
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir));
+}
+
+TEST_CASE(test_signature_4) {
+  fs::path p(StaticEnv::SymlinkToDir);
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir));
+}
+
+TEST_CASE(test_signature_5) {
+  fs::path p(StaticEnv::SymlinkToDir / "dir2/.");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir / "dir2"));
+}
+
+TEST_CASE(test_signature_6) {
+  // FIXME? If the trailing separator occurs in a part of the path that exists,
+  // it is ommitted. Otherwise it is added to the end of the result.
+  fs::path p(StaticEnv::SymlinkToDir / "dir2/./");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir / "dir2"));
+}
+
+TEST_CASE(test_signature_7) {
+  fs::path p(StaticEnv::SymlinkToDir / "dir2/DNE/./");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir / "dir2/DNE/"));
+}
+
+TEST_CASE(test_signature_8) {
+  fs::path p(StaticEnv::SymlinkToDir / "dir2");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir2));
+}
+
+TEST_CASE(test_signature_9) {
+  fs::path p(StaticEnv::SymlinkToDir / "dir2/../dir2/DNE/..");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir2 / ""));
+}
+
+TEST_CASE(test_signature_10) {
+  fs::path p(StaticEnv::SymlinkToDir / "dir2/dir3/../DNE/DNE2");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir2 / "DNE/DNE2"));
+}
+
+TEST_CASE(test_signature_11) {
+  fs::path p(StaticEnv::Dir / "../dir1");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir));
+}
+
+TEST_CASE(test_signature_12) {
+  fs::path p(StaticEnv::Dir / "./.");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir));
+}
+
+TEST_CASE(test_signature_13) {
+  fs::path p(StaticEnv::Dir / "DNE/../foo");
+  const fs::path output = fs::weakly_canonical(p);
+  TEST_CHECK(output == std::string(StaticEnv::Dir / "foo"));
 }
 
 TEST_SUITE_END()

@@ -1,9 +1,8 @@
 //===- llvm/IR/DebugInfoFlags.def - Debug info flag definitions -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -54,7 +53,7 @@ HANDLE_DI_FLAG((1 << 20), NoReturn)
 HANDLE_DI_FLAG((1 << 21), MainSubprogram)
 HANDLE_DI_FLAG((1 << 22), TypePassByValue)
 HANDLE_DI_FLAG((1 << 23), TypePassByReference)
-HANDLE_DI_FLAG((1 << 24), FixedEnum)
+HANDLE_DI_FLAG((1 << 24), EnumClass)
 HANDLE_DI_FLAG((1 << 25), Thunk)
 HANDLE_DI_FLAG((1 << 26), Trivial)
 HANDLE_DI_FLAG((1 << 27), BigEndian)

@@ -1,6 +1,5 @@
-; The purpose of this test to verify that the fltused symbol is emitted when
-; any function is called with floating point arguments on Windows. And that it
-; is not emitted otherwise.
+; The purpose of this test to verify that the fltused symbol is
+; emitted when a floating point call is made on Windows.
 
 ; RUN: llc < %s -mtriple i686-pc-win32 | FileCheck %s --check-prefix WIN32
 ; RUN: llc < %s -mtriple x86_64-pc-win32 | FileCheck %s --check-prefix WIN64

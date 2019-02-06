@@ -1,9 +1,8 @@
 //===--- DurationRewriter.h - clang-tidy ------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,7 +29,7 @@ enum class DurationScale : std::uint8_t {
 
 /// Given a `Scale`, return the appropriate factory function call for
 /// constructing a `Duration` for that scale.
-llvm::StringRef getFactoryForScale(DurationScale Scale);
+llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
 
 // Determine if `Node` represents a literal floating point or integral zero.
 bool IsLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
@@ -61,13 +60,31 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
 
 /// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
 /// return its `DurationScale`, or `None` if a match is not found.
-llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name);
+llvm::Optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
+
+/// Given the name of an inverse Time function (e.g., `ToUnixSeconds`),
+/// return its `DurationScale`, or `None` if a match is not found.
+llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
+
+/// Given a `Scale` return the fully qualified inverse functions for it.
+/// The first returned value is the inverse for `double`, and the second
+/// returned value is the inverse for `int64`.
+const std::pair<llvm::StringRef, llvm::StringRef> &
+getDurationInverseForScale(DurationScale Scale);
+
+/// Returns the Time inverse function name for a given `Scale`.
+llvm::StringRef getTimeInverseForScale(DurationScale scale);
 
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.
 std::string rewriteExprFromNumberToDuration(
     const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
     const Expr *Node);
+
+/// Return `true` if `E` is a either: not a macro at all; or an argument to
+/// one.  In the both cases, we often want to do the transformation.
+bool isNotInMacro(const ast_matchers::MatchFinder::MatchResult &Result,
+                  const Expr *E);
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
                      DurationConversionFunction) {
@@ -87,6 +104,14 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
   return functionDecl(hasAnyName("::absl::Nanoseconds", "::absl::Microseconds",
                                  "::absl::Milliseconds", "::absl::Seconds",
                                  "::absl::Minutes", "::absl::Hours"));
+}
+
+AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
+                     TimeConversionFunction) {
+  using namespace clang::ast_matchers;
+  return functionDecl(hasAnyName(
+      "::absl::ToUnixHours", "::absl::ToUnixMinutes", "::absl::ToUnixSeconds",
+      "::absl::ToUnixMillis", "::absl::ToUnixMicros", "::absl::ToUnixNanos"));
 }
 
 } // namespace abseil

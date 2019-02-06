@@ -1,10 +1,9 @@
 #
 #//===----------------------------------------------------------------------===//
 #//
-#//                     The LLVM Compiler Infrastructure
-#//
-#// This file is dual licensed under the MIT and the University of Illinois Open
-#// Source Licenses. See LICENSE.txt for details.
+#// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+#// See https://llvm.org/LICENSE.txt for license information.
+#// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #//
 #//===----------------------------------------------------------------------===//
 #
@@ -112,6 +111,9 @@ mark_as_advanced(
 ################################################################################
 # Looking for CUDA...
 ################################################################################
+if (CUDA_TOOLKIT_ROOT_DIR)
+  set(LIBOMPTARGET_CUDA_TOOLKIT_ROOT_DIR_PRESET TRUE)
+endif()
 find_package(CUDA QUIET)
 
 set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDA_FOUND})
@@ -158,3 +160,33 @@ find_package_handle_standard_args(
   LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
 
 mark_as_advanced(LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
+
+################################################################################
+# Looking for CUDA libdevice subdirectory
+#
+# Special case for Debian/Ubuntu to have nvidia-cuda-toolkit work
+# out of the box. More info on http://bugs.debian.org/882505
+################################################################################
+
+set(LIBOMPTARGET_CUDA_LIBDEVICE_SUBDIR nvvm/libdevice)
+
+# Don't alter CUDA_TOOLKIT_ROOT_DIR if the user specified it, if a value was
+# already cached for it, or if it already has libdevice.  Otherwise, on
+# Debian/Ubuntu, look where the nvidia-cuda-toolkit package normally installs
+# libdevice.
+if (NOT LIBOMPTARGET_CUDA_TOOLKIT_ROOT_DIR_PRESET AND
+    NOT EXISTS
+      "${CUDA_TOOLKIT_ROOT_DIR}/${LIBOMPTARGET_CUDA_LIBDEVICE_SUBDIR}")
+  find_program(LSB_RELEASE lsb_release)
+  if (LSB_RELEASE)
+    execute_process(COMMAND ${LSB_RELEASE} -is
+      OUTPUT_VARIABLE LSB_RELEASE_ID
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(candidate_dir /usr/lib/cuda)
+    if ((LSB_RELEASE_ID STREQUAL "Debian" OR LSB_RELEASE_ID STREQUAL "Ubuntu")
+        AND EXISTS "${candidate_dir}/${LIBOMPTARGET_CUDA_LIBDEVICE_SUBDIR}")
+      set(CUDA_TOOLKIT_ROOT_DIR "${candidate_dir}" CACHE PATH
+          "Toolkit location." FORCE)
+    endif()
+  endif()
+endif()

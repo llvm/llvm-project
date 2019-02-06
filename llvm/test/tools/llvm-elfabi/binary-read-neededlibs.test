@@ -1,0 +1,48 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-elfabi --elf %t --emit-tbe=- | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    #                "\0libfoo.so\0libbar.so\0somelib.so\0foo\0"
+    Content:         "006c6962666f6f2e736f006c69626261722e736f00736f6d656c69622e736f00666f6f00"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1024
+    Content:         "010000000000000001000000000000000e00000000000000150000000000000001000000000000000b000000000000000a000000000000002400000000000000050000000000000000100000000000000600000000000000001000000000000000000000000000000000000000000000"
+      # DT_NEEDED     1 (0x01)
+      # DT_SONAME     21 (0x15)
+      # DT_NEEDED     11 (0x0b)
+      # DT_STRSZ      36 (0x24)
+      # DT_STRTAB     0x1000
+      # DT_SYMTAB     0x1000
+      # DT_NULL       0x0
+    Size:            112
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Align: 8
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x1024
+    PAddr: 0x1024
+    Sections:
+
+# CHECK:      NeededLibs:
+# CHECK-NEXT:   - libfoo.so{{$}}
+# CHECK-NEXT:   - libbar.so{{$}}
+# CHECK-NEXT: Symbols: {}

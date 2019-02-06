@@ -28,7 +28,7 @@ source_filename = "test/DebugInfo/Generic/debuginfofinder-forward-declaration.ll
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "y", scope: !2, file: !3, line: 7, type: !6, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.7.0 (http://llvm.org/git/clang.git 247b30a043eb8f39ea3708e7e995089da0a6b00f) (http://llvm.org/git/llvm.git 6ecc7365a89c771fd229bdd9ffcc178684ea1aa5)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 3.7.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !4, globals: !5, imports: !4)
 !3 = !DIFile(filename: "minimal.c", directory: "/tmp")
 !4 = !{}
 !5 = !{!0}
@@ -39,5 +39,5 @@ source_filename = "test/DebugInfo/Generic/debuginfofinder-forward-declaration.ll
 !10 = !DICompositeType(tag: DW_TAG_structure_type, name: "X", file: !3, line: 1, flags: DIFlagFwdDecl)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
-!13 = !{!"clang version 3.7.0 (http://llvm.org/git/clang.git 247b30a043eb8f39ea3708e7e995089da0a6b00f) (http://llvm.org/git/llvm.git 6ecc7365a89c771fd229bdd9ffcc178684ea1aa5)"}
+!13 = !{!"clang version 3.7.0"}
 

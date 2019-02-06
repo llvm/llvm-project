@@ -1,9 +1,8 @@
 //===- lib/CodeGen/GlobalISel/LegalizerMutations.cpp - Mutations ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -47,5 +46,11 @@ LegalizeMutation LegalizeMutations::moreElementsToNextPow2(unsigned TypeIdx,
       NewNumElements = Min;
     return std::make_pair(
         TypeIdx, LLT::vector(NewNumElements, VecTy.getScalarSizeInBits()));
+  };
+}
+
+LegalizeMutation LegalizeMutations::scalarize(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return std::make_pair(TypeIdx, Query.Types[TypeIdx].getElementType());
   };
 }

@@ -1,9 +1,8 @@
 //===- BitstreamReaderTest.cpp - Tests for BitstreamReader ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -147,5 +146,8 @@ TEST(BitstreamReaderTest, shortRead) {
     EXPECT_EQ(8ull, Cursor.Read(8));
   }
 }
+
+static_assert(is_trivially_copyable<BitCodeAbbrevOp>::value,
+              "trivially copyable");
 
 } // end anonymous namespace

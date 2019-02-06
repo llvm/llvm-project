@@ -1,9 +1,8 @@
 //===- CheckerRegistry.cpp - Maintains all available checkers -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,15 +38,76 @@ static bool isCompatibleAPIVersion(const char *versionString) {
   return strcmp(versionString, CLANG_ANALYZER_API_VERSION_STRING) == 0;
 }
 
-CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
-                                 DiagnosticsEngine &diags) : Diags(diags) {
+static bool checkerNameLT(const CheckerRegistry::CheckerInfo &a,
+                          const CheckerRegistry::CheckerInfo &b) {
+  return a.FullName < b.FullName;
+}
+
+static constexpr char PackageSeparator = '.';
+
+static bool isInPackage(const CheckerRegistry::CheckerInfo &checker,
+                        StringRef packageName) {
+  // Does the checker's full name have the package as a prefix?
+  if (!checker.FullName.startswith(packageName))
+    return false;
+
+  // Is the package actually just the name of a specific checker?
+  if (checker.FullName.size() == packageName.size())
+    return true;
+
+  // Is the checker in the package (or a subpackage)?
+  if (checker.FullName[packageName.size()] == PackageSeparator)
+    return true;
+
+  return false;
+}
+
+CheckerRegistry::CheckerInfoListRange
+CheckerRegistry::getMutableCheckersForCmdLineArg(StringRef CmdLineArg) {
+
+  assert(std::is_sorted(Checkers.begin(), Checkers.end(), checkerNameLT) &&
+         "In order to efficiently gather checkers, this function expects them "
+         "to be already sorted!");
+
+  // Use a binary search to find the possible start of the package.
+  CheckerRegistry::CheckerInfo
+      packageInfo(nullptr, nullptr, CmdLineArg, "", "");
+  auto it = std::lower_bound(Checkers.begin(), Checkers.end(),
+                             packageInfo, checkerNameLT);
+
+  if (!isInPackage(*it, CmdLineArg))
+    return { Checkers.end(), Checkers.end() };
+
+  // See how large the package is.
+  // If the package doesn't exist, assume the option refers to a single
+  // checker.
+  size_t size = 1;
+  llvm::StringMap<size_t>::const_iterator packageSize =
+      Packages.find(CmdLineArg);
+
+  if (packageSize != Packages.end())
+    size = packageSize->getValue();
+
+  return { it, it + size };
+}
+
+CheckerRegistry::CheckerRegistry(
+     ArrayRef<std::string> plugins, DiagnosticsEngine &diags,
+     AnalyzerOptions &AnOpts, const LangOptions &LangOpts,
+     ArrayRef<std::function<void(CheckerRegistry &)>>
+         checkerRegistrationFns)
+  : Diags(diags), AnOpts(AnOpts), LangOpts(LangOpts) {
+
+  // Register builtin checkers.
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI)                            \
-  addChecker(register##CLASS, FULLNAME, HELPTEXT, DOC_URI);
+  addChecker(register##CLASS, shouldRegister##CLASS, FULLNAME, HELPTEXT,       \
+             DOC_URI);
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
 #undef GET_CHECKERS
 
+  // Register checkers from plugins.
   for (ArrayRef<std::string>::iterator i = plugins.begin(), e = plugins.end();
        i != e; ++i) {
     // Get access to the plugin.
@@ -77,79 +137,119 @@ CheckerRegistry::CheckerRegistry(ArrayRef<std::string> plugins,
     if (registerPluginCheckers)
       registerPluginCheckers(*this);
   }
-}
 
-static constexpr char PackageSeparator = '.';
+  // Register statically linked checkers, that aren't generated from the tblgen
+  // file, but rather passed their registry function as a parameter in 
+  // checkerRegistrationFns. 
 
-static bool checkerNameLT(const CheckerRegistry::CheckerInfo &a,
-                          const CheckerRegistry::CheckerInfo &b) {
-  return a.FullName < b.FullName;
-}
+  for (const auto &Fn : checkerRegistrationFns)
+    Fn(*this);
 
-static bool isInPackage(const CheckerRegistry::CheckerInfo &checker,
-                        StringRef packageName) {
-  // Does the checker's full name have the package as a prefix?
-  if (!checker.FullName.startswith(packageName))
-    return false;
+  // Sort checkers for efficient collection.
+  // FIXME: Alphabetical sort puts 'experimental' in the middle.
+  // Would it be better to name it '~experimental' or something else
+  // that's ASCIIbetically last?
+  llvm::sort(Checkers, checkerNameLT);
 
-  // Is the package actually just the name of a specific checker?
-  if (checker.FullName.size() == packageName.size())
-    return true;
+#define GET_CHECKER_DEPENDENCIES
 
-  // Is the checker in the package (or a subpackage)?
-  if (checker.FullName[packageName.size()] == PackageSeparator)
-    return true;
+#define CHECKER_DEPENDENCY(FULLNAME, DEPENDENCY)                               \
+  addDependency(FULLNAME, DEPENDENCY);
 
-  return false;
-}
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER_DEPENDENCY
+#undef GET_CHECKER_DEPENDENCIES
 
-CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers(
-                                            const AnalyzerOptions &Opts) const {
+  // Parse '-analyzer-checker' and '-analyzer-disable-checker' options from the
+  // command line.
+  for (const std::pair<std::string, bool> &opt : AnOpts.CheckersControlList) {
+    CheckerInfoListRange checkersForCmdLineArg =
+                                     getMutableCheckersForCmdLineArg(opt.first);
 
-  assert(std::is_sorted(Checkers.begin(), Checkers.end(), checkerNameLT) &&
-         "In order to efficiently gather checkers, this function expects them "
-         "to be already sorted!");
-
-  CheckerInfoSet enabledCheckers;
-  const auto end = Checkers.cend();
-
-  for (const std::pair<std::string, bool> &opt : Opts.CheckersControlList) {
-    // Use a binary search to find the possible start of the package.
-    CheckerRegistry::CheckerInfo packageInfo(nullptr, opt.first, "", "");
-    auto firstRelatedChecker =
-      std::lower_bound(Checkers.cbegin(), end, packageInfo, checkerNameLT);
-
-    if (firstRelatedChecker == end ||
-        !isInPackage(*firstRelatedChecker, opt.first)) {
+    if (checkersForCmdLineArg.begin() == checkersForCmdLineArg.end()) {
       Diags.Report(diag::err_unknown_analyzer_checker) << opt.first;
       Diags.Report(diag::note_suggest_disabling_all_checkers);
-      return {};
     }
 
-    // See how large the package is.
-    // If the package doesn't exist, assume the option refers to a single
-    // checker.
-    size_t size = 1;
-    llvm::StringMap<size_t>::const_iterator packageSize =
-      Packages.find(opt.first);
-    if (packageSize != Packages.end())
-      size = packageSize->getValue();
+    for (CheckerInfo &checker : checkersForCmdLineArg) {
+      checker.State = opt.second ? StateFromCmdLine::State_Enabled :
+                                   StateFromCmdLine::State_Disabled;
+    }
+  }
+}
 
-    // Step through all the checkers in the package.
-    for (auto lastRelatedChecker = firstRelatedChecker+size;
-         firstRelatedChecker != lastRelatedChecker; ++firstRelatedChecker)
-      if (opt.second)
-        enabledCheckers.insert(&*firstRelatedChecker);
-      else
-        enabledCheckers.remove(&*firstRelatedChecker);
+/// Collects dependencies in \p ret, returns false on failure.
+static bool collectDependenciesImpl(
+                              const CheckerRegistry::ConstCheckerInfoList &deps,
+                              const LangOptions &LO,
+                              CheckerRegistry::CheckerInfoSet &ret);
+
+/// Collects dependenies in \p enabledCheckers. Return None on failure.
+LLVM_NODISCARD
+static llvm::Optional<CheckerRegistry::CheckerInfoSet> collectDependencies(
+     const CheckerRegistry::CheckerInfo &checker, const LangOptions &LO) {
+
+  CheckerRegistry::CheckerInfoSet ret;
+  // Add dependencies to the enabled checkers only if all of them can be
+  // enabled.
+  if (!collectDependenciesImpl(checker.Dependencies, LO, ret))
+    return None;
+
+  return ret;
+}
+
+static bool collectDependenciesImpl(
+                              const CheckerRegistry::ConstCheckerInfoList &deps,
+                              const LangOptions &LO,
+                              CheckerRegistry::CheckerInfoSet &ret) {
+
+  for (const CheckerRegistry::CheckerInfo *dependency : deps) {
+
+    if (dependency->isDisabled(LO))
+      return false;
+
+    // Collect dependencies recursively.
+    if (!collectDependenciesImpl(dependency->Dependencies, LO, ret))
+      return false;
+
+    ret.insert(dependency);
+  }
+
+  return true;
+}
+
+CheckerRegistry::CheckerInfoSet CheckerRegistry::getEnabledCheckers() const {
+
+  CheckerInfoSet enabledCheckers;
+
+  for (const CheckerInfo &checker : Checkers) {
+    if (!checker.isEnabled(LangOpts))
+      continue;
+
+    // Recursively enable it's dependencies.
+    llvm::Optional<CheckerInfoSet> deps =
+        collectDependencies(checker, LangOpts);
+
+    if (!deps) {
+      // If we failed to enable any of the dependencies, don't enable this
+      // checker.
+      continue;
+    }
+
+    // Note that set_union also preserves the order of insertion.
+    enabledCheckers.set_union(*deps);
+
+    // Enable the checker.
+    enabledCheckers.insert(&checker);
   }
 
   return enabledCheckers;
 }
 
-void CheckerRegistry::addChecker(InitializationFunction Fn, StringRef Name,
+void CheckerRegistry::addChecker(InitializationFunction Rfn,
+                                 ShouldRegisterFunction Sfn, StringRef Name,
                                  StringRef Desc, StringRef DocsUri) {
-  Checkers.emplace_back(Fn, Name, Desc, DocsUri);
+  Checkers.emplace_back(Rfn, Sfn, Name, Desc, DocsUri);
 
   // Record the presence of the checker in its packages.
   StringRef packageName, leafName;
@@ -160,13 +260,9 @@ void CheckerRegistry::addChecker(InitializationFunction Fn, StringRef Name,
   }
 }
 
-void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
-                                        const AnalyzerOptions &Opts) const {
-  // Sort checkers for efficient collection.
-  llvm::sort(Checkers, checkerNameLT);
-
+void CheckerRegistry::initializeManager(CheckerManager &checkerMgr) const {
   // Collect checkers enabled by the options.
-  CheckerInfoSet enabledCheckers = getEnabledCheckers(Opts);
+  CheckerInfoSet enabledCheckers = getEnabledCheckers();
 
   // Initialize the CheckerManager with all enabled checkers.
   for (const auto *i : enabledCheckers) {
@@ -175,9 +271,8 @@ void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
   }
 }
 
-void CheckerRegistry::validateCheckerOptions(
-                                            const AnalyzerOptions &opts) const {
-  for (const auto &config : opts.Config) {
+void CheckerRegistry::validateCheckerOptions() const {
+  for (const auto &config : AnOpts.Config) {
     size_t pos = config.getKey().find(':');
     if (pos == StringRef::npos)
       continue;
@@ -198,11 +293,6 @@ void CheckerRegistry::validateCheckerOptions(
 
 void CheckerRegistry::printHelp(raw_ostream &out,
                                 size_t maxNameChars) const {
-  // FIXME: Alphabetical sort puts 'experimental' in the middle.
-  // Would it be better to name it '~experimental' or something else
-  // that's ASCIIbetically last?
-  llvm::sort(Checkers, checkerNameLT);
-
   // FIXME: Print available packages.
 
   out << "CHECKERS:\n";
@@ -234,13 +324,9 @@ void CheckerRegistry::printHelp(raw_ostream &out,
   }
 }
 
-void CheckerRegistry::printList(raw_ostream &out,
-                                const AnalyzerOptions &opts) const {
-  // Sort checkers for efficient collection.
-  llvm::sort(Checkers, checkerNameLT);
-
+void CheckerRegistry::printList(raw_ostream &out) const {
   // Collect checkers enabled by the options.
-  CheckerInfoSet enabledCheckers = getEnabledCheckers(opts);
+  CheckerInfoSet enabledCheckers = getEnabledCheckers();
 
   for (const auto *i : enabledCheckers)
     out << i->FullName << '\n';

@@ -1,9 +1,8 @@
 //===-- CodeGen/AsmPrinter/WinException.cpp - Dwarf Exception Impl ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -545,15 +544,17 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
       OS.AddComment(Comment);
   };
 
-  // Emit a label assignment with the SEH frame offset so we can use it for
-  // llvm.x86.seh.recoverfp.
-  StringRef FLinkageName =
-      GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
-  MCSymbol *ParentFrameOffset =
-      Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
-  const MCExpr *MCOffset =
-      MCConstantExpr::create(FuncInfo.SEHSetFrameOffset, Ctx);
-  Asm->OutStreamer->EmitAssignment(ParentFrameOffset, MCOffset);
+  if (!isAArch64) {
+    // Emit a label assignment with the SEH frame offset so we can use it for
+    // llvm.eh.recoverfp.
+    StringRef FLinkageName =
+        GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
+    MCSymbol *ParentFrameOffset =
+        Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
+    const MCExpr *MCOffset =
+        MCConstantExpr::create(FuncInfo.SEHSetFrameOffset, Ctx);
+    Asm->OutStreamer->EmitAssignment(ParentFrameOffset, MCOffset);
+  }
 
   // Use the assembler to compute the number of table entries through label
   // difference and division.
@@ -936,8 +937,7 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   int FI = FuncInfo.EHRegNodeFrameIndex;
   if (FI != INT_MAX) {
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
-    unsigned UnusedReg;
-    Offset = TFI->getFrameIndexReference(*Asm->MF, FI, UnusedReg);
+    Offset = TFI->getNonLocalFrameIndexReference(*Asm->MF, FI);
   }
 
   MCContext &Ctx = Asm->OutContext;

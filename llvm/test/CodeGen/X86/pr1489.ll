@@ -1,5 +1,5 @@
-; RUN: llc < %s -disable-fp-elim -O0 -mcpu=i486 | grep 1082126238 | count 3
-; RUN: llc < %s -disable-fp-elim -O0 -mcpu=i486 | grep -- -1236950581 | count 1
+; RUN: llc < %s -frame-pointer=all -O0 -mcpu=i486 | grep 1082126238 | count 3
+; RUN: llc < %s -frame-pointer=all -O0 -mcpu=i486 | grep -- -1236950581 | count 1
 ;; magic constants are 3.999f and half of 3.999
 ; ModuleID = '1489.c'
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"

@@ -1,0 +1,15 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("BinaryFormatTests") {
+  deps = [
+    "//llvm/lib/BinaryFormat",
+  ]
+  sources = [
+    "DwarfTest.cpp",
+    "MachOTest.cpp",
+    "MsgPackReaderTest.cpp",
+    "MsgPackTypesTest.cpp",
+    "MsgPackWriterTest.cpp",
+    "TestFileMagic.cpp",
+  ]
+}

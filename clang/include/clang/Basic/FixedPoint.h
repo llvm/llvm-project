@@ -1,9 +1,8 @@
 //===- FixedPoint.h - Fixed point constant handling -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,6 +17,8 @@
 #define LLVM_CLANG_BASIC_FIXEDPOINT_H
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 
@@ -36,6 +37,8 @@ public:
       : Width(Width), Scale(Scale), IsSigned(IsSigned),
         IsSaturated(IsSaturated), HasUnsignedPadding(HasUnsignedPadding) {
     assert(Width >= Scale && "Not enough room for the scale");
+    assert(!(IsSigned && HasUnsignedPadding) &&
+           "Cannot have unsigned padding on a signed type.");
   }
 
   unsigned getWidth() const { return Width; }
@@ -46,11 +49,29 @@ public:
 
   void setSaturated(bool Saturated) { IsSaturated = Saturated; }
 
+  /// Return the number of integral bits represented by these semantics. These
+  /// are separate from the fractional bits and do not include the sign or
+  /// padding bit.
   unsigned getIntegralBits() const {
     if (IsSigned || (!IsSigned && HasUnsignedPadding))
       return Width - Scale - 1;
     else
       return Width - Scale;
+  }
+
+  /// Return the FixedPointSemantics that allows for calculating the full
+  /// precision semantic that can precisely represent the precision and ranges
+  /// of both input values. This does not compute the resulting semantics for a
+  /// given binary operation.
+  FixedPointSemantics
+  getCommonSemantics(const FixedPointSemantics &Other) const;
+
+  /// Return the FixedPointSemantics for an integer type.
+  static FixedPointSemantics GetIntegerSemantics(unsigned Width,
+                                                 bool IsSigned) {
+    return FixedPointSemantics(Width, /*Scale=*/0, IsSigned,
+                               /*IsSaturated=*/false,
+                               /*HasUnsignedPadding=*/false);
   }
 
 private:
@@ -83,19 +104,38 @@ class APFixedPoint {
        : APFixedPoint(llvm::APInt(Sema.getWidth(), Val, Sema.isSigned()),
                       Sema) {}
 
+   // Zero initialization.
+   APFixedPoint(const FixedPointSemantics &Sema) : APFixedPoint(0, Sema) {}
+
    llvm::APSInt getValue() const { return llvm::APSInt(Val, !Sema.isSigned()); }
    inline unsigned getWidth() const { return Sema.getWidth(); }
    inline unsigned getScale() const { return Sema.getScale(); }
    inline bool isSaturated() const { return Sema.isSaturated(); }
    inline bool isSigned() const { return Sema.isSigned(); }
    inline bool hasPadding() const { return Sema.hasUnsignedPadding(); }
+   FixedPointSemantics getSemantics() const { return Sema; }
 
-   // Convert this number to match the semantics provided.
-   APFixedPoint convert(const FixedPointSemantics &DstSema) const;
+   bool getBoolValue() const { return Val.getBoolValue(); }
+
+   // Convert this number to match the semantics provided. If the overflow
+   // parameter is provided, set this value to true or false to indicate if this
+   // operation results in an overflow.
+   APFixedPoint convert(const FixedPointSemantics &DstSema,
+                        bool *Overflow = nullptr) const;
+
+   // Perform binary operations on a fixed point type. The resulting fixed point
+   // value will be in the common, full precision semantics that can represent
+   // the precision and ranges os both input values. See convert() for an
+   // explanation of the Overflow parameter.
+   APFixedPoint add(const APFixedPoint &Other, bool *Overflow = nullptr) const;
+
+   /// Perform a unary negation (-X) on this fixed point type, taking into
+   /// account saturation if applicable.
+   APFixedPoint negate(bool *Overflow = nullptr) const;
 
    APFixedPoint shr(unsigned Amt) const {
      return APFixedPoint(Val >> Amt, Sema);
-  }
+   }
 
   APFixedPoint shl(unsigned Amt) const {
     return APFixedPoint(Val << Amt, Sema);
@@ -106,6 +146,13 @@ class APFixedPoint {
       return -(-Val >> getScale());
     else
       return Val >> getScale();
+  }
+
+  void toString(llvm::SmallVectorImpl<char> &Str) const;
+  std::string toString() const {
+    llvm::SmallString<40> S;
+    toString(S);
+    return S.str();
   }
 
   // If LHS > RHS, return 1. If LHS == RHS, return 0. If LHS < RHS, return -1.
@@ -132,6 +179,12 @@ private:
   llvm::APSInt Val;
   FixedPointSemantics Sema;
 };
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     const APFixedPoint &FX) {
+  OS << FX.toString();
+  return OS;
+}
 
 }  // namespace clang
 

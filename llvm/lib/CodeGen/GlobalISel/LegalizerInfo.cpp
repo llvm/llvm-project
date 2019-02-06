@@ -1,9 +1,8 @@
 //===- lib/CodeGen/GlobalISel/LegalizerInfo.cpp - Legalizer ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -59,6 +58,66 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
   return OS;
 }
 
+#ifndef NDEBUG
+// Make sure the returned mutation makes sense for the match type.
+static bool mutationIsSane(const LegalizeRule &Rule,
+                           const LegalityQuery &Q,
+                           std::pair<unsigned, LLT> Mutation) {
+  const unsigned TypeIdx = Mutation.first;
+  const LLT OldTy = Q.Types[TypeIdx];
+  const LLT NewTy = Mutation.second;
+
+  switch (Rule.getAction()) {
+  case FewerElements:
+  case MoreElements: {
+    if (!OldTy.isVector())
+      return false;
+
+    if (NewTy.isVector()) {
+      if (Rule.getAction() == FewerElements) {
+        // Make sure the element count really decreased.
+        if (NewTy.getNumElements() >= OldTy.getNumElements())
+          return false;
+      } else {
+        // Make sure the element count really increased.
+        if (NewTy.getNumElements() <= OldTy.getNumElements())
+          return false;
+      }
+    }
+
+    // Make sure the element type didn't change.
+    return NewTy.getScalarType() == OldTy.getElementType();
+  }
+  case NarrowScalar:
+  case WidenScalar: {
+    if (OldTy.isVector()) {
+      // Number of elements should not change.
+      if (!NewTy.isVector() || OldTy.getNumElements() != NewTy.getNumElements())
+        return false;
+    } else {
+      // Both types must be vectors
+      if (NewTy.isVector())
+        return false;
+    }
+
+    if (Rule.getAction() == NarrowScalar)  {
+      // Make sure the size really decreased.
+      if (NewTy.getScalarSizeInBits() >= OldTy.getScalarSizeInBits())
+        return false;
+    } else {
+      // Make sure the size really increased.
+      if (NewTy.getScalarSizeInBits() <= OldTy.getScalarSizeInBits())
+        return false;
+    }
+
+    return true;
+  }
+  default:
+    return true;
+  }
+}
+#endif
+
 LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
   LLVM_DEBUG(dbgs() << "Applying legalizer ruleset to: "; Query.print(dbgs());
              dbgs() << "\n");
@@ -66,12 +125,15 @@ LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
     LLVM_DEBUG(dbgs() << ".. fallback to legacy rules (no rules defined)\n");
     return {LegalizeAction::UseLegacyRules, 0, LLT{}};
   }
-  for (const auto &Rule : Rules) {
+  for (const LegalizeRule &Rule : Rules) {
     if (Rule.match(Query)) {
       LLVM_DEBUG(dbgs() << ".. match\n");
       std::pair<unsigned, LLT> Mutation = Rule.determineMutation(Query);
       LLVM_DEBUG(dbgs() << ".. .. " << (unsigned)Rule.getAction() << ", "
                         << Mutation.first << ", " << Mutation.second << "\n");
+      assert(mutationIsSane(Rule, Query, Mutation) &&
+             "legality mutation invalid for match");
+
       assert((Query.Types[Mutation.first] != Mutation.second ||
               Rule.getAction() == Lower ||
               Rule.getAction() == MoreElements ||
@@ -180,16 +242,14 @@ void LegalizerInfo::computeTables() {
         if (TypeIdx < ScalarSizeChangeStrategies[OpcodeIdx].size() &&
             ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx] != nullptr)
           S = ScalarSizeChangeStrategies[OpcodeIdx][TypeIdx];
-        llvm::sort(ScalarSpecifiedActions.begin(),
-                   ScalarSpecifiedActions.end());
+        llvm::sort(ScalarSpecifiedActions);
         checkPartialSizeAndActionsVector(ScalarSpecifiedActions);
         setScalarAction(Opcode, TypeIdx, S(ScalarSpecifiedActions));
       }
 
       // 2. Handle pointer types
       for (auto PointerSpecifiedActions : AddressSpace2SpecifiedActions) {
-        llvm::sort(PointerSpecifiedActions.second.begin(),
-                   PointerSpecifiedActions.second.end());
+        llvm::sort(PointerSpecifiedActions.second);
         checkPartialSizeAndActionsVector(PointerSpecifiedActions.second);
         // For pointer types, we assume that there isn't a meaningfull way
         // to change the number of bits used in the pointer.
@@ -201,8 +261,7 @@ void LegalizerInfo::computeTables() {
       // 3. Handle vector types
       SizeAndActionsVec ElementSizesSeen;
       for (auto VectorSpecifiedActions : ElemSize2SpecifiedActions) {
-        llvm::sort(VectorSpecifiedActions.second.begin(),
-                   VectorSpecifiedActions.second.end());
+        llvm::sort(VectorSpecifiedActions.second);
         const uint16_t ElementSize = VectorSpecifiedActions.first;
         ElementSizesSeen.push_back({ElementSize, Legal});
         checkPartialSizeAndActionsVector(VectorSpecifiedActions.second);

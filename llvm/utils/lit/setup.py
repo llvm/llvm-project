@@ -16,7 +16,7 @@ setup(
     author = lit.__author__,
     author_email = lit.__email__,
     url = 'http://llvm.org',
-    license = 'BSD',
+    license = 'Apache-2.0 with LLVM exception',
 
     description = "A Software Testing Tool",
     keywords = 'test C++ automatic discovery',
@@ -52,15 +52,15 @@ Command Guide: http://llvm.org/cmds/lit.html.
 Source
 ======
 
-The *lit* source is available as part of LLVM, in the LLVM SVN repository:
-http://llvm.org/svn/llvm-project/llvm/trunk/utils/lit.
+The *lit* source is available as part of LLVM, in the LLVM source repository:
+https://github.com/llvm/llvm-project/tree/master/llvm/utils/lit
 """,
 
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: University of Illinois/NCSA Open Source License',
+        'License :: OSI Approved :: Apache-2.0 with LLVM exception',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',

@@ -610,3 +610,36 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
   ret <2 x i32> %r
 }
 
+; Test to make sure we don't try to insert a new setcc to swap the operands
+; of select with all zeros LHS if the setcc has additional users.
+define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32>* %p1, <4 x i32>* %p2) {
+; SSE-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm3, (%rdi)
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8]
+; AVX-NEXT:    vpand %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
+; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    retq
+  %and = and <4 x i32> %x, <i32 1, i32 2, i32 4, i32 8>
+  %cond = icmp ne <4 x i32> %and, zeroinitializer
+  %sel1 = select <4 x i1> %cond, <4 x i32> zeroinitializer, <4 x i32> %y
+  %sel2 = select <4 x i1> %cond, <4 x i32> %z, <4 x i32> zeroinitializer
+  store <4 x i32> %sel1, <4 x i32>* %p1
+  store <4 x i32> %sel2, <4 x i32>* %p2
+  ret void
+}

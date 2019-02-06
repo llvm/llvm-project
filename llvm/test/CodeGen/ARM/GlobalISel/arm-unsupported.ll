@@ -83,13 +83,6 @@ define void @test_vararg_definition(i32 %a, ...) {
   ret void
 }
 
-define void @test_vararg_call(i32 %a) {
-; CHECK: remark: {{.*}} unable to translate instruction: call
-; CHECK-LABEL: warning: Instruction selection used fallback path for test_vararg_call
-  call void(i32, ...) @test_vararg_definition(i32 %a, i32 %a, i32 %a)
-  ret void
-}
-
 define i32 @test_thumb(i32 %a) #0 {
 ; CHECK: remark: {{.*}} unable to lower arguments: i32 (i32)*
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_thumb

@@ -1,9 +1,8 @@
 //===-- AnalyzerOptions.def - Metadata about Static Analyses ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -275,7 +274,7 @@ ANALYZER_OPTION(
 ANALYZER_OPTION(
     bool, IsNaiveCTUEnabled, "experimental-enable-naive-ctu-analysis",
     "Whether naive cross translation unit analysis is enabled. This is an "
-    "experimental feature to inline functions from another translation units.",
+    "experimental feature to inline functions from other translation units.",
     false)
 
 ANALYZER_OPTION(bool, ShouldDisplayMacroExpansions, "expand-macros",
@@ -344,8 +343,8 @@ ANALYZER_OPTION(StringRef, CTUDir, "ctu-dir",
                 "The directory containing the CTU related files.", "")
 
 ANALYZER_OPTION(StringRef, CTUIndexName, "ctu-index-name",
-                "the name of the file containing the CTU index of functions.",
-                "externalFnMap.txt")
+                "the name of the file containing the CTU index of definitions.",
+                "externalDefMap.txt")
 
 ANALYZER_OPTION(
     StringRef, ModelPath, "model-path",

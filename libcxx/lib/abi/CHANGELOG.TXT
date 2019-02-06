@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 8.0
 -----------
 
-* rXXXXX - Remove std::bad_array_length
+* r347903 - Remove std::bad_array_length
 
   The change removes the definition of std::bad_array_length (which never made
   it into the standard) from the headers and the dylib. This is technically an

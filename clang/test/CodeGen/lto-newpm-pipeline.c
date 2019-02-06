@@ -27,12 +27,14 @@
 
 // CHECK-FULL-O0: Starting llvm::Module pass manager run.
 // CHECK-FULL-O0: Running pass: AlwaysInlinerPass
+// CHECK-FULL-O0-NEXT: Running pass: CanonicalizeAliasesPass
 // CHECK-FULL-O0-NEXT: Running pass: NameAnonGlobalPass
 // CHECK-FULL-O0-NEXT: Running pass: BitcodeWriterPass
 // CHECK-FULL-O0: Finished llvm::Module pass manager run.
 
 // CHECK-THIN-O0: Starting llvm::Module pass manager run.
 // CHECK-THIN-O0: Running pass: AlwaysInlinerPass
+// CHECK-THIN-O0-NEXT: Running pass: CanonicalizeAliasesPass
 // CHECK-THIN-O0-NEXT: Running pass: NameAnonGlobalPass
 // CHECK-THIN-O0-NEXT: Running pass: ThinLTOBitcodeWriterPass
 // CHECK-THIN-O0: Finished llvm::Module pass manager run.
@@ -48,6 +50,7 @@
 // LoopVectorizePass.
 // CHECK-THIN-OPTIMIZED: Starting llvm::Function pass manager run.
 // CHECK-THIN-OPTIMIZED-NOT: Running pass: LoopVectorizePass
+// CHECK-THIN-OPTIMIZED: Running pass: CanonicalizeAliasesPass
 // CHECK-THIN-OPTIMIZED: Running pass: NameAnonGlobalPass
 // CHECK-THIN-OPTIMIZED: Running pass: ThinLTOBitcodeWriterPass
 

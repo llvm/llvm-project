@@ -1,9 +1,8 @@
 //===------------------ llvm-opt-report/OptReport.cpp ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -231,13 +230,8 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
   bool FirstFile = true;
   for (auto &FI : LocationInfo) {
     SmallString<128> FileName(FI.first);
-    if (!InputRelDir.empty()) {
-      if (std::error_code EC = sys::fs::make_absolute(InputRelDir, FileName)) {
-        WithColor::error() << "Can't resolve file path to " << FileName << ": "
-                           << EC.message() << "\n";
-        return false;
-      }
-    }
+    if (!InputRelDir.empty())
+      sys::fs::make_absolute(InputRelDir, FileName);
 
     const auto &FileInfo = FI.second;
 

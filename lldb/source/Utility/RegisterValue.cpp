@@ -1,9 +1,8 @@
 //===-- RegisterValue.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -157,6 +156,7 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
       return true;
     case 16:
     case 32:
+    case 64:
       if (buffer.length % sizeof(uint64_t) == 0) {
         const auto length_in_bits = buffer.length * 8;
         const auto length_in_uint64 = buffer.length / sizeof(uint64_t);
@@ -793,32 +793,7 @@ bool RegisterValue::operator==(const RegisterValue &rhs) const {
 }
 
 bool RegisterValue::operator!=(const RegisterValue &rhs) const {
-  if (m_type != rhs.m_type)
-    return true;
-  switch (m_type) {
-  case eTypeInvalid:
-    return false;
-  case eTypeUInt8:
-  case eTypeUInt16:
-  case eTypeUInt32:
-  case eTypeUInt64:
-  case eTypeUInt128:
-  case eTypeFloat:
-  case eTypeDouble:
-  case eTypeLongDouble:
-    return m_scalar != rhs.m_scalar;
-  case eTypeBytes:
-    if (buffer.length != rhs.buffer.length) {
-      return true;
-    } else {
-      uint8_t length = buffer.length;
-      if (length > kMaxRegisterByteSize)
-        length = kMaxRegisterByteSize;
-      return memcmp(buffer.bytes, rhs.buffer.bytes, length) != 0;
-    }
-    break;
-  }
-  return true;
+  return !(*this == rhs);
 }
 
 bool RegisterValue::ClearBit(uint32_t bit) {

@@ -1,9 +1,8 @@
 //===--- CrossTranslationUnit.h - -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -90,11 +89,11 @@ std::string createCrossTUIndexString(const llvm::StringMap<std::string> &Index);
 /// This class is used for tools that requires cross translation
 ///        unit capability.
 ///
-/// This class can load function definitions from external AST files.
+/// This class can load definitions from external AST files.
 /// The loaded definition will be merged back to the original AST using the
 /// AST Importer.
 /// In order to use this class, an index file is required that describes
-/// the locations of the AST files for each function definition.
+/// the locations of the AST files for each definition.
 ///
 /// Note that this class also implements caching.
 class CrossTranslationUnitContext {
@@ -130,8 +129,9 @@ public:
   /// \p IndexName. In case the declaration is found in the index the
   /// corresponding AST file will be loaded.
   ///
-  /// \return Returns an ASTUnit that contains the definition of the looked up
-  /// function.
+  /// \return Returns a pointer to the ASTUnit that contains the definition of
+  /// the looked up function or an Error.
+  /// The returned pointer is never a nullptr.
   ///
   /// Note that the AST files should also be in the \p CrossTUDir.
   llvm::Expected<ASTUnit *> loadExternalAST(StringRef LookupName,

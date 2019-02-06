@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -disable-fp-elim -O0 -regalloc=fast
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -relocation-model=pic -frame-pointer=all -O0 -regalloc=fast
 ; PR5534
 
 	%struct.CGPoint = type { double, double }

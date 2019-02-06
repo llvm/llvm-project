@@ -1,6 +1,6 @@
-# FIXME: Once it's possible to add files to the root directory of the
-# monorepo, move this file to there.  Until then, you need to pass
-# `--dotfile=llvm/utils/gn/.gn --root=.` to the `gn gen` command.
+# Since this can't be at the toplevel, you either need to pass
+# `--dotfile=llvm/utils/gn/.gn --root=.` to the `gn gen` command
+# or use llvm/utils/gn/gn.py which calls gn with these two flags added.
 
 buildconfig = "//llvm/utils/gn/build/BUILDCONFIG.gn"
 

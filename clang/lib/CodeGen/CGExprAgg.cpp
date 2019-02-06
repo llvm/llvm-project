@@ -1,9 +1,8 @@
 //===--- CGExprAgg.cpp - Emit LLVM Code from Aggregate Expressions --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1264,7 +1263,52 @@ void AggExprEmitter::VisitCXXInheritedCtorInitExpr(
 void
 AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
   AggValueSlot Slot = EnsureSlot(E->getType());
-  CGF.EmitLambdaExpr(E, Slot);
+  LValue SlotLV = CGF.MakeAddrLValue(Slot.getAddress(), E->getType());
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception.
+  SmallVector<EHScopeStack::stable_iterator, 16> Cleanups;
+  llvm::Instruction *CleanupDominator = nullptr;
+
+  CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();
+  for (LambdaExpr::const_capture_init_iterator i = E->capture_init_begin(),
+                                               e = E->capture_init_end();
+       i != e; ++i, ++CurField) {
+    // Emit initialization
+    LValue LV = CGF.EmitLValueForFieldInitialization(SlotLV, *CurField);
+    if (CurField->hasCapturedVLAType()) {
+      CGF.EmitLambdaVLACapture(CurField->getCapturedVLAType(), LV);
+      continue;
+    }
+
+    EmitInitializationToLValue(*i, LV);
+
+    // Push a destructor if necessary.
+    if (QualType::DestructionKind DtorKind =
+            CurField->getType().isDestructedType()) {
+      assert(LV.isSimple());
+      if (CGF.needsEHCleanup(DtorKind)) {
+        if (!CleanupDominator)
+          CleanupDominator = CGF.Builder.CreateAlignedLoad(
+              CGF.Int8Ty,
+              llvm::Constant::getNullValue(CGF.Int8PtrTy),
+              CharUnits::One()); // placeholder
+
+        CGF.pushDestroy(EHCleanup, LV.getAddress(), CurField->getType(),
+                        CGF.getDestroyer(DtorKind), false);
+        Cleanups.push_back(CGF.EHStack.stable_begin());
+      }
+    }
+  }
+
+  // Deactivate all the partial cleanups in reverse order, which
+  // generally means popping them.
+  for (unsigned i = Cleanups.size(); i != 0; --i)
+    CGF.DeactivateCleanupBlock(Cleanups[i-1], CleanupDominator);
+
+  // Destroy the placeholder if we made one.
+  if (CleanupDominator)
+    CleanupDominator->eraseFromParent();
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {

@@ -1,0 +1,12 @@
+executable("llvm-opt-report") {
+  deps = [
+    "//llvm/lib/Demangle",
+    "//llvm/lib/IR",
+    "//llvm/lib/Object",
+    "//llvm/lib/OptRemarks",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "OptReport.cpp",
+  ]
+}

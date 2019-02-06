@@ -1,9 +1,8 @@
 //=- X86ATTInstPrinter.h - Convert X86 MCInst to assembly syntax --*- C++ -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -44,6 +43,7 @@ public:
   void printSrcIdx(const MCInst *MI, unsigned Op, raw_ostream &O);
   void printDstIdx(const MCInst *MI, unsigned Op, raw_ostream &O);
   void printU8Imm(const MCInst *MI, unsigned Op, raw_ostream &OS);
+  void printSTiRegOperand(const MCInst *MI, unsigned OpNo, raw_ostream &OS);
 
   void printanymem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
     printMemReference(MI, OpNo, O);

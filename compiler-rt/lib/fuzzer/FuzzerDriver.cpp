@@ -1,9 +1,8 @@
 //===- FuzzerDriver.cpp - FuzzerDriver function and flags -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // FuzzerDriver and flag parsing.
@@ -16,7 +15,6 @@
 #include "FuzzerInternal.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
-#include "FuzzerShmem.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>
 #include <atomic>
@@ -29,7 +27,12 @@
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
+#if LIBFUZZER_MSVC
+extern "C" void __libfuzzer_is_present() {}
+#pragma comment(linker, "/include:__libfuzzer_is_present")
+#else
 extern "C" __attribute__((used)) void __libfuzzer_is_present() {}
+#endif  // LIBFUZZER_MSVC
 
 namespace fuzzer {
 
@@ -617,11 +620,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.PrintCorpusStats = Flags.print_corpus_stats;
   Options.PrintCoverage = Flags.print_coverage;
-  Options.PrintUnstableStats = Flags.print_unstable_stats;
-  if (Flags.handle_unstable == TracePC::MinUnstable ||
-      Flags.handle_unstable == TracePC::ZeroUnstable)
-    Options.HandleUnstable = Flags.handle_unstable;
-  Options.DumpCoverage = Flags.dump_coverage;
   if (Flags.exit_on_src_pos)
     Options.ExitOnSrcPos = Flags.exit_on_src_pos;
   if (Flags.exit_on_item)
@@ -630,6 +628,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.FocusFunction = Flags.focus_function;
   if (Flags.data_flow_trace)
     Options.DataFlowTrace = Flags.data_flow_trace;
+  Options.LazyCounters = Flags.lazy_counters;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.
@@ -672,34 +671,6 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   if (Flags.cleanse_crash)
     return CleanseCrashInput(Args, Options);
-
-#if 0  // deprecated, to be removed.
-  if (auto Name = Flags.run_equivalence_server) {
-    SMR.Destroy(Name);
-    if (!SMR.Create(Name)) {
-       Printf("ERROR: can't create shared memory region\n");
-      return 1;
-    }
-    Printf("INFO: EQUIVALENCE SERVER UP\n");
-    while (true) {
-      SMR.WaitClient();
-      size_t Size = SMR.ReadByteArraySize();
-      SMR.WriteByteArray(nullptr, 0);
-      const Unit tmp(SMR.GetByteArray(), SMR.GetByteArray() + Size);
-      F->ExecuteCallback(tmp.data(), tmp.size());
-      SMR.PostServer();
-    }
-    return 0;
-  }
-
-  if (auto Name = Flags.use_equivalence_server) {
-    if (!SMR.Open(Name)) {
-      Printf("ERROR: can't open shared memory region\n");
-      return 1;
-    }
-    Printf("INFO: EQUIVALENCE CLIENT UP\n");
-  }
-#endif
 
   if (DoPlainRun) {
     Options.SaveArtifacts = false;

@@ -1,9 +1,8 @@
 //===- FileCheck.cpp - Check that File's Contents match what is expected --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -79,13 +78,16 @@ static cl::opt<bool> AllowDeprecatedDagOverlap(
              "provided for convenience as old tests are migrated to the new\n"
              "non-overlapping CHECK-DAG implementation.\n"));
 
-static cl::opt<bool> Verbose("v", cl::init(false),
-                             cl::desc("Print directive pattern matches.\n"));
+static cl::opt<bool> Verbose(
+    "v", cl::init(false),
+    cl::desc("Print directive pattern matches, or add them to the input dump\n"
+             "if enabled.\n"));
 
 static cl::opt<bool> VerboseVerbose(
     "vv", cl::init(false),
     cl::desc("Print information helpful in diagnosing internal FileCheck\n"
-             "issues.  Implies -v.\n"));
+             "issues, or add it to the input dump if enabled.  Implies\n"
+             "-v.\n"));
 static const char * DumpInputEnv = "FILECHECK_DUMP_INPUT_ON_FAILURE";
 
 static cl::opt<bool> DumpInputOnFailure(

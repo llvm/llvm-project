@@ -38,7 +38,11 @@ entry:
 ; CHECK: i32.const {{.*}}, 24
 ; CHECK: i32.shr_s
 ; CHECK: i32.const {{.*}}, 64
-; CHECK: br_if 0, $pop0
+; CHECK: i32.lt_s
+; CHECK: i32.const {{.*}}, 1
+; CHECK: i32.and
+; CHECK: i32.eqz
+; CHECK: br_if 0, $pop{{[0-9]+}}
 define hidden i32 @d() #0 {
 entry:
   %t = icmp slt i8 ptrtoint (void ()* @addr to i8), 64
@@ -53,7 +57,11 @@ b:
 ; CHECK: i32.const {{.*}}, 255
 ; CHECK: i32.and
 ; CHECK: i32.const {{.*}}, 64
-; CHECK: br_if 0, $pop0
+; CHECK: i32.lt_u
+; CHECK: i32.const {{.*}}, 1
+; CHECK: i32.and
+; CHECK: i32.eqz
+; CHECK: br_if 0, $pop{{[0-9]+}}
 define hidden i32 @e() #0 {
 entry:
   %t = icmp ult i8 ptrtoint (void ()* @addr to i8), 64

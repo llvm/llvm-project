@@ -1,9 +1,8 @@
 //===- ELFObjcopy.cpp -----------------------------------------------------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -69,6 +68,17 @@ static bool onlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   // Short of keeping the string table we want to keep everything that is a DWO
   // section and remove everything else.
   return !isDWOSection(Sec);
+}
+
+static uint64_t setSectionFlagsPreserveMask(uint64_t OldFlags,
+                                            uint64_t NewFlags) {
+  // Preserve some flags which should not be dropped when setting flags.
+  // Also, preserve anything OS/processor dependant.
+  const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
+                                ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
+                                ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
+                                ELF::SHF_TLS | ELF::SHF_INFO_LINK;
+  return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
 }
 
 static ElfType getOutputElfType(const Binary &Bin) {
@@ -147,13 +157,15 @@ findBuildID(const object::ELFObjectFileBase &In) {
   llvm_unreachable("Bad file format");
 }
 
-static void linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
-                             StringRef Suffix, ArrayRef<uint8_t> BuildIdBytes) {
+static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
+                              StringRef Suffix,
+                              ArrayRef<uint8_t> BuildIdBytes) {
   SmallString<128> Path = Config.BuildIdLinkDir;
   sys::path::append(Path, llvm::toHex(BuildIdBytes[0], /*LowerCase*/ true));
   if (auto EC = sys::fs::create_directories(Path))
-    error("cannot create build ID link directory " + Path + ": " +
-          EC.message());
+    return createFileError(
+        Path.str(),
+        createStringError(EC, "cannot create build ID link directory"));
 
   sys::path::append(Path,
                     llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
@@ -164,19 +176,27 @@ static void linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
       sys::fs::remove(Path);
     EC = sys::fs::create_hard_link(ToLink, Path);
     if (EC)
-      error("cannot link " + ToLink + " to " + Path + ": " + EC.message());
+      return createStringError(EC, "cannot link %s to %s", ToLink.data(),
+                               Path.data());
   }
+  return Error::success();
 }
 
-static void splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
-                           StringRef File, ElfType OutputElfType) {
+static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
+                            StringRef File, ElfType OutputElfType) {
   auto DWOFile = Reader.create();
-  DWOFile->removeSections(
-      [&](const SectionBase &Sec) { return onlyKeepDWOPred(*DWOFile, Sec); });
+  auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
+    return onlyKeepDWOPred(*DWOFile, Sec);
+  };
+  if (Error E = DWOFile->removeSections(OnlyKeepDWOPred))
+    return E;
+  if (Config.OutputArch)
+    DWOFile->Machine = Config.OutputArch.getValue().EMachine;
   FileBuffer FB(File);
   auto Writer = createWriter(Config, *DWOFile, FB, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    return E;
+  return Writer->write();
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
@@ -184,9 +204,10 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
       if (Sec.OriginalData.empty())
-        return make_error<StringError>("Can't dump section \"" + SecName +
-                                           "\": it has no contents",
-                                       object_error::parse_failed);
+        return createStringError(
+            object_error::parse_failed,
+            "Can't dump section \"%s\": it has no contents",
+            SecName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Sec.OriginalData.size());
       if (!BufferOrErr)
@@ -199,8 +220,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       return Error::success();
     }
   }
-  return make_error<StringError>("Section not found",
-                                 object_error::parse_failed);
+  return createStringError(object_error::parse_failed, "Section not found");
 }
 
 static bool isCompressed(const SectionBase &Section) {
@@ -255,18 +275,24 @@ static void replaceDebugSections(
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-static void handleArgs(const CopyConfig &Config, Object &Obj,
-                       const Reader &Reader, ElfType OutputElfType) {
+static Error handleArgs(const CopyConfig &Config, Object &Obj,
+                        const Reader &Reader, ElfType OutputElfType) {
 
-  if (!Config.SplitDWO.empty()) {
-    splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType);
-  }
+  if (!Config.SplitDWO.empty())
+    if (Error E =
+            splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
+      return E;
+
+  if (Config.OutputArch)
+    Obj.Machine = Config.OutputArch.getValue().EMachine;
 
   // TODO: update or remove symbols only if there is an option that affects
   // them.
   if (Obj.SymbolTable) {
     Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      if (!Sym.isCommon() &&
+      // Common and undefined symbols don't make sense as local symbols, and can
+      // even cause crashes if we localize those, so skip them.
+      if (!Sym.isCommon() && Sym.getShndx() != SHN_UNDEF &&
           ((Config.LocalizeHidden &&
             (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
            is_contained(Config.SymbolsToLocalize, Sym.Name)))
@@ -315,14 +341,16 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
         Section.markSymbols();
     }
 
-    Obj.removeSymbols([&](const Symbol &Sym) {
+    auto RemoveSymbolsPred = [&](const Symbol &Sym) {
       if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
           (Config.KeepFileSymbols && Sym.Type == STT_FILE))
         return false;
 
-      if (Config.DiscardAll && Sym.Binding == STB_LOCAL &&
-          Sym.getShndx() != SHN_UNDEF && Sym.Type != STT_FILE &&
-          Sym.Type != STT_SECTION)
+      if ((Config.DiscardMode == DiscardType::All ||
+           (Config.DiscardMode == DiscardType::Locals &&
+            StringRef(Sym.Name).startswith(".L"))) &&
+          Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
+          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
         return true;
 
       if (Config.StripAll || Config.StripAllGNU)
@@ -337,7 +365,9 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
         return true;
 
       return false;
-    });
+    };
+    if (Error E = Obj.removeSymbols(RemoveSymbolsPred))
+      return E;
   }
 
   SectionPred RemovePred = [](const SectionBase &) { return false; };
@@ -471,7 +501,8 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
           return &Obj.addSection<DecompressedSection>(*CS);
         });
 
-  Obj.removeSections(RemovePred);
+  if (Error E = Obj.removeSections(RemovePred))
+    return E;
 
   if (!Config.SectionsToRename.empty()) {
     for (auto &Sec : Obj.sections()) {
@@ -479,33 +510,40 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
         Sec.Name = SR.NewName;
-        if (SR.NewFlags.hasValue()) {
-          // Preserve some flags which should not be dropped when setting flags.
-          // Also, preserve anything OS/processor dependant.
-          const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
-                                        ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
-                                        ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
-                                        ELF::SHF_TLS | ELF::SHF_INFO_LINK;
-          Sec.Flags = (Sec.Flags & PreserveMask) |
-                      (SR.NewFlags.getValue() & ~PreserveMask);
-        }
+        if (SR.NewFlags.hasValue())
+          Sec.Flags =
+              setSectionFlagsPreserveMask(Sec.Flags, SR.NewFlags.getValue());
+      }
+    }
+  }
+
+  if (!Config.SetSectionFlags.empty()) {
+    for (auto &Sec : Obj.sections()) {
+      const auto Iter = Config.SetSectionFlags.find(Sec.Name);
+      if (Iter != Config.SetSectionFlags.end()) {
+        const SectionFlagsUpdate &SFU = Iter->second;
+        Sec.Flags = setSectionFlagsPreserveMask(Sec.Flags, SFU.NewFlags);
       }
     }
   }
 
   if (!Config.AddSection.empty()) {
     for (const auto &Flag : Config.AddSection) {
-      auto SecPair = Flag.split("=");
-      auto SecName = SecPair.first;
-      auto File = SecPair.second;
-      auto BufOrErr = MemoryBuffer::getFile(File);
+      std::pair<StringRef, StringRef> SecPair = Flag.split("=");
+      StringRef SecName = SecPair.first;
+      StringRef File = SecPair.second;
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+          MemoryBuffer::getFile(File);
       if (!BufOrErr)
-        reportError(File, BufOrErr.getError());
-      auto Buf = std::move(*BufOrErr);
-      auto BufPtr = reinterpret_cast<const uint8_t *>(Buf->getBufferStart());
-      auto BufSize = Buf->getBufferSize();
-      Obj.addSection<OwnedDataSection>(SecName,
-                                       ArrayRef<uint8_t>(BufPtr, BufSize));
+        return createFileError(File, errorCodeToError(BufOrErr.getError()));
+      std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
+      ArrayRef<uint8_t> Data(
+          reinterpret_cast<const uint8_t *>(Buf->getBufferStart()),
+          Buf->getBufferSize());
+      OwnedDataSection &NewSection =
+          Obj.addSection<OwnedDataSection>(SecName, Data);
+      if (SecName.startswith(".note") && SecName != ".note.GNU-stack")
+        NewSection.Type = SHT_NOTE;
     }
   }
 
@@ -515,54 +553,74 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       StringRef SecName = SecPair.first;
       StringRef File = SecPair.second;
       if (Error E = dumpSectionToFile(SecName, File, Obj))
-        reportError(Config.InputFilename, std::move(E));
+        return createFileError(Config.InputFilename, std::move(E));
     }
   }
 
   if (!Config.AddGnuDebugLink.empty())
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
+
+  return Error::success();
 }
 
-void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
-                               Buffer &Out) {
+Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
+                                Buffer &Out) {
   BinaryReader Reader(Config.BinaryArch, &In);
   std::unique_ptr<Object> Obj = Reader.create();
 
-  const ElfType OutputElfType = getOutputElfType(Config.BinaryArch);
-  handleArgs(Config, *Obj, Reader, OutputElfType);
+  // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch
+  // (-B<arch>).
+  const ElfType OutputElfType = getOutputElfType(
+      Config.OutputArch ? Config.OutputArch.getValue() : Config.BinaryArch);
+  if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
+    return E;
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
+  if (Error E = Writer->finalize())
+    return E;
+  return Writer->write();
 }
 
-void executeObjcopyOnBinary(const CopyConfig &Config,
-                            object::ELFObjectFileBase &In, Buffer &Out) {
+Error executeObjcopyOnBinary(const CopyConfig &Config,
+                             object::ELFObjectFileBase &In, Buffer &Out) {
   ELFReader Reader(&In);
   std::unique_ptr<Object> Obj = Reader.create();
-  const ElfType OutputElfType = getOutputElfType(In);
+  // Prefer OutputArch (-O<format>) if set, otherwise infer it from the input.
+  const ElfType OutputElfType =
+      Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())
+                        : getOutputElfType(In);
   ArrayRef<uint8_t> BuildIdBytes;
 
   if (!Config.BuildIdLinkDir.empty()) {
     BuildIdBytes = unwrapOrError(findBuildID(In));
     if (BuildIdBytes.size() < 2)
-      error("build ID in file '" + Config.InputFilename +
-            "' is smaller than two bytes");
+      return createFileError(
+          Config.InputFilename,
+          createStringError(object_error::parse_failed,
+                            "build ID is smaller than two bytes."));
   }
 
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput) {
-    linkToBuildIdDir(Config, Config.InputFilename,
-                     Config.BuildIdLinkInput.getValue(), BuildIdBytes);
-  }
-  handleArgs(Config, *Obj, Reader, OutputElfType);
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput)
+    if (Error E =
+            linkToBuildIdDir(Config, Config.InputFilename,
+                             Config.BuildIdLinkInput.getValue(), BuildIdBytes))
+      return E;
+
+  if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
+    return E;
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
-  Writer->finalize();
-  Writer->write();
-  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput) {
-    linkToBuildIdDir(Config, Config.OutputFilename,
-                     Config.BuildIdLinkOutput.getValue(), BuildIdBytes);
-  }
+  if (Error E = Writer->finalize())
+    return E;
+  if (Error E = Writer->write())
+    return E;
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput)
+    if (Error E =
+            linkToBuildIdDir(Config, Config.OutputFilename,
+                             Config.BuildIdLinkOutput.getValue(), BuildIdBytes))
+      return E;
+
+  return Error::success();
 }
 
 } // end namespace elf

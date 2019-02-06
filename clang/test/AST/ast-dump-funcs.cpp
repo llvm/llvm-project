@@ -56,10 +56,10 @@ struct S {
 struct T : S { // T is not referenced, but S is
   void f(float, int = 100) override;
   // CHECK: CXXMethodDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:28> col:8 f 'void (float, int)'
+  // CHECK-NEXT: Overrides: [ 0x{{[^ ]*}} S::f 'void (float, int)' ]
   // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:10> col:15 'float'
   // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:17, col:23> col:21 'int' cinit
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:23> 'int' 100
-  // CHECK-NEXT: Overrides: [ 0x{{[^ ]*}} S::f 'void (float, int)' ]
   // CHECK-NEXT: OverrideAttr
 
   // CHECK: CXXConstructorDecl 0x{{[^ ]*}} <line:[[@LINE-9]]:8> col:8 implicit T 'void (const T &)' inline default_delete noexcept-unevaluated
@@ -117,6 +117,11 @@ void m(int) {}
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:14> col:6 m 'void (int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8> col:11 'int'
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:13, col:14>
+
+void n(int, ...) {}
+// CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:19> col:6 n 'void (int, ...)'
+// CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8> col:11 'int'
+// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
 
 int main() {
   // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:5 main 'int ()'

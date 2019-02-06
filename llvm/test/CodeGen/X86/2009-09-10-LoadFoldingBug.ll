@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10.0 -relocation-model=pic -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10.0 -relocation-model=pic -frame-pointer=all | FileCheck %s
 
 ; It's not legal to fold a load from 32-bit stack slot into a 64-bit
 ; instruction. If done, the instruction does a 64-bit load and that's not

@@ -1,0 +1,26 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("CodeGenTests") {
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/AsmParser",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:TargetsToBuild",
+  ]
+  sources = [
+    "AArch64SelectionDAGTest.cpp",
+    "DIEHashTest.cpp",
+    "LowLevelTypeTest.cpp",
+    "MachineInstrBundleIteratorTest.cpp",
+    "MachineInstrTest.cpp",
+    "MachineOperandTest.cpp",
+    "ScalableVectorMVTsTest.cpp",
+    "TypeTraitsTest.cpp",
+  ]
+}

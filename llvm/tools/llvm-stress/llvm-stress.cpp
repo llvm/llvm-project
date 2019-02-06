@@ -1,9 +1,8 @@
 //===- llvm-stress.cpp - Generate random LL files to stress-test LLVM -----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -356,8 +355,8 @@ struct StoreModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    Type  *Tp = Ptr->getType();
-    Value *Val = getRandomValue(Tp->getContainedType(0));
+    PointerType *Tp = cast<PointerType>(Ptr->getType());
+    Value *Val = getRandomValue(Tp->getElementType());
     Type  *ValTy = Val->getType();
 
     // Do not store vectors of i1s because they are unsupported

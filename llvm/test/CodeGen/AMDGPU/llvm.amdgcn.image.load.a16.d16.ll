@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}load.f16.1d:
-; GCN: image_load v[0:1], v0, s[0:7] dmask:0x1 unorm a16 d16
+; GCN: image_load v0, v0, s[0:7] dmask:0x1 unorm a16 d16
 define amdgpu_ps <4 x half> @load.f16.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -10,7 +10,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.v2f16.1d:
-; GCN: image_load v[0:1], v0, s[0:7] dmask:0x3 unorm a16 d16
+; GCN: image_load v0, v0, s[0:7] dmask:0x3 unorm a16 d16
 define amdgpu_ps <4 x half> @load.v2f16.1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -37,7 +37,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.f16.2d:
-; GCN: image_load v[0:1], v0, s[0:7] dmask:0x1 unorm a16 d16
+; GCN: image_load v0, v0, s[0:7] dmask:0x1 unorm a16 d16
 define amdgpu_ps <4 x half> @load.f16.2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -47,7 +47,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.v2f16.2d:
-; GCN: image_load v[0:1], v0, s[0:7] dmask:0x3 unorm a16 d16
+; GCN: image_load v0, v0, s[0:7] dmask:0x3 unorm a16 d16
 define amdgpu_ps <4 x half> @load.v2f16.2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 main_body:
   %x = extractelement <2 x i16> %coords, i32 0
@@ -77,7 +77,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.f16.3d:
-; GCN: image_load v[0:1], v[0:1], s[0:7] dmask:0x1 unorm a16 d16
+; GCN: image_load v0, v[0:1], s[0:7] dmask:0x1 unorm a16 d16
 define amdgpu_ps <4 x half> @load.f16.3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo, <2 x i16> %coords_hi) {
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0
@@ -88,7 +88,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load.v2f16.3d:
-; GCN: image_load v[0:1], v[0:1], s[0:7] dmask:0x3 unorm a16 d16
+; GCN: image_load v0, v[0:1], s[0:7] dmask:0x3 unorm a16 d16
 define amdgpu_ps <4 x half> @load.v2f16.3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo, <2 x i16> %coords_hi) {
 main_body:
   %x = extractelement <2 x i16> %coords_lo, i32 0

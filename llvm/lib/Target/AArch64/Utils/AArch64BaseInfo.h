@@ -1,9 +1,8 @@
 //===-- AArch64BaseInfo.h - Top level definitions for AArch64 ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -581,6 +580,10 @@ namespace AArch64II {
     /// to the symbol is for an import stub.  This is used for DLL import
     /// storage class indication on Windows.
     MO_DLLIMPORT = 0x80,
+
+    /// MO_S - Indicates that the bits of the symbol operand represented by
+    /// MO_G0 etc are signed.
+    MO_S = 0x100,
   };
 } // end namespace AArch64II
 

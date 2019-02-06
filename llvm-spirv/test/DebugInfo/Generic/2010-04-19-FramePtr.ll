@@ -4,7 +4,7 @@
 
 ; RUN: llc -mtriple=%triple -debugger-tune=lldb -asm-verbose -O1 -o - < %t.ll | FileCheck %s
 ; RUN: llc -mtriple=%triple -debugger-tune=gdb -asm-verbose -O1 -o - < %t.ll | FileCheck %s --check-prefix=DISABLE
-; RUN: llc -mtriple=%triple -disable-fp-elim -debugger-tune=lldb -asm-verbose -O1 -o - < %t.ll | FileCheck %s --check-prefix=DISABLE
+; RUN: llc -mtriple=%triple -frame-pointer=all -debugger-tune=lldb -asm-verbose -O1 -o - < %t.ll | FileCheck %s --check-prefix=DISABLE
 
 ; CHECK: DW_AT_APPLE_omit_frame_ptr
 ; DISABLE-NOT: DW_AT_APPLE_omit_frame_ptr

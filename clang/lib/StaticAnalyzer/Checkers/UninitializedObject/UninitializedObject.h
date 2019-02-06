@@ -1,9 +1,8 @@
 //===----- UninitializedObject.h ---------------------------------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,6 +34,12 @@
 //     `-analyzer-config \
 //         alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true`.
 //
+//     TODO: With some clever heuristics, some pointers should be dereferenced
+//     by default. For example, if the pointee is constructed within the
+//     constructor call, it's reasonable to say that no external object
+//     references it, and we wouldn't generate multiple report on the same
+//     pointee.
+//
 //   - "IgnoreRecordsWithField" (string). If supplied, the checker will not
 //     analyze structures that have a field with a name or type name that
 //     matches the given pattern. Defaults to "".
@@ -42,11 +47,12 @@
 //     `-analyzer-config \
 // alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"`.
 //
-//     TODO: With some clever heuristics, some pointers should be dereferenced
-//     by default. For example, if the pointee is constructed within the
-//     constructor call, it's reasonable to say that no external object
-//     references it, and we wouldn't generate multiple report on the same
-//     pointee.
+//   - "IgnoreGuardedFields" (boolean). If set to true, the checker will analyze
+//     _syntactically_ whether the found uninitialized object is used without a
+//     preceding assert call. Defaults to false.
+//
+//     `-analyzer-config \
+//         alpha.cplusplus.UninitializedObject:IgnoreGuardedFields=true`.
 //
 // Most of the following methods as well as the checker itself is defined in
 // UninitializedObjectChecker.cpp.
@@ -69,6 +75,7 @@ struct UninitObjCheckerOptions {
   bool ShouldConvertNotesToWarnings = false;
   bool CheckPointeeInitialization = false;
   std::string IgnoredRecordsWithFieldPattern;
+  bool IgnoreGuardedFields = false;
 };
 
 /// A lightweight polymorphic wrapper around FieldRegion *. We'll use this

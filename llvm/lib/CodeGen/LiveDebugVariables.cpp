@@ -1,9 +1,8 @@
 //===- LiveDebugVariables.cpp - Tracking debug info variables -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -71,6 +70,7 @@ EnableLDV("live-debug-variables", cl::init(true),
           cl::desc("Enable the live debug variables pass"), cl::Hidden);
 
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
+STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
 
 char LiveDebugVariables::ID = 0;
 
@@ -339,6 +339,37 @@ public:
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
 
+/// A user label is a part of a debug info user label.
+class UserLabel {
+  const DILabel *Label; ///< The debug info label we are part of.
+  DebugLoc dl;          ///< The debug location for the label. This is
+                        ///< used by dwarf writer to find lexical scope.
+  SlotIndex loc;        ///< Slot used by the debug label.
+
+  /// Insert a DBG_LABEL into MBB at Idx.
+  void insertDebugLabel(MachineBasicBlock *MBB, SlotIndex Idx,
+                        LiveIntervals &LIS, const TargetInstrInfo &TII);
+
+public:
+  /// Create a new UserLabel.
+  UserLabel(const DILabel *label, DebugLoc L, SlotIndex Idx)
+      : Label(label), dl(std::move(L)), loc(Idx) {}
+
+  /// Does this UserLabel match the parameters?
+  bool match(const DILabel *L, const DILocation *IA,
+             const SlotIndex Index) const {
+    return Label == L && dl->getInlinedAt() == IA && loc == Index;
+  }
+
+  /// Recreate DBG_LABEL instruction from data structures.
+  void emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII);
+
+  /// Return DebugLoc of this UserLabel.
+  DebugLoc getDebugLoc() { return dl; }
+
+  void print(raw_ostream &, const TargetRegisterInfo *);
+};
+
 /// Implementation of the LiveDebugVariables pass.
 class LDVImpl {
   LiveDebugVariables &pass;
@@ -355,6 +386,9 @@ class LDVImpl {
 
   /// All allocated UserValue instances.
   SmallVector<std::unique_ptr<UserValue>, 8> userValues;
+
+  /// All allocated UserLabel instances.
+  SmallVector<std::unique_ptr<UserLabel>, 2> userLabels;
 
   /// Map virtual register to eq class leader.
   using VRMap = DenseMap<unsigned, UserValue *>;
@@ -379,6 +413,14 @@ class LDVImpl {
   /// \returns True if the DBG_VALUE instruction should be deleted.
   bool handleDebugValue(MachineInstr &MI, SlotIndex Idx);
 
+  /// Add DBG_LABEL instruction to UserLabel.
+  ///
+  /// \param MI DBG_LABEL instruction
+  /// \param Idx Last valid SlotIndex before instruction.
+  ///
+  /// \returns True if the DBG_LABEL instruction should be deleted.
+  bool handleDebugLabel(MachineInstr &MI, SlotIndex Idx);
+
   /// Collect and erase all DBG_VALUE instructions, adding a UserValue def
   /// for each instruction.
   ///
@@ -400,6 +442,7 @@ public:
   void clear() {
     MF = nullptr;
     userValues.clear();
+    userLabels.clear();
     virtRegToEqClass.clear();
     userVarMap.clear();
     // Make sure we call emitDebugValues if the machine function was modified.
@@ -445,12 +488,21 @@ static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
   CommentOS << " ]";
 }
 
-static void printExtendedName(raw_ostream &OS, const DILocalVariable *V,
+static void printExtendedName(raw_ostream &OS, const DINode *Node,
                               const DILocation *DL) {
-  const LLVMContext &Ctx = V->getContext();
-  StringRef Res = V->getName();
+  const LLVMContext &Ctx = Node->getContext();
+  StringRef Res;
+  unsigned Line;
+  if (const auto *V = dyn_cast<const DILocalVariable>(Node)) {
+    Res = V->getName();
+    Line = V->getLine();
+  } else if (const auto *L = dyn_cast<const DILabel>(Node)) {
+    Res = L->getName();
+    Line = L->getLine();
+  }
+
   if (!Res.empty())
-    OS << Res << "," << V->getLine();
+    OS << Res << "," << Line;
   if (auto *InlinedAt = DL->getInlinedAt()) {
     if (DebugLoc InlinedAtDL = InlinedAt) {
       OS << " @[";
@@ -461,9 +513,8 @@ static void printExtendedName(raw_ostream &OS, const DILocalVariable *V,
 }
 
 void UserValue::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
-  auto *DV = cast<DILocalVariable>(Variable);
   OS << "!\"";
-  printExtendedName(OS, DV, dl);
+  printExtendedName(OS, Variable, dl);
 
   OS << "\"\t";
   for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I) {
@@ -483,10 +534,22 @@ void UserValue::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
   OS << '\n';
 }
 
+void UserLabel::print(raw_ostream &OS, const TargetRegisterInfo *TRI) {
+  OS << "!\"";
+  printExtendedName(OS, Label, dl);
+
+  OS << "\"\t";
+  OS << loc;
+  OS << '\n';
+}
+
 void LDVImpl::print(raw_ostream &OS) {
   OS << "********** DEBUG VARIABLES **********\n";
-  for (unsigned i = 0, e = userValues.size(); i != e; ++i)
-    userValues[i]->print(OS, TRI);
+  for (auto &userValue : userValues)
+    userValue->print(OS, TRI);
+  OS << "********** DEBUG LABELS **********\n";
+  for (auto &userLabel : userLabels)
+    userLabel->print(OS, TRI);
 }
 #endif
 
@@ -587,6 +650,29 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   return true;
 }
 
+bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
+  // DBG_LABEL label
+  if (MI.getNumOperands() != 1 || !MI.getOperand(0).isMetadata()) {
+    LLVM_DEBUG(dbgs() << "Can't handle " << MI);
+    return false;
+  }
+
+  // Get or create the UserLabel for label here.
+  const DILabel *Label = MI.getDebugLabel();
+  const DebugLoc &DL = MI.getDebugLoc();
+  bool Found = false;
+  for (auto const &L : userLabels) {
+    if (L->match(Label, DL->getInlinedAt(), Idx)) {
+      Found = true;
+      break;
+    }
+  }
+  if (!Found)
+    userLabels.push_back(llvm::make_unique<UserLabel>(Label, DL, Idx));
+
+  return true;
+}
+
 bool LDVImpl::collectDebugValues(MachineFunction &mf) {
   bool Changed = false;
   for (MachineFunction::iterator MFI = mf.begin(), MFE = mf.end(); MFI != MFE;
@@ -610,7 +696,8 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
       do {
         // Only handle DBG_VALUE in handleDebugValue(). Skip all other
         // kinds of debug instructions.
-        if (MBBI->isDebugValue() && handleDebugValue(*MBBI, Idx)) {
+        if ((MBBI->isDebugValue() && handleDebugValue(*MBBI, Idx)) ||
+            (MBBI->isDebugLabel() && handleDebugLabel(*MBBI, Idx))) {
           MBBI = MBB->erase(MBBI);
           Changed = true;
         } else
@@ -1247,6 +1334,15 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
   } while (I != MBB->end());
 }
 
+void UserLabel::insertDebugLabel(MachineBasicBlock *MBB, SlotIndex Idx,
+                                 LiveIntervals &LIS,
+                                 const TargetInstrInfo &TII) {
+  MachineBasicBlock::iterator I = findInsertLocation(MBB, Idx, LIS);
+  ++NumInsertedDebugLabels;
+  BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_LABEL))
+      .addMetadata(Label);
+}
+
 void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
                                 const TargetInstrInfo &TII,
                                 const TargetRegisterInfo &TRI,
@@ -1295,16 +1391,31 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
   }
 }
 
+void UserLabel::emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII) {
+  LLVM_DEBUG(dbgs() << "\t" << loc);
+  MachineFunction::iterator MBB = LIS.getMBBFromIndex(loc)->getIterator();
+
+  LLVM_DEBUG(dbgs() << ' ' << printMBBReference(*MBB));
+  insertDebugLabel(&*MBB, loc, LIS, TII);
+
+  LLVM_DEBUG(dbgs() << '\n');
+}
+
 void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
     return;
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   SpillOffsetMap SpillOffsets;
-  for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
-    LLVM_DEBUG(userValues[i]->print(dbgs(), TRI));
-    userValues[i]->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
-    userValues[i]->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets);
+  for (auto &userValue : userValues) {
+    LLVM_DEBUG(userValue->print(dbgs(), TRI));
+    userValue->rewriteLocations(*VRM, *MF, *TII, *TRI, SpillOffsets);
+    userValue->emitDebugValues(VRM, *LIS, *TII, *TRI, SpillOffsets);
+  }
+  LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG LABELS **********\n");
+  for (auto &userLabel : userLabels) {
+    LLVM_DEBUG(userLabel->print(dbgs(), TRI));
+    userLabel->emitDebugLabel(*LIS, *TII);
   }
   EmitDone = true;
 }

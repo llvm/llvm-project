@@ -14,21 +14,19 @@
 # CHECK: i64.load32_u 16:p2align=1
 0x35 0x01 0x10
 
-# CHECK: block
-# 3
-# FIXME: WebAssemblyInstPrinter does not currently print block number.
-0x02 0x03
+# CHECK: block f64
+0x02 0x7C
 
 # CHECK: call_indirect
 # $0=, 128, 0
 # FIXME: WebAssemblyInstPrinter does not print immediates.
 0x11 0x80 0x01 0x00
 
-# CHECK: get_local 128
+# CHECK: local.get 128
 0x20 0x80 0x01
 
 # Prefix byte example:
-# CHECK: i64.trunc_u:sat/f64
+# CHECK: i64.trunc_sat_f64_u
 0xFC 0x07
 
 # v128.const is arbitrarily disassembled as v16i8
@@ -46,3 +44,7 @@
 # CHECK: i64x2.any_true
 # CHECK-NOT: i64.div_u
 0xFD 0x85 0x81 0x80 0x80 0x80 0x80 0x00
+
+# Check br_table, which has its own operand type.
+# CHECK: br_table {0, 1, 2}
+0x0E 0x02 0x00 0x01 0x02

@@ -1,9 +1,8 @@
 //===-- AMDGPUISelLowering.h - AMDGPU Lowering Interface --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -212,14 +211,14 @@ public:
 
   const char* getTargetNodeName(unsigned Opcode) const override;
 
-  // FIXME: Turn off MergeConsecutiveStores() before Instruction Selection
-  // for AMDGPU.
-  // A commit ( git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@319036
-  // 91177308-0d34-0410-b5e6-96231b3b80d8 ) turned on
-  // MergeConsecutiveStores() before Instruction Selection for all targets.
-  // Enough AMDGPU compiles go into an infinite loop ( MergeConsecutiveStores()
-  // merges two stores; LegalizeStoreOps() un-merges; MergeConsecutiveStores()
-  // re-merges, etc. ) to warrant turning it off for now.
+  // FIXME: Turn off MergeConsecutiveStores() before Instruction Selection for
+  // AMDGPU.  Commit r319036,
+  // (https://github.com/llvm/llvm-project/commit/db77e57ea86d941a4262ef60261692f4cb6893e6)
+  // turned on MergeConsecutiveStores() before Instruction Selection for all
+  // targets.  Enough AMDGPU compiles go into an infinite loop (
+  // MergeConsecutiveStores() merges two stores; LegalizeStoreOps() un-merges;
+  // MergeConsecutiveStores() re-merges, etc. ) to warrant turning it off for
+  // now.
   bool mergeStoresAfterLegalization() const override { return false; }
 
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
@@ -463,6 +462,9 @@ enum NodeType : unsigned {
   INTERP_MOV,
   INTERP_P1,
   INTERP_P2,
+  INTERP_P1LL_F16,
+  INTERP_P1LV_F16,
+  INTERP_P2_F16,
   PC_ADD_REL_OFFSET,
   KILL,
   DUMMY_CHAIN,
@@ -474,10 +476,10 @@ enum NodeType : unsigned {
   TBUFFER_STORE_FORMAT_D16,
   TBUFFER_LOAD_FORMAT,
   TBUFFER_LOAD_FORMAT_D16,
+  DS_ORDERED_COUNT,
   ATOMIC_CMP_SWAP,
   ATOMIC_INC,
   ATOMIC_DEC,
-  ATOMIC_LOAD_FADD,
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_FMAX,
   BUFFER_LOAD,

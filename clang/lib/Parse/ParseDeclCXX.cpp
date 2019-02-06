@@ -1,9 +1,8 @@
 //===--- ParseDeclCXX.cpp - C++ Declaration Parsing -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -2346,32 +2345,22 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
   if (D.isFunctionDeclarator()) {
     auto &Function = D.getFunctionTypeInfo();
     if (DS.getTypeQualifiers() != DeclSpec::TQ_unspecified) {
-      auto DeclSpecCheck = [&] (DeclSpec::TQ TypeQual,
-                                const char *FixItName,
-                                SourceLocation SpecLoc,
-                                unsigned* QualifierLoc) {
+      auto DeclSpecCheck = [&](DeclSpec::TQ TypeQual, StringRef FixItName,
+                               SourceLocation SpecLoc) {
         FixItHint Insertion;
-        if (DS.getTypeQualifiers() & TypeQual) {
-          if (!(Function.TypeQuals & TypeQual)) {
-            std::string Name(FixItName);
-            Name += " ";
-            Insertion = FixItHint::CreateInsertion(VS.getFirstLocation(), Name);
-            Function.TypeQuals |= TypeQual;
-            *QualifierLoc = SpecLoc.getRawEncoding();
-          }
-          Diag(SpecLoc, diag::err_declspec_after_virtspec)
+        auto &MQ = Function.getOrCreateMethodQualifiers();
+        if (!(MQ.getTypeQualifiers() & TypeQual)) {
+          std::string Name(FixItName.data());
+          Name += " ";
+          Insertion = FixItHint::CreateInsertion(VS.getFirstLocation(), Name);
+          MQ.SetTypeQual(TypeQual, SpecLoc);
+        }
+        Diag(SpecLoc, diag::err_declspec_after_virtspec)
             << FixItName
             << VirtSpecifiers::getSpecifierName(VS.getLastSpecifier())
-            << FixItHint::CreateRemoval(SpecLoc)
-            << Insertion;
-        }
+            << FixItHint::CreateRemoval(SpecLoc) << Insertion;
       };
-      DeclSpecCheck(DeclSpec::TQ_const, "const", DS.getConstSpecLoc(),
-                    &Function.ConstQualifierLoc);
-      DeclSpecCheck(DeclSpec::TQ_volatile, "volatile", DS.getVolatileSpecLoc(),
-                    &Function.VolatileQualifierLoc);
-      DeclSpecCheck(DeclSpec::TQ_restrict, "restrict", DS.getRestrictSpecLoc(),
-                    &Function.RestrictQualifierLoc);
+      DS.forEachQualifier(DeclSpecCheck);
     }
 
     // Parse ref-qualifiers.

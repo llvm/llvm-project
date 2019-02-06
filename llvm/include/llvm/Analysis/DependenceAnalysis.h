@@ -1,9 +1,8 @@
 //===-- llvm/Analysis/DependenceAnalysis.h -------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -274,6 +273,10 @@ template <typename T> class ArrayRef;
     DependenceInfo(Function *F, AliasAnalysis *AA, ScalarEvolution *SE,
                    LoopInfo *LI)
         : AA(AA), SE(SE), LI(LI), F(F) {}
+
+    /// Handle transitive invalidation when the cached analysis results go away.
+    bool invalidate(Function &F, const PreservedAnalyses &PA,
+                    FunctionAnalysisManager::Invalidator &Inv);
 
     /// depends - Tests for a dependence between the Src and Dst instructions.
     /// Returns NULL if no dependence; otherwise, returns a Dependence (or a
@@ -935,6 +938,17 @@ template <typename T> class ArrayRef;
     static AnalysisKey Key;
     friend struct AnalysisInfoMixin<DependenceAnalysis>;
   }; // class DependenceAnalysis
+
+  /// Printer pass to dump DA results.
+  struct DependenceAnalysisPrinterPass
+      : public PassInfoMixin<DependenceAnalysisPrinterPass> {
+    DependenceAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+    PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+  private:
+    raw_ostream &OS;
+  }; // class DependenceAnalysisPrinterPass
 
   /// Legacy pass manager pass to access dependence information
   class DependenceAnalysisWrapperPass : public FunctionPass {

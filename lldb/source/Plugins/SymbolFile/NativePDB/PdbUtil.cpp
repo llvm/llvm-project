@@ -1,9 +1,8 @@
 //===-- PdbUtil.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,10 +14,12 @@
 
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 
+#include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
+#include "lldb/Symbol/Block.h"
 #include "lldb/Utility/LLDBAssert.h"
-
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb_private;
@@ -43,7 +44,7 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
     gaps = gaps.drop_front();
   }
 
-  result.Append(start, end);
+  result.Append(start, end - start);
   return result;
 }
 
@@ -449,16 +450,7 @@ TypeIndex lldb_private::npdb::LookThroughModifierRecord(CVType modifier) {
 }
 
 llvm::StringRef lldb_private::npdb::DropNameScope(llvm::StringRef name) {
-  // Not all PDB names can be parsed with CPlusPlusNameParser.
-  // E.g. it fails on names containing `anonymous namespace'.
-  // So we simply drop everything before '::'
-
-  auto offset = name.rfind("::");
-  if (offset == llvm::StringRef::npos)
-    return name;
-  assert(offset + 2 <= name.size());
-
-  return name.substr(offset + 2);
+  return MSVCUndecoratedNameParser::DropScope(name);
 }
 
 VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
@@ -516,8 +508,78 @@ VariableInfo lldb_private::npdb::GetVariableNameInfo(CVSymbol sym) {
   return {};
 }
 
+static llvm::FixedStreamArray<FrameData>::Iterator
+GetCorrespondingFrameData(lldb::addr_t load_addr,
+                          const DebugFrameDataSubsectionRef &fpo_data,
+                          const Variable::RangeList &ranges) {
+  lldbassert(!ranges.IsEmpty());
+
+  // assume that all variable ranges correspond to one frame data
+  using RangeListEntry = Variable::RangeList::Entry;
+  const RangeListEntry &range = ranges.GetEntryRef(0);
+
+  auto it = fpo_data.begin();
+
+  // start by searching first frame data range containing variable range
+  for (; it != fpo_data.end(); ++it) {
+    RangeListEntry fd_range(load_addr + it->RvaStart, it->CodeSize);
+
+    if (fd_range.Contains(range)) {
+      break;
+    }
+  }
+
+  // then first most nested entry that still contains variable range
+  auto found = it;
+  for (; it != fpo_data.end(); ++it) {
+    RangeListEntry fd_range(load_addr + it->RvaStart, it->CodeSize);
+
+    if (!fd_range.Contains(range)) {
+      break;
+    }
+    found = it;
+  }
+
+  return found;
+}
+
+static bool GetFrameDataProgram(PdbIndex &index,
+                                const Variable::RangeList &ranges,
+                                llvm::StringRef &out_program) {
+  const DebugFrameDataSubsectionRef &new_fpo_data =
+      index.dbi().getNewFpoRecords();
+
+  auto frame_data_it =
+      GetCorrespondingFrameData(index.GetLoadAddress(), new_fpo_data, ranges);
+  if (frame_data_it == new_fpo_data.end())
+    return false;
+
+  PDBStringTable &strings = cantFail(index.pdb().getStringTable());
+  out_program = cantFail(strings.getStringForID(frame_data_it->FrameFunc));
+  return true;
+}
+
+static RegisterId GetBaseFrameRegister(PdbIndex &index,
+                                       PdbCompilandSymId frame_proc_id,
+                                       bool is_parameter) {
+  CVSymbol frame_proc_cvs = index.ReadSymbolRecord(frame_proc_id);
+  lldbassert(frame_proc_cvs.kind() == S_FRAMEPROC);
+
+  FrameProcSym frame_proc(SymbolRecordKind::FrameProcSym);
+  cantFail(SymbolDeserializer::deserializeAs<FrameProcSym>(frame_proc_cvs,
+                                                           frame_proc));
+
+  CPUType cpu_type = index.compilands()
+                         .GetCompiland(frame_proc_id.modi)
+                         ->m_compile_opts->Machine;
+
+  return is_parameter ? frame_proc.getParamFramePtrReg(cpu_type)
+                      : frame_proc.getLocalFramePtrReg(cpu_type);
+}
+
 VariableInfo lldb_private::npdb::GetVariableLocationInfo(
-    PdbIndex &index, PdbCompilandSymId var_id, lldb::ModuleSP module) {
+    PdbIndex &index, PdbCompilandSymId var_id, Block &block,
+    lldb::ModuleSP module) {
 
   CVSymbol sym = index.ReadSymbolRecord(var_id);
 
@@ -552,17 +614,69 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
           SymbolRecordKind::DefRangeFramePointerRelSym);
       cantFail(SymbolDeserializer::deserializeAs<DefRangeFramePointerRelSym>(
           loc_specifier_cvs, loc));
-      // FIXME: The register needs to come from the S_FRAMEPROC symbol.
-      result.location =
-          MakeRegRelLocationExpression(RegisterId::RSP, loc.Offset, module);
-      result.ranges = MakeRangeList(index, loc.Range, loc.Gaps);
-    } else {
-      // FIXME: Handle other kinds
-      llvm::APSInt value;
-      value = 42;
-      result.location = MakeConstantLocationExpression(
-          TypeIndex::Int32(), index.tpi(), value, module);
+
+      Variable::RangeList ranges = MakeRangeList(index, loc.Range, loc.Gaps);
+
+      // TODO: may be better to pass function scope and not lookup it every
+      // time? find nearest parent function block
+      Block *cur = &block;
+      while (cur->GetParent()) {
+        cur = cur->GetParent();
+      }
+      PdbCompilandSymId func_scope_id =
+          PdbSymUid(cur->GetID()).asCompilandSym();
+      CVSymbol func_block_cvs = index.ReadSymbolRecord(func_scope_id);
+      lldbassert(func_block_cvs.kind() == S_GPROC32 ||
+                 func_block_cvs.kind() == S_LPROC32);
+
+      PdbCompilandSymId frame_proc_id(
+          func_scope_id.modi, func_scope_id.offset + func_block_cvs.length());
+
+      bool is_parameter =
+          ((local.Flags & LocalSymFlags::IsParameter) != LocalSymFlags::None);
+      RegisterId base_reg =
+          GetBaseFrameRegister(index, frame_proc_id, is_parameter);
+
+      if (base_reg == RegisterId::VFRAME) {
+        llvm::StringRef program;
+        if (GetFrameDataProgram(index, ranges, program)) {
+          result.location =
+              MakeVFrameRelLocationExpression(program, loc.Offset, module);
+          result.ranges = std::move(ranges);
+        } else {
+          // invalid variable
+        }
+      } else {
+        result.location =
+            MakeRegRelLocationExpression(base_reg, loc.Offset, module);
+        result.ranges = std::move(ranges);
+      }
+    } else if (loc_specifier_cvs.kind() == S_DEFRANGE_REGISTER_REL) {
+      DefRangeRegisterRelSym loc(SymbolRecordKind::DefRangeRegisterRelSym);
+      cantFail(SymbolDeserializer::deserializeAs<DefRangeRegisterRelSym>(
+          loc_specifier_cvs, loc));
+
+      Variable::RangeList ranges = MakeRangeList(index, loc.Range, loc.Gaps);
+
+      RegisterId base_reg = (RegisterId)(uint16_t)loc.Hdr.Register;
+
+      if (base_reg == RegisterId::VFRAME) {
+        llvm::StringRef program;
+        if (GetFrameDataProgram(index, ranges, program)) {
+          result.location = MakeVFrameRelLocationExpression(
+              program, loc.Hdr.BasePointerOffset, module);
+          result.ranges = std::move(ranges);
+        } else {
+          // invalid variable
+        }
+      } else {
+        result.location = MakeRegRelLocationExpression(
+            base_reg, loc.Hdr.BasePointerOffset, module);
+        result.ranges = std::move(ranges);
+      }
     }
+
+    // FIXME: Handle other kinds
     return result;
   }
   llvm_unreachable("Symbol is not a local variable!");
@@ -733,7 +847,11 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
     return 0;
   }
 
-  CVType cvt = tpi.getType(id.index);
+  TypeIndex index = id.index;
+  if (IsForwardRefUdt(index, tpi))
+    index = llvm::cantFail(tpi.findFullDeclForForwardRef(index));
+
+  CVType cvt = tpi.getType(index);
   switch (cvt.kind()) {
   case LF_MODIFIER:
     return GetSizeOfType({LookThroughModifierRecord(cvt)}, tpi);

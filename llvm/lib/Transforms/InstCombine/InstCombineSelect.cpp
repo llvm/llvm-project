@@ -1,9 +1,8 @@
 //===- InstCombineSelect.cpp ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -676,6 +675,23 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   return IsNegative ? Builder.CreateSub(B, Max) : Builder.CreateSub(Max, B);
 }
 
+static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                       InstCombiner::BuilderTy &Builder) {
+  // Match an unsigned saturated add with constant.
+  Value *X = Cmp->getOperand(0);
+  const APInt *CmpC, *AddC;
+  if (!Cmp->hasOneUse() || Cmp->getPredicate() != ICmpInst::ICMP_ULT ||
+      !match(Cmp->getOperand(1), m_APInt(CmpC)) || !match(FVal, m_AllOnes()) ||
+      !match(TVal, m_Add(m_Specific(X), m_APInt(AddC))) || ~(*AddC) != *CmpC)
+    return nullptr;
+
+  // Commute compare and select operands:
+  // select (icmp ult X, C), (add X, ~C), -1 -->
+  // select (icmp ugt X, C), -1, (add X, ~C)
+  Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_UGT, X, Cmp->getOperand(1));
+  return Builder.CreateSelect(NewCmp, FVal, TVal);
+}
+
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single
 /// call to cttz/ctlz with flag 'is_zero_undef' cleared.
 ///
@@ -709,23 +725,30 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
       match(Count, m_Trunc(m_Value(V))))
     Count = V;
 
+  // Check that 'Count' is a call to intrinsic cttz/ctlz. Also check that the
+  // input to the cttz/ctlz is used as LHS for the compare instruction.
+  if (!match(Count, m_Intrinsic<Intrinsic::cttz>(m_Specific(CmpLHS))) &&
+      !match(Count, m_Intrinsic<Intrinsic::ctlz>(m_Specific(CmpLHS))))
+    return nullptr;
+
+  IntrinsicInst *II = cast<IntrinsicInst>(Count);
+
   // Check if the value propagated on zero is a constant number equal to the
   // sizeof in bits of 'Count'.
   unsigned SizeOfInBits = Count->getType()->getScalarSizeInBits();
-  if (!match(ValueOnZero, m_SpecificInt(SizeOfInBits)))
-    return nullptr;
-
-  // Check that 'Count' is a call to intrinsic cttz/ctlz. Also check that the
-  // input to the cttz/ctlz is used as LHS for the compare instruction.
-  if (match(Count, m_Intrinsic<Intrinsic::cttz>(m_Specific(CmpLHS))) ||
-      match(Count, m_Intrinsic<Intrinsic::ctlz>(m_Specific(CmpLHS)))) {
-    IntrinsicInst *II = cast<IntrinsicInst>(Count);
+  if (match(ValueOnZero, m_SpecificInt(SizeOfInBits))) {
     // Explicitly clear the 'undef_on_zero' flag.
     IntrinsicInst *NewI = cast<IntrinsicInst>(II->clone());
     NewI->setArgOperand(1, ConstantInt::getFalse(NewI->getContext()));
     Builder.Insert(NewI);
     return Builder.CreateZExtOrTrunc(NewI, ValueOnZero->getType());
   }
+
+  // If the ValueOnZero is not the bitwidth, we can at least make use of the
+  // fact that the cttz/ctlz result will not be used if the input is zero, so
+  // it's okay to relax it to undef for that case.
+  if (II->hasOneUse() && !match(II->getArgOperand(1), m_One()))
+    II->setArgOperand(1, ConstantInt::getTrue(II->getContext()));
 
   return nullptr;
 }
@@ -1040,6 +1063,9 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeSaturatedSubtract(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = canonicalizeSaturatedAdd(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
@@ -1547,11 +1573,10 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
 }
 
 /// Try to reduce a rotate pattern that includes a compare and select into a
-/// sequence of ALU ops only. Example:
+/// funnel shift intrinsic. Example:
 /// rotl32(a, b) --> (b == 0 ? a : ((a >> (32 - b)) | (a << b)))
-///              --> (a >> (-b & 31)) | (a << (b & 31))
-static Instruction *foldSelectRotate(SelectInst &Sel,
-                                     InstCombiner::BuilderTy &Builder) {
+///              --> call llvm.fshl.i32(a, a, b)
+static Instruction *foldSelectRotate(SelectInst &Sel) {
   // The false value of the select must be a rotate of the true value.
   Value *Or0, *Or1;
   if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
@@ -1593,17 +1618,12 @@ static Instruction *foldSelectRotate(SelectInst &Sel,
     return nullptr;
 
   // This is a rotate that avoids shift-by-bitwidth UB in a suboptimal way.
-  // Convert to safely bitmasked shifts.
-  // TODO: When we can canonicalize to funnel shift intrinsics without risk of
-  // performance regressions, replace this sequence with that call.
-  Value *NegShAmt = Builder.CreateNeg(ShAmt);
-  Value *MaskedShAmt = Builder.CreateAnd(ShAmt, Width - 1);
-  Value *MaskedNegShAmt = Builder.CreateAnd(NegShAmt, Width - 1);
-  Value *NewSA0 = ShAmt == SA0 ? MaskedShAmt : MaskedNegShAmt;
-  Value *NewSA1 = ShAmt == SA1 ? MaskedShAmt : MaskedNegShAmt;
-  Value *NewSh0 = Builder.CreateBinOp(ShiftOpcode0, TVal, NewSA0);
-  Value *NewSh1 = Builder.CreateBinOp(ShiftOpcode1, TVal, NewSA1);
-  return BinaryOperator::CreateOr(NewSh0, NewSh1);
+  // Convert to funnel shift intrinsic.
+  bool IsFshl = (ShAmt == SA0 && ShiftOpcode0 == BinaryOperator::Shl) ||
+                (ShAmt == SA1 && ShiftOpcode1 == BinaryOperator::Shl);
+  Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
+  Function *F = Intrinsic::getDeclaration(Sel.getModule(), IID, Sel.getType());
+  return IntrinsicInst::Create(F, { TVal, TVal, ShAmt });
 }
 
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
@@ -2045,7 +2065,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Instruction *Select = foldSelectBinOpIdentity(SI, TLI))
     return Select;
 
-  if (Instruction *Rot = foldSelectRotate(SI, Builder))
+  if (Instruction *Rot = foldSelectRotate(SI))
     return Rot;
 
   return nullptr;

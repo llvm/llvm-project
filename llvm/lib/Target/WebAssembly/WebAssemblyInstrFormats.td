@@ -1,9 +1,8 @@
 //=- WebAssemblyInstrFormats.td - WebAssembly Instr. Formats -*- tablegen -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -40,10 +39,10 @@ class NI<dag oops, dag iops, list<dag> pattern, string stack,
 // based version of this instruction, as well as the corresponding asmstr.
 // The register versions have virtual-register operands which correspond to wasm
 // locals or stack locations. Each use and def of the register corresponds to an
-// implicit get_local / set_local or access of stack operands in wasm. These
+// implicit local.get / local.set or access of stack operands in wasm. These
 // instructions are used for ISel and all MI passes. The stack versions of the
 // instructions do not have register operands (they implicitly operate on the
-// stack), and get_locals and set_locals are explicit. The register instructions
+// stack), and local.gets and local.sets are explicit. The register instructions
 // are converted to their corresponding stack instructions before lowering to
 // MC.
 // Every instruction should want to be based on this multi-class to guarantee

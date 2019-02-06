@@ -1,9 +1,8 @@
 //===- DWARFDebugLoc.cpp --------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -184,7 +183,8 @@ DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
     }
 
     if (Kind != dwarf::DW_LLE_base_address) {
-      unsigned Bytes = Data.getU16(Offset);
+      unsigned Bytes =
+          Version >= 5 ? Data.getULEB128(Offset) : Data.getU16(Offset);
       // A single location description describing the location of the object...
       StringRef str = Data.getData().substr(*Offset, Bytes);
       *Offset += Bytes;

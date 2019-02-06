@@ -52,7 +52,7 @@ int safe_div(int numerator, int denominator, int *res) {
 //
 // X86-LABEL: define internal i32 @"?filt$0@0@safe_div@@"()
 // X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress(i32 1)
-// X86: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 (i32, i32, i32*)* @safe_div to i8*), i8* %[[ebp]])
+// X86: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (i32 (i32, i32, i32*)* @safe_div to i8*), i8* %[[ebp]])
 // X86: call i8* @llvm.localrecover(i8* bitcast (i32 (i32, i32, i32*)* @safe_div to i8*), i8* %[[fp]], i32 0)
 // X86: load i8*, i8**
 // X86: load i32*, i32**
@@ -95,16 +95,16 @@ int filter_expr_capture(void) {
 // CHECK: ret i32 %[[rv]]
 
 // X64-LABEL: define internal i32 @"?filt$0@0@filter_expr_capture@@"(i8* %exception_pointers, i8* %frame_pointer)
-// X64: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %frame_pointer)
+// X64: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %frame_pointer)
 // X64: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
 //
 // ARM64-LABEL: define internal i32 @"?filt$0@0@filter_expr_capture@@"(i8* %exception_pointers, i8* %frame_pointer)
-// ARM64: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %frame_pointer)
+// ARM64: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %frame_pointer)
 // ARM64: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
 //
 // X86-LABEL: define internal i32 @"?filt$0@0@filter_expr_capture@@"()
 // X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress(i32 1)
-// X86: %[[fp:[^ ]*]] = call i8* @llvm.x86.seh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[ebp]])
+// X86: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[ebp]])
 // X86: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
 //
 // CHECK: store i32 -1, i32* %{{.*}}
@@ -166,13 +166,13 @@ int nested_try(void) {
 // CHECK: br label %[[inner_try_cont]]
 //
 // CHECK-LABEL: define internal i32 @"?filt$0@0@nested_try@@"({{.*}})
-// X86: call i8* @llvm.x86.seh.recoverfp({{.*}})
+// X86: call i8* @llvm.eh.recoverfp({{.*}})
 // CHECK: load i32*, i32**
 // CHECK: load i32, i32*
 // CHECK: icmp eq i32 %{{.*}}, 456
 //
 // CHECK-LABEL: define internal i32 @"?filt$1@0@nested_try@@"({{.*}})
-// X86: call i8* @llvm.x86.seh.recoverfp({{.*}})
+// X86: call i8* @llvm.eh.recoverfp({{.*}})
 // CHECK: load i32*, i32**
 // CHECK: load i32, i32*
 // CHECK: icmp eq i32 %{{.*}}, 123

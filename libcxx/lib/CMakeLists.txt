@@ -175,46 +175,73 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
-# Add an object library that contains the compiled source files.
-add_library(cxx_objects OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-if(LIBCXX_CXX_ABI_HEADER_TARGET)
-  add_dependencies(cxx_objects ${LIBCXX_CXX_ABI_HEADER_TARGET})
-endif()
-if(WIN32 AND NOT MINGW)
-  target_compile_definitions(cxx_objects
-                             PRIVATE
-                               # Ignore the -MSC_VER mismatch, as we may build
-                               # with a different compatibility version.
-                               _ALLOW_MSC_VER_MISMATCH
-                               # Don't check the msvcprt iterator debug levels
-                               # as we will define the iterator types; libc++
-                               # uses a different macro to identify the debug
-                               # level.
-                               _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
-                               # We are building the c++ runtime, don't pull in
-                               # msvcprt.
-                               _CRTBLD
-                               # Don't warn on the use of "deprecated"
-                               # "insecure" functions which are standards
-                               # specified.
-                               _CRT_SECURE_NO_WARNINGS
-                               # Use the ISO conforming behaviour for conversion
-                               # in printf, scanf.
-                               _CRT_STDIO_ISO_WIDE_SPECIFIERS)
-endif()
+macro(cxx_object_library name)
+  cmake_parse_arguments(ARGS "" "" "DEFINES;FLAGS" ${ARGN})
 
-set_target_properties(cxx_objects
-  PROPERTIES
-    COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
-)
+  # Add an object library that contains the compiled source files.
+  add_library(${name} OBJECT ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  if(LIBCXX_CXX_ABI_HEADER_TARGET)
+    add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
+  endif()
+  if(WIN32 AND NOT MINGW)
+    target_compile_definitions(${name}
+                               PRIVATE
+                                 # Ignore the -MSC_VER mismatch, as we may build
+                                 # with a different compatibility version.
+                                 _ALLOW_MSC_VER_MISMATCH
+                                 # Don't check the msvcprt iterator debug levels
+                                 # as we will define the iterator types; libc++
+                                 # uses a different macro to identify the debug
+                                 # level.
+                                 _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH
+                                 # We are building the c++ runtime, don't pull in
+                                 # msvcprt.
+                                 _CRTBLD
+                                 # Don't warn on the use of "deprecated"
+                                 # "insecure" functions which are standards
+                                 # specified.
+                                 _CRT_SECURE_NO_WARNINGS
+                                 # Use the ISO conforming behaviour for conversion
+                                 # in printf, scanf.
+                                 _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+  endif()
+
+  if(ARGS_DEFINES)
+    target_compile_definitions(${name} PRIVATE ${ARGS_DEFINES})
+  endif()
+
+  set_target_properties(${name}
+    PROPERTIES
+      COMPILE_FLAGS ${LIBCXX_COMPILE_FLAGS}
+  )
+
+  if(ARGS_FLAGS)
+    target_compile_options(${name} PRIVATE ${ARGS_FLAGS})
+  endif()
+endmacro()
+
+if(LIBCXX_HERMETIC_STATIC_LIBRARY)
+  append_flags_if_supported(CXX_STATIC_OBJECTS_FLAGS -fvisibility=hidden)
+  append_flags_if_supported(CXX_STATIC_OBJECTS_FLAGS -fvisibility-global-new-delete-hidden)
+  cxx_object_library(cxx_static_objects
+    DEFINES _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS
+    FLAGS ${CXX_STATIC_OBJECTS_FLAGS})
+  cxx_object_library(cxx_shared_objects)
+  set(cxx_static_sources $<TARGET_OBJECTS:cxx_static_objects>)
+  set(cxx_shared_sources $<TARGET_OBJECTS:cxx_shared_objects>)
+else()
+  cxx_object_library(cxx_objects)
+  set(cxx_static_sources $<TARGET_OBJECTS:cxx_objects>)
+  set(cxx_shared_sources $<TARGET_OBJECTS:cxx_objects>)
+endif()
 
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
-  add_library(cxx_shared SHARED $<TARGET_OBJECTS:cxx_objects>)
+  add_library(cxx_shared SHARED ${cxx_shared_sources})
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
-  target_link_libraries(cxx_shared ${LIBCXX_LIBRARIES})
+  target_link_libraries(cxx_shared PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
@@ -237,8 +264,8 @@ endif()
 
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
-  add_library(cxx_static STATIC $<TARGET_OBJECTS:cxx_objects>)
-  target_link_libraries(cxx_static ${LIBCXX_LIBRARIES})
+  add_library(cxx_static STATIC ${cxx_static_sources})
+  target_link_libraries(cxx_static PRIVATE ${LIBCXX_LIBRARIES})
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES
@@ -434,3 +461,8 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
                       -P "${LIBCXX_BINARY_DIR}/cmake_install.cmake")
     add_custom_target(install-libcxx DEPENDS install-cxx)
 endif()
+
+# TODO: This is needed by cxx-benchmarks but this variable isn't
+# available outside of the scope of this file so we need to export
+# it. This is not necessarily the cleanest solution.
+set(LIBCXX_LIBRARIES ${LIBCXX_LIBRARIES} PARENT_SCOPE)

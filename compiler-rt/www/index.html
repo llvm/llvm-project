@@ -109,16 +109,20 @@
   <h2>Get it and get involved!</h2>
   <!--=====================================================================-->
   
-  <p>Generally, you need to build LLVM/Clang in order to build compiler-rt. You can
-  either follow the Clang's
-  <a href="http://clang.llvm.org/get_started.html">Getting Started</a> page, or
+  <p>Generally, you need to build LLVM/Clang in order to build compiler-rt. You
+    can build it either together with llvm and clang, or separately.
+
+  <p>To build it together, simply add compiler-rt to the -DLLVM_ENABLE_PROJECTS= option to
+    cmake.
+
+  <p>To build it separately, first
   <a href="http://llvm.org/docs/CMake.html#quick-start">build LLVM</a>
   separately to get llvm-config binary, and then run:
 
   <ul>
-  <li>svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt</li>
-  <li>mkdir build</li>
-  <li>cd build</li>
+  <li>cd llvm-project</li>
+  <li>mkdir build-compiler-rt</li>
+  <li>cd build-compiler-rt</li>
   <li>cmake ../compiler-rt -DLLVM_CONFIG_PATH=/path/to/llvm-config</li>
   <li>make</li>
   </ul>

@@ -1,9 +1,8 @@
 //===- llvm/Support/DiagnosticInfo.cpp - Diagnostic Definitions -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -103,6 +102,11 @@ void DiagnosticInfoPGOProfile::print(DiagnosticPrinter &DP) const {
     DP << getFileName() << ": ";
   DP << getMsg();
 }
+
+void DiagnosticInfo::anchor() {}
+void DiagnosticInfoStackSize::anchor() {}
+void DiagnosticInfoWithLocationBase::anchor() {}
+void DiagnosticInfoIROptimization::anchor() {}
 
 DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
   if (!DL)
@@ -366,6 +370,9 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
   return OS.str();
 }
 
+void OptimizationRemarkAnalysisFPCommute::anchor() {}
+void OptimizationRemarkAnalysisAliasing::anchor() {}
+
 namespace llvm {
 namespace yaml {
 
@@ -431,11 +438,33 @@ template <> struct MappingTraits<DiagnosticLocation> {
   static const bool flow = true;
 };
 
+/// Helper struct for multiline string block literals. Use this type to preserve
+/// newlines in strings.
+struct StringBlockVal {
+  StringRef Value;
+  StringBlockVal(const std::string &Value) : Value(Value) {}
+};
+
+template <> struct BlockScalarTraits<StringBlockVal> {
+  static void output(const StringBlockVal &S, void *Ctx, raw_ostream &OS) {
+    return ScalarTraits<StringRef>::output(S.Value, Ctx, OS);
+  }
+
+  static StringRef input(StringRef Scalar, void *Ctx, StringBlockVal &S) {
+    return ScalarTraits<StringRef>::input(Scalar, Ctx, S.Value);
+  }
+};
+
 // Implement this as a mapping for now to get proper quotation for the value.
 template <> struct MappingTraits<DiagnosticInfoOptimizationBase::Argument> {
   static void mapping(IO &io, DiagnosticInfoOptimizationBase::Argument &A) {
     assert(io.outputting() && "input not yet implemented");
-    io.mapRequired(A.Key.data(), A.Val);
+    // Emit a string block scalar for multiline strings, to preserve newlines.
+    if (StringRef(A.Val).count('\n') > 1) {
+      StringBlockVal S(A.Val);
+      io.mapRequired(A.Key.data(), S);
+    } else
+      io.mapRequired(A.Key.data(), A.Val);
     if (A.Loc.isValid())
       io.mapOptional("DebugLoc", A.Loc);
   }

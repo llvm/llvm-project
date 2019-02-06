@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """ This module is responsible for the Clang executable.
 
 Since Clang command line interface is so rich, but this project is using only
@@ -156,12 +155,12 @@ def get_checkers(clang, plugins):
     return checkers
 
 
-def is_ctu_capable(func_map_cmd):
-    """ Detects if the current (or given) clang and function mapping
+def is_ctu_capable(extdef_map_cmd):
+    """ Detects if the current (or given) clang and external definition mapping
     executables are CTU compatible. """
 
     try:
-        run_command([func_map_cmd, '-version'])
+        run_command([extdef_map_cmd, '-version'])
     except (OSError, subprocess.CalledProcessError):
         return False
     return True

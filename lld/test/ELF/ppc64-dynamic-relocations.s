@@ -25,7 +25,7 @@
 // There should be 2 reserved doublewords before the first entry. The dynamic
 // linker will fill those in with the address of the resolver entry point and
 // the dynamic object identifier.
-// DIS: Idx Name       Size      Address          Type
+// DIS: Idx Name       Size      VMA              Type
 // DIS:     .plt       00000018  0000000010030000 BSS
 
 // DT_PLTGOT should point to the start of the .plt section.

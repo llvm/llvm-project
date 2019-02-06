@@ -162,7 +162,7 @@ Related Work
 * *TODO: add more "related work" links. Suggestions are welcome.*
 
 
-.. _Watchdog: http://www.cis.upenn.edu/acg/papers/isca12_watchdog.pdf
+.. _Watchdog: https://www.cis.upenn.edu/acg/papers/isca12_watchdog.pdf
 .. _Effective and Efficient Memory Protection Using Dynamic Tainting: https://www.cc.gatech.edu/~orso/papers/clause.doudalis.orso.prvulovic.pdf
 .. _SPARC ADI: https://lazytyped.blogspot.com/2017/09/getting-started-with-adi.html
 .. _AddressSanitizer paper: https://www.usenix.org/system/files/conference/atc12/atc12-final39.pdf

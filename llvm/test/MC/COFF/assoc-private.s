@@ -5,7 +5,7 @@
 # it anyway.
 
 # CHECK: Sections:
-# CHECK: Idx Name          Size      Address          Type
+# CHECK: Idx Name          Size     VMA              Type
 # CHECK:   3 .rdata        00000004 0000000000000000 DATA
 # CHECK:   4 .CRT$XCU      00000008 0000000000000000 DATA
 # CHECK: SYMBOL TABLE:

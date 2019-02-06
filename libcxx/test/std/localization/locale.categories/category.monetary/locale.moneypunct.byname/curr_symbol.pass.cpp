@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -62,6 +61,20 @@ public:
         : std::moneypunct_byname<wchar_t, true>(nm, refs) {}
 };
 
+#if defined(_CS_GNU_LIBC_VERSION)
+static bool glibc_version_less_than(char const* version) {
+    std::string test_version = std::string("glibc ") + version;
+
+    size_t n = confstr(_CS_GNU_LIBC_VERSION, nullptr, (size_t)0);
+    char *current_version = new char[n];
+    confstr(_CS_GNU_LIBC_VERSION, current_version, n);
+
+    bool result = strverscmp(current_version, test_version.c_str()) < 0;
+    delete[] current_version;
+    return result;
+}
+#endif
+
 int main()
 {
     {
@@ -117,17 +130,14 @@ int main()
 
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
+#if defined(_CS_GNU_LIBC_VERSION)
         // GLIBC <= 2.23 uses currency_symbol="<U0440><U0443><U0431>"
         // GLIBC >= 2.24 uses currency_symbol="<U20BD>"
         // See also: http://www.fileformat.info/info/unicode/char/20bd/index.htm
-#if defined(TEST_GLIBC_PREREQ)
-    #if TEST_GLIBC_PREREQ(2, 24)
-        #define TEST_GLIBC_2_24_CURRENCY_SYMBOL
-    #endif
-#endif
-
-#if defined(TEST_GLIBC_2_24_CURRENCY_SYMBOL)
-        assert(f.curr_symbol() == " \u20BD");
+        if (!glibc_version_less_than("2.24"))
+          assert(f.curr_symbol() == " \u20BD");
+        else
+          assert(f.curr_symbol() == " \xD1\x80\xD1\x83\xD0\xB1");
 #else
         assert(f.curr_symbol() == " \xD1\x80\xD1\x83\xD0\xB1");
 #endif
@@ -138,8 +148,11 @@ int main()
     }
     {
         Fwf f(LOCALE_ru_RU_UTF_8, 1);
-#if defined(TEST_GLIBC_2_24_CURRENCY_SYMBOL)
-        assert(f.curr_symbol() == L" \u20BD");
+#if defined(_CS_GNU_LIBC_VERSION)
+        if (!glibc_version_less_than("2.24"))
+          assert(f.curr_symbol() == L" \u20BD");
+        else
+          assert(f.curr_symbol() == L" \x440\x443\x431");
 #else
         assert(f.curr_symbol() == L" \x440\x443\x431");
 #endif

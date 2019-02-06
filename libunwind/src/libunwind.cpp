@@ -1,9 +1,8 @@
 //===--------------------------- libunwind.cpp ----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //
 //  Implements unw_* functions from <libunwind.h>
@@ -11,12 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <libunwind.h>
-
-#ifndef NDEBUG
-#include <cstdlib> // getenv
-#endif
-#include <new>
-#include <algorithm>
 
 #include "libunwind_ext.h"
 #include "config.h"
@@ -67,100 +60,21 @@ _LIBUNWIND_EXPORT int unw_init_local(unw_cursor_t *cursor,
 # define REGISTER_KIND Registers_mips_newabi
 #elif defined(__mips__)
 # warning The MIPS architecture is not supported with this ABI and environment!
+#elif defined(__sparc__)
+# define REGISTER_KIND Registers_sparc
 #else
 # error Architecture not supported
 #endif
   // Use "placement new" to allocate UnwindCursor in the cursor buffer.
-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, REGISTER_KIND>(
-                                 context, LocalAddressSpace::sThisAddressSpace);
+  new (reinterpret_cast<UnwindCursor<LocalAddressSpace, REGISTER_KIND> *>(cursor))
+      UnwindCursor<LocalAddressSpace, REGISTER_KIND>(
+          context, LocalAddressSpace::sThisAddressSpace);
 #undef REGISTER_KIND
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   co->setInfoBasedOnIPRegister();
 
   return UNW_ESUCCESS;
 }
-
-#ifdef UNW_REMOTE
-/// Create a cursor into a thread in another process.
-_LIBUNWIND_EXPORT int unw_init_remote_thread(unw_cursor_t *cursor,
-                                             unw_addr_space_t as,
-                                             void *arg) {
-  // special case: unw_init_remote(xx, unw_local_addr_space, xx)
-  if (as == (unw_addr_space_t)&LocalAddressSpace::sThisAddressSpace)
-    return unw_init_local(cursor, NULL); //FIXME
-
-  // use "placement new" to allocate UnwindCursor in the cursor buffer
-  switch (as->cpuType) {
-  case CPU_TYPE_I386:
-    new ((void *)cursor)
-        UnwindCursor<RemoteAddressSpace<Pointer32<LittleEndian>>,
-                     Registers_x86>(((unw_addr_space_i386 *)as)->oas, arg);
-    break;
-  case CPU_TYPE_X86_64:
-    new ((void *)cursor)
-        UnwindCursor<RemoteAddressSpace<Pointer64<LittleEndian>>,
-                     Registers_x86_64>(((unw_addr_space_x86_64 *)as)->oas, arg);
-    break;
-  case CPU_TYPE_POWERPC:
-    new ((void *)cursor)
-        UnwindCursor<RemoteAddressSpace<Pointer32<BigEndian>>,
-                     Registers_ppc>(((unw_addr_space_ppc *)as)->oas, arg);
-    break;
-  default:
-    return UNW_EUNSPEC;
-  }
-  return UNW_ESUCCESS;
-}
-
-
-static bool is64bit(task_t task) {
-  return false; // FIXME
-}
-
-/// Create an address_space object for use in examining another task.
-_LIBUNWIND_EXPORT unw_addr_space_t unw_create_addr_space_for_task(task_t task) {
-#if __i386__
-  if (is64bit(task)) {
-    unw_addr_space_x86_64 *as = new unw_addr_space_x86_64(task);
-    as->taskPort = task;
-    as->cpuType = CPU_TYPE_X86_64;
-    //as->oas
-  } else {
-    unw_addr_space_i386 *as = new unw_addr_space_i386(task);
-    as->taskPort = task;
-    as->cpuType = CPU_TYPE_I386;
-    //as->oas
-  }
-#else
-// FIXME
-#endif
-}
-
-
-/// Delete an address_space object.
-_LIBUNWIND_EXPORT void unw_destroy_addr_space(unw_addr_space_t asp) {
-  switch (asp->cpuType) {
-#if __i386__ || __x86_64__
-  case CPU_TYPE_I386: {
-    unw_addr_space_i386 *as = (unw_addr_space_i386 *)asp;
-    delete as;
-  }
-  break;
-  case CPU_TYPE_X86_64: {
-    unw_addr_space_x86_64 *as = (unw_addr_space_x86_64 *)asp;
-    delete as;
-  }
-  break;
-#endif
-  case CPU_TYPE_POWERPC: {
-    unw_addr_space_ppc *as = (unw_addr_space_ppc *)asp;
-    delete as;
-  }
-  break;
-  }
-}
-#endif // UNW_REMOTE
-
 
 /// Get value of specified register at cursor position in stack frame.
 _LIBUNWIND_EXPORT int unw_get_reg(unw_cursor_t *cursor, unw_regnum_t regNum,

@@ -1,9 +1,8 @@
 //===-- ABISysV_mips.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -812,9 +811,11 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
 
   // In MIPS register "r2" (v0) holds the integer function return values
   const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
-  size_t bit_width = return_compiler_type.GetBitSize(&thread);
+  llvm::Optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
+  if (!bit_width)
+    return return_valobj_sp;
   if (return_compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    switch (bit_width) {
+    switch (*bit_width) {
     default:
       return return_valobj_sp;
     case 64: {
@@ -873,7 +874,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
       uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_reg_info, 0);
       if (count != 1 && is_complex)
         return return_valobj_sp;
-      switch (bit_width) {
+      switch (*bit_width) {
       default:
         return return_valobj_sp;
       case 32:
@@ -905,7 +906,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
       lldb::offset_t offset = 0;
 
       if (count == 1 && !is_complex) {
-        switch (bit_width) {
+        switch (*bit_width) {
         default:
           return return_valobj_sp;
         case 64: {

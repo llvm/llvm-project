@@ -1,9 +1,8 @@
 //===--- SymbolYAML.cpp ------------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -28,8 +27,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
-using namespace llvm;
-
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Ref)
 
@@ -38,8 +35,8 @@ using RefBundle =
     std::pair<clang::clangd::SymbolID, std::vector<clang::clangd::Ref>>;
 // This is a pale imitation of std::variant<Symbol, RefBundle>
 struct VariantEntry {
-  Optional<clang::clangd::Symbol> Symbol;
-  Optional<RefBundle> Refs;
+  llvm::Optional<clang::clangd::Symbol> Symbol;
+  llvm::Optional<RefBundle> Refs;
 };
 // A class helps YAML to serialize the 32-bit encoded position (Line&Column),
 // as YAMLIO can't directly map bitfields.
@@ -66,14 +63,14 @@ using clang::index::SymbolLanguage;
 struct NormalizedSymbolID {
   NormalizedSymbolID(IO &) {}
   NormalizedSymbolID(IO &, const SymbolID &ID) {
-    raw_string_ostream OS(HexString);
+    llvm::raw_string_ostream OS(HexString);
     OS << ID;
   }
 
   SymbolID denormalize(IO &I) {
     auto ID = SymbolID::fromStr(HexString);
     if (!ID) {
-      I.setError(toString(ID.takeError()));
+      I.setError(llvm::toString(ID.takeError()));
       return SymbolID();
     }
     return *ID;
@@ -294,8 +291,8 @@ template <> struct MappingTraits<VariantEntry> {
 namespace clang {
 namespace clangd {
 
-void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
-  yaml::Output Yout(OS);
+void writeYAML(const IndexFileOut &O, llvm::raw_ostream &OS) {
+  llvm::yaml::Output Yout(OS);
   for (const auto &Sym : *O.Symbols) {
     VariantEntry Entry;
     Entry.Symbol = Sym;
@@ -309,23 +306,27 @@ void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
     }
 }
 
-Expected<IndexFileIn> readYAML(StringRef Data) {
+llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data) {
   SymbolSlab::Builder Symbols;
   RefSlab::Builder Refs;
-  BumpPtrAllocator Arena; // store the underlying data of Position::FileURI.
-  UniqueStringSaver Strings(Arena);
-  yaml::Input Yin(Data, &Strings);
-  do {
+  llvm::BumpPtrAllocator
+      Arena; // store the underlying data of Position::FileURI.
+  llvm::UniqueStringSaver Strings(Arena);
+  llvm::yaml::Input Yin(Data, &Strings);
+  while (Yin.setCurrentDocument()) {
+    llvm::yaml::EmptyContext Ctx;
     VariantEntry Variant;
-    Yin >> Variant;
+    yamlize(Yin, Variant, true, Ctx);
     if (Yin.error())
-      return errorCodeToError(Yin.error());
+      return llvm::errorCodeToError(Yin.error());
+
     if (Variant.Symbol)
       Symbols.insert(*Variant.Symbol);
     if (Variant.Refs)
       for (const auto &Ref : Variant.Refs->second)
         Refs.insert(Variant.Refs->first, Ref);
-  } while (Yin.nextDocument());
+    Yin.nextDocument();
+  }
 
   IndexFileIn Result;
   Result.Symbols.emplace(std::move(Symbols).build());
@@ -336,20 +337,20 @@ Expected<IndexFileIn> readYAML(StringRef Data) {
 std::string toYAML(const Symbol &S) {
   std::string Buf;
   {
-    raw_string_ostream OS(Buf);
-    yaml::Output Yout(OS);
+    llvm::raw_string_ostream OS(Buf);
+    llvm::yaml::Output Yout(OS);
     Symbol Sym = S; // copy: Yout<< requires mutability.
     Yout << Sym;
   }
   return Buf;
 }
 
-std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &Data) {
+std::string toYAML(const std::pair<SymbolID, llvm::ArrayRef<Ref>> &Data) {
   RefBundle Refs = {Data.first, Data.second};
   std::string Buf;
   {
-    raw_string_ostream OS(Buf);
-    yaml::Output Yout(OS);
+    llvm::raw_string_ostream OS(Buf);
+    llvm::yaml::Output Yout(OS);
     Yout << Refs;
   }
   return Buf;

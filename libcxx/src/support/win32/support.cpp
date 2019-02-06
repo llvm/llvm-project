@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===----------------------- support/win32/support.h ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -62,6 +61,11 @@ size_t mbsnrtowcs( wchar_t *__restrict dst, const char **__restrict src,
     size_t result = 0;
     bool have_result = false;
 
+    // If dst is null then max_dest_chars should be ignored according to the
+    // standard.  Setting max_dest_chars to a large value has this effect.
+    if (!dst)
+        max_dest_chars = static_cast<size_t>(-1);
+
     while ( source_remaining ) {
         if ( dst && dest_converted >= max_dest_chars )
             break;
@@ -114,6 +118,11 @@ size_t wcsnrtombs( char *__restrict dst, const wchar_t **__restrict src,
     errno_t result = ( errno_t ) 0;
     bool have_result = false;
     bool terminator_found = false;
+
+    // If dst is null then dst_size_bytes should be ignored according to the
+    // standard.  Setting dest_remaining to a large value has this effect.
+    if (!dst)
+        dest_remaining = static_cast<size_t>(-1);
 
     while ( source_converted != max_source_chars ) {
         if ( ! dest_remaining )

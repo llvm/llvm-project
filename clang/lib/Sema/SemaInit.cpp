@@ -1,9 +1,8 @@
 //===--- SemaInit.cpp - Semantic Analysis for Initializers ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -4669,11 +4668,22 @@ static void TryReferenceInitializationCore(Sema &S,
     //   If the converted initializer is a prvalue, its type T4 is adjusted
     //   to type "cv1 T4" and the temporary materialization conversion is
     //   applied.
+    // Postpone address space conversions to after the temporary materialization
+    // conversion to allow creating temporaries in the alloca address space.
+    auto AS1 = T1Quals.getAddressSpace();
+    auto AS2 = T2Quals.getAddressSpace();
+    T1Quals.removeAddressSpace();
+    T2Quals.removeAddressSpace();
     QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1Quals);
     if (T1Quals != T2Quals)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_RValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
+    if (AS1 != AS2) {
+      T1Quals.addAddressSpace(AS1);
+      QualType cv1AST4 = S.Context.getQualifiedType(cv2T2, T1Quals);
+      Sequence.AddQualificationConversionStep(cv1AST4, ValueKind);
+    }
 
     //   In any case, the reference is bound to the resulting glvalue (or to
     //   an appropriate base class subobject).
@@ -8433,6 +8443,7 @@ bool InitializationSequence::Diagnose(Sema &S,
   case FK_ReferenceInitFailed:
     S.Diag(Kind.getLocation(), diag::err_reference_bind_failed)
       << DestType.getNonReferenceType()
+      << DestType.getNonReferenceType()->isIncompleteType()
       << OnlyArg->isLValue()
       << OnlyArg->getType()
       << Args[0]->getSourceRange();
@@ -9246,9 +9257,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   OverloadCandidateSet Candidates(Kind.getLocation(),
                                   OverloadCandidateSet::CSK_Normal);
   OverloadCandidateSet::iterator Best;
+
+  bool HasAnyDeductionGuide = false;
+
   auto tryToResolveOverload =
       [&](bool OnlyListConstructors) -> OverloadingResult {
     Candidates.clear(OverloadCandidateSet::CSK_Normal);
+    HasAnyDeductionGuide = false;
+
     for (auto I = Guides.begin(), E = Guides.end(); I != E; ++I) {
       NamedDecl *D = (*I)->getUnderlyingDecl();
       if (D->isInvalidDecl())
@@ -9259,6 +9275,9 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           TD ? TD->getTemplatedDecl() : dyn_cast<FunctionDecl>(D));
       if (!GD)
         continue;
+
+      if (!GD->isImplicit())
+        HasAnyDeductionGuide = true;
 
       // C++ [over.match.ctor]p1: (non-list copy-initialization from non-class)
       //   For copy-initialization, the candidate functions are all the
@@ -9412,5 +9431,15 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   Diag(TSInfo->getTypeLoc().getBeginLoc(),
        diag::warn_cxx14_compat_class_template_argument_deduction)
       << TSInfo->getTypeLoc().getSourceRange() << 1 << DeducedType;
+
+  // Warn if CTAD was used on a type that does not have any user-defined
+  // deduction guides.
+  if (!HasAnyDeductionGuide) {
+    Diag(TSInfo->getTypeLoc().getBeginLoc(),
+         diag::warn_ctad_maybe_unsupported)
+        << TemplateName;
+    Diag(Template->getLocation(), diag::note_suppress_ctad_maybe_unsupported);
+  }
+
   return DeducedType;
 }

@@ -1,0 +1,55 @@
+# RUN: yaml2obj %s > %t.in.o
+
+# RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-PRE
+
+# RUN: llvm-objcopy --strip-all %t.in.o %t.out.o
+# RUN: llvm-objdump -t %t.out.o | FileCheck %s --check-prefix=SYMBOLS
+# RUN: llvm-readobj -relocs %t.out.o | FileCheck %s --check-prefix=RELOCS
+
+# Test that -S, llvm-strip without arguments and --strip-all-gnu produces
+# output identical to --strip-all above.
+# RUN: llvm-objcopy -S %t.in.o %t.out-short.o
+# RUN: cmp %t.out.o %t.out-short.o
+
+# RUN: cp %t.in.o %t.out-strip.o
+# RUN: llvm-strip %t.out-strip.o
+# RUN: cmp %t.out.o %t.out-strip.o
+
+# RUN: llvm-objcopy --strip-all-gnu %t.in.o %t.out-gnu.o
+# RUN: cmp %t.out.o %t.out-gnu.o
+
+# SYMBOLS: SYMBOL TABLE:
+# SYMBOLS-PRE-NEXT: external
+# SYMBOLS-PRE-NEXT: external_undefined
+# SYMBOLS-EMPTY:
+
+# RELOCS:      Relocations [
+# RELOCS-NEXT: ]
+
+--- !COFF
+header:          
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:        
+  - Name:            .text
+    Characteristics: [  ]
+    Alignment:       4
+    SectionData:     488B0500000000C3
+    Relocations:     
+      - VirtualAddress:  3
+        SymbolName:      external_undefined
+        Type:            IMAGE_REL_AMD64_REL32
+symbols:         
+  - Name:            external
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            external_undefined
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

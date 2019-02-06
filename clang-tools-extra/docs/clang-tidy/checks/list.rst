@@ -4,7 +4,9 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-duration-addition
    abseil-duration-comparison
+   abseil-duration-conversion-cast
    abseil-duration-division
    abseil-duration-factory-float
    abseil-duration-factory-scale
@@ -13,8 +15,8 @@ Clang-Tidy Checks
    abseil-no-internal-dependencies
    abseil-no-namespace
    abseil-redundant-strcat-calls
-   abseil-string-find-startswith
    abseil-str-cat-append
+   abseil-string-find-startswith
    abseil-upgrade-duration-conversions
    android-cloexec-accept
    android-cloexec-accept4
@@ -91,8 +93,8 @@ Clang-Tidy Checks
    cert-msc50-cpp
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
-   cppcoreguidelines-avoid-goto
    cppcoreguidelines-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <cppcoreguidelines-avoid-c-arrays>
+   cppcoreguidelines-avoid-goto
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-interfaces-global-init
@@ -130,6 +132,7 @@ Clang-Tidy Checks
    google-objc-avoid-throwing-exception
    google-objc-function-naming
    google-objc-global-variable-declaration
+   google-readability-avoid-underscore-in-googletest-name
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>
    google-readability-casting
    google-readability-function-size (redirects to readability-function-size) <google-readability-function-size>
@@ -159,6 +162,7 @@ Clang-Tidy Checks
    hicpp-special-member-functions (redirects to cppcoreguidelines-special-member-functions) <hicpp-special-member-functions>
    hicpp-static-assert (redirects to misc-static-assert) <hicpp-static-assert>
    hicpp-undelegated-constructor (redirects to bugprone-undelegated-constructor) <hicpp-undelegated-constructor>
+   hicpp-uppercase-literal-suffix (redirects to readability-uppercase-literal-suffix) <hicpp-uppercase-literal-suffix>
    hicpp-use-auto (redirects to modernize-use-auto) <hicpp-use-auto>
    hicpp-use-emplace (redirects to modernize-use-emplace) <hicpp-use-emplace>
    hicpp-use-equals-default (redirects to modernize-use-equals-default) <hicpp-use-equals-default>
@@ -167,7 +171,6 @@ Clang-Tidy Checks
    hicpp-use-nullptr (redirects to modernize-use-nullptr) <hicpp-use-nullptr>
    hicpp-use-override (redirects to modernize-use-override) <hicpp-use-override>
    hicpp-vararg (redirects to cppcoreguidelines-pro-type-vararg) <hicpp-vararg>
-   hicpp-uppercase-literal-suffix (redirects to readability-uppercase-literal-suffix) <hicpp-uppercase-literal-suffix>
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
@@ -207,6 +210,7 @@ Clang-Tidy Checks
    modernize-use-emplace
    modernize-use-equals-default
    modernize-use-equals-delete
+   modernize-use-nodiscard
    modernize-use-noexcept
    modernize-use-nullptr
    modernize-use-override
@@ -253,6 +257,7 @@ Clang-Tidy Checks
    readability-redundant-declaration
    readability-redundant-function-ptr-dereference
    readability-redundant-member-init
+   readability-redundant-preprocessor
    readability-redundant-smartptr-get
    readability-redundant-string-cstr
    readability-redundant-string-init

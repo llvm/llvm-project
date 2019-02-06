@@ -1,9 +1,8 @@
 //===-- TypeFormat.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,16 +93,18 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             return false;
         }
 
+        ExecutionContextScope *exe_scope =
+            exe_ctx.GetBestExecutionContextScope();
+        llvm::Optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
+        if (!size)
+          return false;
         StreamString sstr;
-        ExecutionContextScope *exe_scope(
-            exe_ctx.GetBestExecutionContextScope());
         compiler_type.DumpTypeValue(
-            &sstr,       // The stream to use for display
-            GetFormat(), // Format to display this type with
-            data,        // Data to extract from
-            0,           // Byte offset into "m_data"
-            compiler_type.GetByteSize(
-                exe_scope),                 // Byte size of item in "m_data"
+            &sstr,                          // The stream to use for display
+            GetFormat(),                    // Format to display this type with
+            data,                           // Data to extract from
+            0,                              // Byte offset into "m_data"
+            *size,                          // Byte size of item in "m_data"
             valobj->GetBitfieldBitSize(),   // Bitfield bit size
             valobj->GetBitfieldBitOffset(), // Bitfield bit offset
             exe_scope);
@@ -159,11 +160,10 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     if (!target_sp)
       return false;
     const ModuleList &images(target_sp->GetImages());
-    SymbolContext sc;
     TypeList types;
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    images.FindTypes(sc, m_enum_type, false, UINT32_MAX, searched_symbol_files,
-                     types);
+    images.FindTypes(nullptr, m_enum_type, false, UINT32_MAX,
+                     searched_symbol_files, types);
     if (types.GetSize() == 0)
       return false;
     for (lldb::TypeSP type_sp : types.Types()) {

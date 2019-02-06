@@ -1,9 +1,8 @@
 //===-- HashedNameToDIE.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -279,7 +278,9 @@ bool DWARFMappedHash::Header::Read(const lldb_private::DWARFDataExtractor &data,
     switch (header_data.atoms[i].type) {
     case eAtomTypeDIEOffset: // DIE offset, check form for encoding
       hash_data.offset =
-          (dw_offset_t)form_value.Reference(header_data.die_base_offset);
+          DWARFFormValue::IsDataForm(form_value.Form())
+              ? form_value.Unsigned()
+              : form_value.Reference(header_data.die_base_offset);
       break;
 
     case eAtomTypeTag: // DW_TAG value for the DIE

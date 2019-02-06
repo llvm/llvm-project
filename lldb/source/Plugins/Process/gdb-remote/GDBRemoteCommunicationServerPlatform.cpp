@@ -1,9 +1,8 @@
 //===-- GDBRemoteCommunicationServerPlatform.cpp ----------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -164,9 +163,6 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
     StringExtractorGDBRemote &packet) {
-#ifdef _WIN32
-  return SendErrorResponse(9);
-#else
   // Spawn a local debugserver as a platform so we can then attach or launch a
   // process...
 
@@ -217,10 +213,9 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   PacketResult packet_result = SendPacketNoLock(response.GetString());
   if (packet_result != PacketResult::Success) {
     if (debugserver_pid != LLDB_INVALID_PROCESS_ID)
-      ::kill(debugserver_pid, SIGINT);
+      Host::Kill(debugserver_pid, SIGINT);
   }
   return packet_result;
-#endif
 }
 
 GDBRemoteCommunication::PacketResult

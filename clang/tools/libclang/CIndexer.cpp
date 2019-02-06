@@ -1,9 +1,8 @@
 //===- CIndex.cpp - Clang-C Source Indexing Library -----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,6 +14,7 @@
 #include "CXString.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/Driver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MD5.h"
@@ -63,7 +63,7 @@ const std::string &CIndexer::getClangResourcesPath() {
 #endif
 #endif
 
-  LibClangPath += llvm::sys::path::parent_path(path);
+  LibClangPath += path;
 #else
   // This silly cast below avoids a C++ warning.
   Dl_info info;
@@ -71,13 +71,11 @@ const std::string &CIndexer::getClangResourcesPath() {
     llvm_unreachable("Call to dladdr() failed");
 
   // We now have the CIndex directory, locate clang relative to it.
-  LibClangPath += llvm::sys::path::parent_path(info.dli_fname);
+  LibClangPath += info.dli_fname;
 #endif
 
-  llvm::sys::path::append(LibClangPath, "clang", CLANG_VERSION_STRING);
-
   // Cache our result.
-  ResourcesPath = LibClangPath.str();
+  ResourcesPath = driver::Driver::GetResourcesPath(LibClangPath);
   return ResourcesPath;
 }
 

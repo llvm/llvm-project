@@ -1,9 +1,8 @@
 //===- lib/MC/MCWin64EH.cpp - MCWin64EH implementation --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -453,6 +452,38 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
   }
 }
 
+// Returns the epilog symbol of an epilog with the exact same unwind code
+// sequence, if it exists.  Otherwise, returns nulltpr.
+// EpilogInstrs - Unwind codes for the current epilog.
+// Epilogs - Epilogs that potentialy match the current epilog.
+static MCSymbol*
+FindMatchingEpilog(const std::vector<WinEH::Instruction>& EpilogInstrs,
+                   const std::vector<MCSymbol *>& Epilogs,
+                   const WinEH::FrameInfo *info) {
+  for (auto *EpilogStart : Epilogs) {
+    auto InstrsIter = info->EpilogMap.find(EpilogStart);
+    assert(InstrsIter != info->EpilogMap.end() &&
+           "Epilog not found in EpilogMap");
+    const auto &Instrs = InstrsIter->second;
+
+    if (Instrs.size() != EpilogInstrs.size())
+      continue;
+
+    bool Match = true;
+    for (unsigned i = 0; i < Instrs.size(); ++i)
+      if (Instrs[i].Operation != EpilogInstrs[i].Operation ||
+          Instrs[i].Offset != EpilogInstrs[i].Offset ||
+          Instrs[i].Register != EpilogInstrs[i].Register) {
+         Match = false;
+         break;
+      }
+
+    if (Match)
+      return EpilogStart;
+  }
+  return nullptr;
+}
+
 // Populate the .xdata section.  The format of .xdata on ARM64 is documented at
 // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
@@ -477,12 +508,28 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Process epilogs.
   MapVector<MCSymbol *, uint32_t> EpilogInfo;
+  // Epilogs processed so far.
+  std::vector<MCSymbol *> AddedEpilogs;
+
   for (auto &I : info->EpilogMap) {
     MCSymbol *EpilogStart = I.first;
     auto &EpilogInstrs = I.second;
     uint32_t CodeBytes = ARM64CountOfUnwindCodes(EpilogInstrs);
-    EpilogInfo[EpilogStart] = TotalCodeBytes;
-    TotalCodeBytes += CodeBytes;
+
+    MCSymbol* MatchingEpilog =
+      FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
+    if (MatchingEpilog) {
+      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+             "Duplicate epilog not found");
+      EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
+      // Clear the unwind codes in the EpilogMap, so that they don't get output
+      // in the logic below.
+      EpilogInstrs.clear();
+    } else {
+      EpilogInfo[EpilogStart] = TotalCodeBytes;
+      TotalCodeBytes += CodeBytes;
+      AddedEpilogs.push_back(EpilogStart);
+    }
   }
 
   // Code Words, Epilog count, E, X, Vers, Function Length

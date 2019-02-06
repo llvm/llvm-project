@@ -1,7 +1,7 @@
 RUN: llvm-objdump -macho -h %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
 CHECK: Sections:
-CHECK: Idx Name          Size      Address          Type
+CHECK: Idx Name          Size     VMA              Type
 CHECK:   0 __text        0000003b 0000000000000000 TEXT 
 CHECK:   1 __cstring     0000000d 000000000000003b DATA 
 CHECK:   2 __compact_unwind 00000020 0000000000000048 DATA 

@@ -632,3 +632,15 @@ exit:
   %result = load i32, i32* %phi, align 4
   ret i32 %result
 }
+
+; Don't speculate a load based on an earlier volatile operation.
+define i8 @volatile_select(i8* %p, i1 %b) {
+; CHECK-LABEL: @volatile_select(
+; CHECK: select i1 %b, i8* %p, i8* %p2
+  %p2 = alloca i8
+  store i8 0, i8* %p2
+  store volatile i8 0, i8* %p
+  %px = select i1 %b, i8* %p, i8* %p2
+  %v2 = load i8, i8* %px
+  ret i8 %v2
+}

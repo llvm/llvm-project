@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -244,7 +244,7 @@ entry:
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: srw [[SMOLDV:[0-9]+]], [[MOLDV]], [[SA]]
 ; CHECK: extsh [[SESMOLDV:[0-9]+]], [[SMOLDV]]
-; CHECK: cmpw 0, 4, [[SESMOLDV]]
+; CHECK: cmpw 4, [[SESMOLDV]]
 ; CHECK: bgelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]
@@ -271,7 +271,7 @@ entry:
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: srw [[SMOLDV:[0-9]+]], [[MOLDV]], [[SA]]
 ; CHECK: extsh [[SESMOLDV:[0-9]+]], [[SMOLDV]]
-; CHECK: cmpw 0, 4, [[SESMOLDV]]
+; CHECK: cmpw 4, [[SESMOLDV]]
 ; CHECK: blelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]
@@ -296,7 +296,7 @@ entry:
 ; CHECK-DAG: and [[SMV:[0-9]+]], [[SV]], [[M]]
 ; CHECK: lwarx [[OLDV:[0-9]+]], 0, 3
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
-; CHECK: cmplw 0, 4, [[MOLDV]]
+; CHECK: cmplw 4, [[MOLDV]]
 ; CHECK: bgelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]
@@ -321,7 +321,7 @@ entry:
 ; CHECK-DAG: and [[SMV:[0-9]+]], [[SV]], [[M]]
 ; CHECK: lwarx [[OLDV:[0-9]+]], 0, 3
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
-; CHECK: cmplw 0, 4, [[MOLDV]]
+; CHECK: cmplw 4, [[MOLDV]]
 ; CHECK: blelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]
@@ -347,7 +347,7 @@ entry:
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: srw [[SMOLDV:[0-9]+]], [[MOLDV]], [[SA]]
 ; CHECK: extsb [[SESMOLDV:[0-9]+]], [[SMOLDV]]
-; CHECK: cmpw 0, 4, [[SESMOLDV]]
+; CHECK: cmpw 4, [[SESMOLDV]]
 ; CHECK: bgelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]
@@ -373,7 +373,7 @@ entry:
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: srw [[SMOLDV:[0-9]+]], [[MOLDV]], [[SA]]
 ; CHECK: extsb [[SESMOLDV:[0-9]+]], [[SMOLDV]]
-; CHECK: cmpw 0, 4, [[SESMOLDV]]
+; CHECK: cmpw 4, [[SESMOLDV]]
 ; CHECK: blelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]
@@ -397,7 +397,7 @@ entry:
 ; CHECK-DAG: and [[SMV:[0-9]+]], [[SV]], [[M]]
 ; CHECK: lwarx [[OLDV:[0-9]+]], 0, 3
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
-; CHECK: cmplw 0, 4, [[MOLDV]]
+; CHECK: cmplw 4, [[MOLDV]]
 ; CHECK: bgelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]
@@ -421,7 +421,7 @@ entry:
 ; CHECK-DAG: and [[SMV:[0-9]+]], [[SV]], [[M]]
 ; CHECK: lwarx [[OLDV:[0-9]+]], 0, 3
 ; CHECK: and [[MOLDV:[0-9]+]], [[OLDV]], [[M]]
-; CHECK: cmplw 0, 4, [[MOLDV]]
+; CHECK: cmplw 4, [[MOLDV]]
 ; CHECK: blelr 0
 ; CHECK: andc [[NOLDV:[0-9]+]], [[OLDV]], [[M]]
 ; CHECK: or [[NEWV:[0-9]+]], [[SMV]], [[NOLDV]]

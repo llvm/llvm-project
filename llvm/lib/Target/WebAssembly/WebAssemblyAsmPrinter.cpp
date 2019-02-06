@@ -1,9 +1,8 @@
 //===-- WebAssemblyAsmPrinter.cpp - WebAssembly LLVM assembly writer ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -22,6 +21,7 @@
 #include "WebAssemblyMCInstLower.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
@@ -41,6 +42,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
+
+extern cl::opt<bool> WasmKeepRegisters;
 
 //===----------------------------------------------------------------------===//
 // Helpers.
@@ -111,8 +114,15 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
           F.hasFnAttribute("wasm-import-module")) {
         StringRef Name =
             F.getFnAttribute("wasm-import-module").getValueAsString();
-        Sym->setModuleName(Name);
+        Sym->setImportModule(Name);
         getTargetStreamer()->emitImportModule(Sym, Name);
+      }
+      if (TM.getTargetTriple().isOSBinFormatWasm() &&
+          F.hasFnAttribute("wasm-import-name")) {
+        StringRef Name =
+            F.getFnAttribute("wasm-import-name").getValueAsString();
+        Sym->setImportName(Name);
+        getTargetStreamer()->emitImportName(Sym, Name);
       }
     }
   }
@@ -145,6 +155,59 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
       OutStreamer->EmitBytes(Contents->getString());
       OutStreamer->PopSection();
     }
+  }
+
+  EmitProducerInfo(M);
+}
+
+void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
+  llvm::SmallVector<std::pair<std::string, std::string>, 4> Languages;
+  if (const NamedMDNode *Debug = M.getNamedMetadata("llvm.dbg.cu")) {
+     llvm::SmallSet<StringRef, 4> SeenLanguages;
+    for (size_t i = 0, e = Debug->getNumOperands(); i < e; ++i) {
+      const auto *CU = cast<DICompileUnit>(Debug->getOperand(i));
+      StringRef Language = dwarf::LanguageString(CU->getSourceLanguage());
+      Language.consume_front("DW_LANG_");
+      if (SeenLanguages.insert(Language).second)
+        Languages.emplace_back(Language.str(), "");
+    }
+  }
+
+  llvm::SmallVector<std::pair<std::string, std::string>, 4> Tools;
+  if (const NamedMDNode *Ident = M.getNamedMetadata("llvm.ident")) {
+    llvm::SmallSet<StringRef, 4> SeenTools;
+    for (size_t i = 0, e = Ident->getNumOperands(); i < e; ++i) {
+      const auto *S = cast<MDString>(Ident->getOperand(i)->getOperand(0));
+      std::pair<StringRef, StringRef> Field = S->getString().split("version");
+      StringRef Name = Field.first.trim();
+      StringRef Version = Field.second.trim();
+      if (SeenTools.insert(Name).second)
+        Tools.emplace_back(Name.str(), Version.str());
+    }
+  }
+
+  int FieldCount = int(!Languages.empty()) + int(!Tools.empty());
+  if (FieldCount != 0) {
+    MCSectionWasm *Producers = OutContext.getWasmSection(
+        ".custom_section.producers", SectionKind::getMetadata());
+    OutStreamer->PushSection();
+    OutStreamer->SwitchSection(Producers);
+    OutStreamer->EmitULEB128IntValue(FieldCount);
+    for (auto &Producers : {std::make_pair("language", &Languages),
+            std::make_pair("processed-by", &Tools)}) {
+      if (Producers.second->empty())
+        continue;
+      OutStreamer->EmitULEB128IntValue(strlen(Producers.first));
+      OutStreamer->EmitBytes(Producers.first);
+      OutStreamer->EmitULEB128IntValue(Producers.second->size());
+      for (auto &Producer : *Producers.second) {
+        OutStreamer->EmitULEB128IntValue(Producer.first.size());
+        OutStreamer->EmitBytes(Producer.first);
+        OutStreamer->EmitULEB128IntValue(Producer.second.size());
+        OutStreamer->EmitBytes(Producer.second);
+      }
+    }
+    OutStreamer->PopSection();
   }
 }
 
@@ -250,6 +313,14 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       OutStreamer->AddBlankLine();
     }
     break;
+  case WebAssembly::EXTRACT_EXCEPTION_I32:
+  case WebAssembly::EXTRACT_EXCEPTION_I32_S:
+    // These are pseudo instructions that simulates popping values from stack.
+    // We print these only when we have -wasm-keep-registers on for assembly
+    // readability.
+    if (!WasmKeepRegisters)
+      break;
+    LLVM_FALLTHROUGH;
   default: {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
     MCInst TmpInst;

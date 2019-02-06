@@ -5,7 +5,6 @@
 # RUN: FileCheck %s --input-file=%t1
 
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 0000000000000000         *UND*     00000000
 # CHECK-NEXT: 0000000000001004 l     F .text     00000000 lfoo
 # CHECK-NEXT: 0000000000001008 l     O .text     00000000 lbar
 # CHECK-NEXT: 0000000000001004 g     F .text     00000000 foo

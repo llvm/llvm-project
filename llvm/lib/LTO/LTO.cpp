@@ -1,9 +1,8 @@
 //===-LTO.cpp - LLVM Link Time Optimizer ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -545,6 +544,15 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   Expected<BitcodeLTOInfo> LTOInfo = Input.Mods[ModI].getLTOInfo();
   if (!LTOInfo)
     return LTOInfo.takeError();
+
+  if (EnableSplitLTOUnit.hasValue()) {
+    // If only some modules were split, flag this in the index so that
+    // we can skip or error on optimizations that need consistently split
+    // modules (whole program devirt and lower type tests).
+    if (EnableSplitLTOUnit.getValue() != LTOInfo->EnableSplitLTOUnit)
+      ThinLTO.CombinedIndex.setPartiallySplitLTOUnits();
+  } else
+    EnableSplitLTOUnit = LTOInfo->EnableSplitLTOUnit;
 
   BitcodeModule BM = Input.Mods[ModI];
   auto ModSyms = Input.module_symbols(ModI);

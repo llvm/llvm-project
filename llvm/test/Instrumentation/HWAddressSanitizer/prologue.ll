@@ -1,15 +1,15 @@
 ; Test -hwasan-with-ifunc flag.
 ;
-; RUN: opt -hwasan -S < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-TLS,CHECK-HISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-TLS,CHECK-HISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-TLS,CHECK-NOHISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
+; RUN: opt -hwasan -hwasan-allow-ifunc -S < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS,CHECK-HISTORY
+; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS,CHECK-HISTORY
+; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
+; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-GLOBAL,CHECK-NOHISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC,CHECK-NOHISTORY
+; RUN: opt -hwasan -hwasan-allow-ifunc -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECk-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android22"
@@ -23,17 +23,10 @@ define i32 @test_load(i32* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load
 ; CHECK: entry:
 
-; CHECK-IFUNC:   %[[A:[^ ]*]] = call i64 asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
-; CHECK-IFUNC:   add i64 %{{.*}}, %[[A]]
+; CHECK-NOGLOBAL:   %[[A:[^ ]*]] = call i8* asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
+; CHECK-NOGLOBAL:   @llvm.hwasan.check.memaccess(i8* %[[A]]
 
-; CHECK-GLOBAL: load i64, i64* @__hwasan_shadow_memory_dynamic_address
-
-; CHECK-TLS:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
-; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 64
-; CHECK-TLS:   %[[C:[^ ]*]] = bitcast i8* %[[B]] to i64*
-; CHECK-TLS:   %[[D:[^ ]*]] = load i64, i64* %[[C]]
-; CHECK-TLS:   %[[E:[^ ]*]] = or i64 %[[D]], 4294967295
-; CHECK-TLS:   = add i64 %[[E]], 1
+; CHECK-GLOBAL: load i8*, i8** @__hwasan_shadow_memory_dynamic_address
 
 ; "store i64" is only used to update stack history (this input IR intentionally does not use any i64)
 ; W/o any allocas, the history is not updated, even if it is enabled explicitly with -hwasan-record-stack-history=1
@@ -54,13 +47,13 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-LABEL: @test_alloca
 ; CHECK: entry:
 
-; CHECK-IFUNC:   %[[A:[^ ]*]] = call i64 asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
-; CHECK-IFUNC:   add i64 %{{.*}}, %[[A]]
+; CHECK-IFUNC:   %[[A:[^ ]*]] = call i8* asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
+; CHECK-IFUNC:   getelementptr i8, i8* %[[A]]
 
-; CHECK-GLOBAL: load i64, i64* @__hwasan_shadow_memory_dynamic_address
+; CHECK-GLOBAL: load i8*, i8** @__hwasan_shadow_memory_dynamic_address
 
 ; CHECK-TLS:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
-; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 64
+; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 48
 ; CHECK-TLS:   %[[C:[^ ]*]] = bitcast i8* %[[B]] to i64*
 ; CHECK-TLS:   %[[D:[^ ]*]] = load i64, i64* %[[C]]
 

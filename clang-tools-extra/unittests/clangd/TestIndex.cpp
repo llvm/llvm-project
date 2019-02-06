@@ -1,23 +1,23 @@
 //===-- IndexHelpers.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "TestIndex.h"
+#include "clang/Index/IndexSymbol.h"
+#include "llvm/Support/Regex.h"
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 
-Symbol symbol(StringRef QName) {
+Symbol symbol(llvm::StringRef QName) {
   Symbol Sym;
   Sym.ID = SymbolID(QName.str());
   size_t Pos = QName.rfind("::");
-  if (Pos == StringRef::npos) {
+  if (Pos == llvm::StringRef::npos) {
     Sym.Name = QName;
     Sym.Scope = "";
   } else {
@@ -27,9 +27,61 @@ Symbol symbol(StringRef QName) {
   return Sym;
 }
 
+static std::string replace(llvm::StringRef Haystack, llvm::StringRef Needle,
+                           llvm::StringRef Repl) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  std::pair<llvm::StringRef, llvm::StringRef> Split;
+  for (Split = Haystack.split(Needle); !Split.second.empty();
+       Split = Split.first.split(Needle))
+    OS << Split.first << Repl;
+  Result += Split.first;
+  OS.flush();
+  return Result;
+}
+
+// Helpers to produce fake index symbols for memIndex() or completions().
+// USRFormat is a regex replacement string for the unqualified part of the USR.
+Symbol sym(llvm::StringRef QName, index::SymbolKind Kind,
+           llvm::StringRef USRFormat) {
+  Symbol Sym;
+  std::string USR = "c:"; // We synthesize a few simple cases of USRs by hand!
+  size_t Pos = QName.rfind("::");
+  if (Pos == llvm::StringRef::npos) {
+    Sym.Name = QName;
+    Sym.Scope = "";
+  } else {
+    Sym.Name = QName.substr(Pos + 2);
+    Sym.Scope = QName.substr(0, Pos + 2);
+    USR += "@N@" + replace(QName.substr(0, Pos), "::", "@N@"); // ns:: -> @N@ns
+  }
+  USR += llvm::Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
+  Sym.ID = SymbolID(USR);
+  Sym.SymInfo.Kind = Kind;
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
+  Sym.Origin = SymbolOrigin::Static;
+  return Sym;
+}
+
+Symbol func(llvm::StringRef Name) { // Assumes the function has no args.
+  return sym(Name, index::SymbolKind::Function, "@F@\\0#"); // no args
+}
+
+Symbol cls(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::Class, "@S@\\0");
+}
+
+Symbol var(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::Variable, "@\\0");
+}
+
+Symbol ns(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::Namespace, "@N@\\0");
+}
+
 SymbolSlab generateSymbols(std::vector<std::string> QualifiedNames) {
   SymbolSlab::Builder Slab;
-  for (StringRef QName : QualifiedNames)
+  for (llvm::StringRef QName : QualifiedNames)
     Slab.insert(symbol(QName));
   return std::move(Slab).build();
 }
@@ -57,7 +109,8 @@ std::vector<std::string> match(const SymbolIndex &I,
 }
 
 // Returns qualified names of symbols with any of IDs in the index.
-std::vector<std::string> lookup(const SymbolIndex &I, ArrayRef<SymbolID> IDs) {
+std::vector<std::string> lookup(const SymbolIndex &I,
+                                llvm::ArrayRef<SymbolID> IDs) {
   LookupRequest Req;
   Req.IDs.insert(IDs.begin(), IDs.end());
   std::vector<std::string> Results;

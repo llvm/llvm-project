@@ -22,9 +22,9 @@ void test_selfinit() {
 
 // UNINIT-LABEL:  test_block(
 // ZERO-LABEL:    test_block(
-// ZERO: store i32 0, i32* %block, align 4
+// ZERO: store i32 0, i32* %block
 // PATTERN-LABEL: test_block(
-// PATTERN: store i32 -1431655766, i32* %block, align 4
+// PATTERN: store i32 -1431655766, i32* %block
 void test_block() {
   __block int block;
   used(block);

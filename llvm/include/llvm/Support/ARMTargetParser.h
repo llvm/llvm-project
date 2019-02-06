@@ -1,9 +1,8 @@
 //===-- ARMTargetParser - Parser for ARM target features --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -45,6 +44,7 @@ enum ArchExtKind : unsigned {
   AEK_SHA2    =     1 << 15,
   AEK_AES     =     1 << 16,
   AEK_FP16FML =     1 << 17,
+  AEK_SB      =     1 << 18,
   // Unsupported extensions.
   AEK_OS = 0x8000000,
   AEK_IWMMXT = 0x10000000,

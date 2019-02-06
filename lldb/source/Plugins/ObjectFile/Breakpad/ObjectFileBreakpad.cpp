@@ -1,17 +1,16 @@
 //===-- ObjectFileBreakpad.cpp -------------------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/Breakpad/ObjectFileBreakpad.h"
+#include "Plugins/ObjectFile/Breakpad/BreakpadRecords.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Utility/DataBuffer.h"
-#include "llvm/ADT/StringExtras.h"
+#include "lldb/Core/Section.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -25,129 +24,22 @@ struct Header {
 };
 } // namespace
 
-static llvm::Triple::OSType toOS(llvm::StringRef str) {
-  using llvm::Triple;
-  return llvm::StringSwitch<Triple::OSType>(str)
-      .Case("Linux", Triple::Linux)
-      .Case("mac", Triple::MacOSX)
-      .Case("windows", Triple::Win32)
-      .Default(Triple::UnknownOS);
-}
-
-static llvm::Triple::ArchType toArch(llvm::StringRef str) {
-  using llvm::Triple;
-  return llvm::StringSwitch<Triple::ArchType>(str)
-      .Case("arm", Triple::arm)
-      .Case("arm64", Triple::aarch64)
-      .Case("mips", Triple::mips)
-      .Case("ppc", Triple::ppc)
-      .Case("ppc64", Triple::ppc64)
-      .Case("s390", Triple::systemz)
-      .Case("sparc", Triple::sparc)
-      .Case("sparcv9", Triple::sparcv9)
-      .Case("x86", Triple::x86)
-      .Case("x86_64", Triple::x86_64)
-      .Default(Triple::UnknownArch);
-}
-
-static llvm::StringRef consume_front(llvm::StringRef &str, size_t n) {
-  llvm::StringRef result = str.take_front(n);
-  str = str.drop_front(n);
-  return result;
-}
-
-static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
-  struct uuid_data {
-    llvm::support::ulittle32_t uuid1;
-    llvm::support::ulittle16_t uuid2[2];
-    uint8_t uuid3[8];
-    llvm::support::ulittle32_t age;
-  } data;
-  static_assert(sizeof(data) == 20, "");
-  // The textual module id encoding should be between 33 and 40 bytes long,
-  // depending on the size of the age field, which is of variable length.
-  // The first three chunks of the id are encoded in big endian, so we need to
-  // byte-swap those.
-  if (str.size() < 33 || str.size() > 40)
-    return UUID();
-  uint32_t t;
-  if (to_integer(consume_front(str, 8), t, 16))
-    data.uuid1 = t;
-  else
-    return UUID();
-  for (int i = 0; i < 2; ++i) {
-    if (to_integer(consume_front(str, 4), t, 16))
-      data.uuid2[i] = t;
-    else
-      return UUID();
-  }
-  for (int i = 0; i < 8; ++i) {
-    if (!to_integer(consume_front(str, 2), data.uuid3[i], 16))
-      return UUID();
-  }
-  if (to_integer(str, t, 16))
-    data.age = t;
-  else
-    return UUID();
-
-  // On non-windows, the age field should always be zero, so we don't include to
-  // match the native uuid format of these platforms.
-  return UUID::fromData(&data, os == llvm::Triple::Win32 ? 20 : 16);
-}
-
 llvm::Optional<Header> Header::parse(llvm::StringRef text) {
-  // A valid module should start with something like:
-  // MODULE Linux x86_64 E5894855C35DCCCCCCCCCCCCCCCCCCCC0 a.out
-  // optionally followed by
-  // INFO CODE_ID 554889E55DC3CCCCCCCCCCCCCCCCCCCC [a.exe]
-  llvm::StringRef token, line;
+  llvm::StringRef line;
   std::tie(line, text) = text.split('\n');
-  std::tie(token, line) = getToken(line);
-  if (token != "MODULE")
+  auto Module = ModuleRecord::parse(line);
+  if (!Module)
     return llvm::None;
 
-  std::tie(token, line) = getToken(line);
   llvm::Triple triple;
-  triple.setOS(toOS(token));
-  if (triple.getOS() == llvm::Triple::UnknownOS)
-    return llvm::None;
-
-  std::tie(token, line) = getToken(line);
-  triple.setArch(toArch(token));
-  if (triple.getArch() == llvm::Triple::UnknownArch)
-    return llvm::None;
-
-  llvm::StringRef module_id;
-  std::tie(module_id, line) = getToken(line);
+  triple.setArch(Module->Arch);
+  triple.setOS(Module->OS);
 
   std::tie(line, text) = text.split('\n');
-  std::tie(token, line) = getToken(line);
-  if (token == "INFO") {
-    std::tie(token, line) = getToken(line);
-    if (token != "CODE_ID")
-      return llvm::None;
 
-    std::tie(token, line) = getToken(line);
-    // If we don't have any text following the code id (e.g. on linux), we
-    // should use the module id as UUID. Otherwise, we revert back to the module
-    // id.
-    if (line.trim().empty()) {
-      UUID uuid;
-      if (uuid.SetFromStringRef(token, token.size() / 2) != token.size())
-        return llvm::None;
-
-      return Header{ArchSpec(triple), uuid};
-    }
-  }
-
-  // We reach here if we don't have a INFO CODE_ID section, or we chose not to
-  // use it. In either case, we need to properly decode the module id, whose
-  // fields are encoded in big-endian.
-  UUID uuid = parseModuleId(triple.getOS(), module_id);
-  if (!uuid)
-    return llvm::None;
-
-  return Header{ArchSpec(triple), uuid};
+  auto Info = InfoRecord::parse(line);
+  UUID uuid = Info && Info->ID ? Info->ID : Module->ID;
+  return Header{ArchSpec(triple), std::move(uuid)};
 }
 
 void ObjectFileBreakpad::Initialize() {
@@ -230,16 +122,52 @@ Symtab *ObjectFileBreakpad::GetSymtab() {
   return nullptr;
 }
 
-bool ObjectFileBreakpad::GetArchitecture(ArchSpec &arch) {
-  arch = m_arch;
-  return true;
-}
-
 bool ObjectFileBreakpad::GetUUID(UUID *uuid) {
   *uuid = m_uuid;
   return true;
 }
 
 void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
-  // TODO
+  if (m_sections_ap)
+    return;
+  m_sections_ap = llvm::make_unique<SectionList>();
+
+  llvm::Optional<Record::Kind> current_section;
+  offset_t section_start;
+  llvm::StringRef text = toStringRef(m_data.GetData());
+  uint32_t next_section_id = 1;
+  auto maybe_add_section = [&](const uint8_t *end_ptr) {
+    if (!current_section)
+      return; // We have been called before parsing the first line.
+
+    offset_t end_offset = end_ptr - m_data.GetDataStart();
+    auto section_sp = std::make_shared<Section>(
+        GetModule(), this, next_section_id++,
+        ConstString(toString(*current_section)), eSectionTypeOther,
+        /*file_vm_addr*/ 0, /*vm_size*/ 0, section_start,
+        end_offset - section_start, /*log2align*/ 0, /*flags*/ 0);
+    m_sections_ap->AddSection(section_sp);
+    unified_section_list.AddSection(section_sp);
+  };
+  while (!text.empty()) {
+    llvm::StringRef line;
+    std::tie(line, text) = text.split('\n');
+
+    Record::Kind next_section = Record::classify(line);
+    if (next_section == Record::Line) {
+      // Line records logically belong to the preceding Func record, so we put
+      // them in the same section.
+      next_section = Record::Func;
+    }
+    if (next_section == current_section)
+      continue;
+
+    // Changing sections, finish off the previous one, if there was any.
+    maybe_add_section(line.bytes_begin());
+    // And start a new one.
+    current_section = next_section;
+    section_start = line.bytes_begin() - m_data.GetDataStart();
+  }
+  // Finally, add the last section.
+  maybe_add_section(m_data.GetDataEnd());
 }

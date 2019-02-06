@@ -1401,13 +1401,17 @@ class IntegratedTestKeywordParser(object):
     @staticmethod
     def _handleBooleanExpr(line_number, line, output):
         """A parser for BOOLEAN_EXPR type keywords"""
+        parts = [s.strip() for s in line.split(',') if s.strip() != '']
+        if output and output[-1][-1] == '\\':
+            output[-1] = output[-1][:-1] + parts[0]
+            del parts[0]
         if output is None:
             output = []
-        output.extend([s.strip() for s in line.split(',')])
+        output.extend(parts)
         # Evaluate each expression to verify syntax.
         # We don't want any results, just the raised ValueError.
         for s in output:
-            if s != '*':
+            if s != '*' and not s.endswith('\\'):
                 BooleanExpression.evaluate(s, [])
         return output
 
@@ -1485,6 +1489,15 @@ def parseIntegratedTestScript(test, additional_parsers=[],
     if script and script[-1][-1] == '\\':
         return lit.Test.Result(Test.UNRESOLVED,
                                "Test has unterminated run lines (with '\\')")
+
+    # Check boolean expressions for unterminated lines.
+    for key in keyword_parsers:
+        kp = keyword_parsers[key]
+        if kp.kind != ParserKind.BOOLEAN_EXPR:
+            continue
+        value = kp.getValue()
+        if value and value[-1][-1] == '\\':
+            raise ValueError("Test has unterminated %s lines (with '\\')" % key)
 
     # Enforce REQUIRES:
     missing_required_features = test.getMissingRequiredFeatures()

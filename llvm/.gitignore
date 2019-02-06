@@ -43,6 +43,8 @@ autoconf/autom4te.cache
 /compile_commands.json
 # Visual Studio built-in CMake configuration
 /CMakeSettings.json
+# CLion project configuration
+/.idea
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
@@ -70,6 +72,8 @@ docs/_build
 # VS2017 and VSCode config files.
 .vscode
 .vs
+# clangd background index
+.clangd-index
 
 #==============================================================================#
 # Files created in tree by the Go bindings.

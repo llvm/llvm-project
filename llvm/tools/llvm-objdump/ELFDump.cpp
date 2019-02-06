@@ -1,9 +1,8 @@
 //===-- ELFDump.cpp - ELF-specific dumper -----------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -13,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-objdump.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
@@ -49,6 +49,116 @@ Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> *Elf) {
   }
 
   return createError("dynamic string table not found");
+}
+
+template <class ELFT>
+static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
+                                                const RelocationRef &RelRef,
+                                                SmallVectorImpl<char> &Result) {
+  typedef typename ELFObjectFile<ELFT>::Elf_Sym Elf_Sym;
+  typedef typename ELFObjectFile<ELFT>::Elf_Shdr Elf_Shdr;
+  typedef typename ELFObjectFile<ELFT>::Elf_Rela Elf_Rela;
+
+  const ELFFile<ELFT> &EF = *Obj->getELFFile();
+  DataRefImpl Rel = RelRef.getRawDataRefImpl();
+  auto SecOrErr = EF.getSection(Rel.d.a);
+  if (!SecOrErr)
+    return errorToErrorCode(SecOrErr.takeError());
+
+  int64_t Addend = 0;
+  // If there is no Symbol associated with the relocation, we set the undef
+  // boolean value to 'true'. This will prevent us from calling functions that
+  // requires the relocation to be associated with a symbol.
+  //
+  // In SHT_REL case we would need to read the addend from section data.
+  // GNU objdump does not do that and we just follow for simplicity atm.
+  bool Undef = false;
+  if ((*SecOrErr)->sh_type == ELF::SHT_RELA) {
+    const Elf_Rela *ERela = Obj->getRela(Rel);
+    Addend = ERela->r_addend;
+    Undef = ERela->getSymbol(false) == 0;
+  } else if ((*SecOrErr)->sh_type != ELF::SHT_REL) {
+    return object_error::parse_failed;
+  }
+
+  // Default scheme is to print Target, as well as "+ <addend>" for nonzero
+  // addend. Should be acceptable for all normal purposes.
+  std::string FmtBuf;
+  raw_string_ostream Fmt(FmtBuf);
+
+  if (!Undef) {
+    symbol_iterator SI = RelRef.getSymbol();
+    const Elf_Sym *Sym = Obj->getSymbol(SI->getRawDataRefImpl());
+    if (Sym->getType() == ELF::STT_SECTION) {
+      Expected<section_iterator> SymSI = SI->getSection();
+      if (!SymSI)
+        return errorToErrorCode(SymSI.takeError());
+      const Elf_Shdr *SymSec = Obj->getSection((*SymSI)->getRawDataRefImpl());
+      auto SecName = EF.getSectionName(SymSec);
+      if (!SecName)
+        return errorToErrorCode(SecName.takeError());
+      Fmt << *SecName;
+    } else {
+      Expected<StringRef> SymName = SI->getName();
+      if (!SymName)
+        return errorToErrorCode(SymName.takeError());
+      if (Demangle)
+        Fmt << demangle(*SymName);
+      else
+        Fmt << *SymName;
+    }
+  } else {
+    Fmt << "*ABS*";
+  }
+
+  if (Addend != 0)
+    Fmt << (Addend < 0 ? "" : "+") << Addend;
+  Fmt.flush();
+  Result.append(FmtBuf.begin(), FmtBuf.end());
+  return std::error_code();
+}
+
+std::error_code
+llvm::getELFRelocationValueString(const ELFObjectFileBase *Obj,
+                                  const RelocationRef &Rel,
+                                  SmallVectorImpl<char> &Result) {
+  if (auto *ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
+    return getRelocationValueString(ELF32LE, Rel, Result);
+  if (auto *ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj))
+    return getRelocationValueString(ELF64LE, Rel, Result);
+  if (auto *ELF32BE = dyn_cast<ELF32BEObjectFile>(Obj))
+    return getRelocationValueString(ELF32BE, Rel, Result);
+  auto *ELF64BE = cast<ELF64BEObjectFile>(Obj);
+  return getRelocationValueString(ELF64BE, Rel, Result);
+}
+
+template <class ELFT>
+static uint64_t getSectionLMA(const ELFFile<ELFT> *Obj,
+                              const object::ELFSectionRef &Sec) {
+  auto PhdrRangeOrErr = Obj->program_headers();
+  if (!PhdrRangeOrErr)
+    report_fatal_error(errorToErrorCode(PhdrRangeOrErr.takeError()).message());
+
+  // Search for a PT_LOAD segment containing the requested section. Use this
+  // segment's p_addr to calculate the section's LMA.
+  for (const typename ELFFile<ELFT>::Elf_Phdr &Phdr : *PhdrRangeOrErr)
+    if ((Phdr.p_type == ELF::PT_LOAD) && (Phdr.p_vaddr <= Sec.getAddress()) &&
+        (Phdr.p_vaddr + Phdr.p_memsz > Sec.getAddress()))
+      return Sec.getAddress() - Phdr.p_vaddr + Phdr.p_paddr;
+
+  // Return section's VMA if it isn't in a PT_LOAD segment.
+  return Sec.getAddress();
+}
+
+uint64_t llvm::getELFSectionLMA(const object::ELFSectionRef &Sec) {
+  if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Sec.getObject()))
+    return getSectionLMA(ELFObj->getELFFile(), Sec);
+  else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Sec.getObject()))
+    return getSectionLMA(ELFObj->getELFFile(), Sec);
+  else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Sec.getObject()))
+    return getSectionLMA(ELFObj->getELFFile(), Sec);
+  const auto *ELFObj = cast<ELF64BEObjectFile>(Sec.getObject());
+  return getSectionLMA(ELFObj->getELFFile(), Sec);
 }
 
 template <class ELFT>

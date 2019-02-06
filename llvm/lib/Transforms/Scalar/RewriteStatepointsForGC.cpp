@@ -1,9 +1,8 @@
 //===- RewriteStatepointsForGC.cpp - Make GC relocations explicit ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -347,7 +346,7 @@ static bool containsGCPtrType(Type *Ty) {
   if (ArrayType *AT = dyn_cast<ArrayType>(Ty))
     return containsGCPtrType(AT->getElementType());
   if (StructType *ST = dyn_cast<StructType>(Ty))
-    return llvm::any_of(ST->subtypes(), containsGCPtrType);
+    return llvm::any_of(ST->elements(), containsGCPtrType);
   return false;
 }
 
@@ -1307,7 +1306,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
   // Lazily populated map from input types to the canonicalized form mentioned
   // in the comment above.  This should probably be cached somewhere more
   // broadly.
-  DenseMap<Type*, Value*> TypeToDeclMap;
+  DenseMap<Type *, Function *> TypeToDeclMap;
 
   for (unsigned i = 0; i < LiveVariables.size(); i++) {
     // Generate the gc.relocate call and save the result
@@ -1318,7 +1317,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Type *Ty = LiveVariables[i]->getType();
     if (!TypeToDeclMap.count(Ty))
       TypeToDeclMap[Ty] = getGCRelocateDecl(Ty);
-    Value *GCRelocateDecl = TypeToDeclMap[Ty];
+    Function *GCRelocateDecl = TypeToDeclMap[Ty];
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(
@@ -1481,8 +1480,9 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
       // calls to @llvm.experimental.deoptimize with different argument types in
       // the same module.  This is fine -- we assume the frontend knew what it
       // was doing when generating this kind of IR.
-      CallTarget =
-          F->getParent()->getOrInsertFunction("__llvm_deoptimize", FTy);
+      CallTarget = F->getParent()
+                       ->getOrInsertFunction("__llvm_deoptimize", FTy)
+                       .getCallee();
 
       IsDeoptimize = true;
     }
@@ -1636,7 +1636,7 @@ makeStatepointExplicit(DominatorTree &DT, CallSite CS,
 // for sanity checking.
 static void
 insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
-                       DenseMap<Value *, Value *> &AllocaMap,
+                       DenseMap<Value *, AllocaInst *> &AllocaMap,
                        DenseSet<Value *> &VisitedLiveValues) {
   for (User *U : GCRelocs) {
     GCRelocateInst *Relocate = dyn_cast<GCRelocateInst>(U);
@@ -1671,7 +1671,7 @@ insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
 // "insertRelocationStores" but works for rematerialized values.
 static void insertRematerializationStores(
     const RematerializedValueMapTy &RematerializedValues,
-    DenseMap<Value *, Value *> &AllocaMap,
+    DenseMap<Value *, AllocaInst *> &AllocaMap,
     DenseSet<Value *> &VisitedLiveValues) {
   for (auto RematerializedValuePair: RematerializedValues) {
     Instruction *RematerializedValue = RematerializedValuePair.first;
@@ -1704,7 +1704,7 @@ static void relocationViaAlloca(
 #endif
 
   // TODO-PERF: change data structures, reserve
-  DenseMap<Value *, Value *> AllocaMap;
+  DenseMap<Value *, AllocaInst *> AllocaMap;
   SmallVector<AllocaInst *, 200> PromotableAllocas;
   // Used later to chack that we have enough allocas to store all values
   std::size_t NumRematerializedValues = 0;
@@ -1774,7 +1774,7 @@ static void relocationViaAlloca(
       SmallVector<AllocaInst *, 64> ToClobber;
       for (auto Pair : AllocaMap) {
         Value *Def = Pair.first;
-        AllocaInst *Alloca = cast<AllocaInst>(Pair.second);
+        AllocaInst *Alloca = Pair.second;
 
         // This value was relocated
         if (VisitedLiveValues.count(Def)) {
@@ -1806,7 +1806,7 @@ static void relocationViaAlloca(
   // Update use with load allocas and add store for gc_relocated.
   for (auto Pair : AllocaMap) {
     Value *Def = Pair.first;
-    Value *Alloca = Pair.second;
+    AllocaInst *Alloca = Pair.second;
 
     // We pre-record the uses of allocas so that we dont have to worry about
     // later update that changes the user information..
@@ -1834,13 +1834,15 @@ static void relocationViaAlloca(
         PHINode *Phi = cast<PHINode>(Use);
         for (unsigned i = 0; i < Phi->getNumIncomingValues(); i++) {
           if (Def == Phi->getIncomingValue(i)) {
-            LoadInst *Load = new LoadInst(
-                Alloca, "", Phi->getIncomingBlock(i)->getTerminator());
+            LoadInst *Load =
+                new LoadInst(Alloca->getAllocatedType(), Alloca, "",
+                             Phi->getIncomingBlock(i)->getTerminator());
             Phi->setIncomingValue(i, Load);
           }
         }
       } else {
-        LoadInst *Load = new LoadInst(Alloca, "", Use);
+        LoadInst *Load =
+            new LoadInst(Alloca->getAllocatedType(), Alloca, "", Use);
         Use->replaceUsesOfWith(Def, Load);
       }
     }
@@ -1901,8 +1903,8 @@ static void insertUseHolderAfter(CallSite &CS, const ArrayRef<Value *> Values,
 
   Module *M = CS.getInstruction()->getModule();
   // Use a dummy vararg function to actually hold the values live
-  Function *Func = cast<Function>(M->getOrInsertFunction(
-      "__tmp_use", FunctionType::get(Type::getVoidTy(M->getContext()), true)));
+  FunctionCallee Func = M->getOrInsertFunction(
+      "__tmp_use", FunctionType::get(Type::getVoidTy(M->getContext()), true));
   if (CS.isCall()) {
     // For call safepoints insert dummy calls right after safepoint
     Holders.push_back(CallInst::Create(Func, Values, "",
@@ -2600,6 +2602,33 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
         MadeChange = true;
         Cond->moveBefore(TI);
       }
+  }
+
+  // Nasty workaround - The base computation code in the main algorithm doesn't
+  // consider the fact that a GEP can be used to convert a scalar to a vector.
+  // The right fix for this is to integrate GEPs into the base rewriting
+  // algorithm properly, this is just a short term workaround to prevent
+  // crashes by canonicalizing such GEPs into fully vector GEPs.
+  for (Instruction &I : instructions(F)) {
+    if (!isa<GetElementPtrInst>(I))
+      continue;
+
+    unsigned VF = 0;
+    for (unsigned i = 0; i < I.getNumOperands(); i++)
+      if (I.getOperand(i)->getType()->isVectorTy()) {
+        assert(VF == 0 ||
+               VF == I.getOperand(i)->getType()->getVectorNumElements());
+        VF = I.getOperand(i)->getType()->getVectorNumElements();
+      }
+
+    // It's the vector to scalar traversal through the pointer operand which
+    // confuses base pointer rewriting, so limit ourselves to that case.
+    if (!I.getOperand(0)->getType()->isVectorTy() && VF != 0) {
+      IRBuilder<> B(&I);
+      auto *Splat = B.CreateVectorSplat(VF, I.getOperand(0));
+      I.setOperand(0, Splat);
+      MadeChange = true;
+    }
   }
 
   MadeChange |= insertParsePoints(F, DT, TTI, ParsePointNeeded);

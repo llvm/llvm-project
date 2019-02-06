@@ -1,9 +1,8 @@
 //=====-- AMDGPUSubtarget.h - Define Subtarget for AMDGPU ------*- C++ -*-====//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //==-----------------------------------------------------------------------===//
 //
@@ -326,6 +325,7 @@ protected:
   bool EnableUnsafeDSOffsetFolding;
   bool EnableSIScheduler;
   bool EnableDS128;
+  bool EnablePRTStrictNull;
   bool DumpCode;
 
   // Subtarget statically properties set by tablegen
@@ -353,6 +353,7 @@ protected:
   bool HasDPP;
   bool HasR128A16;
   bool HasDLInsts;
+  bool HasDotInsts;
   bool EnableSRAMECC;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
@@ -576,6 +577,12 @@ public:
     return getGeneration() < AMDGPUSubtarget::GFX9;
   }
 
+  /// \returns If target requires PRT Struct NULL support (zero result registers
+  /// for sparse texture support).
+  bool usePRTStrictNull() const {
+    return EnablePRTStrictNull;
+  }
+
   bool hasAutoWaitcntBeforeBarrier() const {
     return AutoWaitcntBeforeBarrier;
   }
@@ -680,6 +687,10 @@ public:
     return HasDLInsts;
   }
 
+  bool hasDotInsts() const {
+    return HasDotInsts;
+  }
+
   bool isSRAMECCEnabled() const {
     return EnableSRAMECC;
   }
@@ -780,6 +791,9 @@ public:
     return HasScalarAtomics;
   }
 
+  bool hasLDSFPAtomics() const {
+    return VIInsts;
+  }
 
   bool hasDPP() const {
     return HasDPP;
@@ -815,6 +829,11 @@ public:
 
   bool has12DWordStoreHazard() const {
     return getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS;
+  }
+
+  // \returns true if the subtarget supports DWORDX3 load/store instructions.
+  bool hasDwordx3LoadStores() const {
+    return CIInsts;
   }
 
   bool hasSMovFedHazard() const {

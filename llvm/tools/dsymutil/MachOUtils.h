@@ -1,16 +1,18 @@
 //===-- MachOUtils.h - Mach-o specific helpers for dsymutil  --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 #define LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 
+#include "SymbolMap.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+
 #include <string>
 
 namespace llvm {
@@ -38,8 +40,8 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName, const LinkOptions &,
                              StringRef SDKPath);
 
-bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
-                           raw_fd_ostream &OutFile);
+bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
+                           MCStreamer &MS, raw_fd_ostream &OutFile);
 
 std::string getArchName(StringRef Arch);
 } // namespace MachOUtils

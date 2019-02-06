@@ -1,10 +1,9 @@
 # !/bin/bash
 #===-- merge-request.sh  ---------------------------------------------------===#
 #
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License.
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #===------------------------------------------------------------------------===#
 #
@@ -100,6 +99,9 @@ case $stable_version in
     ;;
   7.0)
     release_metabug="39106"
+    ;;
+  8.0)
+    release_metabug="40331"
     ;;
   *)
     echo "error: invalid stable version"

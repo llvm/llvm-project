@@ -1,9 +1,8 @@
 //===- SIInstrInfo.cpp - SI Instruction Information  ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,7 +13,6 @@
 
 #include "SIInstrInfo.h"
 #include "AMDGPU.h"
-#include "AMDGPUIntrinsicInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNHazardRecognizer.h"
 #include "SIDefines.h"
@@ -277,6 +275,11 @@ bool SIInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
     if (OffsetImm) {
       // Normal, single offset LDS instruction.
       BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
+      // TODO: ds_consume/ds_append use M0 for the base address. Is it safe to
+      // report that here?
+      if (!BaseOp)
+        return false;
+
       Offset = OffsetImm->getImm();
       assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
                                 "operands of type register.");
@@ -1154,7 +1157,7 @@ void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
   }
 }
 
-unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) const {
+unsigned SIInstrInfo::getNumWaitStates(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default: return 1; // FIXME: Do wait states equal cycles?
 
@@ -2390,6 +2393,16 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
          changesVGPRIndexingMode(MI);
 }
 
+bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
+  return Opcode == AMDGPU::DS_ORDERED_COUNT ||
+         Opcode == AMDGPU::DS_GWS_INIT ||
+         Opcode == AMDGPU::DS_GWS_SEMA_V ||
+         Opcode == AMDGPU::DS_GWS_SEMA_BR ||
+         Opcode == AMDGPU::DS_GWS_SEMA_P ||
+         Opcode == AMDGPU::DS_GWS_SEMA_RELEASE_ALL ||
+         Opcode == AMDGPU::DS_GWS_BARRIER;
+}
+
 bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
@@ -2403,7 +2416,8 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       EXEC = 0, but checking for that case here seems not worth it
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
-      Opcode == AMDGPU::EXP || Opcode == AMDGPU::EXP_DONE)
+      Opcode == AMDGPU::EXP || Opcode == AMDGPU::EXP_DONE ||
+      Opcode == AMDGPU::DS_ORDERED_COUNT)
     return true;
 
   if (MI.isInlineAsm())
@@ -2972,6 +2986,42 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  // Verify MIMG
+  if (isMIMG(MI.getOpcode()) && !MI.mayStore()) {
+    // Ensure that the return type used is large enough for all the options
+    // being used TFE/LWE require an extra result register.
+    const MachineOperand *DMask = getNamedOperand(MI, AMDGPU::OpName::dmask);
+    if (DMask) {
+      uint64_t DMaskImm = DMask->getImm();
+      uint32_t RegCount =
+          isGather4(MI.getOpcode()) ? 4 : countPopulation(DMaskImm);
+      const MachineOperand *TFE = getNamedOperand(MI, AMDGPU::OpName::tfe);
+      const MachineOperand *LWE = getNamedOperand(MI, AMDGPU::OpName::lwe);
+      const MachineOperand *D16 = getNamedOperand(MI, AMDGPU::OpName::d16);
+
+      // Adjust for packed 16 bit values
+      if (D16 && D16->getImm() && !ST.hasUnpackedD16VMem())
+        RegCount >>= 1;
+
+      // Adjust if using LWE or TFE
+      if ((LWE && LWE->getImm()) || (TFE && TFE->getImm()))
+        RegCount += 1;
+
+      const uint32_t DstIdx =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
+      const MachineOperand &Dst = MI.getOperand(DstIdx);
+      if (Dst.isReg()) {
+        const TargetRegisterClass *DstRC = getOpRegClass(MI, DstIdx);
+        uint32_t DstSize = RI.getRegSizeInBits(*DstRC) / 32;
+        if (RegCount > DstSize) {
+          ErrInfo = "MIMG instruction returns too many registers for dst "
+                    "register class";
+          return false;
+        }
+      }
+    }
+  }
+
   // Verify VOP*. Ignore multiple sgpr operands on writelane.
   if (Desc.getOpcode() != AMDGPU::V_WRITELANE_B32
       && (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isVOPC(MI) || isSDWA(MI))) {
@@ -3225,18 +3275,6 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
 
   unsigned RCID = Desc.OpInfo[OpNo].RegClass;
   return RI.getRegClass(RCID);
-}
-
-bool SIInstrInfo::canReadVGPR(const MachineInstr &MI, unsigned OpNo) const {
-  switch (MI.getOpcode()) {
-  case AMDGPU::COPY:
-  case AMDGPU::REG_SEQUENCE:
-  case AMDGPU::PHI:
-  case AMDGPU::INSERT_SUBREG:
-    return RI.hasVGPRs(getOpRegClass(MI, 0));
-  default:
-    return RI.hasVGPRs(getOpRegClass(MI, OpNo));
-  }
 }
 
 void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
@@ -4907,7 +4945,23 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
   for (MachineRegisterInfo::use_iterator I = MRI.use_begin(DstReg),
          E = MRI.use_end(); I != E;) {
     MachineInstr &UseMI = *I->getParent();
-    if (!canReadVGPR(UseMI, I.getOperandNo())) {
+
+    unsigned OpNo = 0;
+
+    switch (UseMI.getOpcode()) {
+    case AMDGPU::COPY:
+    case AMDGPU::WQM:
+    case AMDGPU::WWM:
+    case AMDGPU::REG_SEQUENCE:
+    case AMDGPU::PHI:
+    case AMDGPU::INSERT_SUBREG:
+      break;
+    default:
+      OpNo = I.getOperandNo();
+      break;
+    }
+
+    if (!RI.hasVGPRs(getOpRegClass(UseMI, OpNo))) {
       Worklist.insert(&UseMI);
 
       do {

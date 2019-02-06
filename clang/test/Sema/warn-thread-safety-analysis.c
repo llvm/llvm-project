@@ -77,7 +77,7 @@ int main() {
   Foo_fun1(1); // expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu2'}} \
                   expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu1' exclusively}}
 
-  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_lock(&mu1); // expected-note{{mutex acquired here}}
   mutex_shared_lock(&mu2);
   Foo_fun1(1);
 

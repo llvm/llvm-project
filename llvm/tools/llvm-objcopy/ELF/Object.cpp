@@ -1,9 +1,8 @@
 //===- Object.cpp ---------------------------------------------------------===//
 //
-//                      The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
@@ -49,8 +49,14 @@ template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
   Phdr.p_align = Seg.Align;
 }
 
-void SectionBase::removeSectionReferences(const SectionBase *Sec) {}
-void SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {}
+Error SectionBase::removeSectionReferences(const SectionBase *Sec) {
+  return Error::success();
+}
+
+Error SectionBase::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  return Error::success();
+}
+
 void SectionBase::initialize(SectionTableRef SecTable) {}
 void SectionBase::finalize() {}
 void SectionBase::markSymbols() {}
@@ -71,7 +77,46 @@ template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
   Shdr.sh_entsize = Sec.EntrySize;
 }
 
-SectionVisitor::~SectionVisitor() {}
+template <class ELFT> void ELFSectionSizer<ELFT>::visit(Section &Sec) {}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(OwnedDataSection &Sec) {}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(StringTableSection &Sec) {}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(DynamicRelocationSection &Sec) {}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(SymbolTableSection &Sec) {
+  Sec.EntrySize = sizeof(Elf_Sym);
+  Sec.Size = Sec.Symbols.size() * Sec.EntrySize;
+  // Align to the largest field in Elf_Sym.
+  Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
+}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(RelocationSection &Sec) {
+  Sec.EntrySize = Sec.Type == SHT_REL ? sizeof(Elf_Rel) : sizeof(Elf_Rela);
+  Sec.Size = Sec.Relocations.size() * Sec.EntrySize;
+  // Align to the largest field in Elf_Rel(a).
+  Sec.Align = ELFT::Is64Bits ? sizeof(Elf_Xword) : sizeof(Elf_Word);
+}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(GnuDebugLinkSection &Sec) {}
+
+template <class ELFT> void ELFSectionSizer<ELFT>::visit(GroupSection &Sec) {}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(SectionIndexSection &Sec) {}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(CompressedSection &Sec) {}
+
+template <class ELFT>
+void ELFSectionSizer<ELFT>::visit(DecompressedSection &Sec) {}
 
 void BinarySectionWriter::visit(const SectionIndexSection &Sec) {
   error("Cannot write symbol section index table '" + Sec.Name + "' ");
@@ -101,6 +146,8 @@ void SectionWriter::visit(const Section &Sec) {
 }
 
 void Section::accept(SectionVisitor &Visitor) const { Visitor.visit(*this); }
+
+void Section::accept(MutableSectionVisitor &Visitor) { Visitor.visit(*this); }
 
 void SectionWriter::visit(const OwnedDataSection &Sec) {
   uint8_t *Buf = Out.getBufferStart() + Sec.Offset;
@@ -164,7 +211,15 @@ void DecompressedSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
+void DecompressedSection::accept(MutableSectionVisitor &Visitor) {
+  Visitor.visit(*this);
+}
+
 void OwnedDataSection::accept(SectionVisitor &Visitor) const {
+  Visitor.visit(*this);
+}
+
+void OwnedDataSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
@@ -246,6 +301,10 @@ void CompressedSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
+void CompressedSection::accept(MutableSectionVisitor &Visitor) {
+  Visitor.visit(*this);
+}
+
 void StringTableSection::addString(StringRef Name) {
   StrTabBuilder.add(Name);
   Size = StrTabBuilder.getSize();
@@ -262,6 +321,10 @@ void SectionWriter::visit(const StringTableSection &Sec) {
 }
 
 void StringTableSection::accept(SectionVisitor &Visitor) const {
+  Visitor.visit(*this);
+}
+
+void StringTableSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
@@ -285,6 +348,10 @@ void SectionIndexSection::initialize(SectionTableRef SecTable) {
 void SectionIndexSection::finalize() { Link = Symbols->Index; }
 
 void SectionIndexSection::accept(SectionVisitor &Visitor) const {
+  Visitor.visit(*this);
+}
+
+void SectionIndexSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
@@ -365,15 +432,17 @@ void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
   Size += this->EntrySize;
 }
 
-void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
+Error SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
   if (SectionIndexTable == Sec)
     SectionIndexTable = nullptr;
   if (SymbolNames == Sec) {
-    error("String table " + SymbolNames->Name +
-          " cannot be removed because it is referenced by the symbol table " +
-          this->Name);
+    return createStringError(llvm::errc::invalid_argument,
+                             "String table %s cannot be removed because it is "
+                             "referenced by the symbol table %s",
+                             SymbolNames->Name.data(), this->Name.data());
   }
-  removeSymbols([Sec](const Symbol &Sym) { return Sym.DefinedIn == Sec; });
+  return removeSymbols(
+      [Sec](const Symbol &Sym) { return Sym.DefinedIn == Sec; });
 }
 
 void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
@@ -385,7 +454,7 @@ void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
   assignIndices();
 }
 
-void SymbolTableSection::removeSymbols(
+Error SymbolTableSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   Symbols.erase(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
@@ -393,6 +462,7 @@ void SymbolTableSection::removeSymbols(
       std::end(Symbols));
   Size = Symbols.size() * EntrySize;
   assignIndices();
+  return Error::success();
 }
 
 void SymbolTableSection::initialize(SectionTableRef SecTable) {
@@ -470,16 +540,19 @@ void SymbolTableSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
+void SymbolTableSection::accept(MutableSectionVisitor &Visitor) {
+  Visitor.visit(*this);
+}
+
 template <class SymTabType>
-void RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
+Error RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
     const SectionBase *Sec) {
-  if (Symbols == Sec) {
-    error("Symbol table " + Symbols->Name +
-          " cannot be removed because it is "
-          "referenced by the relocation "
-          "section " +
-          this->Name);
-  }
+  if (Symbols == Sec)
+    return createStringError(llvm::errc::invalid_argument,
+                             "Symbol table %s cannot be removed because it is "
+                             "referenced by the relocation section %s.",
+                             Symbols->Name.data(), this->Name.data());
+  return Error::success();
 }
 
 template <class SymTabType>
@@ -540,12 +613,19 @@ void RelocationSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
-void RelocationSection::removeSymbols(
+void RelocationSection::accept(MutableSectionVisitor &Visitor) {
+  Visitor.visit(*this);
+}
+
+Error RelocationSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   for (const Relocation &Reloc : Relocations)
     if (ToRemove(*Reloc.RelocSymbol))
-      error("not stripping symbol '" + Reloc.RelocSymbol->Name +
-            "' because it is named in a relocation");
+      return createStringError(
+          llvm::errc::invalid_argument,
+          "not stripping symbol '%s' because it is named in a relocation.",
+          Reloc.RelocSymbol->Name.data());
+  return Error::success();
 }
 
 void RelocationSection::markSymbols() {
@@ -562,13 +642,17 @@ void DynamicRelocationSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
-void Section::removeSectionReferences(const SectionBase *Sec) {
-  if (LinkSection == Sec) {
-    error("Section " + LinkSection->Name +
-          " cannot be removed because it is "
-          "referenced by the section " +
-          this->Name);
-  }
+void DynamicRelocationSection::accept(MutableSectionVisitor &Visitor) {
+  Visitor.visit(*this);
+}
+
+Error Section::removeSectionReferences(const SectionBase *Sec) {
+  if (LinkSection == Sec)
+    return createStringError(llvm::errc::invalid_argument,
+                             "Section %s cannot be removed because it is "
+                             "referenced by the section %s",
+                             LinkSection->Name.data(), this->Name.data());
+  return Error::success();
 }
 
 void GroupSection::finalize() {
@@ -576,13 +660,13 @@ void GroupSection::finalize() {
   this->Link = SymTab->Index;
 }
 
-void GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
-  if (ToRemove(*Sym)) {
-    error("Symbol " + Sym->Name +
-          " cannot be removed because it is "
-          "referenced by the section " +
-          this->Name + "[" + Twine(this->Index) + "]");
-  }
+Error GroupSection::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  if (ToRemove(*Sym))
+    return createStringError(llvm::errc::invalid_argument,
+                             "Symbol %s cannot be removed because it is "
+                             "referenced by the section %s[%d].",
+                             Sym->Name.data(), this->Name.data(), this->Index);
+  return Error::success();
 }
 
 void GroupSection::markSymbols() {
@@ -648,6 +732,10 @@ void GnuDebugLinkSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
+void GnuDebugLinkSection::accept(MutableSectionVisitor &Visitor) {
+  Visitor.visit(*this);
+}
+
 template <class ELFT>
 void ELFSectionWriter<ELFT>::visit(const GroupSection &Sec) {
   ELF::Elf32_Word *Buf =
@@ -658,6 +746,10 @@ void ELFSectionWriter<ELFT>::visit(const GroupSection &Sec) {
 }
 
 void GroupSection::accept(SectionVisitor &Visitor) const {
+  Visitor.visit(*this);
+}
+
+void GroupSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
@@ -700,7 +792,7 @@ static bool compareSegmentsByPAddr(const Segment *A, const Segment *B) {
   return A->Index < B->Index;
 }
 
-template <class ELFT> void BinaryELFBuilder<ELFT>::initFileHeader() {
+void BinaryELFBuilder::initFileHeader() {
   Obj->Flags = 0x0;
   Obj->Type = ET_REL;
   Obj->OSABI = ELFOSABI_NONE;
@@ -710,11 +802,9 @@ template <class ELFT> void BinaryELFBuilder<ELFT>::initFileHeader() {
   Obj->Version = 1;
 }
 
-template <class ELFT> void BinaryELFBuilder<ELFT>::initHeaderSegment() {
-  Obj->ElfHdrSegment.Index = 0;
-}
+void BinaryELFBuilder::initHeaderSegment() { Obj->ElfHdrSegment.Index = 0; }
 
-template <class ELFT> StringTableSection *BinaryELFBuilder<ELFT>::addStrTab() {
+StringTableSection *BinaryELFBuilder::addStrTab() {
   auto &StrTab = Obj->addSection<StringTableSection>();
   StrTab.Name = ".strtab";
 
@@ -722,15 +812,11 @@ template <class ELFT> StringTableSection *BinaryELFBuilder<ELFT>::addStrTab() {
   return &StrTab;
 }
 
-template <class ELFT>
-SymbolTableSection *
-BinaryELFBuilder<ELFT>::addSymTab(StringTableSection *StrTab) {
+SymbolTableSection *BinaryELFBuilder::addSymTab(StringTableSection *StrTab) {
   auto &SymTab = Obj->addSection<SymbolTableSection>();
 
   SymTab.Name = ".symtab";
   SymTab.Link = StrTab->Index;
-  // TODO: Factor out dependence on ElfType here.
-  SymTab.EntrySize = sizeof(Elf_Sym);
 
   // The symbol table always needs a null symbol
   SymTab.addSymbol("", 0, 0, nullptr, 0, 0, 0, 0);
@@ -739,8 +825,7 @@ BinaryELFBuilder<ELFT>::addSymTab(StringTableSection *StrTab) {
   return &SymTab;
 }
 
-template <class ELFT>
-void BinaryELFBuilder<ELFT>::addData(SymbolTableSection *SymTab) {
+void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
   auto Data = ArrayRef<uint8_t>(
       reinterpret_cast<const uint8_t *>(MemBuf->getBufferStart()),
       MemBuf->getBufferSize());
@@ -763,13 +848,13 @@ void BinaryELFBuilder<ELFT>::addData(SymbolTableSection *SymTab) {
                     /*Value=*/DataSection.Size, STV_DEFAULT, SHN_ABS, 0);
 }
 
-template <class ELFT> void BinaryELFBuilder<ELFT>::initSections() {
+void BinaryELFBuilder::initSections() {
   for (auto &Section : Obj->sections()) {
     Section.initialize(Obj->sections());
   }
 }
 
-template <class ELFT> std::unique_ptr<Object> BinaryELFBuilder<ELFT>::build() {
+std::unique_ptr<Object> BinaryELFBuilder::build() {
   initFileHeader();
   initHeaderSegment();
   StringTableSection *StrTab = addStrTab();
@@ -1122,14 +1207,7 @@ Writer::~Writer() {}
 Reader::~Reader() {}
 
 std::unique_ptr<Object> BinaryReader::create() const {
-  if (MInfo.Is64Bit)
-    return MInfo.IsLittleEndian
-               ? BinaryELFBuilder<ELF64LE>(MInfo.EMachine, MemBuf).build()
-               : BinaryELFBuilder<ELF64BE>(MInfo.EMachine, MemBuf).build();
-  else
-    return MInfo.IsLittleEndian
-               ? BinaryELFBuilder<ELF32LE>(MInfo.EMachine, MemBuf).build()
-               : BinaryELFBuilder<ELF32BE>(MInfo.EMachine, MemBuf).build();
+  return BinaryELFBuilder(MInfo.EMachine, MemBuf).build();
 }
 
 std::unique_ptr<Object> ELFReader::create() const {
@@ -1251,7 +1329,8 @@ template <class ELFT> void ELFWriter<ELFT>::writeSectionData() {
     Sec.accept(*SecWriter);
 }
 
-void Object::removeSections(std::function<bool(const SectionBase &)> ToRemove) {
+Error Object::removeSections(
+    std::function<bool(const SectionBase &)> ToRemove) {
 
   auto Iter = std::stable_partition(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
@@ -1276,18 +1355,20 @@ void Object::removeSections(std::function<bool(const SectionBase &)> ToRemove) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
     for (auto &KeepSec : make_range(std::begin(Sections), Iter))
-      KeepSec->removeSectionReferences(RemoveSec.get());
+      if (Error E = KeepSec->removeSectionReferences(RemoveSec.get()))
+        return E;
   }
   // Now finally get rid of them all togethor.
   Sections.erase(Iter, std::end(Sections));
+  return Error::success();
 }
 
-void Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
-  if (!SymbolTable)
-    return;
-
-  for (const SecPtr &Sec : Sections)
-    Sec->removeSymbols(ToRemove);
+Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
+  if (SymbolTable)
+    for (const SecPtr &Sec : Sections)
+      if (Error E = Sec->removeSymbols(ToRemove))
+        return E;
+  return Error::success();
 }
 
 void Object::sortSections() {
@@ -1422,23 +1503,23 @@ template <class ELFT> size_t ELFWriter<ELFT>::totalSize() const {
          NullSectionSize;
 }
 
-template <class ELFT> void ELFWriter<ELFT>::write() {
+template <class ELFT> Error ELFWriter<ELFT>::write() {
   writeEhdr();
   writePhdrs();
   writeSectionData();
   if (WriteSectionHeaders)
     writeShdrs();
-  if (auto E = Buf.commit())
-    reportError(Buf.getName(), errorToErrorCode(std::move(E)));
+  return Buf.commit();
 }
 
-template <class ELFT> void ELFWriter<ELFT>::finalize() {
+template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // It could happen that SectionNames has been removed and yet the user wants
   // a section header table output. We need to throw an error if a user tries
   // to do that.
   if (Obj.SectionNames == nullptr && WriteSectionHeaders)
-    error("Cannot write section header table because section header string "
-          "table was removed.");
+    return createStringError(llvm::errc::invalid_argument,
+                             "Cannot write section header table because "
+                             "section header string table was removed.");
 
   Obj.sortSections();
 
@@ -1469,9 +1550,10 @@ template <class ELFT> void ELFWriter<ELFT>::finalize() {
     // Since we don't need SectionIndexTable we should remove it and all
     // references to it.
     if (Obj.SectionIndexTable != nullptr) {
-      Obj.removeSections([this](const SectionBase &Sec) {
-        return &Sec == Obj.SectionIndexTable;
-      });
+      if (Error E = Obj.removeSections([this](const SectionBase &Sec) {
+            return &Sec == Obj.SectionIndexTable;
+          }))
+        return E;
     }
   }
 
@@ -1483,10 +1565,16 @@ template <class ELFT> void ELFWriter<ELFT>::finalize() {
     }
 
   initEhdrSegment();
+
   // Before we can prepare for layout the indexes need to be finalized.
+  // Also, the output arch may not be the same as the input arch, so fix up
+  // size-related fields before doing layout calculations.
   uint64_t Index = 0;
-  for (auto &Sec : Obj.sections())
+  auto SecSizer = llvm::make_unique<ELFSectionSizer<ELFT>>();
+  for (auto &Sec : Obj.sections()) {
     Sec.Index = Index++;
+    Sec.accept(*SecSizer);
+  }
 
   // The symbol table does not update all other sections on update. For
   // instance, symbol names are not added as new symbols are added. This means
@@ -1510,21 +1598,22 @@ template <class ELFT> void ELFWriter<ELFT>::finalize() {
     Section.finalize();
   }
 
-  Buf.allocate(totalSize());
+  if (Error E = Buf.allocate(totalSize()))
+    return E;
   SecWriter = llvm::make_unique<ELFSectionWriter<ELFT>>(Buf);
+  return Error::success();
 }
 
-void BinaryWriter::write() {
+Error BinaryWriter::write() {
   for (auto &Section : Obj.sections()) {
     if ((Section.Flags & SHF_ALLOC) == 0)
       continue;
     Section.accept(*SecWriter);
   }
-  if (auto E = Buf.commit())
-    reportError(Buf.getName(), errorToErrorCode(std::move(E)));
+  return Buf.commit();
 }
 
-void BinaryWriter::finalize() {
+Error BinaryWriter::finalize() {
   // TODO: Create a filter range to construct OrderedSegments from so that this
   // code can be deduped with assignOffsets above. This should also solve the
   // todo below for LayoutSections.
@@ -1603,14 +1692,11 @@ void BinaryWriter::finalize() {
       TotalSize = std::max(TotalSize, Section->Offset + Section->Size);
   }
 
-  Buf.allocate(TotalSize);
+  if (Error E = Buf.allocate(TotalSize))
+    return E;
   SecWriter = llvm::make_unique<BinarySectionWriter>(Buf);
+  return Error::success();
 }
-
-template class BinaryELFBuilder<ELF64LE>;
-template class BinaryELFBuilder<ELF64BE>;
-template class BinaryELFBuilder<ELF32LE>;
-template class BinaryELFBuilder<ELF32BE>;
 
 template class ELFBuilder<ELF64LE>;
 template class ELFBuilder<ELF64BE>;

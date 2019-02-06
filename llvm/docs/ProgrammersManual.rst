@@ -656,19 +656,21 @@ taken is to report them to the user so that the user can attempt to fix the
 environment. In this case representing the error as a string makes perfect
 sense. LLVM provides the ``StringError`` class for this purpose. It takes two
 arguments: A string error message, and an equivalent ``std::error_code`` for
-interoperability:
+interoperability. It also provides a ``createStringError`` function to simplify
+common usage of this class:
 
 .. code-block:: c++
 
-  make_error<StringError>("Bad executable",
-                          make_error_code(errc::executable_format_error"));
+  // These two lines of code are equivalent:
+  make_error<StringError>("Bad executable", errc::executable_format_error);
+  createStringError(errc::executable_format_error, "Bad executable");
 
 If you're certain that the error you're building will never need to be converted
 to a ``std::error_code`` you can use the ``inconvertibleErrorCode()`` function:
 
 .. code-block:: c++
 
-  make_error<StringError>("Bad executable", inconvertibleErrorCode());
+  createStringError(inconvertibleErrorCode(), "Bad executable");
 
 This should be done only after careful consideration. If any attempt is made to
 convert this error to a ``std::error_code`` it will trigger immediate program
@@ -676,6 +678,14 @@ termination. Unless you are certain that your errors will not need
 interoperability you should look for an existing ``std::error_code`` that you
 can convert to, and even (as painful as it is) consider introducing a new one as
 a stopgap measure.
+
+``createStringError`` can take ``printf`` style format specifiers to provide a
+formatted message:
+
+.. code-block:: c++
+
+  createStringError(errc::executable_format_error,
+                    "Bad executable: %s", FileName);
 
 Interoperability with std::error_code and ErrorOr
 """""""""""""""""""""""""""""""""""""""""""""""""
@@ -1456,7 +1466,7 @@ SmallVector has grown a few other minor advantages over std::vector, causing
 #. std::vector is exception-safe, and some implementations have pessimizations
    that copy elements when SmallVector would move them.
 
-#. SmallVector understands ``isPodLike<Type>`` and uses realloc aggressively.
+#. SmallVector understands ``llvm::is_trivially_copyable<Type>`` and uses realloc aggressively.
 
 #. Many LLVM APIs take a SmallVectorImpl as an out parameter (see the note
    below).
@@ -2905,37 +2915,6 @@ For example:
   GV->eraseFromParent();
 
 
-.. _create_types:
-
-How to Create Types
--------------------
-
-In generating IR, you may need some complex types.  If you know these types
-statically, you can use ``TypeBuilder<...>::get()``, defined in
-``llvm/Support/TypeBuilder.h``, to retrieve them.  ``TypeBuilder`` has two forms
-depending on whether you're building types for cross-compilation or native
-library use.  ``TypeBuilder<T, true>`` requires that ``T`` be independent of the
-host environment, meaning that it's built out of types from the ``llvm::types``
-(`doxygen <http://llvm.org/doxygen/namespacellvm_1_1types.html>`__) namespace
-and pointers, functions, arrays, etc. built of those.  ``TypeBuilder<T, false>``
-additionally allows native C types whose size may depend on the host compiler.
-For example,
-
-.. code-block:: c++
-
-  FunctionType *ft = TypeBuilder<types::i<8>(types::i<32>*), true>::get();
-
-is easier to read and write than the equivalent
-
-.. code-block:: c++
-
-  std::vector<const Type*> params;
-  params.push_back(PointerType::getUnqual(Type::Int32Ty));
-  FunctionType *ft = FunctionType::get(Type::Int8Ty, params, false);
-
-See the `class comment
-<http://llvm.org/doxygen/TypeBuilder_8h_source.html#l00001>`_ for more details.
-
 .. _threading:
 
 Threads and LLVM
@@ -3522,11 +3501,17 @@ Important Public Members of the ``Module`` class
   Look up the specified function in the ``Module`` SymbolTable_.  If it does not
   exist, return ``null``.
 
-* ``Function *getOrInsertFunction(const std::string &Name, const FunctionType
-  *T)``
+* ``FunctionCallee getOrInsertFunction(const std::string &Name,
+  const FunctionType *T)``
 
-  Look up the specified function in the ``Module`` SymbolTable_.  If it does not
-  exist, add an external declaration for the function and return it.
+  Look up the specified function in the ``Module`` SymbolTable_.  If
+  it does not exist, add an external declaration for the function and
+  return it. Note that the function signature already present may not
+  match the requested signature. Thus, in order to enable the common
+  usage of passing the result directly to EmitCall, the return type is
+  a struct of ``{FunctionType *T, Constant *FunctionPtr}``, rather
+  than simply the ``Function*`` with potentially an unexpected
+  signature.
 
 * ``std::string getTypeName(const Type *Ty)``
 

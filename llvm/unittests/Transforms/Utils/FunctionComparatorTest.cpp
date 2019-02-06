@@ -1,9 +1,8 @@
 //===- FunctionComparator.cpp - Unit tests for FunctionComparator ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Transforms/Utils/FunctionComparator.h"
@@ -32,7 +31,7 @@ struct TestFunction {
     BB = BasicBlock::Create(Ctx, "", F);
     B.SetInsertPoint(BB);
     Argument *PointerArg = &*F->arg_begin();
-    LoadInst *LoadInst = B.CreateLoad(PointerArg);
+    LoadInst *LoadInst = B.CreateLoad(T, PointerArg);
     C = B.getInt8(addVal);
     I = cast<Instruction>(B.CreateAdd(LoadInst, C));
     B.CreateRet(I);

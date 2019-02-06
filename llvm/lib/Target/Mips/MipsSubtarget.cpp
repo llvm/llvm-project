@@ -1,9 +1,8 @@
 //===-- MipsSubtarget.cpp - Mips Subtarget Information --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -73,7 +72,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                              unsigned StackAlignOverride)
     : MipsGenSubtargetInfo(TT, CPU, FS), MipsArchVersion(MipsDefault),
       IsLittle(little), IsSoftFloat(false), IsSingleFloat(false), IsFPXX(false),
-      NoABICalls(false), IsFP64bit(false), UseOddSPReg(true),
+      NoABICalls(false), Abs2008(false), IsFP64bit(false), UseOddSPReg(true),
       IsNaN2008bit(false), IsGP64bit(false), HasVFPU(false), HasCnMips(false),
       HasMips3_32(false), HasMips3_32r2(false), HasMips4_32(false),
       HasMips4_32r2(false), HasMips5_32r2(false), InMips16Mode(false),
@@ -129,11 +128,18 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       report_fatal_error(
           "indirect jumps with hazard barriers requires MIPS32R2 or later");
   }
+  if (inAbs2008Mode() && hasMips32() && !hasMips32r2()) {
+    report_fatal_error("IEEE 754-2008 abs.fmt is not supported for the given "
+                       "architecture.",
+                       false);
+  }
+
   if (hasMips32r6()) {
     StringRef ISA = hasMips64r6() ? "MIPS64r6" : "MIPS32r6";
 
     assert(isFP64bit());
     assert(isNaN2008());
+    assert(inAbs2008Mode());
     if (hasDSP())
       report_fatal_error(ISA + " is not compatible with the DSP ASE", false);
   }

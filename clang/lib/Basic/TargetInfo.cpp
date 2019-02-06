@@ -1,9 +1,8 @@
 //===--- TargetInfo.cpp - Information about Target machine ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,6 +34,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   NoAsmVariants = false;
   HasLegalHalfType = false;
   HasFloat128 = false;
+  HasFloat16 = false;
   PointerWidth = PointerAlign = 32;
   BoolWidth = BoolAlign = 8;
   IntWidth = IntAlign = 32;
@@ -795,4 +795,10 @@ void TargetInfo::CheckFixedPointBits() const {
   assert(getShortAccumIBits() >= getUnsignedShortAccumIBits());
   assert(getAccumIBits() >= getUnsignedAccumIBits());
   assert(getLongAccumIBits() >= getUnsignedLongAccumIBits());
+}
+
+void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
+  auto *Target = static_cast<TransferrableTargetInfo*>(this);
+  auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
+  *Target = *Src;
 }

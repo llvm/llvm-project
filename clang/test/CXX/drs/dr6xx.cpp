@@ -839,7 +839,7 @@ namespace dr673 { // dr673: yes
   F *f; // expected-error {{unknown type name}}
 }
 
-namespace dr674 { // dr674: no
+namespace dr674 { // dr674: 8
   template<typename T> int f(T);
 
   int g(int);
@@ -849,22 +849,50 @@ namespace dr674 { // dr674: no
   template<typename T> int h(T);
 
   class X {
-    // FIXME: This should deduce dr674::f<int>.
-    friend int dr674::f(int); // expected-error {{does not match any}}
+    friend int dr674::f(int);
     friend int dr674::g(int);
     friend int dr674::h<>(int);
-    int n;
+    int n; // expected-note 2{{private}}
   };
 
   template<typename T> int f(T) { return X().n; }
   int g(int) { return X().n; }
-  template<typename T> int g(T) { return X().n; }
-  int h(int) { return X().n; }
+  template<typename T> int g(T) { return X().n; } // expected-error {{private}}
+  int h(int) { return X().n; } // expected-error {{private}}
   template<typename T> int h(T) { return X().n; }
 
   template int f(int);
-  template int g(int);
+  template int g(int); // expected-note {{in instantiation of}}
   template int h(int);
+
+
+  struct Y {
+    template<typename T> int f(T);
+
+    int g(int);
+    template<typename T> int g(T);
+
+    int h(int);
+    template<typename T> int h(T);
+  };
+
+  class Z {
+    friend int Y::f(int);
+    friend int Y::g(int);
+    friend int Y::h<>(int);
+    int n; // expected-note 2{{private}}
+  };
+
+  template<typename T> int Y::f(T) { return Z().n; }
+  int Y::g(int) { return Z().n; }
+  template<typename T> int Y::g(T) { return Z().n; } // expected-error {{private}}
+  int Y::h(int) { return Z().n; } // expected-error {{private}}
+  template<typename T> int Y::h(T) { return Z().n; }
+
+  // FIXME: Should the <> be required here?
+  template int Y::f<>(int);
+  template int Y::g<>(int); // expected-note {{in instantiation of}}
+  template int Y::h<>(int);
 }
 
 namespace dr675 { // dr675: dup 739

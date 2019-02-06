@@ -1,9 +1,8 @@
 //===- llvm/Analysis/ValueTracking.h - Walk computations --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -297,10 +296,10 @@ class Value;
 
   /// This function returns call pointer argument that is considered the same by
   /// aliasing rules. You CAN'T use it to replace one value with another.
-  const Value *getArgumentAliasingToReturnedPointer(ImmutableCallSite CS);
-  inline Value *getArgumentAliasingToReturnedPointer(CallSite CS) {
-    return const_cast<Value *>(
-        getArgumentAliasingToReturnedPointer(ImmutableCallSite(CS)));
+  const Value *getArgumentAliasingToReturnedPointer(const CallBase *Call);
+  inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call) {
+    return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
+        const_cast<const CallBase *>(Call)));
   }
 
   // {launder,strip}.invariant.group returns pointer that aliases its argument,
@@ -309,7 +308,7 @@ class Value;
   // considered as capture. The arguments are not marked as returned neither,
   // because it would make it useless.
   bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-      ImmutableCallSite CS);
+      const CallBase *Call);
 
   /// This method strips off any GEP address adjustments and pointer casts from
   /// the specified value, returning the original object being addressed. Note

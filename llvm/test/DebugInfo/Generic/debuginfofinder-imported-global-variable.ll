@@ -29,7 +29,7 @@
 !2 = !DINamespace(name: "s", scope: null)
 !3 = !DIFile(filename: "source.cpp", directory: "/somewhere")
 !4 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 7.0.99 (https://git.llvm.org/git/clang.git/ ec45e6c6530b8f9a1046d0a7efae467b3151783b) (https://git.llvm.org/git/llvm.git/ 9d2fcc2bf4a301d05d9b440a805847645637ab28)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !6, globals: !7, imports: !8)
+!5 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 7.0.99", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !6, globals: !7, imports: !8)
 !6 = !{}
 !7 = !{!0}
 !8 = !{!9}
@@ -38,4 +38,4 @@
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
 !13 = !{i32 7, !"PIC Level", i32 2}
-!14 = !{!"clang version 7.0.99 (https://git.llvm.org/git/clang.git/ ec45e6c6530b8f9a1046d0a7efae467b3151783b) (https://git.llvm.org/git/llvm.git/ 9d2fcc2bf4a301d05d9b440a805847645637ab28)"}
+!14 = !{!"clang version 7.0.99"}

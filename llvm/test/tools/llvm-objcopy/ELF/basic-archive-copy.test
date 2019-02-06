@@ -8,9 +8,9 @@
 # RUN: llvm-ar p %t2.a > %t3
 # RUN: cmp %t2 %t3
 
-# RUN: llvm-readobj -sections %t2 | FileCheck %s
-# RUN: llvm-nm -print-armap %t.a | FileCheck --check-prefix=INDEX-TABLE %s
-# RUN: llvm-nm -print-armap %t2.a | FileCheck --check-prefix=INDEX-TABLE %s
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=INDEX-TABLE %s
+# RUN: llvm-nm --print-armap %t2.a | FileCheck --check-prefix=INDEX-TABLE %s
 # Verify that llvm-objcopy has not modifed the input.
 # RUN: cmp %t.copy.a %t.a
 
@@ -22,8 +22,8 @@
 # RUN: llvm-objcopy %t.no.index.a %t2.no.index.a
 # RUN: llvm-ar p %t2.no.index.a > %t4
 
-# RUN: llvm-nm -print-armap %t.no.index.a | FileCheck --check-prefix=NO-INDEX-TABLE %s
-# RUN: llvm-nm -print-armap %t2.no.index.a | FileCheck --check-prefix=NO-INDEX-TABLE %s
+# RUN: llvm-nm --print-armap %t.no.index.a | FileCheck --check-prefix=NO-INDEX-TABLE %s
+# RUN: llvm-nm --print-armap %t2.no.index.a | FileCheck --check-prefix=NO-INDEX-TABLE %s
 # RUN: cmp %t2 %t4
 
 # NO-INDEX-TABLE-NOT: Archive map

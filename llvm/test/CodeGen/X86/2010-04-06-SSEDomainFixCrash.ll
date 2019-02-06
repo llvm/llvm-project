@@ -1,4 +1,4 @@
-; RUN: llc < %s -O3 -relocation-model=pic -disable-fp-elim -mcpu=nocona
+; RUN: llc < %s -O3 -relocation-model=pic -frame-pointer=all -mcpu=nocona
 ;
 ; This test case is reduced from Bullet. It crashes SSEDomainFix.
 ;

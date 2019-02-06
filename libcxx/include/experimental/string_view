@@ -1,11 +1,20 @@
 // -*- C++ -*-
 //===------------------------ string_view ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifndef _LIBCPP_EXPERIMENTAL_STRING_VIEW
+#define _LIBCPP_EXPERIMENTAL_STRING_VIEW
 
-#error "<experimental/string_view> has been removed. Use <string_view> instead."
+#include <__config>
+
+#ifdef _LIBCPP_WARNING
+_LIBCPP_WARNING("<experimental/string_view> has been removed. Use <string_view> instead.")
+#else
+# warning "<experimental/string_view> has been removed. Use <string_view> instead."
+#endif
+
+#endif // _LIBCPP_EXPERIMENTAL_STRING_VIEW

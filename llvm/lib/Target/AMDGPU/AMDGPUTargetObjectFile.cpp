@@ -1,9 +1,8 @@
 //===-- AMDGPUHSATargetObjectFile.cpp - AMDGPU Object Files ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,7 +33,7 @@ MCSection *AMDGPUTargetObjectFile::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind SK, const TargetMachine &TM) const {
   // Set metadata access for the explicit section
   StringRef SectionName = GO->getSection();
-  if (SectionName.startswith(".AMDGPU.metadata."))
+  if (SectionName.startswith(".AMDGPU.comment."))
     SK = SectionKind::getMetadata();
 
   return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, SK, TM);

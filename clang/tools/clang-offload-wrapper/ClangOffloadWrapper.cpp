@@ -288,7 +288,7 @@ private:
     // Get RegFuncName function declaration.
     auto *RegFuncTy =
         FunctionType::get(Type::getVoidTy(C), {getBinDescPtrTy()}, false);
-    auto *RegFunc = M.getOrInsertFunction(RegFuncName, RegFuncTy);
+    FunctionCallee RegFunc = M.getOrInsertFunction(RegFuncName, RegFuncTy);
 
     // Construct function body
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -308,7 +308,7 @@ private:
     // Get UnregFuncName function declaration.
     auto *UnRegFuncTy =
         FunctionType::get(Type::getVoidTy(C), {getBinDescPtrTy()}, false);
-    auto *UnRegFunc = M.getOrInsertFunction(UnregFuncName, UnRegFuncTy);
+    FunctionCallee UnRegFunc = M.getOrInsertFunction(UnregFuncName, UnRegFuncTy);
 
     // Construct function body
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));

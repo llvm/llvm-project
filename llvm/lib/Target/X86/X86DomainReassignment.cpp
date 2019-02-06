@@ -1,9 +1,8 @@
 //===--- X86DomainReassignment.cpp - Selectively switch register classes---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -732,7 +731,10 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<X86Subtarget>();
   // GPR->K is the only transformation currently supported, bail out early if no
   // AVX512.
-  if (!STI->hasAVX512())
+  // TODO: We're also bailing of AVX512BW isn't supported since we use VK32 and
+  // VK64 for GR32/GR64, but those aren't legal classes on KNL. If the register
+  // coalescer doesn't clean it up and we generate a spill we will crash.
+  if (!STI->hasAVX512() || !STI->hasBWI())
     return false;
 
   MRI = &MF.getRegInfo();

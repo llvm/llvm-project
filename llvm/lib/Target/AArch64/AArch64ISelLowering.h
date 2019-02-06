@@ -1,9 +1,8 @@
 //==-- AArch64ISelLowering.h - AArch64 DAG Lowering Interface ----*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -409,7 +408,7 @@ public:
 
   void insertSSPDeclarations(Module &M) const override;
   Value *getSDagStackGuard(const Module &M) const override;
-  Value *getSSPStackGuardCheck(const Module &M) const override;
+  Function *getSSPStackGuardCheck(const Module &M) const override;
 
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
@@ -468,6 +467,12 @@ public:
       return hasAndNotCompare(Y);
 
     return VT.getSizeInBits() >= 64; // vector 'bic'
+  }
+
+  bool shouldExpandShift(SelectionDAG &DAG, SDNode *N) const override {
+    if (DAG.getMachineFunction().getFunction().optForMinSize())
+      return false;
+    return true;
   }
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,

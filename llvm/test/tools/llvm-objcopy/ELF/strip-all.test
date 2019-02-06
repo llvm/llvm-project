@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t
 # RUN: cp %t %t3
 # RUN: llvm-objcopy --strip-all %t %t2
-# RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
 
 # Verify that the previous llvm-objcopy's run has not modified the input.
 # RUN: cmp %t %t3

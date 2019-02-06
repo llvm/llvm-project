@@ -1,9 +1,8 @@
 //===---- omptarget-nvptx.h - NVPTX OpenMP GPU initialization ---- CUDA -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -53,15 +52,16 @@
 #define __SHFL_SYNC(mask, var, srcLane) __shfl_sync((mask), (var), (srcLane))
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down_sync((mask), (var), (delta), (width))
-#define __BALLOT_SYNC(mask, predicate) __ballot_sync((mask), (predicate))
 #define __ACTIVEMASK() __activemask()
 #else
 #define __SHFL_SYNC(mask, var, srcLane) __shfl((var), (srcLane))
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down((var), (delta), (width))
-#define __BALLOT_SYNC(mask, predicate) __ballot((predicate))
 #define __ACTIVEMASK() __ballot(1)
 #endif
+
+#define __SYNCTHREADS_N(n) asm volatile("bar.sync %0;" : : "r"(n) : "memory");
+#define __SYNCTHREADS() __SYNCTHREADS_N(0)
 
 // arguments needed for L0 parallelism only.
 class omptarget_nvptx_SharedArgs {
@@ -90,7 +90,7 @@ public:
     }
   }
   // Called by all threads.
-  INLINE void **GetArgs() { return args; };
+  INLINE void **GetArgs() const { return args; };
 private:
   // buffer of pre-allocated arguments.
   void *buffer[MAX_SHARED_ARGS];
@@ -101,7 +101,8 @@ private:
   uint32_t nArgs;
 };
 
-extern __device__ __shared__ omptarget_nvptx_SharedArgs omptarget_nvptx_globalArgs;
+extern __device__ __shared__ omptarget_nvptx_SharedArgs
+    omptarget_nvptx_globalArgs;
 
 // Data sharing related quantities, need to match what is used in the compiler.
 enum DATA_SHARING_SIZES {
@@ -152,28 +153,28 @@ extern __device__ __shared__ DataSharingStateTy DataSharingState;
 class omptarget_nvptx_TaskDescr {
 public:
   // methods for flags
-  INLINE omp_sched_t GetRuntimeSched();
+  INLINE omp_sched_t GetRuntimeSched() const;
   INLINE void SetRuntimeSched(omp_sched_t sched);
-  INLINE int InParallelRegion() { return items.flags & TaskDescr_InPar; }
-  INLINE int InL2OrHigherParallelRegion() {
+  INLINE int InParallelRegion() const { return items.flags & TaskDescr_InPar; }
+  INLINE int InL2OrHigherParallelRegion() const {
     return items.flags & TaskDescr_InParL2P;
   }
-  INLINE int IsParallelConstruct() {
+  INLINE int IsParallelConstruct() const {
     return items.flags & TaskDescr_IsParConstr;
   }
-  INLINE int IsTaskConstruct() { return !IsParallelConstruct(); }
+  INLINE int IsTaskConstruct() const { return !IsParallelConstruct(); }
   // methods for other fields
   INLINE uint16_t &NThreads() { return items.nthreads; }
   INLINE uint16_t &ThreadLimit() { return items.threadlimit; }
   INLINE uint16_t &ThreadId() { return items.threadId; }
   INLINE uint16_t &ThreadsInTeam() { return items.threadsInTeam; }
   INLINE uint64_t &RuntimeChunkSize() { return items.runtimeChunkSize; }
-  INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() { return prev; }
+  INLINE omptarget_nvptx_TaskDescr *GetPrevTaskDescr() const { return prev; }
   INLINE void SetPrevTaskDescr(omptarget_nvptx_TaskDescr *taskDescr) {
     prev = taskDescr;
   }
   // init & copy
-  INLINE void InitLevelZeroTaskDescr();
+  INLINE void InitLevelZeroTaskDescr(bool isSPMDExecutionMode);
   INLINE void InitLevelOneTaskDescr(uint16_t tnum,
                                     omptarget_nvptx_TaskDescr *parentTaskDescr);
   INLINE void Copy(omptarget_nvptx_TaskDescr *sourceTaskDescr);
@@ -254,7 +255,7 @@ public:
   INLINE uint64_t *getLastprivateIterBuffer() { return &lastprivateIterBuffer; }
 
   // init
-  INLINE void InitTeamDescr();
+  INLINE void InitTeamDescr(bool isSPMDExecutionMode);
 
   INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
     // If this is invoked by the master thread of the master warp then intialize
@@ -323,7 +324,7 @@ public:
                                    omptarget_nvptx_TaskDescr *taskICV) {
     topTaskDescr[tid] = taskICV;
   }
-  INLINE omptarget_nvptx_TaskDescr *GetTopLevelTaskDescr(int tid);
+  INLINE omptarget_nvptx_TaskDescr *GetTopLevelTaskDescr(int tid) const;
   // parallel
   INLINE uint16_t &NumThreadsForNextParallel(int tid) {
     return nextRegion.tnum[tid];
@@ -342,6 +343,7 @@ public:
   INLINE omptarget_nvptx_TeamDescr &TeamContext() { return teamContext; }
 
   INLINE void InitThreadPrivateContext(int tid);
+  INLINE uint64_t &Cnt() { return cnt; }
 
 private:
   // team context for this team
@@ -364,6 +366,7 @@ private:
   // state for dispatch with dyn/guided OR static (never use both at a time)
   int64_t nextLowerBound[MAX_THREADS_PER_TEAM];
   int64_t stride[MAX_THREADS_PER_TEAM];
+  uint64_t cnt;
 };
 
 /// Device envrionment data
@@ -378,46 +381,13 @@ private:
     volatile unsigned keys[OMP_STATE_COUNT];
   } MemData[MAX_SM];
 
-  INLINE uint32_t hash(unsigned key) const {
+  INLINE static uint32_t hash(unsigned key) {
     return key & (OMP_STATE_COUNT - 1);
   }
 
 public:
   INLINE void Release();
   INLINE const void *Acquire(const void *buf, size_t size);
-};
-
-class omptarget_nvptx_SimpleThreadPrivateContext {
-  uint16_t par_level[MAX_THREADS_PER_TEAM];
-
-public:
-  INLINE void Init() {
-    ASSERT0(LT_FUSSY, isSPMDMode() && isRuntimeUninitialized(),
-            "Expected SPMD + uninitialized runtime modes.");
-    par_level[GetThreadIdInBlock()] = 0;
-  }
-  INLINE void IncParLevel() {
-    ASSERT0(LT_FUSSY, isSPMDMode() && isRuntimeUninitialized(),
-            "Expected SPMD + uninitialized runtime modes.");
-    ++par_level[GetThreadIdInBlock()];
-  }
-  INLINE void DecParLevel() {
-    ASSERT0(LT_FUSSY, isSPMDMode() && isRuntimeUninitialized(),
-            "Expected SPMD + uninitialized runtime modes.");
-    ASSERT0(LT_FUSSY, par_level[GetThreadIdInBlock()] > 0,
-            "Expected parallel level >0.");
-    --par_level[GetThreadIdInBlock()];
-  }
-  INLINE bool InL2OrHigherParallelRegion() const {
-    ASSERT0(LT_FUSSY, isSPMDMode() && isRuntimeUninitialized(),
-            "Expected SPMD + uninitialized runtime modes.");
-    return par_level[GetThreadIdInBlock()] > 0;
-  }
-  INLINE uint16_t GetParallelLevel() const {
-    ASSERT0(LT_FUSSY, isSPMDMode() && isRuntimeUninitialized(),
-            "Expected SPMD + uninitialized runtime modes.");
-    return par_level[GetThreadIdInBlock()] + 1;
-  }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -436,10 +406,9 @@ extern __device__ omptarget_nvptx_SimpleMemoryManager
     omptarget_nvptx_simpleMemoryManager;
 extern __device__ __shared__ uint32_t usedMemIdx;
 extern __device__ __shared__ uint32_t usedSlotIdx;
+extern __device__ __shared__ uint8_t parallelLevel;
 extern __device__ __shared__
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
-extern __device__ __shared__ omptarget_nvptx_SimpleThreadPrivateContext
-    *omptarget_nvptx_simpleThreadPrivateContext;
 
 extern __device__ __shared__ uint32_t execution_param;
 extern __device__ __shared__ void *ReductionScratchpadPtr;
@@ -459,7 +428,8 @@ extern volatile __device__ __shared__ omptarget_nvptx_WorkFn
 
 INLINE omptarget_nvptx_TeamDescr &getMyTeamDescriptor();
 INLINE omptarget_nvptx_WorkDescr &getMyWorkDescriptor();
-INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor();
+INLINE omptarget_nvptx_TaskDescr *
+getMyTopTaskDescriptor(bool isSPMDExecutionMode);
 INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int globalThreadId);
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -25,7 +25,7 @@
 #   }
 
 template("tablegen") {
-  assert(defined(invoker.args), "args must be defined for $target_name")
+  assert(defined(invoker.args), "must set 'args' in $target_name")
 
   config_name = "${target_name}_config"
   config(config_name) {
@@ -39,9 +39,9 @@ template("tablegen") {
     if (defined(invoker.tblgen_target)) {
       tblgen_target = invoker.tblgen_target
     } else {
-      # FIXME: In cross builds, this should depend on the host binary.
       tblgen_target = "//llvm/utils/TableGen:llvm-tblgen"
     }
+    tblgen_target += "($host_toolchain)"
     tblgen_executable = get_label_info(tblgen_target, "root_out_dir") +
                         "/bin/" + get_label_info(tblgen_target, "name")
     deps = [

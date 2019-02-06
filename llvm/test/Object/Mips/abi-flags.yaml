@@ -25,6 +25,7 @@
 # YAML-NEXT: - Name:            .MIPS.abiflags
 # YAML-NEXT:   Type:            SHT_MIPS_ABIFLAGS
 # YAML-NEXT:   AddressAlign:    0x0000000000000008
+# YAML-NEXT:   EntSize:         0x0000000000000018
 # YAML-NEXT:   ISA:             MIPS64
 # YAML-NEXT:   ISARevision:     0x05
 # YAML-NEXT:   ISAExtension:    EXT_OCTEON3

@@ -1,9 +1,8 @@
 //===-- IteratorChecker.cpp ---------------------------------------*- C++ -*--//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -399,14 +398,14 @@ bool isZero(ProgramStateRef State, const NonLoc &Val);
 
 IteratorChecker::IteratorChecker() {
   OutOfRangeBugType.reset(
-      new BugType(this, "Iterator out of range", "Misuse of STL APIs"));
-  OutOfRangeBugType->setSuppressOnSink(true);
+      new BugType(this, "Iterator out of range", "Misuse of STL APIs",
+                  /*SuppressOnSink=*/true));
   MismatchedBugType.reset(
-      new BugType(this, "Iterator(s) mismatched", "Misuse of STL APIs"));
-  MismatchedBugType->setSuppressOnSink(true);
+      new BugType(this, "Iterator(s) mismatched", "Misuse of STL APIs",
+                  /*SuppressOnSink=*/true));
   InvalidatedBugType.reset(
-      new BugType(this, "Iterator invalidated", "Misuse of STL APIs"));
-  InvalidatedBugType->setSuppressOnSink(true);
+      new BugType(this, "Iterator invalidated", "Misuse of STL APIs",
+                  /*SuppressOnSink=*/true));
 }
 
 void IteratorChecker::checkPreCall(const CallEvent &Call,
@@ -2379,7 +2378,6 @@ bool compare(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2,
   return compare(State, nonloc::SymbolVal(Sym1), nonloc::SymbolVal(Sym2), Opc);
 }
 
-
 bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
              BinaryOperator::Opcode Opc) {
   auto &SVB = State->getStateManager().getSValBuilder();
@@ -2395,12 +2393,24 @@ bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
 
 } // namespace
 
+void ento::registerIteratorModeling(CheckerManager &mgr) {
+  mgr.registerChecker<IteratorChecker>();
+}
+
+bool ento::shouldRegisterIteratorModeling(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &Mgr) {                             \
-    auto *checker = Mgr.registerChecker<IteratorChecker>();                    \
+    auto *checker = Mgr.getChecker<IteratorChecker>();                         \
     checker->ChecksEnabled[IteratorChecker::CK_##name] = true;                 \
     checker->CheckNames[IteratorChecker::CK_##name] =                          \
         Mgr.getCurrentCheckName();                                             \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(IteratorRangeChecker)

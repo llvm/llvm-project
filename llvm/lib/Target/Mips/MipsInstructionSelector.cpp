@@ -1,9 +1,8 @@
 //===- MipsInstructionSelector.cpp ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -91,6 +90,28 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
+/// Returning Opc indicates that we failed to select MIPS instruction opcode.
+static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes) {
+  if (Opc == TargetOpcode::G_STORE)
+    switch (MemSizeInBytes) {
+    case 4:
+      return Mips::SW;
+    default:
+      return Opc;
+    }
+  else
+    switch (MemSizeInBytes) {
+    case 4:
+      return Mips::LW;
+    case 2:
+      return Opc == TargetOpcode::G_SEXTLOAD ? Mips::LH : Mips::LHu;
+    case 1:
+      return Opc == TargetOpcode::G_SEXTLOAD ? Mips::LB : Mips::LBu;
+    default:
+      return Opc;
+    }
+}
+
 bool MipsInstructionSelector::select(MachineInstr &I,
                                      CodeGenCoverage &CoverageInfo) const {
 
@@ -128,15 +149,21 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     break;
   }
   case G_STORE:
-  case G_LOAD: {
+  case G_LOAD:
+  case G_ZEXTLOAD:
+  case G_SEXTLOAD: {
     const unsigned DestReg = I.getOperand(0).getReg();
     const unsigned DestRegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
     const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
+    const unsigned OpMemSizeInBytes = (*I.memoperands_begin())->getSize();
 
     if (DestRegBank != Mips::GPRBRegBankID || OpSize != 32)
       return false;
 
-    const unsigned NewOpc = I.getOpcode() == G_STORE ? Mips::SW : Mips::LW;
+    const unsigned NewOpc =
+        selectLoadStoreOpCode(I.getOpcode(), OpMemSizeInBytes);
+    if (NewOpc == I.getOpcode())
+      return false;
 
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
              .add(I.getOperand(0))

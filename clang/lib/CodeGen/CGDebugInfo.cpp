@@ -1,9 +1,8 @@
 //===--- CGDebugInfo.cpp - Emit Debug Information for a Module ------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1428,8 +1427,7 @@ CGDebugInfo::getOrCreateMethodType(const CXXMethodDecl *Method,
   if (Method->isStatic())
     return cast_or_null<llvm::DISubroutineType>(
         getOrCreateType(QualType(Func, 0), Unit));
-  return getOrCreateInstanceMethodType(Method->getThisType(CGM.getContext()),
-                                       Func, Unit);
+  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit);
 }
 
 llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
@@ -2711,7 +2709,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(EnumContext, ED->getName(), DefUnit,
                                         Line, Size, Align, EltArray, ClassTy,
-                                        Identifier, ED->isFixed());
+                                        Identifier, ED->isScoped());
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
@@ -3864,6 +3862,32 @@ CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
   return EmitDeclare(VD, Storage, llvm::None, Builder);
 }
 
+void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
+  assert(DebugKind >= codegenoptions::LimitedDebugInfo);
+  assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
+
+  if (D->hasAttr<NoDebugAttr>())
+    return;
+
+  auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
+  llvm::DIFile *Unit = getOrCreateFile(D->getLocation());
+
+  // Get location information.
+  unsigned Line = getLineNumber(D->getLocation());
+  unsigned Column = getColumnNumber(D->getLocation());
+
+  StringRef Name = D->getName();
+
+  // Create the descriptor for the label.
+  auto *L =
+      DBuilder.createLabel(Scope, Name, Unit, Line, CGM.getLangOpts().Optimize);
+
+  // Insert an llvm.dbg.label into the current block.
+  DBuilder.insertLabel(L,
+                       llvm::DebugLoc::get(Line, Column, Scope, CurInlinedAt),
+                       Builder.GetInsertBlock());
+}
+
 llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
                                           llvm::DIType *Ty) {
   llvm::DIType *CachedTy = getTypeOrNull(QualTy);
@@ -4064,7 +4088,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       QualType type;
       if (auto *Method =
               cast_or_null<CXXMethodDecl>(blockDecl->getNonClosureContext()))
-        type = Method->getThisType(C);
+        type = Method->getThisType();
       else if (auto *RDecl = dyn_cast<CXXRecordDecl>(blockDecl->getParent()))
         type = QualType(RDecl->getTypeForDecl(), 0);
       else

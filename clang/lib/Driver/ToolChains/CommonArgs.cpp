@@ -1,9 +1,8 @@
 //===--- CommonArgs.cpp - Args handling for multiple toolchains -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -220,21 +219,6 @@ static std::string getR600TargetGPU(const ArgList &Args) {
   return "";
 }
 
-static std::string getNios2TargetCPU(const ArgList &Args) {
-  Arg *A = Args.getLastArg(options::OPT_mcpu_EQ);
-  if (!A)
-    A = Args.getLastArg(options::OPT_march_EQ);
-
-  if (!A)
-    return "";
-
-  const char *name = A->getValue();
-  return llvm::StringSwitch<const char *>(name)
-      .Case("r1", "nios2r1")
-      .Case("r2", "nios2r2")
-      .Default(name);
-}
-
 static std::string getLanaiTargetCPU(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     return A->getValue();
@@ -286,10 +270,6 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     if (const Arg *A = Args.getLastArg(options::OPT_mmcu_EQ))
       return A->getValue();
     return "";
-
-  case llvm::Triple::nios2: {
-    return getNios2TargetCPU(Args);
-  }
 
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
@@ -777,9 +757,9 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
 
   if (TC.getXRayArgs().needsXRayRt()) {
     CmdArgs.push_back("-whole-archive");
-    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray", false));
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray"));
     for (const auto &Mode : TC.getXRayArgs().modeList())
-      CmdArgs.push_back(TC.getCompilerRTArgString(Args, Mode, false));
+      CmdArgs.push_back(TC.getCompilerRTArgString(Args, Mode));
     CmdArgs.push_back("-no-whole-archive");
     return true;
   }
@@ -1159,11 +1139,8 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   bool StaticLibgcc = Args.hasArg(options::OPT_static_libgcc) ||
                       Args.hasArg(options::OPT_static);
 
-  // The driver ignores -shared-libgcc and therefore treats such cases as
-  // unspecified.  Breaking out the two variables as below makes the current
-  // behavior explicit.
-  bool UnspecifiedLibgcc = !StaticLibgcc;
-  bool SharedLibgcc = !StaticLibgcc;
+  bool SharedLibgcc = Args.hasArg(options::OPT_shared_libgcc);
+  bool UnspecifiedLibgcc = !StaticLibgcc && !SharedLibgcc;
 
   // Gcc adds libgcc arguments in various ways:
   //
@@ -1180,7 +1157,7 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   if (LibGccFirst)
     CmdArgs.push_back("-lgcc");
 
-  bool AsNeeded = D.CCCIsCC() && !StaticLibgcc && !isAndroid && !isCygMing;
+  bool AsNeeded = D.CCCIsCC() && UnspecifiedLibgcc && !isAndroid && !isCygMing;
   if (AsNeeded)
     CmdArgs.push_back("--as-needed");
 

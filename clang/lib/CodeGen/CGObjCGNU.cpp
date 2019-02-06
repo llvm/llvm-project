@@ -1,9 +1,8 @@
 //===------- CGObjCGNU.cpp - Emit LLVM Code from ASTs for a Module --------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -29,7 +28,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -277,6 +275,8 @@ protected:
     Fields.addInt(Int8Ty, 0);
   }
 
+  virtual llvm::Constant *GenerateCategoryProtocolList(const
+      ObjCCategoryDecl *OCD);
   virtual ConstantArrayBuilder PushPropertyListHeader(ConstantStructBuilder &Fields,
       int count) {
       // int count;
@@ -689,9 +689,9 @@ protected:
     llvm::Value *args[] = {
             EnforceType(Builder, Receiver, IdTy),
             EnforceType(Builder, cmd, SelectorTy) };
-    llvm::CallSite imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFn, args);
+    llvm::CallBase *imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFn, args);
     imp->setMetadata(msgSendMDKind, node);
-    return imp.getInstruction();
+    return imp;
   }
 
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
@@ -770,14 +770,13 @@ class CGObjCGNUstep : public CGObjCGNU {
               EnforceType(Builder, ReceiverPtr.getPointer(), PtrToIdTy),
               EnforceType(Builder, cmd, SelectorTy),
               EnforceType(Builder, self, IdTy) };
-      llvm::CallSite slot = CGF.EmitRuntimeCallOrInvoke(LookupFn, args);
-      slot.setOnlyReadsMemory();
+      llvm::CallBase *slot = CGF.EmitRuntimeCallOrInvoke(LookupFn, args);
+      slot->setOnlyReadsMemory();
       slot->setMetadata(msgSendMDKind, node);
 
       // Load the imp from the slot
       llvm::Value *imp = Builder.CreateAlignedLoad(
-          Builder.CreateStructGEP(nullptr, slot.getInstruction(), 4),
-          CGF.getPointerAlign());
+          Builder.CreateStructGEP(nullptr, slot, 4), CGF.getPointerAlign());
 
       // The lookup function may have changed the receiver, so make sure we use
       // the new one.
@@ -1164,6 +1163,15 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     return MethodList.finishAndCreateGlobal(".objc_protocol_method_list",
                                             CGM.getPointerAlign());
   }
+  llvm::Constant *GenerateCategoryProtocolList(const ObjCCategoryDecl *OCD)
+    override {
+    SmallVector<llvm::Constant*, 16> Protocols;
+    for (const auto *PI : OCD->getReferencedProtocols())
+      Protocols.push_back(
+          llvm::ConstantExpr::getBitCast(GenerateProtocolRef(PI),
+            ProtocolPtrTy));
+    return GenerateProtocolList(Protocols);
+  }
 
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
                               llvm::Value *cmd, MessageSendInfo &MSI) override {
@@ -1547,7 +1555,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
             sectionName<CategorySection>());
       if (!EmittedClass) {
         createNullGlobal(".objc_null_cls_init_ref", NULLPtr,
-            sectionName<ClassReferenceSection>());
+            sectionName<ClassSection>());
         createNullGlobal(".objc_null_class_ref", { NULLPtr, NULLPtr },
             sectionName<ClassReferenceSection>());
       }
@@ -1720,7 +1728,6 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
           CGM.getContext().getCharWidth());
       // struct objc_ivar ivars[]
       auto ivarArrayBuilder = ivarListBuilder.beginArray();
-      CodeGenTypes &Types = CGM.getTypes();
       for (const ObjCIvarDecl *IVD = classDecl->all_declared_ivar_begin(); IVD;
            IVD = IVD->getNextIvar()) {
         auto ivarTy = IVD->getType();
@@ -1754,8 +1761,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         ivarBuilder.add(OffsetVar);
         // Ivar size
         ivarBuilder.addInt(Int32Ty,
-            td.getTypeSizeInBits(Types.ConvertType(ivarTy)) /
-              CGM.getContext().getCharWidth());
+            CGM.getContext().getTypeSizeInChars(ivarTy).getQuantity());
         // Alignment will be stored as a base-2 log of the alignment.
         int align = llvm::Log2_32(Context.getTypeAlignInChars(ivarTy).getQuantity());
         // Objects that require more than 2^64-byte alignment should be impossible!
@@ -1927,14 +1933,14 @@ protected:
             EnforceType(Builder, Receiver, IdTy),
             EnforceType(Builder, cmd, SelectorTy) };
 
-    llvm::CallSite imp;
+    llvm::CallBase *imp;
     if (CGM.ReturnTypeUsesSRet(MSI.CallInfo))
       imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFnSRet, args);
     else
       imp = CGF.EmitRuntimeCallOrInvoke(MsgLookupFn, args);
 
     imp->setMetadata(msgSendMDKind, node);
-    return imp.getInstruction();
+    return imp;
   }
 
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
@@ -2490,7 +2496,7 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
 
   CGCallee callee(CGCalleeInfo(), imp);
 
-  llvm::Instruction *call;
+  llvm::CallBase *call;
   RValue msgRet = CGF.EmitCall(MSI.CallInfo, callee, Return, ActualArgs, &call);
   call->setMetadata(msgSendMDKind, node);
   return msgRet;
@@ -2602,7 +2608,7 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
 
   imp = EnforceType(Builder, imp, MSI.MessengerType);
 
-  llvm::Instruction *call;
+  llvm::CallBase *call;
   CGCallee callee(CGCalleeInfo(), imp);
   RValue msgRet = CGF.EmitCall(MSI.CallInfo, callee, Return, ActualArgs, &call);
   call->setMetadata(msgSendMDKind, node);
@@ -3099,18 +3105,21 @@ llvm::Constant *CGObjCGNU::MakeBitField(ArrayRef<bool> bits) {
   return ptr;
 }
 
+llvm::Constant *CGObjCGNU::GenerateCategoryProtocolList(const
+    ObjCCategoryDecl *OCD) {
+  SmallVector<std::string, 16> Protocols;
+  for (const auto *PD : OCD->getReferencedProtocols())
+    Protocols.push_back(PD->getNameAsString());
+  return GenerateProtocolList(Protocols);
+}
+
 void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
   const ObjCInterfaceDecl *Class = OCD->getClassInterface();
   std::string ClassName = Class->getNameAsString();
   std::string CategoryName = OCD->getNameAsString();
 
   // Collect the names of referenced protocols
-  SmallVector<std::string, 16> Protocols;
   const ObjCCategoryDecl *CatDecl = OCD->getCategoryDecl();
-  const ObjCList<ObjCProtocolDecl> &Protos = CatDecl->getReferencedProtocols();
-  for (ObjCList<ObjCProtocolDecl>::iterator I = Protos.begin(),
-       E = Protos.end(); I != E; ++I)
-    Protocols.push_back((*I)->getNameAsString());
 
   ConstantInitBuilder Builder(CGM);
   auto Elements = Builder.beginStruct();
@@ -3132,7 +3141,7 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
           GenerateMethodList(ClassName, CategoryName, ClassMethods, true),
           PtrTy);
   // Protocol list
-  Elements.addBitCast(GenerateProtocolList(Protocols), PtrTy);
+  Elements.addBitCast(GenerateCategoryProtocolList(CatDecl), PtrTy);
   if (isRuntime(ObjCRuntime::GNUstep, 2)) {
     const ObjCCategoryDecl *Category =
       Class->FindCategoryDeclaration(OCD->getIdentifier());
@@ -3830,13 +3839,14 @@ void CGObjCGNU::EmitThrowStmt(CodeGenFunction &CGF,
     // that was passed into the `@catch` block, then this code path is not
     // reached and we will instead call `objc_exception_throw` with an explicit
     // argument.
-    CGF.EmitRuntimeCallOrInvoke(ExceptionReThrowFn).setDoesNotReturn();
+    llvm::CallBase *Throw = CGF.EmitRuntimeCallOrInvoke(ExceptionReThrowFn);
+    Throw->setDoesNotReturn();
   }
   else {
     ExceptionAsObject = CGF.Builder.CreateBitCast(ExceptionAsObject, IdTy);
-    llvm::CallSite Throw =
+    llvm::CallBase *Throw =
         CGF.EmitRuntimeCallOrInvoke(ExceptionThrowFn, ExceptionAsObject);
-    Throw.setDoesNotReturn();
+    Throw->setDoesNotReturn();
   }
   CGF.Builder.CreateUnreachable();
   if (ClearInsertionPoint)

@@ -1,0 +1,121 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("WebAssemblyGenCallingConv") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-callingconv" ]
+  td_file = "WebAssembly.td"
+}
+
+tablegen("WebAssemblyGenDAGISel") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-dag-isel" ]
+  td_file = "WebAssembly.td"
+}
+
+tablegen("WebAssemblyGenFastISel") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-fast-isel" ]
+  td_file = "WebAssembly.td"
+}
+
+tablegen("WebAssemblyGenGlobalISel") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-global-isel" ]
+  td_file = "WebAssembly.td"
+}
+
+tablegen("WebAssemblyGenMCPseudoLowering") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-pseudo-lowering" ]
+  td_file = "WebAssembly.td"
+}
+
+tablegen("WebAssemblyGenRegisterBank") {
+  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  args = [ "-gen-register-bank" ]
+  td_file = "WebAssembly.td"
+}
+
+static_library("LLVMWebAssemblyCodeGen") {
+  deps = [
+    ":WebAssemblyGenCallingConv",
+    ":WebAssemblyGenDAGISel",
+    ":WebAssemblyGenFastISel",
+    ":WebAssemblyGenGlobalISel",
+    ":WebAssemblyGenMCPseudoLowering",
+    ":WebAssemblyGenRegisterBank",
+    "InstPrinter",
+    "MCTargetDesc",
+    "TargetInfo",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/GlobalISel",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+  ]
+  include_dirs = [ "." ]
+  sources = [
+    "WebAssemblyAddMissingPrototypes.cpp",
+    "WebAssemblyArgumentMove.cpp",
+    "WebAssemblyAsmPrinter.cpp",
+    "WebAssemblyCFGSort.cpp",
+    "WebAssemblyCFGStackify.cpp",
+    "WebAssemblyCallIndirectFixup.cpp",
+    "WebAssemblyDebugValueManager.cpp",
+    "WebAssemblyExceptionInfo.cpp",
+    "WebAssemblyExplicitLocals.cpp",
+    "WebAssemblyFastISel.cpp",
+    "WebAssemblyFixFunctionBitcasts.cpp",
+    "WebAssemblyFixIrreducibleControlFlow.cpp",
+    "WebAssemblyFrameLowering.cpp",
+    "WebAssemblyISelDAGToDAG.cpp",
+    "WebAssemblyISelLowering.cpp",
+    "WebAssemblyInstrInfo.cpp",
+    "WebAssemblyLateEHPrepare.cpp",
+    "WebAssemblyLowerBrUnless.cpp",
+    "WebAssemblyLowerEmscriptenEHSjLj.cpp",
+    "WebAssemblyLowerGlobalDtors.cpp",
+    "WebAssemblyMCInstLower.cpp",
+    "WebAssemblyMachineFunctionInfo.cpp",
+    "WebAssemblyMemIntrinsicResults.cpp",
+    "WebAssemblyOptimizeLiveIntervals.cpp",
+    "WebAssemblyOptimizeReturned.cpp",
+    "WebAssemblyPeephole.cpp",
+    "WebAssemblyPrepareForLiveIntervals.cpp",
+    "WebAssemblyRegColoring.cpp",
+    "WebAssemblyRegNumbering.cpp",
+    "WebAssemblyRegStackify.cpp",
+    "WebAssemblyRegisterInfo.cpp",
+    "WebAssemblyReplacePhysRegs.cpp",
+    "WebAssemblyRuntimeLibcallSignatures.cpp",
+    "WebAssemblySelectionDAGInfo.cpp",
+    "WebAssemblySetP2AlignOperands.cpp",
+    "WebAssemblySubtarget.cpp",
+    "WebAssemblyTargetMachine.cpp",
+    "WebAssemblyTargetObjectFile.cpp",
+    "WebAssemblyTargetTransformInfo.cpp",
+    "WebAssemblyUtilities.cpp",
+  ]
+}
+
+# This is a bit different from most build files: Due to this group
+# having the directory's name, "//llvm/lib/Target/AArch64" will refer to this
+# target, which pulls in the code in this directory *and all subdirectories*.
+# For most other directories, "//llvm/lib/Foo" only pulls in the code directly
+# in "llvm/lib/Foo". The forwarding targets in //llvm/lib/Target expect this
+# different behavior.
+group("WebAssembly") {
+  deps = [
+    ":LLVMWebAssemblyCodeGen",
+    "AsmParser",
+    "Disassembler",
+    "InstPrinter",
+    "MCTargetDesc",
+    "TargetInfo",
+  ]
+}

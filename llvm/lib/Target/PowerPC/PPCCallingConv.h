@@ -1,9 +1,8 @@
 //=== PPCCallingConv.h - PPC Custom Calling Convention Routines -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -20,14 +19,27 @@
 
 namespace llvm {
 
-inline bool CC_PPC_AnyReg_Error(unsigned &, MVT &, MVT &,
-                                CCValAssign::LocInfo &, ISD::ArgFlagsTy &,
-                                CCState &) {
-  llvm_unreachable("The AnyReg calling convention is only supported by the " \
-                   "stackmap and patchpoint intrinsics.");
-  // gracefully fallback to PPC C calling convention on Release builds.
-  return false;
-}
+bool RetCC_PPC(unsigned ValNo, MVT ValVT, MVT LocVT,
+               CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+               CCState &State);
+bool RetCC_PPC64_ELF_FIS(unsigned ValNo, MVT ValVT, MVT LocVT,
+                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                         CCState &State);
+bool RetCC_PPC_Cold(unsigned ValNo, MVT ValVT, MVT LocVT,
+                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                    CCState &State);
+bool CC_PPC32_SVR4(unsigned ValNo, MVT ValVT, MVT LocVT,
+                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                   CCState &State);
+bool CC_PPC64_ELF_FIS(unsigned ValNo, MVT ValVT, MVT LocVT,
+                      CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                      CCState &State);
+bool CC_PPC32_SVR4_ByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
+                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                         CCState &State);
+bool CC_PPC32_SVR4_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
+                          CCValAssign::LocInfo LocInfo,
+                          ISD::ArgFlagsTy ArgFlags, CCState &State);
 
 } // End llvm namespace
 

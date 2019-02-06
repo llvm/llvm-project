@@ -1,9 +1,8 @@
 //===-- ARMISelDAGToDAG.cpp - A dag to dag inst selector for ARM ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -131,6 +130,7 @@ public:
 
   // Thumb Addressing Modes:
   bool SelectThumbAddrModeRR(SDValue N, SDValue &Base, SDValue &Offset);
+  bool SelectThumbAddrModeRRSext(SDValue N, SDValue &Base, SDValue &Offset);
   bool SelectThumbAddrModeImm5S(SDValue N, unsigned Scale, SDValue &Base,
                                 SDValue &OffImm);
   bool SelectThumbAddrModeImm5S1(SDValue N, SDValue &Base,
@@ -452,8 +452,10 @@ unsigned ARMDAGToDAGISel::ConstantMaterializationCost(unsigned Val) const {
   if (Subtarget->isThumb()) {
     if (Val <= 255) return 1;                               // MOV
     if (Subtarget->hasV6T2Ops() &&
-        (Val <= 0xffff || ARM_AM::getT2SOImmValSplatVal(Val) != -1))
-      return 1; // MOVW
+        (Val <= 0xffff ||                                   // MOV
+         ARM_AM::getT2SOImmVal(Val) != -1 ||                // MOVW
+         ARM_AM::getT2SOImmVal(~Val) != -1))                // MVN
+      return 1;
     if (Val <= 510) return 2;                               // MOV + ADDi8
     if (~Val <= 255) return 2;                              // MOV + MVN
     if (ARM_AM::isThumbImmShiftedVal(Val)) return 2;        // MOV + LSL
@@ -1033,8 +1035,22 @@ bool ARMDAGToDAGISel::SelectAddrModePC(SDValue N,
 //                         Thumb Addressing Modes
 //===----------------------------------------------------------------------===//
 
-bool ARMDAGToDAGISel::SelectThumbAddrModeRR(SDValue N,
-                                            SDValue &Base, SDValue &Offset){
+static bool shouldUseZeroOffsetLdSt(SDValue N) {
+  // Negative numbers are difficult to materialise in thumb1. If we are
+  // selecting the add of a negative, instead try to select ri with a zero
+  // offset, so create the add node directly which will become a sub.
+  if (N.getOpcode() != ISD::ADD)
+    return false;
+
+  // Look for an imm which is not legal for ld/st, but is legal for sub.
+  if (auto C = dyn_cast<ConstantSDNode>(N.getOperand(1)))
+    return C->getSExtValue() < 0 && C->getSExtValue() >= -255;
+
+  return false;
+}
+
+bool ARMDAGToDAGISel::SelectThumbAddrModeRRSext(SDValue N, SDValue &Base,
+                                                SDValue &Offset) {
   if (N.getOpcode() != ISD::ADD && !CurDAG->isBaseWithConstantOffset(N)) {
     ConstantSDNode *NC = dyn_cast<ConstantSDNode>(N);
     if (!NC || !NC->isNullValue())
@@ -1049,9 +1065,22 @@ bool ARMDAGToDAGISel::SelectThumbAddrModeRR(SDValue N,
   return true;
 }
 
+bool ARMDAGToDAGISel::SelectThumbAddrModeRR(SDValue N, SDValue &Base,
+                                            SDValue &Offset) {
+  if (shouldUseZeroOffsetLdSt(N))
+    return false; // Select ri instead
+  return SelectThumbAddrModeRRSext(N, Base, Offset);
+}
+
 bool
 ARMDAGToDAGISel::SelectThumbAddrModeImm5S(SDValue N, unsigned Scale,
                                           SDValue &Base, SDValue &OffImm) {
+  if (shouldUseZeroOffsetLdSt(N)) {
+    Base = N;
+    OffImm = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
+    return true;
+  }
+
   if (!CurDAG->isBaseWithConstantOffset(N)) {
     if (N.getOpcode() == ISD::ADD) {
       return false; // We want to select register offset instead

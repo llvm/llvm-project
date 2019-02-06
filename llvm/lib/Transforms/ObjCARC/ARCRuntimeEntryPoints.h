@@ -1,9 +1,8 @@
 //===- ARCRuntimeEntryPoints.h - ObjC ARC Optimization ----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -34,7 +33,7 @@
 
 namespace llvm {
 
-class Constant;
+class Function;
 class LLVMContext;
 
 namespace objcarc {
@@ -70,7 +69,7 @@ public:
     RetainAutoreleaseRV = nullptr;
   }
 
-  Constant *get(ARCRuntimeEntryPointKind kind) {
+  Function *get(ARCRuntimeEntryPointKind kind) {
     assert(TheModule != nullptr && "Not initialized.");
 
     switch (kind) {
@@ -106,33 +105,33 @@ private:
   Module *TheModule = nullptr;
 
   /// Declaration for ObjC runtime function objc_autoreleaseReturnValue.
-  Constant *AutoreleaseRV = nullptr;
+  Function *AutoreleaseRV = nullptr;
 
   /// Declaration for ObjC runtime function objc_release.
-  Constant *Release = nullptr;
+  Function *Release = nullptr;
 
   /// Declaration for ObjC runtime function objc_retain.
-  Constant *Retain = nullptr;
+  Function *Retain = nullptr;
 
   /// Declaration for ObjC runtime function objc_retainBlock.
-  Constant *RetainBlock = nullptr;
+  Function *RetainBlock = nullptr;
 
   /// Declaration for ObjC runtime function objc_autorelease.
-  Constant *Autorelease = nullptr;
+  Function *Autorelease = nullptr;
 
   /// Declaration for objc_storeStrong().
-  Constant *StoreStrong = nullptr;
+  Function *StoreStrong = nullptr;
 
   /// Declaration for objc_retainAutoreleasedReturnValue().
-  Constant *RetainRV = nullptr;
+  Function *RetainRV = nullptr;
 
   /// Declaration for objc_retainAutorelease().
-  Constant *RetainAutorelease = nullptr;
+  Function *RetainAutorelease = nullptr;
 
   /// Declaration for objc_retainAutoreleaseReturnValue().
-  Constant *RetainAutoreleaseRV = nullptr;
+  Function *RetainAutoreleaseRV = nullptr;
 
-  Constant *getIntrinsicEntryPoint(Constant *&Decl, Intrinsic::ID IntID) {
+  Function *getIntrinsicEntryPoint(Function *&Decl, Intrinsic::ID IntID) {
     if (Decl)
       return Decl;
 

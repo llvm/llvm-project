@@ -1,9 +1,8 @@
 //===-- ObjectFile.h --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,7 +39,7 @@ public:
   virtual void PopulateSectionList(lldb_private::ObjectFile *obj_file,
                                    lldb_private::SectionList &section_list) = 0;
 
-  virtual bool GetArchitecture(lldb_private::ArchSpec &arch) = 0;
+  virtual ArchSpec GetArchitecture() = 0;
 };
 
 //----------------------------------------------------------------------
@@ -305,19 +304,13 @@ public:
   virtual const FileSpec &GetFileSpec() const { return m_file; }
 
   //------------------------------------------------------------------
-  /// Get the name of the cpu, vendor and OS for this object file.
-  ///
-  /// This value is a string that represents the target triple where the cpu
-  /// type, the vendor and the OS are encoded into a string.
-  ///
-  /// @param[out] target_triple
-  ///     The string value of the target triple.
+  /// Get the ArchSpec for this object file.
   ///
   /// @return
-  ///     \b True if the target triple was able to be computed, \b
-  ///     false otherwise.
+  ///     The ArchSpec of this object file. In case of error, an invalid
+  ///     ArchSpec object is returned.
   //------------------------------------------------------------------
-  virtual bool GetArchitecture(ArchSpec &arch) = 0;
+  virtual ArchSpec GetArchitecture() = 0;
 
   //------------------------------------------------------------------
   /// Gets the section list for the currently selected architecture (and

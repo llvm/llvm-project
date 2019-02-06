@@ -1,9 +1,8 @@
 //===- ObjCARCContract.cpp - ObjC ARC Optimization ------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -140,7 +139,7 @@ bool ObjCARCContract::optimizeRetainCall(Function &F, Instruction *Retain) {
 
   // We do not have to worry about tail calls/does not throw since
   // retain/retainRV have the same properties.
-  Constant *Decl = EP.get(ARCRuntimeEntryPointKind::RetainRV);
+  Function *Decl = EP.get(ARCRuntimeEntryPointKind::RetainRV);
   cast<CallInst>(Retain)->setCalledFunction(Decl);
 
   LLVM_DEBUG(dbgs() << "New: " << *Retain << "\n");
@@ -189,7 +188,7 @@ bool ObjCARCContract::contractAutorelease(
                        "        Retain: "
                     << *Retain << "\n");
 
-  Constant *Decl = EP.get(Class == ARCInstKind::AutoreleaseRV
+  Function *Decl = EP.get(Class == ARCInstKind::AutoreleaseRV
                               ? ARCRuntimeEntryPointKind::RetainAutoreleaseRV
                               : ARCRuntimeEntryPointKind::RetainAutorelease);
   Retain->setCalledFunction(Decl);
@@ -314,8 +313,8 @@ findRetainForStoreStrongContraction(Value *New, StoreInst *Store,
 /// Create a call instruction with the correct funclet token. Should be used
 /// instead of calling CallInst::Create directly.
 static CallInst *
-createCallInst(Value *Func, ArrayRef<Value *> Args, const Twine &NameStr,
-               Instruction *InsertBefore,
+createCallInst(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
+               const Twine &NameStr, Instruction *InsertBefore,
                const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (!BlockColors.empty()) {
@@ -326,7 +325,15 @@ createCallInst(Value *Func, ArrayRef<Value *> Args, const Twine &NameStr,
       OpBundles.emplace_back("funclet", EHPad);
   }
 
-  return CallInst::Create(Func, Args, OpBundles, NameStr, InsertBefore);
+  return CallInst::Create(FTy, Func, Args, OpBundles, NameStr, InsertBefore);
+}
+
+static CallInst *
+createCallInst(FunctionCallee Func, ArrayRef<Value *> Args, const Twine &NameStr,
+               Instruction *InsertBefore,
+               const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
+  return createCallInst(Func.getFunctionType(), Func.getCallee(), Args, NameStr,
+                        InsertBefore, BlockColors);
 }
 
 /// Attempt to merge an objc_release with a store, load, and objc_retain to form
@@ -409,7 +416,7 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
     Args[0] = new BitCastInst(Args[0], I8XX, "", Store);
   if (Args[1]->getType() != I8X)
     Args[1] = new BitCastInst(Args[1], I8X, "", Store);
-  Constant *Decl = EP.get(ARCRuntimeEntryPointKind::StoreStrong);
+  Function *Decl = EP.get(ARCRuntimeEntryPointKind::StoreStrong);
   CallInst *StoreStrong = createCallInst(Decl, Args, "", Store, BlockColors);
   StoreStrong->setDoesNotThrow();
   StoreStrong->setDebugLoc(Store->getDebugLoc());

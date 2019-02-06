@@ -1,9 +1,8 @@
 //===-- SearchFilter.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -328,9 +327,7 @@ SearchFilter::DoCUIteration(const ModuleSP &module_sp,
           SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
           if (!sym_vendor)
             continue;
-          SymbolContext sym_ctx;
-          cu_sp->CalculateSymbolContext(&sym_ctx);
-          if (!sym_vendor->ParseCompileUnitFunctions(sym_ctx))
+          if (!sym_vendor->ParseFunctions(*cu_sp))
             continue;
           // If we got any functions, use ForeachFunction to do the iteration.
           cu_sp->ForeachFunction([&](const FunctionSP &func_sp) {

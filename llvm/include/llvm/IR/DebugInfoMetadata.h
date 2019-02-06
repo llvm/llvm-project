@@ -1,9 +1,8 @@
 //===- llvm/IR/DebugInfoMetadata.h - Debug info metadata --------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -1541,9 +1540,6 @@ public:
   ///
   /// For precise control over the data being encoded in the discriminator,
   /// use encodeDiscriminator/decodeDiscriminator.
-  ///
-  /// Use {get|set}BaseDiscriminator and cloneWithDuplicationFactor after reading
-  /// their documentation, as their behavior has side-effects.
 
   inline unsigned getDiscriminator() const;
 
@@ -1554,7 +1550,7 @@ public:
   /// base discriminator is set in the new DILocation, the other encoded values
   /// are elided.
   /// If the discriminator cannot be encoded, the function returns None.
-  inline Optional<const DILocation *> setBaseDiscriminator(unsigned BD) const;
+  inline Optional<const DILocation *> cloneWithBaseDiscriminator(unsigned BD) const;
 
   /// Returns the duplication factor stored in the discriminator, or 1 if no
   /// duplication factor (or 0) is encoded.
@@ -1570,7 +1566,7 @@ public:
   /// duplication factor encoded in the discriminator. The current duplication
   /// factor is as defined by getDuplicationFactor().
   /// Returns None if encoding failed.
-  inline Optional<const DILocation *> cloneWithDuplicationFactor(unsigned DF) const;
+  inline Optional<const DILocation *> cloneByMultiplyingDuplicationFactor(unsigned DF) const;
 
   /// When two instructions are combined into a single instruction we also
   /// need to combine the original locations into a single location.
@@ -1594,10 +1590,11 @@ public:
     return getUnsignedFromPrefixEncoding(D);
   }
 
-  /// Raw encoding of the discriminator. APIs such as setBaseDiscriminator or
-  /// cloneWithDuplicationFactor have certain side-effects. This API, in
-  /// conjunction with cloneWithDiscriminator, may be used to encode precisely
-  /// the values provided. \p BD: base discriminator \p DF: duplication factor
+  /// Raw encoding of the discriminator. APIs such as cloneWithDuplicationFactor
+  /// have certain special case behavior (e.g. treating empty duplication factor
+  /// as the value '1').
+  /// This API, in conjunction with cloneWithDiscriminator, may be used to encode
+  /// the raw values provided. \p BD: base discriminator \p DF: duplication factor
   /// \p CI: copy index
   /// The return is None if the values cannot be encoded in 32 bits - for
   /// example, values for BD or DF larger than 12 bits. Otherwise, the return
@@ -2039,15 +2036,17 @@ unsigned DILocation::getCopyIdentifier() const {
   return getCopyIdentifierFromDiscriminator(getDiscriminator());
 }
 
-Optional<const DILocation *> DILocation::setBaseDiscriminator(unsigned D) const {
-  if (D == 0)
+Optional<const DILocation *> DILocation::cloneWithBaseDiscriminator(unsigned D) const {
+  unsigned BD, DF, CI;
+  decodeDiscriminator(getDiscriminator(), BD, DF, CI);
+  if (D == BD)
     return this;
-  if (D > 0xfff)
-    return None;
-  return cloneWithDiscriminator(encodeComponent(D));
+  if (Optional<unsigned> Encoded = encodeDiscriminator(D, DF, CI))
+    return cloneWithDiscriminator(*Encoded);
+  return None;
 }
 
-Optional<const DILocation *> DILocation::cloneWithDuplicationFactor(unsigned DF) const {
+Optional<const DILocation *> DILocation::cloneByMultiplyingDuplicationFactor(unsigned DF) const {
   DF *= getDuplicationFactor();
   if (DF <= 1)
     return this;

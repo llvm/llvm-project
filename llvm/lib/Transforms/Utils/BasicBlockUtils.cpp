@@ -1,9 +1,8 @@
 //===- BasicBlockUtils.cpp - BasicBlock Utilities --------------------------==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -49,46 +48,57 @@
 using namespace llvm;
 
 void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU) {
-  assert((pred_begin(BB) == pred_end(BB) ||
-         // Can delete self loop.
-         BB->getSinglePredecessor() == BB) && "Block is not dead!");
-  Instruction *BBTerm = BB->getTerminator();
-  std::vector<DominatorTree::UpdateType> Updates;
+  SmallVector<BasicBlock *, 1> BBs = {BB};
+  DeleteDeadBlocks(BBs, DTU);
+}
 
-  // Loop through all of our successors and make sure they know that one
-  // of their predecessors is going away.
+void llvm::DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
+                            DomTreeUpdater *DTU) {
+#ifndef NDEBUG
+  // Make sure that all predecessors of each dead block is also dead.
+  SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
+  assert(Dead.size() == BBs.size() && "Duplicating blocks?");
+  for (auto *BB : Dead)
+    for (BasicBlock *Pred : predecessors(BB))
+      assert(Dead.count(Pred) && "All predecessors must be dead!");
+#endif
+
+  SmallVector<DominatorTree::UpdateType, 4> Updates;
+  for (auto *BB : BBs) {
+    // Loop through all of our successors and make sure they know that one
+    // of their predecessors is going away.
+    for (BasicBlock *Succ : successors(BB)) {
+      Succ->removePredecessor(BB);
+      if (DTU)
+        Updates.push_back({DominatorTree::Delete, BB, Succ});
+    }
+
+    // Zap all the instructions in the block.
+    while (!BB->empty()) {
+      Instruction &I = BB->back();
+      // If this instruction is used, replace uses with an arbitrary value.
+      // Because control flow can't get here, we don't care what we replace the
+      // value with.  Note that since this block is unreachable, and all values
+      // contained within it must dominate their uses, that all uses will
+      // eventually be removed (they are themselves dead).
+      if (!I.use_empty())
+        I.replaceAllUsesWith(UndefValue::get(I.getType()));
+      BB->getInstList().pop_back();
+    }
+    new UnreachableInst(BB->getContext(), BB);
+    assert(BB->getInstList().size() == 1 &&
+           isa<UnreachableInst>(BB->getTerminator()) &&
+           "The successor list of BB isn't empty before "
+           "applying corresponding DTU updates.");
+  }
   if (DTU)
-    Updates.reserve(BBTerm->getNumSuccessors());
-  for (BasicBlock *Succ : successors(BBTerm)) {
-    Succ->removePredecessor(BB);
-    if (DTU)
-      Updates.push_back({DominatorTree::Delete, BB, Succ});
-  }
-
-  // Zap all the instructions in the block.
-  while (!BB->empty()) {
-    Instruction &I = BB->back();
-    // If this instruction is used, replace uses with an arbitrary value.
-    // Because control flow can't get here, we don't care what we replace the
-    // value with.  Note that since this block is unreachable, and all values
-    // contained within it must dominate their uses, that all uses will
-    // eventually be removed (they are themselves dead).
-    if (!I.use_empty())
-      I.replaceAllUsesWith(UndefValue::get(I.getType()));
-    BB->getInstList().pop_back();
-  }
-  new UnreachableInst(BB->getContext(), BB);
-  assert(BB->getInstList().size() == 1 &&
-         isa<UnreachableInst>(BB->getTerminator()) &&
-         "The successor list of BB isn't empty before "
-         "applying corresponding DTU updates.");
-
-  if (DTU) {
     DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
-    DTU->deleteBB(BB);
-  } else {
-    BB->eraseFromParent(); // Zap the block!
-  }
+
+  for (BasicBlock *BB : BBs)
+    if (DTU)
+      DTU->deleteBB(BB);
+    else
+      BB->eraseFromParent();
 }
 
 void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,

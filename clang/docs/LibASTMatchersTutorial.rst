@@ -16,23 +16,16 @@ Step 0: Obtaining Clang
 =======================
 
 As Clang is part of the LLVM project, you'll need to download LLVM's
-source code first. Both Clang and LLVM are maintained as Subversion
-repositories, but we'll be accessing them through the git mirror. For
-further information, see the `getting started
-guide <https://llvm.org/docs/GettingStarted.html>`_.
+source code first. Both Clang and LLVM are in the same git repository,
+under different directories. For further information, see the `getting
+started guide <https://llvm.org/docs/GettingStarted.html>`_.
 
 .. code-block:: console
 
-      mkdir ~/clang-llvm && cd ~/clang-llvm
-      git clone https://llvm.org/git/llvm.git
-      cd llvm/tools
-      git clone https://llvm.org/git/clang.git
-      cd clang/tools
-      git clone https://llvm.org/git/clang-tools-extra.git extra
+      cd ~/clang-llvm
+      git clone https://github.com/llvm/llvm-project.git
 
-Next you need to obtain the CMake build system and Ninja build tool. You
-may already have CMake installed, but current binary versions of CMake
-aren't built with Ninja support.
+Next you need to obtain the CMake build system and Ninja build tool.
 
 .. code-block:: console
 
@@ -57,7 +50,7 @@ Okay. Now we'll build Clang!
 
       cd ~/clang-llvm
       mkdir build && cd build
-      cmake -G Ninja ../llvm -DLLVM_BUILD_TESTS=ON  # Enable tests; default is off.
+      cmake -G Ninja ../llvm -DLLVM_ENABLE_PROJECTS=clang -DLLVM_BUILD_TESTS=ON  # Enable tests; default is off.
       ninja
       ninja check       # Test LLVM only.
       ninja clang-test  # Test Clang only.
@@ -65,9 +58,7 @@ Okay. Now we'll build Clang!
 
 And we're live.
 
-All of the tests should pass, though there is a (very) small chance that
-you can catch LLVM and Clang out of sync. Running ``'git svn rebase'``
-in both the llvm and clang directories should fix any problems.
+All of the tests should pass.
 
 Finally, we want to set Clang as its own compiler.
 

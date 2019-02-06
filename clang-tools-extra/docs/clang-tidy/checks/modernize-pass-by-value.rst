@@ -144,7 +144,7 @@ Example:
  +  C(std::string S) : S(std::move(S)) {}
    };
 
-.. _Clang Compiler User’s Manual - Microsoft extensions: http://clang.llvm.org/docs/UsersManual.html#microsoft-extensions
+.. _Clang Compiler User’s Manual - Microsoft extensions: https://clang.llvm.org/docs/UsersManual.html#microsoft-extensions
 
 .. seealso::
 

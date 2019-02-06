@@ -1,9 +1,8 @@
 //===-- GDBRemoteCommunicationServerLLGS.cpp --------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -218,8 +217,10 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.SetLaunchInSeparateProcessGroup(true);
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
-  const bool default_to_use_pty = true;
-  m_process_launch_info.FinalizeFileActions(nullptr, default_to_use_pty);
+  if (should_forward_stdio) {
+    if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
+      return Status(std::move(Err));
+  }
 
   {
     std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);

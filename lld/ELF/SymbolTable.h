@@ -1,9 +1,8 @@
 //===- SymbolTable.h --------------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -80,6 +79,9 @@ public:
 
   void handleDynamicList();
 
+  // Set of .so files to not link the same shared object file more than once.
+  llvm::DenseMap<StringRef, InputFile *> SoNames;
+
 private:
   std::pair<Symbol *, bool> insertName(StringRef Name);
 
@@ -106,9 +108,6 @@ private:
   // same name, only one of them is linked, and the other is ignored. This set
   // is used to uniquify them.
   llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
-
-  // Set of .so files to not link the same shared object file more than once.
-  llvm::DenseSet<StringRef> SoNames;
 
   // A map from demangled symbol names to their symbol objects.
   // This mapping is 1:N because two symbols with different versions

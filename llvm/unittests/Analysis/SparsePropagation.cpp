@@ -1,9 +1,8 @@
 //===- SparsePropagation.cpp - Unit tests for the generic solver ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -382,7 +381,7 @@ TEST_F(SparsePropagationTest, FunctionDefined) {
   BasicBlock *Else = BasicBlock::Create(Context, "else", F);
   F->arg_begin()->setName("cond");
   Builder.SetInsertPoint(If);
-  LoadInst *Cond = Builder.CreateLoad(F->arg_begin());
+  LoadInst *Cond = Builder.CreateLoad(Type::getInt1Ty(Context), F->arg_begin());
   Builder.CreateCondBr(Cond, Then, Else);
   Builder.SetInsertPoint(Then);
   Builder.CreateRet(Builder.getInt64(1));
@@ -422,7 +421,7 @@ TEST_F(SparsePropagationTest, FunctionOverDefined) {
   BasicBlock *Else = BasicBlock::Create(Context, "else", F);
   F->arg_begin()->setName("cond");
   Builder.SetInsertPoint(If);
-  LoadInst *Cond = Builder.CreateLoad(F->arg_begin());
+  LoadInst *Cond = Builder.CreateLoad(Type::getInt1Ty(Context), F->arg_begin());
   Builder.CreateCondBr(Cond, Then, Else);
   Builder.SetInsertPoint(Then);
   Builder.CreateRet(Builder.getInt64(0));

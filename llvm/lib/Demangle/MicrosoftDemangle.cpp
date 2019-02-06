@@ -1,9 +1,8 @@
 //===- MicrosoftDemangle.cpp ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -18,7 +17,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
 
-#include "llvm/Demangle/Compiler.h"
+#include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/StringView.h"
 #include "llvm/Demangle/Utility.h"
 
@@ -265,7 +264,7 @@ Demangler::demangleSpecialTableSymbolNode(StringView &MangledName,
     NI->Name = "`RTTI Complete Object Locator'";
     break;
   default:
-    LLVM_BUILTIN_UNREACHABLE;
+    DEMANGLE_UNREACHABLE;
   }
   QualifiedNameNode *QN = demangleNameScopeChain(MangledName, NI);
   SpecialTableSymbolNode *STSN = Arena.alloc<SpecialTableSymbolNode>();
@@ -632,7 +631,7 @@ translateIntrinsicFunctionCode(char CH, FunctionIdentifierCodeGroup Group) {
   case FunctionIdentifierCodeGroup::DoubleUnder:
     return DoubleUnder[Index];
   }
-  LLVM_BUILTIN_UNREACHABLE;
+  DEMANGLE_UNREACHABLE;
 }
 
 IdentifierNode *
@@ -1188,7 +1187,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   switch (MangledName.popFront()) {
   case '1':
     IsWcharT = true;
-    LLVM_FALLTHROUGH;
+    DEMANGLE_FALLTHROUGH;
   case '0':
     break;
   default:
@@ -1255,7 +1254,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
       Result->Char = CharKind::Char32;
       break;
     default:
-      LLVM_BUILTIN_UNREACHABLE;
+      DEMANGLE_UNREACHABLE;
     }
     const unsigned NumChars = BytesDecoded / CharBytes;
     for (unsigned CharIndex = 0; CharIndex < NumChars; ++CharIndex) {
@@ -1681,11 +1680,14 @@ TypeNode *Demangler::demangleType(StringView &MangledName,
   return Ty;
 }
 
-void Demangler::demangleThrowSpecification(StringView &MangledName) {
+bool Demangler::demangleThrowSpecification(StringView &MangledName) {
+  if (MangledName.consumeFront("_E"))
+    return true;
   if (MangledName.consumeFront('Z'))
-    return;
+    return false;
 
   Error = true;
+  return false;
 }
 
 FunctionSignatureNode *Demangler::demangleFunctionType(StringView &MangledName,
@@ -1709,7 +1711,7 @@ FunctionSignatureNode *Demangler::demangleFunctionType(StringView &MangledName,
 
   FTy->Params = demangleFunctionParameterList(MangledName);
 
-  demangleThrowSpecification(MangledName);
+  FTy->IsNoexcept = demangleThrowSpecification(MangledName);
 
   return FTy;
 }
@@ -2080,15 +2082,15 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       case 'J':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case 'I':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case 'H':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case '1':
         break;
       default:
@@ -2114,13 +2116,13 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       case 'G':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case 'F':
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
         TPRN->ThunkOffsets[TPRN->ThunkOffsetCount++] =
             demangleSigned(MangledName);
-        LLVM_FALLTHROUGH;
+        DEMANGLE_FALLTHROUGH;
       case '0':
         break;
       default:

@@ -11,7 +11,7 @@
 # RUN:   --globalize-symbol Global1 \
 # RUN:   --keep-global-symbol Global2 \
 # RUN:   %t.o %t.2.o
-# RUN: llvm-readobj -elf-output-style=GNU -symbols %t.2.o | FileCheck %s
+# RUN: llvm-readobj --elf-output-style=GNU --symbols %t.2.o | FileCheck %s
 
 !ELF
 FileHeader:

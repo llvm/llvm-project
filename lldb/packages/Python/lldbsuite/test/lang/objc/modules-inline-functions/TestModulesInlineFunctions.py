@@ -23,8 +23,6 @@ class ModulesInlineFunctionsTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        # Find the line number to break inside main().
-        self.line = line_number('main.m', '// Set breakpoint here.')
 
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"], debug_info=no_match(["gmodules"]))
@@ -34,19 +32,8 @@ class ModulesInlineFunctionsTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the foo function which takes a bar_ptr argument.
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
-
-        # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.run_to_source_breakpoint(
+            self, '// Set breakpoint here.', lldb.SBFileSpec('main.m'))
 
         self.runCmd(
             "settings set target.clang-module-search-paths \"" +

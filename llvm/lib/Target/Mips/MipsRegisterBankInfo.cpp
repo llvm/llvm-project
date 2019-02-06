@@ -1,9 +1,8 @@
 //===- MipsRegisterBankInfo.cpp ---------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -83,9 +82,13 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const ValueMapping *OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
 
   switch (Opc) {
+  case G_TRUNC:
   case G_ADD:
+  case G_SUB:
   case G_LOAD:
   case G_STORE:
+  case G_ZEXTLOAD:
+  case G_SEXTLOAD:
   case G_GEP:
   case G_AND:
   case G_OR:

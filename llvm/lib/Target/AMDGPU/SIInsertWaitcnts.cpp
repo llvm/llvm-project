@@ -1,9 +1,8 @@
 //===- SIInsertWaitcnts.cpp - Insert Wait Instructions --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -536,10 +535,13 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             CurrScore);
       }
       if (Inst.mayStore()) {
-        setExpScore(
-            &Inst, TII, TRI, MRI,
-            AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data0),
-            CurrScore);
+        if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
+                                       AMDGPU::OpName::data0) != -1) {
+          setExpScore(
+              &Inst, TII, TRI, MRI,
+              AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data0),
+              CurrScore);
+        }
         if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
                                        AMDGPU::OpName::data1) != -1) {
           setExpScore(&Inst, TII, TRI, MRI,
@@ -1093,7 +1095,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   // bracket and the destination operand scores.
   // TODO: Use the (TSFlags & SIInstrFlags::LGKM_CNT) property everywhere.
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
-    if (TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
+    if (TII->isAlwaysGDS(Inst.getOpcode()) ||
+        TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_ACCESS, Inst);
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_GPR_LOCK, Inst);
     } else {

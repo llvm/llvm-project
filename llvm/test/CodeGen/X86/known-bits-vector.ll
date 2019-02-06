@@ -5,18 +5,14 @@
 define i32 @knownbits_mask_extract_sext(<8 x i16> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_extract_sext:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl $15, %eax
-; X32-NEXT:    vmovd %eax, %xmm1
-; X32-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpextrw $0, %xmm0, %eax
+; X32-NEXT:    vmovd %xmm0, %eax
+; X32-NEXT:    andl $15, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_extract_sext:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $15, %eax
-; X64-NEXT:    vmovd %eax, %xmm1
-; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpextrw $0, %xmm0, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    retq
   %1 = and <8 x i16> %a0, <i16 15, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %2 = extractelement <8 x i16> %1, i32 0
@@ -38,8 +34,8 @@ define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: knownbits_mask_extract_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-NEXT:    vmovq %xmm0, %rax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 65535, i64 -1>

@@ -1,9 +1,8 @@
 //===--------- PPCPreEmitPeephole.cpp - Late peephole optimizations -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -140,7 +139,7 @@ namespace {
           // This conditional branch is always taken. So, remove all branches
           // and insert an unconditional branch to the destination of this.
           MachineBasicBlock::iterator It = Br, Er = MBB.end();
-          for (; It != Er && !SeenUse; It++) {
+          for (; It != Er; It++) {
             if (It->isDebugInstr()) continue;
             assert(It->isTerminator() && "Non-terminator after a terminator");
             InstrsToErase.push_back(&*It);

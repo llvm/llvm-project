@@ -19,6 +19,12 @@
 # the reference to a2 is weak, don't add a DT_NEEDED entry for a.so.
 # CHECK-NOT: a.so
 
+# RUN: ld.lld %t.o %tb.so --as-needed %ta.so --no-as-needed %ta.so -o %t
+# RUN: llvm-readelf -d %t | FileCheck %s -check-prefix=NEEDED
+
+# a.so is needed because one of its occurrences is needed.
+# NEEDED: a.so
+
 .global _start
 .weak a2
 _start:

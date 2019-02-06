@@ -1,9 +1,8 @@
 //===- RValues.cpp - Abstract RValues for Path-Sens. Value Tracking -------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -169,6 +168,10 @@ const void *nonloc::LazyCompoundVal::getStore() const {
 
 const TypedValueRegion *nonloc::LazyCompoundVal::getRegion() const {
   return static_cast<const LazyCompoundValData*>(Data)->getRegion();
+}
+
+bool nonloc::PointerToMember::isNullMemberPointer() const {
+  return getPTMData().isNull();
 }
 
 const DeclaratorDecl *nonloc::PointerToMember::getDecl() const {

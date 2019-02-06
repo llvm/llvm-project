@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===------------------------ functional ----------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -1489,8 +1488,9 @@ class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)>
     _LIBCPP_INLINE_VISIBILITY
     const _Target& __target() const { return __f_.first(); }
 
+    // WIN32 APIs may define __allocator, so use __get_allocator instead.
     _LIBCPP_INLINE_VISIBILITY
-    const _Alloc& __allocator() const { return __f_.second(); }
+    const _Alloc& __get_allocator() const { return __f_.second(); }
 
     _LIBCPP_INLINE_VISIBILITY
     explicit __alloc_func(_Target&& __f)
@@ -1612,7 +1612,7 @@ __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__clone() const
 {
     typedef allocator_traits<_Alloc> __alloc_traits;
     typedef typename __rebind_alloc_helper<__alloc_traits, __func>::type _Ap;
-    _Ap __a(__f_.__allocator());
+    _Ap __a(__f_.__get_allocator());
     typedef __allocator_destructor<_Ap> _Dp;
     unique_ptr<__func, _Dp> __hold(__a.allocate(1), _Dp(__a, 1));
     ::new ((void*)__hold.get()) __func(__f_.__target(), _Alloc(__a));
@@ -1623,7 +1623,7 @@ template<class _Fp, class _Alloc, class _Rp, class ..._ArgTypes>
 void
 __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__clone(__base<_Rp(_ArgTypes...)>* __p) const
 {
-    ::new (__p) __func(__f_.__target(), __f_.__allocator());
+    ::new (__p) __func(__f_.__target(), __f_.__get_allocator());
 }
 
 template<class _Fp, class _Alloc, class _Rp, class ..._ArgTypes>
@@ -1639,7 +1639,7 @@ __func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy_deallocate() _NOEXCEPT
 {
     typedef allocator_traits<_Alloc> __alloc_traits;
     typedef typename __rebind_alloc_helper<__alloc_traits, __func>::type _Ap;
-    _Ap __a(__f_.__allocator());
+    _Ap __a(__f_.__get_allocator());
     __f_.destroy();
     __a.deallocate(this, 1);
 }
@@ -1872,7 +1872,7 @@ template <typename _Fun>
 struct __use_small_storage
     : public _VSTD::integral_constant<
           bool, sizeof(_Fun) <= sizeof(__policy_storage) &&
-                    alignof(_Fun) <= alignof(__policy_storage) &&
+                    _LIBCPP_ALIGNOF(_Fun) <= _LIBCPP_ALIGNOF(__policy_storage) &&
                     _VSTD::is_trivially_copy_constructible<_Fun>::value &&
                     _VSTD::is_trivially_destructible<_Fun>::value> {};
 
@@ -1925,7 +1925,7 @@ struct __policy
         typedef typename __rebind_alloc_helper<__alloc_traits, _Fun>::type
             _FunAlloc;
         _Fun* __f = static_cast<_Fun*>(__s);
-        _FunAlloc __a(__f->__allocator());
+        _FunAlloc __a(__f->__get_allocator());
         __f->destroy();
         __a.deallocate(__f, 1);
     }

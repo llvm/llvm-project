@@ -1,9 +1,8 @@
 //= FormatString.h - Analysis of printf/fprintf format strings --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -68,6 +67,7 @@ public:
     None,
     AsChar,       // 'hh'
     AsShort,      // 'h'
+    AsShortLong,  // 'hl' (OpenCL float/int vector element)
     AsLong,       // 'l'
     AsLongLong,   // 'll'
     AsQuad,       // 'q' (BSD, deprecated, for 64-bit integer types)
@@ -437,7 +437,8 @@ public:
 
   bool usesPositionalArg() const { return UsesPositionalArg; }
 
-  bool hasValidLengthModifier(const TargetInfo &Target) const;
+  bool hasValidLengthModifier(const TargetInfo &Target,
+                              const LangOptions &LO) const;
 
   bool hasStandardLengthModifier() const;
 

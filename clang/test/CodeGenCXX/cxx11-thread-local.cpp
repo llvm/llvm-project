@@ -318,7 +318,7 @@ void set_anon_i() {
 // CHECK-NOT: call void @[[V_M_INIT]]()
 
 
-// LIUNX: define weak_odr hidden i32* @_ZTW1a() {
+// LINUX: define weak_odr hidden i32* @_ZTW1a()
 // DARWIN: define cxx_fast_tlscc i32* @_ZTW1a()
 // LINUX:   call void @_ZTH1a()
 // DARWIN: call cxx_fast_tlscc void @_ZTH1a()

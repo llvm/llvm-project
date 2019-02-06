@@ -2,9 +2,9 @@
 
 # ===== x86_64 =====
 
-# RUN: yaml2obj -docnum 1 %s > %t-x86_64.o
+# RUN: yaml2obj --docnum 1 %s > %t-x86_64.o
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-x86_64.o
-# RUN: llvm-readobj -sections %t-x86_64.o | FileCheck %s --check-prefix=X86_64
+# RUN: llvm-readobj --sections %t-x86_64.o | FileCheck %s --check-prefix=X86_64
 
 --- !ELF
 FileHeader:
@@ -27,9 +27,9 @@ Sections:
 
 # ===== hex =====
 
-# RUN: yaml2obj -docnum 2 %s > %t-hex.o
+# RUN: yaml2obj --docnum 2 %s > %t-hex.o
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-hex.o
-# RUN: llvm-readobj -sections %t-hex.o | FileCheck %s --check-prefix=HEX
+# RUN: llvm-readobj --sections %t-hex.o | FileCheck %s --check-prefix=HEX
 
 --- !ELF
 FileHeader:
@@ -52,9 +52,9 @@ Sections:
 
 # ===== mips =====
 
-# RUN: yaml2obj -docnum 3 %s > %t-mips.o
+# RUN: yaml2obj --docnum 3 %s > %t-mips.o
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-mips.o
-# RUN: llvm-readobj -sections %t-mips.o | FileCheck %s --check-prefix=MIPS
+# RUN: llvm-readobj --sections %t-mips.o | FileCheck %s --check-prefix=MIPS
 
 --- !ELF
 FileHeader:
@@ -91,9 +91,9 @@ Sections:
 
 # ===== arm =====
 
-# RUN: yaml2obj -docnum 4 %s > %t-arm.o
+# RUN: yaml2obj --docnum 4 %s > %t-arm.o
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc %t-arm.o
-# RUN: llvm-readobj -sections %t-arm.o | FileCheck %s --check-prefix=ARM
+# RUN: llvm-readobj --sections %t-arm.o | FileCheck %s --check-prefix=ARM
 
 --- !ELF
 FileHeader:

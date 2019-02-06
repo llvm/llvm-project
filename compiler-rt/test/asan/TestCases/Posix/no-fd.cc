@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O0 %s -o %t
+// RUN: %clangxx_asan -std=c++11 -O0 %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=debug=1,verbosity=2 %run %t 2>&1 | FileCheck %s
 
@@ -8,6 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+extern "C" const char *__asan_default_options() {
+  return "test_only_emulate_no_memorymap=1";
+}
 
 void parent(int argc, char **argv) {
   fprintf(stderr, "hello\n");

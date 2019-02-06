@@ -1,9 +1,8 @@
 //===-- AVRSubtarget.cpp - AVR Subtarget Information ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -29,9 +28,9 @@
 namespace llvm {
 
 AVRSubtarget::AVRSubtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &FS, AVRTargetMachine &TM)
+                           const std::string &FS, const AVRTargetMachine &TM)
     : AVRGenSubtargetInfo(TT, CPU, FS), InstrInfo(), FrameLowering(),
-      TLInfo(TM), TSInfo(),
+      TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)), TSInfo(),
 
       // Subtarget features
       m_hasSRAM(false), m_hasJMPCALL(false), m_hasIJMPCALL(false),
@@ -42,6 +41,14 @@ AVRSubtarget::AVRSubtarget(const Triple &TT, const std::string &CPU,
       m_hasTinyEncoding(false), ELFArch(false), m_FeatureSetDummy(false) {
   // Parse features string.
   ParseSubtargetFeatures(CPU, FS);
+}
+
+AVRSubtarget &
+AVRSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
+                                              const TargetMachine &TM) {
+  // Parse features string.
+  ParseSubtargetFeatures(CPU, FS);
+  return *this;
 }
 
 } // end of namespace llvm

@@ -11,6 +11,10 @@
 // This technique in general allows us to exercise most of LLDB's type
 // system without a running process.
 
+// Define _fltused, since we're not linking against the MS C runtime, but use
+// floats.
+extern "C" int _fltused = 0;
+
 template<typename T>
 struct MakeResult {
   static T result() {
@@ -186,17 +190,17 @@ auto rad = &unaryret<int(*const)[5], 28>;
 // Function references, we only need a couple of these since most of the
 // interesting cases are already tested.
 auto &ref = unary<bool>;
-// CHECK: (void (&)(bool)) ref = {{.*}} (&::ref = <Unable to determine byte size.>)
+// CHECK: (void (&)(bool)) ref = {{.*}} (&::ref = <no summary available>)
 auto &ref2 = unary<volatile int*>;
-// CHECK: (void (&)(volatile int *)) ref2 = {{.*}} (&::ref2 = <Unable to determine byte size.>)
+// CHECK: (void (&)(volatile int *)) ref2 = {{.*}} (&::ref2 = <no summary available>)
 auto &ref3 = varargs;
-// CHECK: (int (&)(int, int, ...)) ref3 = {{.*}} (&::ref3 = <Unable to determine byte size.>)
+// CHECK: (int (&)(int, int, ...)) ref3 = {{.*}} (&::ref3 = <no summary available>)
 
 // Multiple arguments, as before, just something to make sure it works.
 auto binp = &binary<int*, const int*>;
 // CHECK: (void (*)(int *, const int *)) binp = {{.*}}
 auto &binr = binary<int*, const int*>;
-// CHECK: (void (&)(int *, const int *)) binr = {{.*}} (&::binr = <Unable to determine byte size.>)
+// CHECK: (void (&)(int *, const int *)) binr = {{.*}} (&::binr = <no summary available>)
 
 // And finally, a function with no arguments.
 auto null = &nullary;

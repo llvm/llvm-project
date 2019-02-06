@@ -11,7 +11,7 @@
 ; CHECK-NEXT:               DW_AT_type [DW_FORM_ref4]     (cu + 0x0040 => {0x00000040} "A")
 
 ; CHECK:      .debug_loclists contents:
-; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000017, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000015, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 ; CHECK-NEXT: 0x00000000:
 ; CHECK-NEXT:  [0x0000000000000000, 0x0000000000000004): DW_OP_breg5 RDI+0
 ; CHECK-NEXT:  [0x0000000000000004, 0x0000000000000012): DW_OP_breg3 RBX+0
@@ -32,13 +32,13 @@
 ; ASM-NEXT:  .byte 4                               # DW_LLE_offset_pair
 ; ASM-NEXT:  .uleb128 .Lfunc_begin0-.Lfunc_begin0  # starting offset
 ; ASM-NEXT:  .uleb128 .Ltmp0-.Lfunc_begin0         # ending offset
-; ASM-NEXT:  .short 2                              # Loc expr size
+; ASM-NEXT:  .byte 2                               # Loc expr size
 ; ASM-NEXT:  .byte 117                             # DW_OP_breg5
 ; ASM-NEXT:  .byte 0                               # 0
 ; ASM-NEXT:  .byte 4                               # DW_LLE_offset_pair
 ; ASM-NEXT:  .uleb128 .Ltmp0-.Lfunc_begin0         # starting offset
 ; ASM-NEXT:  .uleb128 .Ltmp1-.Lfunc_begin0         # ending offset
-; ASM-NEXT:  .short 2                              # Loc expr size
+; ASM-NEXT:  .byte 2                               # Loc expr size
 ; ASM-NEXT:  .byte 115                             # DW_OP_breg3
 ; ASM-NEXT:  .byte 0                               # 0
 ; ASM-NEXT:  .byte 0                               # DW_LLE_end_of_list

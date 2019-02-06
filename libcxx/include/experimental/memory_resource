@@ -1,10 +1,9 @@
 // -*- C++ -*-
 //===------------------------ memory_resource -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -98,7 +97,7 @@ size_t __aligned_allocation_size(size_t __s, size_t __a) _NOEXCEPT
 // 8.5, memory.resource
 class _LIBCPP_TYPE_VIS memory_resource
 {
-    static const size_t __max_align = alignof(max_align_t);
+    static const size_t __max_align = _LIBCPP_ALIGNOF(max_align_t);
 
 // 8.5.2, memory.resource.public
 public:
@@ -190,7 +189,7 @@ public:
                 " 'n' exceeds maximum supported size");
         }
         return static_cast<_ValueType*>(
-            __res_->allocate(__n * sizeof(_ValueType), alignof(_ValueType))
+            __res_->allocate(__n * sizeof(_ValueType), _LIBCPP_ALIGNOF(_ValueType))
         );
     }
 
@@ -198,7 +197,7 @@ public:
     void deallocate(_ValueType * __p, size_t __n) _NOEXCEPT {
         _LIBCPP_ASSERT(__n <= __max_size(),
                        "deallocate called for size which exceeds max_size()");
-        __res_->deallocate(__p, __n * sizeof(_ValueType), alignof(_ValueType));
+        __res_->deallocate(__p, __n * sizeof(_ValueType), _LIBCPP_ALIGNOF(_ValueType));
     }
 
     template <class _Tp, class ..._Ts>
@@ -345,7 +344,7 @@ class _LIBCPP_TEMPLATE_VIS __resource_adaptor_imp
                && is_same<typename _CTraits::pointer, char*>::value
                && is_same<typename _CTraits::void_pointer, void*>::value, "");
 
-    static const size_t _MaxAlign = alignof(max_align_t);
+    static const size_t _MaxAlign = _LIBCPP_ALIGNOF(max_align_t);
 
     using _Alloc = typename _CTraits::template rebind_alloc<
             typename aligned_storage<_MaxAlign, _MaxAlign>::type

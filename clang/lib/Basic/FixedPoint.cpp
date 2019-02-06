@@ -1,9 +1,8 @@
 //===- FixedPoint.cpp - Fixed point constant handling -----------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,11 +15,14 @@
 
 namespace clang {
 
-APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema) const {
+APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
+                                   bool *Overflow) const {
   llvm::APSInt NewVal = Val;
   unsigned DstWidth = DstSema.getWidth();
   unsigned DstScale = DstSema.getScale();
   bool Upscaling = DstScale > getScale();
+  if (Overflow)
+    *Overflow = false;
 
   if (Upscaling) {
     NewVal = NewVal.extend(NewVal.getBitWidth() + DstScale - getScale());
@@ -29,18 +31,28 @@ APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema) const {
     NewVal >>= (getScale() - DstScale);
   }
 
-  if (DstSema.isSaturated()) {
-    auto Mask = llvm::APInt::getBitsSetFrom(
-        NewVal.getBitWidth(),
-        std::min(DstScale + DstSema.getIntegralBits(), NewVal.getBitWidth()));
-    llvm::APInt Masked(NewVal & Mask);
+  auto Mask = llvm::APInt::getBitsSetFrom(
+      NewVal.getBitWidth(),
+      std::min(DstScale + DstSema.getIntegralBits(), NewVal.getBitWidth()));
+  llvm::APInt Masked(NewVal & Mask);
 
-    // Change in the bits above the sign
-    if (!(Masked == Mask || Masked == 0))
+  // Change in the bits above the sign
+  if (!(Masked == Mask || Masked == 0)) {
+    // Found overflow in the bits above the sign
+    if (DstSema.isSaturated())
       NewVal = NewVal.isNegative() ? Mask : ~Mask;
+    else if (Overflow)
+      *Overflow = true;
+  }
 
-    if (!DstSema.isSigned() && NewVal.isNegative())
+  // If the dst semantics are unsigned, but our value is signed and negative, we
+  // clamp to zero.
+  if (!DstSema.isSigned() && NewVal.isSigned() && NewVal.isNegative()) {
+    // Found negative overflow for unsigned result
+    if (DstSema.isSaturated())
       NewVal = 0;
+    else if (Overflow)
+      *Overflow = true;
   }
 
   NewVal = NewVal.extOrTrunc(DstWidth);
@@ -110,6 +122,100 @@ APFixedPoint APFixedPoint::getMax(const FixedPointSemantics &Sema) {
 APFixedPoint APFixedPoint::getMin(const FixedPointSemantics &Sema) {
   auto Val = llvm::APSInt::getMinValue(Sema.getWidth(), !Sema.isSigned());
   return APFixedPoint(Val, Sema);
+}
+
+FixedPointSemantics FixedPointSemantics::getCommonSemantics(
+    const FixedPointSemantics &Other) const {
+  unsigned CommonScale = std::max(getScale(), Other.getScale());
+  unsigned CommonWidth =
+      std::max(getIntegralBits(), Other.getIntegralBits()) + CommonScale;
+
+  bool ResultIsSigned = isSigned() || Other.isSigned();
+  bool ResultIsSaturated = isSaturated() || Other.isSaturated();
+  bool ResultHasUnsignedPadding = false;
+  if (!ResultIsSigned) {
+    // Both are unsigned.
+    ResultHasUnsignedPadding = hasUnsignedPadding() &&
+                               Other.hasUnsignedPadding() && !ResultIsSaturated;
+  }
+
+  // If the result is signed, add an extra bit for the sign. Otherwise, if it is
+  // unsigned and has unsigned padding, we only need to add the extra padding
+  // bit back if we are not saturating.
+  if (ResultIsSigned || ResultHasUnsignedPadding)
+    CommonWidth++;
+
+  return FixedPointSemantics(CommonWidth, CommonScale, ResultIsSigned,
+                             ResultIsSaturated, ResultHasUnsignedPadding);
+}
+
+APFixedPoint APFixedPoint::add(const APFixedPoint &Other,
+                               bool *Overflow) const {
+  auto CommonFXSema = Sema.getCommonSemantics(Other.getSemantics());
+  APFixedPoint ConvertedThis = convert(CommonFXSema);
+  APFixedPoint ConvertedOther = Other.convert(CommonFXSema);
+  llvm::APSInt ThisVal = ConvertedThis.getValue();
+  llvm::APSInt OtherVal = ConvertedOther.getValue();
+  bool Overflowed = false;
+
+  llvm::APSInt Result;
+  if (CommonFXSema.isSaturated()) {
+    Result = CommonFXSema.isSigned() ? ThisVal.sadd_sat(OtherVal)
+                                     : ThisVal.uadd_sat(OtherVal);
+  } else {
+    Result = ThisVal.isSigned() ? ThisVal.sadd_ov(OtherVal, Overflowed)
+                                : ThisVal.uadd_ov(OtherVal, Overflowed);
+  }
+
+  if (Overflow)
+    *Overflow = Overflowed;
+
+  return APFixedPoint(Result, CommonFXSema);
+}
+
+void APFixedPoint::toString(llvm::SmallVectorImpl<char> &Str) const {
+  llvm::APSInt Val = getValue();
+  unsigned Scale = getScale();
+
+  if (Val.isSigned() && Val.isNegative() && Val != -Val) {
+    Val = -Val;
+    Str.push_back('-');
+  }
+
+  llvm::APSInt IntPart = Val >> Scale;
+
+  // Add 4 digits to hold the value after multiplying 10 (the radix)
+  unsigned Width = Val.getBitWidth() + 4;
+  llvm::APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
+  llvm::APInt FractPartMask = llvm::APInt::getAllOnesValue(Scale).zext(Width);
+  llvm::APInt RadixInt = llvm::APInt(Width, 10);
+
+  IntPart.toString(Str, /*radix=*/10);
+  Str.push_back('.');
+  do {
+    (FractPart * RadixInt)
+        .lshr(Scale)
+        .toString(Str, /*radix=*/10, Val.isSigned());
+    FractPart = (FractPart * RadixInt) & FractPartMask;
+  } while (FractPart != 0);
+}
+
+APFixedPoint APFixedPoint::negate(bool *Overflow) const {
+  if (!isSaturated()) {
+    if (Overflow)
+      *Overflow =
+          (!isSigned() && Val != 0) || (isSigned() && Val.isMinSignedValue());
+    return APFixedPoint(-Val, Sema);
+  }
+
+  // We never overflow for saturation
+  if (Overflow)
+    *Overflow = false;
+
+  if (isSigned())
+    return Val.isMinSignedValue() ? getMax(Sema) : APFixedPoint(-Val, Sema);
+  else
+    return APFixedPoint(Sema);
 }
 
 }  // namespace clang

@@ -64,18 +64,18 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .bss.g0
-; CHECK-NEXT:         Alignment:       4
+; CHECK-NEXT:         Alignment:       2
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            .bss.g1
-; CHECK-NEXT:         Alignment:       4
+; CHECK-NEXT:         Alignment:       2
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            .bss.foo
-; CHECK-NEXT:         Alignment:       1
+; CHECK-NEXT:         Alignment:       0
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            .bss.bar
-; CHECK-NEXT:         Alignment:       1
+; CHECK-NEXT:         Alignment:       0
 ; CHECK-NEXT:         Flags:           [ ]
 ; CHECK-NEXT: ...

@@ -1,13 +1,13 @@
 # RUN: yaml2obj %s > %t
 # RUN: cp %t %t1
 # RUN: llvm-objcopy --strip-all --keep-symbol foo %t %t2
-# RUN: llvm-readobj -sections -symbols %t2 | FileCheck %s
+# RUN: llvm-readobj --sections --symbols %t2 | FileCheck %s
 
 # Verify that the first run of llvm-objcopy
 # has not modified the input binary.
 # RUN: cmp %t %t1
 
-# RUN: llvm-strip -keep-symbol=foo %t1
+# RUN: llvm-strip --keep-symbol=foo %t1
 # RUN: cmp %t1 %t2
 
 # RUN: cp %t %t3

@@ -1,9 +1,8 @@
 //===-- raw-ostream.h - Support for printing using raw_ostream --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 // This file is not part of gtest, but extends it to support LLVM libraries.
@@ -42,8 +41,9 @@ auto printable(const T &V) -> decltype(StreamSwitch<T>::printable(V)) {
 // If raw_ostream support is enabled, we specialize for types with operator<<
 // that takes a raw_ostream.
 #if !GTEST_NO_LLVM_RAW_OSTREAM
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_os_ostream.h"
+#include "llvm/Support/raw_ostream.h"
 #include <ostream>
 namespace llvm_gtest {
 
@@ -67,6 +67,18 @@ template <typename T>
 struct StreamSwitch<T, decltype((void)(std::declval<llvm::raw_ostream &>()
                                        << ConvertibleTo<const T &>()))> {
   static const RawStreamProxy<T> printable(const T &V) { return {V}; }
+};
+
+// llvm::Optional has a template operator<<, which means it will not accept any
+// implicit conversions, so we need to special-case it here.
+template <typename T>
+struct StreamSwitch<llvm::Optional<T>,
+                    decltype((void)(std::declval<llvm::raw_ostream &>()
+                                    << std::declval<llvm::Optional<T>>()))> {
+  static const RawStreamProxy<llvm::Optional<T>>
+  printable(const llvm::Optional<T> &V) {
+    return {V};
+  }
 };
 } // namespace llvm_gtest
 #endif  // !GTEST_NO_LLVM_RAW_OSTREAM

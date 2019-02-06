@@ -1,4 +1,4 @@
-; RUN: not llvm-rc /V /FO %t.res %p/Inputs/tokens.rc | FileCheck %s
+; RUN: not llvm-rc /V /FO %t.res -- %p/Inputs/tokens.rc | FileCheck %s
 ; llvm-rc fails now on this sample because it is an invalid resource file
 ; script. We silence the error message and just analyze the output.
 

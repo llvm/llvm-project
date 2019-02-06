@@ -57,7 +57,7 @@ class TestYMMRegister(TestBase):
         else:
             register_range = 8
         for i in range(register_range):
-            j = i - ((i / 8) * 8)
+            j = i - ((i // 8) * 8)
             self.runCmd("thread step-inst")
 
             register_byte = (byte_pattern1 | j)

@@ -33,10 +33,10 @@ entry:
 ; TODO(ncw): Update LLD so that the symbol table is written out for
 ;   non-relocatable output (with an option to strip it)
 
-; CHECK:      00000004 T _start
-; CHECK-NEXT: 00000002 T archive2_symbol
+; CHECK:      00000016 T _start
+; CHECK-NEXT: 0000000a T archive2_symbol
 ; CHECK-NEXT: 00000001 T bar
-; CHECK-NEXT: 00000003 T foo
+; CHECK-NEXT: 0000000d T foo
 ; CHECK-NEXT:          U missing_func
 
 ; Verify that symbols from unused objects don't appear in the symbol table

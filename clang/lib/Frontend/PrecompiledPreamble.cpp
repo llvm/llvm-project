@@ -1,9 +1,8 @@
 //===--- PrecompiledPreamble.cpp - Build precompiled preambles --*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -19,6 +18,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/StringExtras.h"
@@ -347,6 +347,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
       Callbacks.createPPCallbacks();
   if (DelegatedPPCallbacks)
     Clang->getPreprocessor().addPPCallbacks(std::move(DelegatedPPCallbacks));
+  if (auto CommentHandler = Callbacks.getCommentHandler())
+    Clang->getPreprocessor().addCommentHandler(CommentHandler);
 
   Act->Execute();
 
@@ -743,6 +745,7 @@ void PreambleCallbacks::HandleTopLevelDecl(DeclGroupRef DG) {}
 std::unique_ptr<PPCallbacks> PreambleCallbacks::createPPCallbacks() {
   return nullptr;
 }
+CommentHandler *PreambleCallbacks::getCommentHandler() { return nullptr; }
 
 static llvm::ManagedStatic<BuildPreambleErrorCategory> BuildPreambleErrCategory;
 

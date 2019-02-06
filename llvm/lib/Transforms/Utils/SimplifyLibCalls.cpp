@@ -1,9 +1,8 @@
 //===------ SimplifyLibCalls.cpp - Library calls simplifier ---------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -334,11 +333,12 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilder<> &B) {
     return ConstantInt::get(CI->getType(), Str1.compare(Str2));
 
   if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
-    return B.CreateNeg(
-        B.CreateZExt(B.CreateLoad(Str2P, "strcmpload"), CI->getType()));
+    return B.CreateNeg(B.CreateZExt(
+        B.CreateLoad(B.getInt8Ty(), Str2P, "strcmpload"), CI->getType()));
 
   if (HasStr2 && Str2.empty()) // strcmp(x,"") -> *x
-    return B.CreateZExt(B.CreateLoad(Str1P, "strcmpload"), CI->getType());
+    return B.CreateZExt(B.CreateLoad(B.getInt8Ty(), Str1P, "strcmpload"),
+                        CI->getType());
 
   // strcmp(P, "x") -> memcmp(P, "x", 2)
   uint64_t Len1 = GetStringLength(Str1P);
@@ -398,11 +398,12 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilder<> &B) {
   }
 
   if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
-    return B.CreateNeg(
-        B.CreateZExt(B.CreateLoad(Str2P, "strcmpload"), CI->getType()));
+    return B.CreateNeg(B.CreateZExt(
+        B.CreateLoad(B.getInt8Ty(), Str2P, "strcmpload"), CI->getType()));
 
   if (HasStr2 && Str2.empty()) // strncmp(x, "", n) -> *x
-    return B.CreateZExt(B.CreateLoad(Str1P, "strcmpload"), CI->getType());
+    return B.CreateZExt(B.CreateLoad(B.getInt8Ty(), Str1P, "strcmpload"),
+                        CI->getType());
 
   uint64_t Len1 = GetStringLength(Str1P);
   uint64_t Len2 = GetStringLength(Str2P);
@@ -591,7 +592,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilder<> &B,
   // strlen(x) != 0 --> *x != 0
   // strlen(x) == 0 --> *x == 0
   if (isOnlyUsedInZeroEqualityComparison(CI))
-    return B.CreateZExt(B.CreateLoad(Src, "strlenfirst"), CI->getType());
+    return B.CreateZExt(B.CreateLoad(B.getIntNTy(CharSize), Src, "strlenfirst"),
+                        CI->getType());
 
   return nullptr;
 }
@@ -735,7 +737,8 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilder<> &B) {
 
     // strstr("abcd", "bc") -> gep((char*)"abcd", 1)
     Value *Result = castToCStr(CI->getArgOperand(0), B);
-    Result = B.CreateConstInBoundsGEP1_64(Result, Offset, "strstr");
+    Result =
+        B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), Result, Offset, "strstr");
     return B.CreateBitCast(Result, CI->getType());
   }
 
@@ -798,8 +801,11 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilder<> &B) {
       Bitfield.setBit((unsigned char)C);
     Value *BitfieldC = B.getInt(Bitfield);
 
-    // First check that the bit field access is within bounds.
+    // Adjust width of "C" to the bitfield width, then mask off the high bits.
     Value *C = B.CreateZExtOrTrunc(CI->getArgOperand(1), BitfieldC->getType());
+    C = B.CreateAnd(C, B.getIntN(Width, 0xFF));
+
+    // First check that the bit field access is within bounds.
     Value *Bounds = B.CreateICmp(ICmpInst::ICMP_ULT, C, B.getIntN(Width, Width),
                                  "memchr.bounds");
 
@@ -842,10 +848,12 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
 
   // memcmp(S1,S2,1) -> *(unsigned char*)LHS - *(unsigned char*)RHS
   if (Len == 1) {
-    Value *LHSV = B.CreateZExt(B.CreateLoad(castToCStr(LHS, B), "lhsc"),
-                               CI->getType(), "lhsv");
-    Value *RHSV = B.CreateZExt(B.CreateLoad(castToCStr(RHS, B), "rhsc"),
-                               CI->getType(), "rhsv");
+    Value *LHSV =
+        B.CreateZExt(B.CreateLoad(B.getInt8Ty(), castToCStr(LHS, B), "lhsc"),
+                     CI->getType(), "lhsv");
+    Value *RHSV =
+        B.CreateZExt(B.CreateLoad(B.getInt8Ty(), castToCStr(RHS, B), "rhsc"),
+                     CI->getType(), "rhsv");
     return B.CreateSub(LHSV, RHSV, "chardiff");
   }
 
@@ -875,12 +883,12 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
       if (!LHSV) {
         Type *LHSPtrTy =
             IntType->getPointerTo(LHS->getType()->getPointerAddressSpace());
-        LHSV = B.CreateLoad(B.CreateBitCast(LHS, LHSPtrTy), "lhsv");
+        LHSV = B.CreateLoad(IntType, B.CreateBitCast(LHS, LHSPtrTy), "lhsv");
       }
       if (!RHSV) {
         Type *RHSPtrTy =
             IntType->getPointerTo(RHS->getType()->getPointerAddressSpace());
-        RHSV = B.CreateLoad(B.CreateBitCast(RHS, RHSPtrTy), "rhsv");
+        RHSV = B.CreateLoad(IntType, B.CreateBitCast(RHS, RHSPtrTy), "rhsv");
       }
       return B.CreateZExt(B.CreateICmpNE(LHSV, RHSV), CI->getType(), "memcmp");
     }
@@ -1501,9 +1509,8 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
         One = ConstantExpr::getFPExtend(One, Op->getType());
 
       Module *M = CI->getModule();
-      Value *NewCallee =
-          M->getOrInsertFunction(TLI->getName(LdExp), Op->getType(),
-                                 Op->getType(), B.getInt32Ty());
+      FunctionCallee NewCallee = M->getOrInsertFunction(
+          TLI->getName(LdExp), Op->getType(), Op->getType(), B.getInt32Ty());
       CallInst *CI = B.CreateCall(NewCallee, {One, LdExpArg});
       if (const Function *F = dyn_cast<Function>(Callee->stripPointerCasts()))
         CI->setCallingConv(F->getCallingConv());
@@ -1651,13 +1658,13 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilder<> &B) {
   // replace it with the fabs of that factor.
   Module *M = Callee->getParent();
   Type *ArgType = I->getType();
-  Value *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, ArgType);
+  Function *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, ArgType);
   Value *FabsCall = B.CreateCall(Fabs, RepeatOp, "fabs");
   if (OtherOp) {
     // If we found a non-repeated factor, we still need to get its square
     // root. We then multiply that by the value that was simplified out
     // of the square root calculation.
-    Value *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, ArgType);
+    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, ArgType);
     Value *SqrtCall = B.CreateCall(Sqrt, OtherOp, "sqrt");
     return B.CreateFMul(FabsCall, SqrtCall);
   }
@@ -1725,8 +1732,8 @@ static void insertSinCosCall(IRBuilder<> &B, Function *OrigCallee, Value *Arg,
   }
 
   Module *M = OrigCallee->getParent();
-  Value *Callee = M->getOrInsertFunction(Name, OrigCallee->getAttributes(),
-                                         ResTy, ArgTy);
+  FunctionCallee Callee =
+      M->getOrInsertFunction(Name, OrigCallee->getAttributes(), ResTy, ArgTy);
 
   if (Instruction *ArgInst = dyn_cast<Instruction>(Arg)) {
     // If the argument is an instruction, it must dominate all uses so put our
@@ -1837,8 +1844,8 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilder<> &B) {
   // ffs(x) -> x != 0 ? (i32)llvm.cttz(x)+1 : 0
   Value *Op = CI->getArgOperand(0);
   Type *ArgType = Op->getType();
-  Value *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
-                                       Intrinsic::cttz, ArgType);
+  Function *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
+                                          Intrinsic::cttz, ArgType);
   Value *V = B.CreateCall(F, {Op, B.getTrue()}, "cttz");
   V = B.CreateAdd(V, ConstantInt::get(V->getType(), 1));
   V = B.CreateIntCast(V, B.getInt32Ty(), false);
@@ -1851,8 +1858,8 @@ Value *LibCallSimplifier::optimizeFls(CallInst *CI, IRBuilder<> &B) {
   // fls(x) -> (i32)(sizeInBits(x) - llvm.ctlz(x, false))
   Value *Op = CI->getArgOperand(0);
   Type *ArgType = Op->getType();
-  Value *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
-                                       Intrinsic::ctlz, ArgType);
+  Function *F = Intrinsic::getDeclaration(CI->getCalledFunction()->getParent(),
+                                          Intrinsic::ctlz, ArgType);
   Value *V = B.CreateCall(F, {Op, B.getFalse()}, "ctlz");
   V = B.CreateSub(ConstantInt::get(V->getType(), ArgType->getIntegerBitWidth()),
                   V);
@@ -2023,7 +2030,7 @@ Value *LibCallSimplifier::optimizePrintF(CallInst *CI, IRBuilder<> &B) {
   // arguments.
   if (TLI->has(LibFunc_iprintf) && !callHasFloatingPointArgument(CI)) {
     Module *M = B.GetInsertBlock()->getParent()->getParent();
-    Constant *IPrintFFn =
+    FunctionCallee IPrintFFn =
         M->getOrInsertFunction("iprintf", FT, Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(IPrintFFn);
@@ -2102,7 +2109,7 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilder<> &B) {
   // point arguments.
   if (TLI->has(LibFunc_siprintf) && !callHasFloatingPointArgument(CI)) {
     Module *M = B.GetInsertBlock()->getParent()->getParent();
-    Constant *SIPrintFFn =
+    FunctionCallee SIPrintFFn =
         M->getOrInsertFunction("siprintf", FT, Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(SIPrintFFn);
@@ -2259,7 +2266,7 @@ Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilder<> &B) {
   // floating point arguments.
   if (TLI->has(LibFunc_fiprintf) && !callHasFloatingPointArgument(CI)) {
     Module *M = B.GetInsertBlock()->getParent()->getParent();
-    Constant *FIPrintFFn =
+    FunctionCallee FIPrintFFn =
         M->getOrInsertFunction("fiprintf", FT, Callee->getAttributes());
     CallInst *New = cast<CallInst>(CI->clone());
     New->setCalledFunction(FIPrintFFn);
@@ -2285,7 +2292,8 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilder<> &B) {
     // If this is writing one byte, turn it into fputc.
     // This optimisation is only valid, if the return value is unused.
     if (Bytes == 1 && CI->use_empty()) { // fwrite(S,1,1,F) -> fputc(S[0],F)
-      Value *Char = B.CreateLoad(castToCStr(CI->getArgOperand(0), B), "char");
+      Value *Char = B.CreateLoad(B.getInt8Ty(),
+                                 castToCStr(CI->getArgOperand(0), B), "char");
       Value *NewCI = emitFPutC(Char, CI->getArgOperand(3), B, TLI);
       return NewCI ? ConstantInt::get(CI->getType(), 1) : nullptr;
     }

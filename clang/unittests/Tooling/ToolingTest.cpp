@@ -1,9 +1,8 @@
 //===- unittest/Tooling/ToolingTest.cpp - Tooling unit tests --------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -448,6 +447,37 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
   EXPECT_FALSE(HasFlag("-MMD"));
   EXPECT_TRUE(HasFlag("-c"));
   EXPECT_TRUE(HasFlag("-w"));
+}
+
+// Check getClangStripPluginsAdjuster strips plugin related args.
+TEST(ClangToolTest, StripPluginsAdjuster) {
+  FixedCompilationDatabase Compilations(
+      "/", {"-Xclang", "-add-plugin", "-Xclang", "random-plugin"});
+
+  ClangTool Tool(Compilations, std::vector<std::string>(1, "/a.cc"));
+  Tool.mapVirtualFile("/a.cc", "void a() {}");
+
+  std::unique_ptr<FrontendActionFactory> Action(
+      newFrontendActionFactory<SyntaxOnlyAction>());
+
+  CommandLineArguments FinalArgs;
+  ArgumentsAdjuster CheckFlagsAdjuster =
+      [&FinalArgs](const CommandLineArguments &Args, StringRef /*unused*/) {
+        FinalArgs = Args;
+        return Args;
+      };
+  Tool.clearArgumentsAdjusters();
+  Tool.appendArgumentsAdjuster(getStripPluginsAdjuster());
+  Tool.appendArgumentsAdjuster(CheckFlagsAdjuster);
+  Tool.run(Action.get());
+
+  auto HasFlag = [&FinalArgs](const std::string &Flag) {
+    return std::find(FinalArgs.begin(), FinalArgs.end(), Flag) !=
+           FinalArgs.end();
+  };
+  EXPECT_FALSE(HasFlag("-Xclang"));
+  EXPECT_FALSE(HasFlag("-add-plugin"));
+  EXPECT_FALSE(HasFlag("-random-plugin"));
 }
 
 namespace {

@@ -1,9 +1,8 @@
 //===-- NVPTXAsmPrinter.cpp - NVPTX LLVM assembly writer ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -473,6 +472,9 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
   // Emit open brace for function body.
   OutStreamer->EmitRawText(StringRef("{\n"));
   setAndEmitFunctionVirtualRegisters(*MF);
+  // Emit initial .loc debug directive for correct relocation symbol data.
+  if (MMI && MMI->hasDebugInfo())
+    emitInitialRawDwarfLocDirective(*MF);
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
@@ -730,6 +732,11 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
   for (Module::const_iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI) {
     const Function *F = &*FI;
 
+    if (F->getAttributes().hasFnAttribute("nvptx-libcall-callee")) {
+      emitDeclaration(F, O);
+      continue;
+    }
+
     if (F->isDeclaration()) {
       if (F->use_empty())
         continue;
@@ -894,9 +901,8 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
     if (HasFullDebugInfo)
       break;
   }
-  // FIXME: remove comment once debug info is properly supported.
   if (MMI && MMI->hasDebugInfo() && HasFullDebugInfo)
-    O << "//, debug";
+    O << ", debug";
 
   O << "\n";
 
@@ -947,10 +953,10 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   clearAnnotationCache(&M);
 
   delete[] gv_array;
-  // FIXME: remove comment once debug info is properly supported.
   // Close the last emitted section
   if (HasDebugInfo)
-    OutStreamer->EmitRawText("//\t}");
+    static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
+        ->closeLastSection();
 
   // Output last DWARF .file directives, if any.
   static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())

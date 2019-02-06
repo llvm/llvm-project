@@ -1,9 +1,8 @@
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,10 +12,6 @@
 // Libc++ defers to the underlying MSVC library to provide the new/delete
 // definitions, which does not yet provide aligned allocation
 // XFAIL: LIBCXX-WINDOWS-FIXME
-
-// Clang 10 (and older) will trigger an availability error when the deployment
-// target does not support aligned allocation, even if we pass `-faligned-allocation`.
-// XFAIL: apple-clang-10 && availability=macosx10.12
 
 // The dylibs shipped before macosx10.14 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results

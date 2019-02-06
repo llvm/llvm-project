@@ -1,9 +1,8 @@
 //===-- sanitizer_common_libcdep.cc ---------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,7 +24,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
   SoftRssLimitExceededCallback = Callback;
 }
 
-#if SANITIZER_LINUX && !SANITIZER_GO
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
 SANITIZER_WEAK_ATTRIBUTE StackDepotStats *StackDepotGetStats() {
   return nullptr;
@@ -114,7 +113,7 @@ void WriteToSyslog(const char *msg) {
 }
 
 void MaybeStartBackgroudThread() {
-#if SANITIZER_LINUX && \
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && \
     !SANITIZER_GO  // Need to implement/test on other platforms.
   // Start the background thread if one of the rss limits is given.
   if (!common_flags()->hard_rss_limit_mb &&

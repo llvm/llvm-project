@@ -1,9 +1,8 @@
 //==- BuiltinsAMDGPU.def - AMDGPU Builtin function database ------*- C++ -*-==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -99,12 +98,23 @@ BUILTIN(__builtin_amdgcn_fmed3f, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_ds_faddf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_fminf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_fmaxf, "ff*3fIiIiIb", "n")
+BUILTIN(__builtin_amdgcn_ds_append, "ii*3", "n")
+BUILTIN(__builtin_amdgcn_ds_consume, "ii*3", "n")
 
 //===----------------------------------------------------------------------===//
 // CI+ only builtins.
 //===----------------------------------------------------------------------===//
 TARGET_BUILTIN(__builtin_amdgcn_s_dcache_inv_vol, "v", "n", "ci-insts")
 TARGET_BUILTIN(__builtin_amdgcn_buffer_wbinvl1_vol, "v", "n", "ci-insts")
+
+//===----------------------------------------------------------------------===//
+// Interpolation builtins.
+//===----------------------------------------------------------------------===//
+BUILTIN(__builtin_amdgcn_interp_p1_f16, "ffUiUibUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_p2_f16, "hffUiUibUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_p1, "ffUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_p2, "fffUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_interp_mov, "fUiUiUiUi", "nc")
 
 //===----------------------------------------------------------------------===//
 // VI+ only builtins.
@@ -135,13 +145,13 @@ TARGET_BUILTIN(__builtin_amdgcn_fmed3h, "hhhh", "nc", "gfx9-insts")
 // Deep learning builtins.
 //===----------------------------------------------------------------------===//
 
-TARGET_BUILTIN(__builtin_amdgcn_fdot2, "fV2hV2hfIb", "nc", "dl-insts")
-TARGET_BUILTIN(__builtin_amdgcn_sdot2, "SiV2SsV2SsSiIb", "nc", "dl-insts")
-TARGET_BUILTIN(__builtin_amdgcn_udot2, "UiV2UsV2UsUiIb", "nc", "dl-insts")
-TARGET_BUILTIN(__builtin_amdgcn_sdot4, "SiSiSiSiIb", "nc", "dl-insts")
-TARGET_BUILTIN(__builtin_amdgcn_udot4, "UiUiUiUiIb", "nc", "dl-insts")
-TARGET_BUILTIN(__builtin_amdgcn_sdot8, "SiSiSiSiIb", "nc", "dl-insts")
-TARGET_BUILTIN(__builtin_amdgcn_udot8, "UiUiUiUiIb", "nc", "dl-insts")
+TARGET_BUILTIN(__builtin_amdgcn_fdot2, "fV2hV2hfIb", "nc", "dot-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot2, "SiV2SsV2SsSiIb", "nc", "dot-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot2, "UiV2UsV2UsUiIb", "nc", "dot-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot4, "SiSiSiSiIb", "nc", "dot-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot4, "UiUiUiUiIb", "nc", "dot-insts")
+TARGET_BUILTIN(__builtin_amdgcn_sdot8, "SiSiSiSiIb", "nc", "dot-insts")
+TARGET_BUILTIN(__builtin_amdgcn_udot8, "UiUiUiUiIb", "nc", "dot-insts")
 
 //===----------------------------------------------------------------------===//
 // Special builtins.

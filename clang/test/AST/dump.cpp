@@ -56,12 +56,12 @@ struct S {
 // CHECK-NEXT: |       | `-DeclRefExpr {{.+}} <col:48> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 // CHECK-NEXT: |       |-OMPSharedClause {{.+}} <col:51, col:59>
 // CHECK-NEXT: |       | `-MemberExpr {{.+}} <col:58> 'int' lvalue ->b
-// CHECK-NEXT: |       |   `-CXXThisExpr {{.+}} <col:58> 'S *' this
+// CHECK-NEXT: |       |   `-CXXThisExpr {{.+}} <col:58> 'S *' implicit this
 // CHECK-NEXT: |       |-OMPScheduleClause {{.+}} <col:61, col:79>
 // CHECK-NEXT: |       | `-ImplicitCastExpr {{.+}} <col:78> 'int' <LValueToRValue>
 // CHECK-NEXT: |       |   `-DeclRefExpr {{.+}} <col:78> 'int' lvalue OMPCapturedExpr {{.+}} '.capture_expr.' 'int'
 // CHECK-NEXT: |       `-CapturedStmt {{.+}} <line:[[@LINE-15]]:5, line:[[@LINE-14]]:9>
-// CHECK-NEXT: |         |-CapturedDecl {{.+}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: |         |-CapturedDecl {{.+}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |         | |-ForStmt {{.+}} <line:[[@LINE-17]]:5, line:[[@LINE-16]]:9>
 // CHECK:      |         | | `-UnaryOperator {{.+}} <line:[[@LINE-17]]:7, col:9> 'int' lvalue prefix '++'
 // CHECK-NEXT: |         | |   `-DeclRefExpr {{.+}} <col:9> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'

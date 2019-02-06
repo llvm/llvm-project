@@ -1,9 +1,8 @@
 ///===- SimpleLoopUnswitch.cpp - Hoist loop-invariant control flow ---------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -848,6 +847,10 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
     // Check if there are any side-effecting instructions (e.g. stores, calls,
     // volatile loads) in the part of the loop that the code *would* execute
     // without unswitching.
+    if (MSSAU) // Possible early exit with MSSA
+      if (auto *Defs = MSSAU->getMemorySSA()->getBlockDefs(CurrentBB))
+        if (!isa<MemoryPhi>(*Defs->begin()) || (++Defs->begin() != Defs->end()))
+          return Changed;
     if (llvm::any_of(*CurrentBB,
                      [](Instruction &I) { return I.mayHaveSideEffects(); }))
       return Changed;
@@ -2281,7 +2284,10 @@ static void unswitchNontrivialInvariants(
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
-  ++NumBranches;
+  if (BI)
+    ++NumBranches;
+  else
+    ++NumSwitches;
 }
 
 /// Recursively compute the cost of a dominator subtree based on the per-block

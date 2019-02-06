@@ -93,21 +93,6 @@ void floating_point_suffix() {
   static constexpr auto v12 = 0xfp0Q; // OK.
   static_assert(is_same<decltype(v12), const __float128>::value, "");
   static_assert(v12 == 0xfp0, "");
-
-  // _Float16
-
-  static constexpr auto v13 = 0xfp0f16;
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: floating point literal has suffix 'f16', which is not uppercase
-  // CHECK-MESSAGES-NEXT: static constexpr auto v13 = 0xfp0f16;
-  // CHECK-MESSAGES-NEXT: ^    ~
-  // CHECK-MESSAGES-NEXT: {{^ *}}F16{{$}}
-  // CHECK-FIXES: static constexpr auto v13 = 0xfp0F16;
-  static_assert(is_same<decltype(v13), const _Float16>::value, "");
-  static_assert(v13 == 0xfp0F16, "");
-
-  static constexpr auto v14 = 0xfp0F16; // OK.
-  static_assert(is_same<decltype(v14), const _Float16>::value, "");
-  static_assert(v14 == 0xfp0F16, "");
 }
 
 void floating_point_complex_suffix() {

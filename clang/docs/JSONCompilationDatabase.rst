@@ -29,7 +29,7 @@ system is not necessarily the best solution:
 Supported Systems
 =================
 
-Currently `CMake <http://cmake.org>`_ (since 2.8.5) supports generation
+Currently `CMake <https://cmake.org>`_ (since 2.8.5) supports generation
 of compilation databases for Unix Makefile builds (Ninja builds in the
 works) with the option ``CMAKE_EXPORT_COMPILE_COMMANDS``.
 

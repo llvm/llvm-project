@@ -1,11 +1,23 @@
 # Contributing
 
 ## License
-Intel Project for LLVM* technology is dual-licensed under the terms of the 2 licenses in [LICENSE](https://github.com/intel/llvm/blob/intel/llvm/LICENSE.TXT) and [LICENSE2](https://github.com/intel/llvm/blob/intel/llvm/LICENSE2.TXT). We are dual-licensing this technology because, while the LLVM project is currently provided under the NCSA license, LLVM intends to change to Apache-2.0 With LLVM-exception.  We want to ensure our ability to contribute this project to the LLVM project under either of these licenses. 
-By contributing to this project, you agree to the licenses and copyright terms therein and release your contribution under these terms.
+Intel Project for LLVM* technology is licensed under the terms of the
+Apache-2.0 with LLVM-exception license (
+[LICENSE.txt](https://github.com/intel/llvm/blob/intel/llvm/LICENSE.TXT))
+to ensure our ability to contribute this project to the LLVM project
+under the same license.
+
+By contributing to this project, you agree to the Apache-2.0 with
+LLVM-exception license and copyright terms there in and release your
+contribution under these terms.
 
 ## Sign your work
-Please use the sign-off line at the end of your contribution. Your signature certifies that you wrote the contribution or otherwise have the right to pass it on as an open-source contribution, and that you agree to provide your contribution under the terms of the licenses noted above. The rules are pretty simple: if you can certify the below (from [developercertificate.org](http://developercertificate.org)):
+Please use the sign-off line at the end of your contribution. Your
+signature certifies that you wrote the contribution or otherwise have
+the right to pass it on as an open-source contribution, and that you
+agree to provide your contribution under the terms of the licenses
+noted above. The rules are pretty simple: if you can certify the
+below (from [developercertificate.org](http://developercertificate.org)):
 
 ```
 Developer Certificate of Origin

@@ -1,9 +1,8 @@
 //===- Stmt.h - Classes for representing statements -------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -481,7 +480,10 @@ protected:
 
     unsigned Kind : 6;
     unsigned PartOfExplicitCast : 1; // Only set for ImplicitCastExpr.
-    unsigned BasePathIsEmpty : 1;
+
+    /// The number of CXXBaseSpecifiers in the cast. 14 bits would be enough
+    /// here. ([implimits] Direct and indirect base classes [16384]).
+    unsigned BasePathSize;
   };
 
   class BinaryOperatorBitfields {
@@ -516,6 +518,16 @@ protected:
 
     /// The number of expressions in the paren list.
     unsigned NumExprs;
+  };
+
+  class GenericSelectionExprBitfields {
+    friend class ASTStmtReader;
+    friend class GenericSelectionExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location of the "_Generic".
+    SourceLocation GenericLoc;
   };
 
   class PseudoObjectExprBitfields {
@@ -612,6 +624,48 @@ protected:
     SourceLocation Loc;
   };
 
+  class CXXScalarValueInitExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXScalarValueInitExpr;
+
+    unsigned : NumExprBits;
+
+    SourceLocation RParenLoc;
+  };
+
+  class CXXNewExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class CXXNewExpr;
+
+    unsigned : NumExprBits;
+
+    /// Was the usage ::new, i.e. is the global new to be used?
+    unsigned IsGlobalNew : 1;
+
+    /// Do we allocate an array? If so, the first trailing "Stmt *" is the
+    /// size expression.
+    unsigned IsArray : 1;
+
+    /// Should the alignment be passed to the allocation function?
+    unsigned ShouldPassAlignment : 1;
+
+    /// If this is an array allocation, does the usual deallocation
+    /// function for the allocated type want to know the allocated size?
+    unsigned UsualArrayDeleteWantsSize : 1;
+
+    /// What kind of initializer do we have? Could be none, parens, or braces.
+    /// In storage, we distinguish between "none, and no initializer expr", and
+    /// "none, but an implicit initializer expr".
+    unsigned StoredInitializationStyle : 2;
+
+    /// True if the allocated type was expressed as a parenthesized type-id.
+    unsigned IsParenTypeId : 1;
+
+    /// The number of placement new arguments.
+    unsigned NumPlacementArgs;
+  };
+
   class CXXDeleteExprBitfields {
     friend class ASTStmtReader;
     friend class CXXDeleteExpr;
@@ -655,6 +709,18 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class DependentScopeDeclRefExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class DependentScopeDeclRefExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether the name includes info for explicit template
+    /// keyword and arguments.
+    unsigned HasTemplateKWAndArgsInfo : 1;
+  };
+
   class CXXConstructExprBitfields {
     friend class ASTStmtReader;
     friend class CXXConstructExpr;
@@ -683,6 +749,112 @@ protected:
     unsigned NumObjects : 32 - 1 - NumExprBits;
   };
 
+  class CXXUnresolvedConstructExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXUnresolvedConstructExpr;
+
+    unsigned : NumExprBits;
+
+    /// The number of arguments used to construct the type.
+    unsigned NumArgs;
+  };
+
+  class CXXDependentScopeMemberExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDependentScopeMemberExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether this member expression used the '->' operator or
+    /// the '.' operator.
+    unsigned IsArrow : 1;
+
+    /// Whether this member expression has info for explicit template
+    /// keyword and arguments.
+    unsigned HasTemplateKWAndArgsInfo : 1;
+
+    /// See getFirstQualifierFoundInScope() and the comment listing
+    /// the trailing objects.
+    unsigned HasFirstQualifierFoundInScope : 1;
+
+    /// The location of the '->' or '.' operator.
+    SourceLocation OperatorLoc;
+  };
+
+  class OverloadExprBitfields {
+    friend class ASTStmtReader;
+    friend class OverloadExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether the name includes info for explicit template
+    /// keyword and arguments.
+    unsigned HasTemplateKWAndArgsInfo : 1;
+
+    /// Padding used by the derived classes to store various bits. If you
+    /// need to add some data here, shrink this padding and add your data
+    /// above. NumOverloadExprBits also needs to be updated.
+    unsigned : 32 - NumExprBits - 1;
+
+    /// The number of results.
+    unsigned NumResults;
+  };
+  enum { NumOverloadExprBits = NumExprBits + 1 };
+
+  class UnresolvedLookupExprBitfields {
+    friend class ASTStmtReader;
+    friend class UnresolvedLookupExpr;
+
+    unsigned : NumOverloadExprBits;
+
+    /// True if these lookup results should be extended by
+    /// argument-dependent lookup if this is the operand of a function call.
+    unsigned RequiresADL : 1;
+
+    /// True if these lookup results are overloaded.  This is pretty trivially
+    /// rederivable if we urgently need to kill this field.
+    unsigned Overloaded : 1;
+  };
+  static_assert(sizeof(UnresolvedLookupExprBitfields) <= 4,
+                "UnresolvedLookupExprBitfields must be <= than 4 bytes to"
+                "avoid trashing OverloadExprBitfields::NumResults!");
+
+  class UnresolvedMemberExprBitfields {
+    friend class ASTStmtReader;
+    friend class UnresolvedMemberExpr;
+
+    unsigned : NumOverloadExprBits;
+
+    /// Whether this member expression used the '->' operator or
+    /// the '.' operator.
+    unsigned IsArrow : 1;
+
+    /// Whether the lookup results contain an unresolved using declaration.
+    unsigned HasUnresolvedUsing : 1;
+  };
+  static_assert(sizeof(UnresolvedMemberExprBitfields) <= 4,
+                "UnresolvedMemberExprBitfields must be <= than 4 bytes to"
+                "avoid trashing OverloadExprBitfields::NumResults!");
+
+  class CXXNoexceptExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXNoexceptExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned Value : 1;
+  };
+
+  class SubstNonTypeTemplateParmExprBitfields {
+    friend class ASTStmtReader;
+    friend class SubstNonTypeTemplateParmExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location of the non-type template parameter reference.
+    SourceLocation NameLoc;
+  };
+
   //===--- C++ Coroutines TS bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -706,13 +878,16 @@ protected:
   //===--- Clang Extensions bitfields classes ---===//
 
   class OpaqueValueExprBitfields {
+    friend class ASTStmtReader;
     friend class OpaqueValueExpr;
 
     unsigned : NumExprBits;
 
-    /// The OVE is a unique semantic reference to its source expressio if this
+    /// The OVE is a unique semantic reference to its source expression if this
     /// bit is set to true.
     unsigned IsUnique : 1;
+
+    SourceLocation Loc;
   };
 
   union {
@@ -750,6 +925,7 @@ protected:
     BinaryOperatorBitfields BinaryOperatorBits;
     InitListExprBitfields InitListExprBits;
     ParenListExprBitfields ParenListExprBits;
+    GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
 
     // C++ Expressions
@@ -760,10 +936,20 @@ protected:
     CXXThrowExprBitfields CXXThrowExprBits;
     CXXDefaultArgExprBitfields CXXDefaultArgExprBits;
     CXXDefaultInitExprBitfields CXXDefaultInitExprBits;
+    CXXScalarValueInitExprBitfields CXXScalarValueInitExprBits;
+    CXXNewExprBitfields CXXNewExprBits;
     CXXDeleteExprBitfields CXXDeleteExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
+    DependentScopeDeclRefExprBitfields DependentScopeDeclRefExprBits;
     CXXConstructExprBitfields CXXConstructExprBits;
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
+    CXXUnresolvedConstructExprBitfields CXXUnresolvedConstructExprBits;
+    CXXDependentScopeMemberExprBitfields CXXDependentScopeMemberExprBits;
+    OverloadExprBitfields OverloadExprBits;
+    UnresolvedLookupExprBitfields UnresolvedLookupExprBits;
+    UnresolvedMemberExprBitfields UnresolvedMemberExprBits;
+    CXXNoexceptExprBitfields CXXNoexceptExprBits;
+    SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
 
     // C++ Coroutines TS expressions
     CoawaitExprBitfields CoawaitBits;
@@ -800,37 +986,30 @@ public:
   struct EmptyShell {};
 
 protected:
-  /// Iterator for iterating over Stmt * arrays that contain only Expr *
+  /// Iterator for iterating over Stmt * arrays that contain only T *.
   ///
   /// This is needed because AST nodes use Stmt* arrays to store
   /// references to children (to be compatible with StmtIterator).
-  struct ExprIterator
-      : llvm::iterator_adaptor_base<ExprIterator, Stmt **,
-                                    std::random_access_iterator_tag, Expr *> {
-    ExprIterator() : iterator_adaptor_base(nullptr) {}
-    ExprIterator(Stmt **I) : iterator_adaptor_base(I) {}
+  template<typename T, typename TPtr = T *, typename StmtPtr = Stmt *>
+  struct CastIterator
+      : llvm::iterator_adaptor_base<CastIterator<T, TPtr, StmtPtr>, StmtPtr *,
+                                    std::random_access_iterator_tag, TPtr> {
+    using Base = typename CastIterator::iterator_adaptor_base;
 
-    reference operator*() const {
-      assert((*I)->getStmtClass() >= firstExprConstant &&
-             (*I)->getStmtClass() <= lastExprConstant);
-      return *reinterpret_cast<Expr **>(I);
+    CastIterator() : Base(nullptr) {}
+    CastIterator(StmtPtr *I) : Base(I) {}
+
+    typename Base::value_type operator*() const {
+      return cast<T>(*this->I);
     }
   };
 
-  /// Const iterator for iterating over Stmt * arrays that contain only Expr *
-  struct ConstExprIterator
-      : llvm::iterator_adaptor_base<ConstExprIterator, const Stmt *const *,
-                                    std::random_access_iterator_tag,
-                                    const Expr *const> {
-    ConstExprIterator() : iterator_adaptor_base(nullptr) {}
-    ConstExprIterator(const Stmt *const *I) : iterator_adaptor_base(I) {}
+  /// Const iterator for iterating over Stmt * arrays that contain only T *.
+  template <typename T>
+  using ConstCastIterator = CastIterator<T, const T *const, const Stmt *const>;
 
-    reference operator*() const {
-      assert((*I)->getStmtClass() >= firstExprConstant &&
-             (*I)->getStmtClass() <= lastExprConstant);
-      return *reinterpret_cast<const Expr *const *>(I);
-    }
-  };
+  using ExprIterator = CastIterator<Expr>;
+  using ConstExprIterator = ConstCastIterator<Expr>;
 
 private:
   /// Whether statistic collection is enabled.
@@ -892,13 +1071,6 @@ public:
   /// viewAST - Visualize an AST rooted at this Stmt* using GraphViz.  Only
   ///   works on systems with GraphViz (Mac OS X) or dot+gv installed.
   void viewAST() const;
-
-  /// Skip past any implicit AST nodes which might surround this
-  /// statement, such as ExprWithCleanups or ImplicitCastExpr nodes.
-  Stmt *IgnoreImplicit();
-  const Stmt *IgnoreImplicit() const {
-    return const_cast<Stmt *>(this)->IgnoreImplicit();
-  }
 
   /// Skip no-op (attributed, compound) container stmts and skip captured
   /// stmt at the top, if \a IgnoreCaptured is true.

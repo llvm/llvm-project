@@ -3,10 +3,9 @@
 !
 !//===----------------------------------------------------------------------===//
 !//
-!//                     The LLVM Compiler Infrastructure
-!//
-!// This file is dual licensed under the MIT and the University of Illinois Open
-!// Source Licenses. See LICENSE.txt for details.
+!// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+!// See https://llvm.org/LICENSE.txt for license information.
+!// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 !//
 !//===----------------------------------------------------------------------===//
 !
@@ -523,6 +522,7 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_is_initial_device
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_initial_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_devices
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_teams
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_team_num
@@ -595,6 +595,7 @@
 !$omp declare target(omp_get_default_device )
 !$omp declare target(omp_set_default_device )
 !$omp declare target(omp_is_initial_device )
+!$omp declare target(omp_get_initial_device )
 !$omp declare target(omp_get_num_devices )
 !$omp declare target(omp_get_num_teams )
 !$omp declare target(omp_get_team_num )
@@ -641,4 +642,3 @@
 !$omp declare target(omp_init_nest_lock_with_hint )
 !DIR$ ENDIF
 !DIR$ ENDIF
-

@@ -1,7 +1,7 @@
 ; RUN: opt < %s -analyze -scalar-evolution | FileCheck %s
 
 ; CHECK: %t = add i64 %t, 1
-; CHECK: -->  %t
+; CHECK: -->  undef
 
 define void @foo() {
 entry:

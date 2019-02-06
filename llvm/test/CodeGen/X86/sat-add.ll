@@ -537,6 +537,31 @@ define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+define <4 x i32> @unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat(<4 x i32> %x) {
+; SSE2-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [43,44,45,46]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: unsigned_sat_constant_v4i32_using_cmp_notval_nonsplat:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [43,44,45,46]
+; SSE41-NEXT:    paddd %xmm0, %xmm1
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [4294967253,4294967252,4294967251,4294967250]
+; SSE41-NEXT:    pmaxud %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %a = add <4 x i32> %x, <i32 43, i32 44, i32 45, i32 46>
+  %c = icmp ugt <4 x i32> %x, <i32 -44, i32 -45, i32 -46, i32 -47>
+  %r = select <4 x i1> %c, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> %a
+  ret <4 x i32> %r
+}
+
 define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE2-LABEL: unsigned_sat_constant_v2i64_using_min:
 ; SSE2:       # %bb.0:

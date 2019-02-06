@@ -577,11 +577,11 @@ define <2 x i64> @test_mm_com_epu8(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.xop.vpcomub(<16 x i8> %arg0, <16 x i8> %arg1, i8 0)
+  %cmp = icmp ult <16 x i8> %arg0, %arg1
+  %res = sext <16 x i1> %cmp to <16 x i8>
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.xop.vpcomub(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_com_epu16(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_com_epu16:
@@ -590,11 +590,11 @@ define <2 x i64> @test_mm_com_epu16(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.xop.vpcomuw(<8 x i16> %arg0, <8 x i16> %arg1, i8 0)
+  %cmp = icmp ult <8 x i16> %arg0, %arg1
+  %res = sext <8 x i1> %cmp to <8 x i16>
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.xop.vpcomuw(<8 x i16>, <8 x i16>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_com_epu32(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_com_epu32:
@@ -603,21 +603,21 @@ define <2 x i64> @test_mm_com_epu32(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <4 x i32> @llvm.x86.xop.vpcomud(<4 x i32> %arg0, <4 x i32> %arg1, i8 0)
+  %cmp = icmp ult <4 x i32> %arg0, %arg1
+  %res = sext <4 x i1> %cmp to <4 x i32>
   %bc = bitcast <4 x i32> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.xop.vpcomud(<4 x i32>, <4 x i32>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_com_epu64(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_com_epu64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpcomltuq %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
-  %res = call <2 x i64> @llvm.x86.xop.vpcomuq(<2 x i64> %a0, <2 x i64> %a1, i8 0)
+  %cmp = icmp ult <2 x i64> %a0, %a1
+  %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.xop.vpcomuq(<2 x i64>, <2 x i64>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_com_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_com_epi8:
@@ -626,11 +626,11 @@ define <2 x i64> @test_mm_com_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %res = call <16 x i8> @llvm.x86.xop.vpcomb(<16 x i8> %arg0, <16 x i8> %arg1, i8 0)
+  %cmp = icmp slt <16 x i8> %arg0, %arg1
+  %res = sext <16 x i1> %cmp to <16 x i8>
   %bc = bitcast <16 x i8> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <16 x i8> @llvm.x86.xop.vpcomb(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_com_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_com_epi16:
@@ -639,11 +639,11 @@ define <2 x i64> @test_mm_com_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.xop.vpcomw(<8 x i16> %arg0, <8 x i16> %arg1, i8 0)
+  %cmp = icmp slt <8 x i16> %arg0, %arg1
+  %res = sext <8 x i1> %cmp to <8 x i16>
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.xop.vpcomw(<8 x i16>, <8 x i16>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_com_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_com_epi32:
@@ -652,21 +652,21 @@ define <2 x i64> @test_mm_com_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-NEXT:    ret{{[l|q]}}
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
   %arg1 = bitcast <2 x i64> %a1 to <4 x i32>
-  %res = call <4 x i32> @llvm.x86.xop.vpcomd(<4 x i32> %arg0, <4 x i32> %arg1, i8 0)
+  %cmp = icmp slt <4 x i32> %arg0, %arg1
+  %res = sext <4 x i1> %cmp to <4 x i32>
   %bc = bitcast <4 x i32> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <4 x i32> @llvm.x86.xop.vpcomd(<4 x i32>, <4 x i32>, i8) nounwind readnone
 
 define <2 x i64> @test_mm_com_epi64(<2 x i64> %a0, <2 x i64> %a1) {
 ; ALL-LABEL: test_mm_com_epi64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vpcomltq %xmm1, %xmm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
-  %res = call <2 x i64> @llvm.x86.xop.vpcomq(<2 x i64> %a0, <2 x i64> %a1, i8 0)
+  %cmp = icmp slt <2 x i64> %a0, %a1
+  %res = sext <2 x i1> %cmp to <2 x i64>
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.xop.vpcomq(<2 x i64>, <2 x i64>, i8) nounwind readnone
 
 define <2 x double> @test_mm_permute2_pd(<2 x double> %a0, <2 x double> %a1, <2 x i64> %a2) {
 ; ALL-LABEL: test_mm_permute2_pd:

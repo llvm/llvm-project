@@ -1644,33 +1644,12 @@ define   <8 x i64> @zext_8i1_to_8xi64(i8 %b) {
 }
 
 define i16 @trunc_16i8_to_16i1(<16 x i8> %a) {
-; KNL-LABEL: trunc_16i8_to_16i1:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    # kill: def $ax killed $ax killed $eax
-; KNL-NEXT:    vzeroupper
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: trunc_16i8_to_16i1:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
-; SKX-NEXT:    vpmovb2m %xmm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
-; SKX-NEXT:    retq
-;
-; AVX512DQNOBW-LABEL: trunc_16i8_to_16i1:
-; AVX512DQNOBW:       # %bb.0:
-; AVX512DQNOBW-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; AVX512DQNOBW-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512DQNOBW-NEXT:    vpmovd2m %zmm0, %k0
-; AVX512DQNOBW-NEXT:    kmovw %k0, %eax
-; AVX512DQNOBW-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512DQNOBW-NEXT:    vzeroupper
-; AVX512DQNOBW-NEXT:    retq
+; ALL-LABEL: trunc_16i8_to_16i1:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpsllw $7, %xmm0, %xmm0
+; ALL-NEXT:    vpmovmskb %xmm0, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    retq
   %mask_b = trunc <16 x i8>%a to <16 x i1>
   %mask = bitcast <16 x i1> %mask_b to i16
   ret i16 %mask

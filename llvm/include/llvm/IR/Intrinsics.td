@@ -1,9 +1,8 @@
 //===- Intrinsics.td - Defines all LLVM intrinsics ---------*- tablegen -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -157,10 +156,15 @@ class LLVMMatchType<int num>
 // the intrinsic is overloaded, so the matched type should be declared as iAny.
 class LLVMExtendedType<int num> : LLVMMatchType<num>;
 class LLVMTruncatedType<int num> : LLVMMatchType<num>;
-class LLVMVectorSameWidth<int num, LLVMType elty>
-  : LLVMMatchType<num> {
+
+// Match the scalar/vector of another intrinsic parameter but with a different
+// element type. Either both are scalars or both are vectors with the same
+// number of elements.
+class LLVMScalarOrSameVectorWidth<int idx, LLVMType elty>
+  : LLVMMatchType<idx> {
   ValueType ElTy = elty.VT;
 }
+
 class LLVMPointerTo<int num> : LLVMMatchType<num>;
 class LLVMPointerToElt<int num> : LLVMMatchType<num>;
 class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;
@@ -414,6 +418,13 @@ def int_localescape : Intrinsic<[], [llvm_vararg_ty]>;
 def int_localrecover : Intrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
                                  [IntrNoMem]>;
+
+// Given the frame pointer passed into an SEH filter function, returns a
+// pointer to the local variable area suitable for use with llvm.localrecover.
+def int_eh_recoverfp : Intrinsic<[llvm_ptr_ty],
+                                 [llvm_ptr_ty, llvm_ptr_ty],
+                                 [IntrNoMem]>;
+
 // Note: we treat stacksave/stackrestore as writemem because we don't otherwise
 // model their dependencies on allocas.
 def int_stacksave     : Intrinsic<[llvm_ptr_ty]>,
@@ -547,7 +558,8 @@ def int_siglongjmp : Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], [IntrNoReturn]>;
 
 // Internal interface for object size checking
 def int_objectsize : Intrinsic<[llvm_anyint_ty],
-                               [llvm_anyptr_ty, llvm_i1_ty, llvm_i1_ty],
+                               [llvm_anyptr_ty, llvm_i1_ty,
+                                llvm_i1_ty, llvm_i1_ty],
                                [IntrNoMem, IntrSpeculatable]>,
                                GCCBuiltin<"__builtin_object_size">;
 
@@ -790,24 +802,30 @@ def int_adjust_trampoline : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
 //
 
 // Expose the carry flag from add operations on two integrals.
-def int_sadd_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
+def int_sadd_with_overflow : Intrinsic<[llvm_anyint_ty,
+                                        LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                        [LLVMMatchType<0>, LLVMMatchType<0>],
                                        [IntrNoMem, IntrSpeculatable]>;
-def int_uadd_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
-                                       [LLVMMatchType<0>, LLVMMatchType<0>],
-                                       [IntrNoMem, IntrSpeculatable]>;
-
-def int_ssub_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
-                                       [LLVMMatchType<0>, LLVMMatchType<0>],
-                                       [IntrNoMem, IntrSpeculatable]>;
-def int_usub_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
+def int_uadd_with_overflow : Intrinsic<[llvm_anyint_ty,
+                                        LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                        [LLVMMatchType<0>, LLVMMatchType<0>],
                                        [IntrNoMem, IntrSpeculatable]>;
 
-def int_smul_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
+def int_ssub_with_overflow : Intrinsic<[llvm_anyint_ty,
+                                        LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                        [LLVMMatchType<0>, LLVMMatchType<0>],
                                        [IntrNoMem, IntrSpeculatable]>;
-def int_umul_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
+def int_usub_with_overflow : Intrinsic<[llvm_anyint_ty,
+                                        LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                                       [LLVMMatchType<0>, LLVMMatchType<0>],
+                                       [IntrNoMem, IntrSpeculatable]>;
+
+def int_smul_with_overflow : Intrinsic<[llvm_anyint_ty,
+                                        LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                                       [LLVMMatchType<0>, LLVMMatchType<0>],
+                                       [IntrNoMem, IntrSpeculatable]>;
+def int_umul_with_overflow : Intrinsic<[llvm_anyint_ty,
+                                        LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                        [LLVMMatchType<0>, LLVMMatchType<0>],
                                        [IntrNoMem, IntrSpeculatable]>;
 
@@ -995,35 +1013,35 @@ def int_is_constant : Intrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem], "llvm.
 def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
                                       LLVMAnyPointerType<LLVMMatchType<0>>,
                                       llvm_i32_ty,
-                                      LLVMVectorSameWidth<0, llvm_i1_ty>],
+                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                  [IntrArgMemOnly]>;
 
 def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
                                  [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
-                                  LLVMVectorSameWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
+                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
                                  [IntrReadMem, IntrArgMemOnly]>;
 
 def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
                                  [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
-                                  LLVMVectorSameWidth<0, llvm_i1_ty>,
+                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                   LLVMMatchType<0>],
                                  [IntrReadMem]>;
 
 def int_masked_scatter: Intrinsic<[],
                                   [llvm_anyvector_ty,
                                    LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
-                                   LLVMVectorSameWidth<0, llvm_i1_ty>]>;
+                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>]>;
 
 def int_masked_expandload: Intrinsic<[llvm_anyvector_ty],
                                      [LLVMPointerToElt<0>,
-                                      LLVMVectorSameWidth<0, llvm_i1_ty>,
+                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                       LLVMMatchType<0>],
                                      [IntrReadMem]>;
 
 def int_masked_compressstore: Intrinsic<[],
                                      [llvm_anyvector_ty,
                                       LLVMPointerToElt<0>,
-                                      LLVMVectorSameWidth<0, llvm_i1_ty>],
+                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                      [IntrArgMemOnly]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
@@ -1041,6 +1059,9 @@ def int_icall_branch_funnel : Intrinsic<[], [llvm_vararg_ty], []>;
 
 def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;
+
+def int_hwasan_check_memaccess :
+  Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty], [IntrInaccessibleMemOnly]>;
 
 // Xray intrinsics
 //===----------------------------------------------------------------------===//

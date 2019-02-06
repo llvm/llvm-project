@@ -1,9 +1,8 @@
 //===- WebAssemblyTargetMachine.cpp - Define TargetMachine for WebAssembly -==//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -58,11 +57,10 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
   initializeOptimizeReturnedPass(PR);
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
-  initializeWebAssemblyEHRestoreStackPointerPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);
   initializeWebAssemblyPrepareForLiveIntervalsPass(PR);
   initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
-  initializeWebAssemblyStoreResultsPass(PR);
+  initializeWebAssemblyMemIntrinsicResultsPass(PR);
   initializeWebAssemblyRegStackifyPass(PR);
   initializeWebAssemblyRegColoringPass(PR);
   initializeWebAssemblyExplicitLocalsPass(PR);
@@ -285,19 +283,24 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
 
-  // Restore __stack_pointer global after an exception is thrown.
-  addPass(createWebAssemblyEHRestoreStackPointer());
+  // Rewrite pseudo call_indirect instructions as real instructions.
+  // This needs to run before register stackification, because we change the
+  // order of the arguments.
+  addPass(createWebAssemblyCallIndirectFixup());
+
+  // Eliminate multiple-entry loops.
+  addPass(createWebAssemblyFixIrreducibleControlFlow());
+
+  // Do various transformations for exception handling.
+  // Every CFG-changing optimizations should come before this.
+  addPass(createWebAssemblyLateEHPrepare());
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
   // colored, and numbered with the rest of the registers.
   addPass(createWebAssemblyReplacePhysRegs());
 
-  // Rewrite pseudo call_indirect instructions as real instructions.
-  // This needs to run before register stackification, because we change the
-  // order of the arguments.
-  addPass(createWebAssemblyCallIndirectFixup());
-
+  // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOpt::None) {
     // LiveIntervals isn't commonly run this late. Re-establish preconditions.
     addPass(createWebAssemblyPrepareForLiveIntervals());
@@ -305,13 +308,14 @@ void WebAssemblyPassConfig::addPreEmitPass() {
     // Depend on LiveIntervals and perform some optimizations on it.
     addPass(createWebAssemblyOptimizeLiveIntervals());
 
-    // Prepare store instructions for register stackifying.
-    addPass(createWebAssemblyStoreResults());
+    // Prepare memory intrinsic calls for register stackifying.
+    addPass(createWebAssemblyMemIntrinsicResults());
 
     // Mark registers as representing wasm's value stack. This is a key
     // code-compression technique in WebAssembly. We run this pass (and
-    // StoreResults above) very late, so that it sees as much code as possible,
-    // including code emitted by PEI and expanded by late tail duplication.
+    // MemIntrinsicResults above) very late, so that it sees as much code as
+    // possible, including code emitted by PEI and expanded by late tail
+    // duplication.
     addPass(createWebAssemblyRegStackify());
 
     // Run the register coloring pass to reduce the total number of registers.
@@ -320,16 +324,8 @@ void WebAssemblyPassConfig::addPreEmitPass() {
     addPass(createWebAssemblyRegColoring());
   }
 
-  // Eliminate multiple-entry loops. Do this before inserting explicit get_local
-  // and set_local operators because we create a new variable that we want
-  // converted into a local.
-  addPass(createWebAssemblyFixIrreducibleControlFlow());
-
-  // Insert explicit get_local and set_local operators.
+  // Insert explicit local.get and local.set operators.
   addPass(createWebAssemblyExplicitLocals());
-
-  // Do various transformations for exception handling
-  addPass(createWebAssemblyLateEHPrepare());
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.

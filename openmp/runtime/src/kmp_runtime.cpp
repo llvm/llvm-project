@@ -4,10 +4,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -752,6 +751,10 @@ int __kmp_enter_single(int gtid, ident_t *id_ref, int push_ws) {
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   th = __kmp_threads[gtid];
   team = th->th.th_team;
   status = 0;
@@ -1189,6 +1192,10 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   this_thr = __kmp_threads[global_tid];
   serial_team = this_thr->th.th_serial_team;
 
@@ -1429,7 +1436,7 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     if (ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, OMPT_CUR_TEAM_DATA(this_thr),
-          OMPT_CUR_TASK_DATA(this_thr), 1, __kmp_tid_from_gtid(global_tid));
+          OMPT_CUR_TASK_DATA(this_thr), 1, __kmp_tid_from_gtid(global_tid), ompt_task_implicit); // TODO: Can this be ompt_task_initial?
       OMPT_CUR_TASK_INFO(this_thr)
           ->thread_num = __kmp_tid_from_gtid(global_tid);
     }
@@ -1491,6 +1498,10 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         __kmp_init_serial); // AC: potentially unsafe, not in sync with shutdown
     if (!TCR_4(__kmp_init_parallel))
       __kmp_parallel_initialize();
+
+#if OMP_50_ENABLED
+    __kmp_resume_if_soft_paused();
+#endif
 
     /* setup current data */
     master_th = __kmp_threads[gtid]; // AC: potentially unsafe, not in sync with
@@ -1595,7 +1606,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           if (ompt_enabled.ompt_callback_implicit_task) {
             ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                 ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
-                implicit_task_data, 1, __kmp_tid_from_gtid(gtid));
+                implicit_task_data, 1, __kmp_tid_from_gtid(gtid), ompt_task_implicit); // TODO: Can this be ompt_task_initial?
             OMPT_CUR_TASK_INFO(master_th)
                 ->thread_num = __kmp_tid_from_gtid(gtid);
           }
@@ -1625,7 +1636,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           if (ompt_enabled.ompt_callback_implicit_task) {
             ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                 ompt_scope_end, NULL, implicit_task_data, 1,
-                OMPT_CUR_TASK_INFO(master_th)->thread_num);
+                OMPT_CUR_TASK_INFO(master_th)->thread_num, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
           }
           __ompt_lw_taskteam_unlink(master_th);
 
@@ -1807,7 +1818,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
-                  &(task_info->task_data), 1, __kmp_tid_from_gtid(gtid));
+                  &(task_info->task_data), 1, __kmp_tid_from_gtid(gtid), ompt_task_implicit); // TODO: Can this be ompt_task_initial?
               OMPT_CUR_TASK_INFO(master_th)
                   ->thread_num = __kmp_tid_from_gtid(gtid);
             }
@@ -1837,7 +1848,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_end, NULL, &(task_info->task_data), 1,
-                  OMPT_CUR_TASK_INFO(master_th)->thread_num);
+                  OMPT_CUR_TASK_INFO(master_th)->thread_num, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
             }
 
             __ompt_lw_taskteam_unlink(master_th);
@@ -1908,7 +1919,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
-                  implicit_task_data, 1, __kmp_tid_from_gtid(gtid));
+                  implicit_task_data, 1, __kmp_tid_from_gtid(gtid), ompt_task_implicit); // TODO: Can this be ompt_task_initial?
               OMPT_CUR_TASK_INFO(master_th)
                   ->thread_num = __kmp_tid_from_gtid(gtid);
             }
@@ -1937,7 +1948,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_end, NULL, &(task_info->task_data), 1,
-                  OMPT_CUR_TASK_INFO(master_th)->thread_num);
+                  OMPT_CUR_TASK_INFO(master_th)->thread_num, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
             }
 
             ompt_parallel_data = *OMPT_CUR_TEAM_DATA(master_th);
@@ -2541,7 +2552,7 @@ void __kmp_join_call(ident_t *loc, int gtid
       int ompt_team_size = team->t.t_nproc;
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_end, NULL, &(task_info->task_data), ompt_team_size,
-          OMPT_CUR_TASK_INFO(master_th)->thread_num);
+          OMPT_CUR_TASK_INFO(master_th)->thread_num, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
     }
 
     task_info->frame.exit_frame = ompt_data_none;
@@ -5851,7 +5862,6 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
   gtid = thread->th.th_info.ds.ds_gtid;
 
   if (!is_root) {
-
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
       /* Assume the threads are at the fork barrier here */
       KA_TRACE(
@@ -6272,8 +6282,10 @@ void __kmp_internal_end_thread(int gtid_req) {
   // OM: Removed Linux* OS restriction to fix the crash on OS X* (DPD200239966)
   // and Windows(DPD200287443) that occurs when using critical sections from
   // foreign threads.
-  KA_TRACE(10, ("__kmp_internal_end_thread: exiting T#%d\n", gtid_req));
-  return;
+  if (__kmp_pause_status != kmp_hard_paused) {
+    KA_TRACE(10, ("__kmp_internal_end_thread: exiting T#%d\n", gtid_req));
+    return;
+  }
 #endif
   /* synchronize the termination process */
   __kmp_acquire_bootstrap_lock(&__kmp_initz_lock);
@@ -6920,6 +6932,10 @@ void __kmp_parallel_initialize(void) {
     __kmp_do_middle_initialize();
   }
 
+#if OMP_50_ENABLED
+  __kmp_resume_if_hard_paused();
+#endif
+
   /* begin initialization */
   KA_TRACE(10, ("__kmp_parallel_initialize: enter\n"));
   KMP_ASSERT(KMP_UBER_GTID(gtid));
@@ -7041,7 +7057,7 @@ int __kmp_invoke_task_func(int gtid) {
     ompt_team_size = team->t.t_nproc;
     ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
         ompt_scope_begin, my_parallel_data, my_task_data, ompt_team_size,
-        __kmp_tid_from_gtid(gtid));
+        __kmp_tid_from_gtid(gtid), ompt_task_implicit); // TODO: Can this be ompt_task_initial?
     OMPT_CUR_TASK_INFO(this_thr)->thread_num = __kmp_tid_from_gtid(gtid);
   }
 #endif
@@ -7291,7 +7307,7 @@ void __kmp_internal_join(ident_t *id, int gtid, kmp_team_t *team) {
 #endif
     if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
-          ompt_scope_end, NULL, task_data, 0, ds_tid);
+          ompt_scope_end, NULL, task_data, 0, ds_tid, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
     }
   }
 #endif
@@ -8190,3 +8206,82 @@ __kmp_determine_reduction_method(
 kmp_int32 __kmp_get_reduce_method(void) {
   return ((__kmp_entry_thread()->th.th_local.packed_reduction_method) >> 8);
 }
+
+#if OMP_50_ENABLED
+
+// Soft pause sets up threads to ignore blocktime and just go to sleep.
+// Spin-wait code checks __kmp_pause_status and reacts accordingly.
+void __kmp_soft_pause() { __kmp_pause_status = kmp_soft_paused; }
+
+// Hard pause shuts down the runtime completely.  Resume happens naturally when
+// OpenMP is used subsequently.
+void __kmp_hard_pause() {
+  __kmp_pause_status = kmp_hard_paused;
+  __kmp_internal_end_thread(-1);
+}
+
+// Soft resume sets __kmp_pause_status, and wakes up all threads.
+void __kmp_resume_if_soft_paused() {
+  if (__kmp_pause_status == kmp_soft_paused) {
+    __kmp_pause_status = kmp_not_paused;
+
+    for (int gtid = 1; gtid < __kmp_threads_capacity; ++gtid) {
+      kmp_info_t *thread = __kmp_threads[gtid];
+      if (thread) { // Wake it if sleeping
+        kmp_flag_64 fl(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go, thread);
+        if (fl.is_sleeping())
+          fl.resume(gtid);
+        else if (__kmp_try_suspend_mx(thread)) { // got suspend lock
+          __kmp_unlock_suspend_mx(thread); // unlock it; it won't sleep
+        } else { // thread holds the lock and may sleep soon
+          do { // until either the thread sleeps, or we can get the lock
+            if (fl.is_sleeping()) {
+              fl.resume(gtid);
+              break;
+            } else if (__kmp_try_suspend_mx(thread)) {
+              __kmp_unlock_suspend_mx(thread);
+              break;
+            }
+          } while (1);
+        }
+      }
+    }
+  }
+}
+
+// This function is called via __kmpc_pause_resource. Returns 0 if successful.
+// TODO: add warning messages
+int __kmp_pause_resource(kmp_pause_status_t level) {
+  if (level == kmp_not_paused) { // requesting resume
+    if (__kmp_pause_status == kmp_not_paused) {
+      // error message about runtime not being paused, so can't resume
+      return 1;
+    } else {
+      KMP_DEBUG_ASSERT(__kmp_pause_status == kmp_soft_paused ||
+                       __kmp_pause_status == kmp_hard_paused);
+      __kmp_pause_status = kmp_not_paused;
+      return 0;
+    }
+  } else if (level == kmp_soft_paused) { // requesting soft pause
+    if (__kmp_pause_status != kmp_not_paused) {
+      // error message about already being paused
+      return 1;
+    } else {
+      __kmp_soft_pause();
+      return 0;
+    }
+  } else if (level == kmp_hard_paused) { // requesting hard pause
+    if (__kmp_pause_status != kmp_not_paused) {
+      // error message about already being paused
+      return 1;
+    } else {
+      __kmp_hard_pause();
+      return 0;
+    }
+  } else {
+    // error message about invalid level
+    return 1;
+  }
+}
+
+#endif // OMP_50_ENABLED

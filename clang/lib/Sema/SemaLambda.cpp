@@ -1,9 +1,8 @@
 //===--- SemaLambda.cpp - Semantic Analysis for C++11 Lambdas -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -759,14 +758,15 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
   TypeSourceInfo *TSI = TLB.getTypeSourceInfo(Context, DeductType);
 
   // Deduce the type of the init capture.
+  Expr *DeduceInit = Init;
   QualType DeducedType = deduceVarTypeFromInitializer(
       /*VarDecl*/nullptr, DeclarationName(Id), DeductType, TSI,
-      SourceRange(Loc, Loc), IsDirectInit, Init);
+      SourceRange(Loc, Loc), IsDirectInit, DeduceInit);
   if (DeducedType.isNull())
     return QualType();
 
   // Are we a non-list direct initialization?
-  ParenListExpr *CXXDirectInit = dyn_cast<ParenListExpr>(Init);
+  bool CXXDirectInit = isa<ParenListExpr>(Init);
 
   // Perform initialization analysis and ensure any implicit conversions
   // (such as lvalue-to-rvalue) are enforced.
@@ -779,10 +779,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
                            : InitializationKind::CreateDirectList(Loc))
           : InitializationKind::CreateCopy(Loc, Init->getBeginLoc());
 
-  MultiExprArg Args = Init;
-  if (CXXDirectInit)
-    Args =
-        MultiExprArg(CXXDirectInit->getExprs(), CXXDirectInit->getNumExprs());
+  MultiExprArg Args = DeduceInit;
   QualType DclT;
   InitializationSequence InitSeq(*this, Entity, Kind, Args);
   ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
@@ -884,8 +881,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     //   This function call operator is declared const (9.3.1) if and only if
     //   the lambda-expression's parameter-declaration-clause is not followed
     //   by mutable. It is neither virtual nor declared volatile. [...]
-    if (!FTI.hasMutableQualifier())
-      FTI.TypeQuals |= DeclSpec::TQ_const;
+    if (!FTI.hasMutableQualifier()) {
+      FTI.getOrCreateMethodQualifiers().SetTypeQual(DeclSpec::TQ_const,
+                                                    SourceLocation());
+    }
 
     MethodTyInfo = GetTypeForDeclarator(ParamInfo, CurScope);
     assert(MethodTyInfo && "no type from lambda-declarator");
@@ -1228,9 +1227,10 @@ static void addFunctionPointerConversion(Sema &S,
   FunctionProtoType::ExtProtoInfo ConvExtInfo(
       S.Context.getDefaultCallingConvention(
       /*IsVariadic=*/false, /*IsCXXMethod=*/true));
-  // The conversion function is always const.
+  // The conversion function is always const and noexcept.
   ConvExtInfo.TypeQuals = Qualifiers();
   ConvExtInfo.TypeQuals.addConst();
+  ConvExtInfo.ExceptionSpec.Type = EST_BasicNoexcept;
   QualType ConvTy =
       S.Context.getFunctionType(PtrToFunctionTy, None, ConvExtInfo);
 
@@ -1724,7 +1724,7 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
                                                  /*NRVO=*/false),
       CurrentLocation, Src);
   if (!Init.isInvalid())
-    Init = ActOnFinishFullExpr(Init.get());
+    Init = ActOnFinishFullExpr(Init.get(), /*DiscardedValue*/ false);
 
   if (Init.isInvalid())
     return ExprError();

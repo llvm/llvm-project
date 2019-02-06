@@ -1,9 +1,8 @@
 //===-- hwasan_new_delete.cc ----------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -51,7 +50,7 @@ void *operator new[](size_t size, std::nothrow_t const&) {
 
 #define OPERATOR_DELETE_BODY \
   GET_MALLOC_STACK_TRACE; \
-  if (ptr) HwasanDeallocate(&stack, ptr)
+  if (ptr) hwasan_free(ptr, &stack)
 
 INTERCEPTOR_ATTRIBUTE
 void operator delete(void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }

@@ -1,9 +1,8 @@
 //===-- AMDGPUAnnotateUniformValues.cpp - ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -14,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUIntrinsicInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -117,14 +115,8 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
 }
 
 void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
-  if (I.isUnconditional())
-    return;
-
-  Value *Cond = I.getCondition();
-  if (!DA->isUniform(Cond))
-    return;
-
-  setUniformMetadata(I.getParent()->getTerminator());
+  if (DA->isUniform(&I))
+    setUniformMetadata(I.getParent()->getTerminator());
 }
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {

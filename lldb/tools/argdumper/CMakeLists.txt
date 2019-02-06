@@ -1,4 +1,4 @@
-add_lldb_tool(lldb-argdumper INCLUDE_IN_SUITE
+add_lldb_tool(lldb-argdumper
   argdumper.cpp
 
   LINK_LIBS

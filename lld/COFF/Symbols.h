@@ -1,9 +1,8 @@
 //===- Symbols.h ------------------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,7 +38,7 @@ class Symbol {
 public:
   enum Kind {
     // The order of these is significant. We start with the regular defined
-    // symbols as those are the most prevelant and the zero tag is the cheapest
+    // symbols as those are the most prevalent and the zero tag is the cheapest
     // to set. Among the defined kinds, the lower the kind is preferred over
     // the higher kind when testing whether one symbol should take precedence
     // over another.
