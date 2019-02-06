@@ -393,6 +393,8 @@ static FunctionDecl *CreateSYCLKernelFunction(ASTContext &Context,
   SYCLKernel->addAttr(SYCLDeviceAttr::CreateImplicit(Context));
   SYCLKernel->addAttr(OpenCLKernelAttr::CreateImplicit(Context));
   SYCLKernel->addAttr(AsmLabelAttr::CreateImplicit(Context, Name));
+  SYCLKernel->addAttr(ArtificialAttr::CreateImplicit(Context));
+
   // To see kernel in AST-dump.
   DC->addDecl(SYCLKernel);
   return SYCLKernel;
