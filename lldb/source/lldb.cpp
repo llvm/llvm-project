@@ -80,15 +80,14 @@ const char *lldb_private::GetVersion() {
       g_version_str += " (buildbot " + build_date + ")";
 #endif
 
-    auto const swift_version = swift::version::getSwiftNumericVersion();
-    g_version_str += "\n  Swift-";
-    g_version_str += llvm::utostr(swift_version.first) + ".";
-    g_version_str += llvm::utostr(swift_version.second);
-    std::string swift_rev(swift::version::getSwiftRevision());
-    if (swift_rev.length() > 0) {
-      g_version_str += " (revision " + swift_rev + ")";
-    }
+    auto const swift_version = swift::version::getSwiftFullVersion();
+    g_version_str += "\n" + swift_version;
 
+    // getSwiftFullVersion() also prints clang and llvm versions, no
+    // need to print them again. We keep this code here to not diverge
+    // too much from upstream.
+#undef LLDB_UPSTREAM
+#ifdef LLDB_UPSTREAM
     std::string clang_rev(clang::getClangRevision());
     if (clang_rev.length() > 0) {
       g_version_str += "\n  clang revision ";
@@ -99,6 +98,7 @@ const char *lldb_private::GetVersion() {
       g_version_str += "\n  llvm revision ";
       g_version_str += llvm_rev;
     }
+#endif // LLDB_UPSTREAM
   }
   return g_version_str.c_str();
 }
