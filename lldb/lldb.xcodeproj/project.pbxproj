@@ -790,6 +790,8 @@
 		9485545A1DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948554591DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp */; };
 		23D065911D4A7BEE0008EDE6 /* RenderScriptx86ABIFixups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */; };
 		AFCB1D5F219CD5EA00730AD5 /* Reproducer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */; };
+		DD6C13BB220A6F22005C2AE8 /* ReproducerInstrumentation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6C13BA220A6F21005C2AE8 /* ReproducerInstrumentation.cpp */; };
+		DD6C13BD220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6C13BC220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp */; };
 		4C639ECF21FA684900A7B957 /* ReproducerTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C639EC121FA684700A7B957 /* ReproducerTest.cpp */; };
 		4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04EC211A06200015A814 /* RichManglingContext.cpp */; };
 		4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 4FBC04EE211A06820015A814 /* RichManglingContext.h */; };
@@ -2866,6 +2868,8 @@
 		23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RenderScriptx86ABIFixups.cpp; sourceTree = "<group>"; };
 		23D065871D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderScriptx86ABIFixups.h; sourceTree = "<group>"; };
 		AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Reproducer.cpp; path = source/Utility/Reproducer.cpp; sourceTree = "<group>"; };
+		DD6C13BA220A6F21005C2AE8 /* ReproducerInstrumentation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReproducerInstrumentation.cpp; path = source/Utility/ReproducerInstrumentation.cpp; sourceTree = "<group>"; };
+		DD6C13BC220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReproducerInstrumentationTest.cpp; sourceTree = "<group>"; };
 		4C639EC121FA684700A7B957 /* ReproducerTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReproducerTest.cpp; sourceTree = "<group>"; };
 		4FBC04EC211A06200015A814 /* RichManglingContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RichManglingContext.cpp; path = source/Core/RichManglingContext.cpp; sourceTree = "<group>"; };
 		4FBC04EE211A06820015A814 /* RichManglingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RichManglingContext.h; path = include/lldb/Core/RichManglingContext.h; sourceTree = "<group>"; };
@@ -3793,6 +3797,7 @@
 				4C639EC021FA684700A7B957 /* PredicateTest.cpp */,
 				4C639EC421FA684800A7B957 /* RegisterValueTest.cpp */,
 				4C639EC121FA684700A7B957 /* ReproducerTest.cpp */,
+				DD6C13BC220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp */,
 				23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */,
 				9A3D43E21F3237D500EB767C /* StateTest.cpp */,
 				9A3D43C61F3150D200EB767C /* StatusTest.cpp */,
@@ -4822,6 +4827,7 @@
 				26764C9C1E48F516008D3573 /* RegularExpression.h */,
 				26764C9F1E48F528008D3573 /* RegularExpression.cpp */,
 				AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */,
+				DD6C13BA220A6F21005C2AE8 /* ReproducerInstrumentation.cpp */,
 				26BC7D7410F1B77400F91463 /* Scalar.h */,
 				26BC7E8D10F1B85900F91463 /* Scalar.cpp */,
 				26A375841D59487700D6CBDB /* SelectHelper.h */,
@@ -8183,6 +8189,7 @@
 				4C639ED821FA684900A7B957 /* VMRangeTest.cpp in Sources */,
 				23CB15381D66DA9300EDDDE1 /* PythonExceptionStateTests.cpp in Sources */,
 				9A3D43D81F3151C400EB767C /* NameMatchesTest.cpp in Sources */,
+				DD6C13BD220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp in Sources */,
 				4CEC86A4204738C5009B37B1 /* TestArm64InstEmulation.cpp in Sources */,
 				9A3D43ED1F3237F900EB767C /* StateTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,
@@ -8926,6 +8933,8 @@
 				94FA3DE01405D50400833217 /* ValueObjectConstResultChild.cpp in Sources */,
 				58EC744120EAEB5200695209 /* CompletionRequest.cpp in Sources */,
 				3FDFED2819BA6D96009756A7 /* HostThread.cpp in Sources */,
+				949ADF031406F648004833E1 /* ValueObjectConstResultImpl.cpp in Sources */,
+				DD6C13BB220A6F22005C2AE8 /* ReproducerInstrumentation.cpp in Sources */,
 				B27318421416AC12006039C8 /* WatchpointList.cpp in Sources */,
 				26CFDCA3186163A4000E63E5 /* Editline.cpp in Sources */,
 				26E152261419CAD4007967D0 /* ObjectFilePECOFF.cpp in Sources */,
