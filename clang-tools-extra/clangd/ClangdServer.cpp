@@ -152,6 +152,9 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
   if (ClangTidyOptProvider)
     Opts.ClangTidyOpts = ClangTidyOptProvider->getOptions(File);
+  // FIXME: cache this.
+  Opts.Style =
+      getFormatStyleForFile(File, Contents, FSProvider.getFileSystem().get());
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   // FIXME: some build systems like Bazel will take time to preparing
   // environment to build the file, it would be nice if we could emit a
@@ -372,8 +375,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     auto A = prepareTweak(TweakID, *Selection);
     if (!A)
       return CB(A.takeError());
-    // FIXME: run formatter on top of resulting replacements.
-    return CB((*A)->apply(*Selection));
+    return CB((*A)->apply(*Selection, InpAST->Inputs.Opts.Style));
   };
   WorkScheduler.runWithAST(
       "ApplyTweak", File,

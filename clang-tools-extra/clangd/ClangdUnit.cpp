@@ -309,9 +309,8 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   llvm::Optional<IncludeFixer> FixIncludes;
   auto BuildDir = VFS->getCurrentWorkingDirectory();
   if (Opts.SuggestMissingIncludes && Index && !BuildDir.getError()) {
-    auto Style = getFormatStyleForFile(MainInput.getFile(), Content, VFS.get());
     auto Inserter = std::make_shared<IncludeInserter>(
-        MainInput.getFile(), Content, Style, BuildDir.get(),
+        MainInput.getFile(), Content, Opts.Style, BuildDir.get(),
         Clang->getPreprocessor().getHeaderSearchInfo());
     if (Preamble) {
       for (const auto &Inc : Preamble->Includes.MainFileIncludes)

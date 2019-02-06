@@ -7688,11 +7688,9 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
-      if (OpInfo.ConstraintType != TargetLowering::C_RegisterClass &&
-          OpInfo.ConstraintType != TargetLowering::C_Register) {
-        // Memory output, or 'other' output (e.g. 'X' constraint).
-        assert(OpInfo.isIndirect && "Memory output must be indirect operand");
-
+      if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
+          (OpInfo.ConstraintType == TargetLowering::C_Other &&
+           OpInfo.isIndirect)) {
         unsigned ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
         assert(ConstraintID != InlineAsm::Constraint_Unknown &&
@@ -7705,12 +7703,13 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
                                                         MVT::i32));
         AsmNodeOperands.push_back(OpInfo.CallOperand);
         break;
-      } else if (OpInfo.ConstraintType == TargetLowering::C_Register ||
+      } else if ((OpInfo.ConstraintType == TargetLowering::C_Other &&
+                  !OpInfo.isIndirect) ||
+                 OpInfo.ConstraintType == TargetLowering::C_Register ||
                  OpInfo.ConstraintType == TargetLowering::C_RegisterClass) {
-        // Otherwise, this is a register or register class output.
-
-        // Copy the output from the appropriate register.  Find a register that
-        // we can use.
+        // Otherwise, this outputs to a register (directly for C_Register /
+        // C_RegisterClass, and a target-defined fashion for C_Other). Find a
+        // register that we can use.
         if (OpInfo.AssignedRegs.Regs.empty()) {
           emitInlineAsmError(
               CS, "couldn't allocate output register for constraint '" +
@@ -7926,25 +7925,41 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
     ResultValues.push_back(V);
   };
 
-  // Deal with assembly output fixups.
+  // Deal with output operands.
   for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
-    if (OpInfo.Type == InlineAsm::isOutput &&
-        (OpInfo.ConstraintType == TargetLowering::C_Register ||
-         OpInfo.ConstraintType == TargetLowering::C_RegisterClass)) {
+    if (OpInfo.Type == InlineAsm::isOutput) {
+      SDValue Val;
+      // Skip trivial output operands.
+      if (OpInfo.AssignedRegs.Regs.empty())
+        continue;
+
+      switch (OpInfo.ConstraintType) {
+      case TargetLowering::C_Register:
+      case TargetLowering::C_RegisterClass:
+        Val = OpInfo.AssignedRegs.getCopyFromRegs(
+            DAG, FuncInfo, getCurSDLoc(), Chain, &Flag, CS.getInstruction());
+        break;
+      case TargetLowering::C_Other:
+        Val = TLI.LowerAsmOutputForConstraint(Chain, &Flag, getCurSDLoc(),
+                                              OpInfo, DAG);
+        break;
+      case TargetLowering::C_Memory:
+        break; // Already handled.
+      case TargetLowering::C_Unknown:
+        assert(false && "Unexpected unknown constraint");
+      }
+
+      // Indirect output manifest as stores. Record output chains.
       if (OpInfo.isIndirect) {
-        // Register indirect are manifest as stores.
-        const RegsForValue &OutRegs = OpInfo.AssignedRegs;
+
         const Value *Ptr = OpInfo.CallOperandVal;
-        SDValue OutVal = OutRegs.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
-                                                 Chain, &Flag, IA);
-        SDValue Val = DAG.getStore(Chain, getCurSDLoc(), OutVal, getValue(Ptr),
-                                   MachinePointerInfo(Ptr));
-        OutChains.push_back(Val);
+        assert(Ptr && "Expected value CallOperandVal for indirect asm operand");
+        SDValue Store = DAG.getStore(Chain, getCurSDLoc(), Val, getValue(Ptr),
+                                     MachinePointerInfo(Ptr));
+        OutChains.push_back(Store);
       } else {
         // generate CopyFromRegs to associated registers.
         assert(!CS.getType()->isVoidTy() && "Bad inline asm!");
-        SDValue Val = OpInfo.AssignedRegs.getCopyFromRegs(
-            DAG, FuncInfo, getCurSDLoc(), Chain, &Flag, CS.getInstruction());
         if (Val.getOpcode() == ISD::MERGE_VALUES) {
           for (const SDValue &V : Val->op_values())
             handleRegAssign(V);

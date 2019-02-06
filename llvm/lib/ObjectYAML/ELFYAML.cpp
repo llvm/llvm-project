@@ -572,6 +572,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_STT>::enumeration(
   ECase(STT_TLS);
   ECase(STT_GNU_IFUNC);
 #undef ECase
+  IO.enumFallback<Hex8>(Value);
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_STV>::enumeration(

@@ -788,8 +788,66 @@ bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
   return true;
 }
 
+unsigned
+IRTranslator::getSimpleUnaryIntrinsicOpcode(Intrinsic::ID ID) {
+  switch (ID) {
+    default:
+      break;
+    case Intrinsic::ceil:
+      return TargetOpcode::G_FCEIL;
+    case Intrinsic::cos:
+      return TargetOpcode::G_FCOS;
+    case Intrinsic::ctpop:
+      return TargetOpcode::G_CTPOP;
+    case Intrinsic::exp:
+      return TargetOpcode::G_FEXP;
+    case Intrinsic::exp2:
+      return TargetOpcode::G_FEXP2;
+    case Intrinsic::fabs:
+      return TargetOpcode::G_FABS;
+    case Intrinsic::log:
+      return TargetOpcode::G_FLOG;
+    case Intrinsic::log2:
+      return TargetOpcode::G_FLOG2;
+    case Intrinsic::log10:
+      return TargetOpcode::G_FLOG10;
+    case Intrinsic::round:
+      return TargetOpcode::G_INTRINSIC_ROUND;
+    case Intrinsic::sin:
+      return TargetOpcode::G_FSIN;
+    case Intrinsic::sqrt:
+      return TargetOpcode::G_FSQRT;
+    case Intrinsic::trunc:
+      return TargetOpcode::G_INTRINSIC_TRUNC;
+  }
+  return Intrinsic::not_intrinsic;
+}
+
+bool IRTranslator::translateSimpleUnaryIntrinsic(
+    const CallInst &CI, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+
+  unsigned Op = getSimpleUnaryIntrinsicOpcode(ID);
+
+  // Is this a simple unary intrinsic?
+  if (Op == Intrinsic::not_intrinsic)
+    return false;
+
+  // Yes. Let's translate it.
+  auto Inst = MIRBuilder.buildInstr(Op)
+                  .addDef(getOrCreateVReg(CI))
+                  .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+  Inst->copyIRFlags(CI);
+  return true;
+}
+
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                            MachineIRBuilder &MIRBuilder) {
+
+  // If this is a simple unary intrinsic (that is, we just need to add a def of
+  // a vreg, and a use of a vreg, then translate it.
+  if (translateSimpleUnaryIntrinsic(CI, ID, MIRBuilder))
+    return true;
+
   switch (ID) {
   default:
     break;
@@ -918,58 +976,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     Pow->copyIRFlags(CI);
     return true;
   }
-  case Intrinsic::exp: {
-    auto Exp = MIRBuilder.buildInstr(TargetOpcode::G_FEXP)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    Exp->copyIRFlags(CI);
-    return true;
-  }
-  case Intrinsic::exp2: {
-    auto Exp2 = MIRBuilder.buildInstr(TargetOpcode::G_FEXP2)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    Exp2->copyIRFlags(CI);
-    return true;
-  }
-  case Intrinsic::log: {
-    auto Log = MIRBuilder.buildInstr(TargetOpcode::G_FLOG)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    Log->copyIRFlags(CI);
-    return true;
-  }
-  case Intrinsic::log2: {
-    auto Log2 = MIRBuilder.buildInstr(TargetOpcode::G_FLOG2)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    Log2->copyIRFlags(CI);
-    return true;
-  }
-  case Intrinsic::log10: {
-    auto Log10 = MIRBuilder.buildInstr(TargetOpcode::G_FLOG10)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    Log10->copyIRFlags(CI);
-    return true;
-  }
-  case Intrinsic::fabs: {
-    auto Fabs = MIRBuilder.buildInstr(TargetOpcode::G_FABS)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    Fabs->copyIRFlags(CI);
-    return true;
-  }
-  case Intrinsic::trunc:
-    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::round:
-    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_ROUND)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
   case Intrinsic::fma: {
     auto FMA = MIRBuilder.buildInstr(TargetOpcode::G_FMA)
         .addDef(getOrCreateVReg(CI))
@@ -1058,12 +1064,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;
   }
-  case Intrinsic::ctpop: {
-    MIRBuilder.buildInstr(TargetOpcode::G_CTPOP)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  }
   case Intrinsic::invariant_start: {
     LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
     unsigned Undef = MRI->createGenericVirtualRegister(PtrTy);
@@ -1071,26 +1071,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::invariant_end:
-    return true;
-  case Intrinsic::ceil:
-    MIRBuilder.buildInstr(TargetOpcode::G_FCEIL)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::cos:
-    MIRBuilder.buildInstr(TargetOpcode::G_FCOS)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::sin:
-    MIRBuilder.buildInstr(TargetOpcode::G_FSIN)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::sqrt:
-    MIRBuilder.buildInstr(TargetOpcode::G_FSQRT)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;
   }
   return false;
