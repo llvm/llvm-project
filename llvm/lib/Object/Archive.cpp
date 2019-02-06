@@ -778,19 +778,18 @@ Archive::child_iterator Archive::child_begin(Error &Err,
     return child_end();
 
   if (SkipInternal)
-    return child_iterator(Child(this, FirstRegularData,
-                                FirstRegularStartOfFile),
-                          &Err);
+    return child_iterator::itr(
+        Child(this, FirstRegularData, FirstRegularStartOfFile), Err);
 
   const char *Loc = Data.getBufferStart() + strlen(Magic);
   Child C(this, Loc, &Err);
   if (Err)
     return child_end();
-  return child_iterator(C, &Err);
+  return child_iterator::itr(C, Err);
 }
 
 Archive::child_iterator Archive::child_end() const {
-  return child_iterator(Child(nullptr, nullptr, nullptr), nullptr);
+  return child_iterator::end(Child(nullptr, nullptr, nullptr));
 }
 
 StringRef Archive::Symbol::getName() const {

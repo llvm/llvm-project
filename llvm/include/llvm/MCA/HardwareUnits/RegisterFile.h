@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/Support/Error.h"
 
@@ -195,7 +196,7 @@ public:
 
   // Collect writes that are in a data dependency with RS, and update RS
   // internal state.
-  void addRegisterRead(ReadState &RS, SmallVectorImpl<WriteRef> &Writes) const;
+  void addRegisterRead(ReadState &RS, const MCSubtargetInfo &STI) const;
 
   // Removes write \param WS from the register mappings.
   // Physical registers may be released to reflect this update.

@@ -6793,8 +6793,8 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     Mask.append(NumElts, 0);
     return true;
   }
-  case ISD::ZERO_EXTEND_VECTOR_INREG:
-  case ISD::ZERO_EXTEND: {
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    // TODO: Handle ISD::ZERO_EXTEND
     SDValue Src = N.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
     unsigned NumSrcBitsPerElt = SrcVT.getScalarSizeInBits();
@@ -31070,6 +31070,24 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   bool IsEVEXShuffle =
       RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128);
 
+  // Attempt to match a subvector broadcast.
+  // shuffle(insert_subvector(undef, sub, 0), undef, 0, 0, 0, 0)
+  if (UnaryShuffle &&
+      (BaseMaskEltSizeInBits == 128 || BaseMaskEltSizeInBits == 256)) {
+    SmallVector<int, 64> BroadcastMask(NumBaseMaskElts, 0);
+    if (isTargetShuffleEquivalent(BaseMask, BroadcastMask)) {
+      SDValue Src = Inputs[0];
+      if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Src.getOperand(0).isUndef() &&
+          Src.getOperand(1).getValueSizeInBits() == BaseMaskEltSizeInBits &&
+          MayFoldLoad(Src.getOperand(1)) && isNullConstant(Src.getOperand(2))) {
+        return DAG.getBitcast(RootVT, DAG.getNode(X86ISD::SUBV_BROADCAST, DL,
+                                                  Src.getValueType(),
+                                                  Src.getOperand(1)));
+      }
+    }
+  }
+
   // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
@@ -32836,6 +32854,27 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedRHS, SrcUndef,
                                    SrcZero, TLO, Depth + 1))
       return true;
+    break;
+  }
+  case X86ISD::BLENDV: {
+    APInt SelUndef, SelZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, SelUndef,
+                                   SelZero, TLO, Depth + 1))
+      return true;
+
+    // TODO: Use SelZero to adjust LHS/RHS DemandedElts.
+    APInt LHSUndef, LHSZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, LHSUndef,
+                                   LHSZero, TLO, Depth + 1))
+      return true;
+
+    APInt RHSUndef, RHSZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(2), DemandedElts, RHSUndef,
+                                   RHSZero, TLO, Depth + 1))
+      return true;
+
+    KnownZero = LHSZero & RHSZero;
+    KnownUndef = LHSUndef & RHSUndef;
     break;
   }
   case X86ISD::VBROADCAST: {

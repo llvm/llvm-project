@@ -79,6 +79,11 @@ public:
   /// explicitly.
   MachineInstr *getInstr() const { return MI; }
 
+  /// Get the register for the operand index.
+  /// The operand at the index should be a register (asserted by
+  /// MachineOperand).
+  unsigned getReg(unsigned Idx) { return MI->getOperand(Idx).getReg(); }
+
   /// Add a new virtual register operand.
   const MachineInstrBuilder &addReg(unsigned RegNo, unsigned flags = 0,
                                     unsigned SubReg = 0) const {

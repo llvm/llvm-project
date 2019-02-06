@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
@@ -48,7 +49,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -1593,120 +1593,120 @@ bool llvm::salvageDebugInfo(Instruction &I) {
   if (DbgUsers.empty())
     return false;
 
-  auto &M = *I.getModule();
-  auto &DL = M.getDataLayout();
+  return salvageDebugInfoForDbgValues(I, DbgUsers);
+}
+
+bool llvm::salvageDebugInfoForDbgValues(
+    Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
   auto &Ctx = I.getContext();
   auto wrapMD = [&](Value *V) { return wrapValueInMetadata(Ctx, V); };
 
-  auto doSalvage = [&](DbgVariableIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
-    auto *DIExpr = DII->getExpression();
-    if (!Ops.empty()) {
-      // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
-      // are implicitly pointing out the value as a DWARF memory location
-      // description.
-      bool WithStackValue = isa<DbgValueInst>(DII);
-      DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
-    }
+  for (auto *DII : DbgUsers) {
+    // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
+    // are implicitly pointing out the value as a DWARF memory location
+    // description.
+    bool StackValue = isa<DbgValueInst>(DII);
+
+    DIExpression *DIExpr =
+        salvageDebugInfoImpl(I, DII->getExpression(), StackValue);
+
+    // salvageDebugInfoImpl should fail on examining the first element of
+    // DbgUsers, or none of them.
+    if (!DIExpr)
+      return false;
+
     DII->setOperand(0, wrapMD(I.getOperand(0)));
     DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
+  }
+
+  return true;
+}
+
+DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
+                                         DIExpression *SrcDIExpr,
+                                         bool WithStackValue) {
+  auto &M = *I.getModule();
+  auto &DL = M.getDataLayout();
+
+  // Apply a vector of opcodes to the source DIExpression.
+  auto doSalvage = [&](SmallVectorImpl<uint64_t> &Ops) -> DIExpression * {
+    DIExpression *DIExpr = SrcDIExpr;
+    if (!Ops.empty()) {
+      DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
+    }
+    return DIExpr;
   };
 
-  auto applyOffset = [&](DbgVariableIntrinsic *DII, uint64_t Offset) {
+  // Apply the given offset to the source DIExpression.
+  auto applyOffset = [&](uint64_t Offset) -> DIExpression * {
     SmallVector<uint64_t, 8> Ops;
     DIExpression::appendOffset(Ops, Offset);
-    doSalvage(DII, Ops);
+    return doSalvage(Ops);
   };
 
-  auto applyOps = [&](DbgVariableIntrinsic *DII,
-                      std::initializer_list<uint64_t> Opcodes) {
+  // initializer-list helper for applying operators to the source DIExpression.
+  auto applyOps =
+      [&](std::initializer_list<uint64_t> Opcodes) -> DIExpression * {
     SmallVector<uint64_t, 8> Ops(Opcodes);
-    doSalvage(DII, Ops);
+    return doSalvage(Ops);
   };
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
     if (!CI->isNoopCast(DL))
-      return false;
+      return nullptr;
 
     // No-op casts are irrelevant for debug info.
-    MetadataAsValue *CastSrc = wrapMD(I.getOperand(0));
-    for (auto *DII : DbgUsers) {
-      DII->setOperand(0, CastSrc);
-      LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
-    }
-    return true;
+    return SrcDIExpr;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
         M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
-    // Rewrite a constant GEP into a DIExpression.  Since we are performing
-    // arithmetic to compute the variable's *value* in the DIExpression, we
-    // need to mark the expression with a DW_OP_stack_value.
+    // Rewrite a constant GEP into a DIExpression.
     APInt Offset(BitWidth, 0);
-    if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset))
-      for (auto *DII : DbgUsers)
-        applyOffset(DII, Offset.getSExtValue());
-    return true;
+    if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset)) {
+      return applyOffset(Offset.getSExtValue());
+    } else {
+      return nullptr;
+    }
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
     // Rewrite binary operations with constant integer operands.
     auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1));
     if (!ConstInt || ConstInt->getBitWidth() > 64)
-      return false;
+      return nullptr;
 
     uint64_t Val = ConstInt->getSExtValue();
-    for (auto *DII : DbgUsers) {
-      switch (BI->getOpcode()) {
-      case Instruction::Add:
-        applyOffset(DII, Val);
-        break;
-      case Instruction::Sub:
-        applyOffset(DII, -int64_t(Val));
-        break;
-      case Instruction::Mul:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mul});
-        break;
-      case Instruction::SDiv:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_div});
-        break;
-      case Instruction::SRem:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_mod});
-        break;
-      case Instruction::Or:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
-        break;
-      case Instruction::And:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_and});
-        break;
-      case Instruction::Xor:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
-        break;
-      case Instruction::Shl:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shl});
-        break;
-      case Instruction::LShr:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shr});
-        break;
-      case Instruction::AShr:
-        applyOps(DII, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_shra});
-        break;
-      default:
-        // TODO: Salvage constants from each kind of binop we know about.
-        return false;
-      }
+    switch (BI->getOpcode()) {
+    case Instruction::Add:
+      return applyOffset(Val);
+    case Instruction::Sub:
+      return applyOffset(-int64_t(Val));
+    case Instruction::Mul:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_mul});
+    case Instruction::SDiv:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_div});
+    case Instruction::SRem:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_mod});
+    case Instruction::Or:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_or});
+    case Instruction::And:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_and});
+    case Instruction::Xor:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_xor});
+    case Instruction::Shl:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shl});
+    case Instruction::LShr:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shr});
+    case Instruction::AShr:
+      return applyOps({dwarf::DW_OP_constu, Val, dwarf::DW_OP_shra});
+    default:
+      // TODO: Salvage constants from each kind of binop we know about.
+      return nullptr;
     }
-    return true;
   } else if (isa<LoadInst>(&I)) {
-    MetadataAsValue *AddrMD = wrapMD(I.getOperand(0));
-    for (auto *DII : DbgUsers) {
-      // Rewrite the load into DW_OP_deref.
-      auto *DIExpr = DII->getExpression();
-      DIExpr = DIExpression::prepend(DIExpr, DIExpression::WithDeref);
-      DII->setOperand(0, AddrMD);
-      DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
-      LLVM_DEBUG(dbgs() << "SALVAGE:  " << *DII << '\n');
-    }
-    return true;
+    // Rewrite the load into DW_OP_deref.
+    return DIExpression::prepend(SrcDIExpr, DIExpression::WithDeref);
   }
-  return false;
+  return nullptr;
 }
 
 /// A replacement for a dbg.value expression.

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DomTreeUpdater.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/GenericDomTree.h"

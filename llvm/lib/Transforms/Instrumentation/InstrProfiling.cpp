@@ -967,22 +967,8 @@ void InstrProfiling::emitUses() {
 }
 
 void InstrProfiling::emitInitialization() {
-  StringRef InstrProfileOutput = Options.InstrProfileOutput;
-
-  if (!InstrProfileOutput.empty()) {
-    // Create variable for profile name.
-    Constant *ProfileNameConst =
-        ConstantDataArray::getString(M->getContext(), InstrProfileOutput, true);
-    GlobalVariable *ProfileNameVar = new GlobalVariable(
-        *M, ProfileNameConst->getType(), true, GlobalValue::WeakAnyLinkage,
-        ProfileNameConst, INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR));
-    if (TT.supportsCOMDAT()) {
-      ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
-      ProfileNameVar->setComdat(M->getOrInsertComdat(
-          StringRef(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR))));
-    }
-  }
-
+  // Create variable for profile name.
+  createProfileFileNameVar(*M, Options.InstrProfileOutput);
   Function *RegisterF = M->getFunction(getInstrProfRegFuncsName());
   if (!RegisterF)
     return;

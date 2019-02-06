@@ -74,7 +74,7 @@ public:
 /// An instruction is moved from the WaitSet to the ReadySet when register
 /// operands become available, and all memory dependencies are met.
 /// Instructions that are moved from the WaitSet to the ReadySet transition
-/// in state from 'IS_AVAILABLE' to 'IS_READY'.
+/// in state from 'IS_DISPATCHED' to 'IS_READY'.
 ///
 /// On every cycle, the Scheduler checks if it can promote instructions from the
 /// WaitSet to the ReadySet.

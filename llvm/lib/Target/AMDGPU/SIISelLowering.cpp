@@ -2936,7 +2936,7 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
   MachineInstr *InsertPt =
-    BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_XOR_B64), AMDGPU::EXEC)
+    BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_XOR_B64_term), AMDGPU::EXEC)
     .addReg(AMDGPU::EXEC)
     .addReg(NewExec);
 

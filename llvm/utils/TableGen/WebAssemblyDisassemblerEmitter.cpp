@@ -68,7 +68,7 @@ void emitWebAssemblyDisassemblerTables(
       // If the new one is explicitly marked as canonical, take it.
       if (!IsCanonicalNew) {
         // Neither the existing or new instruction is canonical.
-        // Pick the one with with the shortest name as heuristic.
+        // Pick the one with the shortest name as heuristic.
         // Though ideally IsCanonical is always defined for at least one
         // variant so this never has to apply.
         if (CGIP.second->AsmString.size() <= CGI.AsmString.size())

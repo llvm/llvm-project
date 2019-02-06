@@ -4,8 +4,8 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
-define i64 @test1(i64 %a, i64 %b) nounwind ssp {
-; CHECK-LABEL: @test1(
+define i64 @uaddo1(i64 %a, i64 %b) nounwind ssp {
+; CHECK-LABEL: @uaddo1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
@@ -18,8 +18,8 @@ define i64 @test1(i64 %a, i64 %b) nounwind ssp {
   ret i64 %Q
 }
 
-define i64 @test2(i64 %a, i64 %b) nounwind ssp {
-; CHECK-LABEL: @test2(
+define i64 @uaddo2(i64 %a, i64 %b) nounwind ssp {
+; CHECK-LABEL: @uaddo2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
@@ -32,8 +32,8 @@ define i64 @test2(i64 %a, i64 %b) nounwind ssp {
   ret i64 %Q
 }
 
-define i64 @test3(i64 %a, i64 %b) nounwind ssp {
-; CHECK-LABEL: @test3(
+define i64 @uaddo3(i64 %a, i64 %b) nounwind ssp {
+; CHECK-LABEL: @uaddo3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
@@ -46,8 +46,8 @@ define i64 @test3(i64 %a, i64 %b) nounwind ssp {
   ret i64 %Q
 }
 
-define i64 @test4(i64 %a, i64 %b, i1 %c) nounwind ssp {
-; CHECK-LABEL: @test4(
+define i64 @uaddo4(i64 %a, i64 %b, i1 %c) nounwind ssp {
+; CHECK-LABEL: @uaddo4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
@@ -72,8 +72,8 @@ exit:
   ret i64 0
 }
 
-define i64 @test5(i64 %a, i64 %b, i64* %ptr, i1 %c) nounwind ssp {
-; CHECK-LABEL: @test5(
+define i64 @uaddo5(i64 %a, i64 %b, i64* %ptr, i1 %c) nounwind ssp {
+; CHECK-LABEL: @uaddo5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    store i64 [[ADD]], i64* [[PTR:%.*]]
@@ -248,14 +248,29 @@ define i1 @usubo_ult_constant_op1_i16(i16 %x, i16* %p) {
 
 define i1 @usubo_ugt_constant_op1_i8(i8 %x, i8* %p) {
 ; CHECK-LABEL: @usubo_ugt_constant_op1_i8(
-; CHECK-NEXT:    [[S:%.*]] = add i8 [[X:%.*]], -45
-; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 45, [[X]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 45, [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = add i8 [[X]], -45
 ; CHECK-NEXT:    store i8 [[S]], i8* [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[OV]]
 ;
-  %s = add i8 %x, -45
   %ov = icmp ugt i8 45, %x
+  %s = add i8 %x, -45
   store i8 %s, i8* %p
+  ret i1 %ov
+}
+
+; Special-case: subtract 1 changes the compare predicate and constant.
+
+define i1 @usubo_eq_constant1_op1_i32(i32 %x, i32* %p) {
+; CHECK-LABEL: @usubo_eq_constant1_op1_i32(
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OV:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %s = add i32 %x, -1
+  %ov = icmp eq i32 %x, 0
+  store i32 %s, i32* %p
   ret i1 %ov
 }
 
