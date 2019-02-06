@@ -46,7 +46,10 @@ public:
   void reportRemainingUndefines();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
+
   Symbol *find(StringRef Name);
+
+  void trace(StringRef Name);
 
   Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
                              InputFunction *Function);
@@ -76,8 +79,12 @@ public:
 
 private:
   std::pair<Symbol *, bool> insert(StringRef Name, InputFile *File);
+  std::pair<Symbol *, bool> insertName(StringRef Name);
 
-  llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
+  // Maps symbol names to index into the SymVector.  -1 means that symbols
+  // is to not yet in the vector but it should have tracing enabled if it is
+  // ever added.
+  llvm::DenseMap<llvm::CachedHashStringRef, int> SymMap;
   std::vector<Symbol *> SymVector;
 
   llvm::DenseSet<llvm::CachedHashStringRef> Comdats;

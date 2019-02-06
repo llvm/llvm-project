@@ -25,6 +25,7 @@ namespace {
 template <class ELFT> class X86_64 : public TargetInfo {
 public:
   X86_64();
+  int getTlsGdRelaxSkip(RelType Type) const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   RelType getDynRel(RelType Type) const override;
@@ -65,12 +66,16 @@ template <class ELFT> X86_64<ELFT>::X86_64() {
   GotPltEntrySize = 8;
   PltEntrySize = 16;
   PltHeaderSize = 16;
-  TlsGdRelaxSkip = 2;
   TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   DefaultImageBase = 0x200000;
+}
+
+template <class ELFT>
+int X86_64<ELFT>::getTlsGdRelaxSkip(RelType Type) const {
+  return 2;
 }
 
 template <class ELFT>

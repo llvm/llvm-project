@@ -23,6 +23,7 @@ namespace {
 class X86 : public TargetInfo {
 public:
   X86();
+  int getTlsGdRelaxSkip(RelType Type) const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const override;
@@ -58,12 +59,15 @@ X86::X86() {
   GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 16;
-  TlsGdRelaxSkip = 2;
   TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the non-PAE large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   DefaultImageBase = 0x400000;
+}
+
+int X86::getTlsGdRelaxSkip(RelType Type) const {
+  return 2;
 }
 
 RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
