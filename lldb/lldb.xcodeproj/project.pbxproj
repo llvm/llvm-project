@@ -656,8 +656,8 @@
 		268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 495BBACB119A0DBE00418BEA /* PathMappingList.cpp */; };
 		2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */; };
 		AF815DF921C855B400023A34 /* PdbAstBuilder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF815DF721C855B400023A34 /* PdbAstBuilder.cpp */; };
-		5A6424952204D05000C3D9DB /* PdbFPOProgramToDWARFExpression.h in Headers */ = {isa = PBXBuildFile; fileRef = 5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */; };
 		5A6424972204D05000C3D9DB /* PdbFPOProgramToDWARFExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5A6424932204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.cpp */; };
+		5A6424952204D05000C3D9DB /* PdbFPOProgramToDWARFExpression.h in Headers */ = {isa = PBXBuildFile; fileRef = 5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */; };
 		AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B6217140B6006714AC /* PdbIndex.cpp */; };
 		AF0F459E219FA1C800C1E612 /* PdbSymUid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */; };
 		AFD966B9217140B6006714AC /* PdbUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B5217140B6006714AC /* PdbUtil.cpp */; };
@@ -1768,8 +1768,8 @@
 		7F94D7172040A13A006EE3EA /* CleanUpTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CleanUpTest.cpp; sourceTree = "<group>"; };
 		949EEDA11BA76571008C63CF /* Cocoa.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Cocoa.cpp; path = Language/ObjC/Cocoa.cpp; sourceTree = "<group>"; };
 		94B9E5051BBEFCF6000A48DC /* Cocoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Cocoa.h; path = Language/ObjC/Cocoa.h; sourceTree = "<group>"; };
-		5A6424942204D05000C3D9DB /* CodeViewRegisterMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CodeViewRegisterMapping.h; path = source/Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.h; sourceTree = SOURCE_ROOT; };
 		5A6424922204D04F00C3D9DB /* CodeViewRegisterMapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CodeViewRegisterMapping.cpp; path = source/Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.cpp; sourceTree = SOURCE_ROOT; };
+		5A6424942204D05000C3D9DB /* CodeViewRegisterMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CodeViewRegisterMapping.h; path = source/Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.h; sourceTree = SOURCE_ROOT; };
 		9441816D1C8F5EC900E5A8D9 /* CommandAlias.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandAlias.cpp; path = source/Interpreter/CommandAlias.cpp; sourceTree = "<group>"; };
 		9441816B1C8F5EB000E5A8D9 /* CommandAlias.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CommandAlias.h; path = include/lldb/Interpreter/CommandAlias.h; sourceTree = "<group>"; };
 		4C09CB74116BD98B00C7A725 /* CommandCompletions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandCompletions.cpp; path = source/Commands/CommandCompletions.cpp; sourceTree = "<group>"; };
@@ -2590,8 +2590,6 @@
 		4C639EC321FA684700A7B957 /* OptionsWithRawTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsWithRawTest.cpp; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
-		5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PdbFPOProgramToDWARFExpression.h; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.h; sourceTree = SOURCE_ROOT; };
-		5A6424932204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbFPOProgramToDWARFExpression.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.cpp; sourceTree = SOURCE_ROOT; };
 		4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBLocationToDWARFExpression.cpp; path = PDB/PDBLocationToDWARFExpression.cpp; sourceTree = "<group>"; };
 		4CA0C6CB20F929C700CFE6BB /* PDBLocationToDWARFExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBLocationToDWARFExpression.h; path = PDB/PDBLocationToDWARFExpression.h; sourceTree = "<group>"; };
 		AF3F54B21B3BA5D500186E73 /* POSIXStopInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = POSIXStopInfo.cpp; sourceTree = "<group>"; };
@@ -2601,6 +2599,8 @@
 		2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingListTest.cpp; path = Target/PathMappingListTest.cpp; sourceTree = "<group>"; };
 		AF815DF721C855B400023A34 /* PdbAstBuilder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbAstBuilder.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbAstBuilder.cpp; sourceTree = SOURCE_ROOT; };
 		AF815DF821C855B400023A34 /* PdbAstBuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PdbAstBuilder.h; path = source/Plugins/SymbolFile/NativePDB/PdbAstBuilder.h; sourceTree = SOURCE_ROOT; };
+		5A6424932204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbFPOProgramToDWARFExpression.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.cpp; sourceTree = SOURCE_ROOT; };
+		5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PdbFPOProgramToDWARFExpression.h; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.h; sourceTree = SOURCE_ROOT; };
 		AFD966B6217140B6006714AC /* PdbIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbIndex.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.cpp; sourceTree = SOURCE_ROOT; };
 		AFD966BF217140C8006714AC /* PdbIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbIndex.h; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.h; sourceTree = SOURCE_ROOT; };
 		AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbSymUid.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbSymUid.cpp; sourceTree = SOURCE_ROOT; };
