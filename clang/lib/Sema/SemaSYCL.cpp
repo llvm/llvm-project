@@ -21,6 +21,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "clang/Analysis/CallGraph.h"
 
 #include <array>
 
@@ -45,6 +46,7 @@ enum RestrictKind {
   KernelRTTI,
   KernelNonConstStaticDataVariable,
   KernelCallVirtualFunction,
+  KernelCallRecursiveFunction,
   KernelCallFunctionPointer,
   KernelAllocateStorage,
   KernelUseExceptions,
@@ -85,20 +87,25 @@ public:
 
   bool VisitCallExpr(CallExpr *e) {
     for (const auto &Arg : e->arguments())
-      CheckTypeForVirtual(Arg->getType(), Arg->getSourceRange());
+      CheckSYCLType(Arg->getType(), Arg->getSourceRange());
 
     if (FunctionDecl *Callee = e->getDirectCallee()) {
+      Callee = Callee->getCanonicalDecl();
       // Remember that all SYCL kernel functions have deferred
       // instantiation as template functions. It means that
       // all functions used by kernel have already been parsed and have
       // definitions.
+      llvm::SmallPtrSet<FunctionDecl *, 10> VisitedSet;
+      if (IsRecursive(Callee, Callee, VisitedSet))
+        SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
+                     KernelCallRecursiveFunction;
 
       if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Callee))
         if (Method->isVirtual())
           SemaRef.Diag(e->getExprLoc(), diag::err_sycl_restrict) <<
                        KernelCallVirtualFunction;
 
-      CheckTypeForVirtual(Callee->getReturnType(), Callee->getSourceRange());
+      CheckSYCLType(Callee->getReturnType(), Callee->getSourceRange());
 
       if (FunctionDecl *Def = Callee->getDefinition()) {
         if (!Def->hasAttr<SYCLDeviceAttr>()) {
@@ -116,7 +123,7 @@ public:
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     for (const auto &Arg : E->arguments())
-      CheckTypeForVirtual(Arg->getType(), Arg->getSourceRange());
+      CheckSYCLType(Arg->getType(), Arg->getSourceRange());
 
     CXXConstructorDecl *Ctor = E->getConstructor();
 
@@ -150,22 +157,22 @@ public:
   }
 
   bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
-    CheckTypeForVirtual(TD->getUnderlyingType(), TD->getLocation());
+    CheckSYCLType(TD->getUnderlyingType(), TD->getLocation());
     return true;
   }
 
   bool VisitRecordDecl(RecordDecl *RD) {
-    CheckTypeForVirtual(QualType{RD->getTypeForDecl(), 0}, RD->getLocation());
+    CheckSYCLType(QualType{RD->getTypeForDecl(), 0}, RD->getLocation());
     return true;
   }
 
   bool VisitParmVarDecl(VarDecl *VD) {
-    CheckTypeForVirtual(VD->getType(), VD->getLocation());
+    CheckSYCLType(VD->getType(), VD->getLocation());
     return true;
   }
 
   bool VisitVarDecl(VarDecl *VD) {
-    CheckTypeForVirtual(VD->getType(), VD->getLocation());
+    CheckSYCLType(VD->getType(), VD->getLocation());
     return true;
   }
 
@@ -180,7 +187,7 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *E) {
-    CheckTypeForVirtual(E->getType(), E->getSourceRange());
+    CheckSYCLType(E->getType(), E->getSourceRange());
     if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl())) {
       bool IsConst = VD->getType().getNonReferenceType().isConstQualified();
       if (!IsConst && VD->hasGlobalStorage() && !VD->isStaticLocal() &&
@@ -199,12 +206,17 @@ public:
   // storage are disallowed in a SYCL kernel. The placement
   // new operator and any user-defined overloads that
   // do not allocate storage are permitted.
-    const FunctionDecl *FD = E->getOperatorNew();
-    if (FD && !FD->isReservedGlobalPlacementOperator()) {
-      OverloadedOperatorKind Kind = FD->getOverloadedOperator();
-      if (Kind == OO_New || Kind == OO_Array_New)
-        SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
-                     KernelAllocateStorage;
+    if (FunctionDecl *FD = E->getOperatorNew()) {
+      if (FD->isReplaceableGlobalAllocationFunction()) {
+          SemaRef.Diag(E->getExprLoc(), diag::err_sycl_restrict) <<
+                       KernelAllocateStorage;
+      } else if (FunctionDecl *Def = FD->getDefinition()) {
+        if (!Def->hasAttr<SYCLDeviceAttr>()) {
+          Def->addAttr(SYCLDeviceAttr::CreateImplicit(SemaRef.Context));
+          this->TraverseStmt(Def->getBody());
+          SemaRef.AddSyclKernel(Def);
+        }
+      }
     }
     return true;
   }
@@ -245,8 +257,42 @@ public:
     return true;
   }
 
+  // The call graph for this translation unit.
+  CallGraph SYCLCG;
 private:
-  bool CheckTypeForVirtual(QualType Ty, SourceRange Loc) {
+  // Determines whether the function FD is recursive.
+  // CalleeNode is a function which is called either directly
+  // or indirectly from FD.  If recursion is detected then create
+  // diagnostic notes on each function as the callstack is unwound.
+  bool IsRecursive(FunctionDecl *CalleeNode, FunctionDecl *FD,
+                   llvm::SmallPtrSet<FunctionDecl *, 10> VisitedSet) {
+    // We're currently checking CalleeNode on a different
+    // trace through the CallGraph, we avoid infinite recursion
+    // by using VisitedSet to keep track of this.
+    if (!VisitedSet.insert(CalleeNode).second)
+      return false;
+    if (CallGraphNode *N = SYCLCG.getNode(CalleeNode)) {
+      for (const CallGraphNode *CI : *N) {
+        if (FunctionDecl *Callee = dyn_cast<FunctionDecl>(CI->getDecl())) {
+          Callee = Callee->getCanonicalDecl();
+          if (Callee == FD)
+            return SemaRef.Diag(FD->getSourceRange().getBegin(),
+                         diag::note_sycl_recursive_function_declared_here)
+                         << KernelCallRecursiveFunction;
+          else if (IsRecursive(Callee, FD, VisitedSet))
+            return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool CheckSYCLType(QualType Ty, SourceRange Loc) {
+    if (Ty->isVariableArrayType()) {
+      SemaRef.Diag(Loc.getBegin(), diag::err_vla_unsupported);
+      return false;
+    }
+
     while (Ty->isAnyPointerType() || Ty->isArrayType())
       Ty = QualType{Ty->getPointeeOrArrayElementType(), 0};
 
@@ -264,25 +310,25 @@ private:
       }
 
       for (const auto &Field : CRD->fields()) {
-        if (!CheckTypeForVirtual(Field->getType(), Field->getSourceRange())) {
+        if (!CheckSYCLType(Field->getType(), Field->getSourceRange())) {
           SemaRef.Diag(Loc.getBegin(), diag::note_sycl_used_here);
           return false;
         }
       }
     } else if (const auto *RD = Ty->getAsRecordDecl()) {
       for (const auto &Field : RD->fields()) {
-        if (!CheckTypeForVirtual(Field->getType(), Field->getSourceRange())) {
+        if (!CheckSYCLType(Field->getType(), Field->getSourceRange())) {
           SemaRef.Diag(Loc.getBegin(), diag::note_sycl_used_here);
           return false;
         }
       }
     } else if (const auto *FPTy = dyn_cast<FunctionProtoType>(Ty)) {
       for (const auto &ParamTy : FPTy->param_types())
-        if (!CheckTypeForVirtual(ParamTy, Loc))
+        if (!CheckSYCLType(ParamTy, Loc))
           return false;
-      return CheckTypeForVirtual(FPTy->getReturnType(), Loc);
+      return CheckSYCLType(FPTy->getReturnType(), Loc);
     } else if (const auto *FTy = dyn_cast<FunctionType>(Ty)) {
-      return CheckTypeForVirtual(FTy->getReturnType(), Loc);
+      return CheckSYCLType(FTy->getReturnType(), Loc);
     }
     return true;
   }
@@ -726,6 +772,10 @@ void Sema::ConstructSYCLKernel(FunctionDecl *KernelCallerFunc) {
   AddSyclKernel(SYCLKernel);
   // Let's mark all called functions with SYCL Device attribute.
   MarkDeviceFunction Marker(*this);
+  // Create the call graph so we can detect recursion and check the validity
+  // of new operator overrides. Add the kernel function itself in case
+  // it is recursive.
+  Marker.SYCLCG.addToCallGraph(getASTContext().getTranslationUnitDecl());
   Marker.TraverseStmt(SYCLKernelBody);
 }
 

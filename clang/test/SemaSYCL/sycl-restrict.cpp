@@ -5,6 +5,17 @@ namespace std {
   class type_info;
   typedef __typeof__(sizeof(int)) size_t;
 }
+
+namespace Check_VLA_Restriction {
+void no_restriction(int p) {
+  int index[p+2];
+}
+void restriction(int p) {
+  // expected-error@+1 {{variable length arrays are not supported for the current target}}
+  int index[p+2];
+}
+}
+
 void* operator new (std::size_t size, void* ptr) throw() { return ptr; };
 namespace Check_RTTI_Restriction {
 // expected-error@+1 5{{No class with a vtable can be used in a SYCL kernel or any code included in the kernel}}
@@ -17,8 +28,12 @@ struct B : public A {
 };
 
 struct OverloadedNewDelete {
-  // These overloads do not allocate.
-  void *operator new(std::size_t size) throw() {return 0;}
+  // This overload allocates storage, give diagnostic.
+  void *operator new(std::size_t size) throw() {
+  // expected-error@+1 {{SYCL kernel cannot allocate storage}}
+    float *pt = new float;
+    return 0;}
+  // This overload does not allocate: no diagnostic.
   void *operator new[](std::size_t size) throw() {return 0;}
   void operator delete(void *){};
   void operator delete[](void *){};
@@ -26,12 +41,12 @@ struct OverloadedNewDelete {
 
 bool isa_B(A *a) {
 
+  Check_VLA_Restriction::restriction(7);
   // expected-error@+1 {{SYCL kernel cannot allocate storage}}
   int *ip = new int;
   int i; int *p3 = new(&i) int; // no error on placement new
-  //FIXME call to overloaded new should not get error message
-  // expected-error@+1 {{SYCL kernel cannot allocate storage}}
   OverloadedNewDelete *x = new( struct OverloadedNewDelete );
+  auto y = new struct OverloadedNewDelete [5];
   // expected-error@+1 {{SYCL kernel cannot use rtti}}
   (void)typeid(int);
   // expected-error@+2 {{SYCL kernel cannot use rtti}}

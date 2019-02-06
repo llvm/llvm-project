@@ -9532,6 +9532,7 @@ def err_sycl_restrict : Error<
   "|use rtti"
   "|use a non-const static data variable"
   "|call a virtual function"
+  "|call a recursive function"
   "|call through a function pointer"
   "|allocate storage"
   "|use exceptions"
@@ -9539,6 +9540,7 @@ def err_sycl_restrict : Error<
 def err_sycl_virtual_types : Error<
   "No class with a vtable can be used in a SYCL kernel or any code included in the kernel">;
 def note_sycl_used_here : Note<"used here">;
+def note_sycl_recursive_function_declared_here: Note<"function implemented using recursion declared here">;
 def err_sycl_non_std_layout_type : Error<
   "kernel parameter has non-standard layout class/struct type">;
 } // end of sema component.
