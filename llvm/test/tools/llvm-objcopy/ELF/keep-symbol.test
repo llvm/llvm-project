@@ -1,8 +1,10 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy --discard-all -K foo --keep-symbol bar %t %t2
 # RUN: llvm-objcopy -K foo -N foo -N bar --keep-symbol bar -N baz %t %t3
+# RUN: llvm-objcopy --discard-all --regex -K '^ba.*' %t %t4
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 # RUN: llvm-readobj --symbols %t3 | FileCheck %s
+# RUN: llvm-readobj --symbols %t4 | FileCheck %s --check-prefix=REGEX
 
 !ELF
 FileHeader:
@@ -64,3 +66,9 @@ Symbols:
 #CHECK-NEXT:    Section: .text
 #CHECK-NEXT:  }
 #CHECK-NEXT:]
+
+#REGEX: Symbols [
+#REGEX-NOT: foo
+#REGEX: Name: bar
+#REGEX: Name: baz
+#REGEX: ]

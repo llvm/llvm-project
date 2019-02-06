@@ -454,14 +454,15 @@ struct FuzzyFindRequest {
   /// Contextually relevant files (e.g. the file we're code-completing in).
   /// Paths should be absolute.
   std::vector<std::string> ProximityPaths;
-
-  // FIXME(ibiryukov): add expected type to the request.
+  /// Preferred types of symbols. These are raw representation of `OpaqueType`.
+  std::vector<std::string> PreferredTypes;
 
   bool operator==(const FuzzyFindRequest &Req) const {
     return std::tie(Query, Scopes, Limit, RestrictForCodeCompletion,
-                    ProximityPaths) ==
+                    ProximityPaths, PreferredTypes) ==
            std::tie(Req.Query, Req.Scopes, Req.Limit,
-                    Req.RestrictForCodeCompletion, Req.ProximityPaths);
+                    Req.RestrictForCodeCompletion, Req.ProximityPaths,
+                    Req.PreferredTypes);
   }
   bool operator!=(const FuzzyFindRequest &Req) const { return !(*this == Req); }
 };

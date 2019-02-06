@@ -213,19 +213,20 @@ void ResourceManager::use(const ResourceRef &RR) {
 }
 
 void ResourceManager::release(const ResourceRef &RR) {
-  ResourceState &RS = *Resources[getResourceStateIndex(RR.first)];
+  unsigned RSID = getResourceStateIndex(RR.first);
+  ResourceState &RS = *Resources[RSID];
   bool WasFullyUsed = !RS.isReady();
   RS.releaseSubResource(RR.second);
   if (!WasFullyUsed)
     return;
 
-  for (std::unique_ptr<ResourceState> &Res : Resources) {
-    ResourceState &Current = *Res;
-    if (!Current.isAResourceGroup() || Current.getResourceMask() == RR.first)
-      continue;
-
-    if (Current.containsResource(RR.first))
-      Current.releaseSubResource(RR.first);
+  // Notify groups that RR.first is now available again.
+  uint64_t Users = Resource2Groups[RSID];
+  while (Users) {
+    unsigned GroupIndex = getResourceStateIndex(Users & (-Users));
+    ResourceState &CurrentUser = *Resources[GroupIndex];
+    CurrentUser.releaseSubResource(RR.first);
+    Users &= Users - 1;
   }
 }
 

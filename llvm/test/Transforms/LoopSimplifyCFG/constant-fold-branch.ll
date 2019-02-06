@@ -288,8 +288,6 @@ define i32 @dead_exit_test_switch_loop(i32 %end) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    switch i32 0, label [[PREHEADER_SPLIT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[DEAD:%.*]]
-; CHECK-NEXT:    i32 2, label [[DEAD]]
-; CHECK-NEXT:    i32 3, label [[DEAD]]
 ; CHECK-NEXT:    ]
 ; CHECK:       preheader-split:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]

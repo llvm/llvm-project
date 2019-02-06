@@ -1771,13 +1771,22 @@ Instruction *InstCombiner::foldICmpOrConstant(ICmpInst &Cmp, BinaryOperator *Or,
                           ConstantInt::get(V->getType(), 1));
   }
 
-  // X | C == C --> X <=u C
-  // X | C != C --> X  >u C
-  //   iff C+1 is a power of 2 (C is a bitmask of the low bits)
-  if (Cmp.isEquality() && Cmp.getOperand(1) == Or->getOperand(1) &&
-      (C + 1).isPowerOf2()) {
-    Pred = (Pred == CmpInst::ICMP_EQ) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
-    return new ICmpInst(Pred, Or->getOperand(0), Or->getOperand(1));
+  Value *OrOp0 = Or->getOperand(0), *OrOp1 = Or->getOperand(1);
+  if (Cmp.isEquality() && Cmp.getOperand(1) == OrOp1) {
+    // X | C == C --> X <=u C
+    // X | C != C --> X  >u C
+    //   iff C+1 is a power of 2 (C is a bitmask of the low bits)
+    if ((C + 1).isPowerOf2()) {
+      Pred = (Pred == CmpInst::ICMP_EQ) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
+      return new ICmpInst(Pred, OrOp0, OrOp1);
+    }
+    // More general: are all bits outside of a mask constant set or not set?
+    // X | C == C --> (X & ~C) == 0
+    // X | C != C --> (X & ~C) != 0
+    if (Or->hasOneUse()) {
+      Value *A = Builder.CreateAnd(OrOp0, ~C);
+      return new ICmpInst(Pred, A, ConstantInt::getNullValue(OrOp0->getType()));
+    }
   }
 
   if (!Cmp.isEquality() || !C.isNullValue() || !Or->hasOneUse())
@@ -1798,8 +1807,8 @@ Instruction *InstCombiner::foldICmpOrConstant(ICmpInst &Cmp, BinaryOperator *Or,
   // Are we using xors to bitwise check for a pair of (in)equalities? Convert to
   // a shorter form that has more potential to be folded even further.
   Value *X1, *X2, *X3, *X4;
-  if (match(Or->getOperand(0), m_OneUse(m_Xor(m_Value(X1), m_Value(X2)))) &&
-      match(Or->getOperand(1), m_OneUse(m_Xor(m_Value(X3), m_Value(X4))))) {
+  if (match(OrOp0, m_OneUse(m_Xor(m_Value(X1), m_Value(X2)))) &&
+      match(OrOp1, m_OneUse(m_Xor(m_Value(X3), m_Value(X4))))) {
     // ((X1 ^ X2) || (X3 ^ X4)) == 0 --> (X1 == X2) && (X3 == X4)
     // ((X1 ^ X2) || (X3 ^ X4)) != 0 --> (X1 != X2) || (X3 != X4)
     Value *Cmp12 = Builder.CreateICmp(Pred, X1, X2);

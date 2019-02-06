@@ -22,6 +22,7 @@
 #include "ClangdUnit.h"
 #include "Protocol.h"
 #include "Selection.h"
+#include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,7 +48,7 @@ public:
     ParsedAST &AST;
     /// A location of the cursor in the editor.
     SourceLocation Cursor;
-    // The AST nodes that were selected.
+    /// The AST nodes that were selected.
     SelectionTree ASTSelection;
     // FIXME: provide a way to get sources and ASTs for other files.
   };
@@ -56,20 +57,27 @@ public:
   /// defining the Tweak. Definition is provided automatically by
   /// REGISTER_TWEAK.
   virtual const char *id() const = 0;
-  /// Run the first stage of the action. The non-None result indicates that the
-  /// action is available and should be shown to the user. Returns None if the
+  /// Run the first stage of the action. Returns true indicating that the
+  /// action is available and should be shown to the user. Returns false if the
   /// action is not available.
   /// This function should be fast, if the action requires non-trivial work it
   /// should be moved into 'apply'.
   /// Returns true iff the action is available and apply() can be called on it.
   virtual bool prepare(const Selection &Sel) = 0;
-  /// Run the second stage of the action that would produce the actual changes.
+  /// Format and apply the actual changes generated from the second stage of the
+  /// action.
   /// EXPECTS: prepare() was called and returned true.
-  virtual Expected<tooling::Replacements> apply(const Selection &Sel) = 0;
+  Expected<tooling::Replacements> apply(const Selection &Sel,
+                                        const format::FormatStyle &Style);
   /// A one-line title of the action that should be shown to the users in the
   /// UI.
   /// EXPECTS: prepare() was called and returned true.
   virtual std::string title() const = 0;
+
+protected:
+  /// Run the second stage of the action that would produce the actual changes.
+  /// EXPECTS: prepare() was called and returned true.
+  virtual Expected<tooling::Replacements> execute(const Selection &Sel) = 0;
 };
 
 // All tweaks must be registered in the .cpp file next to their definition.

@@ -92,8 +92,7 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,32768,0,0,1,0,0,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -120,8 +119,7 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsllq $20, %xmm0, %xmm0
-; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -152,8 +150,7 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X32-NEXT:    vmovd %eax, %xmm0
 ; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; X32-NEXT:    vpsrlq $3, %xmm0, %xmm0
-; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -239,8 +236,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X32-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -283,8 +279,7 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X32-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; X32-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X32-NEXT:    vpxor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm3, %xmm0
+; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax

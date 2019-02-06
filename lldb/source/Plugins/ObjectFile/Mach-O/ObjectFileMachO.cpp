@@ -1609,8 +1609,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
   bool add_section = true;
   bool add_to_unified = true;
   ConstString const_segname(
-      load_cmd.segname,
-      std::min<size_t>(strlen(load_cmd.segname), sizeof(load_cmd.segname)));
+      load_cmd.segname, strnlen(load_cmd.segname, sizeof(load_cmd.segname)));
 
   SectionSP unified_section_sp(
       context.UnifiedList.FindSectionByName(const_segname));
@@ -1729,8 +1728,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
 
     if (add_section) {
       ConstString section_name(
-          sect64.sectname,
-          std::min<size_t>(strlen(sect64.sectname), sizeof(sect64.sectname)));
+          sect64.sectname, strnlen(sect64.sectname, sizeof(sect64.sectname)));
       if (!const_segname) {
         // We have a segment with no name so we need to conjure up segments
         // that correspond to the section's segname if there isn't already such

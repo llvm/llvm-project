@@ -46,6 +46,14 @@ Tweak::Selection::Selection(ParsedAST &AST, unsigned RangeBegin,
   Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);
 }
 
+Expected<tooling::Replacements> Tweak::apply(const Selection &Sel,
+                                             const format::FormatStyle &Style) {
+  auto RawReplacements = execute(Sel);
+  if (!RawReplacements)
+    return RawReplacements;
+  return cleanupAndFormat(Sel.Code, *RawReplacements, Style);
+}
+
 std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S) {
   validateRegistry();
 

@@ -28,6 +28,7 @@
 # RUN: echo "Unknown" >> %t-globals2.txt
 # RUN: echo "   " >> %t-globals2.txt
 # RUN: echo "# File with no symbols" > %t-globals3.txt
+# RUN: echo "^Global[0-9]+([[:space:]]Global6)*$" > %t-globals-regexp.txt
 
 # RUN: llvm-objcopy \
 # RUN:   -G Global1 \
@@ -40,6 +41,9 @@
 # RUN:   --globalize-symbol Weak2 \
 # RUN:   %t.o %t.2.o
 # RUN: llvm-readobj --elf-output-style=GNU --symbols %t.2.o | FileCheck %s
+
+# RUN: llvm-objcopy  --regex --keep-global-symbols %t-globals-regexp.txt %t.o %t.3.o
+# RUN: llvm-readobj --elf-output-style=GNU --symbols %t.3.o | FileCheck %s --check-prefix=REGEXP
 
 !ELF
 FileHeader:
@@ -97,3 +101,12 @@ Symbols:
 # CHECK-NEXT:     11: {{.*}}  GLOBAL {{.*}} UND Global7
 # CHECK-NEXT:     12: {{.*}}  WEAK   {{.*}} Weak1
 # CHECK-NEXT:     13: {{.*}}  GLOBAL {{.*}} Weak2
+
+# REGEXP:           6: {{.*}}  GLOBAL {{.*}} Global1
+# REGEXP-NEXT:      7: {{.*}}  GLOBAL {{.*}} Global2
+# REGEXP-NEXT:      8: {{.*}}  GLOBAL {{.*}} Global3
+# REGEXP-NEXT:      9: {{.*}}  GLOBAL {{.*}} Global4
+# REGEXP-NEXT:     10: {{.*}}  GLOBAL {{.*}} Global5
+# REGEXP-NEXT:     11: {{.*}}  GLOBAL {{.*}} Global6
+# REGEXP-NEXT:     12: {{.*}}  GLOBAL {{.*}} Global5 Global6
+# REGEXP-NEXT:     13: {{.*}}  GLOBAL {{.*}} UND Global7

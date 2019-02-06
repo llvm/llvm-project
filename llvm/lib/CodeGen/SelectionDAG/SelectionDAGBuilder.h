@@ -669,8 +669,8 @@ public:
 
   void visit(unsigned Opcode, const User &I);
 
-  /// getCopyFromRegs - If there was virtual register allocated for the value V
-  /// emit CopyFromReg of the specified type Ty. Return empty SDValue() otherwise.
+  /// If there was virtual register allocated for the value V emit CopyFromReg
+  /// of the specified type Ty. Return empty SDValue() otherwise.
   SDValue getCopyFromRegs(const Value *V, Type *Ty);
 
   /// If we have dangling debug info that describes \p Variable, or an
@@ -679,8 +679,8 @@ public:
   void dropDanglingDebugInfo(const DILocalVariable *Variable,
                              const DIExpression *Expr);
 
-  // resolveDanglingDebugInfo - if we saw an earlier dbg_value referring to V,
-  // generate the debug data structures now that we've seen its definition.
+  // If we saw an earlier dbg_value referring to V, generate the debug data
+  // structures now that we've seen its definition.
   void resolveDanglingDebugInfo(const Value *V, SDValue Val);
 
   SDValue getValue(const Value *V);

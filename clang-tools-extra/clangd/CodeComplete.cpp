@@ -1333,6 +1333,8 @@ private:
     Req.AnyScope = AllScopes;
     // FIXME: we should send multiple weighted paths here.
     Req.ProximityPaths.push_back(FileName);
+    if (PreferredType)
+      Req.PreferredTypes.push_back(PreferredType->raw());
     vlog("Code complete: fuzzyFind({0:2})", toJSON(Req));
 
     if (SpecFuzzyFind)

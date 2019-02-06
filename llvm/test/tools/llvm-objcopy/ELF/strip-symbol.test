@@ -2,7 +2,9 @@
 # RUN: llvm-objcopy --strip-symbol baz -N bar %t %t2
 # RUN: llvm-readobj --symbols --sections %t2 | FileCheck %s
 # RUN: llvm-strip --strip-symbol baz -N bar %t -o %t3
-# RUN: llvm-readobj --symbols --sections %t3 | FileCheck %s
+# RUN: cmp %t2 %t3
+# RUN: llvm-strip --regex --strip-symbol '^b.*' -N bar %t -o %t4
+# RUN: cmp %t3 %t4
 
 !ELF
 FileHeader:
