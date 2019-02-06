@@ -94,7 +94,7 @@ def : StorePatExternSymOffOnly<vec_t, store, !cast<NI>("STORE_"#vec_t)>;
 // Constant: v128.const
 multiclass ConstVec<ValueType vec_t, dag ops, dag pat, string args> {
   let isMoveImm = 1, isReMaterializable = 1,
-    Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
+      Predicates = [HasSIMD128, HasUnimplementedSIMD128] in
   defm CONST_V128_#vec_t : SIMD_I<(outs V128:$dst), ops, (outs), ops,
                                   [(set V128:$dst, (vec_t pat))],
                                   "v128.const\t$dst, "#args,
@@ -125,14 +125,13 @@ defm "" : ConstVec<v8i16,
                      ImmI16:$i0, ImmI16:$i1, ImmI16:$i2, ImmI16:$i3,
                      ImmI16:$i4, ImmI16:$i5, ImmI16:$i6, ImmI16:$i7),
                    "$i0, $i1, $i2, $i3, $i4, $i5, $i6, $i7">;
-let IsCanonical = 1 in {
+let IsCanonical = 1 in
 defm "" : ConstVec<v4i32,
                    (ins vec_i32imm_op:$i0, vec_i32imm_op:$i1,
                         vec_i32imm_op:$i2, vec_i32imm_op:$i3),
                    (build_vector (i32 imm:$i0), (i32 imm:$i1),
                                  (i32 imm:$i2), (i32 imm:$i3)),
                    "$i0, $i1, $i2, $i3">;
-}
 defm "" : ConstVec<v2i64,
                    (ins vec_i64imm_op:$i0, vec_i64imm_op:$i1),
                    (build_vector (i64 imm:$i0), (i64 imm:$i1)),

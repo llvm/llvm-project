@@ -566,7 +566,8 @@ void Preprocessor::EnterMainSourceFile() {
         SourceLocation(), PPOpts->PCHThroughHeader,
         /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr, CurDir,
         /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,
-        /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr);
+        /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
+        /*IsFrameworkFound=*/nullptr);
     if (!File) {
       Diag(SourceLocation(), diag::err_pp_through_header_not_found)
           << PPOpts->PCHThroughHeader;

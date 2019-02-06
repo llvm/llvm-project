@@ -17,9 +17,9 @@
 // FIXME: Move to this file: BasicBlock::removePredecessor, BB::splitBasicBlock
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/InstrTypes.h"
 #include <cassert>
 
@@ -40,14 +40,21 @@ class TargetLibraryInfo;
 class Value;
 
 /// Delete the specified block, which must have no predecessors.
-void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
+void DeleteDeadBlock(
+    BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
+    SmallVectorImpl<DominatorTree::UpdateType> *DTUpdates = nullptr);
 
 /// Delete the specified blocks from \p BB. The set of deleted blocks must have
 /// no predecessors that are not being deleted themselves. \p BBs must have no
 /// duplicating blocks. If there are loops among this set of blocks, all
 /// relevant loop info updates should be done before this function is called.
-void DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
-                      DomTreeUpdater *DTU = nullptr);
+/// If \p DTU is specified, all updates of DomTree are done immediately using
+/// this updater.
+/// If \p DTUpdates is specified, all updates to DomTree  are also appended to
+/// this vector, no matter if DTU is specified.
+void DeleteDeadBlocks(
+    ArrayRef<BasicBlock *> BBs, DomTreeUpdater *DTU = nullptr,
+    SmallVectorImpl<DominatorTree::UpdateType> *DTUpdates = nullptr);
 
 /// We know that BB has one predecessor. If there are any single-entry PHI nodes
 /// in it, fold them away. This handles the case when all entries to the PHI

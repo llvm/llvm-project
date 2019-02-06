@@ -248,6 +248,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Using memory.copy is always better than using multiple loads and stores
     MaxStoresPerMemcpy = 1;
     MaxStoresPerMemcpyOptSize = 1;
+    MaxStoresPerMemmove = 1;
+    MaxStoresPerMemmoveOptSize = 1;
   }
 }
 

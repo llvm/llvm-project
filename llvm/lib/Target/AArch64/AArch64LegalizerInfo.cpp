@@ -499,7 +499,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
     auto AlignMinus1 = MIRBuilder.buildConstant(IntPtrTy, Align - 1);
 
     unsigned ListTmp = MRI.createGenericVirtualRegister(PtrTy);
-    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1->getOperand(0).getReg());
+    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1.getReg(0));
 
     DstPtr = MRI.createGenericVirtualRegister(PtrTy);
     MIRBuilder.buildPtrMask(DstPtr, ListTmp, Log2_64(Align));

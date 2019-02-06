@@ -20,11 +20,10 @@ defm BR_IF : I<(outs), (ins bb_op:$dst, I32:$cond),
 let isCodeGenOnly = 1 in
 defm BR_UNLESS : I<(outs), (ins bb_op:$dst, I32:$cond),
                    (outs), (ins bb_op:$dst), []>;
-let isBarrier = 1 in {
+let isBarrier = 1 in
 defm BR   : NRI<(outs), (ins bb_op:$dst),
                 [(br bb:$dst)],
                 "br      \t$dst", 0x0c>;
-} // isBarrier = 1
 } // isBranch = 1, isTerminator = 1, hasCtrlDep = 1
 
 def : Pat<(brcond (i32 (setne I32:$cond, 0)), bb:$dst),
@@ -35,14 +34,11 @@ def : Pat<(brcond (i32 (seteq I32:$cond, 0)), bb:$dst),
 // A list of branch targets enclosed in {} and separated by comma.
 // Used by br_table only.
 def BrListAsmOperand : AsmOperandClass { let Name = "BrList"; }
-let OperandNamespace = "WebAssembly" in {
-let OperandType = "OPERAND_BRLIST" in {
+let OperandNamespace = "WebAssembly", OperandType = "OPERAND_BRLIST" in
 def brlist : Operand<i32> {
   let ParserMatchClass = BrListAsmOperand;
   let PrintMethod = "printBrList";
 }
-} // OPERAND_BRLIST
-} // OperandNamespace = "WebAssembly"
 
 // TODO: SelectionDAG's lowering insists on using a pointer as the index for
 // jump tables, so in practice we don't ever use BR_TABLE_I64 in wasm32 mode
@@ -82,9 +78,8 @@ defm END_BLOCK : NRI<(outs), (ins), [], "end_block", 0x0b>;
 defm END_LOOP  : NRI<(outs), (ins), [], "end_loop", 0x0b>;
 defm END_IF    : NRI<(outs), (ins), [], "end_if", 0x0b>;
 // Generic instruction, for disassembler.
-let IsCanonical = 1 in {
+let IsCanonical = 1 in
 defm END       : NRI<(outs), (ins), [], "end", 0x0b>;
-}
 let isTerminator = 1, isBarrier = 1 in
 defm END_FUNCTION : NRI<(outs), (ins), [], "end_function", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
@@ -109,7 +104,7 @@ multiclass SIMD_RETURN<ValueType vt> {
   let isCodeGenOnly = 1 in
   defm FALLTHROUGH_RETURN_#vt : I<(outs), (ins V128:$val), (outs), (ins),
                                   []>,
-                                Requires<[HasSIMD128]>;
+                                  Requires<[HasSIMD128]>;
 }
 
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
@@ -187,4 +182,4 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
                       [(catchret bb:$dst, bb:$from)], "catchret", 0>;
 } // isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
   // isPseudo = 1, isEHScopeReturn = 1
-}
+} // Predicates = [HasExceptionHandling]

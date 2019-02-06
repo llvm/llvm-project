@@ -1011,4 +1011,21 @@ void getMemOPSizeRangeFromOption(StringRef MemOPSizeRange, int64_t &RangeStart,
   assert(RangeLast >= RangeStart);
 }
 
+// Create the variable for the profile file name.
+void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput) {
+  if (InstrProfileOutput.empty())
+    return;
+  Constant *ProfileNameConst =
+      ConstantDataArray::getString(M.getContext(), InstrProfileOutput, true);
+  GlobalVariable *ProfileNameVar = new GlobalVariable(
+      M, ProfileNameConst->getType(), true, GlobalValue::WeakAnyLinkage,
+      ProfileNameConst, INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR));
+  Triple TT(M.getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
+    ProfileNameVar->setComdat(M.getOrInsertComdat(
+        StringRef(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR))));
+  }
+}
+
 } // end namespace llvm

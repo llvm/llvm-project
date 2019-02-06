@@ -6793,8 +6793,8 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     Mask.append(NumElts, 0);
     return true;
   }
-  case ISD::ZERO_EXTEND_VECTOR_INREG:
-  case ISD::ZERO_EXTEND: {
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    // TODO: Handle ISD::ZERO_EXTEND
     SDValue Src = N.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
     unsigned NumSrcBitsPerElt = SrcVT.getScalarSizeInBits();

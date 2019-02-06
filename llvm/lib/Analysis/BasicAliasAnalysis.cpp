@@ -116,25 +116,44 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 
 /// Returns true if the pointer is to a function-local object that never
 /// escapes from the function.
-static bool isNonEscapingLocalObject(const Value *V) {
+static bool isNonEscapingLocalObject(
+    const Value *V,
+    SmallDenseMap<const Value *, bool, 8> *IsCapturedCache = nullptr) {
+  SmallDenseMap<const Value *, bool, 8>::iterator CacheIt;
+  if (IsCapturedCache) {
+    bool Inserted;
+    std::tie(CacheIt, Inserted) = IsCapturedCache->insert({V, false});
+    if (!Inserted)
+      // Found cached result, return it!
+      return CacheIt->second;
+  }
+
   // If this is a local allocation, check to see if it escapes.
-  if (isa<AllocaInst>(V) || isNoAliasCall(V))
+  if (isa<AllocaInst>(V) || isNoAliasCall(V)) {
     // Set StoreCaptures to True so that we can assume in our callers that the
     // pointer is not the result of a load instruction. Currently
     // PointerMayBeCaptured doesn't have any special analysis for the
     // StoreCaptures=false case; if it did, our callers could be refined to be
     // more precise.
-    return !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
+    auto Ret = !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
+    if (IsCapturedCache)
+      CacheIt->second = Ret;
+    return Ret;
+  }
 
   // If this is an argument that corresponds to a byval or noalias argument,
   // then it has not escaped before entering the function.  Check if it escapes
   // inside the function.
   if (const Argument *A = dyn_cast<Argument>(V))
-    if (A->hasByValAttr() || A->hasNoAliasAttr())
+    if (A->hasByValAttr() || A->hasNoAliasAttr()) {
       // Note even if the argument is marked nocapture, we still need to check
       // for copies made inside the function. The nocapture attribute only
       // specifies that there are no copies made that outlive the function.
-      return !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
+      auto Ret = !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
+      if (IsCapturedCache)
+        CacheIt->second = Ret;
+      return Ret;
+    }
 
   return false;
 }
@@ -816,6 +835,7 @@ AliasResult BasicAAResult::alias(const MemoryLocation &LocA,
   // SmallDenseMap if it ever grows larger.
   // FIXME: This should really be shrink_to_inline_capacity_and_clear().
   AliasCache.shrink_and_clear();
+  IsCapturedCache.shrink_and_clear();
   VisitedPhiBBs.clear();
   return Alias;
 }
@@ -1754,9 +1774,9 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) && isNonEscapingLocalObject(O2))
+    if (isEscapeSource(O1) && isNonEscapingLocalObject(O2, &IsCapturedCache))
       return NoAlias;
-    if (isEscapeSource(O2) && isNonEscapingLocalObject(O1))
+    if (isEscapeSource(O2) && isNonEscapingLocalObject(O1, &IsCapturedCache))
       return NoAlias;
   }
 

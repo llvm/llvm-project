@@ -371,6 +371,7 @@ static void setConfigs(opt::InputArgList &Args) {
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
   Config->StackFirst = Args.hasArg(OPT_stack_first);
+  Config->Trace = Args.hasArg(OPT_trace);
   Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
   Config->ThinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(Args.getLastArgValue(OPT_thinlto_cache_policy)),
@@ -555,6 +556,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->ExportDynamic = true;
     Config->AllowUndefined = true;
   }
+
+  // Handle --trace-symbol.
+  for (auto *Arg : Args.filtered(OPT_trace_symbol))
+    Symtab->trace(Arg->getValue());
 
   if (!Config->Relocatable)
     createSyntheticSymbols();

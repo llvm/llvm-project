@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -25,7 +26,6 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -47,13 +47,15 @@
 
 using namespace llvm;
 
-void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU) {
-  SmallVector<BasicBlock *, 1> BBs = {BB};
-  DeleteDeadBlocks(BBs, DTU);
+void llvm::DeleteDeadBlock(
+    BasicBlock *BB, DomTreeUpdater *DTU,
+    SmallVectorImpl<DominatorTree::UpdateType> *DTUpdates) {
+  DeleteDeadBlocks({BB}, DTU, DTUpdates);
 }
 
-void llvm::DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
-                            DomTreeUpdater *DTU) {
+void llvm::DeleteDeadBlocks(
+    ArrayRef<BasicBlock *> BBs, DomTreeUpdater *DTU,
+    SmallVectorImpl<DominatorTree::UpdateType> *DTUpdates) {
 #ifndef NDEBUG
   // Make sure that all predecessors of each dead block is also dead.
   SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
@@ -69,7 +71,7 @@ void llvm::DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
     // of their predecessors is going away.
     for (BasicBlock *Succ : successors(BB)) {
       Succ->removePredecessor(BB);
-      if (DTU)
+      if (DTU || DTUpdates)
         Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
 
@@ -93,6 +95,8 @@ void llvm::DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
   }
   if (DTU)
     DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+  if (DTUpdates)
+    DTUpdates->append(Updates.begin(), Updates.end());
 
   for (BasicBlock *BB : BBs)
     if (DTU)

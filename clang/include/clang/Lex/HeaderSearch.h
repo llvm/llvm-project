@@ -142,21 +142,21 @@ public:
   virtual HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) = 0;
 };
 
+/// This structure is used to record entries in our framework cache.
+struct FrameworkCacheEntry {
+  /// The directory entry which should be used for the cached framework.
+  const DirectoryEntry *Directory;
+
+  /// Whether this framework has been "user-specified" to be treated as if it
+  /// were a system framework (even if it was found outside a system framework
+  /// directory).
+  bool IsUserSpecifiedSystemFramework;
+};
+
 /// Encapsulates the information needed to find the file referenced
 /// by a \#include or \#include_next, (sub-)framework lookup, etc.
 class HeaderSearch {
   friend class DirectoryLookup;
-
-  /// This structure is used to record entries in our framework cache.
-  struct FrameworkCacheEntry {
-    /// The directory entry which should be used for the cached framework.
-    const DirectoryEntry *Directory;
-
-    /// Whether this framework has been "user-specified" to be treated as if it
-    /// were a system framework (even if it was found outside a system framework
-    /// directory).
-    bool IsUserSpecifiedSystemFramework;
-  };
 
   /// Header-search options used to initialize this header search.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
@@ -390,13 +390,18 @@ public:
   ///
   /// \param IsMapped If non-null, and the search involved header maps, set to
   /// true.
+  ///
+  /// \param IsFrameworkFound If non-null, will be set to true if a framework is
+  /// found in any of searched SearchDirs. Doesn't guarantee the requested file
+  /// is found.
   const FileEntry *LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
       const DirectoryLookup *FromDir, const DirectoryLookup *&CurDir,
       ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
-      bool *IsMapped, bool SkipCache = false, bool BuildSystemModule = false);
+      bool *IsMapped, bool *IsFrameworkFound, bool SkipCache = false,
+      bool BuildSystemModule = false);
 
   /// Look up a subframework for the specified \#include file.
   ///
