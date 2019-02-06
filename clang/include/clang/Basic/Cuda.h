@@ -25,7 +25,8 @@ enum class CudaVersion {
   CUDA_91,
   CUDA_92,
   CUDA_100,
-  LATEST = CUDA_100,
+  CUDA_101,
+  LATEST = CUDA_101,
 };
 const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
@@ -107,6 +108,8 @@ CudaVersion MaxVersionForCudaArch(CudaArch A);
 enum class CudaFeature {
   // CUDA-9.2+ uses a new API for launching kernels.
   CUDA_USES_NEW_LAUNCH,
+  // CUDA-10.1+ needs explicit end of GPU binary registration.
+  CUDA_USES_FATBIN_REGISTER_END,
 };
 
 bool CudaFeatureEnabled(llvm::VersionTuple, CudaFeature);

@@ -566,7 +566,7 @@ public:
     JumpDest RethrowDest;
 
     /// A function to call to enter the catch.
-    llvm::Constant *BeginCatchFn;
+    llvm::FunctionCallee BeginCatchFn;
 
     /// An i1 variable indicating whether or not the @finally is
     /// running for an exception.
@@ -578,8 +578,8 @@ public:
 
   public:
     void enter(CodeGenFunction &CGF, const Stmt *Finally,
-               llvm::Constant *beginCatchFn, llvm::Constant *endCatchFn,
-               llvm::Constant *rethrowFn);
+               llvm::FunctionCallee beginCatchFn,
+               llvm::FunctionCallee endCatchFn, llvm::FunctionCallee rethrowFn);
     void exit(CodeGenFunction &CGF);
   };
 
@@ -1852,14 +1852,14 @@ public:
   void StartThunk(llvm::Function *Fn, GlobalDecl GD,
                   const CGFunctionInfo &FnInfo, bool IsUnprototyped);
 
-  void EmitCallAndReturnForThunk(llvm::Constant *Callee, const ThunkInfo *Thunk,
-                                 bool IsUnprototyped);
+  void EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
+                                 const ThunkInfo *Thunk, bool IsUnprototyped);
 
   void FinishThunk();
 
   /// Emit a musttail call for a thunk with a potentially adjusted this pointer.
   void EmitMustTailThunk(GlobalDecl GD, llvm::Value *AdjustedThisPtr,
-                         llvm::Value *Callee);
+                         llvm::FunctionCallee Callee);
 
   /// Generate a thunk for the given method.
   void generateThunk(llvm::Function *Fn, const CGFunctionInfo &FnInfo,
@@ -3087,7 +3087,7 @@ public:
   bool EmitOMPLinearClauseInit(const OMPLoopDirective &D);
 
   typedef const llvm::function_ref<void(CodeGenFunction & /*CGF*/,
-                                        llvm::Value * /*OutlinedFn*/,
+                                        llvm::Function * /*OutlinedFn*/,
                                         const OMPTaskDataTy & /*Data*/)>
       TaskGenTy;
   void EmitOMPTaskBasedDirective(const OMPExecutableDirective &S,
@@ -3598,30 +3598,30 @@ public:
 
   void checkTargetFeatures(const CallExpr *E, const FunctionDecl *TargetDecl);
 
-  llvm::CallInst *EmitRuntimeCall(llvm::Value *callee,
+  llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   const Twine &name = "");
-  llvm::CallInst *EmitRuntimeCall(llvm::Value *callee,
-                                  ArrayRef<llvm::Value*> args,
+  llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
+                                  ArrayRef<llvm::Value *> args,
                                   const Twine &name = "");
-  llvm::CallInst *EmitNounwindRuntimeCall(llvm::Value *callee,
+  llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                           const Twine &name = "");
-  llvm::CallInst *EmitNounwindRuntimeCall(llvm::Value *callee,
-                                          ArrayRef<llvm::Value*> args,
+  llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
+                                          ArrayRef<llvm::Value *> args,
                                           const Twine &name = "");
 
   SmallVector<llvm::OperandBundleDef, 1>
   getBundlesForFunclet(llvm::Value *Callee);
 
-  llvm::CallBase *EmitCallOrInvoke(llvm::Value *Callee,
+  llvm::CallBase *EmitCallOrInvoke(llvm::FunctionCallee Callee,
                                    ArrayRef<llvm::Value *> Args,
                                    const Twine &Name = "");
-  llvm::CallBase *EmitRuntimeCallOrInvoke(llvm::Value *callee,
+  llvm::CallBase *EmitRuntimeCallOrInvoke(llvm::FunctionCallee callee,
                                           ArrayRef<llvm::Value *> args,
                                           const Twine &name = "");
-  llvm::CallBase *EmitRuntimeCallOrInvoke(llvm::Value *callee,
+  llvm::CallBase *EmitRuntimeCallOrInvoke(llvm::FunctionCallee callee,
                                           const Twine &name = "");
-  void EmitNoreturnRuntimeCallOrInvoke(llvm::Value *callee,
-                                       ArrayRef<llvm::Value*> args);
+  void EmitNoreturnRuntimeCallOrInvoke(llvm::FunctionCallee callee,
+                                       ArrayRef<llvm::Value *> args);
 
   CGCallee BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
                                      NestedNameSpecifier *Qual,

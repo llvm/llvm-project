@@ -119,90 +119,90 @@ struct ObjCEntrypoints {
   ObjCEntrypoints() { memset(this, 0, sizeof(*this)); }
 
   /// void objc_alloc(id);
-  llvm::Constant *objc_alloc;
+  llvm::FunctionCallee objc_alloc;
 
   /// void objc_allocWithZone(id);
-  llvm::Constant *objc_allocWithZone;
+  llvm::FunctionCallee objc_allocWithZone;
 
   /// void objc_autoreleasePoolPop(void*);
-  llvm::Constant *objc_autoreleasePoolPop;
+  llvm::FunctionCallee objc_autoreleasePoolPop;
 
   /// void objc_autoreleasePoolPop(void*);
   /// Note this method is used when we are using exception handling
-  llvm::Constant *objc_autoreleasePoolPopInvoke;
+  llvm::FunctionCallee objc_autoreleasePoolPopInvoke;
 
   /// void *objc_autoreleasePoolPush(void);
-  llvm::Constant *objc_autoreleasePoolPush;
+  llvm::Function *objc_autoreleasePoolPush;
 
   /// id objc_autorelease(id);
-  llvm::Constant *objc_autorelease;
+  llvm::Function *objc_autorelease;
 
   /// id objc_autorelease(id);
   /// Note this is the runtime method not the intrinsic.
-  llvm::Constant *objc_autoreleaseRuntimeFunction;
+  llvm::FunctionCallee objc_autoreleaseRuntimeFunction;
 
   /// id objc_autoreleaseReturnValue(id);
-  llvm::Constant *objc_autoreleaseReturnValue;
+  llvm::Function *objc_autoreleaseReturnValue;
 
   /// void objc_copyWeak(id *dest, id *src);
-  llvm::Constant *objc_copyWeak;
+  llvm::Function *objc_copyWeak;
 
   /// void objc_destroyWeak(id*);
-  llvm::Constant *objc_destroyWeak;
+  llvm::Function *objc_destroyWeak;
 
   /// id objc_initWeak(id*, id);
-  llvm::Constant *objc_initWeak;
+  llvm::Function *objc_initWeak;
 
   /// id objc_loadWeak(id*);
-  llvm::Constant *objc_loadWeak;
+  llvm::Function *objc_loadWeak;
 
   /// id objc_loadWeakRetained(id*);
-  llvm::Constant *objc_loadWeakRetained;
+  llvm::Function *objc_loadWeakRetained;
 
   /// void objc_moveWeak(id *dest, id *src);
-  llvm::Constant *objc_moveWeak;
+  llvm::Function *objc_moveWeak;
 
   /// id objc_retain(id);
-  llvm::Constant *objc_retain;
+  llvm::Function *objc_retain;
 
   /// id objc_retain(id);
   /// Note this is the runtime method not the intrinsic.
-  llvm::Constant *objc_retainRuntimeFunction;
+  llvm::FunctionCallee objc_retainRuntimeFunction;
 
   /// id objc_retainAutorelease(id);
-  llvm::Constant *objc_retainAutorelease;
+  llvm::Function *objc_retainAutorelease;
 
   /// id objc_retainAutoreleaseReturnValue(id);
-  llvm::Constant *objc_retainAutoreleaseReturnValue;
+  llvm::Function *objc_retainAutoreleaseReturnValue;
 
   /// id objc_retainAutoreleasedReturnValue(id);
-  llvm::Constant *objc_retainAutoreleasedReturnValue;
+  llvm::Function *objc_retainAutoreleasedReturnValue;
 
   /// id objc_retainBlock(id);
-  llvm::Constant *objc_retainBlock;
+  llvm::Function *objc_retainBlock;
 
   /// void objc_release(id);
-  llvm::Constant *objc_release;
+  llvm::Function *objc_release;
 
   /// void objc_release(id);
   /// Note this is the runtime method not the intrinsic.
-  llvm::Constant *objc_releaseRuntimeFunction;
+  llvm::FunctionCallee objc_releaseRuntimeFunction;
 
   /// void objc_storeStrong(id*, id);
-  llvm::Constant *objc_storeStrong;
+  llvm::Function *objc_storeStrong;
 
   /// id objc_storeWeak(id*, id);
-  llvm::Constant *objc_storeWeak;
+  llvm::Function *objc_storeWeak;
 
   /// id objc_unsafeClaimAutoreleasedReturnValue(id);
-  llvm::Constant *objc_unsafeClaimAutoreleasedReturnValue;
+  llvm::Function *objc_unsafeClaimAutoreleasedReturnValue;
 
   /// A void(void) inline asm to use to mark that the return value of
   /// a call will be immediately retain.
   llvm::InlineAsm *retainAutoreleasedReturnValueMarker;
 
   /// void clang.arc.use(...);
-  llvm::Constant *clang_arc_use;
+  llvm::Function *clang_arc_use;
 };
 
 /// This class records statistics on instrumentation based profiling.
@@ -500,8 +500,8 @@ private:
   llvm::Constant *NSConcreteGlobalBlock = nullptr;
   llvm::Constant *NSConcreteStackBlock = nullptr;
 
-  llvm::Constant *BlockObjectAssign = nullptr;
-  llvm::Constant *BlockObjectDispose = nullptr;
+  llvm::FunctionCallee BlockObjectAssign = nullptr;
+  llvm::FunctionCallee BlockObjectDispose = nullptr;
 
   llvm::Type *BlockDescriptorType = nullptr;
   llvm::Type *GenericBlockLiteralType = nullptr;
@@ -511,10 +511,10 @@ private:
   } Block;
 
   /// void @llvm.lifetime.start(i64 %size, i8* nocapture <ptr>)
-  llvm::Constant *LifetimeStartFn = nullptr;
+  llvm::Function *LifetimeStartFn = nullptr;
 
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
-  llvm::Constant *LifetimeEndFn = nullptr;
+  llvm::Function *LifetimeEndFn = nullptr;
 
   GlobalDecl initializedGlobalDecl;
 
@@ -585,7 +585,7 @@ public:
 
   // Version checking function, used to implement ObjC's @available:
   // i32 @__isOSVersionAtLeast(i32, i32, i32)
-  llvm::Constant *IsOSVersionAtLeastFn = nullptr;
+  llvm::FunctionCallee IsOSVersionAtLeastFn = nullptr;
 
   InstrProfStats &getPGOStats() { return PGOStats; }
   llvm::IndexedInstrProfReader *getPGOReader() const { return PGOReader.get(); }
@@ -1002,16 +1002,13 @@ public:
     CXXGlobalDtors.emplace_back(DtorFn, Object);
   }
 
-  /// Create a new runtime function with the specified type and name.
-  llvm::Constant *
+  /// Create or return a runtime function declaration with the specified type
+  /// and name.
+  llvm::FunctionCallee
   CreateRuntimeFunction(llvm::FunctionType *Ty, StringRef Name,
                         llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
                         bool Local = false);
 
-  /// Create a new compiler builtin function with the specified type and name.
-  llvm::Constant *
-  CreateBuiltinFunction(llvm::FunctionType *Ty, StringRef Name,
-                        llvm::AttributeList ExtraAttrs = llvm::AttributeList());
   /// Create a new runtime global variable with the specified type and name.
   llvm::Constant *CreateRuntimeVariable(llvm::Type *Ty,
                                         StringRef Name);
@@ -1021,13 +1018,13 @@ public:
 
   llvm::Constant *getNSConcreteGlobalBlock();
   llvm::Constant *getNSConcreteStackBlock();
-  llvm::Constant *getBlockObjectAssign();
-  llvm::Constant *getBlockObjectDispose();
+  llvm::FunctionCallee getBlockObjectAssign();
+  llvm::FunctionCallee getBlockObjectDispose();
 
   ///@}
 
-  llvm::Constant *getLLVMLifetimeStartFn();
-  llvm::Constant *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMLifetimeStartFn();
+  llvm::Function *getLLVMLifetimeEndFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);
@@ -1297,7 +1294,7 @@ public:
   getMostBaseClasses(const CXXRecordDecl *RD);
 
   /// Get the declaration of std::terminate for the platform.
-  llvm::Constant *getTerminateFn();
+  llvm::FunctionCallee getTerminateFn();
 
   llvm::SanitizerStatReport &getSanStats();
 

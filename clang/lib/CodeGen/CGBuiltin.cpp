@@ -794,7 +794,7 @@ static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
   llvm::AttributeList ReturnsTwiceAttr = llvm::AttributeList::get(
       CGF.getLLVMContext(), llvm::AttributeList::FunctionIndex,
       llvm::Attribute::ReturnsTwice);
-  llvm::Constant *SetJmpFn = CGF.CGM.CreateRuntimeFunction(
+  llvm::FunctionCallee SetJmpFn = CGF.CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(CGF.IntTy, ArgTypes, IsVarArg), Name,
       ReturnsTwiceAttr, /*Local=*/true);
 
@@ -1331,8 +1331,8 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
 }
 
 static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
-                               Value *&RecordPtr, CharUnits Align, Value *Func,
-                               int Lvl) {
+                               Value *&RecordPtr, CharUnits Align,
+                               llvm::FunctionCallee Func, int Lvl) {
   const auto *RT = RType->getAs<RecordType>();
   ASTContext &Context = CGF.getContext();
   RecordDecl *RD = RT->getDecl()->getDefinition();
@@ -1736,6 +1736,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_dump_struct: {
+    llvm::Type *LLVMIntTy = getTypes().ConvertType(getContext().IntTy);
+    llvm::FunctionType *LLVMFuncType = llvm::FunctionType::get(
+        LLVMIntTy, {llvm::Type::getInt8PtrTy(getLLVMContext())}, true);
+
     Value *Func = EmitScalarExpr(E->getArg(1)->IgnoreImpCasts());
     CharUnits Arg0Align = EmitPointerWithAlignment(E->getArg(0)).getAlignment();
 
@@ -1743,7 +1747,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     QualType Arg0Type = Arg0->getType()->getPointeeType();
 
     Value *RecordPtr = EmitScalarExpr(Arg0);
-    Value *Res = dumpRecord(*this, Arg0Type, RecordPtr, Arg0Align, Func, 0);
+    Value *Res = dumpRecord(*this, Arg0Type, RecordPtr, Arg0Align,
+                            {LLVMFuncType, Func}, 0);
     return RValue::get(Res);
   }
 
@@ -2734,7 +2739,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     const CGFunctionInfo &FuncInfo =
         CGM.getTypes().arrangeBuiltinFunctionCall(E->getType(), Args);
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FuncInfo);
-    llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy, LibCallName);
+    llvm::FunctionCallee Func = CGM.CreateRuntimeFunction(FTy, LibCallName);
     return EmitCall(FuncInfo, CGCallee::forDirect(Func),
                     ReturnValueSlot(), Args);
   }
@@ -9739,10 +9744,11 @@ llvm::Value *CodeGenFunction::EmitX86CpuSupports(uint64_t FeaturesMask) {
 Value *CodeGenFunction::EmitX86CpuInit() {
   llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy,
                                                     /*Variadic*/ false);
-  llvm::Constant *Func = CGM.CreateRuntimeFunction(FTy, "__cpu_indicator_init");
-  cast<llvm::GlobalValue>(Func)->setDSOLocal(true);
-  cast<llvm::GlobalValue>(Func)->setDLLStorageClass(
-      llvm::GlobalValue::DefaultStorageClass);
+  llvm::FunctionCallee Func =
+      CGM.CreateRuntimeFunction(FTy, "__cpu_indicator_init");
+  cast<llvm::GlobalValue>(Func.getCallee())->setDSOLocal(true);
+  cast<llvm::GlobalValue>(Func.getCallee())
+      ->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
   return Builder.CreateCall(Func);
 }
 

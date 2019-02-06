@@ -17,8 +17,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifdef HAVE_SVN_VERSION_INC
-#  include "SVNVersion.inc"
+#ifdef HAVE_VCS_VERSION_INC
+#include "VCSVersion.inc"
 #endif
 
 namespace clang {
@@ -27,13 +27,13 @@ std::string getClangRepositoryPath() {
 #if defined(CLANG_REPOSITORY_STRING)
   return CLANG_REPOSITORY_STRING;
 #else
-#ifdef SVN_REPOSITORY
-  StringRef URL(SVN_REPOSITORY);
+#ifdef CLANG_REPOSITORY
+  StringRef URL(CLANG_REPOSITORY);
 #else
   StringRef URL("");
 #endif
 
-  // If the SVN_REPOSITORY is empty, try to use the SVN keyword. This helps us
+  // If the CLANG_REPOSITORY is empty, try to use the SVN keyword. This helps us
   // pick up a tag in an SVN export, for example.
   StringRef SVNRepository("$URL$");
   if (URL.empty()) {
@@ -71,8 +71,8 @@ std::string getLLVMRepositoryPath() {
 }
 
 std::string getClangRevision() {
-#ifdef SVN_REVISION
-  return SVN_REVISION;
+#ifdef CLANG_REVISION
+  return CLANG_REVISION;
 #else
   return "";
 #endif

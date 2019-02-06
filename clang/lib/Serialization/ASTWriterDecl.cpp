@@ -2274,7 +2274,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   if (isa<FileScopeAsmDecl>(D) || isa<ObjCImplDecl>(D))
     return true;
 
-  if (WritingModule && (isa<VarDecl>(D) || isa<ImportDecl>(D))) {
+  if (WritingModule && isPartOfPerModuleInitializer(D)) {
     // These declarations are part of the module initializer, and are emitted
     // if and when the module is imported, rather than being emitted eagerly.
     return false;

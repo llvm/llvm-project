@@ -135,6 +135,12 @@ public:
       return CGCallee(abstractInfo, functionPtr);
     }
 
+    static CGCallee
+    forDirect(llvm::FunctionCallee functionPtr,
+              const CGCalleeInfo &abstractInfo = CGCalleeInfo()) {
+      return CGCallee(abstractInfo, functionPtr.getCallee());
+    }
+
     static CGCallee forVirtual(const CallExpr *CE, GlobalDecl MD, Address Addr,
                                llvm::FunctionType *FTy) {
       CGCallee result(SpecialKind::Virtual);
