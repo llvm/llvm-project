@@ -190,17 +190,13 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
 #if SANITIZER_ANDROID
 static char *memory_usage_buffer = nullptr;
 
-#define PR_SET_VMA 0x53564d41
-#define PR_SET_VMA_ANON_NAME 0
-
 static void InitMemoryUsage() {
   memory_usage_buffer =
       (char *)MmapOrDie(kMemoryUsageBufferSize, "memory usage string");
   CHECK(memory_usage_buffer);
   memory_usage_buffer[0] = '\0';
-  CHECK(internal_prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME,
-                       (uptr)memory_usage_buffer, kMemoryUsageBufferSize,
-                       (uptr)memory_usage_buffer) == 0);
+  DecorateMapping((uptr)memory_usage_buffer, kMemoryUsageBufferSize,
+                  memory_usage_buffer);
 }
 
 void UpdateMemoryUsage() {
