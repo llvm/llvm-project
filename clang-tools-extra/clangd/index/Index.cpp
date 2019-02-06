@@ -179,7 +179,8 @@ bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request) {
       O && O.map("Query", Request.Query) && O.map("Scopes", Request.Scopes) &&
       O.map("AnyScope", Request.AnyScope) && O.map("Limit", Limit) &&
       O.map("RestrictForCodeCompletion", Request.RestrictForCodeCompletion) &&
-      O.map("ProximityPaths", Request.ProximityPaths);
+      O.map("ProximityPaths", Request.ProximityPaths) &&
+      O.map("PreferredTypes", Request.PreferredTypes);
   if (OK && Limit <= std::numeric_limits<uint32_t>::max())
     Request.Limit = Limit;
   return OK;
@@ -193,6 +194,7 @@ llvm::json::Value toJSON(const FuzzyFindRequest &Request) {
       {"Limit", Request.Limit},
       {"RestrictForCodeCompletion", Request.RestrictForCodeCompletion},
       {"ProximityPaths", llvm::json::Array{Request.ProximityPaths}},
+      {"PreferredTypes", llvm::json::Array{Request.PreferredTypes}},
   };
 }
 

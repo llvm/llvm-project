@@ -6,6 +6,16 @@
 ; RUN: opt -disable-output -disable-verify -debug-pass=Structure \
 ; RUN:     -O2 %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O2
+; RUN: llvm-profdata merge %S/Inputs/pass-pipelines.proftext -o %t.profdata
+; RUN: opt -disable-output -disable-verify -debug-pass=Structure \
+; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
+; RUN:     -O2 %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-O2 --check-prefix=PGOUSE
+; RUN: opt -disable-output -disable-verify -debug-pass=Structure \
+; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
+; RUN:     -hot-cold-split \
+; RUN:     -O2 %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-O2 --check-prefix=PGOUSE --check-prefix=SPLIT
 ;
 ; In the first pipeline there should just be a function pass manager, no other
 ; pass managers.
@@ -27,6 +37,12 @@
 ; Very carefully assert the CGSCC pass pipeline as it is fragile and unusually
 ; susceptible to phase ordering issues.
 ; CHECK-O2: CallGraph Construction
+; PGOUSE: Call Graph SCC Pass Manager
+; PGOUSE:      Function Integration/Inlining
+; PGOUSE: PGOInstrumentationUsePass
+; PGOUSE: PGOIndirectCallPromotion
+; SPLIT: Hot Cold Splitting
+; PGOUSE: CallGraph Construction
 ; CHECK-O2-NEXT: Globals Alias Analysis
 ; CHECK-O2-NEXT: Call Graph SCC Pass Manager
 ; CHECK-O2-NEXT: Remove unused exception handling info

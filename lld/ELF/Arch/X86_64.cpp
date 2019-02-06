@@ -101,6 +101,8 @@ RelExpr X86_64<ELFT>::getRelExpr(RelType Type, const Symbol &S,
     return R_SIZE;
   case R_X86_64_PLT32:
     return R_PLT_PC;
+  case R_X86_64_PC8:
+  case R_X86_64_PC16:
   case R_X86_64_PC32:
   case R_X86_64_PC64:
     return R_PC;
@@ -319,10 +321,12 @@ template <class ELFT>
 void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_X86_64_8:
+  case R_X86_64_PC8:
     checkUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_X86_64_16:
+  case R_X86_64_PC16:
     checkUInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;

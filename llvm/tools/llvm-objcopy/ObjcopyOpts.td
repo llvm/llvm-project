@@ -193,3 +193,7 @@ defm build_id_link_output
     : Eq<"build-id-link-output", "Hard-link the output to <dir>/xx/xxx<suffix> "
                                  "name derived from hex build ID">,
       MetaVarName<"suffix">;
+
+def regex
+    : Flag<["-", "--"], "regex">,
+      HelpText<"Permit regular expressions in name comparison">;

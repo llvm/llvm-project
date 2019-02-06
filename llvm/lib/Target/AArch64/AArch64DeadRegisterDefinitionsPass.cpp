@@ -54,8 +54,6 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-  bool shouldSkip(const MachineInstr &MI, const MachineFunction &MF) const;
 };
 char AArch64DeadRegisterDefinitions::ID = 0;
 } // end anonymous namespace
@@ -67,63 +65,6 @@ static bool usesFrameIndex(const MachineInstr &MI) {
   for (const MachineOperand &MO : MI.uses())
     if (MO.isFI())
       return true;
-  return false;
-}
-
-bool
-AArch64DeadRegisterDefinitions::shouldSkip(const MachineInstr &MI,
-                                           const MachineFunction &MF) const {
-  if (!MF.getSubtarget<AArch64Subtarget>().hasLSE())
-    return false;
-
-#define CASE_AARCH64_ATOMIC_(PREFIX) \
-  case AArch64::PREFIX##X: \
-  case AArch64::PREFIX##W: \
-  case AArch64::PREFIX##H: \
-  case AArch64::PREFIX##B
-
-  for (const MachineMemOperand *MMO : MI.memoperands()) {
-    if (MMO->isAtomic()) {
-      unsigned Opcode = MI.getOpcode();
-      switch (Opcode) {
-      default:
-        return false;
-        break;
-
-      CASE_AARCH64_ATOMIC_(LDADDA):
-      CASE_AARCH64_ATOMIC_(LDADDAL):
-
-      CASE_AARCH64_ATOMIC_(LDCLRA):
-      CASE_AARCH64_ATOMIC_(LDCLRAL):
-
-      CASE_AARCH64_ATOMIC_(LDEORA):
-      CASE_AARCH64_ATOMIC_(LDEORAL):
-
-      CASE_AARCH64_ATOMIC_(LDSETA):
-      CASE_AARCH64_ATOMIC_(LDSETAL):
-
-      CASE_AARCH64_ATOMIC_(LDSMAXA):
-      CASE_AARCH64_ATOMIC_(LDSMAXAL):
-
-      CASE_AARCH64_ATOMIC_(LDSMINA):
-      CASE_AARCH64_ATOMIC_(LDSMINAL):
-
-      CASE_AARCH64_ATOMIC_(LDUMAXA):
-      CASE_AARCH64_ATOMIC_(LDUMAXAL):
-
-      CASE_AARCH64_ATOMIC_(LDUMINA):
-      CASE_AARCH64_ATOMIC_(LDUMINAL):
-
-      CASE_AARCH64_ATOMIC_(SWPA):
-      CASE_AARCH64_ATOMIC_(SWPAL):
-        return true;
-        break;
-                                                                    }
-    }
-  }
-
-#undef CASE_AARCH64_ATOMIC_
-
   return false;
 }
 
@@ -147,9 +88,8 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
       continue;
     }
 
-    if (shouldSkip(MI, MF)) {
-      LLVM_DEBUG(dbgs() << "    Ignoring, Atomic instruction with acquire "
-                           "semantics using WZR/XZR\n");
+    if (atomicBarrierDroppedOnZero(MI.getOpcode())) {
+      LLVM_DEBUG(dbgs() << "    Ignoring, semantics change with xzr/wzr.\n");
       continue;
     }
 

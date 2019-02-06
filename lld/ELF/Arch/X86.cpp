@@ -72,6 +72,14 @@ int X86::getTlsGdRelaxSkip(RelType Type) const {
 
 RelExpr X86::getRelExpr(RelType Type, const Symbol &S,
                         const uint8_t *Loc) const {
+  // There are 4 different TLS variable models with varying degrees of
+  // flexibility and performance. LocalExec and InitialExec models are fast but
+  // less-flexible models. If they are in use, we set DF_STATIC_TLS flag in the
+  // dynamic section to let runtime know about that.
+  if (Type == R_386_TLS_LE || Type == R_386_TLS_LE_32 || Type == R_386_TLS_IE ||
+      Type == R_386_TLS_GOTIE)
+    Config->HasStaticTlsModel = true;
+
   switch (Type) {
   case R_386_8:
   case R_386_16:
