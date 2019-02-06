@@ -9,9 +9,11 @@
 
 #pragma once
 
+#include <CL/__spirv/spirv_vars.hpp>
 #include <CL/sycl/access/access.hpp>
 #include <CL/sycl/context.hpp>
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/detail/scheduler/scheduler.h>
 #include <CL/sycl/event.hpp>
 #include <CL/sycl/id.hpp>
 #include <CL/sycl/kernel.hpp>
@@ -20,20 +22,9 @@
 #include <CL/sycl/property_list.hpp>
 #include <CL/sycl/stl.hpp>
 
-#include <CL/sycl/detail/scheduler/scheduler.h>
-
 #include <functional>
 #include <memory>
 #include <type_traits>
-
-#ifdef __SYCL_DEVICE_ONLY__
-size_t get_global_size(uint dimindx);
-size_t get_local_size(uint dimindx);
-size_t get_global_id(uint dimindx);
-size_t get_local_id(uint dimindx);
-size_t get_global_offset(uint dimindx);
-size_t get_group_id(uint dimindx);
-#endif
 
 template <typename T_src, int dim_src, cl::sycl::access::mode mode_src,
           cl::sycl::access::target tgt_src, typename T_dest, int dim_dest,
@@ -62,6 +53,48 @@ template <typename DataT, int Dimensions, access::mode AccessMode,
 class accessor;
 template <typename T, int Dimensions, typename AllocatorT> class buffer;
 namespace detail {
+
+#ifdef __SYCL_DEVICE_ONLY__
+
+#define DEFINE_INIT_SIZES(POSTFIX)                                             \
+                                                                               \
+  template <int Dim, class DstT> struct InitSizesST##POSTFIX;                  \
+                                                                               \
+  template <class DstT> struct InitSizesST##POSTFIX<1, DstT> {                 \
+    static INLINE_IF_DEVICE void initSize(DstT &Dst) {                         \
+      Dst[0] = cl::__spirv::get##POSTFIX<0>();                                 \
+    }                                                                          \
+  };                                                                           \
+                                                                               \
+  template <class DstT> struct InitSizesST##POSTFIX<2, DstT> {                 \
+    static INLINE_IF_DEVICE void initSize(DstT &Dst) {                         \
+      Dst[1] = cl::__spirv::get##POSTFIX<1>();                                 \
+      InitSizesST##POSTFIX<1, DstT>::initSize(Dst);                            \
+    }                                                                          \
+  };                                                                           \
+                                                                               \
+  template <class DstT> struct InitSizesST##POSTFIX<3, DstT> {                 \
+    static INLINE_IF_DEVICE void initSize(DstT &Dst) {                         \
+      Dst[2] = cl::__spirv::get##POSTFIX<2>();                                 \
+      InitSizesST##POSTFIX<2, DstT>::initSize(Dst);                            \
+    }                                                                          \
+  };                                                                           \
+                                                                               \
+  template <int Dims, class DstT> static void init##POSTFIX(DstT &Dst) {       \
+    InitSizesST##POSTFIX<Dims, DstT>::initSize(Dst);                           \
+  }
+
+DEFINE_INIT_SIZES(GlobalSize);
+DEFINE_INIT_SIZES(GlobalInvocationId)
+DEFINE_INIT_SIZES(WorkgroupSize)
+DEFINE_INIT_SIZES(LocalInvocationId)
+DEFINE_INIT_SIZES(WorkgroupId)
+DEFINE_INIT_SIZES(GlobalOffset)
+
+#undef DEFINE_INIT_SIZES
+
+#endif //__SYCL_DEVICE_ONLY__
+
 class queue_impl;
 template <typename dataT, int dimensions, access::mode accessMode,
           access::target accessTarget, access::placeholder isPlaceholder,
@@ -263,9 +296,9 @@ public:
                                   (dimensions > 0 && dimensions < 4),
                               KernelType>::type kernelFunc) {
     id<dimensions> global_id;
-    for (int i = 0; i < dimensions; ++i) {
-      global_id[i] = get_global_id(i);
-    }
+
+    detail::initGlobalInvocationId<dimensions>(global_id);
+
     kernelFunc(global_id);
   }
 
@@ -277,10 +310,10 @@ public:
                               KernelType>::type kernelFunc) {
     id<dimensions> global_id;
     range<dimensions> global_size;
-    for (int i = 0; i < dimensions; ++i) {
-      global_id[i] = get_global_id(i);
-      global_size[i] = get_global_size(i);
-    }
+
+    detail::initGlobalInvocationId<dimensions>(global_id);
+    detail::initGlobalSize<dimensions>(global_size);
+
     item<dimensions, false> Item =
         detail::Builder::createItem<dimensions, false>(global_size, global_id);
     kernelFunc(Item);
@@ -299,14 +332,12 @@ public:
     id<dimensions> local_id;
     id<dimensions> global_offset;
 
-    for (int i = 0; i < dimensions; ++i) {
-      global_size[i] = get_global_size(i);
-      local_size[i] = get_local_size(i);
-      group_id[i] = get_group_id(i);
-      global_id[i] = get_global_id(i);
-      local_id[i] = get_local_id(i);
-      global_offset[i] = get_global_offset(i);
-    }
+    detail::initGlobalSize<dimensions>(global_size);
+    detail::initWorkgroupSize<dimensions>(local_size);
+    detail::initWorkgroupId<dimensions>(group_id);
+    detail::initGlobalInvocationId<dimensions>(global_id);
+    detail::initLocalInvocationId<dimensions>(local_id);
+    detail::initGlobalOffset<dimensions>(global_offset);
 
     group<dimensions> Group = detail::Builder::createGroup<dimensions>(
         global_size, local_size, group_id);
