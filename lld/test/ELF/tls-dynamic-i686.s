@@ -56,8 +56,8 @@ addl tls1@gotntpoff(%ebx),%eax
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT:   SHF_WRITE
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x3068
-// CHECK-NEXT: Offset: 0x3068
+// CHECK-NEXT: Address: 0x3070
+// CHECK-NEXT: Offset: 0x3070
 // CHECK-NEXT: Size: 32
 // CHECK-NEXT: Link: 0
 // CHECK-NEXT: Info: 0
@@ -66,13 +66,13 @@ addl tls1@gotntpoff(%ebx),%eax
 
 // CHECK: Relocations [
 // CHECK:      Section ({{.+}}) .rel.dyn {
-// CHECK-NEXT: 0x3078 R_386_TLS_DTPMOD32 - 0x0
-// CHECK-NEXT: 0x3068 R_386_TLS_DTPMOD32 tls0 0x0
-// CHECK-NEXT: 0x306C R_386_TLS_DTPOFF32 tls0 0x0
-// CHECK-NEXT: 0x3080 R_386_TLS_TPOFF tls0 0x0
-// CHECK-NEXT: 0x3070 R_386_TLS_DTPMOD32 tls1 0x0
-// CHECK-NEXT: 0x3074 R_386_TLS_DTPOFF32 tls1 0x0
-// CHECK-NEXT: 0x3084 R_386_TLS_TPOFF tls1 0x0
+// CHECK-NEXT: 0x3080 R_386_TLS_DTPMOD32 - 0x0
+// CHECK-NEXT: 0x3070 R_386_TLS_DTPMOD32 tls0 0x0
+// CHECK-NEXT: 0x3074 R_386_TLS_DTPOFF32 tls0 0x0
+// CHECK-NEXT: 0x3088 R_386_TLS_TPOFF tls0 0x0
+// CHECK-NEXT: 0x3078 R_386_TLS_DTPMOD32 tls1 0x0
+// CHECK-NEXT: 0x307C R_386_TLS_DTPOFF32 tls1 0x0
+// CHECK-NEXT: 0x308C R_386_TLS_TPOFF tls1 0x0
 // CHECK-NEXT: }
 
 // DIS:      Disassembly of section .text:
@@ -80,20 +80,20 @@ addl tls1@gotntpoff(%ebx),%eax
 // General dynamic model:
 // -32 and -24 are first and second GOT entries offsets.
 // Each one is a pair of records.
-// DIS-NEXT: 1000: 8d 04 1d e0 ff ff ff  leal -32(,%ebx), %eax
-// DIS-NEXT: 1007: e8 64 00 00 00        calll 100
-// DIS-NEXT: 100c: 8d 04 1d e8 ff ff ff  leal -24(,%ebx), %eax
-// DIS-NEXT: 1013: e8 58 00 00 00        calll 88
+// DIS-NEXT: 1000: {{.*}} leal -32(,%ebx), %eax
+// DIS-NEXT: 1007: {{.*}} calll 100
+// DIS-NEXT: 100c: {{.*}} leal -24(,%ebx), %eax
+// DIS-NEXT: 1013: {{.*}} calll 88
 // Local dynamic model:
 // -16 is a local module tls index offset.
-// DIS-NEXT: 1018: 8d 83 f0 ff ff ff leal -16(%ebx), %eax
-// DIS-NEXT: 101e: e8 4d 00 00 00    calll 77
-// DIS-NEXT: 1023: 8d 90 08 00 00 00 leal 8(%eax), %edx
-// DIS-NEXT: 1029: 8d 83 f0 ff ff ff leal -16(%ebx), %eax
-// DIS-NEXT: 102f: e8 3c 00 00 00    calll 60
-// DIS-NEXT: 1034: 8d 90 0c 00 00 00 leal 12(%eax), %edx
+// DIS-NEXT: 1018: {{.*}} leal -16(%ebx), %eax
+// DIS-NEXT: 101e: {{.*}} calll 77
+// DIS-NEXT: 1023: {{.*}} leal 8(%eax), %edx
+// DIS-NEXT: 1029: {{.*}} leal -16(%ebx), %eax
+// DIS-NEXT: 102f: {{.*}} calll 60
+// DIS-NEXT: 1034: {{.*}} leal 12(%eax), %edx
 // Initial exec model:
-// DIS-NEXT: 103a: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DIS-NEXT: 1040: 03 83 f8 ff ff ff addl -8(%ebx), %eax
-// DIS-NEXT: 1046: 65 a1 00 00 00 00 movl %gs:0, %eax
-// DIS-NEXT: 104c: 03 83 fc ff ff ff addl -4(%ebx), %eax
+// DIS-NEXT: 103a: {{.*}} movl %gs:0, %eax
+// DIS-NEXT: 1040: {{.*}} addl -8(%ebx), %eax
+// DIS-NEXT: 1046: {{.*}} movl %gs:0, %eax
+// DIS-NEXT: 104c: {{.*}} addl -4(%ebx), %eax
