@@ -1331,8 +1331,8 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
 }
 
 static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
-                               Value *&RecordPtr, CharUnits Align, Value *Func,
-                               int Lvl) {
+                               Value *&RecordPtr, CharUnits Align,
+                               llvm::FunctionCallee Func, int Lvl) {
   const auto *RT = RType->getAs<RecordType>();
   ASTContext &Context = CGF.getContext();
   RecordDecl *RD = RT->getDecl()->getDefinition();
@@ -1736,6 +1736,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_dump_struct: {
+    llvm::Type *LLVMIntTy = getTypes().ConvertType(getContext().IntTy);
+    llvm::FunctionType *LLVMFuncType = llvm::FunctionType::get(
+        LLVMIntTy, {llvm::Type::getInt8PtrTy(getLLVMContext())}, true);
+
     Value *Func = EmitScalarExpr(E->getArg(1)->IgnoreImpCasts());
     CharUnits Arg0Align = EmitPointerWithAlignment(E->getArg(0)).getAlignment();
 
@@ -1743,7 +1747,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     QualType Arg0Type = Arg0->getType()->getPointeeType();
 
     Value *RecordPtr = EmitScalarExpr(Arg0);
-    Value *Res = dumpRecord(*this, Arg0Type, RecordPtr, Arg0Align, Func, 0);
+    Value *Res = dumpRecord(*this, Arg0Type, RecordPtr, Arg0Align,
+                            {LLVMFuncType, Func}, 0);
     return RValue::get(Res);
   }
 

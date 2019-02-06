@@ -1,4 +1,4 @@
-//==- llvm/unittests/IR/DomTreeUpdaterTest.cpp - DomTreeUpdater unit tests ===//
+//===- DomTreeUpdaterTest.cpp - DomTreeUpdater unit tests -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DomTreeUpdater.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"

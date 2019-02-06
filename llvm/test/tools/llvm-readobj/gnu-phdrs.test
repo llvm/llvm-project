@@ -59,6 +59,7 @@ ELF32-NEXT:    06     .tdata .tbss
 ELF32-NEXT:    07     .eh_frame_hdr
 ELF32-NEXT:    08
 ELF32-NEXT:    09     .tdata .ctors .dtors .jcr .dynamic .got
+ELF32-NEXT:    None   .comment .shstrtab .symtab .strtab
 
 ELF64-PHDRS: Elf file type is EXEC (Executable file)
 ELF64-PHDRS-NEXT: Entry point 0x400610
@@ -90,6 +91,7 @@ ELF64-MAPPING-NEXT:    06     .tdata .tbss
 ELF64-MAPPING-NEXT:    07     .eh_frame_hdr
 ELF64-MAPPING-NEXT:    08
 ELF64-MAPPING-NEXT:    09     .tdata .init_array .fini_array .jcr .dynamic .got
+ELF64-MAPPING-NEXT:    None   .comment .shstrtab .symtab .strtab
 
 ELF64-ONEMAPPING: Section to Segment mapping:
 ELF64-ONEMAPPING-NOT: Section to Segment mapping:

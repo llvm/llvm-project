@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DOMTREEUPDATER_H
-#define LLVM_DOMTREEUPDATER_H
+#ifndef LLVM_ANALYSIS_DOMTREEUPDATER_H
+#define LLVM_ANALYSIS_DOMTREEUPDATER_H
 
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
@@ -253,4 +253,4 @@ private:
 };
 } // namespace llvm
 
-#endif // LLVM_DOMTREEUPDATER_H
+#endif // LLVM_ANALYSIS_DOMTREEUPDATER_H

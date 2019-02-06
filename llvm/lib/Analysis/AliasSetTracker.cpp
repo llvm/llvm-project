@@ -428,14 +428,12 @@ void AliasSetTracker::addUnknown(Instruction *Inst) {
   if (!Inst->mayReadOrWriteMemory())
     return; // doesn't alias anything
 
-  AliasSet *AS = findAliasSetForUnknownInst(Inst);
-  if (AS) {
+  if (AliasSet *AS = findAliasSetForUnknownInst(Inst)) {
     AS->addUnknownInst(Inst, AA);
     return;
   }
   AliasSets.push_back(new AliasSet());
-  AS = &AliasSets.back();
-  AS->addUnknownInst(Inst, AA);
+  AliasSets.back().addUnknownInst(Inst, AA);
 }
 
 void AliasSetTracker::add(Instruction *I) {

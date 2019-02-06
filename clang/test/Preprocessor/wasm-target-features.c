@@ -53,6 +53,15 @@
 // BULK-MEMORY:#define __wasm_bulk_memory__ 1{{$}}
 //
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -matomics \
+// RUN:   | FileCheck %s -check-prefix=ATOMICS
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -matomics \
+// RUN:   | FileCheck %s -check-prefix=ATOMICS
+//
+// ATOMICS:#define __wasm_atomics__ 1{{$}}
+//
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=mvp \
 // RUN:   | FileCheck %s -check-prefix=MVP
 // RUN: %clang -E -dM %s -o - 2>&1 \
@@ -65,6 +74,7 @@
 // MVP-NOT:#define __wasm_sign_ext__
 // MVP-NOT:#define __wasm_exception_handling__
 // MVP-NOT:#define __wasm_bulk_memory__
+// MVP-NOT:#define __wasm_atomics__
 //
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=bleeding-edge \
@@ -73,9 +83,10 @@
 // RUN:     -target wasm64-unknown-unknown -mcpu=bleeding-edge \
 // RUN:   | FileCheck %s -check-prefix=BLEEDING-EDGE
 //
-// BLEEDING-EDGE:#define __wasm_nontrapping_fptoint__ 1{{$}}
-// BLEEDING-EDGE:#define __wasm_sign_ext__ 1{{$}}
-// BLEEDING-EDGE:#define __wasm_simd128__ 1{{$}}
+// BLEEDING-EDGE-DAG:#define __wasm_nontrapping_fptoint__ 1{{$}}
+// BLEEDING-EDGE-DAG:#define __wasm_sign_ext__ 1{{$}}
+// BLEEDING-EDGE-DAG:#define __wasm_simd128__ 1{{$}}
+// BLEEDING-EDGE-DAG:#define __wasm_atomics__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_unimplemented_simd128__ 1{{$}}
 //
 // RUN: %clang -E -dM %s -o - 2>&1 \

@@ -511,10 +511,10 @@ private:
   } Block;
 
   /// void @llvm.lifetime.start(i64 %size, i8* nocapture <ptr>)
-  llvm::Constant *LifetimeStartFn = nullptr;
+  llvm::Function *LifetimeStartFn = nullptr;
 
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
-  llvm::Constant *LifetimeEndFn = nullptr;
+  llvm::Function *LifetimeEndFn = nullptr;
 
   GlobalDecl initializedGlobalDecl;
 
@@ -1023,8 +1023,8 @@ public:
 
   ///@}
 
-  llvm::Constant *getLLVMLifetimeStartFn();
-  llvm::Constant *getLLVMLifetimeEndFn();
+  llvm::Function *getLLVMLifetimeStartFn();
+  llvm::Function *getLLVMLifetimeEndFn();
 
   // Make sure that this type is translated.
   void UpdateCompletedType(const TagDecl *TD);

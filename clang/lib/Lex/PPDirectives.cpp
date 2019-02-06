@@ -665,7 +665,8 @@ const FileEntry *Preprocessor::LookupFile(
     const DirectoryLookup *FromDir, const FileEntry *FromFile,
     const DirectoryLookup *&CurDir, SmallVectorImpl<char> *SearchPath,
     SmallVectorImpl<char> *RelativePath,
-    ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped, bool SkipCache) {
+    ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped,
+    bool *IsFrameworkFound, bool SkipCache) {
   Module *RequestingModule = getModuleForLocation(FilenameLoc);
   bool RequestingModuleIsModuleInterface = !SourceMgr.isInMainFile(FilenameLoc);
 
@@ -723,7 +724,8 @@ const FileEntry *Preprocessor::LookupFile(
     while (const FileEntry *FE = HeaderInfo.LookupFile(
                Filename, FilenameLoc, isAngled, TmpFromDir, TmpCurDir,
                Includers, SearchPath, RelativePath, RequestingModule,
-               SuggestedModule, /*IsMapped=*/nullptr, SkipCache)) {
+               SuggestedModule, /*IsMapped=*/nullptr,
+               /*IsFrameworkFound=*/nullptr, SkipCache)) {
       // Keep looking as if this file did a #include_next.
       TmpFromDir = TmpCurDir;
       ++TmpFromDir;
@@ -739,8 +741,8 @@ const FileEntry *Preprocessor::LookupFile(
   // Do a standard file entry lookup.
   const FileEntry *FE = HeaderInfo.LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, CurDir, Includers, SearchPath,
-      RelativePath, RequestingModule, SuggestedModule, IsMapped, SkipCache,
-      BuildSystemModule);
+      RelativePath, RequestingModule, SuggestedModule, IsMapped,
+      IsFrameworkFound, SkipCache, BuildSystemModule);
   if (FE) {
     if (SuggestedModule && !LangOpts.AsmPreprocessor)
       HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
@@ -1756,6 +1758,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
   // Search include directories.
   bool IsMapped = false;
+  bool IsFrameworkFound = false;
   const DirectoryLookup *CurDir;
   SmallString<1024> SearchPath;
   SmallString<1024> RelativePath;
@@ -1774,7 +1777,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       FilenameLoc, LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename,
       isAngled, LookupFrom, LookupFromFile, CurDir,
       Callbacks ? &SearchPath : nullptr, Callbacks ? &RelativePath : nullptr,
-      &SuggestedModule, &IsMapped);
+      &SuggestedModule, &IsMapped, &IsFrameworkFound);
 
   if (!File) {
     if (Callbacks) {
@@ -1791,7 +1794,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
               FilenameLoc,
               LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
               LookupFrom, LookupFromFile, CurDir, nullptr, nullptr,
-              &SuggestedModule, &IsMapped, /*SkipCache*/ true);
+              &SuggestedModule, &IsMapped, /*IsFrameworkFound=*/nullptr,
+              /*SkipCache*/ true);
         }
       }
     }
@@ -1806,7 +1810,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
             LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, false,
             LookupFrom, LookupFromFile, CurDir,
             Callbacks ? &SearchPath : nullptr,
-            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped);
+            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
+            /*IsFrameworkFound=*/nullptr);
         if (File) {
           SourceRange Range(FilenameTok.getLocation(), CharEnd);
           Diag(FilenameTok, diag::err_pp_file_not_found_angled_include_not_fatal) <<
@@ -1842,7 +1847,8 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
                                 : TypoCorrectionName,
             isAngled, LookupFrom, LookupFromFile, CurDir,
             Callbacks ? &SearchPath : nullptr,
-            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped);
+            Callbacks ? &RelativePath : nullptr, &SuggestedModule, &IsMapped,
+            /*IsFrameworkFound=*/nullptr);
         if (File) {
           SourceRange Range(FilenameTok.getLocation(), CharEnd);
           auto Hint = isAngled
@@ -1859,9 +1865,22 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       }
 
       // If the file is still not found, just go with the vanilla diagnostic
-      if (!File)
+      if (!File) {
         Diag(FilenameTok, diag::err_pp_file_not_found) << OriginalFilename
                                                        << FilenameRange;
+        if (IsFrameworkFound) {
+          size_t SlashPos = OriginalFilename.find('/');
+          assert(SlashPos != StringRef::npos &&
+                 "Include with framework name should have '/' in the filename");
+          StringRef FrameworkName = OriginalFilename.substr(0, SlashPos);
+          FrameworkCacheEntry &CacheEntry =
+              HeaderInfo.LookupFrameworkCache(FrameworkName);
+          assert(CacheEntry.Directory && "Found framework should be in cache");
+          Diag(FilenameTok, diag::note_pp_framework_without_header)
+              << OriginalFilename.substr(SlashPos + 1) << FrameworkName
+              << CacheEntry.Directory->getName();
+        }
+      }
     }
   }
 

@@ -5571,6 +5571,55 @@ define float @extract0_sitofp_v4i32_f32(<4 x i32> %x) nounwind {
   ret float %r
 }
 
+define float @extract0_sitofp_v4i32_f32i_multiuse1(<4 x i32> %x) nounwind {
+; SSE-LABEL: extract0_sitofp_v4i32_f32i_multiuse1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    cvtsi2ssl %eax, %xmm0
+; SSE-NEXT:    incl %eax
+; SSE-NEXT:    cvtsi2ssl %eax, %xmm1
+; SSE-NEXT:    divss %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract0_sitofp_v4i32_f32i_multiuse1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
+; AVX-NEXT:    incl %eax
+; AVX-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm1
+; AVX-NEXT:    vdivss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %e = extractelement <4 x i32> %x, i32 0
+  %f = sitofp i32 %e to float
+  %e1 = add i32 %e, 1
+  %f1 = sitofp i32 %e1 to float
+  %r = fdiv float %f, %f1
+  ret float %r
+}
+
+define float @extract0_sitofp_v4i32_f32_multiuse2(<4 x i32> %x, i32* %p) nounwind {
+; SSE-LABEL: extract0_sitofp_v4i32_f32_multiuse2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    cvtsi2ssl %eax, %xmm1
+; SSE-NEXT:    movd %xmm0, (%rdi)
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract0_sitofp_v4i32_f32_multiuse2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm0, (%rdi)
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %e = extractelement <4 x i32> %x, i32 0
+  %r = sitofp i32 %e to float
+  store i32 %e, i32* %p
+  ret float %r
+}
+
 define double @extract0_sitofp_v4i32_f64(<4 x i32> %x) nounwind {
 ; SSE-LABEL: extract0_sitofp_v4i32_f64:
 ; SSE:       # %bb.0:

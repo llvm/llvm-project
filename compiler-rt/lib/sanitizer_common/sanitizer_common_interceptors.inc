@@ -1817,13 +1817,8 @@ INTERCEPTOR(int, ioctl, int d, unsigned long request, ...) {
 #define INIT_IOCTL
 #endif
 
-#if SANITIZER_INTERCEPT_GETPWNAM_AND_FRIENDS || \
-    SANITIZER_INTERCEPT_GETPWENT || SANITIZER_INTERCEPT_FGETPWENT || \
-    SANITIZER_INTERCEPT_GETPWENT_R || \
-    SANITIZER_INTERCEPT_GETPWNAM_R_AND_FRIENDS || \
-    SANITIZER_INTERCEPT_FGETPWENT_R || \
-    SANITIZER_INTERCEPT_FGETGRENT_R
-static void unpoison_passwd(void *ctx, __sanitizer_passwd *pwd) {
+#if SANITIZER_POSIX
+UNUSED static void unpoison_passwd(void *ctx, __sanitizer_passwd *pwd) {
   if (pwd) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd, sizeof(*pwd));
     if (pwd->pw_name)
@@ -1851,7 +1846,7 @@ static void unpoison_passwd(void *ctx, __sanitizer_passwd *pwd) {
   }
 }
 
-static void unpoison_group(void *ctx, __sanitizer_group *grp) {
+UNUSED static void unpoison_group(void *ctx, __sanitizer_group *grp) {
   if (grp) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, grp, sizeof(*grp));
     if (grp->gr_name)
@@ -1868,10 +1863,7 @@ static void unpoison_group(void *ctx, __sanitizer_group *grp) {
                                         (p - grp->gr_mem + 1) * sizeof(*p));
   }
 }
-#endif  // SANITIZER_INTERCEPT_GETPWNAM_AND_FRIENDS ||
-        // SANITIZER_INTERCEPT_GETPWENT || SANITIZER_INTERCEPT_FGETPWENT ||
-        // SANITIZER_INTERCEPT_GETPWENT_R ||
-        // SANITIZER_INTERCEPT_GETPWNAM_R_AND_FRIENDS
+#endif  // SANITIZER_POSIX
 
 #if SANITIZER_INTERCEPT_GETPWNAM_AND_FRIENDS
 INTERCEPTOR(__sanitizer_passwd *, getpwnam, const char *name) {

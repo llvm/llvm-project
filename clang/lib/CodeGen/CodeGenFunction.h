@@ -1852,14 +1852,14 @@ public:
   void StartThunk(llvm::Function *Fn, GlobalDecl GD,
                   const CGFunctionInfo &FnInfo, bool IsUnprototyped);
 
-  void EmitCallAndReturnForThunk(llvm::Constant *Callee, const ThunkInfo *Thunk,
-                                 bool IsUnprototyped);
+  void EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
+                                 const ThunkInfo *Thunk, bool IsUnprototyped);
 
   void FinishThunk();
 
   /// Emit a musttail call for a thunk with a potentially adjusted this pointer.
   void EmitMustTailThunk(GlobalDecl GD, llvm::Value *AdjustedThisPtr,
-                         llvm::Value *Callee);
+                         llvm::FunctionCallee Callee);
 
   /// Generate a thunk for the given method.
   void generateThunk(llvm::Function *Fn, const CGFunctionInfo &FnInfo,

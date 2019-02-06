@@ -25,6 +25,8 @@ const char *CudaVersionToString(CudaVersion V) {
     return "9.2";
   case CudaVersion::CUDA_100:
     return "10.0";
+  case CudaVersion::CUDA_101:
+    return "10.1";
   }
   llvm_unreachable("invalid enum");
 }
@@ -37,7 +39,8 @@ CudaVersion CudaStringToVersion(llvm::StringRef S) {
       .Case("9.0", CudaVersion::CUDA_90)
       .Case("9.1", CudaVersion::CUDA_91)
       .Case("9.2", CudaVersion::CUDA_92)
-      .Case("10.0", CudaVersion::CUDA_100);
+      .Case("10.0", CudaVersion::CUDA_100)
+      .Case("10.1", CudaVersion::CUDA_101);
 }
 
 const char *CudaArchToString(CudaArch A) {
@@ -352,6 +355,8 @@ static CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
     return CudaVersion::CUDA_92;
   case 100:
     return CudaVersion::CUDA_100;
+  case 101:
+    return CudaVersion::CUDA_101;
   default:
     return CudaVersion::UNKNOWN;
   }
@@ -365,6 +370,8 @@ bool CudaFeatureEnabled(CudaVersion Version, CudaFeature Feature) {
   switch (Feature) {
   case CudaFeature::CUDA_USES_NEW_LAUNCH:
     return Version >= CudaVersion::CUDA_92;
+  case CudaFeature::CUDA_USES_FATBIN_REGISTER_END:
+    return Version >= CudaVersion::CUDA_101;
   }
   llvm_unreachable("Unknown CUDA feature.");
 }

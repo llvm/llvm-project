@@ -100,10 +100,14 @@ public:
   unsigned IsUsedInRegularObj : 1;
   unsigned ForceExport : 1;
 
+  // True if this symbol is specified by --trace-symbol option.
+  unsigned Traced : 1;
+
 protected:
   Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
-      : IsUsedInRegularObj(false), ForceExport(false), Name(Name),
-        SymbolKind(K), Flags(Flags), File(F), Referenced(!Config->GcSections) {}
+      : IsUsedInRegularObj(false), ForceExport(false), Traced(false),
+        Name(Name), SymbolKind(K), Flags(Flags), File(F),
+        Referenced(!Config->GcSections) {}
 
   StringRef Name;
   Kind SymbolKind;
@@ -402,6 +406,8 @@ union SymbolUnion {
   alignas(SectionSymbol) char I[sizeof(SectionSymbol)];
 };
 
+void printTraceSymbol(Symbol *Sym);
+
 template <typename T, typename... ArgT>
 T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
   static_assert(std::is_trivially_destructible<T>(),
@@ -417,6 +423,13 @@ T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
   T *S2 = new (S) T(std::forward<ArgT>(Arg)...);
   S2->IsUsedInRegularObj = SymCopy.IsUsedInRegularObj;
   S2->ForceExport = SymCopy.ForceExport;
+  S2->Traced = SymCopy.Traced;
+
+  // Print out a log message if --trace-symbol was specified.
+  // This is for debugging.
+  if (S2->Traced)
+    printTraceSymbol(S2);
+
   return S2;
 }
 

@@ -28,6 +28,8 @@ SymbolTable *lld::wasm::Symtab;
 
 void SymbolTable::addFile(InputFile *File) {
   log("Processing: " + toString(File));
+  if (Config->Trace)
+    message(toString(File));
   File->parse();
 
   // LLVM bitcode file
@@ -73,21 +75,42 @@ void SymbolTable::reportRemainingUndefines() {
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  return SymMap.lookup(CachedHashStringRef(Name));
+  auto It = SymMap.find(CachedHashStringRef(Name));
+  if (It == SymMap.end() || It->second == -1)
+    return nullptr;
+  return SymVector[It->second];
+}
+
+std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
+  bool Trace = false;
+  auto P = SymMap.insert({CachedHashStringRef(Name), (int)SymVector.size()});
+  int &SymIndex = P.first->second;
+  bool IsNew = P.second;
+  if (SymIndex == -1) {
+    SymIndex = SymVector.size();
+    Trace = true;
+    IsNew = true;
+  }
+
+  if (!IsNew)
+    return {SymVector[SymIndex], false};
+
+  Symbol *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+  Sym->IsUsedInRegularObj = false;
+  Sym->Traced = Trace;
+  SymVector.emplace_back(Sym);
+  return {Sym, true};
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, InputFile *File) {
-  bool Inserted = false;
-  Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
-  if (!Sym) {
-    Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-    Sym->IsUsedInRegularObj = false;
-    SymVector.emplace_back(Sym);
-    Inserted = true;
-  }
+  Symbol *S;
+  bool WasInserted;
+  std::tie(S, WasInserted) = insertName(Name);
+
   if (!File || File->kind() == InputFile::ObjectKind)
-    Sym->IsUsedInRegularObj = true;
-  return {Sym, Inserted};
+    S->IsUsedInRegularObj = true;
+
+  return {S, WasInserted};
 }
 
 static void reportTypeError(const Symbol *Existing, const InputFile *File,
@@ -408,4 +431,10 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
 
 bool SymbolTable::addComdat(StringRef Name) {
   return Comdats.insert(CachedHashStringRef(Name)).second;
+}
+
+// Set a flag for --trace-symbol so that we can print out a log message
+// if a new symbol with the same name is inserted into the symbol table.
+void SymbolTable::trace(StringRef Name) {
+  SymMap.insert({CachedHashStringRef(Name), -1});
 }

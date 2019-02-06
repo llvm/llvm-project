@@ -24,7 +24,7 @@ Value = 10
 
 ; ERRCLIEQ1: Missing equal sign in command-line definition '-DVALUE10'
 
-; ERRCLIEQ2: FileCheck{{[^:]*}}: for the -D option: requires a value!
+; ERRCLIEQ2: {{F|f}}ile{{C|c}}heck{{[^:]*}}: for the -D option: requires a value!
 
 ; ERRCLIVAR1: Missing pattern variable name in command-line definition '-D=10'
 
