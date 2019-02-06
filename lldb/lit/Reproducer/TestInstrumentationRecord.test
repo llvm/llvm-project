@@ -1,0 +1,10 @@
+# RUN: cp %p/Inputs/foo.cpp %t.cpp
+# RUN: lldb-instr %t.cpp
+# RUN: cat %t.cpp | FileCheck %s
+
+# CHECK: LLDB_RECORD_METHOD_NO_ARGS(void, Foo, A);
+# CHECK: LLDB_RECORD_METHOD(void, Foo, B, (int), i);
+# CHECK: LLDB_RECORD_METHOD(int, Foo, C, (int), i);
+# CHECK: LLDB_RECORD_METHOD_CONST(int, Foo, D, (bool), b);
+# CHECK: LLDB_RECORD_STATIC_METHOD_NO_ARGS(void, Foo, E);
+# CHECK: LLDB_RECORD_STATIC_METHOD(int, Foo, F, (int), i);

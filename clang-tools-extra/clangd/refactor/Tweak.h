@@ -56,8 +56,8 @@ public:
   /// defining the Tweak. Definition is provided automatically by
   /// REGISTER_TWEAK.
   virtual const char *id() const = 0;
-  /// Run the first stage of the action. The non-None result indicates that the
-  /// action is available and should be shown to the user. Returns None if the
+  /// Run the first stage of the action. Returns true indicating that the
+  /// action is available and should be shown to the user. Returns false if the
   /// action is not available.
   /// This function should be fast, if the action requires non-trivial work it
   /// should be moved into 'apply'.
