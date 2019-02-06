@@ -1,13 +1,13 @@
 // -*- C++ -*-
 //===-------------------------- algorithm ---------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
+#include <__config>
 #include <initializer_list>
 #include <iterator>
 
@@ -495,59 +495,77 @@ RandomAccessIterator is_heap_until(RandomAccessIterator first,
                                    RandomAccessIterator last, Compare comp);
 
 template <class ForwardIterator>
-ForwardIterator min_element(ForwardIterator first, ForwardIterator last);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 ForwardIterator min_element(ForwardIterator first,
+                                                          ForwardIterator last);
 
 template <class ForwardIterator, class Compare>
-ForwardIterator min_element(ForwardIterator first, ForwardIterator last,
-                            Compare comp);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 ForwardIterator min_element(ForwardIterator first,
+                                                          ForwardIterator last,
+                                                          Compare comp);
 
-template <class T> const T &min(const T &a, const T &b);
-
-template <class T, class Compare>
-const T &min(const T &a, const T &b, Compare comp);
-
-template <class T> T min(initializer_list<T> t);
-
-template <class T, class Compare> T min(initializer_list<T> t, Compare comp);
-
-template <class T> const T &clamp(const T &v, const T &lo, const T &hi);
+template <class T>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 const T &min(const T &a, const T &b);
 
 template <class T, class Compare>
-const T &clamp(const T &v, const T &lo, const T &hi, Compare comp);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 const T &min(const T &a, const T &b,
+                                           Compare comp);
+
+template <class T> _LIBCPP_CONSTEXPR_AFTER_CXX11 T min(initializer_list<T> t);
+
+template <class T, class Compare>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 T min(initializer_list<T> t, Compare comp);
+
+#if _LIBCPP_STD_VER > 14
+template <class T>
+const T constexpr &clamp(const T &v, const T &lo, const T &hi);
+
+template <class T, class Compare>
+const T constexpr &clamp(const T &v, const T &lo, const T &hi, Compare comp);
+#endif
 
 template <class ForwardIterator>
-ForwardIterator max_element(ForwardIterator first, ForwardIterator last);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 ForwardIterator max_element(ForwardIterator first,
+                                                          ForwardIterator last);
 
 template <class ForwardIterator, class Compare>
-ForwardIterator max_element(ForwardIterator first, ForwardIterator last,
-                            Compare comp);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 ForwardIterator max_element(ForwardIterator first,
+                                                          ForwardIterator last,
+                                                          Compare comp);
 
-template <class T> const T &max(const T &a, const T &b);
+template <class T>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 const T &max(const T &a, const T &b);
 
 template <class T, class Compare>
-const T &max(const T &a, const T &b, Compare comp);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 const T &max(const T &a, const T &b,
+                                           Compare comp);
 
-template <class T> T max(initializer_list<T> t);
+template <class T> _LIBCPP_CONSTEXPR_AFTER_CXX11 T max(initializer_list<T> t);
 
-template <class T, class Compare> T max(initializer_list<T> t, Compare comp);
+template <class T, class Compare>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 T max(initializer_list<T> t, Compare comp);
 
 template <class ForwardIterator>
-pair<ForwardIterator, ForwardIterator> minmax_element(ForwardIterator first,
-                                                      ForwardIterator last);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 pair<ForwardIterator, ForwardIterator>
+minmax_element(ForwardIterator first, ForwardIterator last);
 
 template <class ForwardIterator, class Compare>
-pair<ForwardIterator, ForwardIterator>
+pair<ForwardIterator, ForwardIterator> _LIBCPP_CONSTEXPR_AFTER_CXX11
 minmax_element(ForwardIterator first, ForwardIterator last, Compare comp);
 
-template <class T> pair<const T &, const T &> minmax(const T &a, const T &b);
+template <class T>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 pair<const T &, const T &> minmax(const T &a,
+                                                                const T &b);
 
 template <class T, class Compare>
-pair<const T &, const T &> minmax(const T &a, const T &b, Compare comp);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 pair<const T &, const T &>
+minmax(const T &a, const T &b, Compare comp);
 
-template <class T> pair<T, T> minmax(initializer_list<T> t);
+template <class T>
+_LIBCPP_CONSTEXPR_AFTER_CXX11 pair<T, T> minmax(initializer_list<T> t);
 
 template <class T, class Compare>
-pair<T, T> minmax(initializer_list<T> t, Compare comp);
+_LIBCPP_CONSTEXPR_AFTER_CXX11 pair<T, T> minmax(initializer_list<T> t,
+                                                Compare comp);
 
 template <class InputIterator1, class InputIterator2>
 bool lexicographical_compare(InputIterator1 first1, InputIterator1 last1,

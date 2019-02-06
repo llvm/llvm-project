@@ -125,6 +125,7 @@ set(cuda_wrapper_files
 set(sycl_wrapper_files
   sycl_wrappers/algorithm
   sycl_wrappers/random
+  sycl_wrappers/__config
 )
 
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
