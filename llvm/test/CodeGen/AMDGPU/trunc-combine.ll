@@ -1,3 +1,4 @@
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs< %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
 ; Make sure high constant 0 isn't pointlessly materialized
@@ -25,7 +26,7 @@ define i32 @trunc_bitcast_i64_lshr_32_i32(i64 %bar) {
 ; GCN: _load_dword
 ; GCN-NOT: _load_dword
 ; GCN-NOT: v_mov_b32
-; GCN: v_add_u16_e32 v0, 4, v0
+; VI: v_add_u16_e32 v0, 4, v0
 define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
   %load0 = load i32, i32 addrspace(1)* undef
   %load1 = load i32, i32 addrspace(1)* null
@@ -42,7 +43,7 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; GCN: _load_dword
 ; GCN-NOT: _load_dword
 ; GCN-NOT: v_mov_b32
-; GCN: v_add_u16_e32 v0, 4, v0
+; VI: v_add_u16_e32 v0, 4, v0
 define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
   %load0 = load float, float addrspace(1)* undef
   %load1 = load float, float addrspace(1)* null
@@ -79,4 +80,19 @@ bb:
   %tmp15 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %arg2, i64 undef
   store <2 x i16> %tmp14, <2 x i16> addrspace(1)* %tmp15, align 4
   ret void
+}
+
+; GCN-LABEL: {{^}}trunc_v2i64_arg_to_v2i16:
+; GCN: v_lshlrev_b32_e32 v1, 16, v2
+
+; SI-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT: v_or_b32_e32 v0, v0, v1
+; SI-NEXT: v_lshrrev_b32_e32 v1, 16, v0
+
+; VI-NEXT: v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+
+; GCN-NEXT: s_setpc_b64
+define <2 x i16> @trunc_v2i64_arg_to_v2i16(<2 x i64> %arg0) #0 {
+  %trunc = trunc <2 x i64> %arg0 to <2 x i16>
+  ret <2 x i16> %trunc
 }

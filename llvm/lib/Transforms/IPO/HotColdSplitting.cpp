@@ -135,8 +135,12 @@ static bool mayExtractBlock(const BasicBlock &BB) {
   // EH pads are unsafe to outline because doing so breaks EH type tables. It
   // follows that invoke instructions cannot be extracted, because CodeExtractor
   // requires unwind destinations to be within the extraction region.
-  return !BB.hasAddressTaken() && !BB.isEHPad() &&
-         !isa<InvokeInst>(BB.getTerminator());
+  //
+  // Resumes that are not reachable from a cleanup landing pad are considered to
+  // be unreachable. It’s not safe to split them out either.
+  auto Term = BB.getTerminator();
+  return !BB.hasAddressTaken() && !BB.isEHPad() && !isa<InvokeInst>(Term) &&
+         !isa<ResumeInst>(Term);
 }
 
 /// Mark \p F cold. Based on this assumption, also optimize it for minimum size.

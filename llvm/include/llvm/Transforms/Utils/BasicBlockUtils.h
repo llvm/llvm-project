@@ -17,9 +17,9 @@
 // FIXME: Move to this file: BasicBlock::removePredecessor, BB::splitBasicBlock
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/InstrTypes.h"
 #include <cassert>
 

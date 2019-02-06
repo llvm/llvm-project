@@ -258,17 +258,6 @@ public:
                             CharUnits::fromQuantity(Offset.getSExtValue())));
   }
 
-  llvm::Value *CreateConstInBoundsByteGEP(llvm::Value *Ptr, CharUnits Offset,
-                                          const llvm::Twine &Name = "") {
-    assert(Ptr->getType()->getPointerElementType() == TypeCache.Int8Ty);
-    return CreateInBoundsGEP(Ptr, getSize(Offset), Name);
-  }
-  llvm::Value *CreateConstByteGEP(llvm::Value *Ptr, CharUnits Offset,
-                                  const llvm::Twine &Name = "") {
-    assert(Ptr->getType()->getPointerElementType() == TypeCache.Int8Ty);
-    return CreateGEP(Ptr, getSize(Offset), Name);
-  }
-
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
                                bool IsVolatile = false) {

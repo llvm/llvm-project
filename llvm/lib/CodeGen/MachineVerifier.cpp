@@ -1100,6 +1100,22 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_GEP: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT PtrTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT OffsetTy = MRI->getType(MI->getOperand(2).getReg());
+    if (!DstTy.isValid() || !PtrTy.isValid() || !OffsetTy.isValid())
+      break;
+
+    if (!PtrTy.getScalarType().isPointer())
+      report("gep first operand must be a pointer", MI);
+
+    if (OffsetTy.getScalarType().isPointer())
+      report("gep offset operand must not be a pointer", MI);
+
+    // TODO: Is the offset allowed to be a scalar with a vector?
+    break;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:

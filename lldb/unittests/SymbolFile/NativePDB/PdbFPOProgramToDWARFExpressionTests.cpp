@@ -115,7 +115,7 @@ CheckInvalidProgramTranslation(llvm::StringRef fpo_program,
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
   EXPECT_FALSE(TranslateFPOProgramToDWARFExpression(
       fpo_program, target_register_name, arch_type, stream));
-  EXPECT_EQ(0, stream.GetSize());
+  EXPECT_EQ((size_t)0, stream.GetSize());
 }
 
 TEST(PDBFPOProgramToDWARFExpressionTests, InvalidAssignmentSingle) {

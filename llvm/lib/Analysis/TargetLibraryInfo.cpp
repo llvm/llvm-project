@@ -160,7 +160,36 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   }
 
   if (T.isOSWindows() && !T.isOSCygMing()) {
-    // Win32 does not support long double
+    if (T.getArch() == Triple::x86) {
+      // Win32 does not support float math functions, in general.
+      TLI.setUnavailable(LibFunc_acosf);
+      TLI.setUnavailable(LibFunc_asinf);
+      TLI.setUnavailable(LibFunc_atanf);
+      TLI.setUnavailable(LibFunc_atan2f);
+      TLI.setUnavailable(LibFunc_ceilf);
+      TLI.setUnavailable(LibFunc_copysignf);
+      TLI.setUnavailable(LibFunc_cosf);
+      TLI.setUnavailable(LibFunc_coshf);
+      TLI.setUnavailable(LibFunc_expf);
+      TLI.setUnavailable(LibFunc_floorf);
+      TLI.setUnavailable(LibFunc_fminf);
+      TLI.setUnavailable(LibFunc_fmaxf);
+      TLI.setUnavailable(LibFunc_fmodf);
+      TLI.setUnavailable(LibFunc_logf);
+      TLI.setUnavailable(LibFunc_log10f);
+      TLI.setUnavailable(LibFunc_modff);
+      TLI.setUnavailable(LibFunc_powf);
+      TLI.setUnavailable(LibFunc_sinf);
+      TLI.setUnavailable(LibFunc_sinhf);
+      TLI.setUnavailable(LibFunc_sqrtf);
+      TLI.setUnavailable(LibFunc_tanf);
+      TLI.setUnavailable(LibFunc_tanhf);
+    }
+    TLI.setUnavailable(LibFunc_fabsf); // Win32 and Win64 both lack fabsf
+    TLI.setUnavailable(LibFunc_frexpf);
+    TLI.setUnavailable(LibFunc_ldexpf);
+
+    // Win32 does not support long double.
     TLI.setUnavailable(LibFunc_acosl);
     TLI.setUnavailable(LibFunc_asinl);
     TLI.setUnavailable(LibFunc_atanl);
@@ -170,14 +199,12 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_cosl);
     TLI.setUnavailable(LibFunc_coshl);
     TLI.setUnavailable(LibFunc_expl);
-    TLI.setUnavailable(LibFunc_fabsf); // Win32 and Win64 both lack fabsf
     TLI.setUnavailable(LibFunc_fabsl);
     TLI.setUnavailable(LibFunc_floorl);
     TLI.setUnavailable(LibFunc_fmaxl);
     TLI.setUnavailable(LibFunc_fminl);
     TLI.setUnavailable(LibFunc_fmodl);
     TLI.setUnavailable(LibFunc_frexpl);
-    TLI.setUnavailable(LibFunc_ldexpf);
     TLI.setUnavailable(LibFunc_ldexpl);
     TLI.setUnavailable(LibFunc_logl);
     TLI.setUnavailable(LibFunc_modfl);
@@ -188,7 +215,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_tanl);
     TLI.setUnavailable(LibFunc_tanhl);
 
-    // Win32 only has C89 math
+    // Win32 does not fully support C99 math functions.
     TLI.setUnavailable(LibFunc_acosh);
     TLI.setUnavailable(LibFunc_acoshf);
     TLI.setUnavailable(LibFunc_acoshl);
@@ -232,37 +259,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_truncf);
     TLI.setUnavailable(LibFunc_truncl);
 
-    // Win32 provides some C99 math with mangled names
+    // Win32 supports some C99 math functions, but with mangled names.
     TLI.setAvailableWithName(LibFunc_copysign, "_copysign");
 
-    if (T.getArch() == Triple::x86) {
-      // Win32 on x86 implements single-precision math functions as macros
-      TLI.setUnavailable(LibFunc_acosf);
-      TLI.setUnavailable(LibFunc_asinf);
-      TLI.setUnavailable(LibFunc_atanf);
-      TLI.setUnavailable(LibFunc_atan2f);
-      TLI.setUnavailable(LibFunc_ceilf);
-      TLI.setUnavailable(LibFunc_copysignf);
-      TLI.setUnavailable(LibFunc_cosf);
-      TLI.setUnavailable(LibFunc_coshf);
-      TLI.setUnavailable(LibFunc_expf);
-      TLI.setUnavailable(LibFunc_floorf);
-      TLI.setUnavailable(LibFunc_fminf);
-      TLI.setUnavailable(LibFunc_fmaxf);
-      TLI.setUnavailable(LibFunc_fmodf);
-      TLI.setUnavailable(LibFunc_logf);
-      TLI.setUnavailable(LibFunc_log10f);
-      TLI.setUnavailable(LibFunc_modff);
-      TLI.setUnavailable(LibFunc_powf);
-      TLI.setUnavailable(LibFunc_sinf);
-      TLI.setUnavailable(LibFunc_sinhf);
-      TLI.setUnavailable(LibFunc_sqrtf);
-      TLI.setUnavailable(LibFunc_tanf);
-      TLI.setUnavailable(LibFunc_tanhf);
-    }
+    // Win32 does not support these C99 functions.
+    TLI.setUnavailable(LibFunc_atoll);
+    TLI.setUnavailable(LibFunc_llabs);
 
-    // Win32 does *not* provide these functions, but they are
-    // generally available on POSIX-compliant systems:
+    // Win32 does not support these functions, but
+    // they are generally available on POSIX-compliant systems.
     TLI.setUnavailable(LibFunc_access);
     TLI.setUnavailable(LibFunc_bcmp);
     TLI.setUnavailable(LibFunc_bcopy);
@@ -317,12 +322,6 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_utime);
     TLI.setUnavailable(LibFunc_utimes);
     TLI.setUnavailable(LibFunc_write);
-
-    // Win32 does *not* provide provide these functions, but they are
-    // specified by C99:
-    TLI.setUnavailable(LibFunc_atoll);
-    TLI.setUnavailable(LibFunc_frexpf);
-    TLI.setUnavailable(LibFunc_llabs);
   }
 
   switch (T.getOS()) {

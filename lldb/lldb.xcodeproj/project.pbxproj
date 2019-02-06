@@ -602,8 +602,8 @@
 		268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 495BBACB119A0DBE00418BEA /* PathMappingList.cpp */; };
 		2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */; };
 		AF815DF921C855B400023A34 /* PdbAstBuilder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF815DF721C855B400023A34 /* PdbAstBuilder.cpp */; };
-		5A6424952204D05000C3D9DB /* PdbFPOProgramToDWARFExpression.h in Headers */ = {isa = PBXBuildFile; fileRef = 5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */; };
 		5A6424972204D05000C3D9DB /* PdbFPOProgramToDWARFExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5A6424932204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.cpp */; };
+		5A6424952204D05000C3D9DB /* PdbFPOProgramToDWARFExpression.h in Headers */ = {isa = PBXBuildFile; fileRef = 5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */; };
 		AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B6217140B6006714AC /* PdbIndex.cpp */; };
 		AF0F459E219FA1C800C1E612 /* PdbSymUid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */; };
 		AFD966B9217140B6006714AC /* PdbUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B5217140B6006714AC /* PdbUtil.cpp */; };
@@ -738,6 +738,8 @@
 		9485545A1DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948554591DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp */; };
 		23D065911D4A7BEE0008EDE6 /* RenderScriptx86ABIFixups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */; };
 		AFCB1D5F219CD5EA00730AD5 /* Reproducer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */; };
+		DD6C13BB220A6F22005C2AE8 /* ReproducerInstrumentation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6C13BA220A6F21005C2AE8 /* ReproducerInstrumentation.cpp */; };
+		DD6C13BD220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6C13BC220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp */; };
 		4C639ECF21FA684900A7B957 /* ReproducerTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C639EC121FA684700A7B957 /* ReproducerTest.cpp */; };
 		4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04EC211A06200015A814 /* RichManglingContext.cpp */; };
 		4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 4FBC04EE211A06820015A814 /* RichManglingContext.h */; };
@@ -1620,8 +1622,8 @@
 		7F94D7172040A13A006EE3EA /* CleanUpTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CleanUpTest.cpp; sourceTree = "<group>"; };
 		949EEDA11BA76571008C63CF /* Cocoa.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = Cocoa.cpp; path = Language/ObjC/Cocoa.cpp; sourceTree = "<group>"; };
 		949EEDA21BA76571008C63CF /* Cocoa.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Cocoa.h; path = Language/ObjC/Cocoa.h; sourceTree = "<group>"; };
-		5A6424942204D05000C3D9DB /* CodeViewRegisterMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CodeViewRegisterMapping.h; path = source/Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.h; sourceTree = SOURCE_ROOT; };
 		5A6424922204D04F00C3D9DB /* CodeViewRegisterMapping.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CodeViewRegisterMapping.cpp; path = source/Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.cpp; sourceTree = SOURCE_ROOT; };
+		5A6424942204D05000C3D9DB /* CodeViewRegisterMapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CodeViewRegisterMapping.h; path = source/Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.h; sourceTree = SOURCE_ROOT; };
 		9441816D1C8F5EC900E5A8D9 /* CommandAlias.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandAlias.cpp; path = source/Interpreter/CommandAlias.cpp; sourceTree = "<group>"; };
 		9441816B1C8F5EB000E5A8D9 /* CommandAlias.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CommandAlias.h; path = include/lldb/Interpreter/CommandAlias.h; sourceTree = "<group>"; };
 		4C09CB74116BD98B00C7A725 /* CommandCompletions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandCompletions.cpp; path = source/Commands/CommandCompletions.cpp; sourceTree = "<group>"; };
@@ -2441,8 +2443,6 @@
 		4C639EC321FA684700A7B957 /* OptionsWithRawTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsWithRawTest.cpp; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
-		5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PdbFPOProgramToDWARFExpression.h; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.h; sourceTree = SOURCE_ROOT; };
-		5A6424932204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbFPOProgramToDWARFExpression.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.cpp; sourceTree = SOURCE_ROOT; };
 		4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBLocationToDWARFExpression.cpp; path = PDB/PDBLocationToDWARFExpression.cpp; sourceTree = "<group>"; };
 		4CA0C6CB20F929C700CFE6BB /* PDBLocationToDWARFExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBLocationToDWARFExpression.h; path = PDB/PDBLocationToDWARFExpression.h; sourceTree = "<group>"; };
 		AF3F54B21B3BA5D500186E73 /* POSIXStopInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = POSIXStopInfo.cpp; sourceTree = "<group>"; };
@@ -2452,6 +2452,8 @@
 		2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingListTest.cpp; path = Target/PathMappingListTest.cpp; sourceTree = "<group>"; };
 		AF815DF721C855B400023A34 /* PdbAstBuilder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbAstBuilder.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbAstBuilder.cpp; sourceTree = SOURCE_ROOT; };
 		AF815DF821C855B400023A34 /* PdbAstBuilder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PdbAstBuilder.h; path = source/Plugins/SymbolFile/NativePDB/PdbAstBuilder.h; sourceTree = SOURCE_ROOT; };
+		5A6424932204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbFPOProgramToDWARFExpression.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.cpp; sourceTree = SOURCE_ROOT; };
+		5A6424912204D04F00C3D9DB /* PdbFPOProgramToDWARFExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PdbFPOProgramToDWARFExpression.h; path = source/Plugins/SymbolFile/NativePDB/PdbFPOProgramToDWARFExpression.h; sourceTree = SOURCE_ROOT; };
 		AFD966B6217140B6006714AC /* PdbIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbIndex.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.cpp; sourceTree = SOURCE_ROOT; };
 		AFD966BF217140C8006714AC /* PdbIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbIndex.h; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.h; sourceTree = SOURCE_ROOT; };
 		AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbSymUid.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbSymUid.cpp; sourceTree = SOURCE_ROOT; };
@@ -2719,6 +2721,8 @@
 		23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RenderScriptx86ABIFixups.cpp; sourceTree = "<group>"; };
 		23D065871D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderScriptx86ABIFixups.h; sourceTree = "<group>"; };
 		AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Reproducer.cpp; path = source/Utility/Reproducer.cpp; sourceTree = "<group>"; };
+		DD6C13BA220A6F21005C2AE8 /* ReproducerInstrumentation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReproducerInstrumentation.cpp; path = source/Utility/ReproducerInstrumentation.cpp; sourceTree = "<group>"; };
+		DD6C13BC220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReproducerInstrumentationTest.cpp; sourceTree = "<group>"; };
 		4C639EC121FA684700A7B957 /* ReproducerTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReproducerTest.cpp; sourceTree = "<group>"; };
 		4FBC04EC211A06200015A814 /* RichManglingContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RichManglingContext.cpp; path = source/Core/RichManglingContext.cpp; sourceTree = "<group>"; };
 		4FBC04EE211A06820015A814 /* RichManglingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RichManglingContext.h; path = include/lldb/Core/RichManglingContext.h; sourceTree = "<group>"; };
@@ -3656,6 +3660,7 @@
 				4C639EC021FA684700A7B957 /* PredicateTest.cpp */,
 				4C639EC421FA684800A7B957 /* RegisterValueTest.cpp */,
 				4C639EC121FA684700A7B957 /* ReproducerTest.cpp */,
+				DD6C13BC220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp */,
 				23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */,
 				9A3D43E21F3237D500EB767C /* StateTest.cpp */,
 				9A3D43C61F3150D200EB767C /* StatusTest.cpp */,
@@ -4702,6 +4707,7 @@
 				26764C9C1E48F516008D3573 /* RegularExpression.h */,
 				26764C9F1E48F528008D3573 /* RegularExpression.cpp */,
 				AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */,
+				DD6C13BA220A6F21005C2AE8 /* ReproducerInstrumentation.cpp */,
 				26BC7D7410F1B77400F91463 /* Scalar.h */,
 				26BC7E8D10F1B85900F91463 /* Scalar.cpp */,
 				26A375841D59487700D6CBDB /* SelectHelper.h */,
@@ -7790,6 +7796,7 @@
 				4C639ED821FA684900A7B957 /* VMRangeTest.cpp in Sources */,
 				23CB15381D66DA9300EDDDE1 /* PythonExceptionStateTests.cpp in Sources */,
 				9A3D43D81F3151C400EB767C /* NameMatchesTest.cpp in Sources */,
+				DD6C13BD220A6F6A005C2AE8 /* ReproducerInstrumentationTest.cpp in Sources */,
 				4CEC86A4204738C5009B37B1 /* TestArm64InstEmulation.cpp in Sources */,
 				9A3D43ED1F3237F900EB767C /* StateTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,
@@ -8507,6 +8514,7 @@
 				58EC744120EAEB5200695209 /* CompletionRequest.cpp in Sources */,
 				3FDFED2819BA6D96009756A7 /* HostThread.cpp in Sources */,
 				949ADF031406F648004833E1 /* ValueObjectConstResultImpl.cpp in Sources */,
+				DD6C13BB220A6F22005C2AE8 /* ReproducerInstrumentation.cpp in Sources */,
 				B27318421416AC12006039C8 /* WatchpointList.cpp in Sources */,
 				26CFDCA3186163A4000E63E5 /* Editline.cpp in Sources */,
 				26E152261419CAD4007967D0 /* ObjectFilePECOFF.cpp in Sources */,

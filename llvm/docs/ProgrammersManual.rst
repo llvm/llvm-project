@@ -935,27 +935,85 @@ Building fallible iterators and iterator ranges
 
 The archive walking examples above retrieve archive members by index, however
 this requires considerable boiler-plate for iteration and error checking. We can
-clean this up by using ``Error`` with the "fallible iterator" pattern. The usual
-C++ iterator patterns do not allow for failure on increment, but we can
-incorporate support for it by having iterators hold an Error reference through
-which they can report failure. In this pattern, if an increment operation fails
-the failure is recorded via the Error reference and the iterator value is set to
-the end of the range in order to terminate the loop. This ensures that the
-dereference operation is safe anywhere that an ordinary iterator dereference
-would be safe (i.e. when the iterator is not equal to end). Where this pattern
-is followed (as in the ``llvm::object::Archive`` class) the result is much
-cleaner iteration idiom:
+clean this up by using the "fallible iterator" pattern, which supports the
+following natural iteration idiom for fallible containers like Archive:
 
 .. code-block:: c++
 
   Error Err;
   for (auto &Child : Ar->children(Err)) {
-    // Use Child - we only enter the loop when it's valid
+    // Use Child - only enter the loop when it's valid
+
+    // Allow early exit from the loop body, since we know that Err is success
+    // when we're inside the loop.
+    if (BailOutOn(Child))
+      return;
+
     ...
   }
   // Check Err after the loop to ensure it didn't break due to an error.
   if (Err)
     return Err;
+
+To enable this idiom, iterators over fallible containers are written in a
+natural style, with their ``++`` and ``--`` operators replaced with fallible
+``Error inc()`` and ``Error dec()`` functions. E.g.:
+
+.. code-block:: c++
+
+  class FallibleChildIterator {
+  public:
+    FallibleChildIterator(Archive &A, unsigned ChildIdx);
+    Archive::Child &operator*();
+    friend bool operator==(const ArchiveIterator &LHS,
+                           const ArchiveIterator &RHS);
+
+    // operator++/operator-- replaced with fallible increment / decrement:
+    Error inc() {
+      if (!A.childValid(ChildIdx + 1))
+        return make_error<BadArchiveMember>(...);
+      ++ChildIdx;
+      return Error::success();
+    }
+
+    Error dec() { ... }
+  };
+
+Instances of this kind of fallible iterator interface are then wrapped with the
+fallible_iterator utility which provides ``operator++`` and ``operator--``,
+returning any errors via a reference passed in to the wrapper at construction
+time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
+range on error, and (b) marking the error as checked whenever an iterator is
+compared to ``end`` and found to be inequal (in particular: this marks the
+error as checked throughout the body of a range-based for loop), enabling early
+exit from the loop without redundant error checking.
+
+Instances of the fallible iterator interface (e.g. FallibleChildIterator above)
+are wrapped using the ``make_fallible_itr`` and ``make_fallible_end``
+functions. E.g.:
+
+.. code-block:: c++
+
+  class Archive {
+  public:
+    using child_iterator = fallible_iterator<FallibleChildIterator>;
+
+    child_iterator child_begin(Error &Err) {
+      return make_fallible_itr(FallibleChildIterator(*this, 0), Err);
+    }
+
+    child_iterator child_end() {
+      return make_fallible_end(FallibleChildIterator(*this, size()));
+    }
+
+    iterator_range<child_iterator> children(Error &Err) {
+      return make_range(child_begin(Err), child_end());
+    }
+  };
+
+Using the fallible_iterator utility allows for both natural construction of
+fallible iterators (using failing ``inc`` and ``dec`` operations) and
+relatively natural use of c++ iterator/loop idioms.
 
 .. _function_apis:
 

@@ -3088,7 +3088,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
   SDValue Src = N->getOperand(0);
 
   // vt1 (truncate (bitcast (build_vector vt0:x, ...))) -> vt1 (bitcast vt0:x)
-  if (Src.getOpcode() == ISD::BITCAST) {
+  if (Src.getOpcode() == ISD::BITCAST && !VT.isVector()) {
     SDValue Vec = Src.getOperand(0);
     if (Vec.getOpcode() == ISD::BUILD_VECTOR) {
       SDValue Elt0 = Vec.getOperand(0);

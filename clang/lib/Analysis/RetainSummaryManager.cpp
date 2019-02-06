@@ -499,18 +499,18 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     if (const RetainSummary *S = getSummaryForOSObject(FD, FName, RetTy))
       return S;
 
-  if (TrackObjCAndCFObjects)
-    if (const RetainSummary *S =
-            getSummaryForObjCOrCFObject(FD, FName, RetTy, FT, AllowAnnotations))
-      return S;
-
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
-    if (!(TrackOSObjects && isOSObjectRelated(MD)))
+    if (!isOSObjectRelated(MD))
       return getPersistentSummary(RetEffect::MakeNoRet(),
                                   ArgEffects(AF.getEmptyMap()),
                                   ArgEffect(DoNothing),
                                   ArgEffect(StopTracking),
                                   ArgEffect(DoNothing));
+
+  if (TrackObjCAndCFObjects)
+    if (const RetainSummary *S =
+            getSummaryForObjCOrCFObject(FD, FName, RetTy, FT, AllowAnnotations))
+      return S;
 
   return getDefaultSummary();
 }

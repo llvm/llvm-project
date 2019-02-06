@@ -928,6 +928,24 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   return false;
 }
 
+const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
+                                                      unsigned &AddrClass) {
+  const unsigned PatternSize = 4;
+  if (Expr->Elements.size() >= PatternSize &&
+      Expr->Elements[PatternSize - 4] == dwarf::DW_OP_constu &&
+      Expr->Elements[PatternSize - 2] == dwarf::DW_OP_swap &&
+      Expr->Elements[PatternSize - 1] == dwarf::DW_OP_xderef) {
+    AddrClass = Expr->Elements[PatternSize - 3];
+
+    if (Expr->Elements.size() == PatternSize)
+      return nullptr;
+    return DIExpression::get(Expr->getContext(),
+                             makeArrayRef(&*Expr->Elements.begin(),
+                                          Expr->Elements.size() - PatternSize));
+  }
+  return Expr;
+}
+
 DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
                                     int64_t Offset, bool DerefAfter,
                                     bool StackValue) {

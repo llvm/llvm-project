@@ -156,9 +156,6 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
-    // FIXME: Archive::child_iterator requires that Err be checked *during* loop
-    // iteration, and hence does not allow early returns.
-    cantFail(std::move(Err));
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr)
       return createFileError(Ar.getFileName(), ChildOrErr.takeError());

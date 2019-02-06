@@ -22,14 +22,12 @@ static_library("clang-tidy") {
     # ClangSACheckers
   ]
 
-  # TODO(mbonadei): Add support for Clang Static Analyzer checkers.
-  # Without this, "clang-analyzer-" will not work.
-  # if (clang_enable_static_analyzer) {
-  #   deps += [
-  #     "//clang/lib/StaticAnalyzer/Core",
-  #     "//clang/lib/StaticAnalyzer/Frontend",
-  #   ]
-  # }
+  if (clang_enable_static_analyzer) {
+    deps += [
+      "//clang/lib/StaticAnalyzer/Core",
+      "//clang/lib/StaticAnalyzer/Frontend",
+    ]
+  }
 
   sources = [
     "ClangTidy.cpp",

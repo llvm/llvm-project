@@ -170,6 +170,9 @@ public:
   /// set to true if the file is located in a framework that has been
   /// user-specified to be treated as a system framework.
   ///
+  /// \param [out] IsFrameworkFound For a framework directory set to true if
+  /// specified '.framework' directory is found.
+  ///
   /// \param [out] MappedName if this is a headermap which maps the filename to
   /// a framework include ("Foo.h" -> "Foo/Foo.h"), set the new name to this
   /// vector and point Filename to it.
@@ -180,6 +183,7 @@ public:
                               Module *RequestingModule,
                               ModuleMap::KnownHeader *SuggestedModule,
                               bool &InUserSpecifiedSystemFramework,
+                              bool &IsFrameworkFound,
                               bool &HasBeenMapped,
                               SmallVectorImpl<char> &MappedName) const;
 
@@ -190,7 +194,8 @@ private:
       SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule,
-      bool &InUserSpecifiedSystemFramework) const;
+      bool &InUserSpecifiedSystemFramework,
+      bool &IsFrameworkFound) const;
 
 };
 

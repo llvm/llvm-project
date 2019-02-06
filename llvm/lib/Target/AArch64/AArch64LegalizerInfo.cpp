@@ -223,7 +223,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
-      .clampNumElements(0, v2s32, v2s32)
+      .clampMaxNumElements(0, s32, 2)
       .clampMaxNumElements(0, s64, 1);
 
   getActionDefinitionsBuilder(G_STORE)
@@ -242,7 +242,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
         return Query.Types[0].isScalar() &&
                Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
-      .clampNumElements(0, v2s32, v2s32)
+      .clampMaxNumElements(0, s32, 2)
       .clampMaxNumElements(0, s64, 1);
 
   // Constants
@@ -499,7 +499,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
     auto AlignMinus1 = MIRBuilder.buildConstant(IntPtrTy, Align - 1);
 
     unsigned ListTmp = MRI.createGenericVirtualRegister(PtrTy);
-    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1->getOperand(0).getReg());
+    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1.getReg(0));
 
     DstPtr = MRI.createGenericVirtualRegister(PtrTy);
     MIRBuilder.buildPtrMask(DstPtr, ListTmp, Log2_64(Align));
