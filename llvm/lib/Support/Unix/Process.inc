@@ -32,10 +32,7 @@
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-// DragonFlyBSD, and OpenBSD have deprecated <malloc.h> for
-// <stdlib.h> instead. Unix.h includes this for us already.
-#if defined(HAVE_MALLOC_H) && !defined(__DragonFly__) && \
-    !defined(__OpenBSD__) 
+#if defined(HAVE_MALLINFO)
 #include <malloc.h>
 #endif
 #if defined(HAVE_MALLCTL)
