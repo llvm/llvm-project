@@ -855,6 +855,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   case Backend_EmitSPIRV:
     if (LangOpts.SYCL) {
+      // TODO: SPIRVNoDerefAttr is not modeled when using the bitcode pass
       SPIRV::SPIRVNoDerefAttr = true;
       // TODO: this pass added to work around missing linkonce_odr in SPIR-V
       PerModulePasses.add(
@@ -862,7 +863,11 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
       PerModulePasses.add(createASFixerPass());
       PerModulePasses.add(createDeadCodeEliminationPass());
     }
-    PerModulePasses.add(createSPIRVWriterPass(*OS));
+    if (LangOpts.SYCLUseBitcode)
+      PerModulePasses.add(
+          createBitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists, false));
+    else
+      PerModulePasses.add(createSPIRVWriterPass(*OS));
 
     break;
 

@@ -1701,6 +1701,10 @@ def fsycl_add_targets_EQ : CommaJoined<["-"], "fsycl-add-targets=">, Flags<[Driv
   HelpText<"Specify comma-separated list of triple and device binary image pairs to add to the final SYCL binary">;
 def fsycl_link_targets_EQ : CommaJoined<["-"], "fsycl-link-targets=">, Flags<[DriverOption, CC1Option]>,
   HelpText<"Specify comma-separated list of triples SYCL offloading targets to produce linked device images">;
+def fsycl_use_bitcode : Flag<["-"], "fsycl-use-bitcode">,
+  Flags<[CC1Option]>, HelpText<"Use LLVM bitcode instead of SPIR-V in fat objects">;
+def fno_sycl_use_bitcode : Flag<["-"], "fno-sycl-use-bitcode">,
+  Flags<[CC1Option]>, HelpText<"Use SPIR-V instead of LLVM bitcode in fat objects">;
 def fsyntax_only : Flag<["-"], "fsyntax-only">,
   Flags<[DriverOption,CoreOption,CC1Option]>, Group<Action_Group>;
 def ftabstop_EQ : Joined<["-"], "ftabstop=">, Group<f_Group>;

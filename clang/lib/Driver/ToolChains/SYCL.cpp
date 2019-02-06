@@ -40,6 +40,7 @@ const char *SYCL::Linker::constructLLVMSpirvCommand(Compilation &C,
     CmdArgs.push_back("-o");
     CmdArgs.push_back(OutputFileName);
   } else {
+    CmdArgs.push_back("-spirv-no-deref-attr");
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
   }
@@ -87,7 +88,8 @@ void SYCL::Linker::constructLlcCommand(Compilation &C, const JobAction &JA,
 }
 
 // For SYCL the inputs of the linker job are SPIR-V binaries and output is
-// a single SPIR-V binary.
+// a single SPIR-V binary.  Input can also be bitcode when specified by
+// the user
 void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
                                    const InputInfoList &Inputs,
@@ -110,9 +112,15 @@ void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs) {
     if (!II.isFilename())
       continue;
-    const char *LLVMSpirvOutputFile =
-      constructLLVMSpirvCommand(C, JA, Output, Prefix, true, II.getFilename());
-    SpirvInputs.push_back(LLVMSpirvOutputFile);
+    if (Args.hasFlag(options::OPT_fsycl_use_bitcode,
+                     options::OPT_fno_sycl_use_bitcode, true))
+      SpirvInputs.push_back(II.getFilename());
+    else {
+      const char *LLVMSpirvOutputFile =
+        constructLLVMSpirvCommand(C, JA, Output, Prefix, true,
+                                  II.getFilename());
+      SpirvInputs.push_back(LLVMSpirvOutputFile);
+    }
   }
   const char *LLVMLinkOutputFile =
       constructLLVMLinkCommand(C, JA, SubArchName, Prefix, SpirvInputs);

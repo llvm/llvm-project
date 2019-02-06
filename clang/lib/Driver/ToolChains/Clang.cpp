@@ -3523,6 +3523,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-aux-triple");
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
     CmdArgs.push_back("-disable-llvm-passes");
+    if (Args.hasFlag(options::OPT_fsycl_use_bitcode,
+                     options::OPT_fno_sycl_use_bitcode, true)) {
+      CmdArgs.push_back("-fsycl-use-bitcode");
+    }
   }
 
   if (IsOpenMPDevice) {

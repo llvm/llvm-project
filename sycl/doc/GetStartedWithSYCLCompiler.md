@@ -132,7 +132,7 @@ The SYCL Compiler supports two types of compilation:
    a. Compile the device code from the C++ file into the SPIR-V file:
 
    ```bash
-   clang++ --sycl -Xclang -fsycl-int-header=simple-sycl-app-int-header.h -c simple-sycl-app.cpp -o kernel.spv
+   clang++ --sycl -fno-sycl-use-bitcode -Xclang -fsycl-int-header=simple-sycl-app-int-header.h -c simple-sycl-app.cpp -o kernel.spv
    # NOTE: The section "-Xclang -fsycl-int-header=simple-sycl-app-int-header.h"
    #       generates `integration header` file.
    #       This file must be included for the host side compilation.
