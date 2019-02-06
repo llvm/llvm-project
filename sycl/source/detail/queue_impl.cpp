@@ -16,8 +16,10 @@ namespace sycl {
 namespace detail {
 template <> cl_uint queue_impl::get_info<info::queue::reference_count>() const {
   cl_uint result = 0;
-  CHECK_OCL_CODE(clGetCommandQueueInfo(m_CommandQueue, CL_QUEUE_REFERENCE_COUNT,
-                                       sizeof(result), &result, nullptr));
+  if (!is_host())
+    CHECK_OCL_CODE(clGetCommandQueueInfo(m_CommandQueue,
+                                         CL_QUEUE_REFERENCE_COUNT,
+                                         sizeof(result), &result, nullptr));
   return result;
 }
 
