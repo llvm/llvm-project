@@ -265,7 +265,7 @@ struct Configuration {
   //
   // Since the flag is updated by multi-threaded code, we use std::atomic.
   // (Writing to a variable is not considered thread-safe even if the
-  // varaible is boolean and we always set the same value from all threads.)
+  // variable is boolean and we always set the same value from all threads.)
   std::atomic<bool> HasStaticTlsModel{false};
 
   // Holds set of ELF header flags for the target.

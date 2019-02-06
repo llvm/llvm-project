@@ -16,6 +16,8 @@ def export_all_symbols: F<"export-all-symbols">,
 def gc_sections: F<"gc-sections">, HelpText<"Remove unused sections">;
 def icf: J<"icf=">, HelpText<"Identical code folding">;
 def image_base: S<"image-base">, HelpText<"Base address of the program">;
+def insert_timestamp: F<"insert-timestamp">,
+    HelpText<"Include PE header timestamp">;
 def kill_at: F<"kill-at">, HelpText<"Remove @n from exported symbols">;
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
