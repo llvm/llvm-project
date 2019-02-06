@@ -186,7 +186,7 @@ void ShadowBuilder::Install() {
                        GetShadowSize(), MAP_FIXED);
     CHECK(res != MAP_FAILED);
 #else
-    void *res = MmapFixedOrDie(shadow_, GetShadowSize());
+    void *res = MmapFixedOrDie(shadow_, GetShadowSize(), "cfi shadow");
     CHECK(res != MAP_FAILED);
     ::memcpy(&shadow_, &main_shadow, GetShadowSize());
 #endif

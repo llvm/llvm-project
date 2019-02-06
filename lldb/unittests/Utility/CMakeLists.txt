@@ -20,6 +20,7 @@ add_lldb_unittest(UtilityTests
   PredicateTest.cpp
   RegisterValueTest.cpp
   ReproducerTest.cpp
+  ReproducerInstrumentationTest.cpp
   ScalarTest.cpp
   StateTest.cpp
   StatusTest.cpp

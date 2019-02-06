@@ -24,7 +24,7 @@ struct ioctl_desc {
   const char *name;
 };
 
-const unsigned ioctl_table_max = 1202;
+const unsigned ioctl_table_max = 1200;
 static ioctl_desc ioctl_table[ioctl_table_max];
 static unsigned ioctl_table_size = 0;
 
@@ -297,9 +297,6 @@ static void ioctl_table_fill() {
   _(IRFRAMETTY_GET_DEVICE, WRITE, sizeof(unsigned int));
   _(IRFRAMETTY_GET_DONGLE, WRITE, sizeof(unsigned int));
   _(IRFRAMETTY_SET_DONGLE, READ, sizeof(unsigned int));
-  /* Entries from file: dev/isa/satlinkio.h */
-  _(SATIORESET, NONE, 0);
-  _(SATIOGID, WRITE, struct_satlink_id_sz);
   /* Entries from file: dev/isa/isvio.h */
   _(ISV_CMD, READWRITE, struct_isv_cmd_sz);
   /* Entries from file: dev/isa/wtreg.h */
@@ -648,8 +645,8 @@ static void ioctl_table_fill() {
   _(SPKRTUNE, NONE, 0);
   _(SPKRGETVOL, WRITE, sizeof(unsigned int));
   _(SPKRSETVOL, READ, sizeof(unsigned int));
-  /* Entries from file: dev/nvmm/nvmm_ioctl.h */
 #if 0 /* WIP */
+  /* Entries from file: dev/nvmm/nvmm_ioctl.h */
   _(NVMM_IOC_CAPABILITY, WRITE, struct_nvmm_ioc_capability_sz);
   _(NVMM_IOC_MACHINE_CREATE, READWRITE, struct_nvmm_ioc_machine_create_sz);
   _(NVMM_IOC_MACHINE_DESTROY, READ, struct_nvmm_ioc_machine_destroy_sz);
@@ -658,7 +655,7 @@ static void ioctl_table_fill() {
   _(NVMM_IOC_VCPU_DESTROY, READ, struct_nvmm_ioc_vcpu_destroy_sz);
   _(NVMM_IOC_VCPU_SETSTATE, READ, struct_nvmm_ioc_vcpu_setstate_sz);
   _(NVMM_IOC_VCPU_GETSTATE, READ, struct_nvmm_ioc_vcpu_getstate_sz);
-  _(NVMM_IOC_VCPU_INJECT, READWRITE, struct_nvmm_ioc_vcpu_inject_sz);
+  _(NVMM_IOC_VCPU_INJECT, READ, struct_nvmm_ioc_vcpu_inject_sz);
   _(NVMM_IOC_VCPU_RUN, READWRITE, struct_nvmm_ioc_vcpu_run_sz);
   _(NVMM_IOC_GPA_MAP, READ, struct_nvmm_ioc_gpa_map_sz);
   _(NVMM_IOC_GPA_UNMAP, READ, struct_nvmm_ioc_gpa_unmap_sz);

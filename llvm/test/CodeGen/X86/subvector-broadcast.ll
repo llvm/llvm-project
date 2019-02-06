@@ -1726,8 +1726,7 @@ define <8 x double> @broadcast_v8f64_v2f64_u1u10101(<2 x double>* %vp) {
 ; X32-AVX512-LABEL: broadcast_v8f64_v2f64_u1u10101:
 ; X32-AVX512:       # %bb.0:
 ; X32-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-AVX512-NEXT:    vmovapd (%eax), %xmm0
-; X32-AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; X32-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X32-AVX512-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: broadcast_v8f64_v2f64_u1u10101:
@@ -1745,8 +1744,7 @@ define <8 x double> @broadcast_v8f64_v2f64_u1u10101(<2 x double>* %vp) {
 ;
 ; X64-AVX512-LABEL: broadcast_v8f64_v2f64_u1u10101:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovapd (%rdi), %xmm0
-; X64-AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; X64-AVX512-NEXT:    vbroadcastf32x4 {{.*#+}} zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; X64-AVX512-NEXT:    retq
   %vec = load <2 x double>, <2 x double>* %vp
   %res = shufflevector <2 x double> %vec, <2 x double> undef, <8 x i32> <i32 3, i32 1, i32 undef, i32 1, i32 0, i32 1, i32 0, i32 1>

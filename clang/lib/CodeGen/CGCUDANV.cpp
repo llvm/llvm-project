@@ -616,6 +616,16 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     // Call __cuda_register_globals(GpuBinaryHandle);
     if (RegisterGlobalsFunc)
       CtorBuilder.CreateCall(RegisterGlobalsFunc, RegisterFatbinCall);
+
+    // Call __cudaRegisterFatBinaryEnd(Handle) if this CUDA version needs it.
+    if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
+                           CudaFeature::CUDA_USES_FATBIN_REGISTER_END)) {
+      // void __cudaRegisterFatBinaryEnd(void **);
+      llvm::FunctionCallee RegisterFatbinEndFunc = CGM.CreateRuntimeFunction(
+          llvm::FunctionType::get(VoidTy, VoidPtrPtrTy, false),
+          "__cudaRegisterFatBinaryEnd");
+      CtorBuilder.CreateCall(RegisterFatbinEndFunc, RegisterFatbinCall);
+    }
   } else {
     // Generate a unique module ID.
     SmallString<64> ModuleID;

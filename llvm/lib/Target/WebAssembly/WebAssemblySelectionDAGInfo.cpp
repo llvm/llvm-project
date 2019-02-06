@@ -20,7 +20,7 @@ WebAssemblySelectionDAGInfo::~WebAssemblySelectionDAGInfo() = default; // anchor
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1, SDValue Op2,
-    SDValue Op3, unsigned Align, bool isVolatile, bool AlwaysInline,
+    SDValue Op3, unsigned Align, bool IsVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   if (!DAG.getMachineFunction()
            .getSubtarget<WebAssemblySubtarget>()
@@ -29,4 +29,13 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   return DAG.getNode(WebAssemblyISD::MEMORY_COPY, DL, MVT::Other, Chain, Op1,
                      Op2, Op3);
+}
+
+SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemmove(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1, SDValue Op2,
+    SDValue Op3, unsigned Align, bool IsVolatile,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+  return EmitTargetCodeForMemcpy(DAG, DL, Chain, Op1, Op2, Op3, Align,
+                                 IsVolatile, false, DstPtrInfo,
+                                 SrcPtrInfo);
 }

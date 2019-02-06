@@ -101,7 +101,7 @@ between the threads in the parallel regions.
 Collapsed loop nest counter
 ---------------------------
 
-When using the collapse clause on a loop nest the default behaviour is to
+When using the collapse clause on a loop nest the default behavior is to
 automatically extend the representation of the loop counter to 64 bits for
 the cases where the sizes of the collapsed loops are not known at compile
 time. To prevent this conservative choice and use at most 32 bits,
@@ -124,5 +124,8 @@ Features not supported or with limited support for Cuda devices
 - Automatic translation of math functions in target regions to device-specific
   math functions is not implemented yet.
 
-- Debug information for OpenMP target regions is not supported yet.
+- Debug information for OpenMP target regions is supported, but sometimes it may
+  be required to manually specify the address class of the inspected variables.
+  In some cases the local variables are actually allocated in the global memory,
+  but the debug info may be not aware of it.
 

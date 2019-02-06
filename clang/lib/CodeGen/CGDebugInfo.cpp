@@ -450,8 +450,8 @@ CGDebugInfo::createFile(StringRef FileName,
     for (; CurDirIt != CurDirE && *CurDirIt == *FileIt; ++CurDirIt, ++FileIt)
       llvm::sys::path::append(DirBuf, *CurDirIt);
     if (std::distance(llvm::sys::path::begin(CurDir), CurDirIt) == 1) {
-      // The common prefix only the root; stripping it would cause
-      // LLVM diagnostic locations to be more confusing.
+      // Don't strip the common prefix if it is only the root "/"
+      // since that would make LLVM diagnostic locations confusing.
       Dir = {};
       File = RemappedFile;
     } else {
@@ -4232,6 +4232,14 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
     SmallVector<int64_t, 4> Expr;
     unsigned AddressSpace =
         CGM.getContext().getTargetAddressSpace(D->getType());
+    if (CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) {
+      if (D->hasAttr<CUDASharedAttr>())
+        AddressSpace =
+            CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared);
+      else if (D->hasAttr<CUDAConstantAttr>())
+        AddressSpace =
+            CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant);
+    }
     AppendAddressSpaceXDeref(AddressSpace, Expr);
 
     GVE = DBuilder.createGlobalVariableExpression(

@@ -1498,6 +1498,11 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   if (!match(Op0, m_ShuffleVector(m_Value(X), m_Value(Y), m_Constant(Mask))))
     return nullptr;
 
+  // Be conservative with shuffle transforms. If we can't kill the 1st shuffle,
+  // then combining may result in worse codegen.
+  if (!Op0->hasOneUse())
+    return nullptr;
+
   // We are extracting a subvector from a shuffle. Remove excess elements from
   // the 1st shuffle mask to eliminate the extract.
   //

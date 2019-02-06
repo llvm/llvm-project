@@ -60,6 +60,16 @@ recognized by GCC. Their use can be conditioned using preprocessor macros
       <li><a href="#attr_ns_consumes_self">Attribute 'ns_consumes_self'</a></li>
     </ul>
     </li>
+    <li><a href="#osobject_mem">Libkern Memory Management Annotations</a>
+      <ul>
+        <li><a href="#attr_os_returns_retained">Attribute 'os_returns_retained'</a></li>
+        <li><a href="#attr_os_returns_not_retained">Attribute 'os_returns_not_retained'</a></li>
+        <li><a href="#attr_os_consumed">Attribute 'os_consumed'</a></li>
+        <li><a href="#attr_os_consumes_this">Attribute 'os_consumes_this'</a></li>
+        <li><a href="#os_out_parameters">Out Parameters</a></li>
+      </ul>
+    
+    </li>
   </ul>
 </li>
 <li><a href="#custom_assertions">Custom Assertion Handlers</a>
@@ -482,6 +492,183 @@ a +1 retain count.</p>
 which is functionally equivalent to the combination of <tt>NS_CONSUMES_SELF</tt>
 and <tt>NS_RETURNS_RETAINED</tt> shown above.</p>
 
+<h3 id="osobject_mem">Libkern Memory Management Annotations</h3>
+
+<p><a
+  href="https://developer.apple.com/documentation/kernel/osobject?language=objc">Libkern</a>
+requires developers to inherit all heap allocated objects from <tt>OSObject</tt>
+and to perform manual reference counting.
+The reference counting model is very similar to MRR (manual retain-release) mode in
+<a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html">Objective-C</a>
+or to CoreFoundation reference counting.
+Freshly-allocated objects start with a reference count of 1,
+and calls to <tt>retain</tt> increment it,
+while calls to <tt>release</tt> decrement it.
+The object is deallocated whenever its reference count reaches zero.</p>
+
+<p>Manually incrementing and decrementing reference counts is error-prone:
+over-retains lead to leaks, and over-releases lead to uses-after-free.
+The analyzer can help the programmer to check for unbalanced
+retain/release calls.</p>
+
+<p>The reference count checking is based on the principle of
+<em>locality</em>: it should be possible to establish correctness
+(lack of leaks/uses after free) by looking at each function body,
+and the declarations (not the definitions) of all the functions it interacts
+with.</p>
+
+<p>In order to support such reasoning, it should be possible to <em>summarize</em>
+the behavior of each function, with respect to reference count
+of its returned values and attributes.</p>
+
+<p>By default, the following summaries are assumed:</p>
+<ul>
+  <li>All functions starting with <tt>get</tt> or <tt>Get</tt>,
+    unless they are returning subclasses of <tt>OSIterator</tt>,
+  are assumed to be returning at +0.
+  That is, the caller has no reference
+  count <em>obligations</em> with respect to the reference count of the returned object
+  and should leave it untouched.
+  </li>
+
+  <li>
+    All other functions are assumed to return at +1.
+    That is, the caller has an <em>obligation</em> to release such objects.
+  </li>
+
+  <li>
+    Functions are assumed not to change the reference count of their parameters,
+    including the implicit <tt>this</tt> parameter.
+  </li>
+</ul>
+
+<p>These summaries can be overriden with the following
+<a href="https://clang.llvm.org/docs/AttributeReference.html#os-returns-not-retained">attributes</a>:</p>
+
+<h4 id="attr_os_returns_retained">Attribute 'os_returns_retained'</h4>
+
+<p>The <tt>os_returns_retained</tt> attribute (accessed through the macro <tt>
+LIBKERN_RETURNS_RETAINED</tt>) plays a role identical to <a
+href="#attr_ns_returns_retained">ns_returns_retained</a> for functions
+returning <tt>OSObject</tt> subclasses.
+The attribute indicates that it is a callers responsibility to release the
+returned object.
+</p>
+
+
+<h4 id="attr_os_returns_not_retained">Attribute 'os_returns_not_retained'</h4>
+
+<p>The <tt>os_returns_not_retained</tt> attribute (accessed through the macro <tt>
+LIBKERN_RETURNS_NOT_RETAINED</tt>) plays a role identical to <a
+href="#attr_ns_returns_not_retained">ns_returns_not_retained</a> for functions
+returning <tt>OSObject</tt> subclasses.
+The attribute indicates that the caller should not change the retain
+count of the returned object.
+</p>
+
+<h5>Example</h5>
+
+<pre class="code_example">
+class MyClass {
+  OSObject *f;
+  LIBKERN_RETURNS_NOT_RETAINED OSObject *myFieldGetter();
+}
+ 
+ 
+// Note that the annotation only has to be applied to the function declaration.
+OSObject * MyClass::myFieldGetter() {
+  return f;
+}
+</pre>
+
+<h4 id="attr_os_consumed">Attribute 'os_consumed'</h4>
+
+<p>Similarly to <a href="#attr_ns_consumed">ns_consumed</a> attribute,
+<tt>os_consumed</tt> (accessed through <tt>LIBKERN_CONSUMED</tt>) attribute,
+applied to a parameter,
+indicates that the call to the function <em>consumes</em> the parameter:
+the callee should either release it or store it and release it in the destructor,
+while the caller should assume one is subtracted from the reference count
+after the call.</p>
+
+<pre class="code_example">
+IOReturn addToList(LIBKERN_CONSUMED IOPMinformee *newInformee);
+</pre>
+
+<h4 id="attr_os_consumes_this">Attribute 'os_consumes_this'</h4>
+
+<p>Similarly to <a href="#attr_ns_consumes_self">ns_consumes_self</a>,
+the <tt>os_consumes_self</tt> attribute indicates that the method call
+<em>consumes</em> the implicit <tt>this</tt> argument: the caller
+should assume one was subtracted from the reference count of the object
+after the call, and the callee has on obligation to either
+release the argument, or store it and eventually release it in the
+destructor.</p>
+
+<pre class="code_example">
+void addThisToList(OSArray *givenList) LIBKERN_CONSUMES_THIS;
+</pre>
+
+<h4 id="os_out_parameters">Out Parameters</h4>
+
+A function can also return an object to a caller by a means of an out parameter
+(a pointer-to-OSObject-pointer is passed, and a callee writes a pointer to an
+object into an argument).
+Currently the analyzer does not track unannotated out
+parameters by default, but with annotations we distinguish four separate cases:
+
+<p><b>1. Non-retained out parameters</b>, identified using
+    <tt>LIBKERN_RETURNS_NOT_RETAINED</tt> applied to parameters, e.g.:</p>
+
+<pre class="code_example">
+void getterViaOutParam(LIBKERN_RETURNS_NOT_RETAINED OSObject **obj)
+</pre>
+
+<p>Such functions write a non-retained object into an out parameter, and the
+caller has no further obligations.</p>
+
+<p><b>2. Retained out parameters</b>,
+identified using <tt>LIBKERN_RETURNS_RETAINED</tt>:</p>
+<pre class="code_example">
+void getterViaOutParam(LIBKERN_RETURNS_NOT_RETAINED OSObject **obj)
+</pre>
+<p>
+In such cases a retained object is written into an out parameter, which the caller has then to release in order to avoid a leak. 
+</p>
+
+<p>These two cases are simple - but in practice a functions returning an out-parameter usually also return a return code, and then an out parameter may or may not be written, which conditionally depends on the exit code, e.g.:</p>
+
+<pre class="code_example">
+bool maybeCreateObject(LIBKERN_RETURNS_RETAINED OSObject **obj);
+</pre>
+
+<p>For such functions, the usual semantics is that an object is written into on "success", and not written into on "failure".<p>
+
+<p>For <tt>LIBKERN_RETURNS_RETAINED</tt> we assume the following definition of
+success:</p>
+
+<p>For functions returning <tt>OSReturn</tt> or <tt>IOReturn</tt>
+(any typedef to <tt>kern_return_t</tt>) success is defined as having an output of zero (<tt>kIOReturnSuccess</tt> is zero).
+For all others, success is non-zero (e.g. non-nullptr for pointers)</p>
+
+<p><b>3. Retained out parameters on zero return</b>
+The annotation <tt>LIBKERN_RETURNS_RETAINED_ON_ZERO</tt> states
+that a retained object is written into if and only if the function returns a zero value:</p>
+
+<pre class="code_example">
+bool OSUnserializeXML(void *data, LIBKERN_RETURNS_RETAINED_ON_ZERO OSString **errString);
+</pre>
+
+<p>Then the caller has to release an object if the function has returned zero.</p>
+
+<p><b>4. Retained out parameters on non-zero return</b>
+Similarly, <tt>LIBKERN_RETURNS_RETAINED_ON_NONZERO</tt> specifies that a
+retained object is written into the parameter if and only if the function has
+returned a non-zero value.</p>
+
+<p>Note that for non-retained out parameters conditionals do not matter, as the
+caller has no obligations regardless of whether an object is written into or
+not.</p>
 
 <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 <h2 id="custom_assertions">Custom Assertion Handlers</h2>
@@ -590,4 +777,3 @@ void my_assert_rtn(const char *, const char *, int, const char *) <span class="c
 </div>
 </body>
 </html>
-

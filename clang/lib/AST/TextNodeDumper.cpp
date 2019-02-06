@@ -1377,6 +1377,10 @@ void TextNodeDumper::VisitCapturedDecl(const CapturedDecl *D) {
 
 void TextNodeDumper::VisitImportDecl(const ImportDecl *D) {
   OS << ' ' << D->getImportedModule()->getFullModuleName();
+
+  for (Decl *InitD :
+       D->getASTContext().getModuleInitializers(D->getImportedModule()))
+    dumpDeclRef(InitD, "initializer");
 }
 
 void TextNodeDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {

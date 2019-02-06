@@ -205,7 +205,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
       C.Relocations.push_back(
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
            Offset, Addend, &Sym});
-      return Target->TlsGdRelaxSkip;
+      return Target->getTlsGdRelaxSkip(Type);
     }
     if (Expr == R_TLSLD_HINT)
       return 1;
@@ -278,7 +278,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
            Offset, Addend, &Sym});
     }
-    return Target->TlsGdRelaxSkip;
+    return Target->getTlsGdRelaxSkip(Type);
   }
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally

@@ -91,4 +91,13 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return 0; }
 COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
 COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
 
+#if defined(_WIN32)
+// Put read-write sections in .data.
+#pragma comment(linker, "/MERGE:.lprfc=.data")
+#pragma comment(linker, "/MERGE:.lprfd=.data")
+// Put read-write sections in .rdata.
+#pragma comment(linker, "/MERGE:.lcovmap=.rdata")
+#pragma comment(linker, "/MERGE:.lprfn=.rdata")
+#endif
+
 #endif

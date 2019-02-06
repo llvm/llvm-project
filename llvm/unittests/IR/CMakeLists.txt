@@ -17,7 +17,6 @@ add_llvm_unittest(IRTests
   DebugTypeODRUniquingTest.cpp
   DominatorTreeTest.cpp
   DominatorTreeBatchUpdatesTest.cpp
-  DomTreeUpdaterTest.cpp
   FunctionTest.cpp
   PassBuilderCallbacksTest.cpp
   IRBuilderTest.cpp

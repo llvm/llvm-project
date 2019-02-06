@@ -38,6 +38,7 @@ struct Configuration {
   bool StripAll;
   bool StripDebug;
   bool StackFirst;
+  bool Trace;
   uint32_t GlobalBase;
   uint32_t InitialMemory;
   uint32_t MaxMemory;
