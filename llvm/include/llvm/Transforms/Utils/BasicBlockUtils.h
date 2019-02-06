@@ -39,6 +39,12 @@ class ReturnInst;
 class TargetLibraryInfo;
 class Value;
 
+/// Replace contents of every block in \p BBs with single unreachable
+/// instruction. If \p Updates is specified, collect all necessary DT updates
+/// into this vector.
+void DetatchDeadBlocks(ArrayRef <BasicBlock *> BBs,
+                       SmallVectorImpl<DominatorTree::UpdateType> *Updates);
+
 /// Delete the specified block, which must have no predecessors.
 void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 
@@ -46,7 +52,7 @@ void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 /// no predecessors that are not being deleted themselves. \p BBs must have no
 /// duplicating blocks. If there are loops among this set of blocks, all
 /// relevant loop info updates should be done before this function is called.
-void DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
+void DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs,
                       DomTreeUpdater *DTU = nullptr);
 
 /// We know that BB has one predecessor. If there are any single-entry PHI nodes

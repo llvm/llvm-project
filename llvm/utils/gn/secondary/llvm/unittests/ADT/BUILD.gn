@@ -24,6 +24,7 @@ unittest("ADTTests") {
     "DenseSetTest.cpp",
     "DepthFirstIteratorTest.cpp",
     "EquivalenceClassesTest.cpp",
+    "FallibleIteratorTest.cpp",
     "FoldingSet.cpp",
     "FunctionExtrasTest.cpp",
     "FunctionRefTest.cpp",

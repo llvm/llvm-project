@@ -3231,6 +3231,12 @@ const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const{
   return nullptr;
 }
 
+SDValue TargetLowering::LowerAsmOutputForConstraint(
+    SDValue &Chain, SDValue *Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
+    SelectionDAG &DAG) const {
+  return SDValue();
+}
+
 /// Lower the specified operand into the Ops vector.
 /// If it is invalid, don't add anything to Ops.
 void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,

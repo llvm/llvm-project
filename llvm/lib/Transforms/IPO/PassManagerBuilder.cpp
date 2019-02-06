@@ -518,11 +518,6 @@ void PassManagerBuilder::populateModulePassManager(
 
   MPM.add(createDeadArgEliminationPass()); // Dead argument elimination
 
-  // Split out cold code before inlining. See comment in the new PM
-  // (\ref buildModuleSimplificationPipeline).
-  if ((EnableHotColdSplit || SplitColdCode) && DefaultOrPreLinkPipeline)
-    MPM.add(createHotColdSplittingPass());
-
   addInstructionCombiningPass(MPM); // Clean up after IPCP & DAE
   addExtensionsToPM(EP_Peephole, MPM);
   MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
@@ -534,6 +529,11 @@ void PassManagerBuilder::populateModulePassManager(
   // not run it a second time
   if (DefaultOrPreLinkPipeline && !PrepareForThinLTOUsingPGOSampleProfile)
     addPGOInstrPasses(MPM);
+
+  // Split out cold code before inlining. See comment in the new PM
+  // (\ref buildModuleSimplificationPipeline).
+  if (EnableHotColdSplit && DefaultOrPreLinkPipeline)
+    MPM.add(createHotColdSplittingPass());
 
   // We add a module alias analysis pass here. In part due to bugs in the
   // analysis infrastructure this "works" in that the analysis stays alive

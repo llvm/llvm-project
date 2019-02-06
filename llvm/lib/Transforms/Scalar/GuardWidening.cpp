@@ -357,7 +357,9 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
     const auto &GuardsInCurBB = GuardsInBlock.find(CurBB)->second;
 
     auto I = GuardsInCurBB.begin();
-    auto E = GuardsInCurBB.end();
+    auto E = Instr->getParent() == CurBB
+                 ? std::find(GuardsInCurBB.begin(), GuardsInCurBB.end(), Instr)
+                 : GuardsInCurBB.end();
 
 #ifndef NDEBUG
     {
@@ -374,14 +376,6 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
 #endif
 
     assert((i == (e - 1)) == (Instr->getParent() == CurBB) && "Bad DFS?");
-
-    if (Instr->getParent() == CurBB && isGuard(Instr)) {
-      // Corner case: make sure we're only looking at guards strictly dominating
-      // GuardInst when visiting GuardInst->getParent().
-      auto NewEnd = std::find(I, E, Instr);
-      assert(NewEnd != E && "GuardInst not in its own block?");
-      E = NewEnd;
-    }
 
     for (auto *Candidate : make_range(I, E)) {
       auto Score = computeWideningScore(Instr, Candidate, InvertCondition);

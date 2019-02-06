@@ -161,10 +161,6 @@ enum NodeType : unsigned {
   // Transaction end.  Just the chain operand.  Returns CC value and chain.
   TEND,
 
-  // Create a vector constant by filling byte N of the result with bit
-  // 15-N of the single operand.
-  BYTE_MASK,
-
   // Create a vector constant by replicating an element-sized RISBG-style mask.
   // The first operand specifies the starting set bit and the second operand
   // specifies the ending set bit.  Both operands count from the MSB of the
@@ -514,6 +510,8 @@ public:
   bool supportSwiftError() const override {
     return true;
   }
+
+  static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask);
 
 private:
   const SystemZSubtarget &Subtarget;

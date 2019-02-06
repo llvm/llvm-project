@@ -653,10 +653,12 @@ def FPR128Op : RegisterOperand<FPR128, "printOperand"> {
 // ARMv8.1a atomic CASP register operands
 
 
-def WSeqPairs : RegisterTuples<[sube32, subo32], 
-                               [(rotl GPR32, 0), (rotl GPR32, 1)]>;
-def XSeqPairs : RegisterTuples<[sube64, subo64], 
-                               [(rotl GPR64, 0), (rotl GPR64, 1)]>;
+def WSeqPairs : RegisterTuples<[sube32, subo32],
+                               [(decimate (rotl GPR32, 0), 2),
+                                (decimate (rotl GPR32, 1), 2)]>;
+def XSeqPairs : RegisterTuples<[sube64, subo64],
+                               [(decimate (rotl GPR64, 0), 2),
+                                (decimate (rotl GPR64, 1), 2)]>;
 
 def WSeqPairsClass   : RegisterClass<"AArch64", [untyped], 32, 
                                      (add WSeqPairs)>{

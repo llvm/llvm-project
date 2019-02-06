@@ -923,6 +923,11 @@ namespace llvm {
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
+    /// Handle Lowering flag assembly outputs.
+    SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue *Flag, SDLoc DL,
+                                        const AsmOperandInfo &Constraint,
+                                        SelectionDAG &DAG) const override;
+
     /// Given a physical register constraint
     /// (e.g. {edx}), return the register number and the register class for the
     /// register.  This should only be used for C_Register constraints.  On
