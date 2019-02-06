@@ -175,10 +175,20 @@ GEN_FUNC_OF_THREE_ARG(mad, double, double, double, double)
 // genfloatf exp (genfloatf x)
 GEN_FUNC_OF_ONE_ARG(native_exp, float, float)
 
-// genfloatf fabs (genfloatf x)
+// genfloat fabs (genfloatf x)
 GEN_FUNC_OF_ONE_ARG(fabs, float, float)
 GEN_FUNC_OF_ONE_ARG(fabs, double, double)
 // GEN_FUNC_OF_ONE_ARG(fabs, half, half)
+
+// genfloat floor (genfloat x)
+GEN_FUNC_OF_ONE_ARG(floor, float, float)
+GEN_FUNC_OF_ONE_ARG(floor, double, double)
+// GEN_FUNC_OF_ONE_ARG(floor, half, half)
+
+// genfloat ceil (genfloat x)
+GEN_FUNC_OF_ONE_ARG(ceil, float, float)
+GEN_FUNC_OF_ONE_ARG(ceil, double, double)
+// GEN_FUNC_OF_ONE_ARG(ceil, half, half)
 
 /* --------------- 4.13.4 Integer functions. Device version -----------------*/
 // geninteger max (geninteger x, geninteger y)
@@ -292,6 +302,12 @@ template <typename T> T sqrt(T x) {
 }
 template <typename T> T fabs(T x) {
   return __sycl_std::fabs(x);
+}
+template <typename T> T floor(T x) {
+  return __sycl_std::floor(x);
+}
+template <typename T> T ceil(T x) {
+  return __sycl_std::ceil(x);
 }
 namespace native {
 template <typename T> T exp(T x) {
