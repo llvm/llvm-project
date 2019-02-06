@@ -183,6 +183,11 @@ void Scheduler::printGraphForCommand(CommandPtr Cmd,
   Cmd->printDot(Stream);
 }
 
+Scheduler &Scheduler::getInstance() {
+  static Scheduler Instance;
+  return Instance;
+}
+
 } // namespace simple_scheduler
 } // namespace sycl
 } // namespace cl

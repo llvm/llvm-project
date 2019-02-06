@@ -190,10 +190,7 @@ public:
   //
   void parallelReadOpt();
 
-  static Scheduler &getInstance() {
-    static Scheduler instance;
-    return instance;
-  }
+  static Scheduler &getInstance();
 
   enum DumpOptions { Text = 0, WholeGraph = 1, RunGraph = 2 };
   bool getDumpFlagValue(DumpOptions DumpOption);
