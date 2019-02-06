@@ -1145,7 +1145,7 @@ class Configuration(object):
 
         # Throwing bad_optional_access, bad_variant_access and bad_any_cast is
         # supported starting in macosx10.14.
-        if name == 'macosx' and version in ('10.%s' % v for v in range(7, 14)):
+        if self.get_lit_conf('use_system_cxx_lib') and name == 'macosx' and version in ('10.%s' % v for v in range(7, 14)):
             self.config.available_features.add('dylib-has-no-bad_optional_access')
             self.lit_config.note("throwing bad_optional_access is not supported by the deployment target")
 
