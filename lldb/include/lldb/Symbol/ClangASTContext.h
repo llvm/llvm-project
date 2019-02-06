@@ -1032,7 +1032,7 @@ protected:
     std::unique_ptr<clang::SelectorTable>           m_selector_table_ap;
     std::unique_ptr<clang::Builtin::Context>        m_builtins_ap;
     std::unique_ptr<DWARFASTParserClang>            m_dwarf_ast_parser_ap;
-    // std::unique_ptr<PDBASTParser>                   m_pdb_ast_parser_ap;
+    std::unique_ptr<PDBASTParser>                   m_pdb_ast_parser_ap;
     std::unique_ptr<ClangASTSource>                 m_scratch_ast_source_ap;
     std::unique_ptr<clang::MangleContext>           m_mangle_ctx_ap;
     CompleteTagDeclCallback                         m_callback_tag_decl;
