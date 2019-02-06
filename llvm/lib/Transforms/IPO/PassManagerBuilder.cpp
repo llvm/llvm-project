@@ -532,7 +532,7 @@ void PassManagerBuilder::populateModulePassManager(
 
   // Split out cold code before inlining. See comment in the new PM
   // (\ref buildModuleSimplificationPipeline).
-  if (EnableHotColdSplit && DefaultOrPreLinkPipeline)
+  if ((EnableHotColdSplit || SplitColdCode) && DefaultOrPreLinkPipeline)
     MPM.add(createHotColdSplittingPass());
 
   // We add a module alias analysis pass here. In part due to bugs in the
