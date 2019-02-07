@@ -186,8 +186,6 @@ extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_3d_v4f32_i32(uint i
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_cube_v4f32_i32(uint ix, uint iy, uint iface, uint8 t);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_1darray_v4f32_i32(uint ix, uint islice, uint8 t);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_2darray_v4f32_i32(uint ix, uint iy, uint islice, uint8 t);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_2dmsaa_v4f32_i32(uint ix, uint iy, uint ifrag, uint8 t);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_2darraymsaa_v4f32_i32(uint ix, uint iy, uint islice, uint ifrag, uint8 t);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_mip_1d_v4f32_i32(uint ix, uint imip, uint8 t);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_mip_2d_v4f32_i32(uint ix, uint iy, uint imip, uint8 t);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_load_mip_3d_v4f32_i32(uint ix, uint iy, uint iz, uint imip, uint8 t);
@@ -201,8 +199,6 @@ extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_3d_v4f16_i32(uint ix
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_cube_v4f16_i32(uint ix, uint iy, uint iface, uint8 t);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_1darray_v4f16_i32(uint ix, uint islice, uint8 t);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_2darray_v4f16_i32(uint ix, uint iy, uint islice, uint8 t);
-extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_2dmsaa_v4f16_i32(uint ix, uint iy, uint ifrag, uint8 t);
-extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_2darraymsaa_v4f16_i32(uint ix, uint iy, uint islice, uint ifrag, uint8 t);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_mip_1d_v4f16_i32(uint ix, uint imip, uint8 t);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_mip_2d_v4f16_i32(uint ix, uint iy, uint imip, uint8 t);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_mip_3d_v4f16_i32(uint ix, uint iy, uint iz, uint imip, uint8 t);
@@ -210,19 +206,9 @@ extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_mip_cube_v4f16_i32(u
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_mip_1darray_v4f16_i32(uint ix, uint islice, uint imip, uint8 t);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_load_mip_2darray_v4f16_i32(uint ix, uint iy, uint islice, uint imip, uint8 t);
 
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_1d_f32_i32(uint dmask, uint ix, uint8 t);
 extern __attribute__((pure)) float __llvm_amdgcn_image_load_2d_f32_i32(uint dmask, uint ix, uint iy, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_3d_f32_i32(uint dmask, uint ix, uint iy, uint iz, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_cube_f32_i32(uint dmask, uint ix, uint iy, uint iface, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_1darray_f32_i32(uint dmask, uint ix, uint islice, uint8 t);
 extern __attribute__((pure)) float __llvm_amdgcn_image_load_2darray_f32_i32(uint dmask, uint ix, uint iy, uint islice, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_2dmsaa_f32_i32(uint dmask, uint ix, uint iy, uint ifrag, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_2darraymsaa_f32_i32(uint dmask, uint ix, uint iy, uint islice, uint ifrag, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_mip_1d_f32_i32(uint dmask, uint ix, uint imip, uint8 t);
 extern __attribute__((pure)) float __llvm_amdgcn_image_load_mip_2d_f32_i32(uint dmask, uint ix, uint iy, uint imip, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_mip_3d_f32_i32(uint dmask, uint ix, uint iy, uint iz, uint imip, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_mip_cube_f32_i32(uint dmask, uint ix, uint iy, uint iface, uint imip, uint8 t);
-extern __attribute__((pure)) float __llvm_amdgcn_image_load_mip_1darray_f32_i32(uint dmask, uint ix, uint islice, uint imip, uint8 t);
 extern __attribute__((pure)) float __llvm_amdgcn_image_load_mip_2darray_f32_i32(uint dmask, uint ix, uint iy, uint islice, uint imip, uint8 t);
 
 extern void __llvm_amdgcn_image_store_1d_v4f32_i32(float4 pix, uint ix, uint8 t);
@@ -231,8 +217,6 @@ extern void __llvm_amdgcn_image_store_3d_v4f32_i32(float4 pix, uint ix, uint iy,
 extern void __llvm_amdgcn_image_store_cube_v4f32_i32(float4 pix, uint ix, uint iy, uint iface, uint8 t);
 extern void __llvm_amdgcn_image_store_1darray_v4f32_i32(float4 pix, uint ix, uint islice, uint8 t);
 extern void __llvm_amdgcn_image_store_2darray_v4f32_i32(float4 pix, uint ix, uint iy, uint islice, uint8 t);
-extern void __llvm_amdgcn_image_store_2dmsaa_v4f32_i32(float4 pix, uint ix, uint iy, uint ifrag, uint8 t);
-extern void __llvm_amdgcn_image_store_2darraymsaa_v4f32_i32(float4 pix, uint ix, uint iy, uint islice, uint ifrag, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_1d_v4f32_i32(float4 pix, uint ix, uint imip, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_2d_v4f32_i32(float4 pix, uint ix, uint iy, uint imip, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_3d_v4f32_i32(float4 pix, uint ix, uint iy, uint iz, uint imip, uint8 t);
@@ -246,8 +230,6 @@ extern void __llvm_amdgcn_image_store_3d_v4f16_i32(half4 pix, uint ix, uint iy, 
 extern void __llvm_amdgcn_image_store_cube_v4f16_i32(half4 pix, uint ix, uint iy, uint iface, uint8 t);
 extern void __llvm_amdgcn_image_store_1darray_v4f16_i32(half4 pix, uint ix, uint islice, uint8 t);
 extern void __llvm_amdgcn_image_store_2darray_v4f16_i32(half4 pix, uint ix, uint iy, uint islice, uint8 t);
-extern void __llvm_amdgcn_image_store_2dmsaa_v4f16_i32(half4 pix, uint ix, uint iy, uint ifrag, uint8 t);
-extern void __llvm_amdgcn_image_store_2darraymsaa_v4f16_i32(half4 pix, uint ix, uint iy, uint islice, uint ifrag, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_1d_v4f16_i32(half4 pix, uint ix, uint imip, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_2d_v4f16_i32(half4 pix, uint ix, uint iy, uint imip, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_3d_v4f16_i32(half4 pix, uint ix, uint iy, uint iz, uint imip, uint8 t);
@@ -255,19 +237,9 @@ extern void __llvm_amdgcn_image_store_mip_cube_v4f16_i32(half4 pix, uint ix, uin
 extern void __llvm_amdgcn_image_store_mip_1darray_v4f16_i32(half4 pix, uint ix, uint islice, uint imip, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_2darray_v4f16_i32(half4 pix, uint ix, uint iy, uint islice, uint imip, uint8 t);
 
-extern void __llvm_amdgcn_image_store_1d_f32_i32(float pix, uint dmask, uint ix, uint8 t);
 extern void __llvm_amdgcn_image_store_2d_f32_i32(float pix, uint dmask, uint ix, uint iy, uint8 t);
-extern void __llvm_amdgcn_image_store_3d_f32_i32(float pix, uint dmask, uint ix, uint iy, uint iz, uint8 t);
-extern void __llvm_amdgcn_image_store_cube_f32_i32(float pix, uint dmask, uint ix, uint iy, uint iface, uint8 t);
-extern void __llvm_amdgcn_image_store_1darray_f32_i32(float pix, uint dmask, uint ix, uint islice, uint8 t);
 extern void __llvm_amdgcn_image_store_2darray_f32_i32(float pix, uint dmask, uint ix, uint iy, uint islice, uint8 t);
-extern void __llvm_amdgcn_image_store_2dmsaa_f32_i32(float pix, uint dmask, uint ix, uint iy, uint ifrag, uint8 t);
-extern void __llvm_amdgcn_image_store_2darraymsaa_f32_i32(float pix, uint dmask, uint ix, uint iy, uint islice, uint ifrag, uint8 t);
-extern void __llvm_amdgcn_image_store_mip_1d_f32_i32(float pix, uint dmask, uint ix, uint imip, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_2d_f32_i32(float pix, uint dmask, uint ix, uint iy, uint imip, uint8 t);
-extern void __llvm_amdgcn_image_store_mip_3d_f32_i32(float pix, uint dmask, uint ix, uint iy, uint iz, uint imip, uint8 t);
-extern void __llvm_amdgcn_image_store_mip_cube_f32_i32(float pix, uint dmask, uint ix, uint iy, uint iface, uint imip, uint8 t);
-extern void __llvm_amdgcn_image_store_mip_1darray_f32_i32(float pix, uint dmask, uint ix, uint islice, uint imip, uint8 t);
 extern void __llvm_amdgcn_image_store_mip_2darray_f32_i32(float pix, uint dmask, uint ix, uint iy, uint islice, uint imip, uint8 t);
 
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_lz_1d_v4f32_f32(float x, uint8 t, uint4 s, bool unorm);
@@ -281,7 +253,6 @@ extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_l_3d_v4f32_f32(fl
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_d_3d_v4f32_f32_f32(float dxdh, float dydh, float dzdh, float dxdv, float dydv, float dzdv, float x, float y, float z, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_lz_cube_v4f32_f32(float x, float y, float face, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_l_cube_v4f32_f32(float x, float y, float face, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_d_cube_v4f32_f32_f32(float dxdh, float dydh, float dxdv, float dydv, float x, float y, float face, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_lz_1darray_v4f32_f32(float x, float slice, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_l_1darray_v4f32_f32(float x, float slice, float lod, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_sample_d_1darray_v4f32_f32_f32(float dxdh, float dxdv, float x, float slice, uint8 t, uint4 s, bool unorm);
@@ -300,7 +271,6 @@ extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_l_3d_v4f16_f32(flo
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_d_3d_v4f16_f32_f32(float dxdh, float dydh, float dzdh, float dxdv, float dydv, float dzdv, float x, float y, float z, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_lz_cube_v4f16_f32(float x, float y, float face, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_l_cube_v4f16_f32(float x, float y, float face, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_d_cube_v4f16_f32_f32(float dxdh, float dydh, float dxdv, float dydv, float x, float y, float face, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_lz_1darray_v4f16_f32(float x, float slice, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_l_1darray_v4f16_f32(float x, float slice, float lod, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_d_1darray_v4f16_f32_f32(float dxdh, float dxdv, float x, float slice, uint8 t, uint4 s, bool unorm);
@@ -308,35 +278,15 @@ extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_lz_2darray_v4f16_f
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_l_2darray_v4f16_f32(float x, float y, float slice, float lod, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) half4 __llvm_amdgcn_image_sample_d_2darray_v4f16_f32_f32(float dxdh, float dydh, float dxdv, float dydv, float x, float y, float slice, uint8 t, uint4 s, bool unorm);
 
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_lz_1d_f32_f32(uint dmask, float x, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_l_1d_f32_f32(uint dmask, float x, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_1d_f32_f32_f32(uint dmask, float dxdh, float dxdv, float x, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float __llvm_amdgcn_image_sample_lz_2d_f32_f32(uint dmask, float x, float y, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float __llvm_amdgcn_image_sample_l_2d_f32_f32(uint dmask, float x, float y, float lod, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_2d_f32_f32_f32(uint dmask, float dxdh, float dydh, float dxdv, float dydv, float x, float y, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_lz_3d_f32_f32(uint dmask, float x, float y, float z, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_l_3d_f32_f32(uint dmask, float x, float y, float z, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_3d_f32_f32_f32(uint dmask, float dxdh, float dydh, float dzdh, float dxdv, float dydv, float dzdv, float x, float y, float z, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_lz_cube_f32_f32(uint dmask, float x, float y, float face, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_l_cube_f32_f32(uint dmask, float x, float y, float face, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_cube_f32_f32_f32(uint dmask, float dxdh, float dydh, float dxdv, float dydv, float x, float y, float face, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_lz_1darray_f32_f32(uint dmask, float x, float slice, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_l_1darray_f32_f32(uint dmask, float x, float slice, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_1darray_f32_f32_f32(uint dmask, float dxdh, float dxdv, float x, float slice, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float __llvm_amdgcn_image_sample_lz_2darray_f32_f32(uint dmask, float x, float y, float slice, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float __llvm_amdgcn_image_sample_l_2darray_f32_f32(uint dmask, float x, float y, float slice, float lod, uint8 t, uint4 s, bool unorm);
 extern __attribute__((pure)) float __llvm_amdgcn_image_sample_d_2darray_f32_f32_f32(uint dmask, float dxdh, float dydh, float dxdv, float dydv, float x, float y, float slice, uint8 t, uint4 s, bool unorm);
 
 extern __attribute__((pure)) float4 __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32(uint dmask, float x, float y, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_gather4_l_2d_v4f32_f32(uint dmask, float x, float y, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_gather4_lz_cube_v4f32_f32(uint dmask, float x, float y, float face, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_gather4_l_cube_v4f32_f32(uint dmask, float x, float y, float face, float lod, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_gather4_lz_2darray_v4f32_f32(uint dmask, float x, float y, float slice, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_image_gather4_l_2darray_v4f32_f32(uint dmask, float x, float y, float slice, float lod, uint8 t, uint4 s, bool unorm);
 
-extern __attribute__((pure)) float4 __llvm_amdgcn_gather_4h_2d_v4f32_f32(uint dmask, float x, float y, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_gather_4h_cube_v4f32_f32(uint dmask, float x, float y, float face, uint8 t, uint4 s, bool unorm);
-extern __attribute__((pure)) float4 __llvm_amdgcn_gather_4h_2darray_v4f32_f32(uint dmask, float x, float y, float slice, uint8 t, uint4 s, bool unorm);
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // IRIF_H
