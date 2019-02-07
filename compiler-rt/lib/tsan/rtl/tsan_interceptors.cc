@@ -1050,6 +1050,11 @@ TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
   return res;
 }
 
+TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_exit, retval);
+  REAL(pthread_exit)(retval);
+}
+
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
   SCOPED_TSAN_INTERCEPTOR(pthread_tryjoin_np, th, ret);
@@ -2203,19 +2208,6 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 // Causes interceptor recursion (getaddrinfo() and fopen())
 #undef SANITIZER_INTERCEPT_GETADDRINFO
-// There interceptors do not seem to be strictly necessary for tsan.
-// But we see cases where the interceptors consume 70% of execution time.
-// Memory blocks passed to fgetgrent_r are "written to" by tsan several times.
-// First, there is some recursion (getgrnam_r calls fgetgrent_r), and each
-// function "writes to" the buffer. Then, the same memory is "written to"
-// twice, first as buf and then as pwbufp (both of them refer to the same
-// addresses).
-#undef SANITIZER_INTERCEPT_GETPWENT
-#undef SANITIZER_INTERCEPT_GETPWENT_R
-#undef SANITIZER_INTERCEPT_FGETPWENT
-#undef SANITIZER_INTERCEPT_FGETPWENT_R
-#undef SANITIZER_INTERCEPT_GETPWNAM_AND_FRIENDS
-#undef SANITIZER_INTERCEPT_GETPWNAM_R_AND_FRIENDS
 // We define our own.
 #if SANITIZER_INTERCEPT_TLS_GET_ADDR
 #define NEED_TLS_GET_ADDR
@@ -2677,6 +2669,7 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_create);
   TSAN_INTERCEPT(pthread_join);
   TSAN_INTERCEPT(pthread_detach);
+  TSAN_INTERCEPT(pthread_exit);
   #if SANITIZER_LINUX
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
