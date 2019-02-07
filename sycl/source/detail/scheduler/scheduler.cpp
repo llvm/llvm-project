@@ -17,6 +17,7 @@
 #include <cassert>
 #include <fstream>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace cl {
@@ -40,21 +41,81 @@ void Node::addInteropArg(shared_ptr_class<void> Ptr, size_t Size,
   m_InteropArgs.emplace_back(Ptr, Size, ArgIndex, BufReq);
 }
 
-// Waits for the event passed.
-void Scheduler::waitForEvent(EventImplPtr Event) {
+CommandPtr Scheduler::getCmdForEvent(EventImplPtr Event) {
+  // TODO: Currently, this method searches for the command in
+  // m_BuffersEvolution, which seems expensive, especially
+  // taking into account that this operation may be called
+  // from another loop. Need to optimize this method, for example,
+  // by adding a direct link from 'event' to the 'command' it
+  // is associated with.
   for (auto &BufEvolution : m_BuffersEvolution) {
     for (auto &Cmd : BufEvolution.second) {
       if (detail::getSyclObjImpl(Cmd->getEvent()) == Event) {
-        enqueueAndWaitForCommand(Cmd);
-        return;
+        return Cmd;
       }
     }
   }
+  return nullptr;
+}
+
+// Waits for the event passed.
+void Scheduler::waitForEvent(EventImplPtr Event) {
+  auto Cmd = getCmdForEvent(Event);
+  if (Cmd) {
+    enqueueAndWaitForCommand(Cmd);
+    return;
+  }
+
   for (auto &Evnt : m_EventsWithoutRequirements) {
     if (Evnt == Event) {
       Evnt->waitInternal();
       return;
     }
+  }
+}
+
+// Calls async handler for the given command Cmd and those other
+// commands that Cmd depends on.
+void Scheduler::throwForCmdRecursive(std::shared_ptr<Command> Cmd) {
+  if (Cmd == nullptr) {
+    return;
+  }
+
+  auto QImpl = Cmd->getQueue();
+  QImpl->throw_asynchronous();
+
+  std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
+    Cmd->getDependencies();
+  for (auto D : Deps) {
+    throwForCmdRecursive(D.first);
+  }
+}
+
+// Calls async handler for the given event Event and those other
+// events that Event depends on.
+void Scheduler::throwForEventRecursive(EventImplPtr Event) {
+  auto Cmd = getCmdForEvent(Event);
+  if (Cmd) {
+    throwForCmdRecursive(Cmd);
+  }
+}
+
+void Scheduler::getDepEventsRecursive(
+    std::unordered_set<cl::sycl::event> &EventsSet,
+    EventImplPtr Event) {
+  auto Cmd = getCmdForEvent(Event);
+  if (Cmd == nullptr) {
+    return;
+  }
+
+  std::vector<std::pair<std::shared_ptr<Command>, BufferReqPtr>> Deps =
+    Cmd->getDependencies();
+  for (auto D : Deps) {
+    auto DepEvent = D.first->getEvent();
+    EventsSet.insert(DepEvent);
+
+    auto DepEventImpl = cl::sycl::detail::getSyclObjImpl(DepEvent);
+    getDepEventsRecursive(EventsSet, DepEventImpl);
   }
 }
 

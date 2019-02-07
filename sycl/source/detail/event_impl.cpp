@@ -72,6 +72,14 @@ void event_impl::wait(
     simple_scheduler::Scheduler::getInstance().waitForEvent(Self);
 }
 
+
+void event_impl::wait_and_throw(
+    std::shared_ptr<cl::sycl::detail::event_impl> Self) {
+  wait(Self);
+  cl::sycl::simple_scheduler::Scheduler::getInstance().throwForEventRecursive(
+    Self);
+}
+
 template <>
 cl_ulong
 event_impl::get_profiling_info<info::event_profiling::command_submit>() const {

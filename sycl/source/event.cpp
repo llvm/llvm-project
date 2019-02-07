@@ -11,9 +11,12 @@
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/event_impl.hpp>
 #include <CL/sycl/event.hpp>
+#include <CL/sycl/detail/scheduler/scheduler.h>
+
 #include <CL/sycl/stl.hpp>
 
 #include <memory>
+#include <unordered_set>
 
 namespace cl {
 namespace sycl {
@@ -31,7 +34,30 @@ cl_event event::get() { return impl->get(); }
 
 bool event::is_host() const { return impl->is_host(); }
 
-void event::wait() const { impl->wait(impl); }
+void event::wait() { impl->wait(impl); }
+
+void event::wait(const vector_class<event> &EventList) {
+  for (auto E : EventList) {
+    E.wait();
+  }
+}
+
+void event::wait_and_throw() { impl->wait_and_throw(impl); }
+
+void event::wait_and_throw(const vector_class<event> &EventList) {
+  for (auto E : EventList) {
+    E.wait_and_throw();
+  }
+}
+
+vector_class<event> event::get_wait_list() {
+  std::unordered_set<event> DepEventsSet;
+  cl::sycl::simple_scheduler::Scheduler::getInstance().getDepEventsRecursive(
+    DepEventsSet, impl);
+
+  vector_class<event> DepEventsVec(DepEventsSet.begin(), DepEventsSet.end());
+  return DepEventsVec;
+}
 
 event::event(std::shared_ptr<detail::event_impl> event_impl)
     : impl(event_impl) {}

@@ -33,6 +33,8 @@ public:
   // Self is needed in order to pass shared_ptr to Scheduler.
   void wait(std::shared_ptr<cl::sycl::detail::event_impl> Self) const;
 
+  void wait_and_throw(std::shared_ptr<cl::sycl::detail::event_impl> Self);
+
   template <info::event_profiling param>
   typename info::param_traits<info::event_profiling, param>::return_type
   get_profiling_info() const;
