@@ -75,486 +75,77 @@ public:
   }
 
   // OP is: +, -, *, /, %, <<, >>, &, |, ^, &&, ||, <, >, <=, >=
-  id<dimensions> operator+(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] + rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator-(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] - rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator*(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] * rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator/(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] / rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator%(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] % rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator<<(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] << rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator>>(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] >> rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator&(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] & rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator|(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] | rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator^(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] ^ rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator&&(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] && rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator||(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] || rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator<(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] < rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator>(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] > rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator<=(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] <= rhs.common_array[i];
-    }
-    return result;
-  }
-  id<dimensions> operator>=(const id<dimensions> &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] >= rhs.common_array[i];
-    }
-    return result;
-  }
+  #define __SYCL_GEN_OPT(op)                                                   \
+    id<dimensions> operator op(const id<dimensions> &rhs) const {              \
+      id<dimensions> result;                                                   \
+      for (int i = 0; i < dimensions; ++i) {                                   \
+        result.common_array[i] = this->common_array[i] op rhs.common_array[i]; \
+      }                                                                        \
+      return result;                                                           \
+    }                                                                          \
+    id<dimensions> operator op(const size_t &rhs) const {                      \
+      id<dimensions> result;                                                   \
+      for (int i = 0; i < dimensions; ++i) {                                   \
+        result.common_array[i] = this->common_array[i] op rhs;                 \
+      }                                                                        \
+      return result;                                                           \
+    }                                                                          \
+    friend id<dimensions> operator op(const size_t &lhs,                       \
+                                      const id<dimensions> &rhs) {             \
+      id<dimensions> result;                                                   \
+      for (int i = 0; i < dimensions; ++i) {                                   \
+        result.common_array[i] = lhs op rhs.common_array[i];                   \
+      }                                                                        \
+      return result;                                                           \
+    }                                                                          \
 
-  // OP is: +, -, *, /, %, <<, >>, &, |, ^, &&, ||, <, >, <=, >=
-  id<dimensions> operator+(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] + rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator-(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] - rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator*(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] * rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator/(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] / rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator%(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] % rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator<<(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] << rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator>>(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] >> rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator&(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] & rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator|(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] | rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator^(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] ^ rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator&&(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] && rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator||(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] || rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator<(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] < rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator>(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] > rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator<=(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] <= rhs;
-    }
-    return result;
-  }
-  id<dimensions> operator>=(const size_t &rhs) const {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = this->common_array[i] >= rhs;
-    }
-    return result;
-  }
+
+  __SYCL_GEN_OPT(+)
+  __SYCL_GEN_OPT(-)
+  __SYCL_GEN_OPT(*)
+  __SYCL_GEN_OPT(/)
+  __SYCL_GEN_OPT(%)
+  __SYCL_GEN_OPT(<<)
+  __SYCL_GEN_OPT(>>)
+  __SYCL_GEN_OPT(&)
+  __SYCL_GEN_OPT(|)
+  __SYCL_GEN_OPT(^)
+  __SYCL_GEN_OPT(&&)
+  __SYCL_GEN_OPT(||)
+  __SYCL_GEN_OPT(<)
+  __SYCL_GEN_OPT(>)
+  __SYCL_GEN_OPT(<=)
+  __SYCL_GEN_OPT(>=)
+
+  #undef __SYCL_GEN_OPT
 
   // OP is: +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
-  id<dimensions> &operator+=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] += rhs[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator-=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] -= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator*=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] *= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator/=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] /= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator%=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] %= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator<<=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] <<= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator>>=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] >>= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator&=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] &= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator|=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] |= rhs.common_array[i];
-    }
-    return *this;
-  }
-  id<dimensions> &operator^=(const id<dimensions> &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] ^= rhs.common_array[i];
-    }
-    return *this;
-  }
+  #define __SYCL_GEN_OPT(op)                                                   \
+    id<dimensions> &operator op(const id<dimensions> &rhs) {                   \
+      for (int i = 0; i < dimensions; ++i) {                                   \
+        this->common_array[i] op rhs.common_array[i];                          \
+      }                                                                        \
+      return *this;                                                            \
+    }                                                                          \
+    id<dimensions> &operator op(const size_t &rhs) {                           \
+      for (int i = 0; i < dimensions; ++i) {                                   \
+        this->common_array[i] op rhs;                                          \
+      }                                                                        \
+      return *this;                                                            \
+    }                                                                          \
 
-  // OP is: +=, -=, *=, /=, %=, <<=, >>=, &=, |=, ^=
-  id<dimensions> &operator+=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] += rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator-=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] -= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator*=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] *= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator/=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] /= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator%=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] %= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator<<=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] <<= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator>>=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] >>= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator&=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] &= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator|=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] |= rhs;
-    }
-    return *this;
-  }
-  id<dimensions> &operator^=(const size_t &rhs) {
-    for (int i = 0; i < dimensions; ++i) {
-      this->common_array[i] ^= rhs;
-    }
-    return *this;
-  }
+  __SYCL_GEN_OPT(+=)
+  __SYCL_GEN_OPT(-=)
+  __SYCL_GEN_OPT(*=)
+  __SYCL_GEN_OPT(/=)
+  __SYCL_GEN_OPT(%=)
+  __SYCL_GEN_OPT(<<=)
+  __SYCL_GEN_OPT(>>=)
+  __SYCL_GEN_OPT(&=)
+  __SYCL_GEN_OPT(|=)
+  __SYCL_GEN_OPT(^=)
 
-  // OP is: +, -, *, /, %, <<, >>, &, |, ^, <, >, <=, >=, &&, ||
-  friend id<dimensions> operator+(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs + rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator-(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs - rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator*(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs * rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator/(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs / rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator%(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs % rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator<<(const size_t &lhs,
-                                   const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs << rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator>>(const size_t &lhs,
-                                   const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs >> rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator&(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs & rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator|(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs | rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator^(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs ^ rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator<(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs < rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator>(const size_t &lhs,
-                                  const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs > rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator<=(const size_t &lhs,
-                                   const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs <= rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator>=(const size_t &lhs,
-                                   const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs >= rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator&&(const size_t &lhs,
-                                   const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs && rhs.common_array[i];
-    }
-    return result;
-  }
-  friend id<dimensions> operator||(const size_t &lhs,
-                                   const id<dimensions> &rhs) {
-    id<dimensions> result;
-    for (int i = 0; i < dimensions; ++i) {
-      result.common_array[i] = lhs || rhs.common_array[i];
-    }
-    return result;
-  }
+  #undef __SYCL_GEN_OPT
 };
 
 namespace detail {
