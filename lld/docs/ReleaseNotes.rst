@@ -61,7 +61,8 @@ COFF Improvements
 
 * lld now can link against import libraries produced by GNU tools.
 
-* lld can create thunks for ARM, to allow linking images over 16 MB.
+* lld can create thunks for ARM and ARM64, to allow linking larger images
+  (over 16 MB for ARM and over 128 MB for ARM64)
 
 * Several speed and memory usage improvements.
 
