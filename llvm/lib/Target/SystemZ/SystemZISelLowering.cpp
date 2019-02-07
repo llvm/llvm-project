@@ -249,6 +249,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // We have native support for a 64-bit CTLZ, via FLOGR.
   setOperationAction(ISD::CTLZ, MVT::i32, Promote);
+  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ, MVT::i64, Legal);
 
   // Give LowerOperation the chance to replace 64-bit ORs with subregs.
@@ -2510,9 +2511,8 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
     break;
   }
   if (Invert) {
-    SDValue Mask = DAG.getNode(SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-                               DAG.getConstant(65535, DL, MVT::i32));
-    Mask = DAG.getNode(ISD::BITCAST, DL, VT, Mask);
+    SDValue Mask =
+      DAG.getSplatBuildVector(VT, DL, DAG.getConstant(-1, DL, MVT::i64));
     Cmp = DAG.getNode(ISD::XOR, DL, VT, Cmp, Mask);
   }
   return Cmp;
@@ -3330,14 +3330,14 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
       break;
     }
     case 32: {
-      SDValue Tmp = DAG.getNode(SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-                                DAG.getConstant(0, DL, MVT::i32));
+      SDValue Tmp = DAG.getSplatBuildVector(MVT::v16i8, DL,
+                                            DAG.getConstant(0, DL, MVT::i32));
       Op = DAG.getNode(SystemZISD::VSUM, DL, VT, Op, Tmp);
       break;
     }
     case 64: {
-      SDValue Tmp = DAG.getNode(SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-                                DAG.getConstant(0, DL, MVT::i32));
+      SDValue Tmp = DAG.getSplatBuildVector(MVT::v16i8, DL,
+                                            DAG.getConstant(0, DL, MVT::i32));
       Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Tmp);
       Op = DAG.getNode(SystemZISD::VSUM, DL, VT, Op, Tmp);
       break;
@@ -4259,10 +4259,10 @@ static SDValue joinDwords(SelectionDAG &DAG, const SDLoc &DL, SDValue Op0,
   return DAG.getNode(SystemZISD::JOIN_DWORDS, DL, MVT::v2i64, Op0, Op1);
 }
 
-// Try to represent constant BUILD_VECTOR node BVN using a
-// SystemZISD::BYTE_MASK-style mask.  Store the mask value in Mask
-// on success.
-static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask) {
+// Try to represent constant BUILD_VECTOR node BVN using a BYTE MASK style
+// mask.  Store the mask value in Mask on success.
+bool SystemZTargetLowering::
+tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask) {
   EVT ElemVT = BVN->getValueType(0).getVectorElementType();
   unsigned BytesPerElement = ElemVT.getStoreSize();
   for (unsigned I = 0, E = BVN->getNumOperands(); I != E; ++I) {
@@ -4541,13 +4541,11 @@ SDValue SystemZTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     // Try using VECTOR GENERATE BYTE MASK.  This is the architecturally-
     // preferred way of creating all-zero and all-one vectors so give it
     // priority over other methods below.
-    uint64_t Mask = 0;
-    if (tryBuildVectorByteMask(BVN, Mask)) {
-      SDValue Op = DAG.getNode(
-          SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-          DAG.getConstant(Mask, DL, MVT::i32, false, true /*isOpaque*/));
-      return DAG.getNode(ISD::BITCAST, DL, VT, Op);
-    }
+    uint64_t Mask;
+    if (ISD::isBuildVectorAllZeros(Op.getNode()) ||
+        ISD::isBuildVectorAllOnes(Op.getNode()) ||
+        (VT.isInteger() && tryBuildVectorByteMask(BVN, Mask)))
+      return Op;
 
     // Try using some form of replication.
     APInt SplatBits, SplatUndef;
@@ -5027,7 +5025,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);
     OPCODE(TEND);
-    OPCODE(BYTE_MASK);
     OPCODE(ROTATE_MASK);
     OPCODE(REPLICATE);
     OPCODE(JOIN_DWORDS);
@@ -5339,8 +5336,7 @@ SDValue SystemZTargetLowering::combineMERGE(
   SDValue Op1 = N->getOperand(1);
   if (Op0.getOpcode() == ISD::BITCAST)
     Op0 = Op0.getOperand(0);
-  if (Op0.getOpcode() == SystemZISD::BYTE_MASK &&
-      cast<ConstantSDNode>(Op0.getOperand(0))->getZExtValue() == 0) {
+  if (ISD::isBuildVectorAllZeros(Op0.getNode())) {
     // (z_merge_* 0, 0) -> 0.  This is mostly useful for using VLLEZF
     // for v4f32.
     if (Op1 == N->getOperand(0))

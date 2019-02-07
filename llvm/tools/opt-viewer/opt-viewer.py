@@ -239,7 +239,7 @@ class IndexRenderer:
 </html>''', file=self.stream)
 
 
-def _render_file(source_dir, output_dir, ctx, no_highlight, entry):
+def _render_file(source_dir, output_dir, ctx, no_highlight, entry, filter_):
     global context
     context = ctx
     filename, remarks = entry
@@ -344,6 +344,11 @@ def main():
         '--demangler',
         help='Set the demangler to be used (defaults to %s)' % optrecord.Remark.default_demangler)
 
+    parser.add_argument(
+        '--filter',
+        default='',
+        help='Only display remarks from passes matching filter expression')
+
     # Do not make this a global variable.  Values needed to be propagated through
     # to individual classes and functions to be portable with multiprocessing across
     # Windows and non-Windows.
@@ -359,7 +364,7 @@ def main():
         sys.exit(1)
 
     all_remarks, file_remarks, should_display_hotness = \
-        optrecord.gather_results(files, args.jobs, print_progress)
+        optrecord.gather_results(files, args.jobs, print_progress, args.filter)
 
     map_remarks(all_remarks)
 

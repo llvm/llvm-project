@@ -997,6 +997,9 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
       Asm = "udf #251";
       Constraints = "{r0}";
       break;
+    case llvm::Triple::aarch64:
+      Asm = "brk #0xF003";
+      Constraints = "{w0}";
     }
     llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, {Int32Ty}, false);
     llvm::InlineAsm *IA =

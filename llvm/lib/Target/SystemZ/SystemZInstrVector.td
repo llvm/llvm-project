@@ -60,7 +60,7 @@ let Predicates = [FeatureVector] in {
     // Generate byte mask.
     def VZERO : InherentVRIa<"vzero", 0xE744, 0>;
     def VONE  : InherentVRIa<"vone", 0xE744, 0xffff>;
-    def VGBM  : UnaryVRIa<"vgbm", 0xE744, z_byte_mask, v128b, imm32zx16>;
+    def VGBM  : UnaryVRIa<"vgbm", 0xE744, null_frag, v128b, imm32zx16>;
 
     // Generate mask.
     def VGM  : BinaryVRIbGeneric<"vgm", 0xE746>;

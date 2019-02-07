@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetMachine.h"
+#include "SystemZISelLowering.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/Debug.h"
@@ -1522,6 +1523,20 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     } else if (ElemBitSize == 64) {
       if (tryGather(Node, SystemZ::VGEG))
         return;
+    }
+    break;
+  }
+
+  case ISD::BUILD_VECTOR: {
+    auto *BVN = cast<BuildVectorSDNode>(Node);
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    uint64_t Mask = 0;
+    if (SystemZTargetLowering::tryBuildVectorByteMask(BVN, Mask)) {
+      SDNode *Res = CurDAG->getMachineNode(SystemZ::VGBM, DL, VT,
+                                CurDAG->getTargetConstant(Mask, DL, MVT::i32));
+      ReplaceNode(Node, Res);
+      return;
     }
     break;
   }

@@ -14,19 +14,22 @@ define i8* @func() {
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: func
 ; CHECK-NEXT:     Type: FUNCTION (0x0)
-; CHECK-NEXT:     Flags: 0x0
+; CHECK-NEXT:     Flags [ (0x0)
+; CHECK-NEXT:     ]
 ; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: foo
 ; CHECK-NEXT:     Type: FUNCTION (0x0)
-; CHECK-NEXT:     Flags: 0x0
+; CHECK-NEXT:     Flags [ (0x0)
+; CHECK-NEXT:     ]
 ; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Name: bar
 ; CHECK-NEXT:     Type: FUNCTION (0x0)
-; CHECK-NEXT:     Flags: 0x0
+; CHECK-NEXT:     Flags [ (0x0)
+; CHECK-NEXT:     ]
 ; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]

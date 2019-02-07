@@ -50,6 +50,7 @@ add_lldb_library(liblldb SHARED
   SBProcessInfo.cpp
   SBQueue.cpp
   SBQueueItem.cpp
+  SBReproducer.cpp
   SBSection.cpp
   SBSourceManager.cpp
   SBStream.cpp

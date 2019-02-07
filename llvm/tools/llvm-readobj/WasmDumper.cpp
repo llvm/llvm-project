@@ -40,6 +40,19 @@ static const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #undef ENUM_ENTRY
 };
 
+static const EnumEntry<unsigned> WasmSymbolFlags[] = {
+#define ENUM_ENTRY(X)                                                          \
+  { #X, wasm::WASM_SYMBOL_##X }
+  ENUM_ENTRY(BINDING_GLOBAL),
+  ENUM_ENTRY(BINDING_WEAK),
+  ENUM_ENTRY(BINDING_LOCAL),
+  ENUM_ENTRY(VISIBILITY_DEFAULT),
+  ENUM_ENTRY(VISIBILITY_HIDDEN),
+  ENUM_ENTRY(UNDEFINED),
+  ENUM_ENTRY(EXPORTED),
+#undef ENUM_ENTRY
+};
+
 class WasmDumper : public ObjDumper {
 public:
   WasmDumper(const WasmObjectFile *Obj, ScopedPrinter &Writer)
@@ -209,7 +222,8 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   WasmSymbol Symbol = Obj->getWasmSymbol(Sym.getRawDataRefImpl());
   W.printString("Name", Symbol.Info.Name);
   W.printEnum("Type", Symbol.Info.Kind, makeArrayRef(WasmSymbolTypes));
-  W.printHex("Flags", Symbol.Info.Flags);
+  W.printFlags("Flags", Symbol.Info.Flags, makeArrayRef(WasmSymbolFlags));
+
   if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)
     W.printString("Module", Symbol.Info.Module);
   if (Symbol.Info.Kind != wasm::WASM_SYMBOL_TYPE_DATA) {
