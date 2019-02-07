@@ -123,14 +123,14 @@ size_t GDBRemoteCommunication::SendNack() {
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
-    StreamString packet(0, 4, eByteOrderBig);
-    packet.PutChar('$');
-    packet.Write(payload.data(), payload.size());
-    packet.PutChar('#');
-    packet.PutHex8(CalculcateChecksum(payload));
-    std::string packet_str = packet.GetString();
+  StreamString packet(0, 4, eByteOrderBig);
+  packet.PutChar('$');
+  packet.Write(payload.data(), payload.size());
+  packet.PutChar('#');
+  packet.PutHex8(CalculcateChecksum(payload));
+  std::string packet_str = packet.GetString();
 
-    return SendRawPacketNoLock(packet_str);
+  return SendRawPacketNoLock(packet_str);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -949,16 +949,18 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   char debugserver_path[PATH_MAX];
   FileSpec &debugserver_file_spec = launch_info.GetExecutableFile();
 
+  Environment host_env = Host::GetEnvironment();
+
   // Always check to see if we have an environment override for the path to the
   // debugserver to use and use it if we do.
-  const char *env_debugserver_path = getenv("LLDB_DEBUGSERVER_PATH");
-  if (env_debugserver_path) {
+  std::string env_debugserver_path = host_env.lookup("LLDB_DEBUGSERVER_PATH");
+  if (!env_debugserver_path.empty()) {
     debugserver_file_spec.SetFile(env_debugserver_path,
                                   FileSpec::Style::native);
     if (log)
       log->Printf("GDBRemoteCommunication::%s() gdb-remote stub exe path set "
                   "from environment variable: %s",
-                  __FUNCTION__, env_debugserver_path);
+                  __FUNCTION__, env_debugserver_path.c_str());
   } else
     debugserver_file_spec = g_debugserver_file_spec;
   bool debugserver_exists =
@@ -1001,7 +1003,6 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
     Args &debugserver_args = launch_info.GetArguments();
     debugserver_args.Clear();
-    char arg_cstr[PATH_MAX];
 
     // Start args with "debugserver /file/path -r --"
     debugserver_args.AppendArgument(llvm::StringRef(debugserver_path));
@@ -1111,29 +1112,27 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
         }
       }
     }
-
-    const char *env_debugserver_log_file = getenv("LLDB_DEBUGSERVER_LOG_FILE");
-    if (env_debugserver_log_file) {
-      ::snprintf(arg_cstr, sizeof(arg_cstr), "--log-file=%s",
-                 env_debugserver_log_file);
-      debugserver_args.AppendArgument(llvm::StringRef(arg_cstr));
+    std::string env_debugserver_log_file =
+        host_env.lookup("LLDB_DEBUGSERVER_LOG_FILE");
+    if (!env_debugserver_log_file.empty()) {
+      debugserver_args.AppendArgument(
+          llvm::formatv("--log-file={0}", env_debugserver_log_file).str());
     }
 
 #if defined(__APPLE__)
     const char *env_debugserver_log_flags =
         getenv("LLDB_DEBUGSERVER_LOG_FLAGS");
     if (env_debugserver_log_flags) {
-      ::snprintf(arg_cstr, sizeof(arg_cstr), "--log-flags=%s",
-                 env_debugserver_log_flags);
-      debugserver_args.AppendArgument(llvm::StringRef(arg_cstr));
+      debugserver_args.AppendArgument(
+          llvm::formatv("--log-flags={0}", env_debugserver_log_flags).str());
     }
 #else
-    const char *env_debugserver_log_channels =
-        getenv("LLDB_SERVER_LOG_CHANNELS");
-    if (env_debugserver_log_channels) {
-      ::snprintf(arg_cstr, sizeof(arg_cstr), "--log-channels=%s",
-                 env_debugserver_log_channels);
-      debugserver_args.AppendArgument(llvm::StringRef(arg_cstr));
+    std::string env_debugserver_log_channels =
+        host_env.lookup("LLDB_SERVER_LOG_CHANNELS");
+    if (!env_debugserver_log_channels.empty()) {
+      debugserver_args.AppendArgument(
+          llvm::formatv("--log-channels={0}", env_debugserver_log_channels)
+              .str());
     }
 #endif
 
@@ -1145,15 +1144,15 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
       char env_var_name[64];
       snprintf(env_var_name, sizeof(env_var_name),
                "LLDB_DEBUGSERVER_EXTRA_ARG_%" PRIu32, env_var_index++);
-      const char *extra_arg = getenv(env_var_name);
-      has_env_var = extra_arg != nullptr;
+      std::string extra_arg = host_env.lookup(env_var_name);
+      has_env_var = !extra_arg.empty();
 
       if (has_env_var) {
         debugserver_args.AppendArgument(llvm::StringRef(extra_arg));
         if (log)
           log->Printf("GDBRemoteCommunication::%s adding env var %s contents "
                       "to stub command line (%s)",
-                      __FUNCTION__, env_var_name, extra_arg);
+                      __FUNCTION__, env_var_name, extra_arg.c_str());
       }
     } while (has_env_var);
 
@@ -1163,7 +1162,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
     }
 
     // Copy the current environment to the gdbserver/debugserver instance
-    launch_info.GetEnvironment() = Host::GetEnvironment();
+    launch_info.GetEnvironment() = host_env;
 
     // Close STDIN, STDOUT and STDERR.
     launch_info.AppendCloseFileAction(STDIN_FILENO);
@@ -1299,14 +1298,14 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
 
 GDBRemoteCommunication::ScopedTimeout::ScopedTimeout(
     GDBRemoteCommunication &gdb_comm, std::chrono::seconds timeout)
-  : m_gdb_comm(gdb_comm), m_timeout_modified(false) {
-    auto curr_timeout = gdb_comm.GetPacketTimeout();
-    // Only update the timeout if the timeout is greater than the current
-    // timeout. If the current timeout is larger, then just use that.
-    if (curr_timeout < timeout) {
-      m_timeout_modified = true;
-      m_saved_timeout = m_gdb_comm.SetPacketTimeout(timeout);
-    }
+    : m_gdb_comm(gdb_comm), m_timeout_modified(false) {
+  auto curr_timeout = gdb_comm.GetPacketTimeout();
+  // Only update the timeout if the timeout is greater than the current
+  // timeout. If the current timeout is larger, then just use that.
+  if (curr_timeout < timeout) {
+    m_timeout_modified = true;
+    m_saved_timeout = m_gdb_comm.SetPacketTimeout(timeout);
+  }
 }
 
 GDBRemoteCommunication::ScopedTimeout::~ScopedTimeout() {
