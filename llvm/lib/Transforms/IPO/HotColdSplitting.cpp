@@ -146,8 +146,10 @@ static bool mayExtractBlock(const BasicBlock &BB) {
 }
 
 /// Mark \p F cold. Based on this assumption, also optimize it for minimum size.
+/// If \p UpdateEntryCount is true (set when this is a new split function and
+/// module has profile data), set entry count to 0 to ensure treated as cold.
 /// Return true if the function is changed.
-static bool markFunctionCold(Function &F) {
+static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
   assert(!F.hasFnAttribute(Attribute::OptimizeNone) && "Can't mark this cold");
   bool Changed = false;
   if (!F.hasFnAttribute(Attribute::Cold)) {
@@ -158,6 +160,13 @@ static bool markFunctionCold(Function &F) {
     F.addFnAttr(Attribute::MinSize);
     Changed = true;
   }
+  if (UpdateEntryCount) {
+    // Set the entry count to 0 to ensure it is placed in the unlikely text
+    // section when function sections are enabled.
+    F.setEntryCount(0);
+    Changed = true;
+  }
+
   return Changed;
 }
 
@@ -342,7 +351,7 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
     }
     CI->setIsNoInline();
 
-    markFunctionCold(*OutF);
+    markFunctionCold(*OutF, BFI != nullptr);
 
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     ORE.emit([&]() {
