@@ -202,6 +202,12 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   ::pthread_getname_np(::pthread_self(), buf, len);
 
   Name.append(buf, buf + strlen(buf));
+#elif defined(__OpenBSD__)
+  constexpr uint32_t len = get_max_thread_name_length_impl();
+  char buf[len];
+  ::pthread_get_name_np(::pthread_self(), buf, len);
+
+  Name.append(buf, buf + strlen(buf));
 #elif defined(__linux__)
 #if HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();

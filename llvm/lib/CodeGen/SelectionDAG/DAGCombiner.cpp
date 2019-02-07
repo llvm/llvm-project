@@ -8543,19 +8543,21 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
                                                    : ISD::isZEXTLoad(N0Node);
   if ((!isAExtLoad && !ISD::isEXTLoad(N0Node)) ||
       !ISD::isUNINDEXEDLoad(N0Node) || !N0.hasOneUse())
-    return {};
+    return SDValue();
 
   LoadSDNode *LN0 = cast<LoadSDNode>(N0);
   EVT MemVT = LN0->getMemoryVT();
   if ((LegalOperations || LN0->isVolatile() || VT.isVector()) &&
       !TLI.isLoadExtLegal(ExtLoadType, VT, MemVT))
-    return {};
+    return SDValue();
 
   SDValue ExtLoad =
       DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
                      LN0->getBasePtr(), MemVT, LN0->getMemOperand());
   Combiner.CombineTo(N, ExtLoad);
   DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+  if (LN0->use_empty())
+    Combiner.recursivelyDeleteUnusedNodes(LN0);
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
@@ -8593,6 +8595,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   Combiner.CombineTo(N, ExtLoad);
   if (NoReplaceTrunc) {
     DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+    Combiner.recursivelyDeleteUnusedNodes(LN0);
   } else {
     SDValue Trunc =
         DAG.getNode(ISD::TRUNCATE, SDLoc(N0), N0.getValueType(), ExtLoad);
@@ -9196,6 +9199,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       CombineTo(N, ExtLoad);
       if (NoReplaceTrunc) {
         DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+        recursivelyDeleteUnusedNodes(LN0);
       } else {
         SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
                                     N0.getValueType(), ExtLoad);
@@ -9219,6 +9223,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
                                        MemVT, LN0->getMemOperand());
       CombineTo(N, ExtLoad);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
+      recursivelyDeleteUnusedNodes(LN0);
       return SDValue(N, 0);   // Return N so it doesn't get rechecked!
     }
   }

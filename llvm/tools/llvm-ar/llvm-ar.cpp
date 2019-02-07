@@ -429,8 +429,9 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
   }
 
   if (C.getParent()->isThin()) {
-    outs() << sys::path::parent_path(ArchiveName);
-    outs() << '/';
+    StringRef ParentDir = sys::path::parent_path(ArchiveName);
+    if (!ParentDir.empty())
+      outs() << ParentDir << '/';
   }
   outs() << Name << "\n";
 }

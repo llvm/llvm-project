@@ -186,7 +186,7 @@ public:
     SSA.AddAvailableValue(PH, Init);
   }
 
-  void doExtraRewritesBeforeFinalDeletion() const override {
+  void doExtraRewritesBeforeFinalDeletion() override {
     for (unsigned i = 0, e = ExitBlocks.size(); i != e; ++i) {
       BasicBlock *ExitBlock = ExitBlocks[i];
       Instruction *InsertPos = InsertPts[i];

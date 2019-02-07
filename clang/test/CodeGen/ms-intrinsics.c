@@ -9,7 +9,7 @@
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-X64,CHECK-ARM-X64,CHECK-INTEL
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple aarch64-windows -Oz -emit-llvm %s -o - \
-// RUN:         | FileCheck %s --check-prefixes CHECK-ARM-ARM64,CHECK-ARM-X64
+// RUN:         | FileCheck %s --check-prefixes CHECK-ARM-ARM64,CHECK-ARM-X64,CHECK-ARM64
 
 // intrin.h needs size_t, but -ffreestanding prevents us from getting it from
 // stddef.h.  Work around it with this typedef.
@@ -1342,15 +1342,14 @@ __int64 test_InterlockedDecrement64_nf(__int64 volatile *Addend) {
 // CHECK-ARM-ARM64: }
 #endif
 
-#if !defined(__aarch64__)
 void test__fastfail() {
   __fastfail(42);
 }
 // CHECK-LABEL: define{{.*}} void @test__fastfail()
 // CHECK-ARM: call void asm sideeffect "udf #251", "{r0}"(i32 42) #[[NORETURN:[0-9]+]]
 // CHECK-INTEL: call void asm sideeffect "int $$0x29", "{cx}"(i32 42) #[[NORETURN]]
+// CHECK-ARM64: call void asm sideeffect "brk #0xF003", "{w0}"(i32 42) #[[NORETURN:[0-9]+]]
 
 // Attributes come last.
 
 // CHECK: attributes #[[NORETURN]] = { noreturn{{.*}} }
-#endif

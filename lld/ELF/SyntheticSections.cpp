@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
-#include "Bits.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "LinkerScript.h"
@@ -57,6 +56,17 @@ using llvm::support::endian::write32le;
 using llvm::support::endian::write64le;
 
 constexpr size_t MergeNoTailSection::NumShards;
+
+static uint64_t readUint(uint8_t *Buf) {
+  return Config->Is64 ? read64(Buf) : read32(Buf);
+}
+
+static void writeUint(uint8_t *Buf, uint64_t Val) {
+  if (Config->Is64)
+    write64(Buf, Val);
+  else
+    write32(Buf, Val);
+}
 
 // Returns an LLD version string.
 static ArrayRef<uint8_t> getVersion() {

@@ -204,12 +204,9 @@ public:
       assert(isVirtual());
       return VirtualInfo.Addr;
     }
-
-    llvm::FunctionType *getFunctionType() const {
-      if (isVirtual())
-        return VirtualInfo.FTy;
-      return cast<llvm::FunctionType>(
-          getFunctionPointer()->getType()->getPointerElementType());
+    llvm::FunctionType *getVirtualFunctionType() const {
+      assert(isVirtual());
+      return VirtualInfo.FTy;
     }
 
     /// If this is a delayed callee computation of some sort, prepare

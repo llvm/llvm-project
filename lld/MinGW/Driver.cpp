@@ -187,7 +187,7 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
       Args.getLastArgValue(OPT_m) != "arm64pe" && !Args.hasArg(OPT_dynamicbase))
     Add("-dynamicbase:no");
 
-  if (Args.hasArg(OPT_no_insert_timestamp))
+  if (Args.hasFlag(OPT_no_insert_timestamp, OPT_insert_timestamp, false))
     Add("-timestamp:0");
 
   if (Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false))
