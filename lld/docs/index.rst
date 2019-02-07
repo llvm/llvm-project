@@ -173,4 +173,5 @@ document soon.
    AtomLLD
    WebAssembly
    windows_support
+   missingkeyfunction
    ReleaseNotes
