@@ -35,7 +35,6 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.assertTrue(os.path.isdir(include))
         shutil.rmtree(include)
 
-    @skipUnlessDarwin
     @swiftTest
     def test_dwarf_importer(self):
         lldb.SBDebugger.MemoryPressureDetected()
@@ -59,7 +58,6 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
 
-    @skipUnlessDarwin
     @swiftTest
     def test_negative(self):
         lldb.SBDebugger.MemoryPressureDetected()
