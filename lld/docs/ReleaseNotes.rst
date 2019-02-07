@@ -49,11 +49,29 @@ COFF Improvements
 * PDB GUID is set to hash of PDB contents instead to a random byte
   sequence for build reproducibility.
 
+* ``/pdbsourcepath:`` is now also used to make ``"cwd"``, ``"exe"``, ``"pdb"``
+  in the env block of PDB outputs absolute if they are relative, and to make
+  paths to obj files referenced in PDB outputs absolute if they are relative.
+  Together with the previous item, this makes it possible to generate
+  executables and PDBs that are fully deterministic and independent of the
+  absolute path to the build directory, so that different machines building
+  the same code in different directories can produce exactly the same output.
+
 * The following flags have been added: ``/force:multiple``
 
 * lld now can link against import libraries produced by GNU tools.
 
 * lld can create thunks for ARM, to allow linking images over 16 MB.
+
+* Several speed and memory usage improvements.
+
+* lld now creates debug info for typedefs.
+
+* lld can now link obj files produced by ``cl.exe /Z7 /Yc``.
+
+* lld now understands ``%_PDB%`` and ``%_EXT%`` in ``/pdbaltpath:``.
+
+* Undefined symbols are now printed in demangled form in addition to raw form.
 
 MinGW Improvements
 ------------------
