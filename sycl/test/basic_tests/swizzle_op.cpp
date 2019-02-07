@@ -228,4 +228,33 @@ int main() {
     assert(results[2] == 3);
     assert(results[3] == 4);
   }
+
+  {
+    cl::sycl::cl_uint results[4] = {0};
+    {
+      buffer<cl::sycl::cl_uint, 1> b(results, range<1>(4));
+      queue myQueue;
+      myQueue.submit([&](handler &cgh) {
+        auto B = b.get_access<access::mode::write>(cgh);
+        cgh.single_task<class test_9>([=]() {
+          cl::sycl::uchar4 vec;
+          cl::sycl::uint add = 254;
+          cl::sycl::uchar factor = 2;
+          vec.x() = 2;
+          vec.y() = 4;
+          vec.z() = 6;
+          vec.w() = 8;
+
+          B[0] = add + vec.x() / factor;
+          B[1] = add + vec.y() / factor;
+          B[2] = add + vec.z() / factor;
+          B[3] = add + vec.w() / factor;
+        });
+      });
+    }
+    assert(results[0] == 255);
+    assert(results[1] == 256);
+    assert(results[2] == 257);
+    assert(results[3] == 258);
+  }
 }

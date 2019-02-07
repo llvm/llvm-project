@@ -137,8 +137,9 @@ using rel_t = typename std::conditional<
 
 // Special type indicating that SwizzleOp should just read value from vector -
 // not trying to perform any operations. Should not be called.
-template <typename DataT> class GetOp {
+template <typename T> class GetOp {
 public:
+  using DataT = T;
   DataT getValue(size_t Index) const;
   DataT operator()(DataT LHS, DataT Rhs);
 };
@@ -146,8 +147,9 @@ public:
 // Special type for working SwizzleOp with scalars, stores a scalar and gives
 // the scalar at any index. Provides interface is compatible with SwizzleOp
 // operations
-template <typename DataT> class GetScalarOp {
+template <typename T> class GetScalarOp {
 public:
+  using DataT = T;
   GetScalarOp(DataT Data) : m_Data(Data) {}
   DataT getValue(size_t Index) const { return m_Data; }
 
@@ -230,7 +232,9 @@ T convertHelper(const T &Opnd) {
 
 } // namespace detail
 
-template <typename DataT, int NumElements> class vec {
+template <typename Type, int NumElements> class vec {
+  using DataT = Type;
+
   // This represent type of underlying value. There should be only one field
   // in the class, so vec<float, 16> should be equal to float16 in memory.
   using DataType =
@@ -806,6 +810,9 @@ template <typename VecT, typename OperationLeftT, typename OperationRightT,
           template <typename> class OperationCurrentT, int... Indexes>
 class SwizzleOp {
   using DataT = typename VecT::element_type;
+  using CommonDataT =
+      typename std::common_type<typename OperationLeftT::DataT,
+                                typename OperationRightT::DataT>::type;
   using rel_t = detail::rel_t<DataT>;
   static constexpr int getNumElements() { return sizeof...(Indexes); }
 
@@ -830,15 +837,13 @@ class SwizzleOp {
                                       OperationCurrentT, Indexes...>,
                             OperationCurrentT_, Idx_...>;
 
-  template <int IdxNum>
-  using EnableIfOneIndex =
-      typename std::enable_if<1 == IdxNum &&
-                              SwizzleOp::getNumElements() == IdxNum>::type;
+  template <int IdxNum, typename T = void>
+  using EnableIfOneIndex = typename std::enable_if<
+      1 == IdxNum && SwizzleOp::getNumElements() == IdxNum, T>::type;
 
-  template <int IdxNum>
-  using EnableIfMultipleIndexes =
-      typename std::enable_if<1 != IdxNum &&
-                              SwizzleOp::getNumElements() == IdxNum>::type;
+  template <int IdxNum, typename T = void>
+  using EnableIfMultipleIndexes = typename std::enable_if<
+      1 != IdxNum && SwizzleOp::getNumElements() == IdxNum, T>::type;
 
   template <typename T>
   using EnableIfScalarType =
@@ -1308,8 +1313,22 @@ private:
         m_RightOperation(std::move(Rhs.m_RightOperation)) {}
 
   // Either performing CurrentOperation on results of left and right operands
-  // or reading values from actual vector.
-  DataT getValue(size_t Index) const {
+  // or reading values from actual vector. Perform implicit type conversion when
+  // the number of elements == 1
+
+  template <int IdxNum = getNumElements()>
+  CommonDataT getValue(EnableIfOneIndex<IdxNum, size_t> Index) const {
+    if (std::is_same<OperationCurrentT<DataT>, GetOp<DataT>>::value) {
+      std::array<int, getNumElements()> Idxs{Indexes...};
+      return m_Vector->getValue(Idxs[Index]);
+    }
+    auto Op = OperationCurrentT<CommonDataT>();
+    return Op(m_LeftOperation.getValue(Index),
+              m_RightOperation.getValue(Index));
+  }
+
+  template <int IdxNum = getNumElements()>
+  DataT getValue(EnableIfMultipleIndexes<IdxNum, size_t> Index) const {
     if (std::is_same<OperationCurrentT<DataT>, GetOp<DataT>>::value) {
       std::array<int, getNumElements()> Idxs{Indexes...};
       return m_Vector->getValue(Idxs[Index]);
