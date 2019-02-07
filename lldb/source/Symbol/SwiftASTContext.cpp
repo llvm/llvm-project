@@ -5352,8 +5352,7 @@ SwiftASTContext::GetTypeInfo(void *type,
   case swift::TypeKind::GenericFunction:
     swift_flags |= eTypeIsGeneric;
   case swift::TypeKind::Function:
-    swift_flags |=
-        eTypeIsBuiltIn | eTypeHasValue | eTypeIsScalar | eTypeInstanceIsPointer;
+    swift_flags |= eTypeIsPointer | eTypeHasValue;
     break;
   case swift::TypeKind::BuiltinInteger:
     swift_flags |=
@@ -5920,13 +5919,13 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     return bound_type.GetBitSize(nullptr).getValueOr(0);
   }
 
-  const swift::TypeKind type_kind = swift_can_type->getKind();
-  switch (type_kind) {
-  case swift::TypeKind::Function:
+  // lldb ValueObject subsystem expects functions to be a single
+  // pointer in size to print them correctly. This is not true
+  // for swift (where functions aren't necessarily a single pointer
+  // in size), so we need to work around the limitation here.
+  if (swift_can_type->getKind() == swift::TypeKind::Function)
     return GetPointerByteSize() * 8;
-  default:
-    break;
-  }
+
   const swift::irgen::FixedTypeInfo *fixed_type_info =
       GetSwiftFixedTypeInfo(type);
   if (fixed_type_info)
