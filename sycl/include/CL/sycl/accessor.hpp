@@ -43,7 +43,7 @@ public:
   subscript_obj(const accessor_t &acc, cl::sycl::id<accessorDim> &indexes)
       : accRef(acc), ids(indexes) {}
 
-  INLINE_IF_DEVICE subscript_obj<accessorDim, dataT, dimensions - 1, accessMode, accessTarget,
+  subscript_obj<accessorDim, dataT, dimensions - 1, accessMode, accessTarget,
                 isPlaceholder>
   operator[](size_t index) {
     ids[accessorDim - dimensions] = index;
@@ -66,7 +66,7 @@ public:
   subscript_obj(const accessor_t &acc, cl::sycl::id<accessorDim> &indexes)
       : accRef(acc), ids(indexes) {}
 
-  INLINE_IF_DEVICE dataT &operator[](size_t index) {
+  dataT &operator[](size_t index) {
     ids[accessorDim - 1] = index;
     return accRef.__impl()->Data[getOffsetForId(
       accRef.__impl()->Range, ids, accRef.__impl()->Offset)];
@@ -87,7 +87,7 @@ public:
   subscript_obj(const accessor_t &acc, cl::sycl::id<accessorDim> &indexes)
       : accRef(acc), ids(indexes) {}
 
-  INLINE_IF_DEVICE typename detail::remove_AS<dataT>::type
+  typename detail::remove_AS<dataT>::type
   operator[](size_t index) {
     ids[accessorDim - 1] = index;
     return accRef.__impl()->Data[getOffsetForId(
@@ -118,7 +118,7 @@ SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions == 0) {
   accessor_impl(dataT *Data) : Data(Data) {}
 
   // Returns the number of accessed elements.
-  INLINE_IF_DEVICE size_t get_count() const { return 1; }
+  size_t get_count() const { return 1; }
 };
 
 /// Implementation of host accessor.
@@ -133,7 +133,7 @@ SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions > 0) {
       : Data(Data), Range(Range), Offset(Offset) {}
 
   // Returns the number of accessed elements.
-  INLINE_IF_DEVICE size_t get_count() const { return Range.size(); }
+  size_t get_count() const { return Range.size(); }
 };
 
 /// Implementation of device (kernel) accessor providing access to a single
@@ -163,7 +163,7 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   {}
 
   // Returns the number of accessed elements.
-  INLINE_IF_DEVICE size_t get_count() const { return 1; }
+  size_t get_count() const { return 1; }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -201,7 +201,7 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   {}
 
   // Returns the number of accessed elements.
-  INLINE_IF_DEVICE size_t get_count() const { return Range.size(); }
+  size_t get_count() const { return Range.size(); }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -240,7 +240,7 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
   }
 
   // Returns the number of accessed elements.
-  INLINE_IF_DEVICE size_t get_count() const { return 1; }
+  size_t get_count() const { return 1; }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -285,7 +285,7 @@ SYCL_ACCESSOR_IMPL(accessTarget == access::target::local &&
   }
 
   // Returns the number of accessed elements.
-  INLINE_IF_DEVICE size_t get_count() const { return Range.size(); }
+  size_t get_count() const { return Range.size(); }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -307,11 +307,11 @@ protected:
   using _ImplT =
       accessor_impl<dataT, dimensions, accessMode, accessTarget, isPlaceholder>;
 
-  INLINE_IF_DEVICE const _ImplT *__impl() const {
+  const _ImplT *__impl() const {
     return reinterpret_cast<const _ImplT *>(this);
   }
 
-  INLINE_IF_DEVICE _ImplT *__impl() { return reinterpret_cast<_ImplT *>(this); }
+  _ImplT *__impl() { return reinterpret_cast<_ImplT *>(this); }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -339,21 +339,21 @@ protected:
 
 SYCL_ACCESSOR_SUBCLASS(accessor_common, accessor_base, true /* always */) {
   // Returns true if the current accessor is a placeholder accessor.
-  INLINE_IF_DEVICE constexpr bool is_placeholder() const {
+  constexpr bool is_placeholder() const {
     return isPlaceholder == access::placeholder::true_t;
   }
 
   // Returns the size of the accessed memory in bytes.
-  INLINE_IF_DEVICE size_t get_size() const { return this->get_count() * sizeof(dataT); }
+  size_t get_size() const { return this->get_count() * sizeof(dataT); }
 
   // Returns the number of accessed elements.
-  INLINE_IF_DEVICE size_t get_count() const { return this->__impl()->get_count(); }
+  size_t get_count() const { return this->__impl()->get_count(); }
 
-  template <int Dimensions = dimensions> INLINE_IF_DEVICE
+  template <int Dimensions = dimensions>
   typename std::enable_if<(Dimensions > 0), range<Dimensions>>::type
   get_range() const { return this->__impl()->Range; }
 
-  template <int Dimensions = dimensions> INLINE_IF_DEVICE
+  template <int Dimensions = dimensions>
   typename std::enable_if<(Dimensions > 0), id<Dimensions>>::type
   get_offset() const { return this->__impl()->Offset; }
 };
@@ -364,7 +364,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_opdata_w, accessor_common,
                         accessMode == access::mode::discard_write ||
                         accessMode == access::mode::discard_read_write) &&
                        dimensions == 0) {
-  INLINE_IF_DEVICE operator dataT &() const {
+  operator dataT &() const {
     return this->__impl()->Data[0];
   }
 };
@@ -382,7 +382,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_wn, accessor_opdata_w,
 
   subscript_obj<dimensions, dataT, dimensions - 1, accessMode, accessTarget,
               isPlaceholder>
-  INLINE_IF_DEVICE operator[](size_t index) const {
+  operator[](size_t index) const {
     id<dimensions> ids;
     ids[0] = index;
     return subscript_obj<dimensions, dataT, dimensions - 1, accessMode,
@@ -402,11 +402,11 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_w, accessor_subscript_wn,
   // classes. That's why operator[] defined in accessor_subscript_wn
   // is not visible here and we have to define
   // operator[](id<dimensions>) once again.
-  INLINE_IF_DEVICE dataT &operator[](id<dimensions> index) const {
+  dataT &operator[](id<dimensions> index) const {
     return this->operator[](
       getOffsetForId(this->get_range(), index, this->get_offset()));
   }
-  INLINE_IF_DEVICE dataT &operator[](size_t index) const {
+  dataT &operator[](size_t index) const {
     return this->__impl()->Data[index];
   }
 };
@@ -560,7 +560,7 @@ class accessor
   // implementation.
   _ImplT __impl;
 
-  INLINE_IF_DEVICE void __init(_ValueType *Ptr, range<dimensions> Range,
+  void __init(_ValueType *Ptr, range<dimensions> Range,
       id<dimensions> Offset) {
     __impl.Data = Ptr;
     __impl.Range = Range;

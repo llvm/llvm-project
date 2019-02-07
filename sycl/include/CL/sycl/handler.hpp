@@ -61,20 +61,20 @@ namespace detail {
   template <int Dim, class DstT> struct InitSizesST##POSTFIX;                  \
                                                                                \
   template <class DstT> struct InitSizesST##POSTFIX<1, DstT> {                 \
-    static INLINE_IF_DEVICE void initSize(DstT &Dst) {                         \
+    static void initSize(DstT &Dst) {                                          \
       Dst[0] = cl::__spirv::get##POSTFIX<0>();                                 \
     }                                                                          \
   };                                                                           \
                                                                                \
   template <class DstT> struct InitSizesST##POSTFIX<2, DstT> {                 \
-    static INLINE_IF_DEVICE void initSize(DstT &Dst) {                         \
+    static void initSize(DstT &Dst) {                                          \
       Dst[1] = cl::__spirv::get##POSTFIX<1>();                                 \
       InitSizesST##POSTFIX<1, DstT>::initSize(Dst);                            \
     }                                                                          \
   };                                                                           \
                                                                                \
   template <class DstT> struct InitSizesST##POSTFIX<3, DstT> {                 \
-    static INLINE_IF_DEVICE void initSize(DstT &Dst) {                         \
+    static void initSize(DstT &Dst) {                                          \
       Dst[2] = cl::__spirv::get##POSTFIX<2>();                                 \
       InitSizesST##POSTFIX<2, DstT>::initSize(Dst);                            \
     }                                                                          \

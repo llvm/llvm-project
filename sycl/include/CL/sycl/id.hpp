@@ -19,7 +19,7 @@ template <int dimensions> class range;
 template <int dimensions = 1> struct id : public detail::array<dimensions> {
 public:
   using base = detail::array<dimensions>;
-  INLINE_IF_DEVICE id() = default;
+  id() = default;
 
   /* The following constructor is only available in the id struct
    * specialization where: dimensions==1 */
@@ -149,7 +149,7 @@ public:
 };
 
 namespace detail {
-template <int dimensions> INLINE_IF_DEVICE
+template <int dimensions>
 size_t getOffsetForId(range<dimensions> Range, id<dimensions> Id,
                       id<dimensions> Offset) {
   size_t offset = 0;

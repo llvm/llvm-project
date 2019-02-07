@@ -1,30 +1,25 @@
 // >> ---- compile src1
 // >> device compilation...
-// RUN: %clang -std=c++11 -fno-sycl-use-bitcode --sycl -Xclang -fsycl-int-header=sycl_ihdr_a.h %s -c -o a_kernel.spv
+// RUN: %clang -std=c++11 --sycl -Xclang -fsycl-int-header=sycl_ihdr_a.h %s -c -o a_kernel.bc
 // >> host compilation...
 // RUN: %clang -std=c++11 -include sycl_ihdr_a.h -g -c %s -o a.o
 //
 // >> ---- compile src2
 // >> device compilation...
-// RUN: %clang -DB_CPP=1 -std=c++11 -fno-sycl-use-bitcode --sycl -Xclang -fsycl-int-header=sycl_ihdr_b.h %s -c -o b_kernel.spv
+// RUN: %clang -DB_CPP=1 -std=c++11 --sycl -Xclang -fsycl-int-header=sycl_ihdr_b.h %s -c -o b_kernel.bc
 // >> host compilation...
 // RUN: %clang -DB_CPP=1 -std=c++11 -include sycl_ihdr_b.h -g -c %s -o b.o
 //
 // >> ---- bundle .o with .spv
 // >> run bundler
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -inputs=a.o,a_kernel.spv -outputs=a_fat.o
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -inputs=b.o,b_kernel.spv -outputs=b_fat.o
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -inputs=a.o,a_kernel.bc -outputs=a_fat.o
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -inputs=b.o,b_kernel.bc -outputs=b_fat.o
 //
 // >> ---- unbundle fat objects
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -outputs=a.o,a_kernel.spv -inputs=a_fat.o -unbundle
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -outputs=b.o,b_kernel.spv -inputs=b_fat.o -unbundle
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -outputs=a.o,a_kernel.bc -inputs=a_fat.o -unbundle
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64,sycl-spir64-pc-linux-gnu -outputs=b.o,b_kernel.bc -inputs=b_fat.o -unbundle
 //
 // >> ---- link device code
-// >> convert to bitcode
-// RUN: llvm-spirv -r -o=a_kernel.bc a_kernel.spv
-// RUN: llvm-spirv -r -o=b_kernel.bc b_kernel.spv
-//
-// >> link bitcode
 // RUN: llvm-link -o=app.bc a_kernel.bc b_kernel.bc
 //
 // >> convert linked .bc to spirv
