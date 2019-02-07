@@ -20,6 +20,9 @@ namespace cl {
 namespace sycl {
 namespace detail {
 
+// Set max number of queues supported by FPGA RT.
+const size_t MaxNumQueues = 256;
+
 class queue_impl {
 public:
   queue_impl(const device &SyclDevice, async_handler AsyncHandler,
@@ -28,26 +31,7 @@ public:
         m_PropList(PropList), m_HostQueue(m_Device.is_host()) {
     m_OpenCLInterop = !m_HostQueue;
     if (!m_HostQueue) {
-      cl_command_queue_properties CreationFlags =
-          CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
-
-      if (m_PropList.has_property<property::queue::enable_profiling>()) {
-        CreationFlags |= CL_QUEUE_PROFILING_ENABLE;
-      }
-
-      cl_int Error = CL_SUCCESS;
-#ifdef CL_VERSION_2_0
-      vector_class<cl_queue_properties> CreationFlagProperties = {
-          CL_QUEUE_PROPERTIES, CreationFlags, 0};
-      m_CommandQueue = clCreateCommandQueueWithProperties(
-          m_Context.get(), m_Device.get(), CreationFlagProperties.data(),
-          &Error);
-#else
-      m_CommandQueue = clCreateCommandQueue(m_Context.get(), m_Device.get(),
-                                            CreationFlags, &Error);
-#endif
-      CHECK_OCL_CODE(Error);
-      // TODO catch an exception and put it to list of asynchronous exceptions
+      m_CommandQueue = createQueue();
     }
   }
 
@@ -132,7 +116,61 @@ public:
     m_Exceptions.clear();
   }
 
-  cl_command_queue &getHandleRef() { return m_CommandQueue; }
+  cl_command_queue createQueue() const {
+    cl_command_queue_properties CreationFlags = 0;
+
+    // FPGA RT can't handle out of order queue - create in order queue instead
+    if (!m_Device.is_accelerator()) {
+      CreationFlags = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE;
+    }
+
+    if (m_PropList.has_property<property::queue::enable_profiling>()) {
+      CreationFlags |= CL_QUEUE_PROFILING_ENABLE;
+    }
+
+    cl_int Error = CL_SUCCESS;
+    cl_command_queue Queue;
+#ifdef CL_VERSION_2_0
+    cl_queue_properties CreationFlagProperties[] = {
+        CL_QUEUE_PROPERTIES, CreationFlags, 0};
+    Queue = clCreateCommandQueueWithProperties(
+        m_Context.get(), m_Device.get(), CreationFlagProperties,
+        &Error);
+#else
+    Queue = clCreateCommandQueue(m_Context.get(), m_Device.get(),
+                                          CreationFlags, &Error);
+#endif
+    CHECK_OCL_CODE(Error);
+    // TODO catch an exception and put it to list of asynchronous exceptions
+
+    return Queue;
+  }
+
+  cl_command_queue &getHandleRef() {
+    if (!m_Device.is_accelerator()) {
+      return m_CommandQueue;
+    }
+
+    // To achive parallelism for FPGA with in order execution model with
+    // possibility of two kernels to share data with each other we shall
+    // create a queue for every kernel enqueued.
+    if (m_Queues.empty()) {
+      m_Queues.push_back(m_CommandQueue);
+      return m_CommandQueue;
+    }
+    else if (m_Queues.size() < MaxNumQueues) {
+      m_Queues.push_back(createQueue());
+      return m_Queues.back();
+    }
+
+    // If the limit of OpenCL queues is going to be exceeded - take the earliest
+    // used queue, wait until it finished and then reuse it.
+    m_QueueNumber %= MaxNumQueues;
+    size_t FreeQueueNum = m_QueueNumber++;
+
+    CHECK_OCL_CODE(clFinish(m_Queues[FreeQueueNum]));
+    return m_Queues[FreeQueueNum];
+  }
 
   template <typename propertyT> bool has_property() const {
     return m_PropList.has_property<propertyT>();
@@ -161,6 +199,12 @@ private:
   property_list m_PropList;
 
   cl_command_queue m_CommandQueue = nullptr;
+
+  // List of OpenCL queues created for FPGA device from a single SYCL queue.
+  vector_class<cl_command_queue> m_Queues;
+  // Iterator through m_Queues.
+  size_t m_QueueNumber = 0;
+
   bool m_OpenCLInterop = false;
   bool m_HostQueue = false;
 };
