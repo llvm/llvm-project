@@ -584,7 +584,11 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     if (ColdBlocks.count(BB))
       continue;
 
-    bool Cold = (BFI && PSI->isColdBlock(BB, BFI)) ||
+    // apple/swift-llvm: The use of ProfileSummaryInfo to identify cold blocks
+    // has not yet been qualified, and may introduce performance regressions
+    // (rdar://47622429). Disable it.
+    const bool EnablePSI = false;
+    bool Cold = (EnablePSI && BFI && PSI->isColdBlock(BB, BFI)) ||
                 (EnableStaticAnalyis && unlikelyExecuted(*BB));
     if (!Cold)
       continue;
