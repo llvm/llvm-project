@@ -1234,7 +1234,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     // headers find in the wild might rely only on #import and do not contain
     // controlling macros, be conservative and only try to enter textual headers
     // if such macro is present.
-    if (!FileInfo.isModuleHeader &&
+    if (FileInfo.isCompilingModuleHeader && !FileInfo.isModuleHeader &&
         FileInfo.getControllingMacro(ExternalLookup))
       TryEnterHdr = true;
     return TryEnterHdr;
