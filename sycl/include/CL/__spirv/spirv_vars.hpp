@@ -36,6 +36,13 @@ DEFINE_INT_ID_TO_XYZ_CONVERTER(GlobalOffset)
 
 #undef DEFINE_INT_ID_TO_XYZ_CONVERTER
 
+extern const __constant uint32_t VarSubgroupSize;
+extern const __constant uint32_t VarSubgroupMaxSize;
+extern const __constant uint32_t VarNumSubgroups;
+extern const __constant uint32_t VarNumEnqueuedSubgroups;
+extern const __constant uint32_t VarSubgroupId;
+extern const __constant uint32_t VarSubgroupLocalInvocationId;
+
 } // namespace __spirv
 } // namespace cl
 #endif // __SYCL_DEVICE_ONLY__

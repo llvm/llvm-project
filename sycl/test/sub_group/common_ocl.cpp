@@ -1,51 +1,54 @@
+// RUN: %clang_cc1 -x cl -cl-std=CL2.0 %S/sg.cl -triple spir64-unknown-unknown -emit-spirv -o %T/kernel_ocl.spv -include opencl-c.h
 // RUN: %clang -std=c++11 -fsycl %s -o %t.out -lstdc++ -lOpenCL -lsycl
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
-// TODO: Enable when use SPIRV operations instead direct built-ins calls.
-// RUNx: %CPU_RUN_PLACEHOLDER %t.out
-// RUN: %GPU_RUN_PLACEHOLDER %t.out
-// RUN: %ACC_RUN_PLACEHOLDER %t.out
-//==--- common_ocl.cpp - basic SG methods in SYCL vs OpenCL  ---------------==//
+// RUN: %CPU_RUN_PLACEHOLDER %t.out %T/kernel_ocl.spv
+// RUN: %GPU_RUN_PLACEHOLDER %t.out %T/kernel_ocl.spv
+// RUN: %ACC_RUN_PLACEHOLDER %t.out %T/kernel_ocl.spv
+//==--- common_ocl.cpp - basic SG methods in SYCL vs OpenCL  ---*- C++ -*---==//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "helper.hpp"
 #include <CL/sycl.hpp>
-
+#include <cstring>
+#include <iostream>
 using namespace cl::sycl;
 struct Data {
-  size_t local_id;
-  size_t local_range;
-  size_t max_local_range;
-  size_t group_id;
-  size_t group_range;
-  size_t uniform_group_range;
+  unsigned int local_id;
+  unsigned int local_range;
+  unsigned int max_local_range;
+  unsigned int group_id;
+  unsigned int group_range;
+  unsigned int uniform_group_range;
 };
 
-void check(queue &Queue, const int G, const int L) {
-
+void check(queue &Queue, const int G, const int L, const char *SpvFile) {
   try {
     nd_range<1> NdRange(G, L);
     buffer<struct Data, 1> oclbuf(G);
     buffer<struct Data, 1> syclbuf(G);
 
-    program Prog(Queue.get_context());
-    Prog.build_with_source(
-        "struct Data { size_t local_id; size_t local_range; size_t "
-        "max_local_range; size_t group_id; size_t group_range; \n"
-        "size_t uniform_group_range; };\n"
-        "kernel void ocl_subgr(global struct Data* a) {\n"
-        "size_t id = get_global_id(0);"
-        "a[id].local_id = get_sub_group_local_id();\n"
-        "a[id].local_range = get_sub_group_size();\n"
-        "a[id].max_local_range = get_max_sub_group_size();\n"
-        "a[id].group_id = get_sub_group_id();\n"
-        "a[id].group_range = get_num_sub_groups();\n"
-        "a[id].uniform_group_range = get_num_sub_groups(); }");
+    std::ifstream File(SpvFile, std::ios::binary);
+    if (!File.is_open()) {
+      std::cerr << std::strerror(errno);
+      throw compile_program_error("Cannot open SPIRV file\n");
+    }
+    File.seekg(0, std::ios::end);
+    vector_class<char> Spv(File.tellg());
+    File.seekg(0);
+    File.read(Spv.data(), Spv.size());
+    File.close();
+    int Err;
+    cl_program ClProgram = clCreateProgramWithIL(Queue.get_context().get(),
+                                                 Spv.data(), Spv.size(), &Err);
+    CHECK_OCL_CODE(Err);
+    CHECK_OCL_CODE(
+        clBuildProgram(ClProgram, 0, nullptr, nullptr, nullptr, nullptr));
+    program Prog(Queue.get_context(), ClProgram);
     Queue.submit([&](handler &cgh) {
       auto oclacc = oclbuf.get_access<access::mode::read_write>(cgh);
       cgh.set_args(oclacc);
@@ -90,17 +93,17 @@ void check(queue &Queue, const int G, const int L) {
     exit(1);
   }
 }
-int main() {
+int main(int argc, char **argv) {
   queue Queue;
-  if (!core_sg_supported(Queue.get_device())) {
+  if (!core_sg_supported(Queue.get_device()) || argc != 2) {
     std::cout << "Skipping test\n";
     return 0;
   }
 
-  check(Queue, 240, 80);
-  check(Queue, 8, 4);
-  check(Queue, 24, 12);
-  check(Queue, 1024, 256);
+  check(Queue, 240, 80, argv[1]);
+  check(Queue, 8, 4, argv[1]);
+  check(Queue, 24, 12, argv[1]);
+  check(Queue, 1024, 256, argv[1]);
   std::cout << "Test passed." << std::endl;
   return 0;
 }

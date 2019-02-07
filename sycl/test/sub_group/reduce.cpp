@@ -1,15 +1,13 @@
 // RUN: %clang -std=c++11 -fsycl %s -o %t.out -lstdc++ -lOpenCL -lsycl
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
-// TODO: Enable when use SPIRV operations instead direct built-ins calls.
-// RUNx: %CPU_RUN_PLACEHOLDER %t.out
+// RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-//==--------------- reduce.cpp - SYCL sub_group reduce test ----------------==//
+//==--------------- reduce.cpp - SYCL sub_group reduce test ----*- C++ -*---==//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,17 +21,12 @@ template <typename T> void check(queue &Queue, size_t G = 240, size_t L = 60) {
     buffer<T> minbuf(G);
     buffer<T> maxbuf(G);
     buffer<T> addbuf(G);
-    buffer<size_t> sgsizebuf(1);
     Queue.submit([&](handler &cgh) {
       auto minacc = minbuf.template get_access<access::mode::read_write>(cgh);
       auto maxacc = maxbuf.template get_access<access::mode::read_write>(cgh);
       auto addacc = addbuf.template get_access<access::mode::read_write>(cgh);
-      auto sgsizeacc =
-          sgsizebuf.template get_access<access::mode::read_write>(cgh);
       cgh.parallel_for<sycl_subgr<T>>(NdRange, [=](nd_item<1> NdItem) {
         intel::sub_group sg = NdItem.get_sub_group();
-        if (NdItem.get_global_id(0) == 0)
-          sgsizeacc[0] = sg.get_max_local_range()[0];
         minacc[NdItem.get_global_id()] =
             sg.reduce<T, intel::minimum>(NdItem.get_global_id(0));
         maxacc[NdItem.get_global_id()] =
@@ -45,8 +38,7 @@ template <typename T> void check(queue &Queue, size_t G = 240, size_t L = 60) {
     auto minacc = minbuf.template get_access<access::mode::read_write>();
     auto maxacc = maxbuf.template get_access<access::mode::read_write>();
     auto addacc = addbuf.template get_access<access::mode::read_write>();
-    auto sgsizeacc = sgsizebuf.template get_access<access::mode::read_write>();
-    size_t sg_size = sgsizeacc[0];
+    size_t sg_size = get_sg_size(Queue.get_device());
     int WGid = -1, SGid = 0;
     T max = 0, add = 0;
     for (int j = 0; j < G; j++) {
@@ -78,18 +70,12 @@ int main() {
     std::cout << "Skipping test\n";
     return 0;
   }
-  /* Limit work-group size to avoid type overflow. */
-  check<char>(Queue, 120, 30);
-  check<short>(Queue);
   check<int>(Queue);
-  check<uint>(Queue);
+  check<unsigned int>(Queue);
   check<long>(Queue);
-  check<ulong>(Queue);
-  if (!Queue.get_device().has_extension("cl_khr_fp16")) {
-    check<half>(Queue);
-  }
+  check<unsigned long>(Queue);
   check<float>(Queue);
-  if (!Queue.get_device().has_extension("cl_khr_fp64")) {
+  if (Queue.get_device().has_extension("cl_khr_fp64")) {
     check<double>(Queue);
   }
   std::cout << "Test passed." << std::endl;

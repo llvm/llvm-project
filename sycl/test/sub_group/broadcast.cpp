@@ -1,15 +1,13 @@
 // RUN: %clang -std=c++11 -fsycl %s -o %t.out -lstdc++ -lOpenCL -lsycl
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
-// TODO: Enable when use SPIRV operations instead direct built-ins calls.
-// RUNx: %CPU_RUN_PLACEHOLDER %t.out
+// RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-//==--------- broadcast.cpp - SYCL sub_group broadcast test ----------------==//
+//==--------- broadcast.cpp - SYCL sub_group broadcast test ----*- C++ -*---==//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,16 +26,18 @@ template <typename T> void check(queue &Queue) {
       auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>(cgh);
       cgh.parallel_for<sycl_subgr<T>>(NdRange, [=](nd_item<1> NdItem) {
         intel::sub_group SG = NdItem.get_sub_group();
-        if (NdItem.get_global_id(0) == 0)
-          sgsizeacc[0] = SG.get_max_local_range()[0];
         /*Broadcast GID of element with SGLID == SGID */
         syclacc[NdItem.get_global_id()] =
             SG.broadcast<T>(NdItem.get_global_id(0), SG.get_group_id());
+        if (NdItem.get_global_id(0) == 0)
+          sgsizeacc[0] = SG.get_max_local_range()[0];
       });
     });
     auto syclacc = syclbuf.template get_access<access::mode::read_write>();
     auto sgsizeacc = sgsizebuf.get_access<access::mode::read_write>();
     size_t sg_size = sgsizeacc[0];
+    if (sg_size == 0)
+      sg_size = L;
     int WGid = -1, SGid = 0;
     for (int j = 0; j < G; j++) {
       if (j % L % sg_size == 0) {
@@ -61,17 +61,12 @@ int main() {
     std::cout << "Skipping test\n";
     return 0;
   }
-  check<char>(Queue);
-  check<short>(Queue);
   check<int>(Queue);
-  check<uint>(Queue);
+  check<unsigned int>(Queue);
   check<long>(Queue);
-  check<ulong>(Queue);
-  if (!Queue.get_device().has_extension("cl_khr_fp16")) {
-    check<half>(Queue);
-  }
+  check<unsigned long>(Queue);
   check<float>(Queue);
-  if (!Queue.get_device().has_extension("cl_khr_fp64")) {
+  if (Queue.get_device().has_extension("cl_khr_fp64")) {
     check<double>(Queue);
   }
   std::cout << "Test passed." << std::endl;

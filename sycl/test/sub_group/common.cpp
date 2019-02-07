@@ -1,31 +1,29 @@
 // RUN: %clang -std=c++11 -fsycl %s -o %t.out -lstdc++ -lOpenCL -lsycl
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
-// TODO: Enable when use SPIRV operations instead direct built-ins calls.
-// RUNx: %CPU_RUN_PLACEHOLDER %t.out
+// RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-//==-------------- common.cpp - SYCL sub_group common test -----------------==//
+//==-------------- common.cpp - SYCL sub_group common test -----*- C++ -*---==//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "helper.hpp"
 #include <CL/sycl.hpp>
-
 using namespace cl::sycl;
 struct Data {
-  size_t local_id;
-  size_t local_range;
-  size_t max_local_range;
-  size_t group_id;
-  size_t group_range;
-  size_t uniform_group_range;
+  unsigned int local_id;
+  unsigned int local_range;
+  unsigned int max_local_range;
+  unsigned int group_id;
+  unsigned int group_range;
+  unsigned int uniform_group_range;
 };
 
-void check(queue &Queue, const int G, const int L) {
+void check(queue &Queue, unsigned int G, unsigned int L) {
 
   try {
     nd_range<1> NdRange(G, L);
@@ -47,16 +45,24 @@ void check(queue &Queue, const int G, const int L) {
       });
     });
     auto syclacc = syclbuf.get_access<access::mode::read_write>();
-    size_t max_sg =
-        Queue.get_device().get_info<info::device::max_num_sub_groups>();
-    size_t num_sg = L / max_sg + (L % max_sg ? 1 : 0);
+    unsigned int max_sg = get_sg_size(Queue.get_device());
+    unsigned int num_sg = L / max_sg + (L % max_sg ? 1 : 0);
     for (int j = 0; j < G; j++) {
-      size_t group_id = j % L / max_sg;
-      size_t local_range =
+      unsigned int group_id = j % L / max_sg;
+      unsigned int local_range =
           (group_id + 1 == num_sg) ? (L - group_id * max_sg) : max_sg;
       exit_if_not_equal(syclacc[j].local_id, j % L % max_sg, "local_id");
       exit_if_not_equal(syclacc[j].local_range, local_range, "local_range");
-      exit_if_not_equal(syclacc[j].max_local_range, max_sg, "max_local_range");
+      // TODO: Currently workgroup size affects this paramater on CPU and does
+      // not on GPU. Remove if when it is aligned.
+      if (Queue.get_device().get_info<info::device::device_type>() ==
+          info::device_type::cpu) {
+        exit_if_not_equal(syclacc[j].max_local_range, std::min(max_sg, L),
+                          "max_local_range");
+      } else {
+        exit_if_not_equal(syclacc[j].max_local_range, max_sg,
+                          "max_local_range");
+      }
       exit_if_not_equal(syclacc[j].group_id, group_id, "group_id");
       exit_if_not_equal(syclacc[j].group_range, num_sg, "group_range");
       exit_if_not_equal(syclacc[j].uniform_group_range, num_sg,
