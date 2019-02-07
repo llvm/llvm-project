@@ -23,7 +23,7 @@ set(LLVM_OPT "${LLVM_TOOLS_BINARY_DIR}/opt${EXE_SUFFIX}")
 
 # -Wno-error=atomic-alignment was added to workaround build problems due to
 # potential mis-aligned atomic ops detected by clang
-set(CLANG_OCL_FLAGS -Werror -Wno-error=atomic-alignment -x cl -Xclang
+set(CLANG_OCL_FLAGS -fcolor-diagnostics -Werror -Wno-error=atomic-alignment -x cl -Xclang
   -cl-std=CL2.0 -target "${AMDGPU_TARGET_TRIPLE}" -fvisibility=protected
   -Xclang -finclude-default-header "${CLANG_OPTIONS_APPEND}")
 
