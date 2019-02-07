@@ -88,10 +88,18 @@ int main() {
     queue Queue(pl);
     try {
       Queue.throw_asynchronous();
-    }
-    catch (const std::bad_function_call& e) {
-      std::cout << "Default asynchronous handler call failed: " << e.what() << std::endl;
+    } catch (const std::bad_function_call &e) {
+      std::cout << "Default asynchronous handler call failed: " << e.what()
+                << std::endl;
       throw;
     }
+  }
+
+  {
+    default_selector Selector;
+    device Device = Selector.select_device();
+    context Context(Device);
+    queue Queue(Context, Selector);
+    assert(Context == Queue.get_context());
   }
 }

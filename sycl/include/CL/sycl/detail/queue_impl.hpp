@@ -27,7 +27,11 @@ class queue_impl {
 public:
   queue_impl(const device &SyclDevice, async_handler AsyncHandler,
              const property_list &PropList)
-      : m_Device(SyclDevice), m_Context(m_Device), m_AsyncHandler(AsyncHandler),
+      : queue_impl(SyclDevice, context(SyclDevice), AsyncHandler, PropList){};
+
+  queue_impl(const device &SyclDevice, const context &Context,
+             async_handler AsyncHandler, const property_list &PropList)
+      : m_Device(SyclDevice), m_Context(Context), m_AsyncHandler(AsyncHandler),
         m_PropList(PropList), m_HostQueue(m_Device.is_host()) {
     m_OpenCLInterop = !m_HostQueue;
     if (!m_HostQueue) {
@@ -160,8 +164,7 @@ public:
     if (m_Queues.empty()) {
       m_Queues.push_back(m_CommandQueue);
       return m_CommandQueue;
-    }
-    else if (m_Queues.size() < MaxNumQueues) {
+    } else if (m_Queues.size() < MaxNumQueues) {
       m_Queues.push_back(createQueue());
       return m_Queues.back();
     }
