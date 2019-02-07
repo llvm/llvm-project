@@ -82,7 +82,7 @@ Changes to the ARM Backend
 
 
 Changes to the Hexagon Target
---------------------------
+-----------------------------
 
 * Added support for Hexagon/HVX V66 ISA.
 
