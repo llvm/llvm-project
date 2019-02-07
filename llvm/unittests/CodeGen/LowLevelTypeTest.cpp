@@ -106,6 +106,61 @@ TEST(LowLevelTypeTest, ScalarOrVector) {
             LLT::scalarOrVector(2, LLT::pointer(1, 32)));
 }
 
+TEST(LowLevelTypeTest, ChangeElementType) {
+  const LLT P0 = LLT::pointer(0, 32);
+  const LLT P1 = LLT::pointer(1, 64);
+
+  const LLT S32 = LLT::scalar(32);
+  const LLT S64 = LLT::scalar(64);
+
+  const LLT V2S32 = LLT::vector(2, 32);
+  const LLT V2S64 = LLT::vector(2, 64);
+
+  const LLT V2P0 = LLT::vector(2, P0);
+  const LLT V2P1 = LLT::vector(2, P1);
+
+  EXPECT_EQ(S64, S32.changeElementType(S64));
+  EXPECT_EQ(S32, S32.changeElementType(S32));
+
+  EXPECT_EQ(S32, S64.changeElementSize(32));
+  EXPECT_EQ(S32, S32.changeElementSize(32));
+
+  EXPECT_EQ(V2S64, V2S32.changeElementType(S64));
+  EXPECT_EQ(V2S32, V2S64.changeElementType(S32));
+
+  EXPECT_EQ(V2S64, V2S32.changeElementSize(64));
+  EXPECT_EQ(V2S32, V2S64.changeElementSize(32));
+
+  EXPECT_EQ(P0, S32.changeElementType(P0));
+  EXPECT_EQ(S32, P0.changeElementType(S32));
+
+  EXPECT_EQ(V2P1, V2P0.changeElementType(P1));
+  EXPECT_EQ(V2S32, V2P0.changeElementType(S32));
+}
+
+#ifdef GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+
+// Invalid to directly change the element size for pointers.
+TEST(LowLevelTypeTest, ChangeElementTypeDeath) {
+  const LLT P0 = LLT::pointer(0, 32);
+  const LLT V2P0 = LLT::vector(2, P0);
+
+  EXPECT_DEATH(P0.changeElementSize(64),
+               "invalid to directly change element size for pointers");
+  EXPECT_DEATH(V2P0.changeElementSize(64),
+               "invalid to directly change element size for pointers");
+
+  // Make sure this still fails even without a change in size.
+  EXPECT_DEATH(P0.changeElementSize(32),
+               "invalid to directly change element size for pointers");
+  EXPECT_DEATH(V2P0.changeElementSize(32),
+               "invalid to directly change element size for pointers");
+}
+
+#endif
+#endif
+
 TEST(LowLevelTypeTest, Pointer) {
   LLVMContext C;
   DataLayout DL("p64:64:64-p127:512:512:512-p16777215:65528:8");

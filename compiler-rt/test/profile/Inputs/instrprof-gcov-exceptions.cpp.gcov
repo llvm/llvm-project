@@ -1,4 +1,4 @@
-// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-exceptions.cpp
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-gcov-exceptions.cpp
 // CHECK-NEXT:        -:    0:Graph:instrprof-gcov-exceptions.gcno
 // CHECK-NEXT:        -:    0:Data:instrprof-gcov-exceptions.gcda
 // CHECK-NEXT:        -:    0:Runs:1

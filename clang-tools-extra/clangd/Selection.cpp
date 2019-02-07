@@ -51,7 +51,7 @@ public:
   //  - those that can't be stored in DynTypedNode.
   // We're missing some interesting things like Attr due to the latter.
   bool TraverseDecl(Decl *X) {
-    if (isa<TranslationUnitDecl>(X))
+    if (X && isa<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
     return traverseNode(X, [&] { return Base::TraverseDecl(X); });
   }

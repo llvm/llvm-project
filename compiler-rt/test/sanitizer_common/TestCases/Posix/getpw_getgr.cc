@@ -14,6 +14,8 @@ std::string any_group;
 const int N = 123456;
 
 void Check(const char *str) {
+  if (!str)
+    return;
   assert(strlen(str) != N);
 }
 

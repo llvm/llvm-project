@@ -1,4 +1,4 @@
-//===-- llvm/Support/DotGraphTraits.h - Customize .dot output ---*- C++ -*-===//
+//===-- llvm/Support/DOTGraphTraits.h - Customize .dot output ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

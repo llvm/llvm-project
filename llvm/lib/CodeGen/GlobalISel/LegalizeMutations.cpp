@@ -26,14 +26,30 @@ LegalizeMutation LegalizeMutations::changeTo(unsigned TypeIdx,
   };
 }
 
-LegalizeMutation LegalizeMutations::widenScalarToNextPow2(unsigned TypeIdx,
-                                                          unsigned Min) {
+LegalizeMutation LegalizeMutations::changeElementTo(unsigned TypeIdx,
+                                                    unsigned FromTypeIdx) {
   return [=](const LegalityQuery &Query) {
-    unsigned NewSizeInBits =
-        1 << Log2_32_Ceil(Query.Types[TypeIdx].getSizeInBits());
-    if (NewSizeInBits < Min)
-      NewSizeInBits = Min;
-    return std::make_pair(TypeIdx, LLT::scalar(NewSizeInBits));
+    const LLT OldTy = Query.Types[TypeIdx];
+    const LLT NewTy = Query.Types[FromTypeIdx];
+    return std::make_pair(TypeIdx, OldTy.changeElementType(NewTy));
+  };
+}
+
+LegalizeMutation LegalizeMutations::changeElementTo(unsigned TypeIdx,
+                                                    LLT NewEltTy) {
+  return [=](const LegalityQuery &Query) {
+    const LLT OldTy = Query.Types[TypeIdx];
+    return std::make_pair(TypeIdx, OldTy.changeElementType(NewEltTy));
+  };
+}
+
+LegalizeMutation LegalizeMutations::widenScalarOrEltToNextPow2(unsigned TypeIdx,
+                                                               unsigned Min) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    unsigned NewEltSizeInBits =
+        std::max(1u << Log2_32_Ceil(Ty.getScalarSizeInBits()), Min);
+    return std::make_pair(TypeIdx, Ty.changeElementSize(NewEltSizeInBits));
   };
 }
 

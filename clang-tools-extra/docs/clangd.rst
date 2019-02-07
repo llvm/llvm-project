@@ -143,6 +143,25 @@ Emacs Integration
 :program:`Emacs` provides `lsp-mode <github.com/emacs-lsp/lsp-mode>`_ and
 `Eglot <https://github.com/joaotavora/eglot>`_ plugins for LSP integration.
 
+Project-wide Index
+==================
+
+By default :program:`Clangd` only has a view on symbols coming from files you
+are currently editing. You can extend this view to whole project by providing a
+project-wide index to :program:`Clangd`.
+
+There are two ways you can generate a project-wide index for clangd:
+
+- Passing experimental `-background-index` commandline argument, which will
+  incrementally build an index of projects that you work on and make use of that
+  in clangd automatically.
+- Generate an index file using `clangd-indexer
+  <https://github.com/llvm-mirror/clang-tools-extra/blob/master/clangd/indexer/IndexerMain.cpp>`_
+  Afterwards you can pass generated index file to clangd using
+  `-index-file=/path/to/index_file`.  *Note that clangd-indexer isn't included
+  alongside clangd in the standard clang-tools package. You will likely have to
+  build from source to use this option*
+
 Getting Involved
 ==================
 

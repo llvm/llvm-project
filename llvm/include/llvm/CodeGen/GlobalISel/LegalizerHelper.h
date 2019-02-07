@@ -157,6 +157,12 @@ private:
   LegalizeResult fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
                                           LLT NarrowTy);
 
+  /// Legalize a instruction with a vector type where each operand may have a
+  /// different element type. All type indexes must have the same number of
+  /// elements.
+  LegalizeResult fewerElementsVectorMultiEltType(MachineInstr &MI,
+                                                 unsigned TypeIdx, LLT NarrowTy);
+
   LegalizeResult fewerElementsVectorCasts(MachineInstr &MI, unsigned TypeIdx,
                                           LLT NarrowTy);
 

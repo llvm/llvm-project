@@ -81,6 +81,9 @@ int X86_64<ELFT>::getTlsGdRelaxSkip(RelType Type) const {
 template <class ELFT>
 RelExpr X86_64<ELFT>::getRelExpr(RelType Type, const Symbol &S,
                                  const uint8_t *Loc) const {
+  if (Type == R_X86_64_GOTTPOFF)
+    Config->HasStaticTlsModel = true;
+
   switch (Type) {
   case R_X86_64_8:
   case R_X86_64_16:
@@ -321,13 +324,19 @@ template <class ELFT>
 void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_X86_64_8:
-  case R_X86_64_PC8:
     checkUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
+  case R_X86_64_PC8:
+    checkInt(Loc, Val, 8, Type);
+    *Loc = Val;
+    break;
   case R_X86_64_16:
-  case R_X86_64_PC16:
     checkUInt(Loc, Val, 16, Type);
+    write16le(Loc, Val);
+    break;
+  case R_X86_64_PC16:
+    checkInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;
   case R_X86_64_32:

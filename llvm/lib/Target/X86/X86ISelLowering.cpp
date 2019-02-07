@@ -14600,7 +14600,11 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
         if (EltWidth == 32 && NumLowerHalves &&
             HalfVT.is128BitVector() && !is128BitUnpackShuffleMask(HalfMask))
           return SDValue();
-        if (EltWidth == 64)
+        // If this is a unary shuffle (assume that the 2nd operand is
+        // canonicalized to undef), then we can use vpermpd. Otherwise, we
+        // are better off extracting the upper half of 1 operand and using a
+        // narrow shuffle.
+        if (EltWidth == 64 && V2.isUndef())
           return SDValue();
       }
       // AVX512 has efficient cross-lane shuffles for all legal 512-bit types.
@@ -42985,6 +42989,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     // GCC Constraint Letters
     switch (Constraint[0]) {
     default: break;
+    // 'A' means [ER]AX + [ER]DX.
+    case 'A':
+      if (Subtarget.is64Bit())
+        return std::make_pair(X86::RAX, &X86::GR64_ADRegClass);
+      assert((Subtarget.is32Bit() || Subtarget.is16Bit()) &&
+             "Expecting 64, 32 or 16 bit subtarget");
+      return std::make_pair(X86::EAX, &X86::GR32_ADRegClass);
+
       // TODO: Slight differences here in allocation order and leaving
       // RIP in the class. Do they matter any more here than they do
       // in the normal allocation?
@@ -43184,14 +43196,6 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (StringRef("{fpsr}").equals_lower(Constraint))
       return std::make_pair(X86::FPSW, &X86::FPCCRRegClass);
 
-    // 'A' means [ER]AX + [ER]DX.
-    if (Constraint == "A") {
-      if (Subtarget.is64Bit())
-        return std::make_pair(X86::RAX, &X86::GR64_ADRegClass);
-      assert((Subtarget.is32Bit() || Subtarget.is16Bit()) &&
-             "Expecting 64, 32 or 16 bit subtarget");
-      return std::make_pair(X86::EAX, &X86::GR32_ADRegClass);
-    }
     return Res;
   }
 

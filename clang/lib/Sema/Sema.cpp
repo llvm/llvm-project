@@ -255,11 +255,12 @@ void Sema::Initialize() {
   // Initialize predefined OpenCL types and supported extensions and (optional)
   // core features.
   if (getLangOpts().OpenCL) {
-    getOpenCLOptions().addSupport(Context.getTargetInfo().getSupportedOpenCLOpts());
-    getOpenCLOptions().enableSupportedCore(getLangOpts().OpenCLVersion);
+    getOpenCLOptions().addSupport(
+        Context.getTargetInfo().getSupportedOpenCLOpts());
+    getOpenCLOptions().enableSupportedCore(getLangOpts());
     addImplicitTypedef("sampler_t", Context.OCLSamplerTy);
     addImplicitTypedef("event_t", Context.OCLEventTy);
-    if (getLangOpts().OpenCLVersion >= 200) {
+    if (getLangOpts().OpenCLCPlusPlus || getLangOpts().OpenCLVersion >= 200) {
       addImplicitTypedef("clk_event_t", Context.OCLClkEventTy);
       addImplicitTypedef("queue_t", Context.OCLQueueTy);
       addImplicitTypedef("reserve_id_t", Context.OCLReserveIDTy);

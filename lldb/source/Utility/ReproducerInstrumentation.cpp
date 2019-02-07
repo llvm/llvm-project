@@ -68,7 +68,7 @@ unsigned Registry::GetID(uintptr_t addr) {
   return id;
 }
 
-unsigned ObjectToIndex::GetIndexForObjectImpl(void *object) {
+unsigned ObjectToIndex::GetIndexForObjectImpl(const void *object) {
   unsigned index = m_mapping.size() + 1;
   auto it = m_mapping.find(object);
   if (it == m_mapping.end())

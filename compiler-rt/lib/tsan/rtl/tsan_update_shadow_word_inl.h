@@ -17,31 +17,35 @@ do {
   const unsigned kAccessSize = 1 << kAccessSizeLog;
   u64 *sp = &shadow_mem[idx];
   old = LoadShadow(sp);
-  if (old.IsZero()) {
+  if (LIKELY(old.IsZero())) {
     StatInc(thr, StatShadowZero);
-    if (store_word)
+    if (!stored) {
       StoreIfNotYetStored(sp, &store_word);
-    // The above StoreIfNotYetStored could be done unconditionally
-    // and it even shows 4% gain on synthetic benchmarks (r4307).
+      stored = true;
+    }
     break;
   }
   // is the memory access equal to the previous?
-  if (Shadow::Addr0AndSizeAreEqual(cur, old)) {
+  if (LIKELY(Shadow::Addr0AndSizeAreEqual(cur, old))) {
     StatInc(thr, StatShadowSameSize);
     // same thread?
-    if (Shadow::TidsAreEqual(old, cur)) {
+    if (LIKELY(Shadow::TidsAreEqual(old, cur))) {
       StatInc(thr, StatShadowSameThread);
-      if (old.IsRWWeakerOrEqual(kAccessIsWrite, kIsAtomic))
+      if (LIKELY(old.IsRWWeakerOrEqual(kAccessIsWrite, kIsAtomic))) {
         StoreIfNotYetStored(sp, &store_word);
+        stored = true;
+      }
       break;
     }
     StatInc(thr, StatShadowAnotherThread);
     if (HappensBefore(old, thr)) {
-      if (old.IsRWWeakerOrEqual(kAccessIsWrite, kIsAtomic))
+      if (old.IsRWWeakerOrEqual(kAccessIsWrite, kIsAtomic)) {
         StoreIfNotYetStored(sp, &store_word);
+        stored = true;
+      }
       break;
     }
-    if (old.IsBothReadsOrAtomic(kAccessIsWrite, kIsAtomic))
+    if (LIKELY(old.IsBothReadsOrAtomic(kAccessIsWrite, kIsAtomic)))
       break;
     goto RACE;
   }
@@ -55,7 +59,7 @@ do {
     StatInc(thr, StatShadowAnotherThread);
     if (old.IsBothReadsOrAtomic(kAccessIsWrite, kIsAtomic))
       break;
-    if (HappensBefore(old, thr))
+    if (LIKELY(HappensBefore(old, thr)))
       break;
     goto RACE;
   }

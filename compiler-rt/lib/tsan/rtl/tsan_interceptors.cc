@@ -958,7 +958,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
       internal_sched_yield();
     Processor *proc = ProcCreate();
     ProcWire(proc, thr);
-    ThreadStart(thr, tid, GetTid(), /*workerthread*/ false);
+    ThreadStart(thr, tid, GetTid(), ThreadType::Regular);
     atomic_store(&p->tid, 0, memory_order_release);
   }
   void *res = callback(param);
@@ -1048,6 +1048,11 @@ TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
     ThreadDetach(thr, pc, tid);
   }
   return res;
+}
+
+TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_exit, retval);
+  REAL(pthread_exit)(retval);
 }
 
 #if SANITIZER_LINUX
@@ -2664,6 +2669,7 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_create);
   TSAN_INTERCEPT(pthread_join);
   TSAN_INTERCEPT(pthread_detach);
+  TSAN_INTERCEPT(pthread_exit);
   #if SANITIZER_LINUX
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);

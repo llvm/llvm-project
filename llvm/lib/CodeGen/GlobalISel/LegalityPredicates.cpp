@@ -79,7 +79,7 @@ LegalityPredicate LegalityPredicates::isPointer(unsigned TypeIdx,
 LegalityPredicate LegalityPredicates::narrowerThan(unsigned TypeIdx,
                                                    unsigned Size) {
   return [=](const LegalityQuery &Query) {
-    const LLT &QueryTy = Query.Types[TypeIdx];
+    const LLT QueryTy = Query.Types[TypeIdx];
     return QueryTy.isScalar() && QueryTy.getSizeInBits() < Size;
   };
 }
@@ -87,14 +87,37 @@ LegalityPredicate LegalityPredicates::narrowerThan(unsigned TypeIdx,
 LegalityPredicate LegalityPredicates::widerThan(unsigned TypeIdx,
                                                 unsigned Size) {
   return [=](const LegalityQuery &Query) {
-    const LLT &QueryTy = Query.Types[TypeIdx];
+    const LLT QueryTy = Query.Types[TypeIdx];
     return QueryTy.isScalar() && QueryTy.getSizeInBits() > Size;
+  };
+}
+
+LegalityPredicate LegalityPredicates::scalarOrEltNarrowerThan(unsigned TypeIdx,
+                                                              unsigned Size) {
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.getScalarSizeInBits() < Size;
+  };
+}
+
+LegalityPredicate LegalityPredicates::scalarOrEltWiderThan(unsigned TypeIdx,
+                                                           unsigned Size) {
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.getScalarSizeInBits() > Size;
+  };
+}
+
+LegalityPredicate LegalityPredicates::scalarOrEltSizeNotPow2(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return !isPowerOf2_32(QueryTy.getScalarSizeInBits());
   };
 }
 
 LegalityPredicate LegalityPredicates::sizeNotPow2(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
-    const LLT &QueryTy = Query.Types[TypeIdx];
+    const LLT QueryTy = Query.Types[TypeIdx];
     return QueryTy.isScalar() && !isPowerOf2_32(QueryTy.getSizeInBits());
   };
 }

@@ -152,9 +152,12 @@ Error TpiStreamBuilder::commit(const msf::MSFLayout &Layout,
   if (auto EC = Writer.writeObject(*Header))
     return EC;
 
-  for (auto Rec : TypeRecords)
+  for (auto Rec : TypeRecords) {
+    assert(!Rec.empty()); // An empty record will not write anything, but it
+                          // would shift all offsets from here on.
     if (auto EC = Writer.writeBytes(Rec))
       return EC;
+  }
 
   if (HashStreamIndex != kInvalidStreamIndex) {
     auto HVS = WritableMappedBlockStream::createIndexedStream(

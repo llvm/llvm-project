@@ -1182,29 +1182,6 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
           }
         }
 
-        // Failing case: the only way IBB can be reached from PBB is via
-        // exception handling.  Happens for landing pads.  Would be nice to have
-        // a bit in the edge so we didn't have to do all this.
-        if (IBB->isEHPad()) {
-          MachineFunction::iterator IP = ++PBB->getIterator();
-          MachineBasicBlock *PredNextBB = nullptr;
-          if (IP != MF.end())
-            PredNextBB = &*IP;
-          if (!TBB) {
-            if (IBB != PredNextBB)      // fallthrough
-              continue;
-          } else if (FBB) {
-            if (TBB != IBB && FBB != IBB)   // cbr then ubr
-              continue;
-          } else if (Cond.empty()) {
-            if (TBB != IBB)               // ubr
-              continue;
-          } else {
-            if (TBB != IBB && IBB != PredNextBB)  // cbr
-              continue;
-          }
-        }
-
         // Remove the unconditional branch at the end, if any.
         if (TBB && (Cond.empty() || FBB)) {
           DebugLoc dl = PBB->findBranchDebugLoc();
