@@ -97,7 +97,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     return;
   }
 
-  llvm::Constant *Func;
+  llvm::FunctionCallee Func;
   llvm::Constant *Argument;
 
   // Special-case non-array C++ destructors, if they have the right signature.
@@ -117,7 +117,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     assert(!Record->hasTrivialDestructor());
     CXXDestructorDecl *Dtor = Record->getDestructor();
 
-    Func = CGM.getAddrOfCXXStructor(Dtor, StructorType::Complete);
+    Func = CGM.getAddrAndTypeOfCXXStructor(Dtor, StructorType::Complete);
     Argument = llvm::ConstantExpr::getBitCast(
         Addr.getPointer(), CGF.getTypes().ConvertType(Type)->getPointerTo());
 
@@ -214,8 +214,8 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
 
 /// Create a stub function, suitable for being passed to atexit,
 /// which passes the given address to the given destructor function.
-llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
-                                                  llvm::Constant *dtor,
+llvm::Function *CodeGenFunction::createAtExitStub(const VarDecl &VD,
+                                                  llvm::FunctionCallee dtor,
                                                   llvm::Constant *addr) {
   // Get the destructor function type, void(*)(void).
   llvm::FunctionType *ty = llvm::FunctionType::get(CGM.VoidTy, false);
@@ -238,7 +238,7 @@ llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
 
  // Make sure the call and the callee agree on calling convention.
   if (llvm::Function *dtorFn =
-        dyn_cast<llvm::Function>(dtor->stripPointerCasts()))
+          dyn_cast<llvm::Function>(dtor.getCallee()->stripPointerCasts()))
     call->setCallingConv(dtorFn->getCallingConv());
 
   CGF.FinishFunction();
@@ -248,7 +248,7 @@ llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
 
 /// Register a global destructor using the C atexit runtime function.
 void CodeGenFunction::registerGlobalDtorWithAtExit(const VarDecl &VD,
-                                                   llvm::Constant *dtor,
+                                                   llvm::FunctionCallee dtor,
                                                    llvm::Constant *addr) {
   // Create a function which calls the destructor.
   llvm::Constant *dtorStub = createAtExitStub(VD, dtor, addr);
@@ -681,8 +681,8 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
 
 void CodeGenFunction::GenerateCXXGlobalDtorsFunc(
     llvm::Function *Fn,
-    const std::vector<std::pair<llvm::WeakTrackingVH, llvm::Constant *>>
-        &DtorsAndObjects) {
+    const std::vector<std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
+                                 llvm::Constant *>> &DtorsAndObjects) {
   {
     auto NL = ApplyDebugLocation::CreateEmpty(*this);
     StartFunction(GlobalDecl(), getContext().VoidTy, Fn,
@@ -692,9 +692,11 @@ void CodeGenFunction::GenerateCXXGlobalDtorsFunc(
 
     // Emit the dtors, in reverse order from construction.
     for (unsigned i = 0, e = DtorsAndObjects.size(); i != e; ++i) {
-      llvm::Value *Callee = DtorsAndObjects[e - i - 1].first;
-      llvm::CallInst *CI = Builder.CreateCall(Callee,
-                                          DtorsAndObjects[e - i - 1].second);
+      llvm::FunctionType *CalleeTy;
+      llvm::Value *Callee;
+      llvm::Constant *Arg;
+      std::tie(CalleeTy, Callee, Arg) = DtorsAndObjects[e - i - 1];
+      llvm::CallInst *CI = Builder.CreateCall(CalleeTy, Callee, Arg);
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))
         CI->setCallingConv(F->getCallingConv());

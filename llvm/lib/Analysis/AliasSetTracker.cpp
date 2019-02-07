@@ -13,7 +13,9 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GuardUtils.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -126,24 +128,24 @@ void AliasSet::removeFromTracker(AliasSetTracker &AST) {
 
 void AliasSet::addPointer(AliasSetTracker &AST, PointerRec &Entry,
                           LocationSize Size, const AAMDNodes &AAInfo,
-                          bool KnownMustAlias) {
+                          bool KnownMustAlias, bool SkipSizeUpdate) {
   assert(!Entry.hasAliasSet() && "Entry already in set!");
 
   // Check to see if we have to downgrade to _may_ alias.
-  if (isMustAlias() && !KnownMustAlias)
+  if (isMustAlias())
     if (PointerRec *P = getSomePointer()) {
-      AliasAnalysis &AA = AST.getAliasAnalysis();
-      AliasResult Result =
-          AA.alias(MemoryLocation(P->getValue(), P->getSize(), P->getAAInfo()),
-                   MemoryLocation(Entry.getValue(), Size, AAInfo));
-      if (Result != MustAlias) {
-        Alias = SetMayAlias;
-        AST.TotalMayAliasSetSize += size();
-      } else {
-        // First entry of must alias must have maximum size!
+      if (!KnownMustAlias) {
+        AliasAnalysis &AA = AST.getAliasAnalysis();
+        AliasResult Result = AA.alias(
+            MemoryLocation(P->getValue(), P->getSize(), P->getAAInfo()),
+            MemoryLocation(Entry.getValue(), Size, AAInfo));
+        if (Result != MustAlias) {
+          Alias = SetMayAlias;
+          AST.TotalMayAliasSetSize += size();
+        }
+        assert(Result != NoAlias && "Cannot be part of must set!");
+      } else if (!SkipSizeUpdate)
         P->updateSizeAndAAInfo(Size, AAInfo);
-      }
-      assert(Result != NoAlias && "Cannot be part of must set!");
     }
 
   Entry.setAliasSet(this);
@@ -289,17 +291,27 @@ void AliasSetTracker::clear() {
   AliasSets.clear();
 }
 
-
 /// mergeAliasSetsForPointer - Given a pointer, merge all alias sets that may
 /// alias the pointer. Return the unified set, or nullptr if no set that aliases
-/// the pointer was found.
+/// the pointer was found. MustAliasAll is updated to true/false if the pointer
+/// is found to MustAlias all the sets it merged.
 AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
                                                     LocationSize Size,
-                                                    const AAMDNodes &AAInfo) {
+                                                    const AAMDNodes &AAInfo,
+                                                    bool &MustAliasAll) {
   AliasSet *FoundSet = nullptr;
+  AliasResult AllAR = MustAlias;
   for (iterator I = begin(), E = end(); I != E;) {
     iterator Cur = I++;
-    if (Cur->Forward || !Cur->aliasesPointer(Ptr, Size, AAInfo, AA)) continue;
+    if (Cur->Forward)
+      continue;
+
+    AliasResult AR = Cur->aliasesPointer(Ptr, Size, AAInfo, AA);
+    if (AR == NoAlias)
+      continue;
+
+    AllAR =
+        AliasResult(AllAR & AR); // Possible downgrade to May/Partial, even No
 
     if (!FoundSet) {
       // If this is the first alias set ptr can go into, remember it.
@@ -310,6 +322,7 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
     }
   }
 
+  MustAliasAll = (AllAR == MustAlias);
   return FoundSet;
 }
 
@@ -354,6 +367,7 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
     return *AliasAnyAS;
   }
 
+  bool MustAliasAll = false;
   // Check to see if the pointer is already known.
   if (Entry.hasAliasSet()) {
     // If the size changed, we may need to merge several alias sets.
@@ -362,20 +376,21 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
     // is NoAlias, mergeAliasSetsForPointer(undef, ...) will not find the
     // the right set for undef, even if it exists.
     if (Entry.updateSizeAndAAInfo(Size, AAInfo))
-      mergeAliasSetsForPointer(Pointer, Size, AAInfo);
+      mergeAliasSetsForPointer(Pointer, Size, AAInfo, MustAliasAll);
     // Return the set!
     return *Entry.getAliasSet(*this)->getForwardedTarget(*this);
   }
 
-  if (AliasSet *AS = mergeAliasSetsForPointer(Pointer, Size, AAInfo)) {
+  if (AliasSet *AS =
+          mergeAliasSetsForPointer(Pointer, Size, AAInfo, MustAliasAll)) {
     // Add it to the alias set it aliases.
-    AS->addPointer(*this, Entry, Size, AAInfo);
+    AS->addPointer(*this, Entry, Size, AAInfo, MustAliasAll);
     return *AS;
   }
 
   // Otherwise create a new alias set to hold the loaded pointer.
   AliasSets.push_back(new AliasSet());
-  AliasSets.back().addPointer(*this, Entry, Size, AAInfo);
+  AliasSets.back().addPointer(*this, Entry, Size, AAInfo, true);
   return AliasSets.back();
 }
 
@@ -520,6 +535,15 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
   }
 }
 
+void AliasSetTracker::addAllInstructionsInLoopUsingMSSA() {
+  assert(MSSA && L && "MSSA and L must be available");
+  for (const BasicBlock *BB : L->blocks())
+    if (auto *Accesses = MSSA->getBlockAccesses(BB))
+      for (auto &Access : *Accesses)
+        if (auto *MUD = dyn_cast<MemoryUseOrDef>(&Access))
+          add(MUD->getMemoryInst());
+}
+
 // deleteValue method - This method is used to remove a pointer value from the
 // AliasSetTracker entirely.  It should be used when an instruction is deleted
 // from the program to update the AST.  If you don't use this, you would have
@@ -567,9 +591,8 @@ void AliasSetTracker::copyValue(Value *From, Value *To) {
   I = PointerMap.find_as(From);
   // Add it to the alias set it aliases...
   AliasSet *AS = I->second->getAliasSet(*this);
-  AS->addPointer(*this, Entry, I->second->getSize(),
-                 I->second->getAAInfo(),
-                 true);
+  AS->addPointer(*this, Entry, I->second->getSize(), I->second->getAAInfo(),
+                 true, true);
 }
 
 AliasSet &AliasSetTracker::mergeAllAliasSets() {

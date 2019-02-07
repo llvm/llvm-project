@@ -2628,6 +2628,8 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
     value.SetCompilerType(voidstar);
     exception = ValueObjectConstResult::Create(frame_sp.get(), value,
                                                ConstString("exception"));
+    exception = ValueObjectRecognizerSynthesizedValue::Create(
+        *exception, eValueTypeVariableArgument);
     exception = exception->GetDynamicValue(eDynamicDontRunTarget);
       
     m_arguments = ValueObjectListSP(new ValueObjectList());

@@ -1538,6 +1538,8 @@ public:
   /// not modify the MIFlags of this MachineInstr.
   uint16_t mergeFlagsWith(const MachineInstr& Other) const;
 
+  static uint16_t copyFlagsFromInstruction(const Instruction &I);
+
   /// Copy all flags to MachineInst MIFlags
   void copyIRFlags(const Instruction &I);
 

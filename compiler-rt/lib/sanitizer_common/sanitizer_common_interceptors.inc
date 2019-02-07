@@ -1822,27 +1822,27 @@ UNUSED static void unpoison_passwd(void *ctx, __sanitizer_passwd *pwd) {
   if (pwd) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd, sizeof(*pwd));
     if (pwd->pw_name)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(pwd->pw_name,
-                                          REAL(strlen)(pwd->pw_name) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_name,
+                                     REAL(strlen)(pwd->pw_name) + 1);
     if (pwd->pw_passwd)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(pwd->pw_passwd,
-                                          REAL(strlen)(pwd->pw_passwd) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_passwd,
+                                     REAL(strlen)(pwd->pw_passwd) + 1);
 #if !SANITIZER_ANDROID
     if (pwd->pw_gecos)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(pwd->pw_gecos,
-                                          REAL(strlen)(pwd->pw_gecos) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_gecos,
+                                     REAL(strlen)(pwd->pw_gecos) + 1);
 #endif
-#if SANITIZER_MAC
+#if SANITIZER_MAC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD
     if (pwd->pw_class)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(pwd->pw_class,
-                                          REAL(strlen)(pwd->pw_class) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_class,
+                                     REAL(strlen)(pwd->pw_class) + 1);
 #endif
     if (pwd->pw_dir)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(pwd->pw_dir,
-                                          REAL(strlen)(pwd->pw_dir) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_dir,
+                                     REAL(strlen)(pwd->pw_dir) + 1);
     if (pwd->pw_shell)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(pwd->pw_shell,
-                                          REAL(strlen)(pwd->pw_shell) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_shell,
+                                     REAL(strlen)(pwd->pw_shell) + 1);
   }
 }
 
@@ -1850,17 +1850,17 @@ UNUSED static void unpoison_group(void *ctx, __sanitizer_group *grp) {
   if (grp) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, grp, sizeof(*grp));
     if (grp->gr_name)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(grp->gr_name,
-                                          REAL(strlen)(grp->gr_name) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, grp->gr_name,
+                                     REAL(strlen)(grp->gr_name) + 1);
     if (grp->gr_passwd)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(grp->gr_passwd,
-                                          REAL(strlen)(grp->gr_passwd) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, grp->gr_passwd,
+                                     REAL(strlen)(grp->gr_passwd) + 1);
     char **p = grp->gr_mem;
     for (; *p; ++p) {
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(*p, REAL(strlen)(*p) + 1);
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *p, REAL(strlen)(*p) + 1);
     }
-    COMMON_INTERCEPTOR_INITIALIZE_RANGE(grp->gr_mem,
-                                        (p - grp->gr_mem + 1) * sizeof(*p));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, grp->gr_mem,
+                                   (p - grp->gr_mem + 1) * sizeof(*p));
   }
 }
 #endif  // SANITIZER_POSIX
@@ -1872,14 +1872,14 @@ INTERCEPTOR(__sanitizer_passwd *, getpwnam, const char *name) {
   if (name)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
   __sanitizer_passwd *res = REAL(getpwnam)(name);
-  if (res) unpoison_passwd(ctx, res);
+  unpoison_passwd(ctx, res);
   return res;
 }
 INTERCEPTOR(__sanitizer_passwd *, getpwuid, u32 uid) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getpwuid, uid);
   __sanitizer_passwd *res = REAL(getpwuid)(uid);
-  if (res) unpoison_passwd(ctx, res);
+  unpoison_passwd(ctx, res);
   return res;
 }
 INTERCEPTOR(__sanitizer_group *, getgrnam, const char *name) {
@@ -1887,14 +1887,14 @@ INTERCEPTOR(__sanitizer_group *, getgrnam, const char *name) {
   COMMON_INTERCEPTOR_ENTER(ctx, getgrnam, name);
   COMMON_INTERCEPTOR_READ_RANGE(ctx, name, REAL(strlen)(name) + 1);
   __sanitizer_group *res = REAL(getgrnam)(name);
-  if (res) unpoison_group(ctx, res);
+  unpoison_group(ctx, res);
   return res;
 }
 INTERCEPTOR(__sanitizer_group *, getgrgid, u32 gid) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getgrgid, gid);
   __sanitizer_group *res = REAL(getgrgid)(gid);
-  if (res) unpoison_group(ctx, res);
+  unpoison_group(ctx, res);
   return res;
 }
 #define INIT_GETPWNAM_AND_FRIENDS      \
@@ -1916,10 +1916,8 @@ INTERCEPTOR(int, getpwnam_r, const char *name, __sanitizer_passwd *pwd,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getpwnam_r)(name, pwd, buf, buflen, result);
-  if (!res) {
-    if (result && *result) unpoison_passwd(ctx, *result);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && result)
+    unpoison_passwd(ctx, *result);
   if (result) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof(*result));
   return res;
 }
@@ -1931,10 +1929,8 @@ INTERCEPTOR(int, getpwuid_r, u32 uid, __sanitizer_passwd *pwd, char *buf,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getpwuid_r)(uid, pwd, buf, buflen, result);
-  if (!res) {
-    if (result && *result) unpoison_passwd(ctx, *result);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && result)
+    unpoison_passwd(ctx, *result);
   if (result) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof(*result));
   return res;
 }
@@ -1947,10 +1943,8 @@ INTERCEPTOR(int, getgrnam_r, const char *name, __sanitizer_group *grp,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getgrnam_r)(name, grp, buf, buflen, result);
-  if (!res) {
-    if (result && *result) unpoison_group(ctx, *result);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && result)
+    unpoison_group(ctx, *result);
   if (result) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof(*result));
   return res;
 }
@@ -1962,10 +1956,8 @@ INTERCEPTOR(int, getgrgid_r, u32 gid, __sanitizer_group *grp, char *buf,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getgrgid_r)(gid, grp, buf, buflen, result);
-  if (!res) {
-    if (result && *result) unpoison_group(ctx, *result);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && result)
+    unpoison_group(ctx, *result);
   if (result) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, result, sizeof(*result));
   return res;
 }
@@ -1983,14 +1975,14 @@ INTERCEPTOR(__sanitizer_passwd *, getpwent, int dummy) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getpwent, dummy);
   __sanitizer_passwd *res = REAL(getpwent)(dummy);
-  if (res) unpoison_passwd(ctx, res);
+  unpoison_passwd(ctx, res);
   return res;
 }
 INTERCEPTOR(__sanitizer_group *, getgrent, int dummy) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, getgrent, dummy);
   __sanitizer_group *res = REAL(getgrent)(dummy);
-  if (res) unpoison_group(ctx, res);;
+  unpoison_group(ctx, res);
   return res;
 }
 #define INIT_GETPWENT                  \
@@ -2005,14 +1997,14 @@ INTERCEPTOR(__sanitizer_passwd *, fgetpwent, void *fp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, fgetpwent, fp);
   __sanitizer_passwd *res = REAL(fgetpwent)(fp);
-  if (res) unpoison_passwd(ctx, res);
+  unpoison_passwd(ctx, res);
   return res;
 }
 INTERCEPTOR(__sanitizer_group *, fgetgrent, void *fp) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, fgetgrent, fp);
   __sanitizer_group *res = REAL(fgetgrent)(fp);
-  if (res) unpoison_group(ctx, res);
+  unpoison_group(ctx, res);
   return res;
 }
 #define INIT_FGETPWENT                  \
@@ -2031,10 +2023,8 @@ INTERCEPTOR(int, getpwent_r, __sanitizer_passwd *pwbuf, char *buf,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getpwent_r)(pwbuf, buf, buflen, pwbufp);
-  if (!res) {
-    if (pwbufp && *pwbufp) unpoison_passwd(ctx, *pwbufp);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && pwbufp)
+    unpoison_passwd(ctx, *pwbufp);
   if (pwbufp) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwbufp, sizeof(*pwbufp));
   return res;
 }
@@ -2046,10 +2036,8 @@ INTERCEPTOR(int, getgrent_r, __sanitizer_group *pwbuf, char *buf, SIZE_T buflen,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(getgrent_r)(pwbuf, buf, buflen, pwbufp);
-  if (!res) {
-    if (pwbufp && *pwbufp) unpoison_group(ctx, *pwbufp);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && pwbufp)
+    unpoison_group(ctx, *pwbufp);
   if (pwbufp) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwbufp, sizeof(*pwbufp));
   return res;
 }
@@ -2069,10 +2057,8 @@ INTERCEPTOR(int, fgetpwent_r, void *fp, __sanitizer_passwd *pwbuf, char *buf,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(fgetpwent_r)(fp, pwbuf, buf, buflen, pwbufp);
-  if (!res) {
-    if (pwbufp && *pwbufp) unpoison_passwd(ctx, *pwbufp);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && pwbufp)
+    unpoison_passwd(ctx, *pwbufp);
   if (pwbufp) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwbufp, sizeof(*pwbufp));
   return res;
 }
@@ -2091,10 +2077,8 @@ INTERCEPTOR(int, fgetgrent_r, void *fp, __sanitizer_group *pwbuf, char *buf,
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   int res = REAL(fgetgrent_r)(fp, pwbuf, buf, buflen, pwbufp);
-  if (!res) {
-    if (pwbufp && *pwbufp) unpoison_group(ctx, *pwbufp);
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, buflen);
-  }
+  if (!res && pwbufp)
+    unpoison_group(ctx, *pwbufp);
   if (pwbufp) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwbufp, sizeof(*pwbufp));
   return res;
 }

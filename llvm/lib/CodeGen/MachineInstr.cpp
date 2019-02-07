@@ -519,39 +519,46 @@ uint16_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
   return getFlags() | Other.getFlags();
 }
 
-void MachineInstr::copyIRFlags(const Instruction &I) {
+uint16_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
+  uint16_t MIFlags = 0;
   // Copy the wrapping flags.
   if (const OverflowingBinaryOperator *OB =
           dyn_cast<OverflowingBinaryOperator>(&I)) {
     if (OB->hasNoSignedWrap())
-      setFlag(MachineInstr::MIFlag::NoSWrap);
+      MIFlags |= MachineInstr::MIFlag::NoSWrap;
     if (OB->hasNoUnsignedWrap())
-      setFlag(MachineInstr::MIFlag::NoUWrap);
+      MIFlags |= MachineInstr::MIFlag::NoUWrap;
   }
 
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
-      setFlag(MachineInstr::MIFlag::IsExact);
+      MIFlags |= MachineInstr::MIFlag::IsExact;
 
   // Copy the fast-math flags.
   if (const FPMathOperator *FP = dyn_cast<FPMathOperator>(&I)) {
     const FastMathFlags Flags = FP->getFastMathFlags();
     if (Flags.noNaNs())
-      setFlag(MachineInstr::MIFlag::FmNoNans);
+      MIFlags |= MachineInstr::MIFlag::FmNoNans;
     if (Flags.noInfs())
-      setFlag(MachineInstr::MIFlag::FmNoInfs);
+      MIFlags |= MachineInstr::MIFlag::FmNoInfs;
     if (Flags.noSignedZeros())
-      setFlag(MachineInstr::MIFlag::FmNsz);
+      MIFlags |= MachineInstr::MIFlag::FmNsz;
     if (Flags.allowReciprocal())
-      setFlag(MachineInstr::MIFlag::FmArcp);
+      MIFlags |= MachineInstr::MIFlag::FmArcp;
     if (Flags.allowContract())
-      setFlag(MachineInstr::MIFlag::FmContract);
+      MIFlags |= MachineInstr::MIFlag::FmContract;
     if (Flags.approxFunc())
-      setFlag(MachineInstr::MIFlag::FmAfn);
+      MIFlags |= MachineInstr::MIFlag::FmAfn;
     if (Flags.allowReassoc())
-      setFlag(MachineInstr::MIFlag::FmReassoc);
+      MIFlags |= MachineInstr::MIFlag::FmReassoc;
   }
+
+  return MIFlags;
+}
+
+void MachineInstr::copyIRFlags(const Instruction &I) {
+  Flags = copyFlagsFromInstruction(I);
 }
 
 bool MachineInstr::hasPropertyInBundle(uint64_t Mask, QueryType Type) const {

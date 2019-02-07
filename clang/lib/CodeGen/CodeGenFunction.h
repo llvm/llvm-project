@@ -3924,12 +3924,12 @@ public:
   void EmitCXXGlobalVarDeclInit(const VarDecl &D, llvm::Constant *DeclPtr,
                                 bool PerformInit);
 
-  llvm::Constant *createAtExitStub(const VarDecl &VD, llvm::Constant *Dtor,
+  llvm::Function *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
                                    llvm::Constant *Addr);
 
   /// Call atexit() with a function that passes the given argument to
   /// the given function.
-  void registerGlobalDtorWithAtExit(const VarDecl &D, llvm::Constant *fn,
+  void registerGlobalDtorWithAtExit(const VarDecl &D, llvm::FunctionCallee fn,
                                     llvm::Constant *addr);
 
   /// Call atexit() with function dtorStub.
@@ -3962,8 +3962,8 @@ public:
   /// variables.
   void GenerateCXXGlobalDtorsFunc(
       llvm::Function *Fn,
-      const std::vector<std::pair<llvm::WeakTrackingVH, llvm::Constant *>>
-          &DtorsAndObjects);
+      const std::vector<std::tuple<llvm::FunctionType *, llvm::WeakTrackingVH,
+                                   llvm::Constant *>> &DtorsAndObjects);
 
   void GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
                                         const VarDecl *D,

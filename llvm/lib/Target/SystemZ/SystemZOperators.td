@@ -286,7 +286,6 @@ def z_vector_insert     : SDNode<"ISD::INSERT_VECTOR_ELT",
                                  SDT_ZInsertVectorElt>;
 def z_vector_extract    : SDNode<"ISD::EXTRACT_VECTOR_ELT",
                                  SDT_ZExtractVectorElt>;
-def z_byte_mask         : SDNode<"SystemZISD::BYTE_MASK", SDT_ZReplicate>;
 def z_rotate_mask       : SDNode<"SystemZISD::ROTATE_MASK", SDT_ZRotateMask>;
 def z_replicate         : SDNode<"SystemZISD::REPLICATE", SDT_ZReplicate>;
 def z_join_dwords       : SDNode<"SystemZISD::JOIN_DWORDS", SDT_ZJoinDwords>;
@@ -708,10 +707,6 @@ class shiftop<SDPatternOperator operator>
              [(operator node:$val, node:$count),
               (operator node:$val, (and node:$count, imm32bottom6set))]>;
 
-// Vector representation of all-zeros and all-ones.
-def z_vzero : PatFrag<(ops), (bitconvert (v16i8 (z_byte_mask (i32 0))))>;
-def z_vones : PatFrag<(ops), (bitconvert (v16i8 (z_byte_mask (i32 65535))))>;
-
 // Load a scalar and replicate it in all elements of a vector.
 class z_replicate_load<ValueType scalartype, SDPatternOperator load>
   : PatFrag<(ops node:$addr),
@@ -739,13 +734,13 @@ def z_vlef64 : z_vle<f64, load>;
 // zeroed vector.
 class z_vllez<ValueType scalartype, SDPatternOperator load, int index>
   : PatFrag<(ops node:$addr),
-            (z_vector_insert (z_vzero),
+            (z_vector_insert (immAllZerosV),
                              (scalartype (load node:$addr)), (i32 index))>;
 def z_vllezi8  : z_vllez<i32, anyextloadi8, 7>;
 def z_vllezi16 : z_vllez<i32, anyextloadi16, 3>;
 def z_vllezi32 : z_vllez<i32, load, 1>;
 def z_vllezi64 : PatFrags<(ops node:$addr),
-                          [(z_vector_insert (z_vzero),
+                          [(z_vector_insert (immAllZerosV),
                                             (i64 (load node:$addr)), (i32 0)),
                            (z_join_dwords (i64 (load node:$addr)), (i64 0))]>;
 // We use high merges to form a v4f32 from four f32s.  Propagating zero
@@ -758,11 +753,12 @@ def z_vllezf32 : PatFrag<(ops node:$addr),
                              (bitconvert
                               (v4f32 (scalar_to_vector
                                       (f32 (load node:$addr)))))))),
-                          (v2i64 (z_vzero)))>;
+                          (v2i64
+                           (bitconvert (v4f32 (immAllZerosV)))))>;
 def z_vllezf64 : PatFrag<(ops node:$addr),
                          (z_merge_high
                           (v2f64 (scalar_to_vector (f64 (load node:$addr)))),
-                          (z_vzero))>;
+                          (immAllZerosV))>;
 
 // Similarly for the high element of a zeroed vector.
 def z_vllezli32 : z_vllez<i32, load, 0>;
@@ -773,8 +769,9 @@ def z_vllezlf32 : PatFrag<(ops node:$addr),
                              (z_merge_high
                               (v4f32 (scalar_to_vector
                                       (f32 (load node:$addr)))),
-                              (v4f32 (z_vzero))))),
-                           (v2i64 (z_vzero)))>;
+                              (v4f32 (immAllZerosV))))),
+                           (v2i64
+                            (bitconvert (v4f32 (immAllZerosV)))))>;
 
 // Store one element of a vector.
 class z_vste<ValueType scalartype, SDPatternOperator store>
@@ -789,16 +786,16 @@ def z_vstef32 : z_vste<f32, store>;
 def z_vstef64 : z_vste<f64, store>;
 
 // Arithmetic negation on vectors.
-def z_vneg : PatFrag<(ops node:$x), (sub (z_vzero), node:$x)>;
+def z_vneg : PatFrag<(ops node:$x), (sub (immAllZerosV), node:$x)>;
 
 // Bitwise negation on vectors.
-def z_vnot : PatFrag<(ops node:$x), (xor node:$x, (z_vones))>;
+def z_vnot : PatFrag<(ops node:$x), (xor node:$x, (immAllOnesV))>;
 
 // Signed "integer greater than zero" on vectors.
-def z_vicmph_zero : PatFrag<(ops node:$x), (z_vicmph node:$x, (z_vzero))>;
+def z_vicmph_zero : PatFrag<(ops node:$x), (z_vicmph node:$x, (immAllZerosV))>;
 
 // Signed "integer less than zero" on vectors.
-def z_vicmpl_zero : PatFrag<(ops node:$x), (z_vicmph (z_vzero), node:$x)>;
+def z_vicmpl_zero : PatFrag<(ops node:$x), (z_vicmph (immAllZerosV), node:$x)>;
 
 // Integer absolute on vectors.
 class z_viabs<int shift>

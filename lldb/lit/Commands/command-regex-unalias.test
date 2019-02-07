@@ -1,0 +1,11 @@
+# Check that commands created with command regex cannot be unaliased
+# RUN: %lldb -s %s 2>&1 | FileCheck %s
+
+command regex 'Help__'
+# CHECK: Enter one of more sed substitution commands in the form
+# We need to leave a new line after to end the regex.
+s/^$/help/
+
+command unalias Help__
+Help__
+# CHECK: error: 'Help__' is not an alias

@@ -34162,7 +34162,6 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
                                 : DAG.getConstant(0, dl, VT);
 
   SDValue SrcOp = Ops[SrcIdx / Mask.size()];
-  SrcOp = DAG.getBitcast(SrcVT, SrcOp);
   SrcIdx = SrcIdx % Mask.size();
 
   // We can only extract other elements from 128-bit vectors and in certain
@@ -34172,6 +34171,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   if ((SrcVT == MVT::v4i32 || SrcVT == MVT::v2i64) &&
       ((SrcIdx == 0 && Subtarget.hasSSE2()) || Subtarget.hasSSE41())) {
     assert(SrcSVT == VT && "Unexpected extraction type");
+    SrcOp = DAG.getBitcast(SrcVT, SrcOp);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SrcSVT, SrcOp,
                        DAG.getIntPtrConstant(SrcIdx, dl));
   }
@@ -34181,6 +34181,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     assert(VT.getSizeInBits() >= SrcSVT.getSizeInBits() &&
            "Unexpected extraction type");
     unsigned OpCode = (SrcVT == MVT::v8i16 ? X86ISD::PEXTRW : X86ISD::PEXTRB);
+    SrcOp = DAG.getBitcast(SrcVT, SrcOp);
     SDValue ExtOp = DAG.getNode(OpCode, dl, MVT::i32, SrcOp,
                                 DAG.getIntPtrConstant(SrcIdx, dl));
     return DAG.getZExtOrTrunc(ExtOp, dl, VT);

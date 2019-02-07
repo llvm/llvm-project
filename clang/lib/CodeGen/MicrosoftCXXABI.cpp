@@ -394,7 +394,8 @@ public:
                        llvm::GlobalVariable *DeclPtr,
                        bool PerformInit) override;
   void registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
-                          llvm::Constant *Dtor, llvm::Constant *Addr) override;
+                          llvm::FunctionCallee Dtor,
+                          llvm::Constant *Addr) override;
 
   // ==== Notes on array cookies =========
   //
@@ -2222,7 +2223,7 @@ Address MicrosoftCXXABI::InitializeArrayCookie(CodeGenFunction &CGF,
 }
 
 static void emitGlobalDtorWithTLRegDtor(CodeGenFunction &CGF, const VarDecl &VD,
-                                        llvm::Constant *Dtor,
+                                        llvm::FunctionCallee Dtor,
                                         llvm::Constant *Addr) {
   // Create a function which calls the destructor.
   llvm::Constant *DtorStub = CGF.createAtExitStub(VD, Dtor, Addr);
@@ -2241,7 +2242,7 @@ static void emitGlobalDtorWithTLRegDtor(CodeGenFunction &CGF, const VarDecl &VD,
 }
 
 void MicrosoftCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
-                                         llvm::Constant *Dtor,
+                                         llvm::FunctionCallee Dtor,
                                          llvm::Constant *Addr) {
   if (D.isNoDestroy(CGM.getContext()))
     return;

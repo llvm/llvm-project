@@ -55,7 +55,7 @@ struct PGOOptions {
 
 /// This class provides access to building LLVM's passes.
 ///
-/// It's members provide the baseline state available to passes during their
+/// Its members provide the baseline state available to passes during their
 /// construction. The \c PassRegistry.def file specifies how to construct all
 /// of the built-in passes, and those may reference these members during
 /// construction.
