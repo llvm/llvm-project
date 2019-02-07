@@ -12,6 +12,8 @@ define weak void @f() {
 ; CHECK:        Symbol {
 ; CHECK-NEXT:     Name: f
 ; CHECK-NEXT:     Type: FUNCTION (0x0)
-; CHECK-NEXT:     Flags: 0x1
+; CHECK-NEXT:     Flags [ (0x1)
+; CHECK-NEXT:       BINDING_WEAK (0x1)
+; CHECK-NEXT:     ]
 ; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }

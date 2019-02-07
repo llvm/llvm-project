@@ -1454,6 +1454,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       Flags |= wasm::WASM_SYMBOL_BINDING_LOCAL;
     if (WS.isUndefined())
       Flags |= wasm::WASM_SYMBOL_UNDEFINED;
+    if (WS.isExported())
+      Flags |= wasm::WASM_SYMBOL_EXPORTED;
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();

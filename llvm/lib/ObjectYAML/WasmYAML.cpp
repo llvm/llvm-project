@@ -486,6 +486,7 @@ void ScalarBitSetTraits<WasmYAML::SymbolFlags>::bitset(
   // BCaseMask(VISIBILITY_MASK, VISIBILITY_DEFAULT);
   BCaseMask(VISIBILITY_MASK, VISIBILITY_HIDDEN);
   BCaseMask(UNDEFINED, UNDEFINED);
+  BCaseMask(EXPORTED, EXPORTED);
 #undef BCaseMask
 }
 

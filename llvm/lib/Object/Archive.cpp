@@ -511,7 +511,7 @@ Expected<MemoryBufferRef> Archive::Child::getMemoryBufferRef() const {
   StringRef Name = NameOrErr.get();
   Expected<StringRef> Buf = getBuffer();
   if (!Buf)
-    return Buf.takeError();
+    return createFileError(Name, Buf.takeError());
   return MemoryBufferRef(*Buf, Name);
 }
 

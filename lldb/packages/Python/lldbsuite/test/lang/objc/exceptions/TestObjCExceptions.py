@@ -44,6 +44,7 @@ class ObjCExceptionsTestCase(TestBase):
 
         self.assertEqual(variables.GetSize(), 1)
         self.assertEqual(variables.GetValueAtIndex(0).name, "exception")
+        self.assertEqual(variables.GetValueAtIndex(0).GetValueType(), lldb.eValueTypeVariableArgument)
 
         lldbutil.run_to_source_breakpoint(self, "// Set break point at this line.", lldb.SBFileSpec("main.mm"), launch_info=launch_info)
 

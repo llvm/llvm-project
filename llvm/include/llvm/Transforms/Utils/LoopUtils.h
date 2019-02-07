@@ -40,6 +40,7 @@ class BasicBlock;
 class DataLayout;
 class Loop;
 class LoopInfo;
+class MemoryAccess;
 class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
@@ -148,14 +149,12 @@ void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 /// LoopInfo, DominatorTree, Loop, AliasSet information for all instructions
 /// of the loop and loop safety information as arguments.
 /// Diagnostics is emitted via \p ORE. It returns changed status.
-bool promoteLoopAccessesToScalars(const SmallSetVector<Value *, 8> &,
-                                  SmallVectorImpl<BasicBlock *> &,
-                                  SmallVectorImpl<Instruction *> &,
-                                  PredIteratorCache &, LoopInfo *,
-                                  DominatorTree *, const TargetLibraryInfo *,
-                                  Loop *, AliasSetTracker *,
-                                  ICFLoopSafetyInfo *,
-                                  OptimizationRemarkEmitter *);
+bool promoteLoopAccessesToScalars(
+    const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
+    SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
+    PredIteratorCache &, LoopInfo *, DominatorTree *, const TargetLibraryInfo *,
+    Loop *, AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
+    OptimizationRemarkEmitter *);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of nodes includes the starting point.
