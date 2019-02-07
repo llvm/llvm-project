@@ -3814,6 +3814,8 @@ public:
   /// nullptr is returned if no named data member exists.
   const FieldDecl *findFirstNamedDataMember() const;
 
+  void reorderFields(ArrayRef<Decl *> Decls) const;
+
 private:
   /// Deserialize just the fields.
   void LoadFieldsFromExternalStorage() const;
