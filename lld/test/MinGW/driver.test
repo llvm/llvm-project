@@ -153,4 +153,7 @@ RUN: ld.lld -### -m i386pep foo.o -Llibpath | FileCheck -check-prefix LIBPATH %s
 LIBPATH: -libpath:libpath
 
 RUN: ld.lld -### -m i386pep foo.o --no-insert-timestamp | FileCheck -check-prefix NOTIMESTAMP %s
+RUN: ld.lld -### -m i386pep foo.o --insert-timestamp --no-insert-timestamp | FileCheck -check-prefix NOTIMESTAMP %s
 NOTIMESTAMP: -timestamp:0
+RUN: ld.lld -### -m i386pep foo.o --no-insert-timestamp --insert-timestamp | FileCheck -check-prefix TIMESTAMP %s
+TIMESTAMP-NOT: -timestamp:0

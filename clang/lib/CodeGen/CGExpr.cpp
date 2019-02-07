@@ -330,7 +330,7 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
   switch (M->getStorageDuration()) {
   case SD_Static:
   case SD_Thread: {
-    llvm::Constant *CleanupFn;
+    llvm::FunctionCallee CleanupFn;
     llvm::Constant *CleanupArg;
     if (E->getType()->isArrayType()) {
       CleanupFn = CodeGenFunction(CGF.CGM).generateDestroyHelper(
@@ -339,8 +339,8 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
           dyn_cast_or_null<VarDecl>(M->getExtendingDecl()));
       CleanupArg = llvm::Constant::getNullValue(CGF.Int8PtrTy);
     } else {
-      CleanupFn = CGF.CGM.getAddrOfCXXStructor(ReferenceTemporaryDtor,
-                                               StructorType::Complete);
+      CleanupFn = CGF.CGM.getAddrAndTypeOfCXXStructor(ReferenceTemporaryDtor,
+                                                      StructorType::Complete);
       CleanupArg = cast<llvm::Constant>(ReferenceTemporary.getPointer());
     }
     CGF.CGM.getCXXABI().registerGlobalDtor(

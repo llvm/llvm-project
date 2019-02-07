@@ -13,7 +13,6 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
-#include "lldb/API/SBReproducer.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 
@@ -911,14 +910,6 @@ main(int argc, char const *argv[])
     WithColor::error() << "initialization failed: " << error.GetCString()
                        << '\n';
     return 1;
-  }
-
-  if (replay) {
-    SBReproducer reproducer;
-    if (!reproducer.Replay()) {
-      WithColor::error() << "something went wrong running the reporducer.\n";
-    }
-    return 0;
   }
 
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
