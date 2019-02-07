@@ -8,7 +8,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(LLDB_PATH_TO_LLVM_BUILD "" CACHE PATH "Path to LLVM build tree")
   set(LLDB_PATH_TO_CLANG_BUILD "${LLDB_PATH_TO_LLVM_BUILD}" CACHE PATH "Path to Clang build tree")
 
-	# BEGIN Swift Mods
+  # BEGIN Swift Mods
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_LLVM_BUILD}" LLDB_PATH_TO_LLVM_BUILD)
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_CLANG_BUILD}" LLDB_PATH_TO_CLANG_BUILD)
   file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_BUILD}" LLDB_PATH_TO_SWIFT_BUILD)
@@ -24,6 +24,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # We set LLVM_CMAKE_PATH so that GetSVN.cmake is found correctly when building SVNVersion.inc
   set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
+
+  # BEGIN Swift Mods
+  # Required for SwiftAddCustomCommandTarget
+  list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}/cmake/modules")
+  # END Swift Mods
 
   set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
   set(LLVM_MAIN_INCLUDE_DIR ${LLVM_BUILD_MAIN_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
