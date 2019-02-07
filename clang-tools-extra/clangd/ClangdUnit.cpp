@@ -322,6 +322,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
                                             const clang::Diagnostic &Info) {
       return FixIncludes->fix(DiagLevl, Info);
     });
+    Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
   }
 
   // Copy over the includes from the preamble, then combine with the
@@ -565,10 +566,10 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
     // dirs.
   }
 
-  return ParsedAST::build(
-      llvm::make_unique<CompilerInvocation>(*Invocation), Preamble,
-      llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents), PCHs,
-      std::move(VFS), Inputs.Index ? Inputs.Index : nullptr, Inputs.Opts);
+  return ParsedAST::build(llvm::make_unique<CompilerInvocation>(*Invocation),
+                          Preamble,
+                          llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents),
+                          PCHs, std::move(VFS), Inputs.Index, Inputs.Opts);
 }
 
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
