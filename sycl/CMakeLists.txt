@@ -74,6 +74,7 @@ set(OPENCL_INCLUDE "${OpenCL_INCLUDE_DIRS}")
 add_library("${SYCLLibrary}" SHARED
   "${includeRootPath}/CL/sycl.hpp"
   "${sourceRootPath}/detail/common.cpp"
+  "${sourceRootPath}/detail/context_impl.cpp"
   "${sourceRootPath}/detail/device_info.cpp"
   "${sourceRootPath}/detail/event_impl.cpp"
   "${sourceRootPath}/detail/force_device.cpp"

@@ -8,27 +8,26 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-#include <CL/sycl/detail/context_host.hpp>
-#include <CL/sycl/detail/context_opencl.hpp>
-#include <CL/sycl/device.hpp>
-#include <CL/sycl/platform.hpp>
+#include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/detail/context_impl.hpp>
+#include <CL/sycl/exception.hpp>
+#include <CL/sycl/info/info_desc.hpp>
 #include <CL/sycl/stl.hpp>
 #include <memory>
-#include <utility>
 // 4.6.2 Context class
 
 namespace cl {
 namespace sycl {
+// Forward declarations
+class device;
+class platform;
 class context {
 public:
-  explicit context(const async_handler &asyncHandler = {})
-      : context(default_selector().select_device(), asyncHandler) {}
+  explicit context(const async_handler &asyncHandler = {});
 
-  context(const device &dev, async_handler asyncHandler = {})
-      : context(vector_class<device>(1, dev), asyncHandler) {}
+  context(const device &dev, async_handler asyncHandler = {});
 
-  context(const platform &plt, async_handler asyncHandler = {})
-      : context(plt.get_devices(), asyncHandler) {}
+  context(const platform &plt, async_handler asyncHandler = {});
 
   context(const vector_class<device> &deviceList,
           async_handler asyncHandler = {});
@@ -37,9 +36,7 @@ public:
 
   template <info::context param>
   typename info::param_traits<info::context, param>::return_type
-  get_info() const {
-    return impl->get_info<param>();
-  }
+  get_info() const;
 
   context(const context &rhs) = default;
 
@@ -49,17 +46,17 @@ public:
 
   context &operator=(context &&rhs) = default;
 
-  bool operator==(const context &rhs) const { return impl == rhs.impl; }
+  bool operator==(const context &rhs) const;
 
-  bool operator!=(const context &rhs) const { return !(*this == rhs); }
+  bool operator!=(const context &rhs) const;
 
-  cl_context get() const { return impl->get(); }
+  cl_context get() const;
 
-  bool is_host() const { return impl->is_host(); }
+  bool is_host() const;
 
-  platform get_platform() const { return impl->get_platform(); }
+  platform get_platform() const;
 
-  vector_class<device> get_devices() const { return impl->get_devices(); }
+  vector_class<device> get_devices() const;
 
 private:
   std::shared_ptr<detail::context_impl> impl;

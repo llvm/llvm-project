@@ -11,6 +11,7 @@
 
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/queue_impl.hpp>
+#include <CL/sycl/device_selector.hpp>
 #include <CL/sycl/info/info_desc.hpp>
 #include <CL/sycl/property_list.hpp>
 
