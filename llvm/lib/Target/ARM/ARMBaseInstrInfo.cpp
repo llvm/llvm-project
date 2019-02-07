@@ -2619,20 +2619,16 @@ inline static ARMCC::CondCodes getCmpToAddCondition(ARMCC::CondCodes CC) {
 inline static bool isRedundantFlagInstr(const MachineInstr *CmpI,
                                         unsigned SrcReg, unsigned SrcReg2,
                                         int ImmValue, const MachineInstr *OI) {
-  if ((CmpI->getOpcode() == ARM::CMPrr ||
-       CmpI->getOpcode() == ARM::t2CMPrr) &&
-      (OI->getOpcode() == ARM::SUBrr ||
-       OI->getOpcode() == ARM::t2SUBrr) &&
+  if ((CmpI->getOpcode() == ARM::CMPrr || CmpI->getOpcode() == ARM::t2CMPrr) &&
+      (OI->getOpcode() == ARM::SUBrr || OI->getOpcode() == ARM::t2SUBrr) &&
       ((OI->getOperand(1).getReg() == SrcReg &&
         OI->getOperand(2).getReg() == SrcReg2) ||
        (OI->getOperand(1).getReg() == SrcReg2 &&
         OI->getOperand(2).getReg() == SrcReg)))
     return true;
 
-  if ((CmpI->getOpcode() == ARM::CMPri ||
-       CmpI->getOpcode() == ARM::t2CMPri) &&
-      (OI->getOpcode() == ARM::SUBri ||
-       OI->getOpcode() == ARM::t2SUBri) &&
+  if ((CmpI->getOpcode() == ARM::CMPri || CmpI->getOpcode() == ARM::t2CMPri) &&
+      (OI->getOpcode() == ARM::SUBri || OI->getOpcode() == ARM::t2SUBri) &&
       OI->getOperand(1).getReg() == SrcReg &&
       OI->getOperand(2).getImm() == ImmValue)
     return true;

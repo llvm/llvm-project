@@ -46,6 +46,13 @@ public:
   wasm::WasmSymbolType getType() const { return Type; }
   void setType(wasm::WasmSymbolType type) { Type = type; }
 
+  bool isExported() const {
+    return getFlags() & wasm::WASM_SYMBOL_EXPORTED;
+  }
+  void setExported() const {
+    modifyFlags(wasm::WASM_SYMBOL_EXPORTED, wasm::WASM_SYMBOL_EXPORTED);
+  }
+
   bool isWeak() const { return IsWeak; }
   void setWeak(bool isWeak) { IsWeak = isWeak; }
 

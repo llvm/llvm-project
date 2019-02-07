@@ -165,13 +165,17 @@
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: f2
 ; CHECK-NEXT:    Type: FUNCTION (0x0)
-; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:    Flags [ (0x4)
+; CHECK-NEXT:      VISIBILITY_HIDDEN (0x4)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    ElementIndex: 0x0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: foo
 ; CHECK-NEXT:    Type: DATA (0x1)
-; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:    Flags [ (0x4)
+; CHECK-NEXT:      VISIBILITY_HIDDEN (0x4)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    Offset: 0x0
 ; CHECK-NEXT:    Segment: 0x0
 ; CHECK-NEXT:    Size: 0x4
@@ -179,13 +183,17 @@
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: myextern
 ; CHECK-NEXT:    Type: DATA (0x1)
-; CHECK-NEXT:    Flags: 0x10
+; CHECK-NEXT:    Flags [ (0x10)
+; CHECK-NEXT:      UNDEFINED (0x10)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    Module:
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: ptr2
 ; CHECK-NEXT:    Type: DATA (0x1)
-; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:    Flags [ (0x4)
+; CHECK-NEXT:      VISIBILITY_HIDDEN (0x4)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    Offset: 0x0
 ; CHECK-NEXT:    Segment: 0x1
 ; CHECK-NEXT:    Size: 0x4
@@ -193,25 +201,33 @@
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_str
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    ElementIndex: 0x6
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_abbrev
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    ElementIndex: 0x7
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_info
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    ElementIndex: 0x8
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_line
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
 ; CHECK-NEXT:    ElementIndex: 0xC
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]

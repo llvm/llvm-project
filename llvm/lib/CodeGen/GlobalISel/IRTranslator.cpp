@@ -320,12 +320,13 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
   unsigned Op0 = getOrCreateVReg(*U.getOperand(0));
   unsigned Op1 = getOrCreateVReg(*U.getOperand(1));
   unsigned Res = getOrCreateVReg(U);
-  auto FBinOp = MIRBuilder.buildInstr(Opcode).addDef(Res).addUse(Op0).addUse(Op1);
+  uint16_t Flags = 0;
   if (isa<Instruction>(U)) {
-    MachineInstr *FBinOpMI = FBinOp.getInstr();
     const Instruction &I = cast<Instruction>(U);
-    FBinOpMI->copyIRFlags(I);
+    Flags = MachineInstr::copyFlagsFromInstruction(I);
   }
+
+  MIRBuilder.buildInstr(Opcode, {Res}, {Op0, Op1}, Flags);
   return true;
 }
 
@@ -366,8 +367,8 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(CI->getType())));
   else {
-    auto FCmp = MIRBuilder.buildFCmp(Pred, Res, Op0, Op1);
-    FCmp->copyIRFlags(*CI);
+    MIRBuilder.buildInstr(TargetOpcode::G_FCMP, {Res}, {Pred, Op0, Op1},
+                          MachineInstr::copyFlagsFromInstruction(*CI));
   }
 
   return true;
@@ -602,13 +603,13 @@ bool IRTranslator::translateSelect(const User &U,
   ArrayRef<unsigned> Op1Regs = getOrCreateVRegs(*U.getOperand(2));
 
   const SelectInst &SI = cast<SelectInst>(U);
-  const CmpInst *Cmp = dyn_cast<CmpInst>(SI.getCondition());
+  uint16_t Flags = 0;
+  if (const CmpInst *Cmp = dyn_cast<CmpInst>(SI.getCondition()))
+    Flags = MachineInstr::copyFlagsFromInstruction(*Cmp);
+
   for (unsigned i = 0; i < ResRegs.size(); ++i) {
-    auto Select =
-        MIRBuilder.buildSelect(ResRegs[i], Tst, Op0Regs[i], Op1Regs[i]);
-    if (Cmp && isa<FPMathOperator>(Cmp)) {
-      Select->copyIRFlags(*Cmp);
-    }
+    MIRBuilder.buildInstr(TargetOpcode::G_SELECT, {ResRegs[i]},
+                          {Tst, Op0Regs[i], Op1Regs[i]}, Flags);
   }
 
   return true;
@@ -833,10 +834,9 @@ bool IRTranslator::translateSimpleUnaryIntrinsic(
     return false;
 
   // Yes. Let's translate it.
-  auto Inst = MIRBuilder.buildInstr(Op)
-                  .addDef(getOrCreateVReg(CI))
-                  .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-  Inst->copyIRFlags(CI);
+  MIRBuilder.buildInstr(Op, {getOrCreateVReg(CI)},
+                        {getOrCreateVReg(*CI.getArgOperand(0))},
+                        MachineInstr::copyFlagsFromInstruction(CI));
   return true;
 }
 
@@ -969,20 +969,18 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::smul_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_SMULO, MIRBuilder);
   case Intrinsic::pow: {
-    auto Pow = MIRBuilder.buildInstr(TargetOpcode::G_FPOW)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
-    Pow->copyIRFlags(CI);
+    MIRBuilder.buildInstr(TargetOpcode::G_FPOW, {getOrCreateVReg(CI)},
+                          {getOrCreateVReg(*CI.getArgOperand(0)),
+                           getOrCreateVReg(*CI.getArgOperand(1))},
+                          MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
   case Intrinsic::fma: {
-    auto FMA = MIRBuilder.buildInstr(TargetOpcode::G_FMA)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(1)))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(2)));
-    FMA->copyIRFlags(CI);
+    MIRBuilder.buildInstr(TargetOpcode::G_FMA, {getOrCreateVReg(CI)},
+                          {getOrCreateVReg(*CI.getArgOperand(0)),
+                           getOrCreateVReg(*CI.getArgOperand(1)),
+                           getOrCreateVReg(*CI.getArgOperand(2))},
+                          MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
   case Intrinsic::fmuladd: {
@@ -996,14 +994,14 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         TLI.isFMAFasterThanFMulAndFAdd(TLI.getValueType(*DL, CI.getType()))) {
       // TODO: Revisit this to see if we should move this part of the
       // lowering to the combiner.
-      auto FMA =  MIRBuilder.buildInstr(TargetOpcode::G_FMA, {Dst}, {Op0, Op1, Op2});
-      FMA->copyIRFlags(CI);
+      MIRBuilder.buildInstr(TargetOpcode::G_FMA, {Dst}, {Op0, Op1, Op2},
+                            MachineInstr::copyFlagsFromInstruction(CI));
     } else {
       LLT Ty = getLLTForType(*CI.getType(), *DL);
-      auto FMul = MIRBuilder.buildInstr(TargetOpcode::G_FMUL, {Ty}, {Op0, Op1});
-      FMul->copyIRFlags(CI);
-      auto FAdd =  MIRBuilder.buildInstr(TargetOpcode::G_FADD, {Dst}, {FMul, Op2});
-      FAdd->copyIRFlags(CI);
+      auto FMul = MIRBuilder.buildInstr(TargetOpcode::G_FMUL, {Ty}, {Op0, Op1},
+                                        MachineInstr::copyFlagsFromInstruction(CI));
+      MIRBuilder.buildInstr(TargetOpcode::G_FADD, {Dst}, {FMul, Op2},
+                            MachineInstr::copyFlagsFromInstruction(CI));
     }
     return true;
   }

@@ -39,7 +39,7 @@ public:
     BPF_STX = 0x3,
     BPF_ALU = 0x4,
     BPF_JMP = 0x5,
-    BPF_RES = 0x6,
+    BPF_JMP32 = 0x6,
     BPF_ALU64 = 0x7
   };
 

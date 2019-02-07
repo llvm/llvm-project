@@ -121,6 +121,10 @@ bool MCWasmStreamer::EmitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_Cold:
     break;
 
+  case MCSA_NoDeadStrip:
+    Symbol->setExported();
+    break;
+
   default:
     // unrecognized directive
     llvm_unreachable("unexpected MCSymbolAttr");

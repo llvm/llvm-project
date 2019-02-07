@@ -7,6 +7,7 @@ unittest("ADTTests") {
     # Some tests include files from IR, but there's no library dependency.
     "//llvm/include/llvm/IR:public_tablegen",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "APFloatTest.cpp",
