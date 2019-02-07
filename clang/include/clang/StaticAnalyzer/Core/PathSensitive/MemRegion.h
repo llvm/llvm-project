@@ -909,7 +909,7 @@ protected:
   DeclRegion(const ValueDecl *d, const MemRegion *sReg, Kind k)
       : TypedValueRegion(sReg, k), D(d) {
     assert(classof(this));
-    assert(d);
+    assert(d && d->isCanonicalDecl());
   }
 
   static void ProfileRegion(llvm::FoldingSetNodeID& ID, const Decl *D,
