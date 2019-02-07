@@ -324,13 +324,19 @@ template <class ELFT>
 void X86_64<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_X86_64_8:
-  case R_X86_64_PC8:
     checkUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
+  case R_X86_64_PC8:
+    checkInt(Loc, Val, 8, Type);
+    *Loc = Val;
+    break;
   case R_X86_64_16:
-  case R_X86_64_PC16:
     checkUInt(Loc, Val, 16, Type);
+    write16le(Loc, Val);
+    break;
+  case R_X86_64_PC16:
+    checkInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;
   case R_X86_64_32:
