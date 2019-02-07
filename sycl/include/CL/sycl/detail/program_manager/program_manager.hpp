@@ -51,6 +51,7 @@ namespace detail {
 class ProgramManager {
 public:
   static ProgramManager &getInstance();
+  cl_program createOpenCLProgram(const context &Context);
   cl_program getBuiltOpenCLProgram(const context &Context);
   cl_kernel getOrCreateKernel(const context &Context, const char *KernelName);
   cl_program getClProgramFromClKernel(cl_kernel ClKernel);

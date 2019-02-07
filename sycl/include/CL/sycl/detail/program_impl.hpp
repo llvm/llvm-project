@@ -274,7 +274,7 @@ public:
 private:
   void create_cl_program_with_il() {
     assert(!ClProgram && "This program already has an encapsulated cl_program");
-    ClProgram = ProgramManager::getInstance().getBuiltOpenCLProgram(Context);
+    ClProgram = ProgramManager::getInstance().createOpenCLProgram(Context);
   }
 
   void create_cl_program_with_source(const string_class &Source) {

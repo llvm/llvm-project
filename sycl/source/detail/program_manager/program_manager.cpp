@@ -112,16 +112,21 @@ static cl_program createProgram(const platform &Platform,
   return Program;
 }
 
+cl_program ProgramManager::createOpenCLProgram(const context &Context) {
+  vector_class<char> DeviceProg = getSpirvSource();
+  cl_context ClContext = Context.get();
+  const platform &Platform = Context.get_platform();
+  cl_program ClProgram = createProgram(Platform, ClContext, DeviceProg);
+  clReleaseContext(ClContext);
+  return ClProgram;
+}
+
 cl_program ProgramManager::getBuiltOpenCLProgram(const context &Context) {
   cl_program &ClProgram = m_CachedSpirvPrograms[Context];
   if (!ClProgram) {
     vector_class<char> DeviceProg = getSpirvSource();
 
-    cl_context ClContext = Context.get();
-    const platform &Platform = Context.get_platform();
-    ClProgram = createProgram(Platform, ClContext, DeviceProg);
-    clReleaseContext(ClContext);
-
+    ClProgram = createOpenCLProgram(Context);
     build(ClProgram);
   }
   return ClProgram;
