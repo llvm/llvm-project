@@ -1,5 +1,5 @@
-Missing Key Method
-==================
+Missing Key Function
+====================
 
 If your build failed with a linker error something like this::
 

@@ -31,7 +31,7 @@ namespace clangd {
 static llvm::cl::opt<bool>
     UseDex("use-dex-index",
            llvm::cl::desc("Use experimental Dex dynamic index."),
-           llvm::cl::init(false), llvm::cl::Hidden);
+           llvm::cl::init(true), llvm::cl::Hidden);
 
 static llvm::cl::opt<Path> CompileCommandsDir(
     "compile-commands-dir",

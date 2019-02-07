@@ -47,7 +47,7 @@ size_t lspLength(StringRef Code);
 /// The returned value is in the range [0, Code.size()].
 llvm::Expected<size_t>
 positionToOffset(llvm::StringRef Code, Position P,
-               bool AllowColumnsBeyondLineLength = true);
+                 bool AllowColumnsBeyondLineLength = true);
 
 /// Turn an offset in Code into a [line, column] pair.
 /// The offset must be in range [0, Code.size()].
@@ -110,7 +110,7 @@ Range halfOpenToRange(const SourceManager &SM, CharSourceRange R);
 // The offset must be in range [0, Code.size()].
 // Prefer to use SourceManager if one is available.
 std::pair<size_t, size_t> offsetToClangLineColumn(llvm::StringRef Code,
-                                                size_t Offset);
+                                                  size_t Offset);
 
 /// From "a::b::c", return {"a::b::", "c"}. Scope is empty if there's no
 /// qualifier.
@@ -120,10 +120,10 @@ splitQualifiedName(llvm::StringRef QName);
 TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R);
 
 std::vector<TextEdit> replacementsToEdits(StringRef Code,
-                                        const tooling::Replacements &Repls);
+                                          const tooling::Replacements &Repls);
 
 TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
-                  const LangOptions &L);
+                    const LangOptions &L);
 
 /// Get the canonical path of \p F.  This means:
 ///
@@ -136,7 +136,7 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 /// component that generate it, so that paths are normalized as much as
 /// possible.
 llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
-                                           const SourceManager &SourceMgr);
+                                             const SourceManager &SourceMgr);
 
 bool isRangeConsecutive(const Range &Left, const Range &Right);
 

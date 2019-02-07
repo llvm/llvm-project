@@ -16,5 +16,5 @@ TEST(ProcessInfoTest, Constructor) {
   ProcessInfo Info("foo", ArchSpec("x86_64-pc-linux"), 47);
   EXPECT_STREQ("foo", Info.GetName());
   EXPECT_EQ(ArchSpec("x86_64-pc-linux"), Info.GetArchitecture());
-  EXPECT_EQ(47, Info.GetProcessID());
+  EXPECT_EQ(47u, Info.GetProcessID());
 }
