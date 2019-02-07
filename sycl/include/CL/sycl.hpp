@@ -35,6 +35,7 @@
 #include <CL/sycl/queue.hpp>
 #include <CL/sycl/range.hpp>
 #include <CL/sycl/types.hpp>
+#include <CL/sycl/version.hpp>
 
 // Do not include RT only function implementations for device code as it leads
 // to problem. Should be finally fixed when we introduce library.
