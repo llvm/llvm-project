@@ -14,6 +14,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 
+#include <mutex>
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -422,6 +423,7 @@ protected:
   LazyBool m_is_interactive;
   LazyBool m_is_real_terminal;
   LazyBool m_supports_colors;
+  std::mutex offset_access_mutex;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(File);
