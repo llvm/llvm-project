@@ -2370,138 +2370,134 @@ enum {
 void CommandInterpreter::HandleCommandsFromFile(
     FileSpec &cmd_file, ExecutionContext *context,
     CommandInterpreterRunOptions &options, CommandReturnObject &result) {
-  if (FileSystem::Instance().Exists(cmd_file)) {
-    StreamFileSP input_file_sp(new StreamFile());
-
-    std::string cmd_file_path = cmd_file.GetPath();
-    Status error = FileSystem::Instance().Open(input_file_sp->GetFile(),
-                                               cmd_file, File::eOpenOptionRead);
-    if (error.Success()) {
-      Debugger &debugger = GetDebugger();
-
-      uint32_t flags = 0;
-
-      if (options.m_stop_on_continue == eLazyBoolCalculate) {
-        if (m_command_source_flags.empty()) {
-          // Stop on continue by default
-          flags |= eHandleCommandFlagStopOnContinue;
-        } else if (m_command_source_flags.back() &
-                   eHandleCommandFlagStopOnContinue) {
-          flags |= eHandleCommandFlagStopOnContinue;
-        }
-      } else if (options.m_stop_on_continue == eLazyBoolYes) {
-        flags |= eHandleCommandFlagStopOnContinue;
-      }
-
-      if (options.m_stop_on_error == eLazyBoolCalculate) {
-        if (m_command_source_flags.empty()) {
-          if (GetStopCmdSourceOnError())
-            flags |= eHandleCommandFlagStopOnError;
-        } else if (m_command_source_flags.back() &
-                   eHandleCommandFlagStopOnError) {
-          flags |= eHandleCommandFlagStopOnError;
-        }
-      } else if (options.m_stop_on_error == eLazyBoolYes) {
-        flags |= eHandleCommandFlagStopOnError;
-      }
-
-      // stop-on-crash can only be set, if it is present in all levels of
-      // pushed flag sets.
-      if (options.GetStopOnCrash()) {
-        if (m_command_source_flags.empty()) {
-          flags |= eHandleCommandFlagStopOnCrash;
-        } else if (m_command_source_flags.back() &
-                   eHandleCommandFlagStopOnCrash) {
-          flags |= eHandleCommandFlagStopOnCrash;
-        }
-      }
-
-      if (options.m_echo_commands == eLazyBoolCalculate) {
-        if (m_command_source_flags.empty()) {
-          // Echo command by default
-          flags |= eHandleCommandFlagEchoCommand;
-        } else if (m_command_source_flags.back() &
-                   eHandleCommandFlagEchoCommand) {
-          flags |= eHandleCommandFlagEchoCommand;
-        }
-      } else if (options.m_echo_commands == eLazyBoolYes) {
-        flags |= eHandleCommandFlagEchoCommand;
-      }
-
-      // We will only ever ask for this flag, if we echo commands in general.
-      if (options.m_echo_comment_commands == eLazyBoolCalculate) {
-        if (m_command_source_flags.empty()) {
-          // Echo comments by default
-          flags |= eHandleCommandFlagEchoCommentCommand;
-        } else if (m_command_source_flags.back() &
-                   eHandleCommandFlagEchoCommentCommand) {
-          flags |= eHandleCommandFlagEchoCommentCommand;
-        }
-      } else if (options.m_echo_comment_commands == eLazyBoolYes) {
-        flags |= eHandleCommandFlagEchoCommentCommand;
-      }
-
-      if (options.m_print_results == eLazyBoolCalculate) {
-        if (m_command_source_flags.empty()) {
-          // Print output by default
-          flags |= eHandleCommandFlagPrintResult;
-        } else if (m_command_source_flags.back() &
-                   eHandleCommandFlagPrintResult) {
-          flags |= eHandleCommandFlagPrintResult;
-        }
-      } else if (options.m_print_results == eLazyBoolYes) {
-        flags |= eHandleCommandFlagPrintResult;
-      }
-
-      if (flags & eHandleCommandFlagPrintResult) {
-        debugger.GetOutputFile()->Printf("Executing commands in '%s'.\n",
-                                         cmd_file_path.c_str());
-      }
-
-      // Used for inheriting the right settings when "command source" might
-      // have nested "command source" commands
-      lldb::StreamFileSP empty_stream_sp;
-      m_command_source_flags.push_back(flags);
-      IOHandlerSP io_handler_sp(new IOHandlerEditline(
-          debugger, IOHandler::Type::CommandInterpreter, input_file_sp,
-          empty_stream_sp, // Pass in an empty stream so we inherit the top
-                           // input reader output stream
-          empty_stream_sp, // Pass in an empty stream so we inherit the top
-                           // input reader error stream
-          flags,
-          nullptr, // Pass in NULL for "editline_name" so no history is saved,
-                   // or written
-          debugger.GetPrompt(), llvm::StringRef(),
-          false, // Not multi-line
-          debugger.GetUseColor(), 0, *this));
-      const bool old_async_execution = debugger.GetAsyncExecution();
-
-      // Set synchronous execution if we are not stopping on continue
-      if ((flags & eHandleCommandFlagStopOnContinue) == 0)
-        debugger.SetAsyncExecution(false);
-
-      m_command_source_depth++;
-
-      debugger.RunIOHandler(io_handler_sp);
-      if (!m_command_source_flags.empty())
-        m_command_source_flags.pop_back();
-      m_command_source_depth--;
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      debugger.SetAsyncExecution(old_async_execution);
-    } else {
-      result.AppendErrorWithFormat(
-          "error: an error occurred read file '%s': %s\n",
-          cmd_file_path.c_str(), error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
-    }
-
-  } else {
+  if (!FileSystem::Instance().Exists(cmd_file)) {
     result.AppendErrorWithFormat(
         "Error reading commands from file %s - file not found.\n",
         cmd_file.GetFilename().AsCString("<Unknown>"));
     result.SetStatus(eReturnStatusFailed);
     return;
   }
+
+  StreamFileSP input_file_sp(new StreamFile());
+  std::string cmd_file_path = cmd_file.GetPath();
+  Status error = FileSystem::Instance().Open(input_file_sp->GetFile(), cmd_file,
+                                             File::eOpenOptionRead);
+
+  if (error.Fail()) {
+    result.AppendErrorWithFormat(
+        "error: an error occurred read file '%s': %s\n", cmd_file_path.c_str(),
+        error.AsCString());
+    result.SetStatus(eReturnStatusFailed);
+    return;
+  }
+
+  Debugger &debugger = GetDebugger();
+
+  uint32_t flags = 0;
+
+  if (options.m_stop_on_continue == eLazyBoolCalculate) {
+    if (m_command_source_flags.empty()) {
+      // Stop on continue by default
+      flags |= eHandleCommandFlagStopOnContinue;
+    } else if (m_command_source_flags.back() &
+               eHandleCommandFlagStopOnContinue) {
+      flags |= eHandleCommandFlagStopOnContinue;
+    }
+  } else if (options.m_stop_on_continue == eLazyBoolYes) {
+    flags |= eHandleCommandFlagStopOnContinue;
+  }
+
+  if (options.m_stop_on_error == eLazyBoolCalculate) {
+    if (m_command_source_flags.empty()) {
+      if (GetStopCmdSourceOnError())
+        flags |= eHandleCommandFlagStopOnError;
+    } else if (m_command_source_flags.back() & eHandleCommandFlagStopOnError) {
+      flags |= eHandleCommandFlagStopOnError;
+    }
+  } else if (options.m_stop_on_error == eLazyBoolYes) {
+    flags |= eHandleCommandFlagStopOnError;
+  }
+
+  // stop-on-crash can only be set, if it is present in all levels of
+  // pushed flag sets.
+  if (options.GetStopOnCrash()) {
+    if (m_command_source_flags.empty()) {
+      flags |= eHandleCommandFlagStopOnCrash;
+    } else if (m_command_source_flags.back() & eHandleCommandFlagStopOnCrash) {
+      flags |= eHandleCommandFlagStopOnCrash;
+    }
+  }
+
+  if (options.m_echo_commands == eLazyBoolCalculate) {
+    if (m_command_source_flags.empty()) {
+      // Echo command by default
+      flags |= eHandleCommandFlagEchoCommand;
+    } else if (m_command_source_flags.back() & eHandleCommandFlagEchoCommand) {
+      flags |= eHandleCommandFlagEchoCommand;
+    }
+  } else if (options.m_echo_commands == eLazyBoolYes) {
+    flags |= eHandleCommandFlagEchoCommand;
+  }
+
+  // We will only ever ask for this flag, if we echo commands in general.
+  if (options.m_echo_comment_commands == eLazyBoolCalculate) {
+    if (m_command_source_flags.empty()) {
+      // Echo comments by default
+      flags |= eHandleCommandFlagEchoCommentCommand;
+    } else if (m_command_source_flags.back() &
+               eHandleCommandFlagEchoCommentCommand) {
+      flags |= eHandleCommandFlagEchoCommentCommand;
+    }
+  } else if (options.m_echo_comment_commands == eLazyBoolYes) {
+    flags |= eHandleCommandFlagEchoCommentCommand;
+  }
+
+  if (options.m_print_results == eLazyBoolCalculate) {
+    if (m_command_source_flags.empty()) {
+      // Print output by default
+      flags |= eHandleCommandFlagPrintResult;
+    } else if (m_command_source_flags.back() & eHandleCommandFlagPrintResult) {
+      flags |= eHandleCommandFlagPrintResult;
+    }
+  } else if (options.m_print_results == eLazyBoolYes) {
+    flags |= eHandleCommandFlagPrintResult;
+  }
+
+  if (flags & eHandleCommandFlagPrintResult) {
+    debugger.GetOutputFile()->Printf("Executing commands in '%s'.\n",
+                                     cmd_file_path.c_str());
+  }
+
+  // Used for inheriting the right settings when "command source" might
+  // have nested "command source" commands
+  lldb::StreamFileSP empty_stream_sp;
+  m_command_source_flags.push_back(flags);
+  IOHandlerSP io_handler_sp(new IOHandlerEditline(
+      debugger, IOHandler::Type::CommandInterpreter, input_file_sp,
+      empty_stream_sp, // Pass in an empty stream so we inherit the top
+                       // input reader output stream
+      empty_stream_sp, // Pass in an empty stream so we inherit the top
+                       // input reader error stream
+      flags,
+      nullptr, // Pass in NULL for "editline_name" so no history is saved,
+               // or written
+      debugger.GetPrompt(), llvm::StringRef(),
+      false, // Not multi-line
+      debugger.GetUseColor(), 0, *this));
+  const bool old_async_execution = debugger.GetAsyncExecution();
+
+  // Set synchronous execution if we are not stopping on continue
+  if ((flags & eHandleCommandFlagStopOnContinue) == 0)
+    debugger.SetAsyncExecution(false);
+
+  m_command_source_depth++;
+
+  debugger.RunIOHandler(io_handler_sp);
+  if (!m_command_source_flags.empty())
+    m_command_source_flags.pop_back();
+  m_command_source_depth--;
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  debugger.SetAsyncExecution(old_async_execution);
 }
 
 ScriptInterpreter *CommandInterpreter::GetScriptInterpreter(bool can_create) {
