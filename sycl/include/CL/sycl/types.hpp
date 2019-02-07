@@ -1242,10 +1242,16 @@ public:
 
   // Begin hi/lo, even/odd, xyzw, and rgba swizzles.
 private:
-  // Indexer used in the swizzles.def. C++14
+  // Indexer used in the swizzles.def. C++11 way, a bit more verbose
+  // than C++14 way.
+  struct IndexerHelper {
+    static const constexpr int IDXs[] = {Indexes...};
+    static constexpr int get(int index) {
+      return IDXs[index >= getNumElements() ? 0 : index];
+    }
+  };
   static constexpr int Indexer(int index) {
-    const constexpr int IDXs[] = {Indexes...};
-    return IDXs[index >= getNumElements() ? 0 : index];
+    return IndexerHelper::get(index);
   }
 
 public:
