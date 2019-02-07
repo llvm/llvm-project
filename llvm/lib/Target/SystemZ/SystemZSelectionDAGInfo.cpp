@@ -164,17 +164,17 @@ static SDValue emitCLC(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
 }
 
 // Convert the current CC value into an integer that is 0 if CC == 0,
-// less than zero if CC == 1 and greater than zero if CC >= 2.
+// greater than zero if CC == 1 and less than zero if CC >= 2.
 // The sequence starts with IPM, which puts CC into bits 29 and 28
 // of an integer and clears bits 30 and 31.
 static SDValue addIPMSequence(const SDLoc &DL, SDValue CCReg,
                               SelectionDAG &DAG) {
   SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, CCReg);
-  SDValue SRL = DAG.getNode(ISD::SRL, DL, MVT::i32, IPM,
-                            DAG.getConstant(SystemZ::IPM_CC, DL, MVT::i32));
-  SDValue ROTL = DAG.getNode(ISD::ROTL, DL, MVT::i32, SRL,
-                             DAG.getConstant(31, DL, MVT::i32));
-  return ROTL;
+  SDValue SHL = DAG.getNode(ISD::SHL, DL, MVT::i32, IPM,
+                            DAG.getConstant(30 - SystemZ::IPM_CC, DL, MVT::i32));
+  SDValue SRA = DAG.getNode(ISD::SRA, DL, MVT::i32, SHL,
+                            DAG.getConstant(30, DL, MVT::i32));
+  return SRA;
 }
 
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemcmp(
@@ -184,7 +184,8 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemcmp(
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size)) {
     uint64_t Bytes = CSize->getZExtValue();
     assert(Bytes > 0 && "Caller should have handled 0-size case");
-    SDValue CCReg = emitCLC(DAG, DL, Chain, Src1, Src2, Bytes);
+    // Swap operands to invert CC == 1 vs. CC == 2 cases.
+    SDValue CCReg = emitCLC(DAG, DL, Chain, Src2, Src1, Bytes);
     Chain = CCReg.getValue(1);
     return std::make_pair(addIPMSequence(DL, CCReg, DAG), Chain);
   }
@@ -232,7 +233,8 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcmp(
     SDValue Src2, MachinePointerInfo Op1PtrInfo,
     MachinePointerInfo Op2PtrInfo) const {
   SDVTList VTs = DAG.getVTList(Src1.getValueType(), MVT::i32, MVT::Other);
-  SDValue Unused = DAG.getNode(SystemZISD::STRCMP, DL, VTs, Chain, Src1, Src2,
+  // Swap operands to invert CC == 1 vs. CC == 2 cases.
+  SDValue Unused = DAG.getNode(SystemZISD::STRCMP, DL, VTs, Chain, Src2, Src1,
                                DAG.getConstant(0, DL, MVT::i32));
   SDValue CCReg = Unused.getValue(1);
   Chain = Unused.getValue(2);
