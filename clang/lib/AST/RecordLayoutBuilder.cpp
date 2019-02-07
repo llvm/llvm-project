@@ -19,6 +19,9 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <algorithm>
+#include <random>
+
 using namespace clang;
 
 namespace {
@@ -1362,14 +1365,27 @@ void ItaniumRecordLayoutBuilder::LayoutFields(const RecordDecl *D) {
   bool InsertExtraPadding = D->mayInsertExtraPadding(/*EmitRemark=*/true);
   bool HasFlexibleArrayMember = D->hasFlexibleArrayMember();
 
+  // A staging area to easily reorder the fields
+  SmallVector<Decl *, 64> fields;
+  for (auto f : D->fields()) {
+    fields.push_back(f);
+  }
+
   bool ShouldBeRandomized = D->getAttr<RandomizeLayoutAttr>() != nullptr;
   if (ShouldBeRandomized) {
-      llvm::outs() << D->getNameAsString() << "\n";
+      // FIXME Should call our Randstruct code once we port it.
+      auto rng = std::default_random_engine {};
+      std::shuffle(std::begin(fields), std::end(fields), rng);
+
+      // This will rebuild the Decl chain of fields
+      D->reorderFields(fields);
   }
+
 
   for (auto I = D->field_begin(), End = D->field_end(); I != End; ++I) {
     auto Next(I);
     ++Next;
+
     LayoutField(*I,
                 InsertExtraPadding && (Next != End || !HasFlexibleArrayMember));
   }
