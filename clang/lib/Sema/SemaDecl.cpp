@@ -15922,6 +15922,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         Record->setHasObjectMember(true);
       if (Record && FDTTy->getDecl()->hasVolatileMember())
         Record->setHasVolatileMember(true);
+      if (Record && Record->isUnion() &&
+          FD->getType().isNonTrivialPrimitiveCType(Context))
+        Diag(FD->getLocation(),
+             diag::err_nontrivial_primitive_type_in_union);
     } else if (FDTy->isObjCObjectType()) {
       /// A field cannot be an Objective-c object
       Diag(FD->getLocation(), diag::err_statically_allocated_object)
