@@ -116,7 +116,7 @@ bool Symbol::isExported() const {
   if (Config->ExportDynamic && !isHidden())
     return true;
 
-  return false;
+  return Flags & WASM_SYMBOL_EXPORTED;
 }
 
 uint32_t FunctionSymbol::getFunctionIndex() const {
