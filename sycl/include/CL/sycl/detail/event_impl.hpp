@@ -46,6 +46,7 @@ public:
 
   void waitInternal() const;
 
+  // Warning. Returned reference will be invalid if event_impl was destroyed.
   cl_event &getHandleRef();
 
   void setIsHostEvent(bool Value);

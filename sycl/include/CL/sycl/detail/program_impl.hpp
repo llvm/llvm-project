@@ -1,19 +1,17 @@
 //==----- program_impl.hpp --- SYCL program implementation -----------------==//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #pragma once
 
-#include <CL/sycl/detail/program_manager/program_manager.hpp>
+#include <CL/sycl/context.hpp>
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/common_info.hpp>
 #include <CL/sycl/detail/kernel_desc.hpp>
-#include <CL/sycl/context.hpp>
+#include <CL/sycl/detail/program_manager/program_manager.hpp>
 #include <CL/sycl/device.hpp>
 #include <CL/sycl/kernel.hpp>
 #include <CL/sycl/stl.hpp>
@@ -66,10 +64,10 @@ public:
         ClPrograms.push_back(Prg->ClProgram);
       }
       cl_int Err;
-      ClProgram =
-          clLinkProgram(Context.get(), ClDevices.size(), ClDevices.data(),
-                        LinkOptions.c_str(), ProgramList.size(),
-                        ClPrograms.data(), nullptr, nullptr, &Err);
+      ClProgram = clLinkProgram(detail::getSyclObjImpl(Context)->getHandleRef(),
+                                ClDevices.size(), ClDevices.data(),
+                                LinkOptions.c_str(), ProgramList.size(),
+                                ClPrograms.data(), nullptr, nullptr, &Err);
       CHECK_OCL_CODE_THROW(Err, compile_program_error);
     }
   }
@@ -179,9 +177,10 @@ public:
     if (!is_host()) {
       vector_class<cl_device_id> ClDevices(get_cl_devices());
       cl_int Err;
-      ClProgram = clLinkProgram(Context.get(), ClDevices.size(),
-                                ClDevices.data(), LinkOptions.c_str(), 1,
-                                &ClProgram, nullptr, nullptr, &Err);
+      ClProgram =
+          clLinkProgram(detail::getSyclObjImpl(Context)->getHandleRef(),
+                        ClDevices.size(), ClDevices.data(), LinkOptions.c_str(),
+                        1, &ClProgram, nullptr, nullptr, &Err);
       CHECK_OCL_CODE_THROW(Err, compile_program_error);
       LinkOptions = LinkOptions;
     }
@@ -282,7 +281,8 @@ private:
     cl_int Err;
     const char *Src = Source.c_str();
     size_t Size = Source.size();
-    ClProgram = clCreateProgramWithSource(Context.get(), 1, &Src, &Size, &Err);
+    ClProgram = clCreateProgramWithSource(
+        detail::getSyclObjImpl(Context)->getHandleRef(), 1, &Src, &Size, &Err);
     CHECK_OCL_CODE(Err);
   }
 

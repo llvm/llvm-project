@@ -103,6 +103,8 @@ context_impl::get_info<info::context::devices>() const {
   return get_devices();
 }
 
+cl_context &context_impl::getHandleRef() { return m_ClContext; }
+
 } // namespace detail
 } // namespace sycl
 } // namespace cl

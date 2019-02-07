@@ -47,6 +47,9 @@ public:
   typename info::param_traits<info::context, param>::return_type
   get_info() const;
 
+  // Warning. Returned reference will be invalid if context_impl was destroyed.
+  cl_context &getHandleRef();
+
 private:
   async_handler m_AsyncHandler;
   vector_class<device> m_Devices;

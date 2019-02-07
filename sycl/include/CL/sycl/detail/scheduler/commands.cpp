@@ -40,10 +40,10 @@ void ExecuteKernelCommand<
     runOnHost();
     return;
   }
-
+  context Context = m_Queue->get_context();
   if (!m_ClKernel) {
     m_ClKernel = detail::ProgramManager::getInstance().getOrCreateKernel(
-        m_Queue->get_context(), m_KernelName.c_str());
+        Context, m_KernelName.c_str());
   }
 
   if (m_KernelArgs != nullptr) {
@@ -99,8 +99,8 @@ void ExecuteKernelCommand<
     }
   }
 
-  std::vector<cl_event> CLEvents =
-      detail::getOrWaitEvents(std::move(DepEvents), m_Queue->get_context());
+  std::vector<cl_event> CLEvents = detail::getOrWaitEvents(
+      std::move(DepEvents), detail::getSyclObjImpl(Context));
   cl_event &CLEvent = Event->getHandleRef();
   CLEvent = runEnqueueNDRangeKernel(m_Queue->getHandleRef(), m_ClKernel,
                                     std::move(CLEvents));

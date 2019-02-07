@@ -114,10 +114,9 @@ static cl_program createProgram(const platform &Platform,
 
 cl_program ProgramManager::createOpenCLProgram(const context &Context) {
   vector_class<char> DeviceProg = getSpirvSource();
-  cl_context ClContext = Context.get();
+  cl_context ClContext = detail::getSyclObjImpl(Context)->getHandleRef();
   const platform &Platform = Context.get_platform();
   cl_program ClProgram = createProgram(Platform, ClContext, DeviceProg);
-  clReleaseContext(ClContext);
   return ClProgram;
 }
 

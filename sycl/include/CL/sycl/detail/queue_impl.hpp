@@ -73,8 +73,9 @@ public:
   template <info::queue param>
   typename info::param_traits<info::queue, param>::return_type get_info() const;
 
-  template <typename T> event submit(T cgf, std::shared_ptr<queue_impl> self,
-                                     std::shared_ptr<queue_impl> second_queue) {
+  template <typename T>
+  event submit(T cgf, std::shared_ptr<queue_impl> self,
+               std::shared_ptr<queue_impl> second_queue) {
     event Event;
     try {
       Event = submit_impl(cgf, self);
@@ -89,7 +90,7 @@ public:
     event Event;
     try {
       Event = submit_impl(cgf, self);
-    } catch(...) {
+    } catch (...) {
       m_Exceptions.push_back(std::current_exception());
     }
     return Event;
@@ -130,14 +131,15 @@ public:
 
     cl_int Error = CL_SUCCESS;
     cl_command_queue Queue;
+    cl_context ClContext = detail::getSyclObjImpl(m_Context)->getHandleRef();
 #ifdef CL_VERSION_2_0
     cl_queue_properties CreationFlagProperties[] = {
         CL_QUEUE_PROPERTIES, CreationFlags, 0};
     Queue = clCreateCommandQueueWithProperties(
-        m_Context.get(), m_Device.get(), CreationFlagProperties,
+        ClContext, m_Device.get(), CreationFlagProperties,
         &Error);
 #else
-    Queue = clCreateCommandQueue(m_Context.get(), m_Device.get(),
+    Queue = clCreateCommandQueue(ClContext, m_Device.get(),
                                           CreationFlags, &Error);
 #endif
     CHECK_OCL_CODE(Error);
@@ -146,6 +148,7 @@ public:
     return Queue;
   }
 
+   // Warning. Returned reference will be invalid if queue_impl was destroyed.
   cl_command_queue &getHandleRef() {
     if (!m_Device.is_accelerator()) {
       return m_CommandQueue;

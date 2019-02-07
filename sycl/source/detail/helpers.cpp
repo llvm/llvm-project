@@ -1,23 +1,23 @@
 //==---------------- helpers.cpp - SYCL helpers ---------------------------==//
 //
-// The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include <CL/sycl/context.hpp>
+#include <CL/sycl/detail/context_impl.hpp>
 #include <CL/sycl/detail/helpers.hpp>
 #include <CL/sycl/event.hpp>
 
+#include <memory>
+
 namespace cl {
 namespace sycl {
+using ContextImplPtr = std::shared_ptr<cl::sycl::detail::context_impl>;
 namespace detail {
-
-std::vector<cl_event>
-getOrWaitEvents(std::vector<cl::sycl::event> DepEvents,
-                cl::sycl::context Context) {
+std::vector<cl_event> getOrWaitEvents(std::vector<cl::sycl::event> DepEvents,
+                                      ContextImplPtr Context) {
   std::vector<cl_event> CLEvents;
   for (auto SyclEvent : DepEvents) {
     auto SyclEventImplPtr = detail::getSyclObjImpl(SyclEvent);

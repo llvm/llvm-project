@@ -29,6 +29,7 @@ namespace cl {
 namespace sycl {
 using QueueImplPtr = std::shared_ptr<detail::queue_impl>;
 using EventImplPtr = std::shared_ptr<cl::sycl::detail::event_impl>;
+using ContextImplPtr = std::shared_ptr<cl::sycl::detail::context_impl>;
 // Forward declarations
 template <typename dataT, int dimensions, access::mode accessmode,
           access::target accessTarget, access::placeholder isPlaceholder>
@@ -120,8 +121,9 @@ public:
           "allowed");
 
     CHECK_OCL_CODE(clGetMemObjectInfo(MemObject, CL_MEM_CONTEXT,
-                                      sizeof(OpenCLContext), &OpenCLContext, nullptr));
-    if (SyclContext.get() != OpenCLContext)
+                                      sizeof(OpenCLContext), &OpenCLContext,
+                                      nullptr));
+    if (detail::getSyclObjImpl(SyclContext)->getHandleRef() != OpenCLContext)
       throw cl::sycl::invalid_parameter_error(
           "Input context must be the same as the context of cl_mem");
     OCLState.Mem = MemObject;
@@ -268,7 +270,7 @@ void buffer_impl<T, dimensions, AllocatorT>::fill(
   size_t Offset = OffsetArr[0];
   size_t Size = RangeArr[0] * PatternSize;
 
-  cl::sycl::context Context = Queue->get_context();
+  ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
   OCLState.Queue = std::move(Queue);
   Event->setIsHostEvent(false);
@@ -278,9 +280,9 @@ void buffer_impl<T, dimensions, AllocatorT>::fill(
       detail::getOrWaitEvents(std::move(DepEvents), Context);
 
   cl_command_queue CommandQueue = OCLState.Queue->get();
-  cl_int Error = clEnqueueFillBuffer(
-      CommandQueue, OCLState.Mem, Pattern, PatternSize, Offset, Size,
-      CLEvents.size(), CLEvents.data(), &BufEvent);
+  cl_int Error = clEnqueueFillBuffer(CommandQueue, OCLState.Mem, Pattern,
+                                     PatternSize, Offset, Size, CLEvents.size(),
+                                     CLEvents.data(), &BufEvent);
 
   CHECK_OCL_CODE(Error);
   CHECK_OCL_CODE(clReleaseCommandQueue(CommandQueue));
@@ -299,7 +301,7 @@ void buffer_impl<T, dimensions, AllocatorT>::copy(
   size_t SizeTyDest = sizeof(T);
   const int DimDest = dimensions;
 
-  cl::sycl::context Context = Queue->get_context();
+  ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
   cl_event &BufEvent = Event->getHandleRef();
   std::vector<cl_event> CLEvents =
@@ -314,11 +316,11 @@ void buffer_impl<T, dimensions, AllocatorT>::copy(
                                 CLEvents.data(), &BufEvent);
   } else {
     size_t SrcOrigin[3] = {SrcOffset[0] * SizeTySrc,
-                            (1 == DimSrc) ? 0 : SrcOffset[1],
-                            (3 == DimSrc) ? SrcOffset[2] : 0};
+                           (1 == DimSrc) ? 0 : SrcOffset[1],
+                           (3 == DimSrc) ? SrcOffset[2] : 0};
     size_t DstOrigin[3] = {DestOffset[0] * SizeTyDest,
-                            (1 == DimDest) ? 0 : DestOffset[1],
-                            (3 == DimDest) ? DestOffset[2] : 0};
+                           (1 == DimDest) ? 0 : DestOffset[1],
+                           (3 == DimDest) ? DestOffset[2] : 0};
     size_t Region[3] = {SrcRange[0] * SizeTySrc,
                         (1 == DimSrc) ? 1 : SrcRange[1],
                         (3 == DimSrc) ? SrcRange[2] : 1};
@@ -345,9 +347,9 @@ void buffer_impl<T, dimensions, AllocatorT>::moveMemoryTo(
     QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
     EventImplPtr Event) {
 
-  cl::sycl::context Context = Queue->get_context();
+  ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
-  if (OpenCLInterop && (Context.get() != OpenCLContext))
+  if (OpenCLInterop && (Context->getHandleRef() != OpenCLContext))
     throw cl::sycl::runtime_error(
         "Interoperability buffer could not be used in a context other than the "
         "context associated with the OpenCL memory object.");
@@ -364,7 +366,7 @@ void buffer_impl<T, dimensions, AllocatorT>::moveMemoryTo(
     return;
   }
 
-  assert(OCLState.Queue->get_context() != Context ||
+  assert(OCLState.Queue->get_context() != Queue->get_context() ||
          OCLState.Queue->get_device() != Queue->get_device() &&
              "Attempt to move to the same env");
 
@@ -394,8 +396,9 @@ void buffer_impl<T, dimensions, AllocatorT>::moveMemoryTo(
   if (OCLState.Queue->is_host() && !Queue->is_host()) {
     const size_t ByteSize = get_size();
     cl_int Error;
-    cl_mem Mem = clCreateBuffer(Context.get(), CL_MEM_READ_WRITE, ByteSize,
-                                /*host_ptr=*/nullptr, &Error);
+    cl_mem Mem =
+        clCreateBuffer(Context->getHandleRef(), CL_MEM_READ_WRITE, ByteSize,
+                       /*host_ptr=*/nullptr, &Error);
     CHECK_OCL_CODE(Error);
 
     OCLState.Queue = std::move(Queue);
@@ -461,9 +464,9 @@ void buffer_impl<T, dimensions, AllocatorT>::allocate(
 
   detail::waitEvents(DepEvents);
 
-  cl::sycl::context Context = Queue->get_context();
+  ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
-  if (OpenCLInterop && (Context.get() != OpenCLContext))
+  if (OpenCLInterop && (Context->getHandleRef() != OpenCLContext))
     throw cl::sycl::runtime_error(
         "Interoperability buffer could not be used in a context other than the "
         "context associated with the OpenCL memory object.");
@@ -479,8 +482,9 @@ void buffer_impl<T, dimensions, AllocatorT>::allocate(
     size_t ByteSize = get_size();
     cl_int Error;
 
-    cl_mem Mem = clCreateBuffer(Context.get(), convertSycl2OCLMode(mode),
-                                ByteSize, nullptr, &Error);
+    cl_mem Mem =
+        clCreateBuffer(Context->getHandleRef(), convertSycl2OCLMode(mode),
+                       ByteSize, nullptr, &Error);
     CHECK_OCL_CODE(Error);
 
     cl_event &WriteBufEvent = Event->getHandleRef();
