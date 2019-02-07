@@ -31,6 +31,12 @@ AST_MATCHER(clang::RecordDecl, isExternCContext) {
   return Node.isExternCContext();
 }
 
+AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
+  const clang::DeclContext *DC = Node.getDeclContext();
+  const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(DC);
+  return FD ? FD->isMain() : false;
+}
+
 } // namespace
 
 namespace clang {
@@ -44,7 +50,8 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       typeLoc(hasValidBeginLoc(), hasType(arrayType()),
-              unless(anyOf(hasParent(varDecl(isExternC())),
+              unless(anyOf(hasParent(parmVarDecl(isArgvOfMain())),
+                           hasParent(varDecl(isExternC())),
                            hasParent(fieldDecl(
                                hasParent(recordDecl(isExternCContext())))),
                            hasAncestor(functionDecl(isExternC())))))
