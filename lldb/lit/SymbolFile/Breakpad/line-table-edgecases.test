@@ -2,6 +2,8 @@
 # input contains a LINE record which does not belong to any function as well as
 # a FUNC record without any LINE records.
 
+# XFAIL: system-windows
+
 # RUN: yaml2obj %S/Inputs/basic-elf.yaml > %T/line-table-edgecases.out
 # RUN: %lldb %T/line-table-edgecases.out \
 # RUN:   -o "target symbols add -s line-table-edgecases.out %S/Inputs/line-table-edgecases.syms" \
