@@ -5944,9 +5944,6 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
 
   const swift::TypeKind type_kind = swift_can_type->getKind();
   switch (type_kind) {
-  case swift::TypeKind::LValue:
-  case swift::TypeKind::UnboundGeneric:
-  case swift::TypeKind::GenericFunction:
   case swift::TypeKind::Function:
     return GetPointerByteSize() * 8;
   default:
