@@ -90,6 +90,10 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS lldb-mi)
   endif()
 
+  if(TARGET lldb-instr)
+    list(APPEND LLDB_TEST_DEPS lldb-instr)
+  endif()
+
   if(NOT LLDB_BUILT_STANDALONE)
     list(APPEND LLDB_TEST_DEPS yaml2obj)
   endif()
