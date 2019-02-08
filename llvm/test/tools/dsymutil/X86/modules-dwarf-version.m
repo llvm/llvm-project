@@ -8,7 +8,7 @@
 // RUN: mkdir %t.dir
 // RUN: cp %p/../Inputs/modules/Bar.pcm %t.dir
 // RUN: cp %p/../Inputs/modules-dwarf-version/1.o %t.dir
-// RUN: dsymutil -f -oso-prepend-path=%t.dir \
+// RUN: dsymutil -verify -f -oso-prepend-path=%t.dir \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
 
