@@ -423,6 +423,21 @@ void foo() {
                               "Add include \"b.h\" for symbol na::nb::X")))));
 }
 
+TEST(IncludeFixerTest, NoCrashMemebrAccess) {
+  Annotations Test(R"cpp(
+    struct X { int  xyz; };
+    void g() { X x; x.$[[xy]] }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"na::X", "unittest:///a.h", "\"a.h\""});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(Diag(Test.range(), "no member named 'xy' in 'X'")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

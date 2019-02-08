@@ -39,6 +39,14 @@
 #define KMP_MEM_CONS_MODEL KMP_MEM_CONS_VOLATILE
 #endif
 
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
+
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
 /* ------------------------- Compiler recognition ---------------------- */
 #define KMP_COMPILER_ICC 0
 #define KMP_COMPILER_GCC 0
@@ -304,7 +312,7 @@ extern "C" {
 #  define KMP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #  define KMP_FALLTHROUGH() [[clang::fallthrough]]
-#elif __has_attribute(fallthough) || _GNUC_VER >= 700
+#elif __has_attribute(fallthough) || __GNUC__ >= 7
 #  define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
 #else
 #  define KMP_FALLTHROUGH() ((void)0)

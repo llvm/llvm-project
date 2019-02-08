@@ -254,7 +254,7 @@ protected:
   /// @return
   ///     The function pointer, for use in a CallInst.
   //------------------------------------------------------------------
-  llvm::Value *BuildPointerValidatorFunc(lldb::addr_t start_address) {
+  llvm::FunctionCallee BuildPointerValidatorFunc(lldb::addr_t start_address) {
     llvm::Type *param_array[1];
 
     param_array[0] = const_cast<llvm::PointerType *>(GetI8PtrTy());
@@ -266,7 +266,7 @@ protected:
     PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
-    return ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty);
+    return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
   }
 
   //------------------------------------------------------------------
@@ -279,7 +279,7 @@ protected:
   /// @return
   ///     The function pointer, for use in a CallInst.
   //------------------------------------------------------------------
-  llvm::Value *BuildObjectCheckerFunc(lldb::addr_t start_address) {
+  llvm::FunctionCallee BuildObjectCheckerFunc(lldb::addr_t start_address) {
     llvm::Type *param_array[2];
 
     param_array[0] = const_cast<llvm::PointerType *>(GetI8PtrTy());
@@ -292,7 +292,7 @@ protected:
     PointerType *fun_ptr_ty = PointerType::getUnqual(fun_ty);
     Constant *fun_addr_int =
         ConstantInt::get(GetIntptrTy(), start_address, false);
-    return ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty);
+    return {fun_ty, ConstantExpr::getIntToPtr(fun_addr_int, fun_ptr_ty)};
   }
 
   PointerType *GetI8PtrTy() {
@@ -382,7 +382,7 @@ protected:
   }
 
 private:
-  llvm::Value *m_valid_pointer_check_func;
+  llvm::FunctionCallee m_valid_pointer_check_func;
 };
 
 class ObjcObjectChecker : public Instrumenter {
@@ -544,7 +544,7 @@ protected:
   }
 
 private:
-  llvm::Value *m_objc_object_check_func;
+  llvm::FunctionCallee m_objc_object_check_func;
 };
 
 IRDynamicChecks::IRDynamicChecks(DynamicCheckerFunctions &checker_functions,
