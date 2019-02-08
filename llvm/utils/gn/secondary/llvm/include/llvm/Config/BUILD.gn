@@ -124,6 +124,7 @@ write_cmake_config("config") {
     "RETSIGTYPE=void",
     "LLVM_GISEL_COV_ENABLED=",
     "LLVM_GISEL_COV_PREFIX=",
+    "LLVM_WITH_Z3=",
 
     # This is both in llvm-config.h and config.h; llvm-config.h doesn't
     # define it if it's not set while config.h defines it to empty in that case.

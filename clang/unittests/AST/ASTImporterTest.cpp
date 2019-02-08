@@ -4812,6 +4812,66 @@ TEST_P(ASTImporterLookupTableTest, LookupFindsOverloadedNames) {
   EXPECT_EQ(Res.count(F2), 1u);
 }
 
+TEST_P(ASTImporterLookupTableTest,
+       DifferentOperatorsShouldHaveDifferentResultSet) {
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      R"(
+      struct X{};
+      void operator+(X, X);
+      void operator-(X, X);
+      )",
+      Lang_CXX);
+
+  ASTImporterLookupTable LT(*ToTU);
+  auto *FPlus = FirstDeclMatcher<FunctionDecl>().match(
+      ToTU, functionDecl(hasOverloadedOperatorName("+")));
+  auto *FMinus = FirstDeclMatcher<FunctionDecl>().match(
+      ToTU, functionDecl(hasOverloadedOperatorName("-")));
+  DeclarationName NamePlus = FPlus->getDeclName();
+  auto ResPlus = LT.lookup(ToTU, NamePlus);
+  EXPECT_EQ(ResPlus.size(), 1u);
+  EXPECT_EQ(ResPlus.count(FPlus), 1u);
+  EXPECT_EQ(ResPlus.count(FMinus), 0u);
+  DeclarationName NameMinus = FMinus->getDeclName();
+  auto ResMinus = LT.lookup(ToTU, NameMinus);
+  EXPECT_EQ(ResMinus.size(), 1u);
+  EXPECT_EQ(ResMinus.count(FMinus), 1u);
+  EXPECT_EQ(ResMinus.count(FPlus), 0u);
+  EXPECT_NE(*ResMinus.begin(), *ResPlus.begin());
+}
+
+TEST_P(ASTImporterLookupTableTest, LookupDeclNamesFromDifferentTUs) {
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      R"(
+      struct X {};
+      void operator+(X, X);
+      )",
+      Lang_CXX);
+  auto *ToPlus = FirstDeclMatcher<FunctionDecl>().match(
+      ToTU, functionDecl(hasOverloadedOperatorName("+")));
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct X {};
+      void operator+(X, X);
+      )",
+      Lang_CXX);
+  auto *FromPlus = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasOverloadedOperatorName("+")));
+
+  // FromPlus have a different TU, thus its DeclarationName is different too.
+  ASSERT_NE(ToPlus->getDeclName(), FromPlus->getDeclName());
+
+  ASTImporterLookupTable LT(*ToTU);
+  auto Res = LT.lookup(ToTU, ToPlus->getDeclName());
+  ASSERT_EQ(Res.size(), 1u);
+  EXPECT_EQ(*Res.begin(), ToPlus);
+
+  // FromPlus have a different TU, thus its DeclarationName is different too.
+  Res = LT.lookup(ToTU, FromPlus->getDeclName());
+  ASSERT_EQ(Res.size(), 0u);
+}
+
 static const RecordDecl * getRecordDeclOfFriend(FriendDecl *FD) {
   QualType Ty = FD->getFriendType()->getType();
   QualType NamedTy = cast<ElaboratedType>(Ty)->getNamedType();

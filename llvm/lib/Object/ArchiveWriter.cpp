@@ -48,6 +48,7 @@ NewArchiveMember::getOldMember(const object::Archive::Child &OldMember,
     return BufOrErr.takeError();
 
   NewArchiveMember M;
+  assert(M.IsNew == false);
   M.Buf = MemoryBuffer::getMemBuffer(*BufOrErr, false);
   M.MemberName = M.Buf->getBufferIdentifier();
   if (!Deterministic) {
@@ -97,6 +98,7 @@ Expected<NewArchiveMember> NewArchiveMember::getFile(StringRef FileName,
     return errorCodeToError(std::error_code(errno, std::generic_category()));
 
   NewArchiveMember M;
+  M.IsNew = true;
   M.Buf = std::move(*MemberBufferOrErr);
   M.MemberName = M.Buf->getBufferIdentifier();
   if (!Deterministic) {
@@ -189,6 +191,35 @@ static bool useStringTable(bool Thin, StringRef Name) {
   return Thin || Name.size() >= 16 || Name.contains('/');
 }
 
+// Compute the relative path from From to To.
+static std::string computeRelativePath(StringRef From, StringRef To) {
+  if (sys::path::is_absolute(From) || sys::path::is_absolute(To))
+    return To;
+
+  StringRef DirFrom = sys::path::parent_path(From);
+  auto FromI = sys::path::begin(DirFrom);
+  auto ToI = sys::path::begin(To);
+  while (*FromI == *ToI) {
+    ++FromI;
+    ++ToI;
+  }
+
+  SmallString<128> Relative;
+  for (auto FromE = sys::path::end(DirFrom); FromI != FromE; ++FromI)
+    sys::path::append(Relative, "..");
+
+  for (auto ToE = sys::path::end(To); ToI != ToE; ++ToI)
+    sys::path::append(Relative, *ToI);
+
+#ifdef _WIN32
+  // Replace backslashes with slashes so that the path is portable between *nix
+  // and Windows.
+  std::replace(Relative.begin(), Relative.end(), '\\', '/');
+#endif
+
+  return Relative.str();
+}
+
 static bool is64BitKind(object::Archive::Kind Kind) {
   switch (Kind) {
   case object::Archive::K_GNU:
@@ -203,11 +234,27 @@ static bool is64BitKind(object::Archive::Kind Kind) {
   llvm_unreachable("not supported for writting");
 }
 
-static void
-printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
-                  StringMap<uint64_t> &MemberNames, object::Archive::Kind Kind,
-                  bool Thin, const NewArchiveMember &M,
-                  sys::TimePoint<std::chrono::seconds> ModTime, unsigned Size) {
+static void addToStringTable(raw_ostream &Out, StringRef ArcName,
+                             const NewArchiveMember &M, bool Thin) {
+  StringRef ID = M.Buf->getBufferIdentifier();
+  if (Thin) {
+    if (M.IsNew)
+      Out << computeRelativePath(ArcName, ID);
+    else
+      Out << ID;
+  } else
+    Out << M.MemberName;
+  Out << "/\n";
+}
+
+static void printMemberHeader(raw_ostream &Out, uint64_t Pos,
+                              raw_ostream &StringTable,
+                              StringMap<uint64_t> &MemberNames,
+                              object::Archive::Kind Kind, bool Thin,
+                              StringRef ArcName, const NewArchiveMember &M,
+                              sys::TimePoint<std::chrono::seconds> ModTime,
+                              unsigned Size) {
+
   if (isBSDLike(Kind))
     return printBSDMemberHeader(Out, Pos, M.MemberName, ModTime, M.UID, M.GID,
                                 M.Perms, Size);
@@ -218,12 +265,12 @@ printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
   uint64_t NamePos;
   if (Thin) {
     NamePos = StringTable.tell();
-    StringTable << M.MemberName << "/\n";
+    addToStringTable(StringTable, ArcName, M, Thin);
   } else {
     auto Insertion = MemberNames.insert({M.MemberName, uint64_t(0)});
     if (Insertion.second) {
       Insertion.first->second = StringTable.tell();
-      StringTable << M.MemberName << "/\n";
+      addToStringTable(StringTable, ArcName, M, Thin);
     }
     NamePos = Insertion.first->second;
   }
@@ -385,8 +432,8 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
 
 static Expected<std::vector<MemberData>>
 computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
-                  object::Archive::Kind Kind, bool Thin, bool Deterministic,
-                  ArrayRef<NewArchiveMember> NewMembers) {
+                  object::Archive::Kind Kind, bool Thin, StringRef ArcName,
+                  bool Deterministic, ArrayRef<NewArchiveMember> NewMembers) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
 
   // This ignores the symbol table, but we only need the value mod 8 and the
@@ -473,8 +520,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       ModTime = sys::toTimePoint(FilenameCount[M.MemberName]++);
     else
       ModTime = M.ModTime;
-    printMemberHeader(Out, Pos, StringTable, MemberNames, Kind, Thin, M,
-                      ModTime, Buf.getBufferSize() + MemberPadding);
+    printMemberHeader(Out, Pos, StringTable, MemberNames, Kind, Thin, ArcName,
+                      M, ModTime, Buf.getBufferSize() + MemberPadding);
     Out.flush();
 
     Expected<std::vector<unsigned>> Symbols =
@@ -506,7 +553,7 @@ Error llvm::writeArchive(StringRef ArcName,
   raw_svector_ostream StringTable(StringTableBuf);
 
   Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
-      StringTable, SymNames, Kind, Thin, Deterministic, NewMembers);
+      StringTable, SymNames, Kind, Thin, ArcName, Deterministic, NewMembers);
   if (Error E = DataOrErr.takeError())
     return E;
   std::vector<MemberData> &Data = *DataOrErr;

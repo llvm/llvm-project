@@ -192,12 +192,6 @@ public:
     if (!SemaPtr->SourceMgr.isWrittenInMainFile(Typo.getLoc()))
       return clang::TypoCorrection();
 
-    assert(S && "Enclosing scope must be set.");
-
-    UnresolvedName Unresolved;
-    Unresolved.Name = Typo.getAsString();
-    Unresolved.Loc = Typo.getBeginLoc();
-
     // FIXME: support invalid scope before a type name. In the following
     // example, namespace "clang::tidy::" hasn't been declared/imported.
     //    namespace clang {
@@ -228,6 +222,12 @@ public:
           return TypoCorrection();
       }
     }
+    if (!SpecifiedScope && !S) // Give up if no scope available.
+      return TypoCorrection();
+
+    UnresolvedName Unresolved;
+    Unresolved.Name = Typo.getAsString();
+    Unresolved.Loc = Typo.getBeginLoc();
 
     auto *Sem = SemaPtr; // Avoid capturing `this`.
     Unresolved.GetScopes = [Sem, SpecifiedScope, S, LookupKind]() {
@@ -235,6 +235,7 @@ public:
       if (SpecifiedScope) {
         Scopes.push_back(*SpecifiedScope);
       } else {
+        assert(S);
         // No scope qualifier is specified. Collect all accessible scopes in the
         // context.
         VisitedContextCollector Collector;

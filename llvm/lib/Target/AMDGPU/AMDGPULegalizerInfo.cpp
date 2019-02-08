@@ -139,7 +139,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                ConstantPtr, LocalPtr, FlatPtr, PrivatePtr})
     .legalFor({LLT::vector(3, 16)})// FIXME: Hack
     .clampScalarOrElt(0, S32, S512)
-    .legalIf(isMultiple32(0));
+    .legalIf(isMultiple32(0))
+    .widenScalarToNextPow2(0, 32);
 
 
   // FIXME: i1 operands to intrinsics should always be legal, but other i1
@@ -451,12 +452,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
     Shifts.clampScalar(1, S16, S32);
     Shifts.clampScalar(0, S16, S64);
+    Shifts.widenScalarToNextPow2(0, 16);
   } else {
     // Make sure we legalize the shift amount type first, as the general
     // expansion for the shifted type will produce much worse code if it hasn't
     // been truncated already.
     Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S32, S64);
+    Shifts.widenScalarToNextPow2(0, 32);
   }
   Shifts.scalarize(0);
 
@@ -707,7 +710,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (ST.getTargetLowering()->isNoopAddrSpaceCast(SrcAS, DestAS)) {
-    MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::COPY));
+    MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::G_BITCAST));
     return true;
   }
 

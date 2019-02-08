@@ -581,7 +581,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
   auto &MBB = *MIB->getParent();
   auto &MF = *MBB.getParent();
 
-  bool UseMovt = STI.useMovt(MF);
+  bool UseMovt = STI.useMovt();
 
   unsigned Size = TM.getPointerSize(0);
   unsigned Alignment = 4;

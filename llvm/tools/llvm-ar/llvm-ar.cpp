@@ -193,9 +193,6 @@ static std::string ArchiveName;
 // on the command line.
 static std::vector<StringRef> Members;
 
-// Static buffer to hold StringRefs.
-static BumpPtrAllocator Alloc;
-
 // Extract the member filename from the command line for the [relpos] argument
 // associated with a, b, and i modifiers
 static void getRelPos() {
@@ -540,35 +537,6 @@ static void performReadOperation(ArchiveOperation Operation,
   exit(1);
 }
 
-// Compute the relative path from From to To.
-static std::string computeRelativePath(StringRef From, StringRef To) {
-  if (sys::path::is_absolute(From) || sys::path::is_absolute(To))
-    return To;
-
-  StringRef DirFrom = sys::path::parent_path(From);
-  auto FromI = sys::path::begin(DirFrom);
-  auto ToI = sys::path::begin(To);
-  while (*FromI == *ToI) {
-    ++FromI;
-    ++ToI;
-  }
-
-  SmallString<128> Relative;
-  for (auto FromE = sys::path::end(DirFrom); FromI != FromE; ++FromI)
-    sys::path::append(Relative, "..");
-
-  for (auto ToE = sys::path::end(To); ToI != ToE; ++ToI)
-    sys::path::append(Relative, *ToI);
-
-#ifdef _WIN32
-  // Replace backslashes with slashes so that the path is portable between *nix
-  // and Windows.
-  std::replace(Relative.begin(), Relative.end(), '\\', '/');
-#endif
-
-  return Relative.str();
-}
-
 static void addChildMember(std::vector<NewArchiveMember> &Members,
                            const object::Archive::Child &M,
                            bool FlattenArchive = false) {
@@ -577,15 +545,6 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getOldMember(M, Deterministic);
   failIfError(NMOrErr.takeError());
-  // If the child member we're trying to add is thin, use the path relative to
-  // the archive it's in, so the file resolves correctly.
-  if (Thin && FlattenArchive) {
-    StringSaver Saver(Alloc);
-    Expected<std::string> FileNameOrErr = M.getFullName();
-    failIfError(FileNameOrErr.takeError());
-    NMOrErr->MemberName =
-        Saver.save(computeRelativePath(ArchiveName, *FileNameOrErr));
-  }
   if (FlattenArchive &&
       identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
     Expected<std::string> FileNameOrErr = M.getFullName();
@@ -609,13 +568,6 @@ static void addMember(std::vector<NewArchiveMember> &Members,
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getFile(FileName, Deterministic);
   failIfError(NMOrErr.takeError(), FileName);
-  StringSaver Saver(Alloc);
-  // For regular archives, use the basename of the object path for the member
-  // name. For thin archives, use the full relative paths so the file resolves
-  // correctly.
-  NMOrErr->MemberName =
-      Thin ? Saver.save(computeRelativePath(ArchiveName, FileName))
-           : sys::path::filename(NMOrErr->MemberName);
   if (FlattenArchive &&
       identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
     object::Archive &Lib = readLibrary(FileName);
@@ -629,6 +581,8 @@ static void addMember(std::vector<NewArchiveMember> &Members,
       return;
     }
   }
+  // Use the basename of the object path for the member name.
+  NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
   Members.push_back(std::move(*NMOrErr));
 }
 
@@ -718,7 +672,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
           computeInsertAction(Operation, Child, Name, MemberI);
       switch (Action) {
       case IA_AddOldMember:
-        addChildMember(Ret, Child, /*FlattenArchive=*/Thin);
+        addChildMember(Ret, Child);
         break;
       case IA_AddNewMember:
         addMember(Ret, *MemberI);
@@ -726,7 +680,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       case IA_Delete:
         break;
       case IA_MoveOldMember:
-        addChildMember(Moved, Child, /*FlattenArchive=*/Thin);
+        addChildMember(Moved, Child);
         break;
       case IA_MoveNewMember:
         addMember(Moved, *MemberI);
@@ -945,7 +899,7 @@ static void runMRIScript() {
       {
         Error Err = Error::success();
         for (auto &Member : Lib.children(Err))
-          addChildMember(NewMembers, Member, /*FlattenArchive=*/Thin);
+          addChildMember(NewMembers, Member);
         failIfError(std::move(Err));
       }
       break;
@@ -997,6 +951,7 @@ static bool handleGenericOption(StringRef arg) {
 
 static int ar_main(int argc, char **argv) {
   SmallVector<const char *, 0> Argv(argv, argv + argc);
+  BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
   cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
   for (size_t i = 1; i < Argv.size(); ++i) {

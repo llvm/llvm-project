@@ -268,6 +268,9 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::XNACK_MASK:
     O << "xnack_mask";
     return;
+  case AMDGPU::LDS_DIRECT:
+    O << "src_lds_direct";
+    return;
   case AMDGPU::VCC_LO:
     O << "vcc_lo";
     return;

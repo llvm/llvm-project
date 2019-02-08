@@ -7144,6 +7144,10 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
   if (N0 == N1 && hasOperation(RotOpc, VT))
     return DAG.getNode(RotOpc, SDLoc(N), VT, N0, N2);
 
+  // Simplify, based on bits shifted out of N0/N1.
+  if (SimplifyDemandedBits(SDValue(N, 0)))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
@@ -13154,42 +13158,30 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (LD->getBasePtr().isUndef() || Offset != 0)
     return SDValue();
   // Model necessary truncations / extenstions.
-  SmallVector<SDNode *, 4> Vals; // Temporaries which may need to be deleted.
-  SDValue Val, RV;
+  SDValue Val;
   // Truncate Value To Stored Memory Size.
   do {
     if (!getTruncatedStoreValue(ST, Val))
       continue;
-    if (Vals.empty() || Vals.back() != Val.getNode())
-      Vals.push_back(Val.getNode());
     if (!isTypeLegal(LDMemType))
       continue;
     if (STMemType != LDMemType) {
       // TODO: Support vectors? This requires extract_subvector/bitcast.
       if (!STMemType.isVector() && !LDMemType.isVector() &&
-          STMemType.isInteger() && LDMemType.isInteger()) {
-        Vals.push_back(Val.getNode());
+          STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
-      } else
+      else
         continue;
     }
-    if (Vals.empty() || Vals.back() != Val.getNode())
-      Vals.push_back(Val.getNode());
-    if (extendLoadedValueToExtension(LD, Val))
-      RV = ReplaceLd(LD, Val, Chain);
-    else if (Vals.empty() || Vals.back() != Val.getNode())
-      Vals.push_back(Val.getNode());
+    if (!extendLoadedValueToExtension(LD, Val))
+      continue;
+    return ReplaceLd(LD, Val, Chain);
   } while (false);
 
   // On failure, cleanup dead nodes we may have created.
-  if (Vals.empty() || Vals.back() != Val.getNode())
-    Vals.push_back(Val.getNode());
-  while (!Vals.empty()) {
-    SDNode *Val = Vals.pop_back_val();
-    if (Val->use_empty())
-      recursivelyDeleteUnusedNodes(Val);
-  }
-  return RV;
+  if (Val->use_empty())
+    deleteAndRecombine(Val.getNode());
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitLOAD(SDNode *N) {

@@ -3,6 +3,15 @@
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 # RUN: not llvm-objcopy --redefine-sym barbar %t %t2 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
 # RUN: not llvm-objcopy --redefine-sym foo=f1 --redefine-sym foo=f2 %t %t2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-REDEFINITION
+# RUN: echo "  foo   oof #rename foo  " > %t.rename.txt
+# RUN: echo "empty" >> %t.rename.txt
+# RUN: not llvm-objcopy --redefine-syms %t.rename.txt %t %t3 2>&1 | FileCheck %s --check-prefix=MISSING-SYM-NAME
+# RUN: not llvm-objcopy --redefine-syms %t.rename-none.txt %t %t-none 2>&1 | FileCheck %s --check-prefix=NO-FILE
+# RUN: echo "  bar   rab #rename bar  " > %t.rename2.txt
+# RUN: echo "  foo   oof #rename foo  " > %t.rename3.txt
+# RUN: echo "  empty   ytpme #rename empty  " >> %t.rename3.txt
+# RUN: llvm-objcopy --redefine-syms %t.rename2.txt --redefine-syms %t.rename3.txt %t %t4
+# RUN: llvm-readobj --symbols %t4 | FileCheck %s --check-prefix=MULTIPLE-FILES
 
 !ELF
 FileHeader:
@@ -79,3 +88,12 @@ Symbols:
 
 #BAD-FORMAT: Bad format for --redefine-sym
 #MULTIPLE-REDEFINITION: Multiple redefinition of symbol foo
+#MISSING-SYM-NAME: error: {{.*}}.rename.txt:2: missing new symbol name
+#NO-FILE: error: '{{.*}}.rename-none.txt': {{[Nn]}}o such file or directory
+
+#MULTIPLE-FILES:        Name: oof
+#MULTIPLE-FILES-NEXT:   Value: 0x1004
+#MULTIPLE-FILES:        Name: rab
+#MULTIPLE-FILES-NEXT:   Value: 0x2000
+#MULTIPLE-FILES:        Name: ytpme
+#MULTIPLE-FILES-NEXT:   Value: 0x1008
