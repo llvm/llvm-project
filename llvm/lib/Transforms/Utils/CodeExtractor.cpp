@@ -21,6 +21,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -67,6 +69,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
@@ -236,18 +239,20 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, bool AllowVarArgs,
-                             bool AllowAlloca, std::string Suffix)
+                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
+                             bool AllowVarArgs, bool AllowAlloca,
+                             std::string Suffix)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AllowVarArgs(AllowVarArgs),
+      BPI(BPI), AC(AC), AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, std::string Suffix)
+                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
+                             std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AllowVarArgs(false),
+      BPI(BPI), AC(AC), AllowVarArgs(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
                                      /* AllowAlloca */ false)),
@@ -1236,6 +1241,13 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
 
     // Insert this basic block into the new function
     newBlocks.push_back(Block);
+
+    // Remove @llvm.assume calls that were moved to the new function from the
+    // old function's assumption cache.
+    if (AC)
+      for (auto &I : *Block)
+        if (match(&I, m_Intrinsic<Intrinsic::assume>()))
+          AC->unregisterAssumption(cast<CallInst>(&I));
   }
 }
 
