@@ -105,9 +105,6 @@ public:
   void SetAllowJIT(bool allow);
 
 protected:
-  SBExpressionOptions(
-      lldb_private::EvaluateExpressionOptions &expression_options);
-
   lldb_private::EvaluateExpressionOptions *get() const;
 
   lldb_private::EvaluateExpressionOptions &ref() const;

@@ -124,6 +124,18 @@ The symbols which are preserved by default are:
 - Any symbol which is to be exported.
 - Any symbol transitively referenced by the above.
 
+Weak Undefined Functions
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+On native platforms, calls to weak undefined functions end up as calls to the
+null function pointer.  With WebAssembly, direct calls must reference a defined
+function (with the correct signature).  In order to handle this case the linker
+will generate function a stub containing only the ``unreachable`` instruction
+and use this for any direct references to an undefined weak function.
+
+For example a runtime call to a weak undefined function ``foo`` will up trapping
+on ``unreachable`` inside and linker-generated function called
+``undefined:foo``.
 
 Missing features
 ----------------

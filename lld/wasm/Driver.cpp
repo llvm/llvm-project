@@ -286,53 +286,6 @@ static StringRef getEntry(opt::InputArgList &Args, StringRef Default) {
   return Arg->getValue();
 }
 
-static const uint8_t UnreachableFn[] = {
-    0x03 /* ULEB length */, 0x00 /* ULEB num locals */,
-    0x00 /* opcode unreachable */, 0x0b /* opcode end */
-};
-
-// For weak undefined functions, there may be "call" instructions that reference
-// the symbol. In this case, we need to synthesise a dummy/stub function that
-// will abort at runtime, so that relocations can still provided an operand to
-// the call instruction that passes Wasm validation.
-static void handleWeakUndefines() {
-  for (Symbol *Sym : Symtab->getSymbols()) {
-    if (!Sym->isUndefWeak())
-      continue;
-
-    const WasmSignature *Sig = nullptr;
-
-    if (auto *FuncSym = dyn_cast<FunctionSymbol>(Sym)) {
-      // It is possible for undefined functions not to have a signature (eg. if
-      // added via "--undefined"), but weak undefined ones do have a signature.
-      assert(FuncSym->Signature);
-      Sig = FuncSym->Signature;
-    } else if (auto *LazySym = dyn_cast<LazySymbol>(Sym)) {
-      // Lazy symbols may not be functions and therefore can have a null
-      // signature.
-      Sig = LazySym->Signature;
-    }
-
-    if (!Sig)
-      continue;
-
-
-    // Add a synthetic dummy for weak undefined functions.  These dummies will
-    // be GC'd if not used as the target of any "call" instructions.
-    std::string SymName = toString(*Sym);
-    StringRef DebugName = Saver.save("undefined function " + SymName);
-    auto *Func = make<SyntheticFunction>(*Sig, Sym->getName(), DebugName);
-    Func->setBody(UnreachableFn);
-    // Ensure it compares equal to the null pointer, and so that table relocs
-    // don't pull in the stub body (only call-operand relocs should do that).
-    Func->setTableIndex(0);
-    Symtab->SyntheticFunctions.emplace_back(Func);
-    // Hide our dummy to prevent export.
-    uint32_t Flags = WASM_SYMBOL_VISIBILITY_HIDDEN;
-    replaceSymbol<DefinedFunction>(Sym, Sym->getName(), Flags, nullptr, Func);
-  }
-}
-
 // Some Config members do not directly correspond to any particular
 // command line options, but computed based on other Config values.
 // This function initialize such members. See Config.h for the details
@@ -443,7 +396,9 @@ static Symbol *handleUndefined(StringRef Name) {
 static UndefinedGlobal *
 createUndefinedGlobal(StringRef Name, llvm::wasm::WasmGlobalType *Type) {
   auto *Sym =
-      cast<UndefinedGlobal>(Symtab->addUndefinedGlobal(Name, 0, nullptr, Type));
+      cast<UndefinedGlobal>(Symtab->addUndefinedGlobal(Name, Name,
+                                                       DefaultModule, 0,
+                                                       nullptr, Type));
   Config->AllowUndefinedSymbols.insert(Sym->getName());
   Sym->IsUsedInRegularObj = true;
   return Sym;
@@ -618,7 +573,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Add synthetic dummies for weak undefined functions.  Must happen
   // after LTO otherwise functions may not yet have signatures.
   if (!Config->Relocatable)
-    handleWeakUndefines();
+    Symtab->handleWeakUndefines();
 
   if (EntrySym)
     EntrySym->setHidden(false);
