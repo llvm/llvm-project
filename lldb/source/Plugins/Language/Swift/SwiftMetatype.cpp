@@ -26,7 +26,7 @@ using namespace lldb_private::formatters::swift;
 
 bool lldb_private::formatters::swift::SwiftMetatype_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  lldb::addr_t metadata_ptr = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  lldb::addr_t metadata_ptr = valobj.GetPointerValue();
   if (metadata_ptr == LLDB_INVALID_ADDRESS || metadata_ptr == 0) {
     CompilerType compiler_metatype_type(valobj.GetCompilerType());
     CompilerType instancetype(compiler_metatype_type.GetInstanceType());
