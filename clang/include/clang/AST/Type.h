@@ -1125,6 +1125,12 @@ public:
   };
 
   /// Check if this is a non-trivial type that would cause a C struct
+  /// transitively containing this type to be non-trivial. This function can be
+  /// used to determine whether a field of this type can be declared inside a C
+  /// union.
+  bool isNonTrivialPrimitiveCType(const ASTContext &Ctx) const;
+
+  /// Check if this is a non-trivial type that would cause a C struct
   /// transitively containing this type to be non-trivial to copy and return the
   /// kind.
   PrimitiveCopyKind isNonTrivialToPrimitiveCopy() const;
