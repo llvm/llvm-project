@@ -1060,11 +1060,11 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
       uint32_t num_resumes = GetResumeCountForLaunchInfo(launch_info);
       if (log) {
         const FileSpec &shell = launch_info.GetShell();
-        const char *shell_str = (shell) ? shell.GetPath().c_str() : "<null>";
+        std::string shell_str = (shell) ? shell.GetPath() : "<null>";
         log->Printf(
             "Platform::%s GetResumeCountForLaunchInfo() returned %" PRIu32
             ", shell is '%s'",
-            __FUNCTION__, num_resumes, shell_str);
+            __FUNCTION__, num_resumes, shell_str.c_str());
       }
 
       if (!launch_info.ConvertArgumentsForLaunchingInShell(
