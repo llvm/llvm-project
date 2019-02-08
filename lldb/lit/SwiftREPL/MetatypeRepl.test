@@ -1,0 +1,11 @@
+// RUN: %lldb --repl < %s | FileCheck %s
+
+let x = [Double.self]
+// CHECK: {{x}}: [Double.Type] = 1 value {
+// CHECK-NEXT:  [0] = Double
+// CHECK-NEXT: }
+
+let y = [Int.self]
+// CHECK: {{y}}: [Int.Type] = 1 value {
+// CHECK-NEXT:  [0] = Int
+// CHECK-NEXT: }
