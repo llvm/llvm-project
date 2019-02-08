@@ -30,6 +30,11 @@ testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher) {
   return Field(&Diag::Fixes, ElementsAre(FixMatcher));
 }
 
+testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher1,
+                                       testing::Matcher<Fix> FixMatcher2) {
+  return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, FixMatcher2));
+}
+
 testing::Matcher<const Diag &> WithNote(testing::Matcher<Note> NoteMatcher) {
   return Field(&Diag::Notes, ElementsAre(NoteMatcher));
 }
@@ -281,6 +286,26 @@ main.cpp:2:3: error: something terrible happened)");
                   Pair(EqualToLSPDiag(NoteInMainLSP), IsEmpty())));
 }
 
+struct SymbolWithHeader {
+  std::string QName;
+  std::string DeclaringFile;
+  std::string IncludeHeader;
+};
+
+std::unique_ptr<SymbolIndex>
+buildIndexWithSymbol(llvm::ArrayRef<SymbolWithHeader> Syms) {
+  SymbolSlab::Builder Slab;
+  for (const auto &S : Syms) {
+    Symbol Sym = cls(S.QName);
+    Sym.Flags |= Symbol::IndexedForCodeCompletion;
+    Sym.CanonicalDeclaration.FileURI = S.DeclaringFile.c_str();
+    Sym.Definition.FileURI = S.DeclaringFile.c_str();
+    Sym.IncludeHeaders.emplace_back(S.IncludeHeader, 1);
+    Slab.insert(Sym);
+  }
+  return MemIndex::build(std::move(Slab).build(), RefSlab());
+}
+
 TEST(IncludeFixerTest, IncompleteType) {
   Annotations Test(R"cpp(
 $insert[[]]namespace ns {
@@ -293,15 +318,8 @@ int main() {
 }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  Symbol Sym = cls("ns::X");
-  Sym.Flags |= Symbol::IndexedForCodeCompletion;
-  Sym.CanonicalDeclaration.FileURI = "unittest:///x.h";
-  Sym.Definition.FileURI = "unittest:///x.h";
-  Sym.IncludeHeaders.emplace_back("\"x.h\"", 1);
-
-  SymbolSlab::Builder Slab;
-  Slab.insert(Sym);
-  auto Index = MemIndex::build(std::move(Slab).build(), RefSlab());
+  auto Index = buildIndexWithSymbol(
+      {SymbolWithHeader{"ns::X", "unittest:///x.h", "\"x.h\""}});
   TU.ExternalIndex = Index.get();
 
   EXPECT_THAT(
@@ -344,6 +362,80 @@ int main() {
                   Diag(Test.range("base"), "base class has incomplete type"),
                   Diag(Test.range("access"),
                        "member access into incomplete type 'ns::X'")));
+}
+
+TEST(IncludeFixerTest, Typo) {
+  Annotations Test(R"cpp(
+$insert[[]]namespace ns {
+void foo() {
+  $unqualified[[X]] x;
+}
+}
+void bar() {
+  ns::$qualified[[X]] x; // ns:: is valid.
+  ::$global[[Global]] glob;
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      {SymbolWithHeader{"ns::X", "unittest:///x.h", "\"x.h\""},
+       SymbolWithHeader{"Global", "unittest:///global.h", "\"global.h\""}});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(
+          AllOf(Diag(Test.range("unqualified"), "unknown type name 'X'"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("qualified"),
+                     "no type named 'X' in namespace 'ns'"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("global"),
+                     "no type named 'Global' in the global namespace"),
+                WithFix(Fix(Test.range("insert"), "#include \"global.h\"\n",
+                            "Add include \"global.h\" for symbol Global")))));
+}
+
+TEST(IncludeFixerTest, MultipleMatchedSymbols) {
+  Annotations Test(R"cpp(
+$insert[[]]namespace na {
+namespace nb {
+void foo() {
+  $unqualified[[X]] x;
+}
+}
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      {SymbolWithHeader{"na::X", "unittest:///a.h", "\"a.h\""},
+       SymbolWithHeader{"na::nb::X", "unittest:///b.h", "\"b.h\""}});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(AllOf(
+                  Diag(Test.range("unqualified"), "unknown type name 'X'"),
+                  WithFix(Fix(Test.range("insert"), "#include \"a.h\"\n",
+                              "Add include \"a.h\" for symbol na::X"),
+                          Fix(Test.range("insert"), "#include \"b.h\"\n",
+                              "Add include \"b.h\" for symbol na::nb::X")))));
+}
+
+TEST(IncludeFixerTest, NoCrashMemebrAccess) {
+  Annotations Test(R"cpp(
+    struct X { int  xyz; };
+    void g() { X x; x.$[[xy]] }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"na::X", "unittest:///a.h", "\"a.h\""});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(Diag(Test.range(), "no member named 'xy' in 'X'")));
 }
 
 } // namespace

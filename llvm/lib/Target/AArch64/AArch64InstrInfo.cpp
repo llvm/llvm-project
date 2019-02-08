@@ -2291,6 +2291,31 @@ void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
   }
 }
 
+void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       DebugLoc DL, unsigned DestReg,
+                                       unsigned SrcReg, bool KillSrc,
+                                       unsigned Opcode, unsigned ZeroReg,
+                                       llvm::ArrayRef<unsigned> Indices) const {
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  unsigned NumRegs = Indices.size();
+
+#ifndef NDEBUG
+  uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
+  uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
+  assert(DestEncoding % NumRegs == 0 && SrcEncoding % NumRegs == 0 &&
+         "GPR reg sequences should not be able to overlap");
+#endif
+
+  for (unsigned SubReg = 0; SubReg != NumRegs; ++SubReg) {
+    const MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(Opcode));
+    AddSubReg(MIB, DestReg, Indices[SubReg], RegState::Define, TRI);
+    MIB.addReg(ZeroReg);
+    AddSubReg(MIB, SrcReg, Indices[SubReg], getKillRegState(KillSrc), TRI);
+    MIB.addImm(0);
+  }
+}
+
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, unsigned DestReg,
@@ -2427,6 +2452,22 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
                      Indices);
+    return;
+  }
+
+  if (AArch64::XSeqPairsClassRegClass.contains(DestReg) &&
+      AArch64::XSeqPairsClassRegClass.contains(SrcReg)) {
+    static const unsigned Indices[] = {AArch64::sube64, AArch64::subo64};
+    copyGPRRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRXrs,
+                    AArch64::XZR, Indices);
+    return;
+  }
+
+  if (AArch64::WSeqPairsClassRegClass.contains(DestReg) &&
+      AArch64::WSeqPairsClassRegClass.contains(SrcReg)) {
+    static const unsigned Indices[] = {AArch64::sube32, AArch64::subo32};
+    copyGPRRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRWrs,
+                    AArch64::WZR, Indices);
     return;
   }
 

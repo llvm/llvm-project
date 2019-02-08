@@ -1650,6 +1650,12 @@ bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(
     }
   } else if (FunctionDecl *FD1 = dyn_cast<FunctionDecl>(D1)) {
     if (FunctionDecl *FD2 = dyn_cast<FunctionDecl>(D2)) {
+      if (FD1->isOverloadedOperator()) {
+        if (!FD2->isOverloadedOperator())
+          return false;
+        if (FD1->getOverloadedOperator() != FD2->getOverloadedOperator())
+          return false;
+      }
       if (!::IsStructurallyEquivalent(FD1->getIdentifier(),
                                       FD2->getIdentifier()))
         return false;

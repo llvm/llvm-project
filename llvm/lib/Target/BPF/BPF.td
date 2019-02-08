@@ -20,6 +20,7 @@ class Proc<string Name, list<SubtargetFeature> Features>
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;
+def : Proc<"v3", []>;
 def : Proc<"probe", []>;
 
 def DummyFeature : SubtargetFeature<"dummy", "isDummyMode",

@@ -5,6 +5,14 @@
 # RUN: cmp %t2 %t3
 # RUN: llvm-strip --regex --strip-symbol '^b.*' -N bar %t -o %t4
 # RUN: cmp %t3 %t4
+# RUN: echo " bar # bar" > %t-list.txt
+# RUN: echo " baz # baz" >> %t-list.txt
+# RUN: echo " # no symbol" >> %t-list.txt
+# RUN: llvm-objcopy --strip-symbols %t-list.txt %t %t5
+# RUN: cmp %t3 %t5
+# RUN: echo "b.* # bar & baz" > %t-list2.txt
+# RUN: llvm-objcopy --regex --strip-symbols %t-list2.txt %t %t6
+# RUN: cmp %t3 %t6
 
 !ELF
 FileHeader:

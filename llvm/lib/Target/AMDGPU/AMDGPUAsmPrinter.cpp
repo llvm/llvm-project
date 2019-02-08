@@ -686,6 +686,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::XNACK_MASK_HI:
           llvm_unreachable("xnack_mask registers should not be used");
 
+        case AMDGPU::LDS_DIRECT:
+          llvm_unreachable("lds_direct register should not be used");
+
         case AMDGPU::TBA:
         case AMDGPU::TBA_LO:
         case AMDGPU::TBA_HI:

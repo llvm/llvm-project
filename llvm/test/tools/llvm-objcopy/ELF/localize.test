@@ -9,6 +9,18 @@
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 # RUN: llvm-objcopy --regex --localize-symbol='.*' %t %t3
 # RUN: cmp %t2 %t3
+# RUN: echo "  Global # comment  " > %t-list.txt
+# RUN: echo "GlobalUndef" >> %t-list.txt
+# RUN: echo "Local" >> %t-list.txt
+# RUN: echo "Weak" >> %t-list.txt
+# RUN: echo "GlobalCommon" >> %t-list.txt
+# RUN: echo " # comment " >> %t-list.txt
+# RUN: llvm-objcopy --localize-symbols %t-list.txt %t %t4
+# RUN: cmp %t2 %t4
+# RUN: echo "  .*al.* # Global + Local + GlobalCommon " > %t-list2.txt
+# RUN: echo "Weak" >> %t-list2.txt
+# RUN: llvm-objcopy --regex --localize-symbols %t-list2.txt %t %t5
+# RUN: cmp %t2 %t5
 
 !ELF
 FileHeader:

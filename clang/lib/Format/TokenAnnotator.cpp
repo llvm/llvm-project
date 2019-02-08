@@ -520,6 +520,10 @@ private:
           if (Parent && Parent->is(TT_PointerOrReference))
             Parent->Type = TT_BinaryOperator;
         }
+        // An arrow after an ObjC method expression is not a lambda arrow.
+        if (CurrentToken->Type == TT_ObjCMethodExpr && CurrentToken->Next &&
+            CurrentToken->Next->is(TT_LambdaArrow))
+          CurrentToken->Next->Type = TT_Unknown;
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
         // FirstObjCSelectorName is set when a colon is found. This does

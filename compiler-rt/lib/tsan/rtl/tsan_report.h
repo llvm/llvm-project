@@ -13,6 +13,7 @@
 #define TSAN_REPORT_H
 
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "sanitizer_common/sanitizer_thread_registry.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_defs.h"
 
@@ -91,7 +92,7 @@ struct ReportThread {
   int id;
   tid_t os_id;
   bool running;
-  bool workerthread;
+  ThreadType thread_type;
   char *name;
   u32 parent_tid;
   ReportStack *stack;

@@ -5646,3 +5646,29 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
   }
   return nullptr;
 }
+
+bool llvm::isEXECMaskConstantBetweenDefAndUses(unsigned VReg,
+                                               MachineRegisterInfo &MRI) {
+  assert(MRI.isSSA() && "Must be run on SSA");
+  auto *TRI = MRI.getTargetRegisterInfo();
+
+  auto *DefI = MRI.getVRegDef(VReg);
+  auto *BB = DefI->getParent();
+
+  DenseSet<MachineInstr*> Uses;
+  for (auto &Use : MRI.use_nodbg_operands(VReg)) {
+    auto *I = Use.getParent();
+    if (I->getParent() != BB)
+      return false;
+    Uses.insert(I);
+  }
+
+  auto E = BB->end();
+  for (auto I = std::next(DefI->getIterator()); I != E; ++I) {
+    Uses.erase(&*I);
+    // don't check the last use
+    if (Uses.empty() || I->modifiesRegister(AMDGPU::EXEC, TRI))
+      break;
+  }
+  return Uses.empty();
+}

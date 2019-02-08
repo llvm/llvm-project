@@ -982,7 +982,8 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
       case wasm::WASM_SYMBOL_TYPE_EVENT:
         encodeULEB128(Sym.ElementIndex, W.OS);
-        if ((Sym.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0)
+        if ((Sym.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0 ||
+            (Sym.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeString(Sym.Name);
         break;
       case wasm::WASM_SYMBOL_TYPE_DATA:
@@ -1456,6 +1457,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       Flags |= wasm::WASM_SYMBOL_UNDEFINED;
     if (WS.isExported())
       Flags |= wasm::WASM_SYMBOL_EXPORTED;
+    if (WS.getName() != WS.getImportName())
+      Flags |= wasm::WASM_SYMBOL_EXPLICIT_NAME;
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();

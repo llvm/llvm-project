@@ -152,9 +152,13 @@ static_library("Support") {
     "Valgrind.cpp",
     "VirtualFileSystem.cpp",
     "Watchdog.cpp",
+    "Z3Solver.cpp",
   ]
 
   libs = []
+
+  # FIXME: llvm/Config/BUILD.gn currently always sets LLVM_WITH_Z3
+  # to false. If that changes we need to link to Z3 libs here.
 
   if (current_os == "linux" || current_os == "android") {
     libs += [ "dl" ]

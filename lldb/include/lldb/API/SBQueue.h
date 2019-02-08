@@ -58,10 +58,6 @@ protected:
 
   void SetQueue(const lldb::QueueSP &queue_sp);
 
-  void FetchThreads();
-
-  void FetchItems();
-
 private:
   std::shared_ptr<lldb_private::QueueImpl> m_opaque_sp;
 };

@@ -15,12 +15,12 @@ define x86_fp80 @rem_pio2l_min(x86_fp80 %z) {
 ; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fisubl -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    flds {{.*}}(%rip)
+; CHECK-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fmul %st, %st(1)
 ; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
 ; CHECK-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    fmul %st, %st(1)
 ; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fistl -{{[0-9]+}}(%rsp)

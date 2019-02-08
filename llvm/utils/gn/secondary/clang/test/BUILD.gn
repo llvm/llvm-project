@@ -39,7 +39,7 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
 
   extra_values = [
-    "CLANG_ANALYZER_WITH_Z3=",  # Must be empty, not 0.
+    "LLVM_WITH_Z3=",  # Must be empty, not 0.
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),

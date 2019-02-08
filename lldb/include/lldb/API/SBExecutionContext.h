@@ -50,8 +50,6 @@ public:
   SBFrame GetFrame() const;
 
 protected:
-  ExecutionContextRefSP &GetSP() const;
-
   void reset(lldb::ExecutionContextRefSP &event_sp);
 
   lldb_private::ExecutionContextRef *get() const;

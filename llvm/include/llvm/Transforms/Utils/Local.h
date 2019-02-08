@@ -467,8 +467,7 @@ void dropDebugUsers(Instruction &I);
 /// \p DomBlock, by moving its instructions to the insertion point \p InsertPt.
 ///
 /// The moved instructions receive the insertion point debug location values
-/// (DILocations) and their debug intrinsic instructions (dbg.values) are
-/// removed.
+/// (DILocations) and their debug intrinsic instructions are removed.
 void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
                               BasicBlock *BB);
 

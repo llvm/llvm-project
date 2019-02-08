@@ -27,6 +27,17 @@ class AMDGPULegalizerInfo : public LegalizerInfo {
 public:
   AMDGPULegalizerInfo(const GCNSubtarget &ST,
                       const GCNTargetMachine &TM);
+
+  bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &MIRBuilder,
+                      GISelChangeObserver &Observer) const override;
+
+  unsigned getSegmentAperture(unsigned AddrSpace,
+                              MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIRBuilder) const;
+
+  bool legalizeAddrSpaceCast(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &MIRBuilder) const;
 };
 } // End llvm namespace.
 #endif

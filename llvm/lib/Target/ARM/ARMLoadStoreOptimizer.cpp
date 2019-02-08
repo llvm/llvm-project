@@ -1286,7 +1286,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
       // can still change to a writeback form as that will save us 2 bytes
       // of code size. It can create WAW hazards though, so only do it if
       // we're minimizing code size.
-      if (!MBB.getParent()->getFunction().optForMinSize() || !BaseKill)
+      if (!STI->optForMinSize() || !BaseKill)
         return false;
 
       bool HighRegsUsed = false;

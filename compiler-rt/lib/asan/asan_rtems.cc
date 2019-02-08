@@ -183,8 +183,8 @@ static void ThreadStartHook(void *hook, uptr os_id) {
   // Determine whether we are starting or restarting the thread.
   if (status == ThreadStatusCreated)
     // In lieu of AsanThread::ThreadStart.
-    asanThreadRegistry().StartThread(thread->tid(), os_id,
-                                     /*workerthread*/ false, nullptr);
+    asanThreadRegistry().StartThread(thread->tid(), os_id, ThreadType::Regular,
+                                     nullptr);
   else {
     // In a thread restart, a thread may resume execution at an
     // arbitrary function entry point, with its stack and TLS state

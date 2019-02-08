@@ -431,13 +431,13 @@ struct invoke<void (Class::*)(Args...)> {
 class ObjectToIndex {
 public:
   template <typename T> unsigned GetIndexForObject(T *t) {
-    return GetIndexForObjectImpl((void *)t);
+    return GetIndexForObjectImpl(static_cast<const void *>(t));
   }
 
 private:
-  unsigned GetIndexForObjectImpl(void *object);
+  unsigned GetIndexForObjectImpl(const void *object);
 
-  llvm::DenseMap<void *, unsigned> m_mapping;
+  llvm::DenseMap<const void *, unsigned> m_mapping;
 };
 
 /// Serializes functions, their arguments and their return type to a stream.

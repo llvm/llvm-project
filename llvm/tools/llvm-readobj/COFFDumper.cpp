@@ -92,9 +92,11 @@ public:
   void printCOFFResources() override;
   void printCOFFLoadConfig() override;
   void printCodeViewDebugInfo() override;
-  void
-  mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
-                     llvm::codeview::MergingTypeTableBuilder &CVTypes) override;
+  void mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
+                          llvm::codeview::MergingTypeTableBuilder &CVTypes,
+                          llvm::codeview::GlobalTypeTableBuilder &GlobalCVIDs,
+                          llvm::codeview::GlobalTypeTableBuilder &GlobalCVTypes,
+                          bool GHash) override;
   void printStackMap() const override;
   void printAddrsig() override;
 private:
@@ -1227,7 +1229,10 @@ void COFFDumper::printFileNameForOffset(StringRef Label, uint32_t FileOffset) {
 }
 
 void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
-                                    MergingTypeTableBuilder &CVTypes) {
+                                    MergingTypeTableBuilder &CVTypes,
+                                    GlobalTypeTableBuilder &GlobalCVIDs,
+                                    GlobalTypeTableBuilder &GlobalCVTypes,
+                                    bool GHash) {
   for (const SectionRef &S : Obj->sections()) {
     StringRef SectionName;
     error(S.getName(SectionName));
@@ -1248,9 +1253,17 @@ void COFFDumper::mergeCodeViewTypes(MergingTypeTableBuilder &CVIDs,
       }
       SmallVector<TypeIndex, 128> SourceToDest;
       Optional<uint32_t> PCHSignature;
-      if (auto EC = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
-                                          PCHSignature))
-        return error(std::move(EC));
+      if (GHash) {
+        std::vector<GloballyHashedType> Hashes =
+            GloballyHashedType::hashTypes(Types);
+        if (auto EC = mergeTypeAndIdRecords(GlobalCVIDs, GlobalCVTypes, SourceToDest, Types,
+                                            Hashes, PCHSignature))
+          return error(std::move(EC));
+      } else {
+        if (auto EC = mergeTypeAndIdRecords(CVIDs, CVTypes, SourceToDest, Types,
+                                            PCHSignature))
+          return error(std::move(EC));
+      }
     }
   }
 }
@@ -1904,16 +1917,10 @@ void COFFDumper::printAddrsig() {
   }
 }
 
-void llvm::dumpCodeViewMergedTypes(
-    ScopedPrinter &Writer, llvm::codeview::MergingTypeTableBuilder &IDTable,
-    llvm::codeview::MergingTypeTableBuilder &CVTypes) {
-  // Flatten it first, then run our dumper on it.
-  SmallString<0> TypeBuf;
-  CVTypes.ForEachRecord([&](TypeIndex TI, const CVType &Record) {
-    TypeBuf.append(Record.RecordData.begin(), Record.RecordData.end());
-  });
-
-  TypeTableCollection TpiTypes(CVTypes.records());
+void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
+                                   ArrayRef<ArrayRef<uint8_t>> IpiRecords,
+                                   ArrayRef<ArrayRef<uint8_t>> TpiRecords) {
+  TypeTableCollection TpiTypes(TpiRecords);
   {
     ListScope S(Writer, "MergedTypeStream");
     TypeDumpVisitor TDV(TpiTypes, &Writer, opts::CodeViewSubsectionBytes);
@@ -1923,7 +1930,7 @@ void llvm::dumpCodeViewMergedTypes(
 
   // Flatten the id stream and print it next. The ID stream refers to names from
   // the type stream.
-  TypeTableCollection IpiTypes(IDTable.records());
+  TypeTableCollection IpiTypes(IpiRecords);
   {
     ListScope S(Writer, "MergedIDStream");
     TypeDumpVisitor TDV(TpiTypes, &Writer, opts::CodeViewSubsectionBytes);

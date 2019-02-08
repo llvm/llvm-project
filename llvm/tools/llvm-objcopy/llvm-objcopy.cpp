@@ -52,6 +52,11 @@ namespace objcopy {
 // The name this program was invoked as.
 StringRef ToolName;
 
+Error createError(StringRef File, std::error_code EC) {
+  assert(EC);  
+  return createFileError(File, make_error<StringError>(EC));
+}
+
 LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
   WithColor::error(errs(), ToolName) << Message << ".\n";
   errs().flush();
@@ -69,10 +74,7 @@ LLVM_ATTRIBUTE_NORETURN void error(Error E) {
 }
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
-  assert(EC);
-  WithColor::error(errs(), ToolName)
-      << "'" << File << "': " << EC.message() << ".\n";
-  exit(1);
+  error(createError(File, EC));
 }
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {

@@ -97,6 +97,10 @@ private:
     unsigned STORE8;
     unsigned LOAD8;
 
+    unsigned CMPrr;
+    unsigned MOVi;
+    unsigned MOVCCi;
+
     OpcodeCache(const ARMSubtarget &STI);
   } const Opcodes;
 
@@ -284,6 +288,10 @@ ARMInstructionSelector::OpcodeCache::OpcodeCache(const ARMSubtarget &STI) {
 
   STORE_OPCODE(STORE8, STRBi12);
   STORE_OPCODE(LOAD8, LDRBi12);
+
+  STORE_OPCODE(CMPrr, CMPrr);
+  STORE_OPCODE(MOVi, MOVi);
+  STORE_OPCODE(MOVCCi, MOVCCi);
 #undef MAP_OPCODE
 }
 
@@ -407,10 +415,11 @@ getComparePreds(CmpInst::Predicate Pred) {
 }
 
 struct ARMInstructionSelector::CmpConstants {
-  CmpConstants(unsigned CmpOpcode, unsigned FlagsOpcode, unsigned OpRegBank,
-               unsigned OpSize)
+  CmpConstants(unsigned CmpOpcode, unsigned FlagsOpcode, unsigned SelectOpcode,
+               unsigned OpRegBank, unsigned OpSize)
       : ComparisonOpcode(CmpOpcode), ReadFlagsOpcode(FlagsOpcode),
-        OperandRegBankID(OpRegBank), OperandSize(OpSize) {}
+        SelectResultOpcode(SelectOpcode), OperandRegBankID(OpRegBank),
+        OperandSize(OpSize) {}
 
   // The opcode used for performing the comparison.
   const unsigned ComparisonOpcode;
@@ -418,6 +427,9 @@ struct ARMInstructionSelector::CmpConstants {
   // The opcode used for reading the flags set by the comparison. May be
   // ARM::INSTRUCTION_LIST_END if we don't need to read the flags.
   const unsigned ReadFlagsOpcode;
+
+  // The opcode used for materializing the result of the comparison.
+  const unsigned SelectResultOpcode;
 
   // The assumed register bank ID for the operands.
   const unsigned OperandRegBankID;
@@ -438,7 +450,7 @@ struct ARMInstructionSelector::InsertInfo {
 
 void ARMInstructionSelector::putConstant(InsertInfo I, unsigned DestReg,
                                          unsigned Constant) const {
-  (void)BuildMI(I.MBB, I.InsertBefore, I.DbgLoc, TII.get(ARM::MOVi))
+  (void)BuildMI(I.MBB, I.InsertBefore, I.DbgLoc, TII.get(Opcodes.MOVi))
       .addDef(DestReg)
       .addImm(Constant)
       .add(predOps(ARMCC::AL))
@@ -541,7 +553,8 @@ bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
   }
 
   // Select either 1 or the previous result based on the value of the flags.
-  auto Mov1I = BuildMI(I.MBB, I.InsertBefore, I.DbgLoc, TII.get(ARM::MOVCCi))
+  auto Mov1I = BuildMI(I.MBB, I.InsertBefore, I.DbgLoc,
+                       TII.get(Helper.SelectResultOpcode))
                    .addDef(ResReg)
                    .addUse(PrevRes)
                    .addImm(1)
@@ -568,7 +581,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
   auto &MBB = *MIB->getParent();
   auto &MF = *MBB.getParent();
 
-  bool UseMovt = STI.useMovt(MF);
+  bool UseMovt = STI.useMovt();
 
   unsigned Size = TM.getPointerSize(0);
   unsigned Alignment = 4;
@@ -899,8 +912,8 @@ bool ARMInstructionSelector::select(MachineInstr &I,
   case G_SELECT:
     return selectSelect(MIB, MRI);
   case G_ICMP: {
-    CmpConstants Helper(ARM::CMPrr, ARM::INSTRUCTION_LIST_END,
-                        ARM::GPRRegBankID, 32);
+    CmpConstants Helper(Opcodes.CMPrr, ARM::INSTRUCTION_LIST_END,
+                        Opcodes.MOVCCi, ARM::GPRRegBankID, 32);
     return selectCmp(Helper, MIB, MRI);
   }
   case G_FCMP: {
@@ -919,7 +932,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     }
 
     CmpConstants Helper(Size == 32 ? ARM::VCMPS : ARM::VCMPD, ARM::FMSTAT,
-                        ARM::FPRRegBankID, Size);
+                        Opcodes.MOVCCi, ARM::FPRRegBankID, Size);
     return selectCmp(Helper, MIB, MRI);
   }
   case G_LSHR:

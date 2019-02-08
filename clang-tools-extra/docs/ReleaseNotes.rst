@@ -92,6 +92,12 @@ Improvements to clang-tidy
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
 
+- The :doc:`bugprone-argument-comment
+  <clang-tidy/checks/bugprone-argument-comment>` now supports
+  `CommentBoolLiterals`, `CommentIntegerLiterals`,  `CommentFloatLiterals`,
+  `CommentUserDefiniedLiterals`, `CommentStringLiterals`,
+  `CommentCharacterLiterals` & `CommentNullPtrs` options.
+
 Improvements to include-fixer
 -----------------------------
 

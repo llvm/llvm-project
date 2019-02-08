@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Program.h"
 
 #include <string>
 #include <vector>
@@ -37,7 +38,19 @@ void CreateEnvironmentBuffer(const Environment &env,
   buffer.push_back(0);
   buffer.push_back(0);
 }
+
+bool GetFlattenedWindowsCommandString(Args args, std::string &command) {
+  if (args.empty())
+    return false;
+
+  std::vector<llvm::StringRef> args_ref;
+  for (auto &entry : args.entries())
+    args_ref.push_back(entry.ref);
+
+  command = llvm::sys::flattenWindowsCommandLine(args_ref);
+  return true;
 }
+} // namespace
 
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
@@ -84,7 +97,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     env_block = environment.data();
 
   executable = launch_info.GetExecutableFile().GetPath();
-  launch_info.GetArguments().GetQuotedCommandString(commandLine);
+  GetFlattenedWindowsCommandString(launch_info.GetArguments(), commandLine);
 
   std::wstring wexecutable, wcommandLine, wworkingDirectory;
   llvm::ConvertUTF8toWide(executable, wexecutable);

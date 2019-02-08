@@ -48,8 +48,8 @@ public:
   bool CanRead() const override;
   bool CanWrite() const override;
 
-  lldb::pipe_t GetReadPipe() const { return lldb::pipe_t(m_read); }
-  lldb::pipe_t GetWritePipe() const { return lldb::pipe_t(m_write); }
+  lldb::pipe_t GetReadPipe() const override { return lldb::pipe_t(m_read); }
+  lldb::pipe_t GetWritePipe() const override { return lldb::pipe_t(m_write); }
 
   int GetReadFileDescriptor() const override;
   int GetWriteFileDescriptor() const override;

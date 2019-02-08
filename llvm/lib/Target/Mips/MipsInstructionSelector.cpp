@@ -96,10 +96,15 @@ static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes) {
     switch (MemSizeInBytes) {
     case 4:
       return Mips::SW;
+    case 2:
+      return Mips::SH;
+    case 1:
+      return Mips::SB;
     default:
       return Opc;
     }
   else
+    // Unspecified extending load is selected into zeroExtending load.
     switch (MemSizeInBytes) {
     case 4:
       return Mips::LW;
