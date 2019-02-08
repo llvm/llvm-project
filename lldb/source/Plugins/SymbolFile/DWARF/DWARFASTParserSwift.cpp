@@ -22,18 +22,18 @@
 #include "swift/AST/ASTContext.h"
 #include "swift/Demangling/Demangle.h"
 
-#include "lldb/Utility/Status.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
+#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeMap.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -84,7 +84,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         case DW_AT_MIPS_linkage_name:
           mangled_name.SetCString(form_value.AsCString());
           break;
-       case DW_AT_byte_size:
+        case DW_AT_byte_size:
           dwarf_byte_size = form_value.Unsigned();
           break;
         default:
@@ -108,17 +108,16 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   if (mangled_name) {
-    // see if we parsed this type already
     type_sp = m_ast.GetCachedType(mangled_name);
     if (type_sp)
       return type_sp;
 
-    // otherwise figure it out yourself
+    // Try to import the type from one of the loaded Swift modules.
     compiler_type =
         m_ast.GetTypeFromMangledTypename(mangled_name.GetCString(), error);
   }
 
-  if (!compiler_type && die.Tag() == DW_TAG_structure_type &&
+  if (!compiler_type &&
       swift::Demangle::isObjCSymbol(mangled_name.GetStringRef())) {
     // When we failed to look up the type because no .swiftmodule is
     // present or it couldn't be read, fall back to presenting objects
@@ -129,24 +128,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
             sc.module_sp->GetTypeSystemForLanguage(eLanguageTypeObjC))) {
       DWARFASTParserClang *clang_ast_parser =
           static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
-
       TypeMap clang_types;
-      std::vector<CompilerContext> decl_context;
-      die.GetDeclContext(decl_context);
-      auto *sym_file = die.GetCU()->GetSymbolFileDWARF();
-      sym_file->UpdateExternalModuleListIfNeeded();
-      // Search any modules referenced by DWARF.
-      for (const auto &name_module : sym_file->getExternalTypeModules()) {
-        if (!name_module.second)
-          continue;
-        SymbolVendor *sym_vendor = name_module.second->GetSymbolVendor();
-        if (sym_vendor->FindTypes(decl_context, true, clang_types))
-          break;
-      }
-      // Next search the .dSYM the DIE came from, if applicable.
-      if (!clang_types.GetSize())
-        if (SymbolFileDWARF *sym_file = die.GetCU()->GetSymbolFileDWARF())
-          sym_file->FindTypes(decl_context, true, clang_types);
+      GetClangType(die, mangled_name.GetStringRef(), clang_types);
 
       // Import the Clang type into the Clang context.
       if (clang_types.GetSize())
@@ -228,11 +211,70 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   // Cache this type.
-  if (type_sp && mangled_name
-      && SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetCString()))
+  if (type_sp && mangled_name &&
+      SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetCString()))
     m_ast.SetCachedType(mangled_name, type_sp);
 
   return type_sp;
+}
+
+void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
+                                       llvm::StringRef mangled_name,
+                                       TypeMap &clang_types) const {
+  std::vector<CompilerContext> decl_context;
+  die.GetDeclContext(decl_context);
+  if (!decl_context.size())
+    return;
+
+  // Typedefs don't have a DW_AT_linkage_name, so their DW_AT_name is the
+  // mangled. Get the unmangled name.
+  if (die.Tag() == DW_TAG_typedef) {
+    using namespace swift::Demangle;
+    Context Ctx;
+    NodePointer node = Ctx.demangleSymbolAsNode(mangled_name);
+    if (!node || node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::Global)
+      return;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::TypeMangling)
+      return;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
+      return;
+    node = node->getFirstChild();
+    if (node->getKind() != Node::Kind::TypeAlias)
+      return;
+    for (NodePointer child : *node)
+      if (child->getKind() == Node::Kind::Identifier && child->hasText()) {
+        decl_context.back().name = ConstString(child->getText());
+        break;
+      }
+  }
+
+  auto *sym_file = die.GetCU()->GetSymbolFileDWARF();
+  sym_file->UpdateExternalModuleListIfNeeded();
+
+  CompilerContextKind kinds[] = {decl_context.back().type,
+                                 CompilerContextKind::Union,
+                                 CompilerContextKind::Enumeration};
+
+  // The Swift projection of all Clang type is a struct; search every kind.
+  for (CompilerContextKind kind : kinds) {
+    decl_context.back().type = kind;
+    // Search any modules referenced by DWARF.
+    for (const auto &name_module : sym_file->getExternalTypeModules()) {
+      if (!name_module.second)
+        continue;
+      SymbolVendor *sym_vendor = name_module.second->GetSymbolVendor();
+      if (sym_vendor->FindTypes(decl_context, true, clang_types))
+        return;
+    }
+    // Next search the .dSYM the DIE came from, if applicable.
+    if (SymbolFileDWARF *sym_file = die.GetCU()->GetSymbolFileDWARF())
+      if (sym_file->FindTypes(decl_context, true, clang_types))
+        return;
+  }
 }
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
@@ -275,20 +317,18 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
         func_name.SetValue(ConstString(mangled), true);
       else
         func_name.SetValue(ConstString(name), false);
-      
+
       // See if this function can throw.  We can't get that from the
       // mangled name (even though the information is often there)
       // because Swift reserves the right to omit it from the name
       // if it doesn't need it.  So instead we look for the
       // DW_TAG_thrown_type:
-      
+
       bool can_throw = false;
-      
+
       DWARFDebugInfoEntry *child(die.GetFirstChild().GetDIE());
-      while (child)
-      {
-        if (child->Tag() == DW_TAG_thrown_type)
-        {
+      while (child) {
+        if (child->Tag() == DW_TAG_thrown_type) {
           can_throw = true;
           break;
         }
@@ -305,8 +345,8 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
       if (dwarf->FixupAddress(func_range.GetBaseAddress())) {
         const user_id_t func_user_id = die.GetID();
         func_sp.reset(new Function(sc.comp_unit, func_user_id, func_user_id,
-                                   func_name, nullptr,
-                                   func_range, can_throw)); // first address range
+                                   func_name, nullptr, func_range,
+                                   can_throw)); // first address range
 
         if (func_sp.get() != NULL) {
           if (frame_base.IsValid())
