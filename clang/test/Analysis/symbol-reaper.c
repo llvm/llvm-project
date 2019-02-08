@@ -133,3 +133,28 @@ void test_zombie_referenced_only_through_field_in_store_value() {
   clang_analyzer_warnOnDeadSymbol((int) s);
   int *x = &s->field;
 } // expected-warning{{SYMBOL DEAD}}
+
+void double_dereference_of_implicit_value_aux1(int *p) {
+  *p = 0;
+}
+
+void double_dereference_of_implicit_value_aux2(int *p) {
+  if (*p != 0)
+    clang_analyzer_warnIfReached(); // no-warning
+}
+
+void test_double_dereference_of_implicit_value(int **x) {
+  clang_analyzer_warnOnDeadSymbol(**x);
+  int **y = x;
+  {
+    double_dereference_of_implicit_value_aux1(*y);
+    // Give time for symbol reaping to happen.
+    ((void)0);
+    // The symbol for **y was cleaned up from the Store at this point,
+    // even though it was not perceived as dead when asked explicitly.
+    // For that reason the SYMBOL DEAD warning never appeared at this point.
+    double_dereference_of_implicit_value_aux2(*y);
+  }
+  // The symbol is generally reaped here regardless.
+  ((void)0); // expected-warning{{SYMBOL DEAD}}
+}
