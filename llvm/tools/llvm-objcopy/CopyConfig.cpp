@@ -18,6 +18,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include <memory>
@@ -255,6 +256,32 @@ NameOrRegex::NameOrRegex(StringRef Pattern, bool IsRegex) {
       ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data));
 }
 
+static Error addSymbolsToRenameFromFile(StringMap<StringRef> &SymbolsToRename,
+                                        BumpPtrAllocator &Alloc,
+                                        StringRef Filename) {
+  StringSaver Saver(Alloc);
+  SmallVector<StringRef, 16> Lines;
+  auto BufOrErr = MemoryBuffer::getFile(Filename);
+  if (!BufOrErr)
+    return createError(Filename, BufOrErr.getError());
+
+  BufOrErr.get()->getBuffer().split(Lines, '\n');
+  size_t NumLines = Lines.size();
+  for (size_t LineNo = 0; LineNo < NumLines; ++LineNo) {
+    StringRef TrimmedLine = Lines[LineNo].split('#').first.trim();
+    if (TrimmedLine.empty())
+      continue;
+
+    std::pair<StringRef, StringRef> Pair = Saver.save(TrimmedLine).split(' ');
+    StringRef NewName = Pair.second.trim();
+    if (NewName.empty())
+      return createStringError(errc::invalid_argument,
+                               "%s:%zu: missing new symbol name",
+                               Filename.str().c_str(), LineNo + 1);
+    SymbolsToRename.insert({Pair.first, NewName});
+  }
+  return Error::success();
+}
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -357,6 +384,11 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     if (!Config.SymbolsToRename.insert(Old2New).second)
       error("Multiple redefinition of symbol " + Old2New.first);
   }
+
+  for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbols))
+    if (Error E = addSymbolsToRenameFromFile(Config.SymbolsToRename, DC.Alloc,
+                                             Arg->getValue()))
+      error(std::move(E));
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
     SectionRename SR = parseRenameSectionValue(StringRef(Arg->getValue()));

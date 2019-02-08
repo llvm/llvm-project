@@ -144,8 +144,10 @@ static bool mayExtractBlock(const BasicBlock &BB) {
 }
 
 /// Mark \p F cold. Based on this assumption, also optimize it for minimum size.
+/// If \p UpdateEntryCount is true (set when this is a new split function and
+/// module has profile data), set entry count to 0 to ensure treated as cold.
 /// Return true if the function is changed.
-static bool markFunctionCold(Function &F) {
+static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
   assert(!F.hasFnAttribute(Attribute::OptimizeNone) && "Can't mark this cold");
   bool Changed = false;
   if (!F.hasFnAttribute(Attribute::Cold)) {
@@ -156,6 +158,13 @@ static bool markFunctionCold(Function &F) {
     F.addFnAttr(Attribute::MinSize);
     Changed = true;
   }
+  if (UpdateEntryCount) {
+    // Set the entry count to 0 to ensure it is placed in the unlikely text
+    // section when function sections are enabled.
+    F.setEntryCount(0);
+    Changed = true;
+  }
+
   return Changed;
 }
 
@@ -164,8 +173,9 @@ public:
   HotColdSplitting(ProfileSummaryInfo *ProfSI,
                    function_ref<BlockFrequencyInfo *(Function &)> GBFI,
                    function_ref<TargetTransformInfo &(Function &)> GTTI,
-                   std::function<OptimizationRemarkEmitter &(Function &)> *GORE)
-      : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE) {}
+                   std::function<OptimizationRemarkEmitter &(Function &)> *GORE,
+                   function_ref<AssumptionCache *(Function &)> LAC)
+      : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE), LookupAC(LAC) {}
   bool run(Module &M);
 
 private:
@@ -174,11 +184,13 @@ private:
   bool outlineColdRegions(Function &F, bool HasProfileSummary);
   Function *extractColdRegion(const BlockSequence &Region, DominatorTree &DT,
                               BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
-                              OptimizationRemarkEmitter &ORE, unsigned Count);
+                              OptimizationRemarkEmitter &ORE,
+                              AssumptionCache *AC, unsigned Count);
   ProfileSummaryInfo *PSI;
   function_ref<BlockFrequencyInfo *(Function &)> GetBFI;
   function_ref<TargetTransformInfo &(Function &)> GetTTI;
   std::function<OptimizationRemarkEmitter &(Function &)> *GetORE;
+  function_ref<AssumptionCache *(Function &)> LookupAC;
 };
 
 class HotColdSplittingLegacyPass : public ModulePass {
@@ -189,10 +201,10 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addUsedIfAvailable<AssumptionCacheTracker>();
   }
 
   bool runOnModule(Module &M) override;
@@ -307,12 +319,13 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
                                               BlockFrequencyInfo *BFI,
                                               TargetTransformInfo &TTI,
                                               OptimizationRemarkEmitter &ORE,
+                                              AssumptionCache *AC,
                                               unsigned Count) {
   assert(!Region.empty());
 
   // TODO: Pass BFI and BPI to update profile information.
   CodeExtractor CE(Region, &DT, /* AggregateArgs */ false, /* BFI */ nullptr,
-                   /* BPI */ nullptr, /* AllowVarArgs */ false,
+                   /* BPI */ nullptr, AC, /* AllowVarArgs */ false,
                    /* AllowAlloca */ false,
                    /* Suffix */ "cold." + std::to_string(Count));
 
@@ -340,7 +353,7 @@ Function *HotColdSplitting::extractColdRegion(const BlockSequence &Region,
     }
     CI->setIsNoInline();
 
-    markFunctionCold(*OutF);
+    markFunctionCold(*OutF, BFI != nullptr);
 
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     ORE.emit([&]() {
@@ -568,6 +581,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
 
   TargetTransformInfo &TTI = GetTTI(F);
   OptimizationRemarkEmitter &ORE = (*GetORE)(F);
+  AssumptionCache *AC = LookupAC(F);
 
   // Find all cold regions.
   for (BasicBlock *BB : RPOT) {
@@ -629,8 +643,8 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
           BB->dump();
       });
 
-      Function *Outlined =
-          extractColdRegion(SubRegion, *DT, BFI, TTI, ORE, OutlinedFunctionID);
+      Function *Outlined = extractColdRegion(SubRegion, *DT, BFI, TTI, ORE, AC,
+                                             OutlinedFunctionID);
       if (Outlined) {
         ++OutlinedFunctionID;
         Changed = true;
@@ -689,17 +703,21 @@ bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
     ORE.reset(new OptimizationRemarkEmitter(&F));
     return *ORE.get();
   };
+  auto LookupAC = [this](Function &F) -> AssumptionCache * {
+    if (auto *ACT = getAnalysisIfAvailable<AssumptionCacheTracker>())
+      return ACT->lookupAssumptionCache(F);
+    return nullptr;
+  };
 
-  return HotColdSplitting(PSI, GBFI, GTTI, &GetORE).run(M);
+  return HotColdSplitting(PSI, GBFI, GTTI, &GetORE, LookupAC).run(M);
 }
 
 PreservedAnalyses
 HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache =
-      [&FAM](Function &F) -> AssumptionCache & {
-    return FAM.getResult<AssumptionAnalysis>(F);
+  auto LookupAC = [&FAM](Function &F) -> AssumptionCache * {
+    return FAM.getCachedResult<AssumptionAnalysis>(F);
   };
 
   auto GBFI = [&FAM](Function &F) {
@@ -720,7 +738,7 @@ HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
 
-  if (HotColdSplitting(PSI, GBFI, GTTI, &GetORE).run(M))
+  if (HotColdSplitting(PSI, GBFI, GTTI, &GetORE, LookupAC).run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }

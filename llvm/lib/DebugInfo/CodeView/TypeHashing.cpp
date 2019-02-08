@@ -54,10 +54,16 @@ GloballyHashedType::hashType(ArrayRef<uint8_t> RecordData,
         reinterpret_cast<const TypeIndex *>(RefData.data()), Ref.Count);
     for (TypeIndex TI : Indices) {
       ArrayRef<uint8_t> BytesToHash;
-      if (TI.isSimple() || TI.isNoneType() || TI.toArrayIndex() >= Prev.size()) {
+      if (TI.isSimple() || TI.isNoneType()) {
         const uint8_t *IndexBytes = reinterpret_cast<const uint8_t *>(&TI);
         BytesToHash = makeArrayRef(IndexBytes, sizeof(TypeIndex));
       } else {
+        if (TI.toArrayIndex() >= Prev.size() ||
+            Prev[TI.toArrayIndex()].empty()) {
+          // There are references to yet-unhashed records. Suspend hashing for
+          // this record until all the other records are processed.
+          return {};
+        }
         BytesToHash = Prev[TI.toArrayIndex()].Hash;
       }
       S.update(BytesToHash);

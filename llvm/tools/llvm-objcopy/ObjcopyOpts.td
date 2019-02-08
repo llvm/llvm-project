@@ -76,6 +76,16 @@ defm rename_section
 defm redefine_symbol
     : Eq<"redefine-sym", "Change the name of a symbol old to new">,
       MetaVarName<"old=new">;
+defm redefine_symbols
+    : Eq<"redefine-syms",
+         "Reads a list of symbol pairs from <filename> and runs as if "
+         "--redefine-sym=<old>=<new> is set for each one. <filename> "
+         "contains two symbols per line separated with whitespace and may "
+         "contain comments beginning with '#'. Leading and trailing "
+         "whitespace is stripped from each line. May be repeated to read "
+         "symbols from many files.">,         
+      MetaVarName<"filename">;
+
 defm keep_section : Eq<"keep-section", "Keep <section>">,
                     MetaVarName<"section">;
 defm only_section : Eq<"only-section", "Remove all but <section>">,

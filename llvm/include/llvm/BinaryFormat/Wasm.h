@@ -170,7 +170,8 @@ struct WasmSymbolInfo {
   StringRef Name;
   uint8_t Kind;
   uint32_t Flags;
-  StringRef Module; // For undefined symbols the module name of the import
+  StringRef ImportModule; // For undefined symbols the module of the import
+  StringRef ImportName;   // For undefined symbols the name of the import
   union {
     // For function or global symbols, the index in function or global index
     // space.
@@ -290,6 +291,7 @@ const unsigned WASM_SYMBOL_VISIBILITY_DEFAULT = 0x0;
 const unsigned WASM_SYMBOL_VISIBILITY_HIDDEN = 0x4;
 const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
 const unsigned WASM_SYMBOL_EXPORTED = 0x20;
+const unsigned WASM_SYMBOL_EXPLICIT_NAME = 0x40;
 
 #define WASM_RELOC(name, value) name = value,
 

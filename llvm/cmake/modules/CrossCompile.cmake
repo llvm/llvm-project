@@ -52,6 +52,7 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
         -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="${experimental_targets_to_build_arg}"
         -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}"
         -DLLVM_TARGET_ARCH="${LLVM_TARGET_ARCH}"
+        -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         ${build_type_flags} ${linker_flag} ${external_clang_dir}
     WORKING_DIRECTORY ${LLVM_${target_name}_BUILD}
     DEPENDS CREATE_LLVM_${target_name}

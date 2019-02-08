@@ -120,6 +120,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
       .legalFor({s32, p0})
       .clampScalar(0, s32, s32);
 
+  getActionDefinitionsBuilder(G_ICMP)
+      .legalForCartesianProduct({s1}, {s32, p0})
+      .minScalar(1, s32);
+
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.
   auto &LoadStoreBuilder =
@@ -167,10 +171,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
                                                                  {s1});
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
-
-  getActionDefinitionsBuilder(G_ICMP)
-      .legalForCartesianProduct({s1}, {s32, p0})
-      .minScalar(1, s32);
 
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.

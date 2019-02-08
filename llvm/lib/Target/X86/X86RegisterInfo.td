@@ -289,6 +289,9 @@ def ST7 : X86Reg<"st(7)", 7>, DwarfRegNum<[40, 19, 18]>;
 // Floating-point status word
 def FPSW : X86Reg<"fpsr", 0>;
 
+// Floating-point control word
+def FPCW : X86Reg<"fpcr", 0>;
+
 // Status flags register.
 //
 // Note that some flags that are commonly thought of as part of the status

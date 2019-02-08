@@ -1,5 +1,7 @@
 if (current_cpu == "x64") {
-  if (current_os == "linux") {
+  if (current_os == "freebsd") {
+    llvm_current_triple = "x86_64-unknown-freebsd"
+  } else if (current_os == "linux") {
     llvm_current_triple = "x86_64-unknown-linux-gnu"
   } else if (current_os == "mac") {
     llvm_current_triple = "x86_64-apple-darwin"
