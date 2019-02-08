@@ -496,6 +496,9 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   const X86FrameLowering *TFI = getFrameLowering(MF);
 
+  // Set the floating point control register as reserved.
+  Reserved.set(X86::FPCW);
+
   // Set the stack-pointer register and its aliases as reserved.
   for (MCSubRegIterator I(X86::RSP, this, /*IncludeSelf=*/true); I.isValid();
        ++I)
@@ -758,4 +761,13 @@ X86RegisterInfo::getPtrSizedFrameRegister(const MachineFunction &MF) const {
   if (Subtarget.isTarget64BitILP32())
     FrameReg = getX86SubSuperRegister(FrameReg, 32);
   return FrameReg;
+}
+
+unsigned
+X86RegisterInfo::getPtrSizedStackRegister(const MachineFunction &MF) const {
+  const X86Subtarget &Subtarget = MF.getSubtarget<X86Subtarget>();
+  unsigned StackReg = getStackRegister();
+  if (Subtarget.isTarget64BitILP32())
+    StackReg = getX86SubSuperRegister(StackReg, 32);
+  return StackReg;
 }

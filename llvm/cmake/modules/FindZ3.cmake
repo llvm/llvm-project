@@ -1,23 +1,23 @@
-# Looking for Z3 in CLANG_ANALYZER_Z3_INSTALL_DIR
+# Looking for Z3 in LLVM_Z3_INSTALL_DIR
 find_path(Z3_INCLUDE_DIR NAMES z3.h
    NO_DEFAULT_PATH
-   PATHS ${CLANG_ANALYZER_Z3_INSTALL_DIR}/include
+   PATHS ${LLVM_Z3_INSTALL_DIR}/include
    PATH_SUFFIXES libz3 z3
    )
 
 find_library(Z3_LIBRARIES NAMES z3 libz3
    NO_DEFAULT_PATH
-   PATHS ${CLANG_ANALYZER_Z3_INSTALL_DIR}
+   PATHS ${LLVM_Z3_INSTALL_DIR}
    PATH_SUFFIXES lib bin
    )
 
 find_program(Z3_EXECUTABLE z3
    NO_DEFAULT_PATH
-   PATHS ${CLANG_ANALYZER_Z3_INSTALL_DIR}
+   PATHS ${LLVM_Z3_INSTALL_DIR}
    PATH_SUFFIXES bin
    )
 
-# If Z3 has not been found in CLANG_ANALYZER_Z3_INSTALL_DIR look in the default directories
+# If Z3 has not been found in LLVM_Z3_INSTALL_DIR look in the default directories
 find_path(Z3_INCLUDE_DIR NAMES z3.h
    PATH_SUFFIXES libz3 z3
    )

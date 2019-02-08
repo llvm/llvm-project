@@ -178,7 +178,7 @@ static void ThreadStartHook(void *hook, uptr os_id) {
   SetCurrentThread(thread);
 
   // In lieu of AsanThread::ThreadStart.
-  asanThreadRegistry().StartThread(thread->tid(), os_id, /*workerthread*/ false,
+  asanThreadRegistry().StartThread(thread->tid(), os_id, ThreadType::Regular,
                                    nullptr);
 }
 

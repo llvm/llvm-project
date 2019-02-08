@@ -35,8 +35,10 @@ public:
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
          FuzzingOptions Options);
   ~Fuzzer();
-  void Loop(const Vector<std::string> &CorpusDirs);
-  void ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs);
+  void Loop(const Vector<std::string> &CorpusDirs,
+            const Vector<std::string> &ExtraSeedFiles);
+  void ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs,
+                                 const Vector<std::string> &ExtraSeedFiles);
   void MinimizeCrashLoop(const Unit &U);
   void RereadOutputCorpus(size_t MaxSize);
 

@@ -64,7 +64,8 @@ public:
   int Open(const char *path, int flags, int mode);
 
   Status Open(File &File, const FileSpec &file_spec, uint32_t options,
-              uint32_t permissions = lldb::eFilePermissionsFileDefault);
+              uint32_t permissions = lldb::eFilePermissionsFileDefault,
+              bool should_close_fd = true);
 
   /// Get a directory iterator.
   /// @{

@@ -80,11 +80,11 @@ public:
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
-          isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
+          isConstantUnsupported(DstTy))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
-      APInt Mask = APInt::getAllOnesValue(SrcTy.getSizeInBits());
+      APInt Mask = APInt::getAllOnesValue(SrcTy.getScalarSizeInBits());
       auto MIBMask = Builder.buildConstant(DstTy, Mask.getZExtValue());
       Builder.buildAnd(DstReg, Builder.buildAnyExtOrTrunc(DstTy, TruncSrc),
                        MIBMask);
@@ -112,11 +112,11 @@ public:
       // applicable.
       if (isInstUnsupported({TargetOpcode::G_SHL, {DstTy, DstTy}}) ||
           isInstUnsupported({TargetOpcode::G_ASHR, {DstTy, DstTy}}) ||
-          isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
+          isConstantUnsupported(DstTy))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
-      unsigned ShAmt = DstTy.getSizeInBits() - SrcTy.getSizeInBits();
+      unsigned ShAmt = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
       auto MIBShAmt = Builder.buildConstant(DstTy, ShAmt);
       auto MIBShl = Builder.buildInstr(
           TargetOpcode::G_SHL, {DstTy},
@@ -151,7 +151,7 @@ public:
       } else {
         // G_[SZ]EXT (G_IMPLICIT_DEF) -> G_CONSTANT 0 because the top
         // bits will be 0 for G_ZEXT and 0/1 for the G_SEXT.
-        if (isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
+        if (isConstantUnsupported(DstTy))
           return false;
         LLVM_DEBUG(dbgs() << ".. Combine G_[SZ]EXT(G_IMPLICIT_DEF): " << MI;);
         Builder.buildConstant(DstReg, 0);
@@ -401,6 +401,15 @@ private:
     using namespace LegalizeActions;
     auto Step = LI.getAction(Query);
     return Step.Action == Unsupported || Step.Action == NotFound;
+  }
+
+  bool isConstantUnsupported(LLT Ty) const {
+    if (!Ty.isVector())
+      return isInstUnsupported({TargetOpcode::G_CONSTANT, {Ty}});
+
+    LLT EltTy = Ty.getElementType();
+    return isInstUnsupported({TargetOpcode::G_CONSTANT, {EltTy}}) ||
+           isInstUnsupported({TargetOpcode::G_BUILD_VECTOR, {Ty, EltTy}});
   }
 
   /// Looks through copy instructions and returns the actual

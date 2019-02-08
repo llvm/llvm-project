@@ -76,6 +76,8 @@ public:
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return File; }
 
+  uint32_t getFlags() const { return Flags; }
+
   InputChunk *getChunk() const;
 
   // Indicates that the section or import for this symbol will be included in
@@ -159,17 +161,19 @@ public:
 
 class UndefinedFunction : public FunctionSymbol {
 public:
-  UndefinedFunction(StringRef Name, StringRef Module, uint32_t Flags,
+  UndefinedFunction(StringRef Name, StringRef ImportName,
+                    StringRef ImportModule, uint32_t Flags,
                     InputFile *File = nullptr,
                     const WasmSignature *Type = nullptr)
       : FunctionSymbol(Name, UndefinedFunctionKind, Flags, File, Type),
-        Module(Module) {}
+        ImportName(ImportName), ImportModule(ImportModule) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedFunctionKind;
   }
 
-  StringRef Module;
+  StringRef ImportName;
+  StringRef ImportModule;
 };
 
 class SectionSymbol : public Symbol {
@@ -275,13 +279,18 @@ public:
 
 class UndefinedGlobal : public GlobalSymbol {
 public:
-  UndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File = nullptr,
+  UndefinedGlobal(StringRef Name, StringRef ImportName, StringRef ImportModule,
+                  uint32_t Flags, InputFile *File = nullptr,
                   const WasmGlobalType *Type = nullptr)
-      : GlobalSymbol(Name, UndefinedGlobalKind, Flags, File, Type) {}
+      : GlobalSymbol(Name, UndefinedGlobalKind, Flags, File, Type),
+        ImportName(ImportName), ImportModule(ImportModule) {}
 
   static bool classof(const Symbol *S) {
     return S->kind() == UndefinedGlobalKind;
   }
+
+  StringRef ImportName;
+  StringRef ImportModule;
 };
 
 // Wasm events are features that suspend the current execution and transfer the

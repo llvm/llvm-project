@@ -465,7 +465,7 @@ unsigned ARMDAGToDAGISel::ConstantMaterializationCost(unsigned Val) const {
     if (Subtarget->hasV6T2Ops() && Val <= 0xffff) return 1; // MOVW
     if (ARM_AM::isSOImmTwoPartVal(Val)) return 2;           // two instrs
   }
-  if (Subtarget->useMovt(*MF)) return 2; // MOVW + MOVT
+  if (Subtarget->useMovt()) return 2; // MOVW + MOVT
   return 3; // Literal pool load
 }
 

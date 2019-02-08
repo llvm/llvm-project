@@ -6,8 +6,10 @@ set(SCUDO_CFLAGS)
 
 list(APPEND SCUDO_CFLAGS
   -Wall
-  -Werror
   -nostdinc++)
+
+# Remove -stdlib= which is unused when passing -nostdinc++.
+string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding SCUDO_CFLAGS)
 

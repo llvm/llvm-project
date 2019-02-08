@@ -28,6 +28,10 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalFor({s32})
       .clampScalar(0, s32, s32);
 
+  getActionDefinitionsBuilder(G_MUL)
+      .legalFor({s32})
+      .minScalar(0, s32);
+
   getActionDefinitionsBuilder({G_UADDE, G_USUBO, G_USUBE})
       .lowerFor({{s32, s1}});
 

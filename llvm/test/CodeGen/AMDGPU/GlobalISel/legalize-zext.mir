@@ -4,7 +4,7 @@
 ---
 name: test_zext_s32_to_s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_zext_s32_to_s64
@@ -19,7 +19,7 @@ body: |
 ---
 name: test_zext_s16_to_s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_zext_s16_to_s64
@@ -37,7 +37,7 @@ body: |
 ---
 name: test_zext_s16_to_s32
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_zext_s16_to_s32
@@ -55,7 +55,7 @@ body: |
 ---
 name: test_zext_i1_to_s32
 body: |
-  bb.0.entry:
+  bb.0:
 
     ; CHECK-LABEL: name: test_zext_i1_to_s32
     ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
@@ -69,7 +69,7 @@ body: |
 ---
 name: test_zext_i1_to_i64
 body: |
-  bb.0.entry:
+  bb.0:
 
     ; CHECK-LABEL: name: test_zext_i1_to_i64
     ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
@@ -83,7 +83,7 @@ body: |
 ---
 name: test_zext_v2s16_to_v2s32
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_zext_v2s16_to_v2s32
@@ -101,38 +101,40 @@ body: |
 ---
 name: test_zext_v3s16_to_v3s32
 body: |
-  bb.0.entry:
-    liveins: $vgpr0
+  bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_zext_v3s16_to_v3s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[COPY]](<4 x s16>), 0
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UV]](s16)
     ; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UV1]](s16)
     ; CHECK: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[UV2]](s16)
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ZEXT]](s32), [[ZEXT1]](s32), [[ZEXT2]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(<3 x s16>) = G_IMPLICIT_DEF
-    %1:_(<3 x s32>) = G_ZEXT %0
-    $vgpr0_vgpr1_vgpr2 = COPY %1
+    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %1:_(<3 x s16>) = G_EXTRACT %0, 0
+    %2:_(<3 x s32>) = G_ZEXT %1
+    $vgpr0_vgpr1_vgpr2 = COPY %2
 ...
 
 ---
 name: test_zext_v4s16_to_v4s32
 body: |
-  bb.0.entry:
-    liveins: $vgpr0
+  bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_zext_v4s16_to_v4s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UV]](s16)
     ; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UV1]](s16)
     ; CHECK: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[UV2]](s16)
     ; CHECK: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[UV3]](s16)
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ZEXT]](s32), [[ZEXT1]](s32), [[ZEXT2]](s32), [[ZEXT3]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<4 x s32>)
-    %0:_(<4 x s16>) = G_IMPLICIT_DEF
+    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<4 x s32>) = G_ZEXT %0
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
 ...
@@ -140,7 +142,7 @@ body: |
 ---
 name: test_zext_v2s32_to_v2s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_zext_v2s32_to_v2s64
@@ -158,7 +160,7 @@ body: |
 ---
 name: test_zext_v3s32_to_v3s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_zext_v3s32_to_v3s64
@@ -178,7 +180,7 @@ body: |
 ---
 name: test_zext_v4s32_to_v4s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_zext_v4s32_to_v4s64

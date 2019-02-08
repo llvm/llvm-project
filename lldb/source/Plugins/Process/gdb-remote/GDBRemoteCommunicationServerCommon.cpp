@@ -10,7 +10,6 @@
 
 #include <errno.h>
 
-
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
@@ -214,8 +213,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   if (sub != LLDB_INVALID_CPUTYPE)
     response.Printf("cpusubtype:%u;", sub);
 
-  if (cpu == llvm::MachO::CPU_TYPE_ARM
-      || cpu == llvm::MachO::CPU_TYPE_ARM64) {
+  if (cpu == llvm::MachO::CPU_TYPE_ARM || cpu == llvm::MachO::CPU_TYPE_ARM64) {
 // Indicate the OS type.
 #if defined(TARGET_OS_TV) && TARGET_OS_TV == 1
     response.PutCString("ostype:tvos;");
@@ -510,18 +508,19 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
   packet.GetHexByteStringTerminatedBy(path, ',');
   if (!path.empty()) {
     if (packet.GetChar() == ',') {
-      uint32_t flags =
-          File::ConvertOpenOptionsForPOSIXOpen(packet.GetHexMaxU32(false, 0));
+      uint32_t flags = packet.GetHexMaxU32(false, 0);
       if (packet.GetChar() == ',') {
         mode_t mode = packet.GetHexMaxU32(false, 0600);
-        Status error;
         FileSpec path_spec(path);
         FileSystem::Instance().Resolve(path_spec);
-        int fd = ::open(path_spec.GetCString(), flags, mode);
-        const int save_errno = fd == -1 ? errno : 0;
+        File file;
+        // Do not close fd.
+        Status error =
+            FileSystem::Instance().Open(file, path_spec, flags, mode, false);
+        const int save_errno = error.GetError();
         StreamString response;
         response.PutChar('F');
-        response.Printf("%i", fd);
+        response.Printf("%i", file.GetDescriptor());
         if (save_errno)
           response.Printf(",%i", save_errno);
         return SendPacketNoLock(response.GetString());
@@ -536,12 +535,13 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
     StringExtractorGDBRemote &packet) {
   packet.SetFilePos(::strlen("vFile:close:"));
   int fd = packet.GetS32(-1);
-  Status error;
   int err = -1;
   int save_errno = 0;
   if (fd >= 0) {
-    err = close(fd);
-    save_errno = err == -1 ? errno : 0;
+    File file(fd, true);
+    Status error = file.Close();
+    err = 0;
+    save_errno = error.GetError();
   } else {
     save_errno = EINVAL;
   }
@@ -556,26 +556,23 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_vFile_pRead(
     StringExtractorGDBRemote &packet) {
-#ifdef _WIN32
-  // Not implemented on Windows
-  return SendUnimplementedResponse(
-      "GDBRemoteCommunicationServerCommon::Handle_vFile_pRead() unimplemented");
-#else
   StreamGDBRemote response;
   packet.SetFilePos(::strlen("vFile:pread:"));
   int fd = packet.GetS32(-1);
   if (packet.GetChar() == ',') {
-    uint64_t count = packet.GetU64(UINT64_MAX);
+    size_t count = packet.GetU64(UINT64_MAX);
     if (packet.GetChar() == ',') {
-      uint64_t offset = packet.GetU64(UINT32_MAX);
+      off_t offset = packet.GetU64(UINT32_MAX);
       if (count == UINT64_MAX) {
         response.Printf("F-1:%i", EINVAL);
         return SendPacketNoLock(response.GetString());
       }
 
       std::string buffer(count, 0);
-      const ssize_t bytes_read = ::pread(fd, &buffer[0], buffer.size(), offset);
-      const int save_errno = bytes_read == -1 ? errno : 0;
+      File file(fd, false);
+      Status error = file.Read(static_cast<void *>(&buffer[0]), count, offset);
+      const ssize_t bytes_read = error.Success() ? count : -1;
+      const int save_errno = error.GetError();
       response.PutChar('F');
       response.Printf("%zi", bytes_read);
       if (save_errno)
@@ -588,17 +585,11 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pRead(
     }
   }
   return SendErrorResponse(21);
-
-#endif
 }
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
     StringExtractorGDBRemote &packet) {
-#ifdef _WIN32
-  return SendUnimplementedResponse("GDBRemoteCommunicationServerCommon::Handle_"
-                                   "vFile_pWrite() unimplemented");
-#else
   packet.SetFilePos(::strlen("vFile:pwrite:"));
 
   StreamGDBRemote response;
@@ -610,9 +601,12 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
     if (packet.GetChar() == ',') {
       std::string buffer;
       if (packet.GetEscapedBinaryData(buffer)) {
-        const ssize_t bytes_written =
-            ::pwrite(fd, buffer.data(), buffer.size(), offset);
-        const int save_errno = bytes_written == -1 ? errno : 0;
+        File file(fd, false);
+        size_t count = buffer.size();
+        Status error =
+            file.Write(static_cast<const void *>(&buffer[0]), count, offset);
+        const ssize_t bytes_written = error.Success() ? count : -1;
+        const int save_errno = error.GetError();
         response.Printf("%zi", bytes_written);
         if (save_errno)
           response.Printf(",%i", save_errno);
@@ -623,7 +617,6 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_pWrite(
     }
   }
   return SendErrorResponse(27);
-#endif
 }
 
 GDBRemoteCommunication::PacketResult
@@ -971,7 +964,8 @@ GDBRemoteCommunicationServerCommon::Handle_QLaunchArch(
   const uint32_t bytes_left = packet.GetBytesLeft();
   if (bytes_left > 0) {
     const char *arch_triple = packet.Peek();
-    m_process_launch_info.SetArchitecture(HostInfo::GetAugmentedArchSpec(arch_triple));
+    m_process_launch_info.SetArchitecture(
+        HostInfo::GetAugmentedArchSpec(arch_triple));
     return SendOKResponse();
   }
   return SendErrorResponse(13);
@@ -1085,7 +1079,8 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
   StreamGDBRemote response;
 
   if (uuid_str.empty()) {
-    auto Result = llvm::sys::fs::md5_contents(matched_module_spec.GetFileSpec().GetPath());
+    auto Result = llvm::sys::fs::md5_contents(
+        matched_module_spec.GetFileSpec().GetPath());
     if (!Result)
       return SendErrorResponse(5);
     response.PutCString("md5:");

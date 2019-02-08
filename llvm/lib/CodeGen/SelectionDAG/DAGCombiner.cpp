@@ -2159,6 +2159,18 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
                          DAG.getNode(ISD::ADD, SDLoc(N1), VT, N01, N11));
   }
 
+  // fold (add (umax X, C), -C) --> (usubsat X, C)
+  if (N0.getOpcode() == ISD::UMAX && hasOperation(ISD::USUBSAT, VT)) {
+    auto MatchUSUBSAT = [](ConstantSDNode *Max, ConstantSDNode *Op) {
+      return (!Max && !Op) ||
+             (Max && Op && Max->getAPIntValue() == (-Op->getAPIntValue()));
+    };
+    if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchUSUBSAT,
+                                  /*AllowUndefs*/ true))
+      return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0),
+                         N0.getOperand(1));
+  }
+
   if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
     return V;
 
@@ -2300,10 +2312,12 @@ SDValue DAGCombiner::visitADDLike(SDValue N0, SDValue N1, SDNode *LocReference) 
   if (SDValue V = foldAddSubMasked1(true, N0, N1, DAG, DL))
     return V;
 
-  // add (sext i1), X -> sub X, (zext i1)
+  // If the target's bool is represented as 0/1, prefer to make this 'sub 0/1'
+  // rather than 'add 0/-1' (the zext should get folded).
+  // add (sext i1 Y), X --> sub X, (zext i1 Y)
   if (N0.getOpcode() == ISD::SIGN_EXTEND &&
-      N0.getOperand(0).getValueType() == MVT::i1 &&
-      !TLI.isOperationLegal(ISD::SIGN_EXTEND, MVT::i1)) {
+      N0.getOperand(0).getScalarValueSizeInBits() == 1 &&
+      TLI.getBooleanContents(VT) == TargetLowering::ZeroOrOneBooleanContent) {
     SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
     return DAG.getNode(ISD::SUB, DL, VT, N1, ZExt);
   }
@@ -2750,6 +2764,17 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   if (SDValue V = foldAddSubMasked1(false, N0, N1, DAG, SDLoc(N)))
     return V;
+
+  // If the target's bool is represented as 0/-1, prefer to make this 'add 0/-1'
+  // rather than 'sub 0/1' (the sext should get folded).
+  // sub X, (zext i1 Y) --> add X, (sext i1 Y)
+  if (N1.getOpcode() == ISD::ZERO_EXTEND &&
+      N1.getOperand(0).getScalarValueSizeInBits() == 1 &&
+      TLI.getBooleanContents(VT) ==
+          TargetLowering::ZeroOrNegativeOneBooleanContent) {
+    SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N1.getOperand(0));
+    return DAG.getNode(ISD::ADD, DL, VT, N0, SExt);
+  }
 
   // fold Y = sra (X, size(X)-1); sub (xor (X, Y), Y) -> (abs X)
   if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
@@ -7444,6 +7469,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       if (normalizeToSequence || !InnerSelect.use_empty())
         return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Cond0,
                            InnerSelect, N2);
+      // Cleanup on failure.
+      if (InnerSelect.use_empty())
+        recursivelyDeleteUnusedNodes(InnerSelect.getNode());
     }
     // select (or Cond0, Cond1), X, Y -> select Cond0, X, (select Cond1, X, Y)
     if (N0->getOpcode() == ISD::OR && N0->hasOneUse()) {
@@ -7454,6 +7482,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       if (normalizeToSequence || !InnerSelect.use_empty())
         return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Cond0, N1,
                            InnerSelect);
+      // Cleanup on failure.
+      if (InnerSelect.use_empty())
+        recursivelyDeleteUnusedNodes(InnerSelect.getNode());
     }
 
     // select Cond0, (select Cond1, X, Y), Y -> select (and Cond0, Cond1), X, Y
@@ -13123,30 +13154,42 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   if (LD->getBasePtr().isUndef() || Offset != 0)
     return SDValue();
   // Model necessary truncations / extenstions.
-  SDValue Val;
+  SmallVector<SDNode *, 4> Vals; // Temporaries which may need to be deleted.
+  SDValue Val, RV;
   // Truncate Value To Stored Memory Size.
   do {
     if (!getTruncatedStoreValue(ST, Val))
       continue;
+    if (Vals.empty() || Vals.back() != Val.getNode())
+      Vals.push_back(Val.getNode());
     if (!isTypeLegal(LDMemType))
       continue;
     if (STMemType != LDMemType) {
       // TODO: Support vectors? This requires extract_subvector/bitcast.
       if (!STMemType.isVector() && !LDMemType.isVector() &&
-          STMemType.isInteger() && LDMemType.isInteger())
+          STMemType.isInteger() && LDMemType.isInteger()) {
+        Vals.push_back(Val.getNode());
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
-      else
+      } else
         continue;
     }
-    if (!extendLoadedValueToExtension(LD, Val))
-      continue;
-    return ReplaceLd(LD, Val, Chain);
+    if (Vals.empty() || Vals.back() != Val.getNode())
+      Vals.push_back(Val.getNode());
+    if (extendLoadedValueToExtension(LD, Val))
+      RV = ReplaceLd(LD, Val, Chain);
+    else if (Vals.empty() || Vals.back() != Val.getNode())
+      Vals.push_back(Val.getNode());
   } while (false);
 
   // On failure, cleanup dead nodes we may have created.
-  if (Val->use_empty())
-    deleteAndRecombine(Val.getNode());
-  return SDValue();
+  if (Vals.empty() || Vals.back() != Val.getNode())
+    Vals.push_back(Val.getNode());
+  while (!Vals.empty()) {
+    SDNode *Val = Vals.pop_back_val();
+    if (Val->use_empty())
+      recursivelyDeleteUnusedNodes(Val);
+  }
+  return RV;
 }
 
 SDValue DAGCombiner::visitLOAD(SDNode *N) {

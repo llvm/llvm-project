@@ -154,6 +154,10 @@ static cl::opt<bool> FilterSameScaledReg(
     cl::desc("Narrow LSR search space by filtering non-optimal formulae"
              " with the same ScaledReg and Scale"));
 
+static cl::opt<bool> EnableBackedgeIndexing(
+  "lsr-backedge-indexing", cl::Hidden, cl::init(true),
+  cl::desc("Enable the generation of cross iteration indexed memops"));
+
 static cl::opt<unsigned> ComplexityLimit(
   "lsr-complexity-limit", cl::Hidden,
   cl::init(std::numeric_limits<uint16_t>::max()),
@@ -1052,12 +1056,12 @@ public:
   void dump() const;
 
 private:
-  void RateRegister(const SCEV *Reg,
+  void RateRegister(const Formula &F, const SCEV *Reg,
                     SmallPtrSetImpl<const SCEV *> &Regs,
                     const Loop *L,
                     ScalarEvolution &SE, DominatorTree &DT,
                     const TargetTransformInfo &TTI);
-  void RatePrimaryRegister(const SCEV *Reg,
+  void RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                            SmallPtrSetImpl<const SCEV *> &Regs,
                            const Loop *L,
                            ScalarEvolution &SE, DominatorTree &DT,
@@ -1208,7 +1212,7 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  Instruction *Fixup = nullptr);
 
 /// Tally up interesting quantities from the given register.
-void Cost::RateRegister(const SCEV *Reg,
+void Cost::RateRegister(const Formula &F, const SCEV *Reg,
                         SmallPtrSetImpl<const SCEV *> &Regs,
                         const Loop *L,
                         ScalarEvolution &SE, DominatorTree &DT,
@@ -1235,16 +1239,24 @@ void Cost::RateRegister(const SCEV *Reg,
     }
 
     unsigned LoopCost = 1;
-    if (TTI.shouldFavorPostInc()) {
-      const SCEV *LoopStep = AR->getStepRecurrence(SE);
-      if (isa<SCEVConstant>(LoopStep)) {
-        // Check if a post-indexed load/store can be used.
-        if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, AR->getType()) ||
-            TTI.isIndexedStoreLegal(TTI.MIM_PostInc, AR->getType())) {
+    if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, AR->getType()) ||
+        TTI.isIndexedStoreLegal(TTI.MIM_PostInc, AR->getType())) {
+
+      // If the step size matches the base offset, we could use pre-indexed
+      // addressing.
+      if (TTI.shouldFavorBackedgeIndex(L)) {
+        if (auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
+          if (Step->getAPInt() == F.BaseOffset)
+            LoopCost = 0;
+      }
+
+      if (TTI.shouldFavorPostInc()) {
+        const SCEV *LoopStep = AR->getStepRecurrence(SE);
+        if (isa<SCEVConstant>(LoopStep)) {
           const SCEV *LoopStart = AR->getStart();
           if (!isa<SCEVConstant>(LoopStart) &&
-            SE.isLoopInvariant(LoopStart, L))
-              LoopCost = 0;
+              SE.isLoopInvariant(LoopStart, L))
+            LoopCost = 0;
         }
       }
     }
@@ -1254,7 +1266,7 @@ void Cost::RateRegister(const SCEV *Reg,
     // TODO: The non-affine case isn't precisely modeled here.
     if (!AR->isAffine() || !isa<SCEVConstant>(AR->getOperand(1))) {
       if (!Regs.count(AR->getOperand(1))) {
-        RateRegister(AR->getOperand(1), Regs, L, SE, DT, TTI);
+        RateRegister(F, AR->getOperand(1), Regs, L, SE, DT, TTI);
         if (isLoser())
           return;
       }
@@ -1278,7 +1290,7 @@ void Cost::RateRegister(const SCEV *Reg,
 /// Record this register in the set. If we haven't seen it before, rate
 /// it. Optional LoserRegs provides a way to declare any formula that refers to
 /// one of those regs an instant loser.
-void Cost::RatePrimaryRegister(const SCEV *Reg,
+void Cost::RatePrimaryRegister(const Formula &F, const SCEV *Reg,
                                SmallPtrSetImpl<const SCEV *> &Regs,
                                const Loop *L,
                                ScalarEvolution &SE, DominatorTree &DT,
@@ -1289,7 +1301,7 @@ void Cost::RatePrimaryRegister(const SCEV *Reg,
     return;
   }
   if (Regs.insert(Reg).second) {
-    RateRegister(Reg, Regs, L, SE, DT, TTI);
+    RateRegister(F, Reg, Regs, L, SE, DT, TTI);
     if (LoserRegs && isLoser())
       LoserRegs->insert(Reg);
   }
@@ -1313,7 +1325,7 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
       Lose();
       return;
     }
-    RatePrimaryRegister(ScaledReg, Regs, L, SE, DT, LoserRegs, TTI);
+    RatePrimaryRegister(F, ScaledReg, Regs, L, SE, DT, LoserRegs, TTI);
     if (isLoser())
       return;
   }
@@ -1322,7 +1334,7 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
       Lose();
       return;
     }
-    RatePrimaryRegister(BaseReg, Regs, L, SE, DT, LoserRegs, TTI);
+    RatePrimaryRegister(F, BaseReg, Regs, L, SE, DT, LoserRegs, TTI);
     if (isLoser())
       return;
   }
@@ -1889,6 +1901,7 @@ class LSRInstance {
   LoopInfo &LI;
   const TargetTransformInfo &TTI;
   Loop *const L;
+  bool FavorBackedgeIndex = false;
   bool Changed = false;
 
   /// This is the insert position that the current loop's induction variable
@@ -2803,7 +2816,7 @@ bool IVChain::isProfitableIncrement(const SCEV *OperExpr,
 /// TODO: Consider IVInc free if it's already used in another chains.
 static bool
 isProfitableChain(IVChain &Chain, SmallPtrSetImpl<Instruction*> &Users,
-                  ScalarEvolution &SE, const TargetTransformInfo &TTI) {
+                  ScalarEvolution &SE) {
   if (StressIVChain)
     return true;
 
@@ -3063,7 +3076,7 @@ void LSRInstance::CollectChains() {
   for (unsigned UsersIdx = 0, NChains = IVChainVec.size();
        UsersIdx < NChains; ++UsersIdx) {
     if (!isProfitableChain(IVChainVec[UsersIdx],
-                           ChainUsersVec[UsersIdx].FarUsers, SE, TTI))
+                           ChainUsersVec[UsersIdx].FarUsers, SE))
       continue;
     // Preserve the chain at UsesIdx.
     if (ChainIdx != UsersIdx)
@@ -3077,7 +3090,7 @@ void LSRInstance::CollectChains() {
 void LSRInstance::FinalizeChain(IVChain &Chain) {
   assert(!Chain.Incs.empty() && "empty IV chains are not allowed");
   LLVM_DEBUG(dbgs() << "Final Chain: " << *Chain.Incs[0].UserInst << "\n");
-
+  
   for (const IVInc &Inc : Chain) {
     LLVM_DEBUG(dbgs() << "        Inc: " << *Inc.UserInst << "\n");
     auto UseI = find(Inc.UserInst->operands(), Inc.IVOperand);
@@ -3737,10 +3750,11 @@ void LSRInstance::GenerateSymbolicOffsets(LSRUse &LU, unsigned LUIdx,
 void LSRInstance::GenerateConstantOffsetsImpl(
     LSRUse &LU, unsigned LUIdx, const Formula &Base,
     const SmallVectorImpl<int64_t> &Worklist, size_t Idx, bool IsScaledReg) {
-  const SCEV *G = IsScaledReg ? Base.ScaledReg : Base.BaseRegs[Idx];
-  for (int64_t Offset : Worklist) {
+
+  auto GenerateOffset = [&](const SCEV *G, int64_t Offset) {
     Formula F = Base;
     F.BaseOffset = (uint64_t)Base.BaseOffset - Offset;
+
     if (isLegalUse(TTI, LU.MinOffset - Offset, LU.MaxOffset - Offset, LU.Kind,
                    LU.AccessTy, F)) {
       // Add the offset to the base register.
@@ -3760,7 +3774,35 @@ void LSRInstance::GenerateConstantOffsetsImpl(
 
       (void)InsertFormula(LU, LUIdx, F);
     }
+  };
+
+  const SCEV *G = IsScaledReg ? Base.ScaledReg : Base.BaseRegs[Idx];
+
+  // With constant offsets and constant steps, we can generate pre-inc
+  // accesses by having the offset equal the step. So, for access #0 with a
+  // step of 8, we generate a G - 8 base which would require the first access
+  // to be ((G - 8) + 8),+,8. The pre-indexed access then updates the pointer
+  // for itself and hopefully becomes the base for other accesses. This means
+  // means that a single pre-indexed access can be generated to become the new
+  // base pointer for each iteration of the loop, resulting in no extra add/sub
+  // instructions for pointer updating.
+  if (FavorBackedgeIndex && LU.Kind == LSRUse::Address) {
+    if (auto *GAR = dyn_cast<SCEVAddRecExpr>(G)) {
+      if (auto *StepRec =
+          dyn_cast<SCEVConstant>(GAR->getStepRecurrence(SE))) {
+        const APInt &StepInt = StepRec->getAPInt();
+        int64_t Step = StepInt.isNegative() ?
+          StepInt.getSExtValue() : StepInt.getZExtValue();
+
+        for (int64_t Offset : Worklist) {
+          Offset -= Step;
+          GenerateOffset(G, Offset);
+        }
+      }
+    }
   }
+  for (int64_t Offset : Worklist)
+    GenerateOffset(G, Offset);
 
   int64_t Imm = ExtractImmediate(G, SE);
   if (G->isZero() || Imm == 0)
@@ -4417,7 +4459,7 @@ void LSRInstance::NarrowSearchSpaceByDetectingSupersets() {
 /// When there are many registers for expressions like A, A+1, A+2, etc.,
 /// allocate a single register for them.
 void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
-  if (EstimateSearchSpaceComplexity() < ComplexityLimit)
+  if (EstimateSearchSpaceComplexity() < ComplexityLimit) 
     return;
 
   LLVM_DEBUG(
@@ -5378,7 +5420,9 @@ void LSRInstance::ImplementSolution(
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                          DominatorTree &DT, LoopInfo &LI,
                          const TargetTransformInfo &TTI)
-    : IU(IU), SE(SE), DT(DT), LI(LI), TTI(TTI), L(L) {
+    : IU(IU), SE(SE), DT(DT), LI(LI), TTI(TTI), L(L),
+      FavorBackedgeIndex(EnableBackedgeIndexing &&
+                         TTI.shouldFavorBackedgeIndex(L)) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;

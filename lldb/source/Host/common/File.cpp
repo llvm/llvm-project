@@ -178,7 +178,7 @@ Status File::Close() {
 
 void File::Clear() {
   m_stream = nullptr;
-  m_descriptor = -1;
+  m_descriptor = kInvalidDescriptor;
   m_options = 0;
   m_own_stream = false;
   m_is_interactive = m_supports_colors = m_is_real_terminal =
@@ -503,6 +503,7 @@ Status File::Read(void *buf, size_t &num_bytes, off_t &offset) {
     error.SetErrorString("invalid file handle");
   }
 #else
+  std::lock_guard<std::mutex> guard(offset_access_mutex);
   long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
   SeekFromStart(offset);
   error = Read(buf, num_bytes);
@@ -602,7 +603,9 @@ Status File::Write(const void *buf, size_t &num_bytes, off_t &offset) {
       num_bytes = bytes_written;
     }
 #else
+    std::lock_guard<std::mutex> guard(offset_access_mutex);
     long cur = ::lseek(m_descriptor, 0, SEEK_CUR);
+    SeekFromStart(offset);
     error = Write(buf, num_bytes);
     long after = ::lseek(m_descriptor, 0, SEEK_CUR);
 

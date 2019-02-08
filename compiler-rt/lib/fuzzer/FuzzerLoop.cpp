@@ -630,6 +630,8 @@ void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
+  if (Options.DoCrossOver)
+    MD.SetCrossOverWith(&Corpus.ChooseUnitToMutate(MD.GetRand()).U);
   const auto &U = II.U;
   memcpy(BaseSha1, II.Sha1, sizeof(BaseSha1));
   assert(CurrentUnitData);
@@ -688,7 +690,9 @@ void Fuzzer::PurgeAllocator() {
   LastAllocatorPurgeAttemptTime = system_clock::now();
 }
 
-void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
+void Fuzzer::ReadAndExecuteSeedCorpora(
+    const Vector<std::string> &CorpusDirs,
+    const Vector<std::string> &ExtraSeedFiles) {
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 4096;
   Vector<SizedFile> SizedFiles;
@@ -702,6 +706,11 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
            Dir.c_str());
     LastNumFiles = SizedFiles.size();
   }
+  // Add files from -seed_inputs.
+  for (auto &File : ExtraSeedFiles)
+    if (auto Size = FileSize(File))
+      SizedFiles.push_back({File, Size});
+
   for (auto &File : SizedFiles) {
     MaxSize = Max(File.Size, MaxSize);
     MinSize = Min(File.Size, MinSize);
@@ -761,14 +770,13 @@ void Fuzzer::ReadAndExecuteSeedCorpora(const Vector<std::string> &CorpusDirs) {
   }
 }
 
-void Fuzzer::Loop(const Vector<std::string> &CorpusDirs) {
-  ReadAndExecuteSeedCorpora(CorpusDirs);
+void Fuzzer::Loop(const Vector<std::string> &CorpusDirs,
+                  const Vector<std::string> &ExtraSeedFiles) {
+  ReadAndExecuteSeedCorpora(CorpusDirs, ExtraSeedFiles);
   DFT.Clear();  // No need for DFT any more.
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
   system_clock::time_point LastCorpusReload = system_clock::now();
-  if (Options.DoCrossOver)
-    MD.SetCorpus(&Corpus);
   while (true) {
     auto Now = system_clock::now();
     if (duration_cast<seconds>(Now - LastCorpusReload).count() >=
