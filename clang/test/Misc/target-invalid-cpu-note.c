@@ -101,7 +101,7 @@
 
 // RUN: not %clang_cc1 -triple bpf--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix BPF
 // BPF: error: unknown target CPU 'not-a-cpu'
-// BPF: note: valid target CPU values are: generic, v1, v2, probe
+// BPF: note: valid target CPU values are: generic, v1, v2, v3, probe
 
 // RUN: not %clang_cc1 -triple avr--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AVR
 // AVR: error: unknown target CPU 'not-a-cpu'

@@ -10177,7 +10177,7 @@ public:
   /// compilation, this is currently only enabled for CUDA compilations.
   llvm::DenseMap<CanonicalDeclPtr<FunctionDecl>,
                  std::vector<PartialDiagnosticAt>>
-      CUDADeferredDiags;
+      DeviceDeferredDiags;
 
   /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
   /// key in a hashtable, both the FD and location are hashed.
@@ -10198,21 +10198,22 @@ public:
   /// map.
   llvm::DenseMap</* Callee = */ CanonicalDeclPtr<FunctionDecl>,
                  /* Caller = */ FunctionDeclAndLoc>
-      CUDAKnownEmittedFns;
+      DeviceKnownEmittedFns;
 
-  /// A partial call graph maintained during CUDA compilation to support
-  /// deferred diagnostics.
+  /// A partial call graph maintained during CUDA/OpenMP device code compilation
+  /// to support deferred diagnostics.
   ///
   /// Functions are only added here if, at the time they're considered, they are
   /// not known-emitted.  As soon as we discover that a function is
   /// known-emitted, we remove it and everything it transitively calls from this
-  /// set and add those functions to CUDAKnownEmittedFns.
+  /// set and add those functions to DeviceKnownEmittedFns.
   llvm::DenseMap</* Caller = */ CanonicalDeclPtr<FunctionDecl>,
                  /* Callees = */ llvm::MapVector<CanonicalDeclPtr<FunctionDecl>,
                                                  SourceLocation>>
-      CUDACallGraph;
+      DeviceCallGraph;
 
-  /// Diagnostic builder for CUDA errors which may or may not be deferred.
+  /// Diagnostic builder for CUDA/OpenMP devices errors which may or may not be
+  /// deferred.
   ///
   /// In CUDA, there exist constructs (e.g. variable-length arrays, try/catch)
   /// which are not allowed to appear inside __device__ functions and are
@@ -10226,7 +10227,7 @@ public:
   /// diagnostic, or no diagnostic at all, according to an argument you pass to
   /// its constructor, thus simplifying the process of creating these "maybe
   /// deferred" diagnostics.
-  class CUDADiagBuilder {
+  class DeviceDiagBuilder {
   public:
     enum Kind {
       /// Emit no diagnostics.
@@ -10243,25 +10244,25 @@ public:
       K_Deferred
     };
 
-    CUDADiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
-                    FunctionDecl *Fn, Sema &S);
-    ~CUDADiagBuilder();
+    DeviceDiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
+                      FunctionDecl *Fn, Sema &S);
+    ~DeviceDiagBuilder();
 
     /// Convertible to bool: True if we immediately emitted an error, false if
     /// we didn't emit an error or we created a deferred error.
     ///
     /// Example usage:
     ///
-    ///   if (CUDADiagBuilder(...) << foo << bar)
+    ///   if (DeviceDiagBuilder(...) << foo << bar)
     ///     return ExprError();
     ///
     /// But see CUDADiagIfDeviceCode() and CUDADiagIfHostCode() -- you probably
-    /// want to use these instead of creating a CUDADiagBuilder yourself.
+    /// want to use these instead of creating a DeviceDiagBuilder yourself.
     operator bool() const { return ImmediateDiag.hasValue(); }
 
     template <typename T>
-    friend const CUDADiagBuilder &operator<<(const CUDADiagBuilder &Diag,
-                                             const T &Value) {
+    friend const DeviceDiagBuilder &operator<<(const DeviceDiagBuilder &Diag,
+                                               const T &Value) {
       if (Diag.ImmediateDiag.hasValue())
         *Diag.ImmediateDiag << Value;
       else if (Diag.PartialDiag.hasValue())
@@ -10282,7 +10283,15 @@ public:
     llvm::Optional<PartialDiagnostic> PartialDiag;
   };
 
-  /// Creates a CUDADiagBuilder that emits the diagnostic if the current context
+  /// Indicate that this function (and thus everything it transtively calls)
+  /// will be codegen'ed, and emit any deferred diagnostics on this function and
+  /// its (transitive) callees.
+  void markKnownEmitted(
+      Sema &S, FunctionDecl *OrigCaller, FunctionDecl *OrigCallee,
+      SourceLocation OrigLoc,
+      const llvm::function_ref<bool(Sema &, FunctionDecl *)> IsKnownEmitted);
+
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current context
   /// is "used as device code".
   ///
   /// - If CurContext is a __host__ function, does not emit any diagnostics.
@@ -10298,13 +10307,13 @@ public:
   ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
-  CUDADiagBuilder CUDADiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
+  DeviceDiagBuilder CUDADiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
 
-  /// Creates a CUDADiagBuilder that emits the diagnostic if the current context
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current context
   /// is "used as host code".
   ///
   /// Same as CUDADiagIfDeviceCode, with "host" and "device" switched.
-  CUDADiagBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
+  DeviceDiagBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
 
   enum CUDAFunctionTarget {
     CFT_Device,

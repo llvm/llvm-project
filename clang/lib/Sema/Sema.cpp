@@ -261,11 +261,12 @@ void Sema::Initialize() {
   // Initialize predefined OpenCL types and supported extensions and (optional)
   // core features.
   if (getLangOpts().OpenCL) {
-    getOpenCLOptions().addSupport(Context.getTargetInfo().getSupportedOpenCLOpts());
-    getOpenCLOptions().enableSupportedCore(getLangOpts().OpenCLVersion);
+    getOpenCLOptions().addSupport(
+        Context.getTargetInfo().getSupportedOpenCLOpts());
+    getOpenCLOptions().enableSupportedCore(getLangOpts());
     addImplicitTypedef("sampler_t", Context.OCLSamplerTy);
     addImplicitTypedef("event_t", Context.OCLEventTy);
-    if (getLangOpts().OpenCLVersion >= 200) {
+    if (getLangOpts().OpenCLCPlusPlus || getLangOpts().OpenCLVersion >= 200) {
       addImplicitTypedef("clk_event_t", Context.OCLClkEventTy);
       addImplicitTypedef("queue_t", Context.OCLQueueTy);
       addImplicitTypedef("reserve_id_t", Context.OCLReserveIDTy);
@@ -1328,6 +1329,168 @@ Sema::Diag(SourceLocation Loc, const PartialDiagnostic& PD) {
   PD.Emit(Builder);
 
   return Builder;
+}
+
+// Print notes showing how we can reach FD starting from an a priori
+// known-callable function.
+static void emitCallStackNotes(Sema &S, FunctionDecl *FD) {
+  auto FnIt = S.DeviceKnownEmittedFns.find(FD);
+  while (FnIt != S.DeviceKnownEmittedFns.end()) {
+    DiagnosticBuilder Builder(
+        S.Diags.Report(FnIt->second.Loc, diag::note_called_by));
+    Builder << FnIt->second.FD;
+    Builder.setForceEmit();
+
+    FnIt = S.DeviceKnownEmittedFns.find(FnIt->second.FD);
+  }
+}
+
+// Emit any deferred diagnostics for FD and erase them from the map in which
+// they're stored.
+static void emitDeferredDiags(Sema &S, FunctionDecl *FD) {
+  auto It = S.DeviceDeferredDiags.find(FD);
+  if (It == S.DeviceDeferredDiags.end())
+    return;
+  bool HasWarningOrError = false;
+  for (PartialDiagnosticAt &PDAt : It->second) {
+    const SourceLocation &Loc = PDAt.first;
+    const PartialDiagnostic &PD = PDAt.second;
+    HasWarningOrError |= S.getDiagnostics().getDiagnosticLevel(
+                             PD.getDiagID(), Loc) >= DiagnosticsEngine::Warning;
+    DiagnosticBuilder Builder(S.Diags.Report(Loc, PD.getDiagID()));
+    Builder.setForceEmit();
+    PD.Emit(Builder);
+  }
+  S.DeviceDeferredDiags.erase(It);
+
+  // FIXME: Should this be called after every warning/error emitted in the loop
+  // above, instead of just once per function?  That would be consistent with
+  // how we handle immediate errors, but it also seems like a bit much.
+  if (HasWarningOrError)
+    emitCallStackNotes(S, FD);
+}
+
+// In CUDA, there are some constructs which may appear in semantically-valid
+// code, but trigger errors if we ever generate code for the function in which
+// they appear.  Essentially every construct you're not allowed to use on the
+// device falls into this category, because you are allowed to use these
+// constructs in a __host__ __device__ function, but only if that function is
+// never codegen'ed on the device.
+//
+// To handle semantic checking for these constructs, we keep track of the set of
+// functions we know will be emitted, either because we could tell a priori that
+// they would be emitted, or because they were transitively called by a
+// known-emitted function.
+//
+// We also keep a partial call graph of which not-known-emitted functions call
+// which other not-known-emitted functions.
+//
+// When we see something which is illegal if the current function is emitted
+// (usually by way of CUDADiagIfDeviceCode, CUDADiagIfHostCode, or
+// CheckCUDACall), we first check if the current function is known-emitted.  If
+// so, we immediately output the diagnostic.
+//
+// Otherwise, we "defer" the diagnostic.  It sits in Sema::DeviceDeferredDiags
+// until we discover that the function is known-emitted, at which point we take
+// it out of this map and emit the diagnostic.
+
+Sema::DeviceDiagBuilder::DeviceDiagBuilder(Kind K, SourceLocation Loc,
+                                           unsigned DiagID, FunctionDecl *Fn,
+                                           Sema &S)
+    : S(S), Loc(Loc), DiagID(DiagID), Fn(Fn),
+      ShowCallStack(K == K_ImmediateWithCallStack || K == K_Deferred) {
+  switch (K) {
+  case K_Nop:
+    break;
+  case K_Immediate:
+  case K_ImmediateWithCallStack:
+    ImmediateDiag.emplace(S.Diag(Loc, DiagID));
+    break;
+  case K_Deferred:
+    assert(Fn && "Must have a function to attach the deferred diag to.");
+    PartialDiag.emplace(S.PDiag(DiagID));
+    break;
+  }
+}
+
+Sema::DeviceDiagBuilder::~DeviceDiagBuilder() {
+  if (ImmediateDiag) {
+    // Emit our diagnostic and, if it was a warning or error, output a callstack
+    // if Fn isn't a priori known-emitted.
+    bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
+                                DiagID, Loc) >= DiagnosticsEngine::Warning;
+    ImmediateDiag.reset(); // Emit the immediate diag.
+    if (IsWarningOrError && ShowCallStack)
+      emitCallStackNotes(S, Fn);
+  } else if (PartialDiag) {
+    assert(ShowCallStack && "Must always show call stack for deferred diags.");
+    S.DeviceDeferredDiags[Fn].push_back({Loc, std::move(*PartialDiag)});
+  }
+}
+
+// Indicate that this function (and thus everything it transtively calls) will
+// be codegen'ed, and emit any deferred diagnostics on this function and its
+// (transitive) callees.
+void Sema::markKnownEmitted(
+    Sema &S, FunctionDecl *OrigCaller, FunctionDecl *OrigCallee,
+    SourceLocation OrigLoc,
+    const llvm::function_ref<bool(Sema &, FunctionDecl *)> IsKnownEmitted) {
+  // Nothing to do if we already know that FD is emitted.
+  if (IsKnownEmitted(S, OrigCallee)) {
+    assert(!S.DeviceCallGraph.count(OrigCallee));
+    return;
+  }
+
+  // We've just discovered that OrigCallee is known-emitted.  Walk our call
+  // graph to see what else we can now discover also must be emitted.
+
+  struct CallInfo {
+    FunctionDecl *Caller;
+    FunctionDecl *Callee;
+    SourceLocation Loc;
+  };
+  llvm::SmallVector<CallInfo, 4> Worklist = {{OrigCaller, OrigCallee, OrigLoc}};
+  llvm::SmallSet<CanonicalDeclPtr<FunctionDecl>, 4> Seen;
+  Seen.insert(OrigCallee);
+  while (!Worklist.empty()) {
+    CallInfo C = Worklist.pop_back_val();
+    assert(!IsKnownEmitted(S, C.Callee) &&
+           "Worklist should not contain known-emitted functions.");
+    S.DeviceKnownEmittedFns[C.Callee] = {C.Caller, C.Loc};
+    emitDeferredDiags(S, C.Callee);
+
+    // If this is a template instantiation, explore its callgraph as well:
+    // Non-dependent calls are part of the template's callgraph, while dependent
+    // calls are part of to the instantiation's call graph.
+    if (auto *Templ = C.Callee->getPrimaryTemplate()) {
+      FunctionDecl *TemplFD = Templ->getAsFunction();
+      if (!Seen.count(TemplFD) && !S.DeviceKnownEmittedFns.count(TemplFD)) {
+        Seen.insert(TemplFD);
+        Worklist.push_back(
+            {/* Caller = */ C.Caller, /* Callee = */ TemplFD, C.Loc});
+      }
+    }
+
+    // Add all functions called by Callee to our worklist.
+    auto CGIt = S.DeviceCallGraph.find(C.Callee);
+    if (CGIt == S.DeviceCallGraph.end())
+      continue;
+
+    for (std::pair<CanonicalDeclPtr<FunctionDecl>, SourceLocation> FDLoc :
+         CGIt->second) {
+      FunctionDecl *NewCallee = FDLoc.first;
+      SourceLocation CallLoc = FDLoc.second;
+      if (Seen.count(NewCallee) || IsKnownEmitted(S, NewCallee))
+        continue;
+      Seen.insert(NewCallee);
+      Worklist.push_back(
+          {/* Caller = */ C.Callee, /* Callee = */ NewCallee, CallLoc});
+    }
+
+    // C.Callee is now known-emitted, so we no longer need to maintain its list
+    // of callees in DeviceCallGraph.
+    S.DeviceCallGraph.erase(CGIt);
+  }
 }
 
 /// Looks through the macro-expansion chain for the given

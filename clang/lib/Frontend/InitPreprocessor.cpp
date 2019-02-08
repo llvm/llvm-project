@@ -1058,10 +1058,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   // OpenCL definitions.
   if (LangOpts.OpenCL) {
-#define OPENCLEXT(Ext) \
-    if (TI.getSupportedOpenCLOpts().isSupported(#Ext, \
-        LangOpts.OpenCLVersion)) \
-      Builder.defineMacro(#Ext);
+#define OPENCLEXT(Ext)                                                         \
+  if (TI.getSupportedOpenCLOpts().isSupported(#Ext, LangOpts))                 \
+    Builder.defineMacro(#Ext);
 #include "clang/Basic/OpenCLExtensions.def"
 
     auto Arch = TI.getTriple().getArch();

@@ -178,6 +178,10 @@
 // Oy_2: -momit-leaf-frame-pointer
 // Oy_2: -O2
 
+// RUN: %clang_cl --target=aarch64-pc-windows-msvc -Werror /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s
+// Oy_aarch64: -mdisable-fp-elim
+// Oy_aarch64: -O2
+
 // RUN: %clang_cl --target=i686-pc-win32 -Werror /O2 /O2 -### -- %s 2>&1 | FileCheck -check-prefix=O2O2 %s
 // O2O2: "-O2"
 
