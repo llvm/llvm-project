@@ -170,7 +170,7 @@ uses the package and provides other details.
 Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor
-`GCC <http://gcc.gnu.org/>`_                                >=4.8.0      C/C++ compiler\ :sup:`1`
+`GCC <http://gcc.gnu.org/>`_                                >=5.1.0      C/C++ compiler\ :sup:`1`
 `python <http://www.python.org/>`_                          >=2.7        Automated test suite\ :sup:`2`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`
 =========================================================== ============ ==========================================
@@ -220,15 +220,25 @@ Host C++ Toolchain, both Compiler and Standard Library
 ------------------------------------------------------
 
 LLVM is very demanding of the host C++ compiler, and as such tends to expose
-bugs in the compiler. We are also planning to follow improvements and
-developments in the C++ language and library reasonably closely. As such, we
-require a modern host C++ toolchain, both compiler and standard library, in
-order to build LLVM.
+bugs in the compiler. We also attempt to follow improvements and developments in
+the C++ language and library reasonably closely. As such, we require a modern
+host C++ toolchain, both compiler and standard library, in order to build LLVM.
 
-For the most popular host toolchains we check for specific minimum versions in
-our build systems:
+LLVM is written using the subset of C++ documented in :doc:`coding
+standards<CodingStandards>`. To enforce this language version, we check the most
+popular host toolchains for specific minimum versions in our build systems:
+
+* Clang 3.5
+* Apple Clang 6.0
+* GCC 5.1
+* Visual Studio 2017
+
+The below versions currently soft-error as we transition to the new compiler
+versions listed above. The LLVM codebase is currently known to compile correctly
+with the following compilers, though this will change in the near future:
 
 * Clang 3.1
+* Apple Clang 3.1
 * GCC 4.8
 * Visual Studio 2015 (Update 3)
 
@@ -282,33 +292,36 @@ The first step is to get a recent GCC toolchain installed. The most common
 distribution on which users have struggled with the version requirements is
 Ubuntu Precise, 12.04 LTS. For this distribution, one easy option is to install
 the `toolchain testing PPA`_ and use it to install a modern GCC. There is
-a really nice discussions of this on the `ask ubuntu stack exchange`_. However,
-not all users can use PPAs and there are many other distributions, so it may be
-necessary (or just useful, if you're here you *are* doing compiler development
-after all) to build and install GCC from source. It is also quite easy to do
-these days.
+a really nice discussions of this on the `ask ubuntu stack exchange`_ and a
+`github gist`_ with updated commands. However, not all users can use PPAs and
+there are many other distributions, so it may be necessary (or just useful, if
+you're here you *are* doing compiler development after all) to build and install
+GCC from source. It is also quite easy to do these days.
 
 .. _toolchain testing PPA:
   https://launchpad.net/~ubuntu-toolchain-r/+archive/test
 .. _ask ubuntu stack exchange:
-  http://askubuntu.com/questions/271388/how-to-install-gcc-4-8-in-ubuntu-12-04-from-the-terminal
+  https://askubuntu.com/questions/466651/how-do-i-use-the-latest-gcc-on-ubuntu/581497#58149
+.. _github gist:
+  https://gist.github.com/application2000/73fd6f4bf1be6600a2cf9f56315a2d91
 
-Easy steps for installing GCC 4.8.2:
+Easy steps for installing GCC 5.1.0:
 
 .. code-block:: console
 
-  % wget https://ftp.gnu.org/gnu/gcc/gcc-4.8.2/gcc-4.8.2.tar.bz2
-  % wget https://ftp.gnu.org/gnu/gcc/gcc-4.8.2/gcc-4.8.2.tar.bz2.sig
+  % gcc_version=5.1.0
+  % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2
+  % wget https://ftp.gnu.org/gnu/gcc/gcc-${gcc_version}/gcc-${gcc_version}.tar.bz2.sig
   % wget https://ftp.gnu.org/gnu/gnu-keyring.gpg
-  % signature_invalid=`gpg --verify --no-default-keyring --keyring ./gnu-keyring.gpg gcc-4.8.2.tar.bz2.sig`
+  % signature_invalid=`gpg --verify --no-default-keyring --keyring ./gnu-keyring.gpg gcc-${gcc_version}.tar.bz2.sig`
   % if [ $signature_invalid ]; then echo "Invalid signature" ; exit 1 ; fi
-  % tar -xvjf gcc-4.8.2.tar.bz2
-  % cd gcc-4.8.2
+  % tar -xvjf gcc-${gcc_version}.tar.bz2
+  % cd gcc-${gcc_version}
   % ./contrib/download_prerequisites
   % cd ..
-  % mkdir gcc-4.8.2-build
-  % cd gcc-4.8.2-build
-  % $PWD/../gcc-4.8.2/configure --prefix=$HOME/toolchains --enable-languages=c,c++
+  % mkdir gcc-${gcc_version}-build
+  % cd gcc-${gcc_version}-build
+  % $PWD/../gcc-${gcc_version}/configure --prefix=$HOME/toolchains --enable-languages=c,c++
   % make -j$(nproc)
   % make install
 
@@ -316,7 +329,7 @@ For more details, check out the excellent `GCC wiki entry`_, where I got most
 of this information from.
 
 .. _GCC wiki entry:
-  http://gcc.gnu.org/wiki/InstallingGCC
+  https://gcc.gnu.org/wiki/InstallingGCC
 
 Once you have a GCC toolchain, configure your build of LLVM to use the new
 toolchain for your host compiler and C++ standard library. Because the new
@@ -336,7 +349,7 @@ If you fail to set rpath, most LLVM binaries will fail on startup with a message
 from the loader similar to ``libstdc++.so.6: version `GLIBCXX_3.4.20' not
 found``. This means you need to tweak the -rpath linker flag.
 
-When you build Clang, you will need to give *it* access to modern C++11
+When you build Clang, you will need to give *it* access to modern C++
 standard library in order to use it as your new host in part of a bootstrap.
 There are two easy ways to do this, either build (and install) libc++ along
 with Clang and then use it with the ``-stdlib=libc++`` compile and link flag,

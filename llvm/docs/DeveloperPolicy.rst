@@ -22,7 +22,7 @@ This policy is also designed to accomplish the following objectives:
 
 #. Make life as simple and easy for contributors as possible.
 
-#. Keep the tip of tree as stable as possible.
+#. Keep the top of tree as stable as possible.
 
 #. Establish awareness of the project's :ref:`copyright, license, and patent
    policies <copyright-license-patents>` with contributors to the project.
@@ -637,6 +637,47 @@ To **continue** as a supported and official target:
 In essences, these rules are necessary for targets to gain and retain their
 status, but also markers to define bit-rot, and will be used to clean up the
 tree from unmaintained targets.
+
+.. _toolchain:
+
+Updating Toolchain Requirements
+-------------------------------
+
+We intend to require newer toolchains as time goes by. This means LLVM's
+codebase can use newer versions of C++ as they get standardized. Requiring newer
+toolchains to build LLVM can be painful for those building LLVM; therefore, it
+will only be done through the following process:
+
+  * Generally, try to support LLVM and GCC versions from the last 3 years at a
+    minimum. This time-based guideline is not strict: we may support much older
+    compilers, or decide to support fewer versions.
+
+  * An RFC is sent to the `llvm-dev mailing list <http://lists.llvm.org/mailman/listinfo/llvm-dev>`_
+
+    - Detail upsides of the version increase (e.g. which newer C++ language or
+      library features LLVM should use; avoid miscompiles in particular compiler
+      versions, etc).
+    - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+
+  * Once the RFC reaches consensus, update the CMake toolchain version checks as
+    well as the :doc:`getting started<GettingStarted>` guide. We want to
+    soft-error when developers compile LLVM. We say "soft-error" because the
+    error can be turned into a warning using a CMake flag. This is an important
+    step: LLVM still doesn't have code which requires the new toolchains, but it
+    soon will. If you compile LLVM but don't read the mailing list, we should
+    tell you!
+
+  * Ensure that at least one LLVM release has had this soft-error. Not all
+    developers compile LLVM top-of-tree. These release-bound developers should
+    also be told about upcoming changes.
+
+  * Turn the soft-error into a hard-error after said LLVM release has branched.
+
+  * Update the :doc:`coding standards<CodingStandards>` to allow the new
+    features we've explicitly approved in the RFC.
+
+  * Start using the new features in LLVM's codebase.
+
 
 .. _copyright-license-patents:
 
