@@ -185,6 +185,12 @@ void MachineIRBuilder::validateBinaryOp(const LLT &Res, const LLT &Op0,
   assert((Res == Op0 && Res == Op1) && "type mismatch");
 }
 
+void MachineIRBuilder::validateShiftOp(const LLT &Res, const LLT &Op0,
+                                       const LLT &Op1) {
+  assert((Res.isScalar() || Res.isVector()) && "invalid operand type");
+  assert((Res == Op0) && "type mismatch");
+}
+
 MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
   assert(getMRI()->getType(Res).isPointer() &&
@@ -852,11 +858,8 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   }
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_AND:
-  case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR:
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_OR:
-  case TargetOpcode::G_SHL:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_UDIV:
@@ -870,6 +873,17 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                      SrcOps[0].getLLTTy(*getMRI()),
                      SrcOps[1].getLLTTy(*getMRI()));
     break;
+  }
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR: {
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 2 && "Invalid Srcs");
+    validateShiftOp(DstOps[0].getLLTTy(*getMRI()),
+                    SrcOps[0].getLLTTy(*getMRI()),
+                    SrcOps[1].getLLTTy(*getMRI()));
+    break;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
@@ -879,7 +893,7 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                      SrcOps[0].getLLTTy(*getMRI()), true);
     break;
   case TargetOpcode::G_TRUNC:
-  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPTRUNC: {
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 1 && "Invalid Srcs");
     validateTruncExt(DstOps[0].getLLTTy(*getMRI()),

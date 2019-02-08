@@ -2886,14 +2886,22 @@ AST_MATCHER_P(NamedDecl, hasUnderlyingDecl, internal::Matcher<NamedDecl>,
          InnerMatcher.matches(*UnderlyingDecl, Finder, Builder);
 }
 
-/// Matches on the implicit object argument of a member call expression.
+/// Matches on the implicit object argument of a member call expression, after
+/// stripping off any parentheses or implicit casts.
 ///
-/// Example matches y.x()
-///   (matcher = cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y"))))))
+/// Given
 /// \code
-///   class Y { public: void x(); };
-///   void z() { Y y; y.x(); }
+///   class Y { public: void m(); };
+///   Y g();
+///   class X : public Y {};
+///   void z(Y y, X x) { y.m(); (g()).m(); x.m(); }
 /// \endcode
+/// cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y")))))
+///   matches `y.m()` and `(g()).m()`.
+/// cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("X")))))
+///   matches `x.m()`.
+/// cxxMemberCallExpr(on(callExpr()))
+///   matches `(g()).m()`.
 ///
 /// FIXME: Overload to allow directly matching types?
 AST_MATCHER_P(CXXMemberCallExpr, on, internal::Matcher<Expr>,
@@ -3253,6 +3261,23 @@ AST_MATCHER_P_OVERLOAD(QualType, references, internal::Matcher<Decl>,
       .matches(Node, Finder, Builder);
 }
 
+/// Matches on the implicit object argument of a member call expression. Unlike
+/// `on`, matches the argument directly without stripping away anything.
+///
+/// Given
+/// \code
+///   class Y { public: void m(); };
+///   Y g();
+///   class X : public Y { void g(); };
+///   void z(Y y, X x) { y.m(); x.m(); x.g(); (g()).m(); }
+/// \endcode
+/// cxxMemberCallExpr(onImplicitObjectArgument(hasType(
+///     cxxRecordDecl(hasName("Y")))))
+///   matches `y.m()`, `x.m()` and (g()).m(), but not `x.g()`.
+/// cxxMemberCallExpr(on(callExpr()))
+///   does not match `(g()).m()`, because the parens are not ignored.
+///
+/// FIXME: Overload to allow directly matching types?
 AST_MATCHER_P(CXXMemberCallExpr, onImplicitObjectArgument,
               internal::Matcher<Expr>, InnerMatcher) {
   const Expr *ExprNode = Node.getImplicitObjectArgument();
@@ -3260,8 +3285,22 @@ AST_MATCHER_P(CXXMemberCallExpr, onImplicitObjectArgument,
           InnerMatcher.matches(*ExprNode, Finder, Builder));
 }
 
-/// Matches if the expression's type either matches the specified
-/// matcher, or is a pointer to a type that matches the InnerMatcher.
+/// Matches if the type of the expression's implicit object argument either
+/// matches the InnerMatcher, or is a pointer to a type that matches the
+/// InnerMatcher.
+///
+/// Given
+/// \code
+///   class Y { public: void m(); };
+///   class X : public Y { void g(); };
+///   void z() { Y y; y.m(); Y *p; p->m(); X x; x.m(); x.g(); }
+/// \endcode
+/// cxxMemberCallExpr(thisPointerType(hasDeclaration(
+///     cxxRecordDecl(hasName("Y")))))
+///   matches `y.m()`, `p->m()` and `x.m()`.
+/// cxxMemberCallExpr(thisPointerType(hasDeclaration(
+///     cxxRecordDecl(hasName("X")))))
+///   matches `x.g()`.
 AST_MATCHER_P_OVERLOAD(CXXMemberCallExpr, thisPointerType,
                        internal::Matcher<QualType>, InnerMatcher, 0) {
   return onImplicitObjectArgument(
@@ -4963,18 +5002,22 @@ AST_MATCHER_P(MemberExpr, member,
   return InnerMatcher.matches(*Node.getMemberDecl(), Finder, Builder);
 }
 
-/// Matches a member expression where the object expression is
-/// matched by a given matcher.
+/// Matches a member expression where the object expression is matched by a
+/// given matcher. Implicit object expressions are included; that is, it matches
+/// use of implicit `this`.
 ///
 /// Given
 /// \code
-///   struct X { int m; };
-///   void f(X x) { x.m; m; }
+///   struct X {
+///     int m;
+///     int f(X x) { x.m; return m; }
+///   };
 /// \endcode
-/// memberExpr(hasObjectExpression(hasType(cxxRecordDecl(hasName("X")))))))
-///   matches "x.m" and "m"
-/// with hasObjectExpression(...)
-///   matching "x" and the implicit object expression of "m" which has type X*.
+/// memberExpr(hasObjectExpression(hasType(cxxRecordDecl(hasName("X")))))
+///   matches `x.m`, but not `m`; however,
+/// memberExpr(hasObjectExpression(hasType(pointsTo(
+//      cxxRecordDecl(hasName("X"))))))
+///   matches `m` (aka. `this->m`), but not `x.m`.
 AST_POLYMORPHIC_MATCHER_P(
     hasObjectExpression,
     AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, UnresolvedMemberExpr,

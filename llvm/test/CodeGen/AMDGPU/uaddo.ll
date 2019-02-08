@@ -1,7 +1,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,FUNC %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}s_uaddo_i64_zext:
 ; GCN: s_add_u32
@@ -152,10 +151,32 @@ define amdgpu_kernel void @v_uaddo_i16(i16 addrspace(1)* %out, i1 addrspace(1)* 
   ret void
 }
 
+; FUNC-LABEL: {{^}}v_uaddo_v2i32:
+; SICIVI: v_cmp_lt_i32
+; SICIVI: v_cmp_lt_i32
+; SICIVI: v_add_{{[iu]}}32
+; SICIVI: v_cmp_lt_i32
+; SICIVI: v_cmp_lt_i32
+; SICIVI: v_add_{{[iu]}}32
+define amdgpu_kernel void @v_uaddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %carryout, <2 x i32> addrspace(1)* %aptr, <2 x i32> addrspace(1)* %bptr) nounwind {
+  %a = load <2 x i32>, <2 x i32> addrspace(1)* %aptr, align 4
+  %b = load <2 x i32>, <2 x i32> addrspace(1)* %bptr, align 4
+  %sadd = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> %b) nounwind
+  %val = extractvalue { <2 x i32>, <2 x i1> } %sadd, 0
+  %carry = extractvalue { <2 x i32>, <2 x i1> } %sadd, 1
+  store <2 x i32> %val, <2 x i32> addrspace(1)* %out, align 4
+  %carry.ext = zext <2 x i1> %carry to <2 x i32>
+  store <2 x i32> %carry.ext, <2 x i32> addrspace(1)* %carryout
+  ret void
+}
+
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16) #1
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #1
 declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64) #1
+declare { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
+
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

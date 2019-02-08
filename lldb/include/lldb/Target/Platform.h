@@ -364,9 +364,9 @@ public:
   //------------------------------------------------------------------
   /// Perform expansion of the command-line for this launch info This can
   /// potentially involve wildcard expansion
-  //  environment variable replacement, and whatever other
-  //  argument magic the platform defines as part of its typical
-  //  user experience
+  /// environment variable replacement, and whatever other
+  /// argument magic the platform defines as part of its typical
+  /// user experience
   //------------------------------------------------------------------
   virtual Status ShellExpandArguments(ProcessLaunchInfo &launch_info);
 

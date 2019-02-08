@@ -201,7 +201,7 @@ void ScopedReportBase::AddThread(const ThreadContext *tctx, bool suppressable) {
   rt->running = (tctx->status == ThreadStatusRunning);
   rt->name = internal_strdup(tctx->name);
   rt->parent_tid = tctx->parent_tid;
-  rt->workerthread = tctx->workerthread;
+  rt->thread_type = tctx->thread_type;
   rt->stack = 0;
   rt->stack = SymbolizeStackId(tctx->creation_stack_id);
   if (rt->stack)

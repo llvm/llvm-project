@@ -89,6 +89,8 @@ private:
   DominatorTree &DT;
   ScalarEvolution &SE;
   MemorySSAUpdater *MSSAU;
+  DomTreeUpdater DTU;
+  SmallVector<DominatorTree::UpdateType, 16> DTUpdates;
 
   // Whether or not the current loop has irreducible CFG.
   bool HasIrreducibleCFG = false;
@@ -319,14 +321,13 @@ private:
 
     // Construct split preheader and the dummy switch to thread edges from it to
     // dead exits.
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
     BasicBlock *Preheader = L.getLoopPreheader();
     BasicBlock *NewPreheader = Preheader->splitBasicBlock(
         Preheader->getTerminator(),
         Twine(Preheader->getName()).concat("-split"));
-    DTU.deleteEdge(Preheader, L.getHeader());
-    DTU.insertEdge(NewPreheader, L.getHeader());
-    DTU.insertEdge(Preheader, NewPreheader);
+    DTUpdates.push_back({DominatorTree::Delete, Preheader, L.getHeader()});
+    DTUpdates.push_back({DominatorTree::Insert, NewPreheader, L.getHeader()});
+    DTUpdates.push_back({DominatorTree::Insert, Preheader, NewPreheader});
     IRBuilder<> Builder(Preheader->getTerminator());
     SwitchInst *DummySwitch =
         Builder.CreateSwitch(Builder.getInt32(0), NewPreheader);
@@ -345,7 +346,7 @@ private:
       }
       assert(DummyIdx != 0 && "Too many dead exits!");
       DummySwitch->addCase(Builder.getInt32(DummyIdx++), BB);
-      DTU.insertEdge(Preheader, BB);
+      DTUpdates.push_back({DominatorTree::Insert, Preheader, BB});
       ++NumLoopExitsDeleted;
     }
 
@@ -389,6 +390,9 @@ private:
         while (FixLCSSALoop->getParentLoop() != StillReachable)
           FixLCSSALoop = FixLCSSALoop->getParentLoop();
         assert(FixLCSSALoop && "Should be a loop!");
+        // We need all DT updates to be done before forming LCSSA.
+        DTU.applyUpdates(DTUpdates);
+        DTUpdates.clear();
         formLCSSARecursively(*FixLCSSALoop, DT, &LI, &SE);
       }
     }
@@ -397,7 +401,6 @@ private:
   /// Delete loop blocks that have become unreachable after folding. Make all
   /// relevant updates to DT and LI.
   void deleteDeadLoopBlocks() {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
     if (MSSAU) {
       SmallPtrSet<BasicBlock *, 8> DeadLoopBlocksSet(DeadLoopBlocks.begin(),
                                                      DeadLoopBlocks.end());
@@ -415,15 +418,18 @@ private:
       LI.removeBlock(BB);
     }
 
-    DeleteDeadBlocks(DeadLoopBlocks, &DTU);
+    DetatchDeadBlocks(DeadLoopBlocks, &DTUpdates);
+    DTU.applyUpdates(DTUpdates);
+    DTUpdates.clear();
+    for (auto *BB : DeadLoopBlocks)
+      BB->eraseFromParent();
+
     NumLoopBlocksDeleted += DeadLoopBlocks.size();
   }
 
   /// Constant-fold terminators of blocks acculumated in FoldCandidates into the
   /// unconditional branches.
   void foldTerminators() {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-
     for (BasicBlock *BB : FoldCandidates) {
       assert(LI.getLoopFor(BB) == &L && "Should be a loop block!");
       BasicBlock *TheOnlySucc = getOnlyLiveSuccessor(BB);
@@ -465,7 +471,7 @@ private:
       Term->eraseFromParent();
 
       for (auto *DeadSucc : DeadSuccessors)
-        DTU.deleteEdge(BB, DeadSucc);
+        DTUpdates.push_back({DominatorTree::Delete, BB, DeadSucc});
 
       ++NumTerminatorsFolded;
     }
@@ -475,7 +481,8 @@ public:
   ConstantTerminatorFoldingImpl(Loop &L, LoopInfo &LI, DominatorTree &DT,
                                 ScalarEvolution &SE,
                                 MemorySSAUpdater *MSSAU)
-      : L(L), LI(LI), DT(DT), SE(SE), MSSAU(MSSAU) {}
+      : L(L), LI(LI), DT(DT), SE(SE), MSSAU(MSSAU),
+        DTU(DT, DomTreeUpdater::UpdateStrategy::Eager) {}
   bool run() {
     assert(L.getLoopLatch() && "Should be single latch!");
 
@@ -539,6 +546,10 @@ public:
                     << " dead blocks in loop " << L.getHeader()->getName()
                     << "\n");
       deleteDeadLoopBlocks();
+    } else {
+      // If we didn't do updates inside deleteDeadLoopBlocks, do them here.
+      DTU.applyUpdates(DTUpdates);
+      DTUpdates.clear();
     }
 
 #ifndef NDEBUG

@@ -732,7 +732,19 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  F->Loop(*Inputs);
+  // Parse -seed_inputs=file1,file2,...
+  Vector<std::string> ExtraSeedFiles;
+  if (Flags.seed_inputs) {
+    std::string s = Flags.seed_inputs;
+    size_t comma_pos;
+    while ((comma_pos = s.find_last_of(',')) != std::string::npos) {
+      ExtraSeedFiles.push_back(s.substr(comma_pos + 1));
+      s = s.substr(0, comma_pos);
+    }
+    ExtraSeedFiles.push_back(s);
+  }
+
+  F->Loop(*Inputs, ExtraSeedFiles);
 
   if (Flags.verbosity)
     Printf("Done %zd runs in %zd second(s)\n", F->getTotalNumberOfRuns(),

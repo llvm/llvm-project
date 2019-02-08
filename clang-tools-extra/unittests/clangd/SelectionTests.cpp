@@ -176,6 +176,16 @@ TEST(SelectionTest, CommonAncestor) {
 
       // Node types that have caused problems in the past.
       {"template <typename T> void foo() { [[^T]] t; }", "TypeLoc"},
+
+      // No crash
+      {
+          R"cpp(
+            template <class T> struct Foo {};
+            template <[[template<class> class /*cursor here*/^U]]>
+             struct Foo<U<int>*> {};
+          )cpp",
+          "TemplateTemplateParmDecl"
+      },
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);

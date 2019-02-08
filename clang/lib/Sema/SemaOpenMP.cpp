@@ -1393,6 +1393,56 @@ void Sema::popOpenMPFunctionRegion(const FunctionScopeInfo *OldFSI) {
   DSAStack->popFunction(OldFSI);
 }
 
+static bool isOpenMPDeviceDelayedContext(Sema &S) {
+  assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  return !S.isInOpenMPTargetExecutionDirective() &&
+         !S.isInOpenMPDeclareTargetContext();
+}
+
+/// Do we know that we will eventually codegen the given function?
+static bool isKnownEmitted(Sema &S, FunctionDecl *FD) {
+  assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  // Templates are emitted when they're instantiated.
+  if (FD->isDependentContext())
+    return false;
+
+  if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
+          FD->getCanonicalDecl()))
+    return true;
+
+  // Otherwise, the function is known-emitted if it's in our set of
+  // known-emitted functions.
+  return S.DeviceKnownEmittedFns.count(FD) > 0;
+}
+
+Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
+                                                     unsigned DiagID) {
+  assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  return DeviceDiagBuilder((isOpenMPDeviceDelayedContext(*this) &&
+                            !isKnownEmitted(*this, getCurFunctionDecl()))
+                               ? DeviceDiagBuilder::K_Deferred
+                               : DeviceDiagBuilder::K_Immediate,
+                           Loc, DiagID, getCurFunctionDecl(), *this);
+}
+
+void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
+  assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  assert(Callee && "Callee may not be null.");
+  FunctionDecl *Caller = getCurFunctionDecl();
+
+  // If the caller is known-emitted, mark the callee as known-emitted.
+  // Otherwise, mark the call in our call graph so we can traverse it later.
+  if (!isOpenMPDeviceDelayedContext(*this) ||
+      (Caller && isKnownEmitted(*this, Caller)))
+    markKnownEmitted(*this, Caller, Callee, Loc, isKnownEmitted);
+  else if (Caller)
+    DeviceCallGraph[Caller].insert({Callee, Loc});
+}
+
 bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
 

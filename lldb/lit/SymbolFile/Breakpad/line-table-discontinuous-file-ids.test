@@ -1,0 +1,15 @@
+# Test that we handle files which has gaps in the FILE record IDs.
+
+# XFAIL: system-windows
+
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml > %T/line-table-discontinuous-file-ids.out
+# RUN: %lldb %T/line-table-discontinuous-file-ids.out \
+# RUN:   -o "target symbols add -s line-table-discontinuous-file-ids.out %S/Inputs/line-table-discontinuous-file-ids.syms" \
+# RUN:   -s %s -o exit | FileCheck %s
+
+image dump line-table a.c
+# CHECK-LABEL: Line table for /tmp/a.c
+# CHECK-NEXT: 0x00000000004000b0: /tmp/a.c:1
+# CHECK-NEXT: 0x00000000004000b1: /tmp/a.c:2
+# CHECK-NEXT: 0x00000000004000b2: /tmp/c.c:2
+# CHECK-NEXT: 0x00000000004000b3: 

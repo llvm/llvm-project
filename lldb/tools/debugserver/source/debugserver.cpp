@@ -492,6 +492,7 @@ RNBRunLoopMode HandleProcessStateChange(RNBRemote *remote, bool initialize) {
 
   case eStateExited:
     remote->HandlePacket_last_signal(NULL);
+    return eRNBRunLoopModeExit;
   case eStateDetached:
     return eRNBRunLoopModeExit;
   }
@@ -1000,7 +1001,8 @@ int main(int argc, char *argv[]) {
 
       case optional_argument:
         short_options[short_options_idx++] = ':';
-      // Fall through to required_argument case below...
+        short_options[short_options_idx++] = ':';
+        break;
       case required_argument:
         short_options[short_options_idx++] = ':';
         break;
@@ -1670,6 +1672,7 @@ int main(int argc, char *argv[]) {
 
     default:
       mode = eRNBRunLoopModeExit;
+      break;
     case eRNBRunLoopModeExit:
       break;
     }

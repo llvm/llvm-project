@@ -448,8 +448,11 @@ option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
 
-option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
+option(LLVM_FORCE_USE_OLD_TOOLCHAIN
        "Set to ON to force using an old, unsupported host toolchain." OFF)
+
+option(LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN
+       "Set to ON to only warn when using a toolchain which is about to be deprecated, instead of emitting an error." OFF)
 
 option(LLVM_USE_INTEL_JITEVENTS
   "Use Intel JIT API to inform Intel(R) VTune(TM) Amplifier XE 2011 about JIT code"

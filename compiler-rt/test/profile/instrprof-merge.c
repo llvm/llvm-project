@@ -2,6 +2,9 @@
 // RUN: %run %t %t.profraw 1 1
 // RUN: llvm-profdata show --all-functions --counts %t.profraw  | FileCheck %s
 
+// FIXME: llvm-profdata exits with "Malformed instrumentation profile data"
+// XFAIL: msvc
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

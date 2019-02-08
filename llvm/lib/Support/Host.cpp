@@ -330,7 +330,19 @@ StringRef sys::detail::getHostCPUNameForBPF() {
 #if !defined(__linux__) || !defined(__x86_64__)
   return "generic";
 #else
-  uint8_t insns[40] __attribute__ ((aligned (8))) =
+  uint8_t v3_insns[40] __attribute__ ((aligned (8))) =
+      /* BPF_MOV64_IMM(BPF_REG_0, 0) */
+    { 0xb7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      /* BPF_MOV64_IMM(BPF_REG_2, 1) */
+      0xb7, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+      /* BPF_JMP32_REG(BPF_JLT, BPF_REG_0, BPF_REG_2, 1) */
+      0xae, 0x20, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0,
+      /* BPF_MOV64_IMM(BPF_REG_0, 1) */
+      0xb7, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0,
+      /* BPF_EXIT_INSN() */
+      0x95, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+
+  uint8_t v2_insns[40] __attribute__ ((aligned (8))) =
       /* BPF_MOV64_IMM(BPF_REG_0, 0) */
     { 0xb7, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
       /* BPF_MOV64_IMM(BPF_REG_2, 1) */
@@ -355,10 +367,23 @@ StringRef sys::detail::getHostCPUNameForBPF() {
   } attr = {};
   attr.prog_type = 1; /* BPF_PROG_TYPE_SOCKET_FILTER */
   attr.insn_cnt = 5;
-  attr.insns = (uint64_t)insns;
+  attr.insns = (uint64_t)v3_insns;
   attr.license = (uint64_t)"DUMMY";
 
-  int fd = syscall(321 /* __NR_bpf */, 5 /* BPF_PROG_LOAD */, &attr, sizeof(attr));
+  int fd = syscall(321 /* __NR_bpf */, 5 /* BPF_PROG_LOAD */, &attr,
+                   sizeof(attr));
+  if (fd >= 0) {
+    close(fd);
+    return "v3";
+  }
+
+  /* Clear the whole attr in case its content changed by syscall. */
+  memset(&attr, 0, sizeof(attr));
+  attr.prog_type = 1; /* BPF_PROG_TYPE_SOCKET_FILTER */
+  attr.insn_cnt = 5;
+  attr.insns = (uint64_t)v2_insns;
+  attr.license = (uint64_t)"DUMMY";
+  fd = syscall(321 /* __NR_bpf */, 5 /* BPF_PROG_LOAD */, &attr, sizeof(attr));
   if (fd >= 0) {
     close(fd);
     return "v2";

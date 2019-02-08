@@ -77,3 +77,47 @@ void n() {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
   // CHECK-FIXES: auto clj = [] { return C::add(1, 1); };
 }
+
+// Let's fake a minimal std::function-like facility.
+namespace std {
+template <typename _Tp>
+_Tp declval();
+
+template <typename _Functor, typename... _ArgTypes>
+struct __res {
+  template <typename... _Args>
+  static decltype(declval<_Functor>()(_Args()...)) _S_test(int);
+
+  template <typename...>
+  static void _S_test(...);
+
+  using type = decltype(_S_test<_ArgTypes...>(0));
+};
+
+template <typename>
+struct function;
+
+template <typename... _ArgTypes>
+struct function<void(_ArgTypes...)> {
+  template <typename _Functor,
+            typename = typename __res<_Functor, _ArgTypes...>::type>
+  function(_Functor) {}
+};
+} // namespace std
+
+struct Thing {};
+void UseThing(Thing *);
+
+struct Callback {
+  Callback();
+  Callback(std::function<void()>);
+  void Reset(std::function<void()>);
+};
+
+void test(Thing *t) {
+  Callback cb;
+  if (t)
+    cb.Reset(std::bind(UseThing, t));
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
+  // CHECK-FIXES: cb.Reset([=] { return UseThing(t); });
+}

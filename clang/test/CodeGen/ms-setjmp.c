@@ -21,12 +21,12 @@ int test_setjmp() {
 
   // X64-LABEL: define dso_local i32 @test_setjmp
   // X64:       %[[addr:.*]] = call i8* @llvm.frameaddress(i32 0)
-  // X64:       %[[call:.*]] = call i32 @_setjmp(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i32 0, i32 0), i8* %[[addr]])
+  // X64:       %[[call:.*]] = call i32 @_setjmp(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i64 0, i64 0), i8* %[[addr]])
   // X64-NEXT:  ret i32 %[[call]]
 
   // AARCH64-LABEL: define dso_local i32 @test_setjmp
   // AARCH64:       %[[addr:.*]] = call i8* @llvm.sponentry()
-  // AARCH64:       %[[call:.*]] = call i32 @_setjmpex(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i32 0, i32 0), i8* %[[addr]])
+  // AARCH64:       %[[call:.*]] = call i32 @_setjmpex(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i64 0, i64 0), i8* %[[addr]])
   // AARCH64-NEXT:  ret i32 %[[call]]
 }
 
@@ -34,11 +34,11 @@ int test_setjmpex() {
   return _setjmpex(jb);
   // X64-LABEL: define dso_local i32 @test_setjmpex
   // X64:       %[[addr:.*]] = call i8* @llvm.frameaddress(i32 0)
-  // X64:       %[[call:.*]] = call i32 @_setjmpex(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i32 0, i32 0), i8* %[[addr]])
+  // X64:       %[[call:.*]] = call i32 @_setjmpex(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i64 0, i64 0), i8* %[[addr]])
   // X64-NEXT:  ret i32 %[[call]]
 
   // AARCH64-LABEL: define dso_local i32 @test_setjmpex
   // AARCH64:       %[[addr:.*]] = call i8* @llvm.sponentry()
-  // AARCH64:       %[[call:.*]] = call i32 @_setjmpex(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i32 0, i32 0), i8* %[[addr]])
+  // AARCH64:       %[[call:.*]] = call i32 @_setjmpex(i8* getelementptr inbounds ([1 x i8], [1 x i8]* @jb, i64 0, i64 0), i8* %[[addr]])
   // AARCH64-NEXT:  ret i32 %[[call]]
 }

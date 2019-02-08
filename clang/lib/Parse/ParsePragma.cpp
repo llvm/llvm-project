@@ -692,13 +692,12 @@ void Parser::HandlePragmaOpenCLExtension() {
   if (Name == "all") {
     if (State == Disable) {
       Opt.disableAll();
-      Opt.enableSupportedCore(getLangOpts().OpenCLVersion);
+      Opt.enableSupportedCore(getLangOpts());
     } else {
       PP.Diag(NameLoc, diag::warn_pragma_expected_predicate) << 1;
     }
   } else if (State == Begin) {
-    if (!Opt.isKnown(Name) ||
-        !Opt.isSupported(Name, getLangOpts().OpenCLVersion)) {
+    if (!Opt.isKnown(Name) || !Opt.isSupported(Name, getLangOpts())) {
       Opt.support(Name);
     }
     Actions.setCurrentOpenCLExtension(Name);
@@ -708,9 +707,9 @@ void Parser::HandlePragmaOpenCLExtension() {
     Actions.setCurrentOpenCLExtension("");
   } else if (!Opt.isKnown(Name))
     PP.Diag(NameLoc, diag::warn_pragma_unknown_extension) << Ident;
-  else if (Opt.isSupportedExtension(Name, getLangOpts().OpenCLVersion))
+  else if (Opt.isSupportedExtension(Name, getLangOpts()))
     Opt.enable(Name, State == Enable);
-  else if (Opt.isSupportedCore(Name, getLangOpts().OpenCLVersion))
+  else if (Opt.isSupportedCore(Name, getLangOpts()))
     PP.Diag(NameLoc, diag::warn_pragma_extension_is_core) << Ident;
   else
     PP.Diag(NameLoc, diag::warn_pragma_unsupported_extension) << Ident;

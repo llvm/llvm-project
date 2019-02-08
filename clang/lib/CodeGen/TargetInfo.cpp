@@ -3753,8 +3753,9 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // loads than necessary. Can we clean this up?
   llvm::Type *LTy = CGF.ConvertTypeForMem(Ty);
   llvm::Value *RegSaveArea = CGF.Builder.CreateLoad(
-      CGF.Builder.CreateStructGEP(VAListAddr, 3, CharUnits::fromQuantity(16)),
-                                  "reg_save_area");
+      CGF.Builder.CreateStructGEP(
+          VAListAddr, 3, CharUnits::fromQuantity(8) + CGF.getPointerSize()),
+      "reg_save_area");
 
   Address RegAddr = Address::invalid();
   if (neededInt && neededSSE) {

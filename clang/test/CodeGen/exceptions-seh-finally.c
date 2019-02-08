@@ -279,7 +279,7 @@ void finally_with_func() {
 }
 
 // CHECK-LABEL: define internal void @"?fin$0@0@finally_with_func@@"({{[^)]*}})
-// CHECK: call void @cleanup_with_func(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@", i32 0, i32 0))
+// CHECK: call void @cleanup_with_func(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@", i{{32|64}} 0, i{{32|64}} 0))
 
 // Look for the absence of noinline. Enum attributes come first, so check that
 // a string attribute is the first to verify that no enum attributes are

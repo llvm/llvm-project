@@ -172,7 +172,8 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
       case wasm::WASM_SYMBOL_TYPE_EVENT:
         encodeULEB128(Info.ElementIndex, SubSection.getStream());
-        if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0)
+        if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0 ||
+            (Info.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStringRef(Info.Name, SubSection.getStream());
         break;
       case wasm::WASM_SYMBOL_TYPE_DATA:

@@ -255,8 +255,6 @@ protected:
 private:
   friend class SBDebugger;
 
-  static void InitializeSWIG();
-
   lldb_private::CommandInterpreter *m_opaque_ptr;
 };
 
