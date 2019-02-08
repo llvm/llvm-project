@@ -1,4 +1,4 @@
-// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-multiple-bbs-single-line.c
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-gcov-multiple-bbs-single-line.c
 // CHECK-NEXT:        -:    0:Graph:instrprof-gcov-multiple-bbs-single-line.gcno
 // CHECK-NEXT:        -:    0:Data:instrprof-gcov-multiple-bbs-single-line.gcda
 // CHECK-NEXT:        -:    0:Runs:1

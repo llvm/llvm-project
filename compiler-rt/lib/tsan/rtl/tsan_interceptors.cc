@@ -958,7 +958,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
       internal_sched_yield();
     Processor *proc = ProcCreate();
     ProcWire(proc, thr);
-    ThreadStart(thr, tid, GetTid(), /*workerthread*/ false);
+    ThreadStart(thr, tid, GetTid(), ThreadType::Regular);
     atomic_store(&p->tid, 0, memory_order_release);
   }
   void *res = callback(param);

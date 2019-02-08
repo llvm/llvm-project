@@ -184,12 +184,17 @@ void Writer::createImportSection() {
 
   for (const Symbol *Sym : ImportedSymbols) {
     WasmImport Import;
-    if (auto *F = dyn_cast<UndefinedFunction>(Sym))
-      Import.Module = F->Module;
-    else
+    if (auto *F = dyn_cast<UndefinedFunction>(Sym)) {
+      Import.Field = F->ImportName;
+      Import.Module = F->ImportModule;
+    } else if (auto *G = dyn_cast<UndefinedGlobal>(Sym)) {
+      Import.Field = G->ImportName;
+      Import.Module = G->ImportModule;
+    } else {
+      Import.Field = Sym->getName();
       Import.Module = DefaultModule;
+    }
 
-    Import.Field = Sym->getName();
     if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_FUNCTION;
       Import.SigIndex = lookupType(*FunctionSym->Signature);
@@ -448,6 +453,13 @@ static uint32_t getWasmFlags(const Symbol *Sym) {
     Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
   if (Sym->isUndefined())
     Flags |= WASM_SYMBOL_UNDEFINED;
+  if (auto *F = dyn_cast<UndefinedFunction>(Sym)) {
+    if (F->getName() != F->ImportName)
+      Flags |= WASM_SYMBOL_EXPLICIT_NAME;
+  } else if (auto *G = dyn_cast<UndefinedGlobal>(Sym)) {
+    if (G->getName() != G->ImportName)
+      Flags |= WASM_SYMBOL_EXPLICIT_NAME;
+  }
   return Flags;
 }
 
@@ -513,15 +525,18 @@ void Writer::createLinkingSection() {
 
       if (auto *F = dyn_cast<FunctionSymbol>(Sym)) {
         writeUleb128(Sub.OS, F->getFunctionIndex(), "index");
-        if (Sym->isDefined())
+        if (Sym->isDefined() ||
+            (Flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStr(Sub.OS, Sym->getName(), "sym name");
       } else if (auto *G = dyn_cast<GlobalSymbol>(Sym)) {
         writeUleb128(Sub.OS, G->getGlobalIndex(), "index");
-        if (Sym->isDefined())
+        if (Sym->isDefined() ||
+            (Flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStr(Sub.OS, Sym->getName(), "sym name");
       } else if (auto *E = dyn_cast<EventSymbol>(Sym)) {
         writeUleb128(Sub.OS, E->getEventIndex(), "index");
-        if (Sym->isDefined())
+        if (Sym->isDefined() ||
+            (Flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStr(Sub.OS, Sym->getName(), "sym name");
       } else if (isa<DataSymbol>(Sym)) {
         writeStr(Sub.OS, Sym->getName(), "sym name");

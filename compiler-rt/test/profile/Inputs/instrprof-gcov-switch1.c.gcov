@@ -1,4 +1,4 @@
-// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-switch1.c
+// CHECK:        -:    0:Source:{{.*}}Inputs{{[/\\]}}instrprof-gcov-switch1.c
 // CHECK-NEXT:        -:    0:Graph:instrprof-gcov-switch1.gcno
 // CHECK-NEXT:        -:    0:Data:instrprof-gcov-switch1.gcda
 // CHECK-NEXT:        -:    0:Runs:1
