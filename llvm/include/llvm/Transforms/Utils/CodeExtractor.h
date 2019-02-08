@@ -27,6 +27,7 @@ class BasicBlock;
 class BlockFrequency;
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
+class AssumptionCache;
 class CallInst;
 class DominatorTree;
 class Function;
@@ -57,6 +58,7 @@ class Value;
     const bool AggregateArgs;
     BlockFrequencyInfo *BFI;
     BranchProbabilityInfo *BPI;
+    AssumptionCache *AC;
 
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
@@ -85,6 +87,7 @@ class Value;
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
+                  AssumptionCache *AC = nullptr,
                   bool AllowVarArgs = false, bool AllowAlloca = false,
                   std::string Suffix = "");
 
@@ -95,6 +98,7 @@ class Value;
     CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
                   BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
+                  AssumptionCache *AC = nullptr,
                   std::string Suffix = "");
 
     /// Perform the extraction, returning the new function.
