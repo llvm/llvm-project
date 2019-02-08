@@ -175,6 +175,10 @@ private:
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
+  LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
+                                             LLT HalfTy, LLT ShiftAmtTy);
+
+  LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarMul(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   LegalizeResult narrowScalarSelect(MachineInstr &MI, unsigned TypeIdx, LLT Ty);

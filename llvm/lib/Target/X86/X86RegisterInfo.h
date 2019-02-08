@@ -130,6 +130,7 @@ public:
   // Debug information queries.
   unsigned getFrameRegister(const MachineFunction &MF) const override;
   unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
+  unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
   unsigned getStackRegister() const { return StackPtr; }
   unsigned getBaseRegister() const { return BasePtr; }
   /// Returns physical register used as frame pointer.

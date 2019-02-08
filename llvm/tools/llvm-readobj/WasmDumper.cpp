@@ -224,8 +224,10 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   W.printEnum("Type", Symbol.Info.Kind, makeArrayRef(WasmSymbolTypes));
   W.printFlags("Flags", Symbol.Info.Flags, makeArrayRef(WasmSymbolFlags));
 
-  if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)
-    W.printString("Module", Symbol.Info.Module);
+  if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) {
+    W.printString("ImportName", Symbol.Info.ImportName);
+    W.printString("ImportModule", Symbol.Info.ImportModule);
+  }
   if (Symbol.Info.Kind != wasm::WASM_SYMBOL_TYPE_DATA) {
     W.printHex("ElementIndex", Symbol.Info.ElementIndex);
   } else if (!(Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)) {

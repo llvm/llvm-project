@@ -843,7 +843,7 @@ public:
     AC(AC), ORE(ORE), TheFunction(F), Hints(Hints), InterleaveInfo(IAI) {}
 
   /// \return An upper bound for the vectorization factor, or None if
-  /// vectorization should be avoided up front.
+  /// vectorization and interleaving should be avoided up front.
   Optional<unsigned> computeMaxVF(bool OptForSize);
 
   /// \return The most profitable vectorization factor and the cost of that VF.
@@ -6079,9 +6079,6 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 VectorizationFactor
 LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
                                                 unsigned UserVF) {
-  // Width 1 means no vectorization, cost 0 means uncomputed cost.
-  const VectorizationFactor NoVectorization = {1U, 0U};
-
   // Outer loop handling: They may require CFG and instruction level
   // transformations before even evaluating whether vectorization is profitable.
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
@@ -6101,7 +6098,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
 
     // For VPlan build stress testing, we bail out after VPlan construction.
     if (VPlanBuildStressTest)
-      return NoVectorization;
+      return VectorizationFactor::Disabled();
 
     return {UserVF, 0};
   }
@@ -6109,17 +6106,15 @@ LoopVectorizationPlanner::planInVPlanNativePath(bool OptForSize,
   LLVM_DEBUG(
       dbgs() << "LV: Not vectorizing. Inner loops aren't supported in the "
                 "VPlan-native path.\n");
-  return NoVectorization;
+  return VectorizationFactor::Disabled();
 }
 
-VectorizationFactor
-LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
+Optional<VectorizationFactor> LoopVectorizationPlanner::plan(bool OptForSize,
+                                                             unsigned UserVF) {
   assert(OrigLoop->empty() && "Inner loop expected.");
-  // Width 1 means no vectorization, cost 0 means uncomputed cost.
-  const VectorizationFactor NoVectorization = {1U, 0U};
   Optional<unsigned> MaybeMaxVF = CM.computeMaxVF(OptForSize);
-  if (!MaybeMaxVF.hasValue()) // Cases considered too costly to vectorize.
-    return NoVectorization;
+  if (!MaybeMaxVF) // Cases that should not to be vectorized nor interleaved.
+    return None;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM.blockNeedsPredication(OrigLoop->getHeader()) &&
@@ -6139,7 +6134,7 @@ LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
     CM.selectUserVectorizationFactor(UserVF);
     buildVPlansWithVPRecipes(UserVF, UserVF);
     LLVM_DEBUG(printPlans(dbgs()));
-    return {UserVF, 0};
+    return {{UserVF, 0}};
   }
 
   unsigned MaxVF = MaybeMaxVF.getValue();
@@ -6158,7 +6153,7 @@ LoopVectorizationPlanner::plan(bool OptForSize, unsigned UserVF) {
   buildVPlansWithVPRecipes(1, MaxVF);
   LLVM_DEBUG(printPlans(dbgs()));
   if (MaxVF == 1)
-    return NoVectorization;
+    return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
   return CM.selectVectorizationFactor(MaxVF);
@@ -7323,13 +7318,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   unsigned UserVF = Hints.getWidth();
 
   // Plan how to best vectorize, return the best VF and its cost.
-  VectorizationFactor VF = LVP.plan(OptForSize, UserVF);
+  Optional<VectorizationFactor> MaybeVF = LVP.plan(OptForSize, UserVF);
 
-  // Select the interleave count.
-  unsigned IC = CM.selectInterleaveCount(OptForSize, VF.Width, VF.Cost);
-
-  // Get user interleave count.
+  VectorizationFactor VF = VectorizationFactor::Disabled();
+  unsigned IC = 1;
   unsigned UserIC = Hints.getInterleave();
+
+  if (MaybeVF) {
+    VF = *MaybeVF;
+    // Select the interleave count.
+    IC = CM.selectInterleaveCount(OptForSize, VF.Width, VF.Cost);
+  }
 
   // Identify the diagnostic messages that should be produced.
   std::pair<StringRef, std::string> VecDiagMsg, IntDiagMsg;
@@ -7349,7 +7348,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VectorizeLoop = false;
   }
 
-  if (IC == 1 && UserIC <= 1) {
+  if (!MaybeVF && UserIC > 1) {
+    // Tell the user interleaving was avoided up-front, despite being explicitly
+    // requested.
+    LLVM_DEBUG(dbgs() << "LV: Ignoring UserIC, because vectorization and "
+                         "interleaving should be avoided up front\n");
+    IntDiagMsg = std::make_pair(
+        "InterleavingAvoided",
+        "Ignoring UserIC, because interleaving was avoided up front");
+    InterleaveLoop = false;
+  } else if (IC == 1 && UserIC <= 1) {
     // Tell the user interleaving is not beneficial.
     LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
     IntDiagMsg = std::make_pair(

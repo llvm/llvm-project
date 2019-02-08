@@ -171,6 +171,14 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FTRUNC:
     R = ScalarizeVecRes_StrictFPOp(N);
     break;
+  case ISD::UADDO:
+  case ISD::SADDO:
+  case ISD::USUBO:
+  case ISD::SSUBO:
+  case ISD::UMULO:
+  case ISD::SMULO:
+    R = ScalarizeVecRes_OverflowOp(N, ResNo);
+    break;
   case ISD::SMULFIX:
   case ISD::UMULFIX:
     R = ScalarizeVecRes_MULFIX(N);
@@ -233,6 +241,43 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_StrictFPOp(SDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
   return Result;
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_OverflowOp(SDNode *N,
+                                                     unsigned ResNo) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  EVT OvVT = N->getValueType(1);
+
+  SDValue ScalarLHS, ScalarRHS;
+  if (getTypeAction(ResVT) == TargetLowering::TypeScalarizeVector) {
+    ScalarLHS = GetScalarizedVector(N->getOperand(0));
+    ScalarRHS = GetScalarizedVector(N->getOperand(1));
+  } else {
+    SmallVector<SDValue, 1> ElemsLHS, ElemsRHS;
+    DAG.ExtractVectorElements(N->getOperand(0), ElemsLHS);
+    DAG.ExtractVectorElements(N->getOperand(1), ElemsRHS);
+    ScalarLHS = ElemsLHS[0];
+    ScalarRHS = ElemsRHS[0];
+  }
+
+  SDVTList ScalarVTs = DAG.getVTList(
+      ResVT.getVectorElementType(), OvVT.getVectorElementType());
+  SDNode *ScalarNode = DAG.getNode(
+      N->getOpcode(), DL, ScalarVTs, ScalarLHS, ScalarRHS).getNode();
+
+  // Replace the other vector result not being explicitly scalarized here.
+  unsigned OtherNo = 1 - ResNo;
+  EVT OtherVT = N->getValueType(OtherNo);
+  if (getTypeAction(OtherVT) == TargetLowering::TypeScalarizeVector) {
+    SetScalarizedVector(SDValue(N, OtherNo), SDValue(ScalarNode, OtherNo));
+  } else {
+    SDValue OtherVal = DAG.getNode(
+        ISD::SCALAR_TO_VECTOR, DL, OtherVT, SDValue(ScalarNode, OtherNo));
+    ReplaceValueWith(SDValue(N, OtherNo), OtherVal);
+  }
+
+  return SDValue(ScalarNode, ResNo);
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
@@ -859,6 +904,14 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FTRUNC:
     SplitVecRes_StrictFPOp(N, Lo, Hi);
     break;
+  case ISD::UADDO:
+  case ISD::SADDO:
+  case ISD::USUBO:
+  case ISD::SSUBO:
+  case ISD::UMULO:
+  case ISD::SMULO:
+    SplitVecRes_OverflowOp(N, ResNo, Lo, Hi);
+    break;
   case ISD::SMULFIX:
   case ISD::UMULFIX:
     SplitVecRes_MULFIX(N, Lo, Hi);
@@ -1203,6 +1256,47 @@ void DAGTypeLegalizer::SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo,
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Chain);
+}
+
+void DAGTypeLegalizer::SplitVecRes_OverflowOp(SDNode *N, unsigned ResNo,
+                                              SDValue &Lo, SDValue &Hi) {
+  SDLoc dl(N);
+  EVT ResVT = N->getValueType(0);
+  EVT OvVT = N->getValueType(1);
+  EVT LoResVT, HiResVT, LoOvVT, HiOvVT;
+  std::tie(LoResVT, HiResVT) = DAG.GetSplitDestVTs(ResVT);
+  std::tie(LoOvVT, HiOvVT) = DAG.GetSplitDestVTs(OvVT);
+
+  SDValue LoLHS, HiLHS, LoRHS, HiRHS;
+  if (getTypeAction(ResVT) == TargetLowering::TypeSplitVector) {
+    GetSplitVector(N->getOperand(0), LoLHS, HiLHS);
+    GetSplitVector(N->getOperand(1), LoRHS, HiRHS);
+  } else {
+    std::tie(LoLHS, HiLHS) = DAG.SplitVectorOperand(N, 0);
+    std::tie(LoRHS, HiRHS) = DAG.SplitVectorOperand(N, 1);
+  }
+
+  unsigned Opcode = N->getOpcode();
+  SDVTList LoVTs = DAG.getVTList(LoResVT, LoOvVT);
+  SDVTList HiVTs = DAG.getVTList(HiResVT, HiOvVT);
+  SDNode *LoNode = DAG.getNode(Opcode, dl, LoVTs, LoLHS, LoRHS).getNode();
+  SDNode *HiNode = DAG.getNode(Opcode, dl, HiVTs, HiLHS, HiRHS).getNode();
+
+  Lo = SDValue(LoNode, ResNo);
+  Hi = SDValue(HiNode, ResNo);
+
+  // Replace the other vector result not being explicitly split here.
+  unsigned OtherNo = 1 - ResNo;
+  EVT OtherVT = N->getValueType(OtherNo);
+  if (getTypeAction(OtherVT) == TargetLowering::TypeSplitVector) {
+    SetSplitVector(SDValue(N, OtherNo),
+                   SDValue(LoNode, OtherNo), SDValue(HiNode, OtherNo));
+  } else {
+    SDValue OtherVal = DAG.getNode(
+        ISD::CONCAT_VECTORS, dl, OtherVT,
+        SDValue(LoNode, OtherNo), SDValue(HiNode, OtherNo));
+    ReplaceValueWith(SDValue(N, OtherNo), OtherVal);
+  }
 }
 
 void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
@@ -2471,6 +2565,15 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_StrictFP(N);
     break;
 
+  case ISD::UADDO:
+  case ISD::SADDO:
+  case ISD::USUBO:
+  case ISD::SSUBO:
+  case ISD::UMULO:
+  case ISD::SMULO:
+    Res = WidenVecRes_OverflowOp(N, ResNo);
+    break;
+
   case ISD::FCOPYSIGN:
     Res = WidenVecRes_FCOPYSIGN(N);
     break;
@@ -2843,6 +2946,58 @@ SDValue DAGTypeLegalizer::WidenVecRes_StrictFP(SDNode *N) {
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return CollectOpsToWiden(DAG, TLI, ConcatOps, ConcatEnd, VT, MaxVT, WidenVT);
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_OverflowOp(SDNode *N, unsigned ResNo) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+  EVT OvVT = N->getValueType(1);
+  EVT WideResVT, WideOvVT;
+  SDValue WideLHS, WideRHS;
+
+  // TODO: This might result in a widen/split loop.
+  if (ResNo == 0) {
+    WideResVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
+    WideOvVT = EVT::getVectorVT(
+        *DAG.getContext(), OvVT.getVectorElementType(),
+        WideResVT.getVectorNumElements());
+
+    WideLHS = GetWidenedVector(N->getOperand(0));
+    WideRHS = GetWidenedVector(N->getOperand(1));
+  } else {
+    WideOvVT = TLI.getTypeToTransformTo(*DAG.getContext(), OvVT);
+    WideResVT = EVT::getVectorVT(
+        *DAG.getContext(), ResVT.getVectorElementType(),
+        WideOvVT.getVectorNumElements());
+
+    SDValue Zero = DAG.getConstant(
+        0, DL, TLI.getVectorIdxTy(DAG.getDataLayout()));
+    WideLHS = DAG.getNode(
+        ISD::INSERT_SUBVECTOR, DL, WideResVT, DAG.getUNDEF(WideResVT),
+        N->getOperand(0), Zero);
+    WideRHS = DAG.getNode(
+        ISD::INSERT_SUBVECTOR, DL, WideResVT, DAG.getUNDEF(WideResVT),
+        N->getOperand(1), Zero);
+  }
+
+  SDVTList WideVTs = DAG.getVTList(WideResVT, WideOvVT);
+  SDNode *WideNode = DAG.getNode(
+      N->getOpcode(), DL, WideVTs, WideLHS, WideRHS).getNode();
+
+  // Replace the other vector result not being explicitly widened here.
+  unsigned OtherNo = 1 - ResNo;
+  EVT OtherVT = N->getValueType(OtherNo);
+  if (getTypeAction(OtherVT) == TargetLowering::TypeWidenVector) {
+    SetWidenedVector(SDValue(N, OtherNo), SDValue(WideNode, OtherNo));
+  } else {
+    SDValue Zero = DAG.getConstant(
+        0, DL, TLI.getVectorIdxTy(DAG.getDataLayout()));
+    SDValue OtherVal = DAG.getNode(
+        ISD::EXTRACT_SUBVECTOR, DL, OtherVT, SDValue(WideNode, OtherNo), Zero);
+    ReplaceValueWith(SDValue(N, OtherNo), OtherVal);
+  }
+
+  return SDValue(WideNode, ResNo);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {

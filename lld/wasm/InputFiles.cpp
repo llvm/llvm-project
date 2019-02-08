@@ -378,12 +378,15 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
 
   switch (Sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION:
-    return Symtab->addUndefinedFunction(Name, Sym.Info.Module, Flags, this,
+    return Symtab->addUndefinedFunction(Name, Sym.Info.ImportName,
+                                        Sym.Info.ImportModule, Flags, this,
                                         Sym.Signature);
   case WASM_SYMBOL_TYPE_DATA:
     return Symtab->addUndefinedData(Name, Flags, this);
   case WASM_SYMBOL_TYPE_GLOBAL:
-    return Symtab->addUndefinedGlobal(Name, Flags, this, Sym.GlobalType);
+    return Symtab->addUndefinedGlobal(Name, Sym.Info.ImportName,
+                                      Sym.Info.ImportModule, Flags, this,
+                                      Sym.GlobalType);
   case WASM_SYMBOL_TYPE_SECTION:
     llvm_unreachable("section symbols cannot be undefined");
   }
@@ -447,7 +450,8 @@ static Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &ObjSym,
 
   if (ObjSym.isUndefined()) {
     if (ObjSym.isExecutable())
-      return Symtab->addUndefinedFunction(Name, DefaultModule, Flags, &F, nullptr);
+      return Symtab->addUndefinedFunction(Name, Name, DefaultModule, Flags, &F,
+                                          nullptr);
     return Symtab->addUndefinedData(Name, Flags, &F);
   }
 

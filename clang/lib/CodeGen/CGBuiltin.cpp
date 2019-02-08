@@ -7076,19 +7076,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
 
     llvm::Type *RegisterType = Int64Ty;
-    llvm::Type *ValueType = Int32Ty;
     llvm::Type *Types[] = { RegisterType };
 
     if (BuiltinID == AArch64::BI_ReadStatusReg) {
       llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::read_register, Types);
-      llvm::Value *Call = Builder.CreateCall(F, Metadata);
 
-      return Builder.CreateTrunc(Call, ValueType);
+      return Builder.CreateCall(F, Metadata);
     }
 
     llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::write_register, Types);
     llvm::Value *ArgValue = EmitScalarExpr(E->getArg(1));
-    ArgValue = Builder.CreateZExt(ArgValue, RegisterType);
 
     return Builder.CreateCall(F, { Metadata, ArgValue });
   }

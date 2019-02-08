@@ -2159,6 +2159,18 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
                          DAG.getNode(ISD::ADD, SDLoc(N1), VT, N01, N11));
   }
 
+  // fold (add (umax X, C), -C) --> (usubsat X, C)
+  if (N0.getOpcode() == ISD::UMAX && hasOperation(ISD::USUBSAT, VT)) {
+    auto MatchUSUBSAT = [](ConstantSDNode *Max, ConstantSDNode *Op) {
+      return (!Max && !Op) ||
+             (Max && Op && Max->getAPIntValue() == (-Op->getAPIntValue()));
+    };
+    if (ISD::matchBinaryPredicate(N0.getOperand(1), N1, MatchUSUBSAT,
+                                  /*AllowUndefs*/ true))
+      return DAG.getNode(ISD::USUBSAT, DL, VT, N0.getOperand(0),
+                         N0.getOperand(1));
+  }
+
   if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
     return V;
 
@@ -18673,21 +18685,14 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   auto *N3C = dyn_cast<ConstantSDNode>(N3.getNode());
 
   // Determine if the condition we're dealing with is constant.
-  if (SDValue SCC =
-          SimplifySetCC(getSetCCResultType(CmpOpVT), N0, N1, CC, DL, false)) {
-    AddToWorklist(SCC.getNode());
-    if (auto *SCCC = dyn_cast<ConstantSDNode>(SCC.getNode())) {
-      // fold select_cc true, x, y -> x
-      // fold select_cc false, x, y -> y
-      bool isNull = SCCC->isNullValue();
-      SDValue RV = isNull ? N3 : N2;
-      // Delete SCC if we don't use it.
-      if (SCCC != RV.getNode())
-        recursivelyDeleteUnusedNodes(SCCC);
-      return RV;
-    }
-    // Don't combine. Cleanup SCC.
-    recursivelyDeleteUnusedNodes(SCC.getNode());
+  SDValue SCC = SimplifySetCC(getSetCCResultType(CmpOpVT), N0, N1, CC, DL,
+                              false);
+  if (SCC.getNode()) AddToWorklist(SCC.getNode());
+
+  if (auto *SCCC = dyn_cast_or_null<ConstantSDNode>(SCC.getNode())) {
+    // fold select_cc true, x, y -> x
+    // fold select_cc false, x, y -> y
+    return !SCCC->isNullValue() ? N2 : N3;
   }
 
   if (SDValue V =

@@ -23,6 +23,9 @@ struct PerFunctionStats {
   StringSet<> VarsInFunction;
   /// Compile units also cover a PC range, but have this flag set to false.
   bool IsFunction = false;
+  /// Verify function definition has PC addresses (for detecting when
+  /// a function has been inlined everywhere).
+  bool HasPCAddresses = false;
 };
 
 /// Holds accumulated global statistics about DIEs.
@@ -136,8 +139,10 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     GlobalStats.ScopeBytesFromFirstDefinition += BytesInScope;
     assert(GlobalStats.ScopeBytesCovered <=
            GlobalStats.ScopeBytesFromFirstDefinition);
-  } else {
+  } else if (Die.getTag() == dwarf::DW_TAG_member) {
     FnStats.ConstantMembers++;
+  } else {
+    FnStats.TotalVarWithLoc += (unsigned)HasLoc;
   }
 }
 
@@ -164,21 +169,6 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
     if (Die.find(dwarf::DW_AT_declaration))
       return;
 
-    // Count the function.
-    if (!IsBlock) {
-      StringRef Name = Die.getName(DINameKind::LinkageName);
-      if (Name.empty())
-        Name = Die.getName(DINameKind::ShortName);
-      FnPrefix = Name;
-      // Skip over abstract origins.
-      if (Die.find(dwarf::DW_AT_inline))
-        return;
-      // We've seen an (inlined) instance of this function.
-      auto &FnStats = FnStatMap[Name];
-      FnStats.NumFnInlined++;
-      FnStats.IsFunction = true;
-    }
-
     // PC Ranges.
     auto RangesOrError = Die.getAddressRanges();
     if (!RangesOrError) {
@@ -191,6 +181,24 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
     for (auto Range : Ranges)
       BytesInThisScope += Range.HighPC - Range.LowPC;
     ScopeLowPC = getLowPC(Die);
+
+    // Count the function.
+    if (!IsBlock) {
+      StringRef Name = Die.getName(DINameKind::LinkageName);
+      if (Name.empty())
+        Name = Die.getName(DINameKind::ShortName);
+      FnPrefix = Name;
+      // Skip over abstract origins.
+      if (Die.find(dwarf::DW_AT_inline))
+        return;
+      // We've seen an (inlined) instance of this function.
+      auto &FnStats = FnStatMap[Name];
+      if (IsInlinedFunction)
+        FnStats.NumFnInlined++;
+      FnStats.IsFunction = true;
+      if (BytesInThisScope && !IsInlinedFunction)
+        FnStats.HasPCAddresses = true;
+    }
 
     if (BytesInThisScope) {
       BytesInScope = BytesInThisScope;
@@ -258,7 +266,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the
   /// version.
-  unsigned Version = 1;
+  unsigned Version = 2;
   unsigned VarTotal = 0;
   unsigned VarUnique = 0;
   unsigned VarWithLoc = 0;
@@ -267,9 +275,12 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   for (auto &Entry : Statistics) {
     PerFunctionStats &Stats = Entry.getValue();
     unsigned TotalVars = Stats.VarsInFunction.size() * Stats.NumFnInlined;
+    // Count variables in concrete out-of-line functions and in global scope.
+    if (Stats.HasPCAddresses || !Stats.IsFunction)
+      TotalVars += Stats.VarsInFunction.size();
     unsigned Constants = Stats.ConstantMembers;
     VarWithLoc += Stats.TotalVarWithLoc + Constants;
-    VarTotal += TotalVars + Constants;
+    VarTotal += TotalVars;
     VarUnique += Stats.VarsInFunction.size();
     LLVM_DEBUG(for (auto &V : Stats.VarsInFunction) llvm::dbgs()
                << Entry.getKey() << ": " << V.getKey() << "\n");

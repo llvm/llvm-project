@@ -269,12 +269,12 @@ write_cmake_config("config") {
     ]
   }
 
-  if (current_os == "linux" || current_os == "android") {
-    values += [ "LTDL_SHLIB_EXT=.so" ]
-  } else if (current_os == "mac") {
+  if (current_os == "mac") {
     values += [ "LTDL_SHLIB_EXT=.dylib" ]
   } else if (current_os == "win") {
     values += [ "LTDL_SHLIB_EXT=.dll" ]
+  } else {
+    values += [ "LTDL_SHLIB_EXT=.so" ]
   }
 
   if (llvm_enable_libedit) {

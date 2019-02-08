@@ -33,7 +33,7 @@ class GISelWorkList {
   DenseMap<MachineInstr *, unsigned> WorklistMap;
 
 public:
-  GISelWorkList() {}
+  GISelWorkList() : WorklistMap(N) {}
 
   bool empty() const { return WorklistMap.empty(); }
 

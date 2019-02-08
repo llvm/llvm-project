@@ -359,8 +359,8 @@ body: |
     CFI_INSTRUCTION def_cfa_offset 32
     LD_F80m $rsp, 1, $noreg, 32, $noreg, implicit-def dead $fpsw
   ; CHECK: name: stack_psv
-  ; CHECK: ST_FP80m $rsp, 1, $noreg, 0, $noreg, implicit-def dead $fpsw :: (store 10 into stack, align 16)
-    ST_FP80m $rsp, 1, _, 0, _, implicit-def dead $fpsw :: (store 10 into stack, align 16)
+  ; CHECK: ST_FP80m $rsp, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (store 10 into stack, align 16)
+    ST_FP80m $rsp, 1, _, 0, _, implicit-def dead $fpsw, implicit $fpcw :: (store 10 into stack, align 16)
     CALL64pcrel32 &cosl, csr_64, implicit $rsp, implicit-def $rsp, implicit-def $fp0
     $rsp = ADD64ri8 $rsp, 24, implicit-def dead $eflags
     RETQ

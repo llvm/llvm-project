@@ -104,7 +104,8 @@ WASM-NEXT:     Type: FUNCTION (0x0)
 WASM-NEXT:     Flags [ (0x10)
 WASM-NEXT:       UNDEFINED (0x10)
 WASM-NEXT:     ]
-WASM-NEXT:     Module: env
+WASM-NEXT:     ImportName: puts
+WASM-NEXT:     ImportModule: env
 WASM-NEXT:     ElementIndex: 0x0
 WASM-NEXT:   }
 WASM-NEXT:   Symbol {
@@ -121,7 +122,8 @@ WASM-NEXT:     Type: FUNCTION (0x0)
 WASM-NEXT:     Flags [ (0x10)
 WASM-NEXT:       UNDEFINED (0x10)
 WASM-NEXT:     ]
-WASM-NEXT:     Module: env
+WASM-NEXT:     ImportName: SomeOtherFunction
+WASM-NEXT:     ImportModule: env
 WASM-NEXT:     ElementIndex: 0x1
 WASM-NEXT:   }
 WASM-NEXT: ]

@@ -651,3 +651,59 @@ define <3 x i1> @i16_cast_cmp_sgt_int_m1_sitofp_float_vec_undef(<3 x i16> %i) {
   ret <3 x i1> %cmp
 }
 
+; Verify that the various forms of this transform are not applied when the
+; bitcast changes the number of vector elements:
+;   icmp (bitcast ([su]itofp X)), Y -> icmp X, Y
+
+define <6 x i1> @i16_cast_cmp_sgt_int_m1_bitcast_vector_num_elements_sitofp(<3 x i16> %i) {
+; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_bitcast_vector_num_elements_sitofp(
+; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i16> [[I:%.*]] to <3 x float>
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <6 x i16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <6 x i16> [[B]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    ret <6 x i1> [[CMP]]
+;
+  %f = sitofp <3 x i16> %i to  <3 x float>
+  %b = bitcast <3 x float> %f to <6 x i16>
+  %cmp = icmp sgt <6 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  ret <6 x i1> %cmp
+}
+
+define i1 @i16_cast_cmp_sgt_int_m1_bitcast_vector_to_scalar_sitofp(<3 x i16> %i) {
+; CHECK-LABEL: @i16_cast_cmp_sgt_int_m1_bitcast_vector_to_scalar_sitofp(
+; CHECK-NEXT:    [[F:%.*]] = sitofp <3 x i16> [[I:%.*]] to <3 x float>
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to i96
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i96 [[B]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp <3 x i16> %i to  <3 x float>
+  %b = bitcast <3 x float> %f to i96
+  %cmp = icmp sgt i96 %b, -1
+  ret i1 %cmp
+}
+
+
+define <6 x i1> @i16_cast_cmp_eq_int_0_bitcast_vector_num_elements_uitofp(<3 x i16> %i) {
+; CHECK-LABEL: @i16_cast_cmp_eq_int_0_bitcast_vector_num_elements_uitofp(
+; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i16> [[I:%.*]] to <3 x float>
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to <6 x i16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <6 x i16> [[B]], zeroinitializer
+; CHECK-NEXT:    ret <6 x i1> [[CMP]]
+;
+  %f = uitofp <3 x i16> %i to <3 x float>
+  %b = bitcast <3 x float> %f to <6 x i16>
+  %cmp = icmp eq <6 x i16> %b, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+  ret <6 x i1> %cmp
+}
+
+define i1 @i16_cast_cmp_eq_int_0_bitcast_vector_to_scalar_uitofp(<3 x i16> %i) {
+; CHECK-LABEL: @i16_cast_cmp_eq_int_0_bitcast_vector_to_scalar_uitofp(
+; CHECK-NEXT:    [[F:%.*]] = uitofp <3 x i16> [[I:%.*]] to <3 x float>
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x float> [[F]] to i96
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i96 [[B]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = uitofp <3 x i16> %i to <3 x float>
+  %b = bitcast <3 x float> %f to i96
+  %cmp = icmp eq i96 %b, 0
+  ret i1 %cmp
+}

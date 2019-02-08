@@ -558,6 +558,11 @@ static void AttemptToFoldSymbolOffsetDifference(
   if (Asm->isThumbFunc(&SA))
     Addend |= 1;
 
+  // If symbol is labeled as micromips, we set low-bit to ensure
+  // correct offset in .gcc_except_table
+  if (Asm->getBackend().isMicroMips(&SA))
+    Addend |= 1;
+
   // Clear the symbol expr pointers to indicate we have folded these
   // operands.
   A = B = nullptr;

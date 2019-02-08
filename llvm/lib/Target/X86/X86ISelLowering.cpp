@@ -22136,7 +22136,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           Cmp = DAG.getNode(IntrData->Opc1, dl, MVT::v1i1, Src1, Src2, CC, Rnd);
       }
       //default rounding mode
-      if(!Cmp.getNode())
+      if (!Cmp.getNode())
         Cmp = DAG.getNode(IntrData->Opc0, dl, MVT::v1i1, Src1, Src2, CC);
 
       SDValue CmpMask = getScalarMaskingNode(Cmp, Mask, SDValue(),
@@ -22558,8 +22558,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned Reg;
     if (RegInfo->hasBasePointer(MF))
       Reg = RegInfo->getBaseRegister();
-    else // This function handles the SP or FP case.
-      Reg = RegInfo->getPtrSizedFrameRegister(MF);
+    else { // Handles the SP or FP case.
+      bool CantUseFP = RegInfo->needsStackRealignment(MF);
+      if (CantUseFP)
+        Reg = RegInfo->getPtrSizedStackRegister(MF);
+      else
+        Reg = RegInfo->getPtrSizedFrameRegister(MF);
+    }
     return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, VT);
   }
   }
@@ -41383,40 +41388,6 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,
                           PMADDBuilder);
 }
 
-// Try to turn (add (umax X, C), -C) into (psubus X, C)
-static SDValue combineAddToSUBUS(SDNode *N, SelectionDAG &DAG,
-                                 const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-
-  // psubus is available in SSE2 for i8 and i16 vectors.
-  if (!VT.isVector() || VT.getVectorNumElements() < 2 ||
-      !isPowerOf2_32(VT.getVectorNumElements()) ||
-      !(VT.getVectorElementType() == MVT::i8 ||
-        VT.getVectorElementType() == MVT::i16))
-    return SDValue();
-
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  if (Op0.getOpcode() != ISD::UMAX)
-    return SDValue();
-
-  // The add should have a constant that is the negative of the max.
-  auto MatchUSUBSAT = [](ConstantSDNode *Max, ConstantSDNode *Op) {
-    return (!Max && !Op) ||
-           (Max && Op && Max->getAPIntValue() == (-Op->getAPIntValue()));
-  };
-  if (!ISD::matchBinaryPredicate(Op0.getOperand(1), Op1, MatchUSUBSAT,
-                                 /*AllowUndefs*/ true))
-    return SDValue();
-
-  SDLoc DL(N);
-  return DAG.getNode(ISD::USUBSAT, DL, VT, Op0.getOperand(0),
-                     Op0.getOperand(1));
-}
-
 // Attempt to turn this pattern into PMADDWD.
 // (mul (add (zext (build_vector)), (zext (build_vector))),
 //      (add (zext (build_vector)), (zext (build_vector)))
@@ -41570,9 +41541,6 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   }
 
   if (SDValue V = combineIncDecVector(N, DAG))
-    return V;
-
-  if (SDValue V = combineAddToSUBUS(N, DAG, Subtarget))
     return V;
 
   return combineAddOrSubToADCOrSBB(N, DAG);
