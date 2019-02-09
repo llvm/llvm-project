@@ -438,6 +438,10 @@ protected:
 
   std::shared_ptr<swift::remote::MemoryReader> GetMemoryReader();
 
+  void PushLocalBuffer(uint64_t local_buffer, uint64_t local_buffer_size);
+
+  void PopLocalBuffer();
+
   std::unordered_set<std::string> m_library_negative_cache; // We have to load
                                                             // swift dependent
                                                             // libraries by
