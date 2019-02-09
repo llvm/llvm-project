@@ -16,6 +16,7 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/FoldingSet.h"
 
 namespace clang {
 namespace ento {

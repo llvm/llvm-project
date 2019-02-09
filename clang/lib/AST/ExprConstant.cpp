@@ -3370,8 +3370,15 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
     } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
       // Special-case character extraction so we don't have to construct an
       // APValue for the whole string.
-      assert(LVal.Designator.Entries.size() == 1 &&
+      assert(LVal.Designator.Entries.size() <= 1 &&
              "Can only read characters from string literals");
+      if (LVal.Designator.Entries.empty()) {
+        // Fail for now for LValue to RValue conversion of an array.
+        // (This shouldn't show up in C/C++, but it could be triggered by a
+        // weird EvaluateAsRValue call from a tool.)
+        Info.FFDiag(Conv);
+        return false;
+      }
       if (LVal.Designator.isOnePastTheEnd()) {
         if (Info.getLangOpts().CPlusPlus11)
           Info.FFDiag(Conv, diag::note_constexpr_access_past_end) << AK_Read;
