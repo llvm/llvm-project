@@ -123,6 +123,10 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
       HasMovrel = true;
   }
 
+  // Don't crash on invalid devices.
+  if (WavefrontSize == 0)
+    WavefrontSize = 64;
+
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
 
   return *this;
@@ -152,7 +156,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     AMDGPUSubtarget(TT),
     TargetTriple(TT),
     Gen(SOUTHERN_ISLANDS),
-    IsaVersion(ISAVersion0_0_0),
     InstrItins(getInstrItineraryForCPU(GPU)),
     LDSBankCount(0),
     MaxPrivateElementSize(0),

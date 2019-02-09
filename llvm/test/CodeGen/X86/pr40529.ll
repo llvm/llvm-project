@@ -5,10 +5,10 @@ define x86_fp80 @rem_pio2l_min(x86_fp80 %z) {
 ; CHECK-LABEL: rem_pio2l_min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
 ; CHECK-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fistl -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldcw -{{[0-9]+}}(%rsp)

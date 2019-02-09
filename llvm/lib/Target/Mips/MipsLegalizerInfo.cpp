@@ -36,7 +36,11 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .lowerFor({{s32, s1}});
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
-      .legalForCartesianProduct({p0, s32}, {p0});
+      .legalForTypesWithMemSize({{s32, p0, 8},
+                                 {s32, p0, 16},
+                                 {s32, p0, 32},
+                                 {p0, p0, 32}})
+      .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_ZEXTLOAD, G_SEXTLOAD})
       .legalForTypesWithMemSize({{s32, p0, 8},

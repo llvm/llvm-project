@@ -921,8 +921,8 @@ Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
 
     // If the InVal is an invoke at the end of the pred block, then we can't
     // insert a computation after it without breaking the edge.
-    if (InvokeInst *II = dyn_cast<InvokeInst>(InVal))
-      if (II->getParent() == NonConstBB)
+    if (isa<InvokeInst>(InVal))
+      if (cast<Instruction>(InVal)->getParent() == NonConstBB)
         return nullptr;
 
     // If the incoming non-constant value is in I's block, we will remove one

@@ -9697,7 +9697,8 @@ static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   do {
     // Follow the chain until we find an INLINEASM node.
     N = N->getOperand(0).getNode();
-    if (N->getOpcode() == ISD::INLINEASM)
+    if (N->getOpcode() == ISD::INLINEASM ||
+        N->getOpcode() == ISD::INLINEASM_BR)
       return true;
   } while (N->getOpcode() == ISD::CopyFromReg);
   return false;

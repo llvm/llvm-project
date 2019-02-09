@@ -549,6 +549,8 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
     // all BlockAddress uses would need to be updated.
     assert(!isa<IndirectBrInst>(Preds[i]->getTerminator()) &&
            "Cannot split an edge from an IndirectBrInst");
+    assert(!isa<CallBrInst>(Preds[i]->getTerminator()) &&
+           "Cannot split an edge from a CallBrInst");
     Preds[i]->getTerminator()->replaceUsesOfWith(BB, NewBB);
   }
 

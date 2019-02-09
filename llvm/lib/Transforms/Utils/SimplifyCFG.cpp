@@ -1265,8 +1265,10 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
     while (isa<DbgInfoIntrinsic>(I2))
       I2 = &*BB2_Itr++;
   }
+  // FIXME: Can we define a safety predicate for CallBr?
   if (isa<PHINode>(I1) || !I1->isIdenticalToWhenDefined(I2) ||
-      (isa<InvokeInst>(I1) && !isSafeToHoistInvoke(BB1, BB2, I1, I2)))
+      (isa<InvokeInst>(I1) && !isSafeToHoistInvoke(BB1, BB2, I1, I2)) ||
+      isa<CallBrInst>(I1))
     return false;
 
   BasicBlock *BIParent = BI->getParent();
@@ -1349,7 +1351,12 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
 
 HoistTerminator:
   // It may not be possible to hoist an invoke.
+  // FIXME: Can we define a safety predicate for CallBr?
   if (isa<InvokeInst>(I1) && !isSafeToHoistInvoke(BB1, BB2, I1, I2))
+    return Changed;
+
+  // TODO: callbr hoisting currently disabled pending further study.
+  if (isa<CallBrInst>(I1))
     return Changed;
 
   for (BasicBlock *Succ : successors(BB1)) {
@@ -1443,7 +1450,7 @@ static bool canSinkInstructions(
     // Conservatively return false if I is an inline-asm instruction. Sinking
     // and merging inline-asm instructions can potentially create arguments
     // that cannot satisfy the inline-asm constraints.
-    if (const auto *C = dyn_cast<CallInst>(I))
+    if (const auto *C = dyn_cast<CallBase>(I))
       if (C->isInlineAsm())
         return false;
 
@@ -1506,7 +1513,7 @@ static bool canSinkInstructions(
         // We can't create a PHI from this GEP.
         return false;
       // Don't create indirect calls! The called value is the final operand.
-      if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OI == OE - 1) {
+      if (isa<CallBase>(I0) && OI == OE - 1) {
         // FIXME: if the call was *already* indirect, we should do this.
         return false;
       }

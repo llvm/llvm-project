@@ -101,7 +101,6 @@ class MIMG <dag outs, string dns = "">
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0; // XXX ????
 
-  let SubtargetPredicate = isGCN;
   let DecoderNamespace = dns;
   let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
   let AsmMatchConverter = "cvtMIMG";

@@ -217,13 +217,16 @@ public:
   RetTy visitVACopyInst(VACopyInst &I)            { DELEGATE(IntrinsicInst); }
   RetTy visitIntrinsicInst(IntrinsicInst &I)      { DELEGATE(CallInst); }
 
-  // Call and Invoke are slightly different as they delegate first through
-  // a generic CallSite visitor.
+  // Call, Invoke and CallBr are slightly different as they delegate first
+  // through a generic CallSite visitor.
   RetTy visitCallInst(CallInst &I) {
     return static_cast<SubClass*>(this)->visitCallSite(&I);
   }
   RetTy visitInvokeInst(InvokeInst &I) {
     return static_cast<SubClass*>(this)->visitCallSite(&I);
+  }
+  RetTy visitCallBrInst(CallBrInst &I) {
+    return static_cast<SubClass *>(this)->visitCallSite(&I);
   }
 
   // While terminators don't have a distinct type modeling them, we support
@@ -270,14 +273,14 @@ public:
   // The next level delegation for `CallBase` is slightly more complex in order
   // to support visiting cases where the call is also a terminator.
   RetTy visitCallBase(CallBase &I) {
-    if (isa<InvokeInst>(I))
+    if (isa<InvokeInst>(I) || isa<CallBrInst>(I))
       return static_cast<SubClass *>(this)->visitTerminator(I);
 
     DELEGATE(Instruction);
   }
 
-  // Provide a legacy visitor for a 'callsite' that visits both calls and
-  // invokes.
+  // Provide a legacy visitor for a 'callsite' that visits calls, invokes,
+  // and calbrs.
   //
   // Prefer overriding the type system based `CallBase` instead.
   RetTy visitCallSite(CallSite CS) {

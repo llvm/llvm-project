@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the visitCall and visitInvoke functions.
+// This file implements the visitCall, visitInvoke, and visitCallBr functions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -1834,8 +1834,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(&CI);
   if (!II) return visitCallBase(CI);
 
-  // Intrinsics cannot occur in an invoke, so handle them here instead of in
-  // visitCallBase.
+  // Intrinsics cannot occur in an invoke or a callbr, so handle them here
+  // instead of in visitCallBase.
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(II)) {
     bool Changed = false;
 
@@ -4017,6 +4017,11 @@ Instruction *InstCombiner::visitInvokeInst(InvokeInst &II) {
   return visitCallBase(II);
 }
 
+// CallBrInst simplification
+Instruction *InstCombiner::visitCallBrInst(CallBrInst &CBI) {
+  return visitCallBase(CBI);
+}
+
 /// If this cast does not affect the value passed through the varargs area, we
 /// can eliminate the use of the cast.
 static bool isSafeToEliminateVarargsCast(const CallBase &Call,
@@ -4145,7 +4150,7 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   return nullptr;
 }
 
-/// Improvements for call and invoke instructions.
+/// Improvements for call, callbr and invoke instructions.
 Instruction *InstCombiner::visitCallBase(CallBase &Call) {
   if (isAllocLikeFn(&Call, &TLI))
     return visitAllocSite(Call);
@@ -4178,7 +4183,7 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
   }
 
   // If the callee is a pointer to a function, attempt to move any casts to the
-  // arguments of the call/invoke.
+  // arguments of the call/callbr/invoke.
   Value *Callee = Call.getCalledValue();
   if (!isa<Function>(Callee) && transformConstExprCastCall(Call))
     return nullptr;
@@ -4211,9 +4216,9 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
       if (isa<CallInst>(OldCall))
         return eraseInstFromFunction(*OldCall);
 
-      // We cannot remove an invoke, because it would change the CFG, just
-      // change the callee to a null pointer.
-      cast<InvokeInst>(OldCall)->setCalledFunction(
+      // We cannot remove an invoke or a callbr, because it would change thexi
+      // CFG, just change the callee to a null pointer.
+      cast<CallBase>(OldCall)->setCalledFunction(
           CalleeF->getFunctionType(),
           Constant::getNullValue(CalleeF->getType()));
       return nullptr;
@@ -4228,8 +4233,8 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
     if (!Call.getType()->isVoidTy())
       replaceInstUsesWith(Call, UndefValue::get(Call.getType()));
 
-    if (isa<InvokeInst>(Call)) {
-      // Can't remove an invoke because we cannot change the CFG.
+    if (Call.isTerminator()) {
+      // Can't remove an invoke or callbr because we cannot change the CFG.
       return nullptr;
     }
 
@@ -4282,7 +4287,7 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
 }
 
 /// If the callee is a constexpr cast of a function, attempt to move the cast to
-/// the arguments of the call/invoke.
+/// the arguments of the call/callbr/invoke.
 bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
   auto *Callee = dyn_cast<Function>(Call.getCalledValue()->stripPointerCasts());
   if (!Callee)
@@ -4333,17 +4338,21 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
         return false;   // Attribute not compatible with transformed value.
     }
 
-    // If the callbase is an invoke instruction, and the return value is used by
-    // a PHI node in a successor, we cannot change the return type of the call
-    // because there is no place to put the cast instruction (without breaking
-    // the critical edge).  Bail out in this case.
-    if (!Caller->use_empty())
+    // If the callbase is an invoke/callbr instruction, and the return value is
+    // used by a PHI node in a successor, we cannot change the return type of
+    // the call because there is no place to put the cast instruction (without
+    // breaking the critical edge).  Bail out in this case.
+    if (!Caller->use_empty()) {
       if (InvokeInst *II = dyn_cast<InvokeInst>(Caller))
         for (User *U : II->users())
           if (PHINode *PN = dyn_cast<PHINode>(U))
             if (PN->getParent() == II->getNormalDest() ||
                 PN->getParent() == II->getUnwindDest())
               return false;
+      // FIXME: Be conservative for callbr to avoid a quadratic search.
+      if (CallBrInst *CBI = dyn_cast<CallBrInst>(Caller))
+        return false;
+    }
   }
 
   unsigned NumActualArgs = Call.arg_size();
@@ -4497,6 +4506,9 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
   if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
     NewCall = Builder.CreateInvoke(Callee, II->getNormalDest(),
                                    II->getUnwindDest(), Args, OpBundles);
+  } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(Caller)) {
+    NewCall = Builder.CreateCallBr(Callee, CBI->getDefaultDest(),
+                                   CBI->getIndirectDests(), Args, OpBundles);
   } else {
     NewCall = Builder.CreateCall(Callee, Args, OpBundles);
     cast<CallInst>(NewCall)->setTailCallKind(
@@ -4520,10 +4532,13 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
       NV = NC = CastInst::CreateBitOrPointerCast(NC, OldRetTy);
       NC->setDebugLoc(Caller->getDebugLoc());
 
-      // If this is an invoke instruction, we should insert it after the first
-      // non-phi, instruction in the normal successor block.
+      // If this is an invoke/callbr instruction, we should insert it after the
+      // first non-phi instruction in the normal successor block.
       if (InvokeInst *II = dyn_cast<InvokeInst>(Caller)) {
         BasicBlock::iterator I = II->getNormalDest()->getFirstInsertionPt();
+        InsertNewInstBefore(NC, *I);
+      } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(Caller)) {
+        BasicBlock::iterator I = CBI->getDefaultDest()->getFirstInsertionPt();
         InsertNewInstBefore(NC, *I);
       } else {
         // Otherwise, it's a call, just insert cast right after the call.
@@ -4673,6 +4688,12 @@ InstCombiner::transformCallThroughTrampoline(CallBase &Call,
                                        NewArgs, OpBundles);
         cast<InvokeInst>(NewCaller)->setCallingConv(II->getCallingConv());
         cast<InvokeInst>(NewCaller)->setAttributes(NewPAL);
+      } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(&Call)) {
+        NewCaller =
+            CallBrInst::Create(NewFTy, NewCallee, CBI->getDefaultDest(),
+                               CBI->getIndirectDests(), NewArgs, OpBundles);
+        cast<CallBrInst>(NewCaller)->setCallingConv(CBI->getCallingConv());
+        cast<CallBrInst>(NewCaller)->setAttributes(NewPAL);
       } else {
         NewCaller = CallInst::Create(NewFTy, NewCallee, NewArgs, OpBundles);
         cast<CallInst>(NewCaller)->setTailCallKind(

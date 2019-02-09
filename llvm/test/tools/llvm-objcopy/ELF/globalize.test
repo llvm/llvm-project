@@ -6,6 +6,16 @@
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 # RUN: llvm-objcopy --regex --globalize-symbol='.*' %t %t3
 # RUN: cmp %t2 %t3
+# RUN: echo " Global # global" > %t-list.txt
+# RUN: echo "Local" >> %t-list.txt
+# RUN: echo "Weak" >> %t-list.txt
+# RUN: echo "WeakUndef" >> %t-list.txt
+# RUN: echo " # comment " >> %t-list.txt
+# RUN: llvm-objcopy --globalize-symbols %t-list.txt %t %t4
+# RUN: cmp %t2 %t4
+# RUN: echo ".+ # .+ " > %t-list2.txt
+# RUN: llvm-objcopy --regex --globalize-symbols %t-list2.txt %t %t5
+# RUN: cmp %t2 %t5
 
 !ELF
 FileHeader:

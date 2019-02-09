@@ -1,5 +1,5 @@
-// RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-readobj -elf-output-style=GNU -sections -symbols -relocations %t | FileCheck --check-prefix=READOBJ %s
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
@@ -44,8 +44,8 @@
 .text
 // ASM: .text
 
-.amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack"
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack"
+.amdgcn_target "amdgcn-amd-amdhsa--gfx904+xnack"
+// ASM: .amdgcn_target "amdgcn-amd-amdhsa--gfx904+xnack"
 
 .p2align 8
 .type minimal,@function
@@ -186,6 +186,12 @@ special_sgpr:
 
 .byte .amdgcn.gfx_generation_number
 // ASM: .byte 9
+
+.byte .amdgcn.gfx_generation_minor
+// ASM: .byte 0
+
+.byte .amdgcn.gfx_generation_stepping
+// ASM: .byte 4
 
 .byte .amdgcn.next_free_vgpr
 // ASM: .byte 0

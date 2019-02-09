@@ -57,7 +57,8 @@ Value::Value(Type *ty, unsigned scid)
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
   // constructed.
-  if (SubclassID == Instruction::Call || SubclassID == Instruction::Invoke)
+  if (SubclassID == Instruction::Call || SubclassID == Instruction::Invoke ||
+      SubclassID == Instruction::CallBr)
     assert((VTy->isFirstClassType() || VTy->isVoidTy() || VTy->isStructTy()) &&
            "invalid CallInst type!");
   else if (SubclassID != BasicBlockVal &&

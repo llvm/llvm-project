@@ -245,26 +245,6 @@ public:
 class GCNSubtarget : public AMDGPUGenSubtargetInfo,
                      public AMDGPUSubtarget {
 public:
-  enum {
-    ISAVersion0_0_0,
-    ISAVersion6_0_0,
-    ISAVersion6_0_1,
-    ISAVersion7_0_0,
-    ISAVersion7_0_1,
-    ISAVersion7_0_2,
-    ISAVersion7_0_3,
-    ISAVersion7_0_4,
-    ISAVersion8_0_1,
-    ISAVersion8_0_2,
-    ISAVersion8_0_3,
-    ISAVersion8_1_0,
-    ISAVersion9_0_0,
-    ISAVersion9_0_2,
-    ISAVersion9_0_4,
-    ISAVersion9_0_6,
-    ISAVersion9_0_9,
-  };
-
   enum TrapHandlerAbi {
     TrapHandlerAbiNone = 0,
     TrapHandlerAbiHsa = 1
@@ -296,7 +276,6 @@ protected:
   // Basic subtarget description.
   Triple TargetTriple;
   unsigned Gen;
-  unsigned IsaVersion;
   InstrItineraryData InstrItins;
   int LDSBankCount;
   unsigned MaxPrivateElementSize;

@@ -181,11 +181,11 @@ struct FunctionOutliningMultiRegionInfo {
 
   // Container for outline regions
   struct OutlineRegionInfo {
-    OutlineRegionInfo(SmallVector<BasicBlock *, 8> Region,
+    OutlineRegionInfo(ArrayRef<BasicBlock *> Region,
                       BasicBlock *EntryBlock, BasicBlock *ExitBlock,
                       BasicBlock *ReturnBlock)
-        : Region(Region), EntryBlock(EntryBlock), ExitBlock(ExitBlock),
-          ReturnBlock(ReturnBlock) {}
+        : Region(Region.begin(), Region.end()), EntryBlock(EntryBlock),
+          ExitBlock(ExitBlock), ReturnBlock(ReturnBlock) {}
     SmallVector<BasicBlock *, 8> Region;
     BasicBlock *EntryBlock;
     BasicBlock *ExitBlock;
@@ -535,7 +535,6 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F,
       // assert(ReturnBlock && "ReturnBlock is NULL somehow!");
       FunctionOutliningMultiRegionInfo::OutlineRegionInfo RegInfo(
           DominateVector, DominateVector.front(), ExitBlock, ReturnBlock);
-      RegInfo.Region = DominateVector;
       OutliningInfo->ORI.push_back(RegInfo);
 #ifndef NDEBUG
       if (TracePartialInlining) {

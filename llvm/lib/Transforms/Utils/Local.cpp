@@ -996,6 +996,18 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
+  // We cannot fold the block if it's a branch to an already present callbr
+  // successor because that creates duplicate successors.
+  for (auto I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
+    if (auto *CBI = dyn_cast<CallBrInst>((*I)->getTerminator())) {
+      if (Succ == CBI->getDefaultDest())
+        return false;
+      for (unsigned i = 0, e = CBI->getNumIndirectDests(); i != e; ++i)
+        if (Succ == CBI->getIndirectDest(i))
+          return false;
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
 
   SmallVector<DominatorTree::UpdateType, 32> Updates;

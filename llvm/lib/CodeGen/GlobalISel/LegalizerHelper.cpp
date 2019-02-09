@@ -1208,13 +1208,6 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_LOAD:
-    // For some types like i24, we might try to widen to i32. To properly handle
-    // this we should be using a dedicated extending load, until then avoid
-    // trying to legalize.
-    if (alignTo(MRI.getType(MI.getOperand(0).getReg()).getSizeInBits(), 8) !=
-        WideTy.getSizeInBits())
-      return UnableToLegalize;
-    LLVM_FALLTHROUGH;
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
     Observer.changingInstr(MI);

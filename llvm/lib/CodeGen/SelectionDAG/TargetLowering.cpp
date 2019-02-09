@@ -1025,6 +1025,45 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    SDValue Op2 = Op.getOperand(2);
+    bool IsFSHL = (Op.getOpcode() == ISD::FSHL);
+
+    if (ConstantSDNode *SA = isConstOrConstSplat(Op2)) {
+      unsigned Amt = SA->getAPIntValue().urem(BitWidth);
+
+      // For fshl, 0-shift returns the 1st arg.
+      // For fshr, 0-shift returns the 2nd arg.
+      if (Amt == 0) {
+        if (SimplifyDemandedBits(IsFSHL ? Op0 : Op1, DemandedBits, DemandedElts,
+                                 Known, TLO, Depth + 1))
+          return true;
+        break;
+      }
+
+      // fshl: (Op0 << Amt) | (Op1 >> (BW - Amt))
+      // fshr: (Op0 << (BW - Amt)) | (Op1 >> Amt)
+      APInt Demanded0 = DemandedBits.lshr(IsFSHL ? Amt : (BitWidth - Amt));
+      APInt Demanded1 = DemandedBits << (IsFSHL ? (BitWidth - Amt) : Amt);
+      if (SimplifyDemandedBits(Op0, Demanded0, DemandedElts, Known2, TLO,
+                               Depth + 1))
+        return true;
+      if (SimplifyDemandedBits(Op1, Demanded1, DemandedElts, Known, TLO,
+                               Depth + 1))
+        return true;
+
+      Known2.One <<= (IsFSHL ? Amt : (BitWidth - Amt));
+      Known2.Zero <<= (IsFSHL ? Amt : (BitWidth - Amt));
+      Known.One.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
+      Known.Zero.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
+      Known.One |= Known2.One;
+      Known.Zero |= Known2.Zero;
+    }
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -3250,7 +3289,8 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   switch (ConstraintLetter) {
   default: break;
   case 'X':     // Allows any operand; labels (basic block) use this.
-    if (Op.getOpcode() == ISD::BasicBlock) {
+    if (Op.getOpcode() == ISD::BasicBlock ||
+        Op.getOpcode() == ISD::TargetBlockAddress) {
       Ops.push_back(Op);
       return;
     }
@@ -3736,6 +3776,9 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
       OpInfo.CallOperandVal = v;
       return;
     }
+
+    if (Op.getNode() && Op.getOpcode() == ISD::TargetBlockAddress)
+      return;
 
     // Otherwise, try to resolve it to something we know about by looking at
     // the actual operand type.
@@ -5473,9 +5516,6 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   // are scaled. The result is given to us in 2 halves, so we only want part of
   // both in the result.
   EVT ShiftTy = getShiftAmountTy(VT, DAG.getDataLayout());
-  Lo = DAG.getNode(ISD::SRL, dl, VT, Lo, DAG.getConstant(Scale, dl, ShiftTy));
-  Hi = DAG.getNode(
-      ISD::SHL, dl, VT, Hi,
-      DAG.getConstant(VT.getScalarSizeInBits() - Scale, dl, ShiftTy));
-  return DAG.getNode(ISD::OR, dl, VT, Lo, Hi);
+  return DAG.getNode(ISD::FSHR, dl, VT, Hi, Lo,
+                     DAG.getConstant(Scale, dl, ShiftTy));
 }

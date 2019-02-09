@@ -417,12 +417,11 @@ def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RSTi:$op),
 } // SchedRW
 
 // Floating point loads & stores.
-let SchedRW = [WriteLoad] in {
+let SchedRW = [WriteLoad], Uses = [FPCW] in {
 let canFoldAsLoad = 1 in {
 def LD_Fp32m   : FpIf32<(outs RFP32:$dst), (ins f32mem:$src), ZeroArgFP,
                   [(set RFP32:$dst, (loadf32 addr:$src))]>;
-let isReMaterializable = 1 in
-  def LD_Fp64m : FpIf64<(outs RFP64:$dst), (ins f64mem:$src), ZeroArgFP,
+def LD_Fp64m : FpIf64<(outs RFP64:$dst), (ins f64mem:$src), ZeroArgFP,
                   [(set RFP64:$dst, (loadf64 addr:$src))]>;
 def LD_Fp80m   : FpI_<(outs RFP80:$dst), (ins f80mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (loadf80 addr:$src))]>;
@@ -490,7 +489,7 @@ def IST_Fp64m80  : FpI_<(outs), (ins i64mem:$op, RFP80:$src), OneArgFP, []>;
 } // mayStore
 } // SchedRW, Uses = [FPCW]
 
-let mayLoad = 1, SchedRW = [WriteLoad] in {
+let mayLoad = 1, SchedRW = [WriteLoad], Uses = [FPCW] in {
 def LD_F32m   : FPI<0xD9, MRM0m, (outs), (ins f32mem:$src), "fld{s}\t$src">;
 def LD_F64m   : FPI<0xDD, MRM0m, (outs), (ins f64mem:$src), "fld{l}\t$src">;
 def LD_F80m   : FPI<0xDB, MRM5m, (outs), (ins f80mem:$src), "fld{t}\t$src">;
@@ -540,7 +539,7 @@ def ISTT_FP64m : FPI<0xDD, MRM1m, (outs), (ins i64mem:$dst), "fisttp{ll}\t$dst">
 }
 
 // FP Stack manipulation instructions.
-let SchedRW = [WriteMove] in {
+let SchedRW = [WriteMove], Uses = [FPCW] in {
 def LD_Frr   : FPI<0xD9, MRM0r, (outs), (ins RSTi:$op), "fld\t$op">;
 def ST_Frr   : FPI<0xDD, MRM2r, (outs), (ins RSTi:$op), "fst\t$op">;
 def ST_FPrr  : FPI<0xDD, MRM3r, (outs), (ins RSTi:$op), "fstp\t$op">;
@@ -548,7 +547,7 @@ def XCH_F    : FPI<0xD9, MRM1r, (outs), (ins RSTi:$op), "fxch\t$op">;
 }
 
 // Floating point constant loads.
-let isReMaterializable = 1, SchedRW = [WriteZero] in {
+let SchedRW = [WriteZero], Uses = [FPCW] in {
 def LD_Fp032 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,
                 [(set RFP32:$dst, fpimm0)]>;
 def LD_Fp132 : FpIf32<(outs RFP32:$dst), (ins), ZeroArgFP,
@@ -563,13 +562,13 @@ def LD_Fp180 : FpI_<(outs RFP80:$dst), (ins), ZeroArgFP,
                 [(set RFP80:$dst, fpimm1)]>;
 }
 
-let SchedRW = [WriteFLD0] in
+let SchedRW = [WriteFLD0], Uses = [FPCW] in
 def LD_F0 : FPI<0xD9, MRM_EE, (outs), (ins), "fldz">;
 
-let SchedRW = [WriteFLD1] in
+let SchedRW = [WriteFLD1], Uses = [FPCW] in
 def LD_F1 : FPI<0xD9, MRM_E8, (outs), (ins), "fld1">;
 
-let SchedRW = [WriteFLDC] in {
+let SchedRW = [WriteFLDC], Uses = [FPCW] in {
 def FLDL2T : I<0xD9, MRM_E9, (outs), (ins), "fldl2t", []>;
 def FLDL2E : I<0xD9, MRM_EA, (outs), (ins), "fldl2e", []>;
 def FLDPI : I<0xD9, MRM_EB, (outs), (ins), "fldpi", []>;

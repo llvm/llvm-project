@@ -10,12 +10,12 @@ body: |
 
     ; VI-LABEL: name: test_addrspacecast_p0_to_p1
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[COPY1:%[0-9]+]]:_(p1) = COPY [[COPY]](p0)
-    ; VI: $vgpr0_vgpr1 = COPY [[COPY1]](p1)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[COPY]](p0)
+    ; VI: $vgpr0_vgpr1 = COPY [[BITCAST]](p1)
     ; GFX9-LABEL: name: test_addrspacecast_p0_to_p1
     ; GFX9: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p1) = COPY [[COPY]](p0)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[COPY1]](p1)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[COPY]](p0)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[BITCAST]](p1)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(p1) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
@@ -29,12 +29,12 @@ body: |
 
     ; VI-LABEL: name: test_addrspacecast_p1_to_p0
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; VI: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p1)
-    ; VI: $vgpr0_vgpr1 = COPY [[COPY1]](p0)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p1)
+    ; VI: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     ; GFX9-LABEL: name: test_addrspacecast_p1_to_p0
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p1)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[COPY1]](p0)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p1)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
@@ -48,12 +48,12 @@ body: |
 
     ; VI-LABEL: name: test_addrspacecast_p0_to_p4
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[COPY1:%[0-9]+]]:_(p4) = COPY [[COPY]](p0)
-    ; VI: $vgpr0_vgpr1 = COPY [[COPY1]](p4)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p4) = G_BITCAST [[COPY]](p0)
+    ; VI: $vgpr0_vgpr1 = COPY [[BITCAST]](p4)
     ; GFX9-LABEL: name: test_addrspacecast_p0_to_p4
     ; GFX9: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p4) = COPY [[COPY]](p0)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[COPY1]](p4)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p4) = G_BITCAST [[COPY]](p0)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[BITCAST]](p4)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(p4) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
@@ -67,12 +67,12 @@ body: |
 
     ; VI-LABEL: name: test_addrspacecast_p4_to_p0
     ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; VI: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p4)
-    ; VI: $vgpr0_vgpr1 = COPY [[COPY1]](p0)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p4)
+    ; VI: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     ; GFX9-LABEL: name: test_addrspacecast_p4_to_p0
     ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p4)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[COPY1]](p0)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p4)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     %0:_(p4) = COPY $vgpr0_vgpr1
     %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
@@ -86,12 +86,12 @@ body: |
 
     ; VI-LABEL: name: test_addrspacecast_p0_to_p999
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[COPY1:%[0-9]+]]:_(p999) = COPY [[COPY]](p0)
-    ; VI: $vgpr0_vgpr1 = COPY [[COPY1]](p999)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p999) = G_BITCAST [[COPY]](p0)
+    ; VI: $vgpr0_vgpr1 = COPY [[BITCAST]](p999)
     ; GFX9-LABEL: name: test_addrspacecast_p0_to_p999
     ; GFX9: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p999) = COPY [[COPY]](p0)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[COPY1]](p999)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p999) = G_BITCAST [[COPY]](p0)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[BITCAST]](p999)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(p999) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
@@ -105,12 +105,12 @@ body: |
 
     ; VI-LABEL: name: test_addrspacecast_p999_to_p0
     ; VI: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
-    ; VI: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p999)
-    ; VI: $vgpr0_vgpr1 = COPY [[COPY1]](p0)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p999)
+    ; VI: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     ; GFX9-LABEL: name: test_addrspacecast_p999_to_p0
     ; GFX9: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p999)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[COPY1]](p0)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p999)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
     %0:_(p999) = COPY $vgpr0_vgpr1
     %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
@@ -251,16 +251,16 @@ body: |
     ; VI-LABEL: name: test_addrspacecast_v2p0_to_v2p1
     ; VI: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY]](<2 x p0>)
-    ; VI: [[COPY1:%[0-9]+]]:_(p1) = COPY [[UV]](p0)
-    ; VI: [[COPY2:%[0-9]+]]:_(p1) = COPY [[UV1]](p0)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[COPY1]](p1), [[COPY2]](p1)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[UV]](p0)
+    ; VI: [[BITCAST1:%[0-9]+]]:_(p1) = G_BITCAST [[UV1]](p0)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[BITCAST]](p1), [[BITCAST1]](p1)
     ; VI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p1>)
     ; GFX9-LABEL: name: test_addrspacecast_v2p0_to_v2p1
     ; GFX9: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY]](<2 x p0>)
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p1) = COPY [[UV]](p0)
-    ; GFX9: [[COPY2:%[0-9]+]]:_(p1) = COPY [[UV1]](p0)
-    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[COPY1]](p1), [[COPY2]](p1)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[UV]](p0)
+    ; GFX9: [[BITCAST1:%[0-9]+]]:_(p1) = G_BITCAST [[UV1]](p0)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p1>) = G_BUILD_VECTOR [[BITCAST]](p1), [[BITCAST1]](p1)
     ; GFX9: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p1>)
     %0:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x p1>) = G_ADDRSPACE_CAST %0
@@ -276,16 +276,16 @@ body: |
     ; VI-LABEL: name: test_addrspacecast_v2p1_to_v2p0
     ; VI: [[COPY:%[0-9]+]]:_(<2 x p1>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI: [[UV:%[0-9]+]]:_(p1), [[UV1:%[0-9]+]]:_(p1) = G_UNMERGE_VALUES [[COPY]](<2 x p1>)
-    ; VI: [[COPY1:%[0-9]+]]:_(p0) = COPY [[UV]](p1)
-    ; VI: [[COPY2:%[0-9]+]]:_(p0) = COPY [[UV1]](p1)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[COPY1]](p0), [[COPY2]](p0)
+    ; VI: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[UV]](p1)
+    ; VI: [[BITCAST1:%[0-9]+]]:_(p0) = G_BITCAST [[UV1]](p1)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[BITCAST]](p0), [[BITCAST1]](p0)
     ; VI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p0>)
     ; GFX9-LABEL: name: test_addrspacecast_v2p1_to_v2p0
     ; GFX9: [[COPY:%[0-9]+]]:_(<2 x p1>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9: [[UV:%[0-9]+]]:_(p1), [[UV1:%[0-9]+]]:_(p1) = G_UNMERGE_VALUES [[COPY]](<2 x p1>)
-    ; GFX9: [[COPY1:%[0-9]+]]:_(p0) = COPY [[UV]](p1)
-    ; GFX9: [[COPY2:%[0-9]+]]:_(p0) = COPY [[UV1]](p1)
-    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[COPY1]](p0), [[COPY2]](p0)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[UV]](p1)
+    ; GFX9: [[BITCAST1:%[0-9]+]]:_(p0) = G_BITCAST [[UV1]](p1)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[BITCAST]](p0), [[BITCAST1]](p0)
     ; GFX9: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p0>)
     %0:_(<2 x p1>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x p0>) = G_ADDRSPACE_CAST %0

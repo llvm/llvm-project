@@ -953,6 +953,12 @@ TargetInstrInfo::RegSubRegPair getRegSequenceSubReg(MachineInstr &MI,
 MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
                                MachineRegisterInfo &MRI);
 
+/// \brief Return true if EXEC mask isnt' changed between the def and
+/// all uses of VReg. Currently if def and uses are in different BBs -
+/// simply return false. Should be run on SSA.
+bool isEXECMaskConstantBetweenDefAndUses(unsigned VReg,
+                                         MachineRegisterInfo &MRI);
+
 namespace AMDGPU {
 
   LLVM_READONLY

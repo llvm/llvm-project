@@ -1067,6 +1067,7 @@ void AsmPrinter::EmitFunctionBody() {
         OutStreamer->EmitLabel(MI.getOperand(0).getMCSymbol());
         break;
       case TargetOpcode::INLINEASM:
+      case TargetOpcode::INLINEASM_BR:
         EmitInlineAsm(&MI);
         break;
       case TargetOpcode::DBG_VALUE:
