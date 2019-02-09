@@ -145,7 +145,7 @@ if (CLANG_ENABLE_STATIC_ANALYZER)
   set_target_properties(check-clang-analyzer PROPERTIES FOLDER "Clang tests")
 
 
-  if (LLVM_WITH_Z3)
+  if (CLANG_ANALYZER_WITH_Z3)
     add_lit_testsuite(check-clang-analyzer-z3 "Running the Clang analyzer tests, using Z3 as a solver"
       ${CMAKE_CURRENT_BINARY_DIR}/Analysis
       PARAMS ${ANALYZER_TEST_PARAMS_Z3}
