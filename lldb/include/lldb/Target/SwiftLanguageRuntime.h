@@ -214,50 +214,10 @@ public:
 
   static const std::string GetCurrentMangledName(const char *mangled_name);
 
-  struct SwiftErrorDescriptor {
-  public:
-    struct SwiftBridgeableNativeError {
-    public:
-      lldb::addr_t metadata_location;
-      lldb::addr_t metadata_ptr_value;
-    };
-
-    struct SwiftPureNativeError {
-    public:
-      lldb::addr_t metadata_location;
-      lldb::addr_t payload_ptr;
-    };
-
-    struct SwiftNSError {
-    public:
-      lldb::addr_t instance_ptr_value;
-    };
-
-    enum class Kind {
-      eSwiftBridgeableNative,
-      eSwiftPureNative,
-      eBridged,
-      eNotAnError
-    };
-
-    Kind m_kind;
-    SwiftBridgeableNativeError m_bridgeable_native;
-    SwiftPureNativeError m_pure_native;
-    SwiftNSError m_bridged;
-
-    operator bool() { return m_kind != Kind::eNotAnError; }
-
-    SwiftErrorDescriptor();
-
-    SwiftErrorDescriptor(const SwiftErrorDescriptor &rhs) = default;
-  };
-
   // provide a quick and yet somewhat reasonable guess as to whether
   // this ValueObject represents something that validly conforms
   // to the magic ErrorType protocol
-  virtual bool
-  IsValidErrorValue(ValueObject &in_value,
-                    SwiftErrorDescriptor *out_error_descriptor = nullptr);
+  virtual bool IsValidErrorValue(ValueObject &in_value);
 
   virtual lldb::BreakpointResolverSP
   CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp,
@@ -395,11 +355,6 @@ protected:
                                          lldb::DynamicValueType use_dynamic,
                                          TypeAndOrName &class_type_or_name,
                                          Address &address);
-
-  bool GetDynamicTypeAndAddress_ErrorType(ValueObject &in_value,
-                                          lldb::DynamicValueType use_dynamic,
-                                          TypeAndOrName &class_type_or_name,
-                                          Address &address);
 
   bool GetDynamicTypeAndAddress_GenericTypeParam(
       ValueObject &in_value, SwiftASTContext &scratch_ctx,
