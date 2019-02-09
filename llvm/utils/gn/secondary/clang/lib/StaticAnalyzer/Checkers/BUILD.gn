@@ -71,6 +71,7 @@ static_library("Checkers") {
     "NonnullGlobalConstantsChecker.cpp",
     "NullabilityChecker.cpp",
     "NumberObjectConversionChecker.cpp",
+    "OSObjectCStyleCast.cpp",
     "ObjCAtSyncChecker.cpp",
     "ObjCAutoreleaseWriteChecker.cpp",
     "ObjCContainersASTChecker.cpp",

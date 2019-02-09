@@ -2411,7 +2411,7 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
   VisitNode(EndPathNode, BRC, BR);
 
   // Create a refutation manager
-  llvm::SMTSolverRef RefutationSolver = llvm::CreateZ3Solver();
+  SMTSolverRef RefutationSolver = CreateZ3Solver();
   ASTContext &Ctx = BRC.getASTContext();
 
   // Add constraints to the solver
@@ -2419,7 +2419,7 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
     const SymbolRef Sym = I.first;
     auto RangeIt = I.second.begin();
 
-    llvm::SMTExprRef Constraints = SMTConv::getRangeExpr(
+    SMTExprRef Constraints = SMTConv::getRangeExpr(
         RefutationSolver, Ctx, Sym, RangeIt->From(), RangeIt->To(),
         /*InRange=*/true);
     while ((++RangeIt) != I.second.end()) {

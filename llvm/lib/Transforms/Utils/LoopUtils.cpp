@@ -65,6 +65,9 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
         if (isa<IndirectBrInst>(PredBB->getTerminator()))
           // We cannot rewrite exiting edges from an indirectbr.
           return false;
+        if (isa<CallBrInst>(PredBB->getTerminator()))
+          // We cannot rewrite exiting edges from a callbr.
+          return false;
 
         InLoopPredecessors.push_back(PredBB);
       } else {

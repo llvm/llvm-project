@@ -269,10 +269,16 @@ def FeatureDLInsts : SubtargetFeature<"dl-insts",
   "Has v_fmac_f32 and v_xnor_b32 instructions"
 >;
 
-def FeatureDotInsts : SubtargetFeature<"dot-insts",
-  "HasDotInsts",
+def FeatureDot1Insts : SubtargetFeature<"dot1-insts",
+  "HasDot1Insts",
   "true",
-  "Has v_dot* instructions"
+  "Has v_dot4_i32_i8 and v_dot8_i32_i4 instructions"
+>;
+
+def FeatureDot2Insts : SubtargetFeature<"dot2-insts",
+  "HasDot2Insts",
+  "true",
+  "Has v_dot2_f32_f16, v_dot2_i32_i16, v_dot2_u32_u16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
 >;
 
 def FeatureSRAMECC : SubtargetFeature<"sram-ecc",
@@ -424,31 +430,25 @@ def FeatureDisable : SubtargetFeature<"",
   "Dummy feature to disable assembler instructions"
 >;
 
-def FeatureGCN : SubtargetFeature<"gcn",
-  "IsGCN",
-  "true",
-  "GCN or newer GPU"
->;
-
 class GCNSubtargetFeatureGeneration <string Value,
                                   list<SubtargetFeature> Implies> :
         SubtargetFeatureGeneration <Value, "GCNSubtarget", Implies>;
 
 def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
-  FeatureWavefrontSize64, FeatureGCN,
+  FeatureWavefrontSize64,
   FeatureLDSBankCount32, FeatureMovrel, FeatureTrigReducedRange]
 >;
 
 def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
-  FeatureWavefrontSize64, FeatureGCN, FeatureFlatAddressSpace,
+  FeatureWavefrontSize64, FeatureFlatAddressSpace,
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange]
 >;
 
 def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
-   FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
+   FeatureWavefrontSize64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, FeatureVIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
@@ -459,7 +459,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
 
 def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
   [FeatureFP64, FeatureLocalMemorySize65536,
-   FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
+   FeatureWavefrontSize64, FeatureFlatAddressSpace,
    FeatureGCN3Encoding, FeatureCIInsts, FeatureVIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3P, FeatureVGPRIndexMode,
@@ -480,47 +480,50 @@ class SubtargetFeatureISAVersion <int Major, int Minor, int Stepping,
   Implies
 >;
 
-def FeatureISAVersion6_0_0 : SubtargetFeatureISAVersion <6,0,0,
-  [FeatureSouthernIslands,
+class FeatureSet<list<SubtargetFeature> Features_> {
+  list<SubtargetFeature> Features = Features_;
+}
+
+def FeatureISAVersion6_0_0 : FeatureSet<[FeatureSouthernIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion6_0_1 : SubtargetFeatureISAVersion <6,0,1,
+def FeatureISAVersion6_0_1 : FeatureSet<
   [FeatureSouthernIslands,
    FeatureLDSBankCount32,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion7_0_0 : SubtargetFeatureISAVersion <7,0,0,
+def FeatureISAVersion7_0_0 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion7_0_1 : SubtargetFeatureISAVersion <7,0,1,
+def FeatureISAVersion7_0_1 : FeatureSet<
   [FeatureSeaIslands,
    HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureFastFMAF32,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion7_0_2 : SubtargetFeatureISAVersion <7,0,2,
+def FeatureISAVersion7_0_2 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
    FeatureFastFMAF32,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion7_0_3 : SubtargetFeatureISAVersion <7,0,3,
+def FeatureISAVersion7_0_3 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion7_0_4 : SubtargetFeatureISAVersion <7,0,4,
+def FeatureISAVersion7_0_4 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion8_0_1 : SubtargetFeatureISAVersion <8,0,1,
+def FeatureISAVersion8_0_1 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
@@ -529,55 +532,56 @@ def FeatureISAVersion8_0_1 : SubtargetFeatureISAVersion <8,0,1,
    FeatureUnpackedD16VMem,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion8_0_2 : SubtargetFeatureISAVersion <8,0,2,
+def FeatureISAVersion8_0_2 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureSGPRInitBug,
    FeatureUnpackedD16VMem,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion8_0_3 : SubtargetFeatureISAVersion <8,0,3,
+def FeatureISAVersion8_0_3 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureUnpackedD16VMem,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion8_1_0 : SubtargetFeatureISAVersion <8,1,0,
+def FeatureISAVersion8_1_0 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount16,
    FeatureXNACK,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion9_0_0 : SubtargetFeatureISAVersion <9,0,0,
+def FeatureISAVersion9_0_0 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion9_0_2 : SubtargetFeatureISAVersion <9,0,2,
+def FeatureISAVersion9_0_2 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureXNACK,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion9_0_4 : SubtargetFeatureISAVersion <9,0,4,
+def FeatureISAVersion9_0_4 : FeatureSet<
   [FeatureGFX9,
    FeatureLDSBankCount32,
    FeatureFmaMixInsts,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion9_0_6 : SubtargetFeatureISAVersion <9,0,6,
+def FeatureISAVersion9_0_6 : FeatureSet<
   [FeatureGFX9,
    HalfRate64Ops,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDotInsts,
+   FeatureDot1Insts,
+   FeatureDot2Insts,
    FeatureSRAMECC,
    FeatureCodeObjectV3]>;
 
-def FeatureISAVersion9_0_9 : SubtargetFeatureISAVersion <9,0,9,
+def FeatureISAVersion9_0_9 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
@@ -772,8 +776,11 @@ def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<"FeatureDLInsts">;
 
-def HasDotInsts : Predicate<"Subtarget->hasDotInsts()">,
-  AssemblerPredicate<"FeatureDotInsts">;
+def HasDot1Insts : Predicate<"Subtarget->hasDot1Insts()">,
+  AssemblerPredicate<"FeatureDot1Insts">;
+
+def HasDot2Insts : Predicate<"Subtarget->hasDot2Insts()">,
+  AssemblerPredicate<"FeatureDot2Insts">;
 
 
 def EnableLateCFGStructurize : Predicate<

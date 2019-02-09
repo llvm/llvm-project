@@ -28,7 +28,9 @@
 
 typedef int __v4si __attribute__((__vector_size__(16)));
 typedef float __v4sf __attribute__((__vector_size__(16)));
-typedef float __m128 __attribute__((__vector_size__(16)));
+typedef float __m128 __attribute__((__vector_size__(16), __aligned__(16)));
+
+typedef float __m128_u __attribute__((__vector_size__(16), __aligned__(1)));
 
 /* Unsigned types */
 typedef unsigned int __v4su __attribute__((__vector_size__(16)));
@@ -1987,7 +1989,7 @@ static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storeu_ps(float *__p, __m128 __a)
 {
   struct __storeu_ps {
-    __m128 __v;
+    __m128_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_ps*)__p)->__v = __a;
 }

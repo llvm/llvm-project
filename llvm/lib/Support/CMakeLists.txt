@@ -44,13 +44,6 @@ if (MSVC)
   set (delayload_flags delayimp -delayload:shell32.dll -delayload:ole32.dll)
 endif()
 
-# Link Z3 if the user wants to build it.
-if(LLVM_WITH_Z3)
-  set(Z3_LINK_FILES ${Z3_LIBRARIES})
-else()
-  set(Z3_LINK_FILES "")
-endif()
-
 add_llvm_library(LLVMSupport
   AArch64TargetParser.cpp
   ARMTargetParser.cpp
@@ -158,7 +151,6 @@ add_llvm_library(LLVMSupport
   regfree.c
   regstrlcpy.c
   xxhash.cpp
-  Z3Solver.cpp
 
 # System
   Atomic.cpp
@@ -184,14 +176,7 @@ add_llvm_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ADT
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
-  LINK_LIBS ${system_libs} ${delayload_flags} ${Z3_LINK_FILES}
+  LINK_LIBS ${system_libs} ${delayload_flags}
   )
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${system_libs}")
-
-if(LLVM_WITH_Z3)
-  target_include_directories(LLVMSupport SYSTEM
-    PRIVATE
-    ${Z3_INCLUDE_DIR}
-    )
-endif()

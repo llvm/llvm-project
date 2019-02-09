@@ -11,13 +11,21 @@ body: |
 
     ; SI-LABEL: name: test_fsqrt_s32
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: [[FSQRT:%[0-9]+]]:_(s32) = G_FSQRT [[COPY]]
+    ; SI: $vgpr0 = COPY [[FSQRT]](s32)
     ; VI-LABEL: name: test_fsqrt_s32
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: [[FSQRT:%[0-9]+]]:_(s32) = G_FSQRT [[COPY]]
+    ; VI: $vgpr0 = COPY [[FSQRT]](s32)
     ; GFX9-LABEL: name: test_fsqrt_s32
     ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9: [[FSQRT:%[0-9]+]]:_(s32) = G_FSQRT [[COPY]]
+    ; GFX9: $vgpr0 = COPY [[FSQRT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_FSQRT %0
+    $vgpr0 = COPY %1
 ...
+
 ---
 name: test_fsqrt_s64
 body: |
@@ -26,12 +34,20 @@ body: |
 
     ; SI-LABEL: name: test_fsqrt_s64
     ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; SI: [[FSQRT:%[0-9]+]]:_(s64) = G_FSQRT [[COPY]]
+    ; SI: $vgpr0_vgpr1 = COPY [[FSQRT]](s64)
     ; VI-LABEL: name: test_fsqrt_s64
     ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; VI: [[FSQRT:%[0-9]+]]:_(s64) = G_FSQRT [[COPY]]
+    ; VI: $vgpr0_vgpr1 = COPY [[FSQRT]](s64)
     ; GFX9-LABEL: name: test_fsqrt_s64
     ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9: [[FSQRT:%[0-9]+]]:_(s64) = G_FSQRT [[COPY]]
+    ; GFX9: $vgpr0_vgpr1 = COPY [[FSQRT]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_FSQRT %0
+    $vgpr0_vgpr1 = COPY %1
+
 ...
 ---
 name: test_fsqrt_s16

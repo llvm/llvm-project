@@ -25,7 +25,6 @@ class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
-  let SubtargetPredicate = isGCN;
 
   string Mnemonic = opName;
   string AsmOperands = asmOps;
@@ -556,7 +555,6 @@ class SOPK_Pseudo <string opName, dag outs, dag ins,
   SIMCInstr<opName, SIEncodingFamily.NONE> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
-  let SubtargetPredicate = isGCN;
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -757,7 +755,6 @@ class SOPC <bits<7> op, dag outs, dag ins, string asm,
   let Defs = [SCC];
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
-  let SubtargetPredicate = isGCN;
 }
 
 class SOPC_Base <bits<7> op, RegisterOperand rc0, RegisterOperand rc1,
@@ -855,7 +852,6 @@ class SOPP <bits<7> op, dag ins, string asm, list<dag> pattern = []> :
   let SchedRW = [WriteSALU];
 
   let UseNamedOperandTable = 1;
-  let SubtargetPredicate = isGCN;
 }
 
 

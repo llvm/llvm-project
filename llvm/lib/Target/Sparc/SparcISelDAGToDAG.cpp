@@ -312,7 +312,7 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
 
   SelectInlineAsmMemoryOperands(AsmNodeOperands, SDLoc(N));
 
-  SDValue New = CurDAG->getNode(ISD::INLINEASM, SDLoc(N),
+  SDValue New = CurDAG->getNode(N->getOpcode(), SDLoc(N),
       CurDAG->getVTList(MVT::Other, MVT::Glue), AsmNodeOperands);
   New->setNodeId(-1);
   ReplaceNode(N, New.getNode());
@@ -328,7 +328,8 @@ void SparcDAGToDAGISel::Select(SDNode *N) {
 
   switch (N->getOpcode()) {
   default: break;
-  case ISD::INLINEASM: {
+  case ISD::INLINEASM:
+  case ISD::INLINEASM_BR: {
     if (tryInlineAsm(N))
       return;
     break;

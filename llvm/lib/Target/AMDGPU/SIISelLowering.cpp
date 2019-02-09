@@ -8708,7 +8708,7 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SDLoc SL(N);
 
-  if (!Subtarget->hasDotInsts() || VT != MVT::f32)
+  if (!Subtarget->hasDot2Insts() || VT != MVT::f32)
     return SDValue();
 
   // FMA((F32)S0.x, (F32)S1. x, FMA((F32)S0.y, (F32)S1.y, (F32)z)) ->
@@ -9697,7 +9697,8 @@ static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   do {
     // Follow the chain until we find an INLINEASM node.
     N = N->getOperand(0).getNode();
-    if (N->getOpcode() == ISD::INLINEASM)
+    if (N->getOpcode() == ISD::INLINEASM ||
+        N->getOpcode() == ISD::INLINEASM_BR)
       return true;
   } while (N->getOpcode() == ISD::CopyFromReg);
   return false;

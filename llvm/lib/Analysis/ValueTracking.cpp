@@ -3922,6 +3922,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   case Instruction::VAArg:
   case Instruction::Alloca:
   case Instruction::Invoke:
+  case Instruction::CallBr:
   case Instruction::PHI:
   case Instruction::Store:
   case Instruction::Ret:

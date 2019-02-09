@@ -1504,6 +1504,10 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   assert(TheCall->getParent() && TheCall->getFunction()
          && "Instruction not in function!");
 
+  // FIXME: we don't inline callbr yet.
+  if (isa<CallBrInst>(TheCall))
+    return false;
+
   // If IFI has any state in it, zap it before we fill it in.
   IFI.reset();
 
@@ -1729,6 +1733,8 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
         Instruction *NewI = nullptr;
         if (isa<CallInst>(I))
           NewI = CallInst::Create(cast<CallInst>(I), OpDefs, I);
+        else if (isa<CallBrInst>(I))
+          NewI = CallBrInst::Create(cast<CallBrInst>(I), OpDefs, I);
         else
           NewI = InvokeInst::Create(cast<InvokeInst>(I), OpDefs, I);
 
@@ -2031,6 +2037,8 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
         Instruction *NewInst;
         if (CS.isCall())
           NewInst = CallInst::Create(cast<CallInst>(I), OpBundles, I);
+        else if (CS.isCallBr())
+          NewInst = CallBrInst::Create(cast<CallBrInst>(I), OpBundles, I);
         else
           NewInst = InvokeInst::Create(cast<InvokeInst>(I), OpBundles, I);
         NewInst->takeName(I);

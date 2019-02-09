@@ -104,16 +104,16 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X64-NEXT:    pmuludq %xmm1, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,3,2,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,2,2,3]
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; X64-NEXT:    pmuludq %xmm2, %xmm1
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,2,2,3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; X64-NEXT:    pslld $30, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; X64-NEXT:    psrld $2, %xmm3
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X64-NEXT:    psrld $2, %xmm0
+; X64-NEXT:    pslld $30, %xmm0
 ; X64-NEXT:    por %xmm3, %xmm0
 ; X64-NEXT:    retq
 ;

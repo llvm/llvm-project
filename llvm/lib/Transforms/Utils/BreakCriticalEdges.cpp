@@ -144,6 +144,10 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   // it in this generic function.
   if (DestBB->isEHPad()) return nullptr;
 
+  // Don't split the non-fallthrough edge from a callbr.
+  if (isa<CallBrInst>(TI) && SuccNum > 0)
+    return nullptr;
+
   // Create a new basic block, linking it into the CFG.
   BasicBlock *NewBB = BasicBlock::Create(TI->getContext(),
                       TIBB->getName() + "." + DestBB->getName() + "_crit_edge");

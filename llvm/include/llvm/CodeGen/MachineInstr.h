@@ -1011,7 +1011,10 @@ public:
   }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
-  bool isInlineAsm() const { return getOpcode() == TargetOpcode::INLINEASM; }
+  bool isInlineAsm() const {
+    return getOpcode() == TargetOpcode::INLINEASM ||
+           getOpcode() == TargetOpcode::INLINEASM_BR;
+  }
 
   bool isMSInlineAsm() const {
     return isInlineAsm() && getInlineAsmDialect() == InlineAsm::AD_Intel;

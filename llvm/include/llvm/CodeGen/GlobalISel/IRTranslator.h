@@ -252,6 +252,8 @@ private:
 
   bool translateInvoke(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateCallBr(const User &U, MachineIRBuilder &MIRBuilder);
+
   bool translateLandingPad(const User &U, MachineIRBuilder &MIRBuilder);
 
   /// Translate one of LLVM's cast instructions into MachineInstrs, with the

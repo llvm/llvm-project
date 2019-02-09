@@ -33,7 +33,6 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let hasSideEffects = 0;
   let UseNamedOperandTable = 1;
   let SchedRW = [WriteSMEM];
-  let SubtargetPredicate = isGCN;
 
   string Mnemonic = opName;
   string AsmOperands = asmOps;

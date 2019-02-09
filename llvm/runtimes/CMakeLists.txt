@@ -87,6 +87,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
   # This variable makes sure that e.g. llvm-lit is found.
   set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR})
+  set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 
   if(APPLE)
     set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
@@ -116,9 +117,13 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # Handle common options used by all runtimes.
   include(AddLLVM)
   include(HandleLLVMOptions)
+  include(FindPythonInterp)
 
   set(CMAKE_REQUIRED_FLAGS ${SAFE_CMAKE_REQUIRED_FLAGS})
   set(CMAKE_REQUIRED_LIBRARIES ${SAFE_CMAKE_REQUIRED_LIBRARIES})
+
+  # This can be used to detect whether we're in the runtimes build.
+  set(RUNTIMES_BUILD ON)
 
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
@@ -126,8 +131,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # TODO: Clean this up as part of an interface standardization
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
-    # The subdirectories need to treat this as standalone builds
-    set(${canon_name}_STANDALONE_BUILD On)
 
     if(LLVM_RUNTIMES_LIBDIR_SUFFIX)
       set(${canon_name}_LIBDIR_SUFFIX "${LLVM_RUNTIMES_LIBDIR_SUFFIX}" CACHE STRING "" FORCE)
@@ -135,7 +138,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
     # Setting a variable to let sub-projects detect which other projects
     # will be included under here.
-    set(HAVE_${canon_name} On)
+    set(HAVE_${canon_name} ON)
   endforeach()
 
   # We do this in two loops so that HAVE_* is set for each runtime before the

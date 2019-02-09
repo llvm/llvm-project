@@ -329,12 +329,8 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
     return;
   }
 
-  if (TI.isExceptionalTerminator()) {
-    Succs.assign(Succs.size(), true);
-    return;
-  }
-
-  if (isa<IndirectBrInst>(TI)) {
+  if (TI.isExceptionalTerminator() ||
+      TI.isIndirectTerminator()) {
     Succs.assign(Succs.size(), true);
     return;
   }
