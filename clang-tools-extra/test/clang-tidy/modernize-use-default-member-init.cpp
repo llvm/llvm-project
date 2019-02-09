@@ -165,6 +165,14 @@ struct PositiveEnum {
   // CHECK-FIXES: Enum e{Foo};
 };
 
+struct PositiveValueEnum {
+  PositiveValueEnum() : e() {}
+  // CHECK-FIXES: PositiveValueEnum()  {}
+  Enum e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use default member initializer for 'e'
+  // CHECK-FIXES: Enum e{};
+};
+
 struct PositiveString {
   PositiveString() : s("foo") {}
   // CHECK-FIXES: PositiveString()  {}

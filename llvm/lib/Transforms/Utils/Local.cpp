@@ -996,6 +996,18 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
+  // We cannot fold the block if it's a branch to an already present callbr
+  // successor because that creates duplicate successors.
+  for (auto I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
+    if (auto *CBI = dyn_cast<CallBrInst>((*I)->getTerminator())) {
+      if (Succ == CBI->getDefaultDest())
+        return false;
+      for (unsigned i = 0, e = CBI->getNumIndirectDests(); i != e; ++i)
+        if (Succ == CBI->getIndirectDest(i))
+          return false;
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
 
   SmallVector<DominatorTree::UpdateType, 32> Updates;
@@ -2530,13 +2542,13 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
                                     BasicBlock *BB) {
   // Since we are moving the instructions out of its basic block, we do not
   // retain their original debug locations (DILocations) and debug intrinsic
-  // instructions (dbg.values).
+  // instructions.
   //
   // Doing so would degrade the debugging experience and adversely affect the
   // accuracy of profiling information.
   //
   // Currently, when hoisting the instructions, we take the following actions:
-  // - Remove their dbg.values.
+  // - Remove their debug intrinsic instructions.
   // - Set their debug locations to the values from the insertion point.
   //
   // As per PR39141 (comment #8), the more fundamental reason why the dbg.values
@@ -2554,7 +2566,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
     I->dropUnknownNonDebugMetadata();
     if (I->isUsedByMetadata())
       dropDebugUsers(*I);
-    if (isa<DbgVariableIntrinsic>(I)) {
+    if (isa<DbgInfoIntrinsic>(I)) {
       // Remove DbgInfo Intrinsics.
       II = I->eraseFromParent();
       continue;

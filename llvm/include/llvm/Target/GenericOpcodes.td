@@ -579,6 +579,13 @@ def G_FSQRT : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Floating point floor of a value.
+def G_FFLOOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Opcodes for LLVM Intrinsics
 //------------------------------------------------------------------------------

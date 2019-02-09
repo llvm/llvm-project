@@ -26,8 +26,11 @@
 
 #include <xmmintrin.h>
 
-typedef double __m128d __attribute__((__vector_size__(16)));
-typedef long long __m128i __attribute__((__vector_size__(16)));
+typedef double __m128d __attribute__((__vector_size__(16), __aligned__(16)));
+typedef long long __m128i __attribute__((__vector_size__(16), __aligned__(16)));
+
+typedef double __m128d_u __attribute__((__vector_size__(16), __aligned__(1)));
+typedef long long __m128i_u __attribute__((__vector_size__(16), __aligned__(1)));
 
 /* Type defines.  */
 typedef double __v2df __attribute__ ((__vector_size__ (16)));
@@ -1652,7 +1655,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_loadu_pd(double const *__dp)
 {
   struct __loadu_pd {
-    __m128d __v;
+    __m128d_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_pd*)__dp)->__v;
 }
@@ -2042,7 +2045,7 @@ static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storeu_pd(double *__dp, __m128d __a)
 {
   struct __storeu_pd {
-    __m128d __v;
+    __m128d_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_pd*)__dp)->__v = __a;
 }
@@ -3567,7 +3570,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_loadu_si128(__m128i const *__p)
 {
   struct __loadu_si128 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_si128*)__p)->__v;
 }
@@ -4030,7 +4033,7 @@ static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storeu_si128(__m128i *__p, __m128i __b)
 {
   struct __storeu_si128 {
-    __m128i __v;
+    __m128i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_si128*)__p)->__v = __b;
 }

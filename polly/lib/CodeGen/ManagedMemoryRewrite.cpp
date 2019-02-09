@@ -310,7 +310,8 @@ static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
   PollyIRBuilder Builder(M->getContext());
   Builder.SetInsertPoint(Alloca);
 
-  Value *MallocManagedFn = getOrCreatePollyMallocManaged(*Alloca->getModule());
+  Function *MallocManagedFn =
+      getOrCreatePollyMallocManaged(*Alloca->getModule());
   const uint64_t Size =
       DL.getTypeAllocSize(Alloca->getType()->getElementType());
   Value *SizeVal = Builder.getInt64(Size);
@@ -330,7 +331,7 @@ static void rewriteAllocaAsManagedMemory(AllocaInst *Alloca,
       continue;
     Builder.SetInsertPoint(Return);
 
-    Value *FreeManagedFn = getOrCreatePollyFreeManaged(*M);
+    Function *FreeManagedFn = getOrCreatePollyFreeManaged(*M);
     Builder.CreateCall(FreeManagedFn, {RawManagedMem});
   }
 }

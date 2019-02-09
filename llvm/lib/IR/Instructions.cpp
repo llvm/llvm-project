@@ -256,6 +256,11 @@ void LandingPadInst::addClause(Constant *Val) {
 
 Function *CallBase::getCaller() { return getParent()->getParent(); }
 
+unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
+  assert(getOpcode() == Instruction::CallBr && "Unexpected opcode!");
+  return cast<CallBrInst>(this)->getNumIndirectDests() + 1;
+}
+
 bool CallBase::isIndirectCall() const {
   const Value *V = getCalledValue();
   if (isa<Function>(V) || isa<Constant>(V))
@@ -724,6 +729,76 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+}
+
+//===----------------------------------------------------------------------===//
+//                        CallBrInst Implementation
+//===----------------------------------------------------------------------===//
+
+void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
+                      ArrayRef<BasicBlock *> IndirectDests,
+                      ArrayRef<Value *> Args,
+                      ArrayRef<OperandBundleDef> Bundles,
+                      const Twine &NameStr) {
+  this->FTy = FTy;
+
+  assert((int)getNumOperands() ==
+             ComputeNumOperands(Args.size(), IndirectDests.size(),
+                                CountBundleInputs(Bundles)) &&
+         "NumOperands not set up?");
+  NumIndirectDests = IndirectDests.size();
+  setDefaultDest(Fallthrough);
+  for (unsigned i = 0; i != NumIndirectDests; ++i)
+    setIndirectDest(i, IndirectDests[i]);
+  setCalledOperand(Fn);
+
+#ifndef NDEBUG
+  assert(((Args.size() == FTy->getNumParams()) ||
+          (FTy->isVarArg() && Args.size() > FTy->getNumParams())) &&
+         "Calling a function with bad signature");
+
+  for (unsigned i = 0, e = Args.size(); i != e; i++)
+    assert((i >= FTy->getNumParams() ||
+            FTy->getParamType(i) == Args[i]->getType()) &&
+           "Calling a function with a bad signature!");
+#endif
+
+  std::copy(Args.begin(), Args.end(), op_begin());
+
+  auto It = populateBundleOperandInfos(Bundles, Args.size());
+  (void)It;
+  assert(It + 2 + IndirectDests.size() == op_end() && "Should add up!");
+
+  setName(NameStr);
+}
+
+CallBrInst::CallBrInst(const CallBrInst &CBI)
+    : CallBase(CBI.Attrs, CBI.FTy, CBI.getType(), Instruction::CallBr,
+               OperandTraits<CallBase>::op_end(this) - CBI.getNumOperands(),
+               CBI.getNumOperands()) {
+  setCallingConv(CBI.getCallingConv());
+  std::copy(CBI.op_begin(), CBI.op_end(), op_begin());
+  std::copy(CBI.bundle_op_info_begin(), CBI.bundle_op_info_end(),
+            bundle_op_info_begin());
+  SubclassOptionalData = CBI.SubclassOptionalData;
+  NumIndirectDests = CBI.NumIndirectDests;
+}
+
+CallBrInst *CallBrInst::Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> OpB,
+                               Instruction *InsertPt) {
+  std::vector<Value *> Args(CBI->arg_begin(), CBI->arg_end());
+
+  auto *NewCBI = CallBrInst::Create(CBI->getFunctionType(),
+                                    CBI->getCalledValue(),
+                                    CBI->getDefaultDest(),
+                                    CBI->getIndirectDests(),
+                                    Args, OpB, CBI->getName(), InsertPt);
+  NewCBI->setCallingConv(CBI->getCallingConv());
+  NewCBI->SubclassOptionalData = CBI->SubclassOptionalData;
+  NewCBI->setAttributes(CBI->getAttributes());
+  NewCBI->setDebugLoc(CBI->getDebugLoc());
+  NewCBI->NumIndirectDests = CBI->NumIndirectDests;
+  return NewCBI;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3994,6 +4069,14 @@ InvokeInst *InvokeInst::cloneImpl() const {
     return new(getNumOperands(), DescriptorBytes) InvokeInst(*this);
   }
   return new(getNumOperands()) InvokeInst(*this);
+}
+
+CallBrInst *CallBrInst::cloneImpl() const {
+  if (hasOperandBundles()) {
+    unsigned DescriptorBytes = getNumOperandBundles() * sizeof(BundleOpInfo);
+    return new (getNumOperands(), DescriptorBytes) CallBrInst(*this);
+  }
+  return new (getNumOperands()) CallBrInst(*this);
 }
 
 ResumeInst *ResumeInst::cloneImpl() const { return new (1) ResumeInst(*this); }

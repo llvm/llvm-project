@@ -611,6 +611,7 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
 
 TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
   verifyFormat("[foo bar:baz];");
+  verifyFormat("[foo bar]->baz;");
   verifyFormat("return [foo bar:baz];");
   verifyFormat("return (a)[foo bar:baz];");
   verifyFormat("f([foo bar:baz]);");

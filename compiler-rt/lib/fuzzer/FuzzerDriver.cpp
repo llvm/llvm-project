@@ -16,6 +16,7 @@
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
 #include "FuzzerTracePC.h"
+#include "FuzzerMerge.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -24,6 +25,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <fstream>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
@@ -304,6 +306,11 @@ static std::string GetDedupTokenFromFile(const std::string &Path) {
   return S.substr(Beg, End - Beg);
 }
 
+static std::string TempPath(const char *Extension) {
+  return DirPlusFile(TmpDir(),
+                     "libFuzzerTemp." + std::to_string(GetPid()) + Extension);
+}
+
 int CleanseCrashInput(const Vector<std::string> &Args,
                        const FuzzingOptions &Options) {
   if (Inputs->size() != 1 || !Flags.exact_artifact_path) {
@@ -319,10 +326,8 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   assert(Cmd.hasArgument(InputFilePath));
   Cmd.removeArgument(InputFilePath);
 
-  auto LogFilePath = DirPlusFile(
-      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
-  auto TmpFilePath = DirPlusFile(
-      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".repro");
+  auto LogFilePath = TempPath(".txt");
+  auto TmpFilePath = TempPath(".repro");
   Cmd.addArgument(TmpFilePath);
   Cmd.setOutputFile(LogFilePath);
   Cmd.combineOutAndErr();
@@ -382,8 +387,7 @@ int MinimizeCrashInput(const Vector<std::string> &Args,
     BaseCmd.addFlag("max_total_time", "600");
   }
 
-  auto LogFilePath = DirPlusFile(
-      TmpDir(), "libFuzzerTemp." + std::to_string(GetPid()) + ".txt");
+  auto LogFilePath = TempPath(".txt");
   BaseCmd.setOutputFile(LogFilePath);
   BaseCmd.combineOutAndErr();
 
@@ -465,6 +469,77 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   Printf("INFO: Done MinimizeCrashInputInternalStep, no crashes found\n");
   exit(0);
   return 0;
+}
+
+// This is just a skeleton of an experimental -fork=1 feature.
+void FuzzWithFork(const FuzzingOptions &Options,
+                  const Vector<std::string> &Args,
+                  const Vector<std::string> &Corpora) {
+  Printf("INFO: -fork=1: doing fuzzing in a separate process in order to "
+         "be more resistant to crashes, timeouts, and OOMs\n");
+
+  Vector<SizedFile> Corpus;
+  for (auto &Dir : Corpora)
+    GetSizedFilesFromDir(Dir, &Corpus);
+  std::sort(Corpus.begin(), Corpus.end());
+
+  Vector<std::string> Files;
+  Set<uint32_t> Features;
+  if (!Corpus.empty()) {
+    auto CFPath = TempPath(".fork");
+    CrashResistantMerge(Args, {}, Corpus, &Files, {}, &Features, CFPath);
+    RemoveFile(CFPath);
+  }
+  Printf("INFO: -fork=1: %zd seeds, starting to fuzz\n", Files.size());
+
+  Command Cmd(Args);
+  Cmd.removeFlag("fork");
+  for (auto &C : Corpora) // Remove all corpora from the args.
+    Cmd.removeArgument(C);
+  if (Files.size() >= 2)
+    Cmd.addFlag("seed_inputs",
+                Files.back() + "," + Files[Files.size() - 2]);
+  Cmd.addFlag("runs", "1000000");
+  Cmd.addFlag("max_total_time", "30");
+  for (size_t i = 0; i < 1000; i++) {
+    Printf("RUN %s\n", Cmd.toString().c_str());
+    int ExitCode = ExecuteCommand(Cmd);
+    if (ExitCode == Options.InterruptExitCode)
+      exit(0);
+    if (ExitCode == Options.TimeoutExitCode || ExitCode == Options.OOMExitCode)
+      continue;
+    if (ExitCode != 0) break;
+  }
+
+  exit(0);
+}
+
+void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
+           const Vector<std::string> &Corpora, const char *CFPathOrNull) {
+  if (Corpora.size() < 2) {
+    Printf("INFO: Merge requires two or more corpus dirs\n");
+    exit(0);
+  }
+
+  Vector<SizedFile> OldCorpus, NewCorpus;
+  GetSizedFilesFromDir(Corpora[0], &OldCorpus);
+  for (size_t i = 1; i < Corpora.size(); i++)
+    GetSizedFilesFromDir(Corpora[i], &NewCorpus);
+  std::sort(OldCorpus.begin(), OldCorpus.end());
+  std::sort(NewCorpus.begin(), NewCorpus.end());
+
+  std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath(".txt");
+  Vector<std::string> NewFiles;
+  Set<uint32_t> NewFeatures;
+  CrashResistantMerge(Args, OldCorpus, NewCorpus, &NewFiles, {}, &NewFeatures,
+                      CFPath);
+  for (auto &Path : NewFiles)
+    F->WriteToOutputCorpus(FileToVector(Path, Options.MaxLen));
+  // We are done, delete the control file if it was a temporary one.
+  if (!Flags.merge_control_file)
+    RemoveFile(CFPath);
+
+  exit(0);
 }
 
 int AnalyzeDictionary(Fuzzer *F, const Vector<Unit>& Dict,
@@ -694,13 +769,11 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  if (Flags.merge) {
-    F->CrashResistantMerge(Args, *Inputs,
-                           Flags.load_coverage_summary,
-                           Flags.save_coverage_summary,
-                           Flags.merge_control_file);
-    exit(0);
-  }
+  if (Flags.fork)
+    FuzzWithFork(Options, Args, *Inputs);
+
+  if (Flags.merge)
+    Merge(F, Options, Args, *Inputs, Flags.merge_control_file);
 
   if (Flags.merge_inner) {
     const size_t kDefaultMaxMergeLen = 1 << 20;

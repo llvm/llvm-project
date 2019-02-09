@@ -46,6 +46,7 @@ class AtomicRMWInst;
 class BasicBlock;
 class BranchInst;
 class CallInst;
+class CallBrInst;
 class CatchPadInst;
 class CatchReturnInst;
 class CatchSwitchInst;
@@ -851,6 +852,7 @@ public:
 private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
+  void visitCallBr(const CallBrInst &I);
   void visitResume(const ResumeInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);

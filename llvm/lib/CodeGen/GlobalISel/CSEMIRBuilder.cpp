@@ -39,6 +39,7 @@ CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
   MachineInstr *MI =
       CSEInfo->getMachineInstrIfExists(ID, CurMBB, NodeInsertPos);
   if (MI) {
+    CSEInfo->countOpcodeHit(MI->getOpcode());
     auto CurrPos = getInsertPt();
     if (!dominates(MI, CurrPos))
       CurMBB->splice(CurrPos, CurMBB, MI);

@@ -923,6 +923,10 @@ public:
         MCSymbol *Sym =
             Ctx.getOrCreateSymbol(Twine(".amdgcn.gfx_generation_number"));
         Sym->setVariableValue(MCConstantExpr::create(ISA.Major, Ctx));
+        Sym = Ctx.getOrCreateSymbol(Twine(".amdgcn.gfx_generation_minor"));
+        Sym->setVariableValue(MCConstantExpr::create(ISA.Minor, Ctx));
+        Sym = Ctx.getOrCreateSymbol(Twine(".amdgcn.gfx_generation_stepping"));
+        Sym->setVariableValue(MCConstantExpr::create(ISA.Stepping, Ctx));
       } else {
         MCSymbol *Sym =
             Ctx.getOrCreateSymbol(Twine(".option.machine_version_major"));
@@ -1091,6 +1095,7 @@ private:
   bool validateMIMGGatherDMask(const MCInst &Inst);
   bool validateMIMGDataSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
+  bool validateLdsDirect(const MCInst &Inst);
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
   unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
@@ -1595,6 +1600,8 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("vcc", AMDGPU::VCC)
     .Case("flat_scratch", AMDGPU::FLAT_SCR)
     .Case("xnack_mask", AMDGPU::XNACK_MASK)
+    .Case("lds_direct", AMDGPU::LDS_DIRECT)
+    .Case("src_lds_direct", AMDGPU::LDS_DIRECT)
     .Case("m0", AMDGPU::M0)
     .Case("scc", AMDGPU::SCC)
     .Case("tba", AMDGPU::TBA)
@@ -2461,6 +2468,86 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
+bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
+
+  using namespace SIInstrFlags;
+  const unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opcode);
+
+  // lds_direct register is defined so that it can be used
+  // with 9-bit operands only. Ignore encodings which do not accept these.
+  if ((Desc.TSFlags & (VOP1 | VOP2 | VOP3 | VOPC | VOP3P | SIInstrFlags::SDWA)) == 0)
+    return true;
+
+  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
+  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
+  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+
+  const int SrcIndices[] = { Src1Idx, Src2Idx };
+
+  // lds_direct cannot be specified as either src1 or src2.
+  for (int SrcIdx : SrcIndices) {
+    if (SrcIdx == -1) break;
+    const MCOperand &Src = Inst.getOperand(SrcIdx);
+    if (Src.isReg() && Src.getReg() == LDS_DIRECT) {
+      return false;
+    }
+  }
+
+  if (Src0Idx == -1)
+    return true;
+
+  const MCOperand &Src = Inst.getOperand(Src0Idx);
+  if (!Src.isReg() || Src.getReg() != LDS_DIRECT)
+    return true;
+
+  // lds_direct is specified as src0. Check additional limitations.
+
+  // FIXME: This is a workaround for bug 37943
+  // which allows 64-bit VOP3 opcodes use 32-bit operands.
+  if (AMDGPU::getRegOperandSize(getMRI(), Desc, Src0Idx) != 4)
+    return false;
+
+  // Documentation does not disable lds_direct for SDWA, but SP3 assembler does.
+  // FIXME: This inconsistence needs to be investigated further.
+  if (Desc.TSFlags & SIInstrFlags::SDWA)
+    return false;
+
+  // The following opcodes do not accept lds_direct which is explicitly stated
+  // in AMD documentation. However SP3 disables lds_direct for most other 'rev'
+  // opcodes as well (e.g. for v_subrev_u32 but not for v_subrev_f32).
+  // FIXME: This inconsistence needs to be investigated further.
+  switch (Opcode) {
+  case AMDGPU::V_LSHLREV_B32_e32_si:
+  case AMDGPU::V_LSHLREV_B32_e64_si:
+  case AMDGPU::V_LSHLREV_B16_e32_vi:
+  case AMDGPU::V_LSHLREV_B16_e64_vi:
+  case AMDGPU::V_LSHLREV_B32_e32_vi:
+  case AMDGPU::V_LSHLREV_B32_e64_vi:
+  case AMDGPU::V_LSHLREV_B64_vi:
+  case AMDGPU::V_LSHRREV_B32_e32_si:
+  case AMDGPU::V_LSHRREV_B32_e64_si:
+  case AMDGPU::V_LSHRREV_B16_e32_vi:
+  case AMDGPU::V_LSHRREV_B16_e64_vi:
+  case AMDGPU::V_LSHRREV_B32_e32_vi:
+  case AMDGPU::V_LSHRREV_B32_e64_vi:
+  case AMDGPU::V_LSHRREV_B64_vi:
+  case AMDGPU::V_ASHRREV_I32_e64_si:
+  case AMDGPU::V_ASHRREV_I32_e32_si:
+  case AMDGPU::V_ASHRREV_I16_e32_vi:
+  case AMDGPU::V_ASHRREV_I16_e64_vi:
+  case AMDGPU::V_ASHRREV_I32_e32_vi:
+  case AMDGPU::V_ASHRREV_I32_e64_vi:
+  case AMDGPU::V_ASHRREV_I64_vi:
+  case AMDGPU::V_PK_LSHLREV_B16_vi:
+  case AMDGPU::V_PK_LSHRREV_B16_vi:
+  case AMDGPU::V_PK_ASHRREV_I16_vi:
+    return false;
+  default:
+    return true;
+  }
+}
+
 bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
   unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
@@ -2496,6 +2583,11 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc) {
+  if (!validateLdsDirect(Inst)) {
+    Error(IDLoc,
+      "invalid use of lds_direct");
+    return false;
+  }
   if (!validateSOPLiteral(Inst)) {
     Error(IDLoc,
       "only one literal operand is allowed");

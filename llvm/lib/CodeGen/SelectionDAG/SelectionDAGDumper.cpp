@@ -172,6 +172,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::UNDEF:                      return "undef";
   case ISD::MERGE_VALUES:               return "merge_values";
   case ISD::INLINEASM:                  return "inlineasm";
+  case ISD::INLINEASM_BR:               return "inlineasm_br";
   case ISD::EH_LABEL:                   return "eh_label";
   case ISD::HANDLENODE:                 return "handlenode";
 

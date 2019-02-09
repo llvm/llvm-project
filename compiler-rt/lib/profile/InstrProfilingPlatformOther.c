@@ -6,10 +6,12 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) && \
-    !(defined(__sun__) && defined(__svr4__)) && !defined(__NetBSD__)
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&     \
+    !(defined(__sun__) && defined(__svr4__)) && !defined(__NetBSD__) &&        \
+    !defined(_WIN32)
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "InstrProfiling.h"
 
@@ -90,14 +92,5 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return 0; }
 
 COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
 COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
-
-#if defined(_WIN32)
-// Put read-write sections in .data.
-#pragma comment(linker, "/MERGE:.lprfc=.data")
-#pragma comment(linker, "/MERGE:.lprfd=.data")
-// Put read-write sections in .rdata.
-#pragma comment(linker, "/MERGE:.lcovmap=.rdata")
-#pragma comment(linker, "/MERGE:.lprfn=.rdata")
-#endif
 
 #endif

@@ -933,6 +933,15 @@ def INLINEASM : StandardPseudoInstruction {
   let AsmString = "";
   let hasSideEffects = 0;  // Note side effect is encoded in an operand.
 }
+def INLINEASM_BR : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "";
+  let hasSideEffects = 0;  // Note side effect is encoded in an operand.
+  let isTerminator = 1;
+  let isBranch = 1;
+  let isIndirectBranch = 1;
+}
 def CFI_INSTRUCTION : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins i32imm:$id);

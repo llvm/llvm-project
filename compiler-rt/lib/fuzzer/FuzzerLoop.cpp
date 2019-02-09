@@ -131,7 +131,7 @@ void Fuzzer::HandleMalloc(size_t Size) {
   DumpCurrentUnit("oom-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
   PrintFinalStats();
-  _Exit(Options.ErrorExitCode); // Stop right now.
+  _Exit(Options.OOMExitCode); // Stop right now.
 }
 
 Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
@@ -256,16 +256,17 @@ void Fuzzer::ExitCallback() {
 }
 
 void Fuzzer::MaybeExitGracefully() {
-  if (!GracefulExitRequested) return;
+  if (!F->GracefulExitRequested) return;
   Printf("==%lu== INFO: libFuzzer: exiting as requested\n", GetPid());
-  PrintFinalStats();
+  F->PrintFinalStats();
   _Exit(0);
 }
 
 void Fuzzer::InterruptCallback() {
   Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
-  _Exit(0); // Stop right now, don't perform any at-exit actions.
+  // Stop right now, don't perform any at-exit actions.
+  _Exit(Options.InterruptExitCode);
 }
 
 NO_SANITIZE_MEMORY
@@ -314,7 +315,7 @@ void Fuzzer::RssLimitCallback() {
   DumpCurrentUnit("oom-");
   Printf("SUMMARY: libFuzzer: out-of-memory\n");
   PrintFinalStats();
-  _Exit(Options.ErrorExitCode); // Stop right now.
+  _Exit(Options.OOMExitCode); // Stop right now.
 }
 
 void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units) {

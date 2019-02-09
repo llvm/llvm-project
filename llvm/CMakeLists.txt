@@ -383,32 +383,6 @@ option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
 option(LLVM_ENABLE_ZLIB "Use zlib for compression/decompression if available." ON)
 
-
-set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
-
-find_package(Z3 4.7.1)
-
-if (LLVM_Z3_INSTALL_DIR)
-  if (NOT Z3_FOUND)
-    message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
-  endif()
-endif()
-
-set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
-
-option(LLVM_ENABLE_Z3_SOLVER
-  "Enable Support for the Z3 constraint solver in LLVM."
-  ${LLVM_ENABLE_Z3_SOLVER_DEFAULT}
-)
-
-if (LLVM_ENABLE_Z3_SOLVER)
-  if (NOT Z3_FOUND)
-    message(FATAL_ERROR "LLVM_ENABLE_Z3_SOLVER cannot be enabled when Z3 is not available.")
-  endif()
-
-  set(LLVM_WITH_Z3 1)
-endif()
-
 if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )
 endif()

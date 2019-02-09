@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the CallSite class, which is a handy wrapper for code that
-// wants to treat Call and Invoke instructions in a generic way. When in non-
-// mutation context (e.g. an analysis) ImmutableCallSite should be used.
+// wants to treat Call, Invoke and CallBr instructions in a generic way. When
+// in non-mutation context (e.g. an analysis) ImmutableCallSite should be used.
 // Finally, when some degree of customization is necessary between these two
 // extremes, CallSiteBase<> can be supplied with fine-tuned parameters.
 //
@@ -17,7 +17,7 @@
 // They are efficiently copyable, assignable and constructable, with cost
 // equivalent to copying a pointer (notice that they have only a single data
 // member). The internal representation carries a flag which indicates which of
-// the two variants is enclosed. This allows for cheaper checks when various
+// the three variants is enclosed. This allows for cheaper checks when various
 // accessors of CallSite are employed.
 //
 //===----------------------------------------------------------------------===//
@@ -48,45 +48,50 @@ namespace Intrinsic {
 enum ID : unsigned;
 }
 
-template <typename FunTy = const Function,
-          typename BBTy = const BasicBlock,
-          typename ValTy = const Value,
-          typename UserTy = const User,
-          typename UseTy = const Use,
-          typename InstrTy = const Instruction,
+template <typename FunTy = const Function, typename BBTy = const BasicBlock,
+          typename ValTy = const Value, typename UserTy = const User,
+          typename UseTy = const Use, typename InstrTy = const Instruction,
           typename CallTy = const CallInst,
           typename InvokeTy = const InvokeInst,
+          typename CallBrTy = const CallBrInst,
           typename IterTy = User::const_op_iterator>
 class CallSiteBase {
 protected:
-  PointerIntPair<InstrTy*, 1, bool> I;
+  PointerIntPair<InstrTy *, 2, int> I;
 
   CallSiteBase() = default;
-  CallSiteBase(CallTy *CI) : I(CI, true) { assert(CI); }
-  CallSiteBase(InvokeTy *II) : I(II, false) { assert(II); }
+  CallSiteBase(CallTy *CI) : I(CI, 1) { assert(CI); }
+  CallSiteBase(InvokeTy *II) : I(II, 0) { assert(II); }
+  CallSiteBase(CallBrTy *CBI) : I(CBI, 2) { assert(CBI); }
   explicit CallSiteBase(ValTy *II) { *this = get(II); }
 
 private:
   /// This static method is like a constructor. It will create an appropriate
-  /// call site for a Call or Invoke instruction, but it can also create a null
-  /// initialized CallSiteBase object for something which is NOT a call site.
+  /// call site for a Call, Invoke or CallBr instruction, but it can also create
+  /// a null initialized CallSiteBase object for something which is NOT a call
+  /// site.
   static CallSiteBase get(ValTy *V) {
     if (InstrTy *II = dyn_cast<InstrTy>(V)) {
       if (II->getOpcode() == Instruction::Call)
         return CallSiteBase(static_cast<CallTy*>(II));
-      else if (II->getOpcode() == Instruction::Invoke)
+      if (II->getOpcode() == Instruction::Invoke)
         return CallSiteBase(static_cast<InvokeTy*>(II));
+      if (II->getOpcode() == Instruction::CallBr)
+        return CallSiteBase(static_cast<CallBrTy *>(II));
     }
     return CallSiteBase();
   }
 
 public:
-  /// Return true if a CallInst is enclosed. Note that !isCall() does not mean
-  /// an InvokeInst is enclosed. It may also signify a NULL instruction pointer.
-  bool isCall() const { return I.getInt(); }
+  /// Return true if a CallInst is enclosed.
+  bool isCall() const { return I.getInt() == 1; }
 
-  /// Return true if a InvokeInst is enclosed.
-  bool isInvoke() const { return getInstruction() && !I.getInt(); }
+  /// Return true if a InvokeInst is enclosed. !I.getInt() may also signify a
+  /// NULL instruction pointer, so check that.
+  bool isInvoke() const { return getInstruction() && I.getInt() == 0; }
+
+  /// Return true if a CallBrInst is enclosed.
+  bool isCallBr() const { return I.getInt() == 2; }
 
   InstrTy *getInstruction() const { return I.getPointer(); }
   InstrTy *operator->() const { return I.getPointer(); }
@@ -97,7 +102,7 @@ public:
 
   /// Return the pointer to function that is being called.
   ValTy *getCalledValue() const {
-    assert(getInstruction() && "Not a call or invoke instruction!");
+    assert(getInstruction() && "Not a call, invoke or callbr instruction!");
     return *getCallee();
   }
 
@@ -114,17 +119,16 @@ public:
       return false;
     if (isa<FunTy>(V) || isa<Constant>(V))
       return false;
-    if (const CallInst *CI = dyn_cast<CallInst>(getInstruction())) {
-      if (CI->isInlineAsm())
+    if (const CallBase *CB = dyn_cast<CallBase>(getInstruction()))
+      if (CB->isInlineAsm())
         return false;
-    }
     return true;
   }
 
   /// Set the callee to the specified value.  Unlike the function of the same
   /// name on CallBase, does not modify the type!
   void setCalledFunction(Value *V) {
-    assert(getInstruction() && "Not a call or invoke instruction!");
+    assert(getInstruction() && "Not a call, callbr, or invoke instruction!");
     assert(cast<PointerType>(V->getType())->getElementType() ==
                cast<CallBase>(getInstruction())->getFunctionType() &&
            "New callee type does not match FunctionType on call");
@@ -192,7 +196,7 @@ public:
   }
 
   void setArgument(unsigned ArgNo, Value* newVal) {
-    assert(getInstruction() && "Not a call or invoke instruction!");
+    assert(getInstruction() && "Not a call, invoke or callbr instruction!");
     assert(arg_begin() + ArgNo < arg_end() && "Argument # out of range!");
     getInstruction()->setOperand(ArgNo, newVal);
   }
@@ -206,7 +210,7 @@ public:
   /// Given a use for an argument, get the argument number that corresponds to
   /// it.
   unsigned getArgumentNo(const Use *U) const {
-    assert(getInstruction() && "Not a call or invoke instruction!");
+    assert(getInstruction() && "Not a call, invoke or callbr instruction!");
     assert(isArgOperand(U) && "Argument # out of range!");
     return U - arg_begin();
   }
@@ -230,7 +234,7 @@ public:
   /// Given a use for a data operand, get the data operand number that
   /// corresponds to it.
   unsigned getDataOperandNo(const Use *U) const {
-    assert(getInstruction() && "Not a call or invoke instruction!");
+    assert(getInstruction() && "Not a call, invoke or callbr instruction!");
     assert(isDataOperand(U) && "Data operand # out of range!");
     return U - data_operands_begin();
   }
@@ -240,10 +244,11 @@ public:
   using data_operand_iterator = IterTy;
 
   /// data_operands_begin/data_operands_end - Return iterators iterating over
-  /// the call / invoke argument list and bundle operands.  For invokes, this is
-  /// the set of instruction operands except the invoke target and the two
-  /// successor blocks; and for calls this is the set of instruction operands
-  /// except the call target.
+  /// the call / invoke / callbr argument list and bundle operands. For invokes,
+  /// this is the set of instruction operands except the invoke target and the
+  /// two successor blocks; for calls this is the set of instruction operands
+  /// except the call target; for callbrs the number of labels to skip must be
+  /// determined first.
 
   IterTy data_operands_begin() const {
     assert(getInstruction() && "Not a call or invoke instruction!");
@@ -280,17 +285,19 @@ public:
     return isCall() && cast<CallInst>(getInstruction())->isTailCall();
   }
 
-#define CALLSITE_DELEGATE_GETTER(METHOD) \
-  InstrTy *II = getInstruction();    \
-  return isCall()                        \
-    ? cast<CallInst>(II)->METHOD         \
-    : cast<InvokeInst>(II)->METHOD
+#define CALLSITE_DELEGATE_GETTER(METHOD)                                       \
+  InstrTy *II = getInstruction();                                              \
+  return isCall() ? cast<CallInst>(II)->METHOD                                 \
+                  : isCallBr() ? cast<CallBrInst>(II)->METHOD                  \
+                                : cast<InvokeInst>(II)->METHOD
 
-#define CALLSITE_DELEGATE_SETTER(METHOD) \
-  InstrTy *II = getInstruction();    \
-  if (isCall())                          \
-    cast<CallInst>(II)->METHOD;          \
-  else                                   \
+#define CALLSITE_DELEGATE_SETTER(METHOD)                                       \
+  InstrTy *II = getInstruction();                                              \
+  if (isCall())                                                                \
+    cast<CallInst>(II)->METHOD;                                                \
+  else if (isCallBr())                                                         \
+    cast<CallBrInst>(II)->METHOD;                                              \
+  else                                                                         \
     cast<InvokeInst>(II)->METHOD
 
   unsigned getNumArgOperands() const {
@@ -306,9 +313,7 @@ public:
   }
 
   bool isInlineAsm() const {
-    if (isCall())
-      return cast<CallInst>(getInstruction())->isInlineAsm();
-    return false;
+    return cast<CallBase>(getInstruction())->isInlineAsm();
   }
 
   /// Get the calling convention of the call.
@@ -392,10 +397,10 @@ public:
   /// Return true if the data operand at index \p i directly or indirectly has
   /// the attribute \p A.
   ///
-  /// Normal call or invoke arguments have per operand attributes, as specified
-  /// in the attribute set attached to this instruction, while operand bundle
-  /// operands may have some attributes implied by the type of its containing
-  /// operand bundle.
+  /// Normal call, invoke or callbr arguments have per operand attributes, as
+  /// specified in the attribute set attached to this instruction, while operand
+  /// bundle operands may have some attributes implied by the type of its
+  /// containing operand bundle.
   bool dataOperandHasImpliedAttr(unsigned i, Attribute::AttrKind Kind) const {
     CALLSITE_DELEGATE_GETTER(dataOperandHasImpliedAttr(i, Kind));
   }
@@ -661,12 +666,13 @@ private:
 
 class CallSite : public CallSiteBase<Function, BasicBlock, Value, User, Use,
                                      Instruction, CallInst, InvokeInst,
-                                     User::op_iterator> {
+                                     CallBrInst, User::op_iterator> {
 public:
   CallSite() = default;
   CallSite(CallSiteBase B) : CallSiteBase(B) {}
   CallSite(CallInst *CI) : CallSiteBase(CI) {}
   CallSite(InvokeInst *II) : CallSiteBase(II) {}
+  CallSite(CallBrInst *CBI) : CallSiteBase(CBI) {}
   explicit CallSite(Instruction *II) : CallSiteBase(II) {}
   explicit CallSite(Value *V) : CallSiteBase(V) {}
 
@@ -888,6 +894,7 @@ public:
   ImmutableCallSite() = default;
   ImmutableCallSite(const CallInst *CI) : CallSiteBase(CI) {}
   ImmutableCallSite(const InvokeInst *II) : CallSiteBase(II) {}
+  ImmutableCallSite(const CallBrInst *CBI) : CallSiteBase(CBI) {}
   explicit ImmutableCallSite(const Instruction *II) : CallSiteBase(II) {}
   explicit ImmutableCallSite(const Value *V) : CallSiteBase(V) {}
   ImmutableCallSite(CallSite CS) : CallSiteBase(CS.getInstruction()) {}

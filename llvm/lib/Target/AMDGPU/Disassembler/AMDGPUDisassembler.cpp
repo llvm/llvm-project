@@ -781,6 +781,7 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
     // ToDo: no support for execz register
   case 252: break;
   case 253: return createRegOperand(SCC);
+  case 254: return createRegOperand(LDS_DIRECT);
   default: break;
   }
   return errOperand(Val, "unknown operand encoding " + Twine(Val));

@@ -3,6 +3,16 @@
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 # RUN: llvm-objcopy --regex --weaken-symbol='.*' %t %t3
 # RUN: cmp %t2 %t3
+# RUN: echo "  Global  # comment" > %t-list.txt
+# RUN: echo "Local" >> %t-list.txt
+# RUN: echo "Weak" >> %t-list.txt
+# RUN: echo " # comment" >> %t-list.txt
+# RUN: llvm-objcopy --weaken-symbols %t-list.txt %t %t4
+# RUN: cmp %t2 %t4
+# RUN: echo ".*al # Global + Local == .*al" > %t-list2.txt
+# RUN: echo "Weak # weak" >> %t-list2.txt
+# RUN: llvm-objcopy --regex --weaken-symbols %t-list2.txt %t %t5
+# RUN: cmp %t2 %t5
 
 !ELF
 FileHeader:

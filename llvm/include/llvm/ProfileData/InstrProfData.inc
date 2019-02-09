@@ -249,22 +249,22 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 #define INSTR_PROF_DATA_DEFINED
 INSTR_PROF_SECT_ENTRY(IPSK_data, \
                       INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_DATA_COFF), "__DATA,")
+                      INSTR_PROF_DATA_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
                       INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COFF), "__DATA,")
+                      INSTR_PROF_CNTS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_name, \
                       INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_NAME_COFF), "__DATA,")
+                      INSTR_PROF_NAME_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_vals, \
                       INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_VALS_COFF), "__DATA,")
+                      INSTR_PROF_VALS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_vnodes, \
                       INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COFF), "__DATA,")
+                      INSTR_PROF_VNODES_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
-                      INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COFF), "__LLVM_COV,")
+                      INSTR_PROF_COVMAP_COFF, "__LLVM_COV,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -654,13 +654,15 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
-/* Win32 */
-#define INSTR_PROF_DATA_COFF .lprfd
-#define INSTR_PROF_NAME_COFF .lprfn
-#define INSTR_PROF_CNTS_COFF .lprfc
-#define INSTR_PROF_VALS_COFF .lprfv
-#define INSTR_PROF_VNODES_COFF .lprfnd
-#define INSTR_PROF_COVMAP_COFF .lcovmap
+/* Windows section names. Because these section names contain dollar characters,
+ * they must be quoted.
+ */
+#define INSTR_PROF_DATA_COFF ".lprfd$M"
+#define INSTR_PROF_NAME_COFF ".lprfn$M"
+#define INSTR_PROF_CNTS_COFF ".lprfc$M"
+#define INSTR_PROF_VALS_COFF ".lprfv$M"
+#define INSTR_PROF_VNODES_COFF ".lprfnd$M"
+#define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
 
 #ifdef _WIN32
 /* Runtime section names and name strings.  */
@@ -676,30 +678,17 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COFF
 #else
 /* Runtime section names and name strings.  */
-#define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COMMON
-#define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COMMON
-#define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COMMON
+#define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON)
+#define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON)
+#define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON)
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
-#define INSTR_PROF_VALS_SECT_NAME INSTR_PROF_VALS_COMMON
+#define INSTR_PROF_VALS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON)
 /* Value profile nodes section. */
-#define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_VNODES_COMMON
-#define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_COVMAP_COMMON
+#define INSTR_PROF_VNODES_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON)
+#define INSTR_PROF_COVMAP_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON)
 #endif
-
-#define INSTR_PROF_DATA_SECT_NAME_STR                                          \
-  INSTR_PROF_QUOTE(INSTR_PROF_DATA_SECT_NAME)
-#define INSTR_PROF_NAME_SECT_NAME_STR                                          \
-  INSTR_PROF_QUOTE(INSTR_PROF_NAME_SECT_NAME)
-#define INSTR_PROF_CNTS_SECT_NAME_STR                                          \
-  INSTR_PROF_QUOTE(INSTR_PROF_CNTS_SECT_NAME)
-#define INSTR_PROF_COVMAP_SECT_NAME_STR                                        \
-  INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_SECT_NAME)
-#define INSTR_PROF_VALS_SECT_NAME_STR                                          \
-  INSTR_PROF_QUOTE(INSTR_PROF_VALS_SECT_NAME)
-#define INSTR_PROF_VNODES_SECT_NAME_STR                                        \
-  INSTR_PROF_QUOTE(INSTR_PROF_VNODES_SECT_NAME)
 
 /* Macros to define start/stop section symbol for a given
  * section on Linux. For instance

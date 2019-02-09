@@ -18,6 +18,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include <memory>
@@ -225,9 +226,9 @@ static const MachineInfo &getOutputFormatMachineInfo(StringRef Format) {
   return Iter->getValue();
 }
 
-static void addGlobalSymbolsFromFile(std::vector<NameOrRegex> &Symbols,
-                                     BumpPtrAllocator &Alloc,
-                                     StringRef Filename, bool UseRegex) {
+static void addSymbolsFromFile(std::vector<NameOrRegex> &Symbols,
+                               BumpPtrAllocator &Alloc, StringRef Filename,
+                               bool UseRegex) {
   StringSaver Saver(Alloc);
   SmallVector<StringRef, 16> Lines;
   auto BufOrErr = MemoryBuffer::getFile(Filename);
@@ -255,6 +256,32 @@ NameOrRegex::NameOrRegex(StringRef Pattern, bool IsRegex) {
       ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data));
 }
 
+static Error addSymbolsToRenameFromFile(StringMap<StringRef> &SymbolsToRename,
+                                        BumpPtrAllocator &Alloc,
+                                        StringRef Filename) {
+  StringSaver Saver(Alloc);
+  SmallVector<StringRef, 16> Lines;
+  auto BufOrErr = MemoryBuffer::getFile(Filename);
+  if (!BufOrErr)
+    return createError(Filename, BufOrErr.getError());
+
+  BufOrErr.get()->getBuffer().split(Lines, '\n');
+  size_t NumLines = Lines.size();
+  for (size_t LineNo = 0; LineNo < NumLines; ++LineNo) {
+    StringRef TrimmedLine = Lines[LineNo].split('#').first.trim();
+    if (TrimmedLine.empty())
+      continue;
+
+    std::pair<StringRef, StringRef> Pair = Saver.save(TrimmedLine).split(' ');
+    StringRef NewName = Pair.second.trim();
+    if (NewName.empty())
+      return createStringError(errc::invalid_argument,
+                               "%s:%zu: missing new symbol name",
+                               Filename.str().c_str(), LineNo + 1);
+    SymbolsToRename.insert({Pair.first, NewName});
+  }
+  return Error::success();
+}
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -358,6 +385,11 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       error("Multiple redefinition of symbol " + Old2New.first);
   }
 
+  for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbols))
+    if (Error E = addSymbolsToRenameFromFile(Config.SymbolsToRename, DC.Alloc,
+                                             Arg->getValue()))
+      error(std::move(E));
+
   for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
     SectionRename SR = parseRenameSectionValue(StringRef(Arg->getValue()));
     if (!Config.SectionsToRename.try_emplace(SR.OriginalName, SR).second)
@@ -413,17 +445,29 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
     Config.SymbolsToLocalize.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
+    addSymbolsFromFile(Config.SymbolsToLocalize, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
     Config.SymbolsToKeepGlobal.emplace_back(Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
-    addGlobalSymbolsFromFile(Config.SymbolsToKeepGlobal, DC.Alloc,
-                             Arg->getValue(), UseRegex);
+    addSymbolsFromFile(Config.SymbolsToKeepGlobal, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
     Config.SymbolsToGlobalize.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbols))
+    addSymbolsFromFile(Config.SymbolsToGlobalize, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
     Config.SymbolsToWeaken.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbols))
+    addSymbolsFromFile(Config.SymbolsToWeaken, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbol))
     Config.SymbolsToRemove.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbols))
+    addSymbolsFromFile(Config.SymbolsToRemove, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegex);
 

@@ -1426,6 +1426,9 @@ bool UnwrappedLineParser::tryToParseLambda() {
       nextToken();
       break;
     case tok::arrow:
+      // This might or might not actually be a lambda arrow (this could be an
+      // ObjC method invocation followed by a dereferencing arrow). We might
+      // reset this back to TT_Unknown in TokenAnnotator.
       FormatTok->Type = TT_LambdaArrow;
       nextToken();
       break;

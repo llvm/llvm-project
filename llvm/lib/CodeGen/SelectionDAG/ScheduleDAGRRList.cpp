@@ -708,6 +708,7 @@ void ScheduleDAGRRList::EmitNode(SUnit *SU) {
     // removed.
     return;
   case ISD::INLINEASM:
+  case ISD::INLINEASM_BR:
     // For inline asm, clear the pipeline state.
     HazardRec->Reset();
     return;
@@ -1347,7 +1348,8 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
   }
 
   for (SDNode *Node = SU->getNode(); Node; Node = Node->getGluedNode()) {
-    if (Node->getOpcode() == ISD::INLINEASM) {
+    if (Node->getOpcode() == ISD::INLINEASM ||
+        Node->getOpcode() == ISD::INLINEASM_BR) {
       // Inline asm can clobber physical defs.
       unsigned NumOps = Node->getNumOperands();
       if (Node->getOperand(NumOps-1).getValueType() == MVT::Glue)
