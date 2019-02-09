@@ -8829,6 +8829,9 @@ private:
   /// Pop OpenMP function region for non-capturing function.
   void popOpenMPFunctionRegion(const sema::FunctionScopeInfo *OldFSI);
 
+  /// Check whether we're allowed to call Callee from the current function.
+  void checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
+
   /// Checks if a type or a declaration is disabled due to the owning extension
   /// being disabled, and emits diagnostic messages if it is disabled.
   /// \param D type or declaration to be checked.
@@ -10314,6 +10317,23 @@ public:
   ///
   /// Same as CUDADiagIfDeviceCode, with "host" and "device" switched.
   DeviceDiagBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
+
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current
+  /// context is "used as device code".
+  ///
+  /// - If CurContext is a `declare target` function or it is known that the
+  /// function is emitted for the device, emits the diagnostics immediately.
+  /// - If CurContext is a non-`declare target` function and we are compiling
+  ///   for the device, creates a diagnostic which is emitted if and when we
+  ///   realize that the function will be codegen'ed.
+  ///
+  /// Example usage:
+  ///
+  ///  // Variable-length arrays are not allowed in NVPTX device code.
+  ///  if (diagIfOpenMPDeviceCode(Loc, diag::err_vla_unsupported))
+  ///    return ExprError();
+  ///  // Otherwise, continue parsing as normal.
+  DeviceDiagBuilder diagIfOpenMPDeviceCode(SourceLocation Loc, unsigned DiagID);
 
   enum CUDAFunctionTarget {
     CFT_Device,

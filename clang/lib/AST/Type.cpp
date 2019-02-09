@@ -2248,7 +2248,7 @@ struct IsNonTrivialCopyMoveVisitor
 
   bool visitWithKind(QualType::PrimitiveCopyKind PCK, QualType QT) {
     if (const auto *AT = this->Ctx.getAsArrayType(QT))
-      return this->asDerived().visit(QualType(AT, 0));
+      return this->asDerived().visit(Ctx.getBaseElementType(AT));
     return Super::visitWithKind(PCK, QT);
   }
 

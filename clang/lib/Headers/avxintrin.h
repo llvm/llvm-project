@@ -45,9 +45,13 @@ typedef unsigned char __v32qu __attribute__ ((__vector_size__ (32)));
  * appear in the interface though. */
 typedef signed char __v32qs __attribute__((__vector_size__(32)));
 
-typedef float __m256 __attribute__ ((__vector_size__ (32)));
-typedef double __m256d __attribute__((__vector_size__(32)));
-typedef long long __m256i __attribute__((__vector_size__(32)));
+typedef float __m256 __attribute__ ((__vector_size__ (32), __aligned__(32)));
+typedef double __m256d __attribute__((__vector_size__(32), __aligned__(32)));
+typedef long long __m256i __attribute__((__vector_size__(32), __aligned__(32)));
+
+typedef float __m256_u __attribute__ ((__vector_size__ (32), __aligned__(1)));
+typedef double __m256d_u __attribute__((__vector_size__(32), __aligned__(1)));
+typedef long long __m256i_u __attribute__((__vector_size__(32), __aligned__(1)));
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx"), __min_vector_width__(256)))
@@ -3113,7 +3117,7 @@ static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_loadu_pd(double const *__p)
 {
   struct __loadu_pd {
-    __m256d __v;
+    __m256d_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_pd*)__p)->__v;
 }
@@ -3133,7 +3137,7 @@ static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_loadu_ps(float const *__p)
 {
   struct __loadu_ps {
-    __m256 __v;
+    __m256_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_ps*)__p)->__v;
 }
@@ -3169,7 +3173,7 @@ static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_loadu_si256(__m256i const *__p)
 {
   struct __loadu_si256 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_si256*)__p)->__v;
 }
@@ -3246,7 +3250,7 @@ static __inline void __DEFAULT_FN_ATTRS
 _mm256_storeu_pd(double *__p, __m256d __a)
 {
   struct __storeu_pd {
-    __m256d __v;
+    __m256d_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_pd*)__p)->__v = __a;
 }
@@ -3266,7 +3270,7 @@ static __inline void __DEFAULT_FN_ATTRS
 _mm256_storeu_ps(float *__p, __m256 __a)
 {
   struct __storeu_ps {
-    __m256 __v;
+    __m256_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_ps*)__p)->__v = __a;
 }
@@ -3304,7 +3308,7 @@ static __inline void __DEFAULT_FN_ATTRS
 _mm256_storeu_si256(__m256i *__p, __m256i __a)
 {
   struct __storeu_si256 {
-    __m256i __v;
+    __m256i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_si256*)__p)->__v = __a;
 }

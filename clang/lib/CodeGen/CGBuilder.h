@@ -170,6 +170,13 @@ public:
   using CGBuilderBaseTy::CreateStructGEP;
   Address CreateStructGEP(Address Addr, unsigned Index, CharUnits Offset,
                           const llvm::Twine &Name = "") {
+#ifndef NDEBUG
+    llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::StructLayout *SL = DL.getStructLayout(ElTy);
+    assert(SL->getElementOffset(Index) == (uint64_t)Offset.getQuantity());
+#endif
+
     return Address(CreateStructGEP(Addr.getElementType(),
                                    Addr.getPointer(), Index, Name),
                    Addr.getAlignment().alignmentAtOffset(Offset));
@@ -177,6 +184,13 @@ public:
   Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::StructLayout *Layout,
                           const llvm::Twine &Name = "") {
+#ifndef NDEBUG
+    llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::StructLayout *SL = DL.getStructLayout(ElTy);
+    assert(Layout == SL);
+#endif
+
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
     return CreateStructGEP(Addr, Index, Offset, Name);
   }
@@ -193,11 +207,31 @@ public:
   /// \param EltSize - the size of the type T in bytes
   Address CreateConstArrayGEP(Address Addr, uint64_t Index, CharUnits EltSize,
                               const llvm::Twine &Name = "") {
+#ifndef NDEBUG
+    llvm::ArrayType *ElTy = cast<llvm::ArrayType>(Addr.getElementType());
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    assert(DL.getTypeAllocSize(ElTy->getElementType()) ==
+           (uint64_t)EltSize.getQuantity());
+#endif
+
     return Address(CreateInBoundsGEP(Addr.getPointer(),
                                      {getSize(CharUnits::Zero()),
                                       getSize(Index)},
                                      Name),
                    Addr.getAlignment().alignmentAtOffset(Index * EltSize));
+  }
+
+  Address CreateConstArrayGEP(Address Addr, uint64_t Index,
+                              const llvm::Twine &Name = "") {
+    llvm::ArrayType *ElTy = cast<llvm::ArrayType>(Addr.getElementType());
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    CharUnits EltSize =
+        CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy->getElementType()));
+
+    return Address(
+        CreateInBoundsGEP(Addr.getPointer(),
+                          {getSize(CharUnits::Zero()), getSize(Index)}, Name),
+        Addr.getAlignment().alignmentAtOffset(Index * EltSize));
   }
 
   /// Given
@@ -210,6 +244,12 @@ public:
   Address CreateConstInBoundsGEP(Address Addr, uint64_t Index,
                                  CharUnits EltSize,
                                  const llvm::Twine &Name = "") {
+#ifndef NDEBUG
+    llvm::Type *ElTy = Addr.getElementType();
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    assert(DL.getTypeAllocSize(ElTy) == (uint64_t)EltSize.getQuantity());
+#endif
+
     return Address(CreateInBoundsGEP(Addr.getElementType(), Addr.getPointer(),
                                      getSize(Index), Name),
                    Addr.getAlignment().alignmentAtOffset(Index * EltSize));
@@ -224,6 +264,11 @@ public:
   /// \param EltSize - the size of the type T in bytes
   Address CreateConstGEP(Address Addr, uint64_t Index, CharUnits EltSize,
                          const llvm::Twine &Name = "") {
+#ifndef NDEBUG
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    assert(DL.getTypeAllocSize(Addr.getElementType()) ==
+           (uint64_t)EltSize.getQuantity());
+#endif
     return Address(CreateGEP(Addr.getElementType(), Addr.getPointer(),
                              getSize(Index), Name),
                    Addr.getAlignment().alignmentAtOffset(Index * EltSize));
@@ -247,6 +292,11 @@ public:
   Address CreateConstInBoundsGEP2_32(Address Addr, unsigned Idx0,
                                       unsigned Idx1, const llvm::DataLayout &DL,
                                       const llvm::Twine &Name = "") {
+#ifndef NDEBUG
+    const llvm::DataLayout &DL2 = BB->getParent()->getParent()->getDataLayout();
+    assert(DL == DL2);
+#endif
+
     auto *GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
         Addr.getElementType(), Addr.getPointer(), Idx0, Idx1, Name));
     llvm::APInt Offset(

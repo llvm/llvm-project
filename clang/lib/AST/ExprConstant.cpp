@@ -2688,9 +2688,11 @@ static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
 }
 
 // Expand a string literal into an array of characters.
-static void expandStringLiteral(EvalInfo &Info, const Expr *Lit,
+//
+// FIXME: This is inefficient; we should probably introduce something similar
+// to the LLVM ConstantDataArray to make this cheaper.
+static void expandStringLiteral(EvalInfo &Info, const StringLiteral *S,
                                 APValue &Result) {
-  const StringLiteral *S = cast<StringLiteral>(Lit);
   const ConstantArrayType *CAT =
       Info.Ctx.getAsConstantArrayType(S->getType());
   assert(CAT && "string literal isn't an array");
@@ -2884,18 +2886,6 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       ObjType = CAT->getElementType();
 
-      // An array object is represented as either an Array APValue or as an
-      // LValue which refers to a string literal.
-      if (O->isLValue()) {
-        assert(I == N - 1 && "extracting subobject of character?");
-        assert(!O->hasLValuePath() || O->getLValuePath().empty());
-        if (handler.AccessKind != AK_Read)
-          expandStringLiteral(Info, O->getLValueBase().get<const Expr *>(),
-                              *O);
-        else
-          return handler.foundString(*O, ObjType, Index);
-      }
-
       if (O->getArrayInitializedElts() > Index)
         O = &O->getArrayInitializedElt(Index);
       else if (handler.AccessKind != AK_Read) {
@@ -3008,11 +2998,6 @@ struct ExtractSubobjectHandler {
     Result = APValue(Value);
     return true;
   }
-  bool foundString(APValue &Subobj, QualType SubobjType, uint64_t Character) {
-    Result = APValue(extractStringLiteralCharacter(
-        Info, Subobj.getLValueBase().get<const Expr *>(), Character));
-    return true;
-  }
 };
 } // end anonymous namespace
 
@@ -3069,9 +3054,6 @@ struct ModifySubobjectHandler {
       return false;
     Value = NewVal.getFloat();
     return true;
-  }
-  bool foundString(APValue &Subobj, QualType SubobjType, uint64_t Character) {
-    llvm_unreachable("shouldn't encounter string elements with ExpandArrays");
   }
 };
 } // end anonymous namespace
@@ -3386,12 +3368,20 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
       CompleteObject LitObj(&Lit, Base->getType(), false);
       return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal);
     } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
-      // We represent a string literal array as an lvalue pointing at the
-      // corresponding expression, rather than building an array of chars.
-      // FIXME: Support ObjCEncodeExpr, MakeStringConstant
-      APValue Str(Base, CharUnits::Zero(), APValue::NoLValuePath(), 0);
-      CompleteObject StrObj(&Str, Base->getType(), false);
-      return extractSubobject(Info, Conv, StrObj, LVal.Designator, RVal);
+      // Special-case character extraction so we don't have to construct an
+      // APValue for the whole string.
+      assert(LVal.Designator.Entries.size() == 1 &&
+             "Can only read characters from string literals");
+      if (LVal.Designator.isOnePastTheEnd()) {
+        if (Info.getLangOpts().CPlusPlus11)
+          Info.FFDiag(Conv, diag::note_constexpr_access_past_end) << AK_Read;
+        else
+          Info.FFDiag(Conv);
+        return false;
+      }
+      uint64_t CharIndex = LVal.Designator.Entries[0].ArrayIndex;
+      RVal = APValue(extractStringLiteralCharacter(Info, Base, CharIndex));
+      return true;
     }
   }
 
@@ -3516,9 +3506,6 @@ struct CompoundAssignSubobjectHandler {
       return false;
     LVal.moveInto(Subobj);
     return true;
-  }
-  bool foundString(APValue &Subobj, QualType SubobjType, uint64_t Character) {
-    llvm_unreachable("shouldn't encounter string elements here");
   }
 };
 } // end anonymous namespace
@@ -3667,9 +3654,6 @@ struct IncDecSubobjectHandler {
       return false;
     LVal.moveInto(Subobj);
     return true;
-  }
-  bool foundString(APValue &Subobj, QualType SubobjType, uint64_t Character) {
-    llvm_unreachable("shouldn't encounter string elements here");
   }
 };
 } // end anonymous namespace
@@ -7150,8 +7134,7 @@ namespace {
       : ExprEvaluatorBaseTy(Info), This(This), Result(Result) {}
 
     bool Success(const APValue &V, const Expr *E) {
-      assert((V.isArray() || V.isLValue()) &&
-             "expected array or string literal");
+      assert(V.isArray() && "expected array");
       Result = V;
       return true;
     }
@@ -7182,6 +7165,10 @@ namespace {
     bool VisitCXXConstructExpr(const CXXConstructExpr *E,
                                const LValue &Subobject,
                                APValue *Value, QualType Type);
+    bool VisitStringLiteral(const StringLiteral *E) {
+      expandStringLiteral(Info, E, Result);
+      return true;
+    }
   };
 } // end anonymous namespace
 
@@ -7214,14 +7201,8 @@ bool ArrayExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
 
   // C++11 [dcl.init.string]p1: A char array [...] can be initialized by [...]
   // an appropriately-typed string literal enclosed in braces.
-  if (E->isStringLiteralInit()) {
-    LValue LV;
-    if (!EvaluateLValue(E->getInit(0), LV, Info))
-      return false;
-    APValue Val;
-    LV.moveInto(Val);
-    return Success(Val, E);
-  }
+  if (E->isStringLiteralInit())
+    return Visit(E->getInit(0));
 
   bool Success = true;
 

@@ -1982,6 +1982,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(ConstantInt::get(ResultType, 0));
 
     Value *ArgValue = EmitScalarExpr(Arg);
+    if (ArgType->isObjCObjectPointerType()) {
+      // Convert Objective-C objects to id because we cannot distinguish between
+      // LLVM types for Obj-C classes as they are opaque.
+      ArgType = CGM.getContext().getObjCIdType();
+      ArgValue = Builder.CreateBitCast(ArgValue, ConvertType(ArgType));
+    }
     Function *F =
         CGM.getIntrinsic(Intrinsic::is_constant, ConvertType(ArgType));
     Value *Result = Builder.CreateCall(F, ArgValue);

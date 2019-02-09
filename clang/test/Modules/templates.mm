@@ -108,11 +108,11 @@ void testStaticDataMember() {
   WithUndefinedStaticDataMember<int[]> load_it;
 
   // CHECK-LABEL: define linkonce_odr i32* @_Z23getStaticDataMemberLeftv(
-  // CHECK: ret i32* getelementptr inbounds ([0 x i32], [0 x i32]* @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE, i32 0, i32 0)
+  // CHECK: ret i32* getelementptr inbounds ([0 x i32], [0 x i32]* @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE, i64 0, i64 0)
   (void) getStaticDataMemberLeft();
 
   // CHECK-LABEL: define linkonce_odr i32* @_Z24getStaticDataMemberRightv(
-  // CHECK: ret i32* getelementptr inbounds ([0 x i32], [0 x i32]* @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE, i32 0, i32 0)
+  // CHECK: ret i32* getelementptr inbounds ([0 x i32], [0 x i32]* @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE, i64 0, i64 0)
   (void) getStaticDataMemberRight();
 }
 

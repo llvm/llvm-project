@@ -4007,12 +4007,13 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                                   ArrayRef<Stmt *> Handlers) {
   // Don't report an error if 'try' is used in system headers.
   if (!getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(TryLoc) &&
-      (!getLangOpts().OpenMPIsDevice ||
-       !getLangOpts().OpenMPHostCXXExceptions ||
-       isInOpenMPTargetExecutionDirective() ||
-       isInOpenMPDeclareTargetContext()))
-    Diag(TryLoc, diag::err_exceptions_disabled) << "try";
+      !getSourceManager().isInSystemHeader(TryLoc)) {
+    // Delay error emission for the OpenMP device code.
+    if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)
+      diagIfOpenMPDeviceCode(TryLoc, diag::err_exceptions_disabled) << "try";
+    else
+      Diag(TryLoc, diag::err_exceptions_disabled) << "try";
+  }
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
