@@ -2298,7 +2298,14 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
   }
 
   bool IsRootModule = M ? !M->Parent : true;
-  if (CreateSkeletonCU && IsRootModule) {
+  // When a module name is specified as -fmodule-name, that module gets a
+  // clang::Module object, but it won't actually be built or imported; it will
+  // be textual.
+  if (CreateSkeletonCU && IsRootModule && Mod.getASTFile().empty())
+    assert((!M || (M->Name == CGM.getLangOpts().ModuleName)) &&
+           "clang module without ASTFile must be specified by -fmodule-name");
+
+  if (CreateSkeletonCU && IsRootModule && !Mod.getASTFile().empty()) {
     // PCH files don't have a signature field in the control block,
     // but LLVM detects skeleton CUs by looking for a non-zero DWO id.
     // We use the lower 64 bits for debug info.
@@ -2315,6 +2322,7 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
                           Signature);
     DIB.finalize();
   }
+
   llvm::DIModule *Parent =
       IsRootModule ? nullptr
                    : getOrCreateModuleRef(
