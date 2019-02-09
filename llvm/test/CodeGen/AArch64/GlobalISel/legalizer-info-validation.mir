@@ -340,7 +340,10 @@
 # DEBUG: .. the first uncovered type index: 1, OK
 #
 # DEBUG-NEXT: G_FSQRT (opcode {{[0-9]+}}): 1 type index
-# DEBUG: .. the first uncovered type index: 1, OK
+# DEBUG: .. type index coverage check SKIPPED: user-defined predicate detected
+#
+# DEBUG-NEXT: G_FFLOOR (opcode {{[0-9]+}}): 1 type index
+# DEBUG: .. type index coverage check SKIPPED: no rules defined
 
 # CHECK-NOT: ill-defined
 

@@ -1,0 +1,35 @@
+# RUN: llc -march=aarch64 -run-pass=legalizer %s -o - -enable-cse-in-legalizer=1 -debug-only=cseinfo 2>&1 | FileCheck %s
+# Test the -debug-only=cseinfo option here to make sure we're recording new instructions and printing the hit count
+# at the end.
+# REQUIRES: asserts
+---
+name:            test_cse_in_legalizer
+body:             |
+  bb.0.entry:
+    ; CHECK: CSEInfo::Add MI: %{{[0-9]+}}:_(s8) = G_TRUNC
+    ; CHECK: CSEInfo::Add MI: %{{[0-9]+}}:_(s32) = G_ZEXT
+    ; CHECK: CSEInfo::Add MI: %{{[0-9]+}}:_(s8) = G_TRUNC
+    ; CHECK: CSEInfo::Add MI: %{{[0-9]+}}:_(s32) = G_ZEXT
+    ; CHECK: CSEInfo::Recording new MI G_CONSTANT
+    ; CHECK: CSEInfo::Recording new MI G_CONSTANT
+    ; CHECK: CSEInfo::Recording new MI G_TRUNC
+    ; CHECK: CSEInfo::Recording new MI G_TRUNC
+    ; CHECK: CSEInfo::Recording new MI G_AND
+    ; CHECK: CSEInfo::Recording new MI G_AND
+    ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_CONSTANT
+    ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_TRUNC
+    ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_AND
+    ; Note - these will be sensitive the opcode numbers. If
+    ; frequently modifying generic opcodes, we could just regex
+    ; the opcodes in the following lines instead of checking for
+    ; specific opcode numbers.
+    ; CHECK: CSEInfo::CSE Hit for Opc 42 : 1
+    ; CHECK: CSEInfo::CSE Hit for Opc 84 : 1
+    ; CHECK: CSEInfo::CSE Hit for Opc 83 : 1
+    %0:_(s64) = COPY $x0
+    %1:_(s8) = G_TRUNC %0(s64)
+    %19:_(s32) = G_ZEXT %1(s8)
+    $w0 = COPY %19(s32)
+    %2:_(s8) = G_TRUNC %0(s64)
+    %20:_(s32) = G_ZEXT %2(s8)
+    $w0 = COPY %20(s32)

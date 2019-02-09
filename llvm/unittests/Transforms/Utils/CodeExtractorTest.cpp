@@ -58,8 +58,7 @@ TEST(CodeExtractor, ExitStub) {
                                            getBlockByName(Func, "body1"),
                                            getBlockByName(Func, "body2") };
 
-  DominatorTree DT(*Func);
-  CodeExtractor CE(Candidates, &DT);
+  CodeExtractor CE(Candidates);
   EXPECT_TRUE(CE.isEligible());
 
   Function *Outlined = CE.extractCodeRegion();
@@ -109,8 +108,7 @@ TEST(CodeExtractor, ExitPHIOnePredFromRegion) {
     getBlockByName(Func, "extracted2")
   };
 
-  DominatorTree DT(*Func);
-  CodeExtractor CE(ExtractedBlocks, &DT);
+  CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
   Function *Outlined = CE.extractCodeRegion();
@@ -184,14 +182,47 @@ TEST(CodeExtractor, StoreOutputInvokeResultAfterEHPad) {
     getBlockByName(Func, "lpad2")
   };
 
-  DominatorTree DT(*Func);
-  CodeExtractor CE(ExtractedBlocks, &DT);
+  CodeExtractor CE(ExtractedBlocks);
   EXPECT_TRUE(CE.isEligible());
 
   Function *Outlined = CE.extractCodeRegion();
   EXPECT_TRUE(Outlined);
   EXPECT_FALSE(verifyFunction(*Outlined, &errs()));
   EXPECT_FALSE(verifyFunction(*Func, &errs()));
+}
+
+TEST(CodeExtractor, StoreOutputInvokeResultInExitStub) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    declare i32 @bar()
+
+    define i32 @foo() personality i8* null {
+    entry:
+      %0 = invoke i32 @bar() to label %exit unwind label %lpad
+
+    exit:
+      ret i32 %0
+
+    lpad:
+      %1 = landingpad { i8*, i32 }
+              cleanup
+      resume { i8*, i32 } %1
+    }
+  )invalid",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{ getBlockByName(Func, "entry"),
+                                       getBlockByName(Func, "lpad") };
+
+  CodeExtractor CE(Blocks);
+  EXPECT_TRUE(CE.isEligible());
+
+  Function *Outlined = CE.extractCodeRegion();
+  EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
 }
 
 } // end anonymous namespace

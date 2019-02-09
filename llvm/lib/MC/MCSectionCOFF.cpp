@@ -14,8 +14,6 @@
 
 using namespace llvm;
 
-MCSectionCOFF::~MCSectionCOFF() = default; // anchor.
-
 // ShouldOmitSectionDirective - Decides whether a '.section' directive
 // should be printed before the section name
 bool MCSectionCOFF::ShouldOmitSectionDirective(StringRef Name,

@@ -2220,3 +2220,11 @@ namespace PointerArithmeticOverflow {
   constexpr int *q = (&n + 1) - (unsigned __int128)-1; // expected-error {{constant expression}} expected-note {{cannot refer to element -3402}}
   constexpr int *r = &(&n + 1)[(unsigned __int128)-1]; // expected-error {{constant expression}} expected-note {{cannot refer to element 3402}}
 }
+
+namespace PR40430 {
+  struct S {
+    char c[10] = "asdf";
+    constexpr char foo() const { return c[3]; }
+  };
+  static_assert(S().foo() == 'f', "");
+}

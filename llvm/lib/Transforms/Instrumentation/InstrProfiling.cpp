@@ -677,22 +677,6 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   return F->hasAddressTaken() || F->hasLinkOnceLinkage();
 }
 
-static inline Comdat *getOrCreateProfileComdat(Module &M, Function &F,
-                                               InstrProfIncrementInst *Inc,
-                                               const Triple &TT) {
-  if (!needsComdatForCounter(F, M))
-    return nullptr;
-
-  // COFF format requires a COMDAT section to have a key symbol with the same
-  // name. The linker targeting COFF also requires that the COMDAT
-  // a section is associated to must precede the associating section. For this
-  // reason, we must choose the counter var's name as the name of the comdat.
-  StringRef ComdatPrefix =
-      (TT.isOSBinFormatCOFF() ? getInstrProfCountersVarPrefix()
-                              : getInstrProfComdatPrefix());
-  return M.getOrInsertComdat(StringRef(getVarName(Inc, ComdatPrefix)));
-}
-
 static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   // Don't do this for Darwin.  compiler-rt uses linker magic.
   if (TT.isOSDarwin())
@@ -700,7 +684,7 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
 
   // Use linker script magic to get data/cnts/name start/end.
   if (TT.isOSLinux() || TT.isOSFreeBSD() || TT.isOSNetBSD() ||
-      TT.isOSFuchsia() || TT.isPS4CPU())
+      TT.isOSFuchsia() || TT.isPS4CPU() || TT.isOSWindows())
     return false;
 
   return true;
@@ -717,13 +701,44 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
     PD = It->second;
   }
 
-  // Move the name variable to the right section. Place them in a COMDAT group
-  // if the associated function is a COMDAT. This will make sure that
-  // only one copy of counters of the COMDAT function will be emitted after
-  // linking.
+  // Match the linkage and visibility of the name global, except on COFF, where
+  // the linkage must be local and consequentially the visibility must be
+  // default.
   Function *Fn = Inc->getParent()->getParent();
-  Comdat *ProfileVarsComdat = nullptr;
-  ProfileVarsComdat = getOrCreateProfileComdat(*M, *Fn, Inc, TT);
+  GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
+  GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
+  if (TT.isOSBinFormatCOFF()) {
+    Linkage = GlobalValue::InternalLinkage;
+    Visibility = GlobalValue::DefaultVisibility;
+  }
+
+  // Move the name variable to the right section. Place them in a COMDAT group
+  // if the associated function is a COMDAT. This will make sure that only one
+  // copy of counters of the COMDAT function will be emitted after linking.
+  Comdat *Cmdt = nullptr;
+  GlobalValue::LinkageTypes CounterLinkage = Linkage;
+  if (needsComdatForCounter(*Fn, *M)) {
+    if (TT.isOSBinFormatCOFF()) {
+      // There are two cases that need a comdat on COFF:
+      // 1. Functions that already have comdats (standard case)
+      // 2. available_externally functions (dllimport and C99 inline)
+      // In the first case, put all the data in the original function comdat. In
+      // the second case, create a new comdat group using the counter as the
+      // leader. It's linkage must be external, so use linkonce_odr linkage in
+      // that case.
+      if (Comdat *C = Fn->getComdat()) {
+        Cmdt = C;
+      } else {
+        Cmdt = M->getOrInsertComdat(
+            getVarName(Inc, getInstrProfCountersVarPrefix()));
+        CounterLinkage = GlobalValue::LinkOnceODRLinkage;
+      }
+    } else {
+      // For other platforms that use comdats (ELF), make a new comdat group for
+      // all the profile data. It will be deduplicated within the current DSO.
+      Cmdt = M->getOrInsertComdat(getVarName(Inc, getInstrProfComdatPrefix()));
+    }
+  }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   LLVMContext &Ctx = M->getContext();
@@ -731,14 +746,15 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 
   // Create the counters variable.
   auto *CounterPtr =
-      new GlobalVariable(*M, CounterTy, false, NamePtr->getLinkage(),
+      new GlobalVariable(*M, CounterTy, false, Linkage,
                          Constant::getNullValue(CounterTy),
                          getVarName(Inc, getInstrProfCountersVarPrefix()));
-  CounterPtr->setVisibility(NamePtr->getVisibility());
+  CounterPtr->setVisibility(Visibility);
   CounterPtr->setSection(
       getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
   CounterPtr->setAlignment(8);
-  CounterPtr->setComdat(ProfileVarsComdat);
+  CounterPtr->setComdat(Cmdt);
+  CounterPtr->setLinkage(CounterLinkage);
 
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
@@ -752,14 +768,14 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
       ArrayType *ValuesTy = ArrayType::get(Type::getInt64Ty(Ctx), NS);
 
       auto *ValuesVar =
-          new GlobalVariable(*M, ValuesTy, false, NamePtr->getLinkage(),
+          new GlobalVariable(*M, ValuesTy, false, Linkage,
                              Constant::getNullValue(ValuesTy),
                              getVarName(Inc, getInstrProfValuesVarPrefix()));
-      ValuesVar->setVisibility(NamePtr->getVisibility());
+      ValuesVar->setVisibility(Visibility);
       ValuesVar->setSection(
           getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
       ValuesVar->setAlignment(8);
-      ValuesVar->setComdat(ProfileVarsComdat);
+      ValuesVar->setComdat(Cmdt);
       ValuesPtrExpr =
           ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
     }
@@ -786,13 +802,13 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *Data = new GlobalVariable(*M, DataTy, false, NamePtr->getLinkage(),
+  auto *Data = new GlobalVariable(*M, DataTy, false, Linkage,
                                   ConstantStruct::get(DataTy, DataVals),
                                   getVarName(Inc, getInstrProfDataVarPrefix()));
-  Data->setVisibility(NamePtr->getVisibility());
+  Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(INSTR_PROF_DATA_ALIGNMENT);
-  Data->setComdat(ProfileVarsComdat);
+  Data->setComdat(Cmdt);
 
   PD.RegionCounters = CounterPtr;
   PD.DataVar = Data;
@@ -878,6 +894,10 @@ void InstrProfiling::emitNameData() {
   NamesSize = CompressedNameStr.size();
   NamesVar->setSection(
       getInstrProfSectionName(IPSK_name, TT.getObjectFormat()));
+  // On COFF, it's important to reduce the alignment down to 1 to prevent the
+  // linker from inserting padding before the start of the names section or
+  // between names entries.
+  NamesVar->setAlignment(1);
   UsedVars.push_back(NamesVar);
 
   for (auto *NamePtr : ReferencedNames)

@@ -84,6 +84,7 @@ ResourcePriorityQueue::numberRCValPredInSU(SUnit *SU, unsigned RCId) {
       case ISD::CopyFromReg:    NumberDeps++;  break;
       case ISD::CopyToReg:      break;
       case ISD::INLINEASM:      break;
+      case ISD::INLINEASM_BR:   break;
     }
     if (!ScegN->isMachineOpcode())
       continue;
@@ -120,6 +121,7 @@ unsigned ResourcePriorityQueue::numberRCValSuccInSU(SUnit *SU,
       case ISD::CopyFromReg:    break;
       case ISD::CopyToReg:      NumberDeps++;  break;
       case ISD::INLINEASM:      break;
+      case ISD::INLINEASM_BR:   break;
     }
     if (!ScegN->isMachineOpcode())
       continue;
@@ -445,6 +447,7 @@ int ResourcePriorityQueue::SUSchedulingCost(SUnit *SU) {
         break;
 
       case ISD::INLINEASM:
+      case ISD::INLINEASM_BR:
         ResCount += PriorityThree;
         break;
       }
@@ -547,6 +550,7 @@ void ResourcePriorityQueue::initNumRegDefsLeft(SUnit *SU) {
           NodeNumDefs++;
           break;
         case ISD::INLINEASM:
+        case ISD::INLINEASM_BR:
           NodeNumDefs++;
           break;
       }

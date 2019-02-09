@@ -3289,7 +3289,8 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   switch (ConstraintLetter) {
   default: break;
   case 'X':     // Allows any operand; labels (basic block) use this.
-    if (Op.getOpcode() == ISD::BasicBlock) {
+    if (Op.getOpcode() == ISD::BasicBlock ||
+        Op.getOpcode() == ISD::TargetBlockAddress) {
       Ops.push_back(Op);
       return;
     }
@@ -3775,6 +3776,9 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
       OpInfo.CallOperandVal = v;
       return;
     }
+
+    if (Op.getNode() && Op.getOpcode() == ISD::TargetBlockAddress)
+      return;
 
     // Otherwise, try to resolve it to something we know about by looking at
     // the actual operand type.
@@ -5512,9 +5516,6 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   // are scaled. The result is given to us in 2 halves, so we only want part of
   // both in the result.
   EVT ShiftTy = getShiftAmountTy(VT, DAG.getDataLayout());
-  Lo = DAG.getNode(ISD::SRL, dl, VT, Lo, DAG.getConstant(Scale, dl, ShiftTy));
-  Hi = DAG.getNode(
-      ISD::SHL, dl, VT, Hi,
-      DAG.getConstant(VT.getScalarSizeInBits() - Scale, dl, ShiftTy));
-  return DAG.getNode(ISD::OR, dl, VT, Lo, Hi);
+  return DAG.getNode(ISD::FSHR, dl, VT, Hi, Lo,
+                     DAG.getConstant(Scale, dl, ShiftTy));
 }

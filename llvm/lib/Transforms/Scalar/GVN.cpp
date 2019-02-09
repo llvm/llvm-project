@@ -1131,6 +1131,14 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
         return false;
       }
 
+      // FIXME: Can we support the fallthrough edge?
+      if (isa<CallBrInst>(Pred->getTerminator())) {
+        LLVM_DEBUG(
+            dbgs() << "COULD NOT PRE LOAD BECAUSE OF CALLBR CRITICAL EDGE '"
+                   << Pred->getName() << "': " << *LI << '\n');
+        return false;
+      }
+
       if (LoadBB->isEHPad()) {
         LLVM_DEBUG(
             dbgs() << "COULD NOT PRE LOAD BECAUSE OF AN EH PAD CRITICAL EDGE '"
@@ -2167,8 +2175,8 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
     return false;
 
   // We don't currently value number ANY inline asm calls.
-  if (CallInst *CallI = dyn_cast<CallInst>(CurInst))
-    if (CallI->isInlineAsm())
+  if (auto *CallB = dyn_cast<CallBase>(CurInst))
+    if (CallB->isInlineAsm())
       return false;
 
   uint32_t ValNo = VN.lookup(CurInst);
@@ -2249,6 +2257,11 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
 
     // Don't do PRE across indirect branch.
     if (isa<IndirectBrInst>(PREPred->getTerminator()))
+      return false;
+
+    // Don't do PRE across callbr.
+    // FIXME: Can we do this across the fallthrough edge?
+    if (isa<CallBrInst>(PREPred->getTerminator()))
       return false;
 
     // We can't do PRE safely on a critical edge, so instead we schedule

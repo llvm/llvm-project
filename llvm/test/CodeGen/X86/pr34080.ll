@@ -54,10 +54,10 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-SCHEDULE-NEXT:    movq %rsp, %rbp
 ; SSE2-SCHEDULE-NEXT:    .cfi_def_cfa_register %rbp
 ; SSE2-SCHEDULE-NEXT:    fnstcw -4(%rbp)
+; SSE2-SCHEDULE-NEXT:    fldt 16(%rbp)
 ; SSE2-SCHEDULE-NEXT:    movzwl -4(%rbp), %eax
 ; SSE2-SCHEDULE-NEXT:    movw $3199, -4(%rbp) ## imm = 0xC7F
 ; SSE2-SCHEDULE-NEXT:    fldcw -4(%rbp)
-; SSE2-SCHEDULE-NEXT:    fldt 16(%rbp)
 ; SSE2-SCHEDULE-NEXT:    movw %ax, -4(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fistl -8(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fldcw -4(%rbp)

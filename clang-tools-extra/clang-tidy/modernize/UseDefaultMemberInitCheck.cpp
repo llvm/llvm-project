@@ -255,17 +255,20 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
   CharSourceRange InitRange =
       CharSourceRange::getCharRange(LParenEnd, Init->getRParenLoc());
 
+  bool ValueInit = isa<ImplicitValueInitExpr>(Init->getInit());
+  bool CanAssign = UseAssignment && (!ValueInit || !Init->getInit()->getType()->isEnumeralType());
+
   auto Diag =
       diag(Field->getLocation(), "use default member initializer for %0")
       << Field
-      << FixItHint::CreateInsertion(FieldEnd, UseAssignment ? " = " : "{")
+      << FixItHint::CreateInsertion(FieldEnd, CanAssign ? " = " : "{")
       << FixItHint::CreateInsertionFromRange(FieldEnd, InitRange);
 
-  if (UseAssignment && isa<ImplicitValueInitExpr>(Init->getInit()))
+  if (CanAssign && ValueInit)
     Diag << FixItHint::CreateInsertion(
         FieldEnd, getValueOfValueInit(Init->getInit()->getType()));
 
-  if (!UseAssignment)
+  if (!CanAssign)
     Diag << FixItHint::CreateInsertion(FieldEnd, "}");
 
   Diag << FixItHint::CreateRemoval(Init->getSourceRange());

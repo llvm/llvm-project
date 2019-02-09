@@ -700,10 +700,12 @@ EmitArrayConstant(CodeGenModule &CGM, const ConstantArrayType *DestType,
   return llvm::ConstantStruct::get(SType, Elements);
 }
 
-/// This class only needs to handle two cases:
-/// 1) Literals (this is used by APValue emission to emit literals).
-/// 2) Arrays, structs and unions (outside C++11 mode, we don't currently
-///    constant fold these types).
+// This class only needs to handle arrays, structs and unions. Outside C++11
+// mode, we don't currently constant fold those types.  All other types are
+// handled by constant folding.
+//
+// Constant folding is currently missing support for a few features supported
+// here: CK_ToUnion, CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
 class ConstExprEmitter :
   public StmtVisitor<ConstExprEmitter, llvm::Constant*, QualType> {
   CodeGenModule &CGM;
@@ -1076,6 +1078,7 @@ public:
   }
 
   llvm::Constant *VisitStringLiteral(StringLiteral *E, QualType T) {
+    // This is a string literal initializing an array in an initializer.
     return CGM.GetConstantArrayFromStringLiteral(E);
   }
 
@@ -1649,17 +1652,7 @@ private:
 llvm::Constant *ConstantLValueEmitter::tryEmit() {
   const APValue::LValueBase &base = Value.getLValueBase();
 
-  // Certain special array initializers are represented in APValue
-  // as l-values referring to the base expression which generates the
-  // array.  This happens with e.g. string literals.  These should
-  // probably just get their own representation kind in APValue.
-  if (DestType->isArrayType()) {
-    assert(!hasNonZeroOffset() && "offset on array initializer");
-    auto expr = const_cast<Expr*>(base.get<const Expr*>());
-    return ConstExprEmitter(Emitter).Visit(expr, DestType);
-  }
-
-  // Otherwise, the destination type should be a pointer or reference
+  // The destination type should be a pointer or reference
   // type, but it might also be a cast thereof.
   //
   // FIXME: the chain of casts required should be reflected in the APValue.

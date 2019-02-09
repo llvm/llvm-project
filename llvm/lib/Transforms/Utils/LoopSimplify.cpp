@@ -27,6 +27,9 @@
 // to transform the loop and make these guarantees. Client code should check
 // that these conditions are true before relying on them.
 //
+// Similar complications arise from callbr instructions, particularly in
+// asm-goto where blockaddress expressions are used.
+//
 // Note that the simplifycfg pass will clean up blocks which are split out but
 // end up being unnecessary, so usage of this pass should not pessimize
 // generated code.
@@ -123,10 +126,11 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
        PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (!L->contains(P)) {         // Coming in from outside the loop?
-      // If the loop is branched to from an indirect branch, we won't
+      // If the loop is branched to from an indirect terminator, we won't
       // be able to fully transform the loop, because it prohibits
       // edge splitting.
-      if (isa<IndirectBrInst>(P->getTerminator())) return nullptr;
+      if (P->getTerminator()->isIndirectTerminator())
+        return nullptr;
 
       // Keep track of it.
       OutsideBlocks.push_back(P);
@@ -235,8 +239,8 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     if (PN->getIncomingValue(i) != PN ||
         !L->contains(PN->getIncomingBlock(i))) {
-      // We can't split indirectbr edges.
-      if (isa<IndirectBrInst>(PN->getIncomingBlock(i)->getTerminator()))
+      // We can't split indirect control flow edges.
+      if (PN->getIncomingBlock(i)->getTerminator()->isIndirectTerminator())
         return nullptr;
       OuterLoopPreds.push_back(PN->getIncomingBlock(i));
     }
@@ -357,8 +361,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   for (pred_iterator I = pred_begin(Header), E = pred_end(Header); I != E; ++I){
     BasicBlock *P = *I;
 
-    // Indirectbr edges cannot be split, so we must fail if we find one.
-    if (isa<IndirectBrInst>(P->getTerminator()))
+    // Indirect edges cannot be split, so we must fail if we find one.
+    if (P->getTerminator()->isIndirectTerminator())
       return nullptr;
 
     if (P != Preheader) BackedgeBlocks.push_back(P);

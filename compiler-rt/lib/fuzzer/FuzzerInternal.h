@@ -73,11 +73,6 @@ public:
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const Vector<std::string> &Corpora);
-  void CrashResistantMerge(const Vector<std::string> &Args,
-                           const Vector<std::string> &Corpora,
-                           const char *CoverageSummaryInputPathOrNull,
-                           const char *CoverageSummaryOutputPathOrNull,
-                           const char *MergeControlFilePathOrNull);
   void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
@@ -91,19 +86,19 @@ public:
                                bool DuringInitialCorpusExecution);
 
   void HandleMalloc(size_t Size);
+  static void MaybeExitGracefully();
+  void WriteToOutputCorpus(const Unit &U);
 
 private:
   void AlarmCallback();
   void CrashCallback();
   void ExitCallback();
-  void MaybeExitGracefully();
   void CrashOnOverwrittenData();
   void InterruptCallback();
   void MutateAndTestOne();
   void PurgeAllocator();
   void ReportNewCoverage(InputInfo *II, const Unit &U);
   void PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size);
-  void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n", size_t Units = 0);
   void PrintStatusForNewUnit(const Unit &U, const char *Text);

@@ -18,7 +18,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 
 typedef llvm::ImmutableSet<
-    std::pair<clang::ento::SymbolRef, const llvm::SMTExpr *>>
+    std::pair<clang::ento::SymbolRef, const clang::ento::SMTExpr *>>
     ConstraintSMTTy;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ConstraintSMT, ConstraintSMTTy)
 
@@ -26,7 +26,7 @@ namespace clang {
 namespace ento {
 
 class SMTConstraintManager : public clang::ento::SimpleConstraintManager {
-  mutable llvm::SMTSolverRef Solver = llvm::CreateZ3Solver();
+  mutable SMTSolverRef Solver = CreateZ3Solver();
 
 public:
   SMTConstraintManager(clang::ento::SubEngine *SE, clang::ento::SValBuilder &SB)
@@ -44,8 +44,7 @@ public:
     QualType RetTy;
     bool hasComparison;
 
-    llvm::SMTExprRef Exp =
-        SMTConv::getExpr(Solver, Ctx, Sym, &RetTy, &hasComparison);
+    SMTExprRef Exp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy, &hasComparison);
 
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
@@ -81,12 +80,12 @@ public:
 
     QualType RetTy;
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
-    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy);
-    llvm::SMTExprRef Exp =
+    SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy);
+    SMTExprRef Exp =
         SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/true);
 
     // Negate the constraint
-    llvm::SMTExprRef NotExp =
+    SMTExprRef NotExp =
         SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/false);
 
     ConditionTruthVal isSat = checkModel(State, Sym, Exp);
@@ -119,7 +118,7 @@ public:
       // this method tries to get the interpretation (the actual value) from
       // the solver, which is currently not cached.
 
-      llvm::SMTExprRef Exp =
+      SMTExprRef Exp =
           SMTConv::fromData(Solver, SD->getSymbolID(), Ty, Ctx.getTypeSize(Ty));
 
       Solver->reset();
@@ -135,7 +134,7 @@ public:
         return nullptr;
 
       // A value has been obtained, check if it is the only value
-      llvm::SMTExprRef NotExp = SMTConv::fromBinOp(
+      SMTExprRef NotExp = SMTConv::fromBinOp(
           Solver, Exp, BO_NE,
           Ty->isBooleanType() ? Solver->mkBoolean(Value.getBoolValue())
                               : Solver->mkBitvector(Value, Value.getBitWidth()),
@@ -273,7 +272,7 @@ public:
 protected:
   // Check whether a new model is satisfiable, and update the program state.
   virtual ProgramStateRef assumeExpr(ProgramStateRef State, SymbolRef Sym,
-                                     const llvm::SMTExprRef &Exp) {
+                                     const SMTExprRef &Exp) {
     // Check the model, avoid simplifying AST to save time
     if (checkModel(State, Sym, Exp).isConstrainedTrue())
       return State->add<ConstraintSMT>(std::make_pair(Sym, Exp));
@@ -290,9 +289,9 @@ protected:
 
     // Construct the logical AND of all the constraints
     if (I != IE) {
-      std::vector<llvm::SMTExprRef> ASTs;
+      std::vector<SMTExprRef> ASTs;
 
-      llvm::SMTExprRef Constraint = I++->second;
+      SMTExprRef Constraint = I++->second;
       while (I != IE) {
         Constraint = Solver->mkAnd(Constraint, I++->second);
       }
@@ -303,7 +302,7 @@ protected:
 
   // Generate and check a Z3 model, using the given constraint.
   ConditionTruthVal checkModel(ProgramStateRef State, SymbolRef Sym,
-                               const llvm::SMTExprRef &Exp) const {
+                               const SMTExprRef &Exp) const {
     ProgramStateRef NewState =
         State->add<ConstraintSMT>(std::make_pair(Sym, Exp));
 

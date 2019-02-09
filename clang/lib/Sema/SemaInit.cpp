@@ -144,6 +144,7 @@ static StringInitFailureKind IsStringInit(Expr *init, QualType declType,
 static void updateStringLiteralType(Expr *E, QualType Ty) {
   while (true) {
     E->setType(Ty);
+    E->setValueKind(VK_RValue);
     if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E))
       break;
     else if (ParenExpr *PE = dyn_cast<ParenExpr>(E))

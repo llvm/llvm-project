@@ -466,6 +466,7 @@ private:
   void visitReturnInst(ReturnInst &RI);
   void visitSwitchInst(SwitchInst &SI);
   void visitIndirectBrInst(IndirectBrInst &BI);
+  void visitCallBrInst(CallBrInst &CBI);
   void visitSelectInst(SelectInst &SI);
   void visitUserOp1(Instruction &I);
   void visitUserOp2(Instruction &I) { visitUserOp1(I); }
@@ -2448,6 +2449,26 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
            "Indirectbr destinations must all have pointer type!", &BI);
 
   visitTerminator(BI);
+}
+
+void Verifier::visitCallBrInst(CallBrInst &CBI) {
+  Assert(CBI.isInlineAsm(), "Callbr is currently only used for asm-goto!",
+         &CBI);
+  Assert(CBI.getType()->isVoidTy(), "Callbr return value is not supported!",
+         &CBI);
+  for (unsigned i = 0, e = CBI.getNumSuccessors(); i != e; ++i)
+    Assert(CBI.getSuccessor(i)->getType()->isLabelTy(),
+           "Callbr successors must all have pointer type!", &CBI);
+  for (unsigned i = 0, e = CBI.getNumOperands(); i != e; ++i) {
+    Assert(i >= CBI.getNumArgOperands() || !isa<BasicBlock>(CBI.getOperand(i)),
+           "Using an unescaped label as a callbr argument!", &CBI);
+    if (isa<BasicBlock>(CBI.getOperand(i)))
+      for (unsigned j = i + 1; j != e; ++j)
+        Assert(CBI.getOperand(i) != CBI.getOperand(j),
+               "Duplicate callbr destination!", &CBI);
+  }
+
+  visitTerminator(CBI);
 }
 
 void Verifier::visitSelectInst(SelectInst &SI) {

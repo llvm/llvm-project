@@ -2615,6 +2615,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       return;
     break;
   case ISD::INLINEASM:
+  case ISD::INLINEASM_BR:
     if (tryInlineAsm(N))
       return;
     break;
@@ -4319,7 +4320,7 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
   if (!Changed)
     return false;
 
-  SDValue New = CurDAG->getNode(ISD::INLINEASM, SDLoc(N),
+  SDValue New = CurDAG->getNode(N->getOpcode(), SDLoc(N),
       CurDAG->getVTList(MVT::Other, MVT::Glue), AsmNodeOperands);
   New->setNodeId(-1);
   ReplaceNode(N, New.getNode());

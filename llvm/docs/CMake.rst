@@ -582,6 +582,9 @@ LLVM-specific variables
   If enabled, the compiler version check will only warn when using a toolchain
   which is about to be deprecated, instead of emitting an error.
 
+**LLVM_USE_NEWPM**:BOOL
+  If enabled, use the experimental new pass manager.
+
 CMake Caches
 ============
 
