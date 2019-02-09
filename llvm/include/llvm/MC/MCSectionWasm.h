@@ -48,11 +48,7 @@ class MCSectionWasm final : public MCSection {
       : MCSection(SV_Wasm, K, Begin), SectionName(Section), UniqueID(UniqueID),
         Group(group) {}
 
-  void setSectionName(StringRef Name) { SectionName = Name; }
-
 public:
-  ~MCSectionWasm();
-
   /// Decides whether a '.section' directive should be printed before the
   /// section name
   bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;

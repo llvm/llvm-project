@@ -62,8 +62,6 @@ private:
   }
 
 public:
-  ~MCSectionCOFF();
-
   /// Decides whether a '.section' directive should be printed before the
   /// section name
   bool ShouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
