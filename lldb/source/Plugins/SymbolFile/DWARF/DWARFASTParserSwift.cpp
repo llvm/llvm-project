@@ -228,7 +228,7 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
 
   // Typedefs don't have a DW_AT_linkage_name, so their DW_AT_name is the
   // mangled. Get the unmangled name.
-  if (die.Tag() == DW_TAG_typedef) {
+  auto fixup_typedef = [&mangled_name, &decl_context]() {
     using namespace swift::Demangle;
     Context Ctx;
     NodePointer node = Ctx.demangleSymbolAsNode(mangled_name);
@@ -247,10 +247,12 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
       return;
     for (NodePointer child : *node)
       if (child->getKind() == Node::Kind::Identifier && child->hasText()) {
+        decl_context.back().type = CompilerContextKind::Typedef;
         decl_context.back().name = ConstString(child->getText());
-        break;
+        return;
       }
-  }
+  };
+  fixup_typedef();
 
   auto *sym_file = die.GetCU()->GetSymbolFileDWARF();
   sym_file->UpdateExternalModuleListIfNeeded();
