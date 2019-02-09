@@ -2240,38 +2240,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
   return true;
 }
 
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
-    ValueObject &in_value, SwiftASTContext &scratch_ctx,
-    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address) {
-  Status error;
-  std::vector<CompilerType> dyn_types;
-  for (size_t idx = 0; idx < in_value.GetNumChildren(); idx++) {
-    ValueObjectSP child_sp(in_value.GetChildAtIndex(idx, true));
-    TypeAndOrName type_and_or_name;
-    Address address;
-    Value::ValueType value_type;
-    CompilerType child_type;
-    if (!GetDynamicTypeAndAddress(*child_sp.get(), use_dynamic,
-                                  type_and_or_name, address, value_type))
-      child_type = child_sp->GetCompilerType();
-    else
-      child_type = type_and_or_name.GetCompilerType();
-    dyn_types.push_back(scratch_ctx.ImportType(child_type, error));
-  }
-
-  CompilerType dyn_tuple_type = scratch_ctx.CreateTupleType(dyn_types);
-  class_type_or_name.SetCompilerType(dyn_tuple_type);
-
-  lldb::addr_t tuple_address = in_value.GetAddressOf(true, nullptr);
-  if (error.Fail() || !tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
-      return false;
-
-  address.SetLoadAddress(tuple_address, in_value.GetTargetSP().get());
-
-  return true;
-}
-
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
@@ -2523,10 +2491,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
   else if (type_info.AnySet(eTypeIsGenericTypeParam))
     // ..._GenericTypeParam performs the archetype binding *and* sets address.
     success = GetDynamicTypeAndAddress_GenericTypeParam(
-        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
-  else if (type_info.AnySet(eTypeIsTuple))
-    // GetDynamicTypeAndAddress_Tuple recursively iterates over all children.
-    success = GetDynamicTypeAndAddress_Tuple(
         in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
   else {
     // Perform archetype binding in the scratch context.

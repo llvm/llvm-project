@@ -406,12 +406,6 @@ protected:
       lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
       Address &address);
 
-  bool GetDynamicTypeAndAddress_Tuple(ValueObject &in_value,
-                                      SwiftASTContext &scratch_ctx,
-                                      lldb::DynamicValueType use_dynamic,
-                                      TypeAndOrName &class_type_or_name,
-                                      Address &address);
-
   bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                        CompilerType &bound_type,
                                        lldb::DynamicValueType use_dynamic,
