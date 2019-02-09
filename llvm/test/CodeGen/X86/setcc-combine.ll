@@ -262,3 +262,21 @@ define void @test_i1_uge(i1 *%A2) {
   ret void
 }
 
+; FIXME: This should not get folded to 0.
+
+define i64 @PR40657(i8 %var2, i8 %var9) {
+; CHECK-LABEL: PR40657:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %var6 = trunc i8 %var9 to i1
+  %var7 = trunc i8 175 to i1
+  %var3 = sub nsw i1 %var6, %var7
+  %var4 = icmp eq i64 1114591064, 1114591064
+  %var1 = udiv i1 %var3, %var4
+  %var0 = trunc i8 %var2 to i1
+  %res = sub nsw nuw i1 %var0, %var1
+  %res.cast = zext i1 %res to i64
+  ret i64 %res.cast
+}
+

@@ -11912,18 +11912,24 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
     return DAG.getNode(ISD::FCBRT, SDLoc(N), VT, N->getOperand(0), Flags);
   }
 
-  // Try to convert x ** (1/4) into square roots.
+  // Try to convert x ** (1/4) and x ** (3/4) into square roots.
   // x ** (1/2) is canonicalized to sqrt, so we do not bother with that case.
   // TODO: This could be extended (using a target hook) to handle smaller
   // power-of-2 fractional exponents.
-  if (ExponentC->getValueAPF().isExactlyValue(0.25)) {
+  bool ExponentIs025 = ExponentC->getValueAPF().isExactlyValue(0.25);
+  bool ExponentIs075 = ExponentC->getValueAPF().isExactlyValue(0.75);
+  if (ExponentIs025 || ExponentIs075) {
     // pow(-0.0, 0.25) = +0.0; sqrt(sqrt(-0.0)) = -0.0.
     // pow(-inf, 0.25) = +inf; sqrt(sqrt(-inf)) =  NaN.
+    // pow(-0.0, 0.75) = +0.0; sqrt(-0.0) * sqrt(sqrt(-0.0)) = +0.0.
+    // pow(-inf, 0.75) = +inf; sqrt(-inf) * sqrt(sqrt(-inf)) =  NaN.
     // For regular numbers, rounding may cause the results to differ.
     // Therefore, we require { nsz ninf afn } for this transform.
     // TODO: We could select out the special cases if we don't have nsz/ninf.
     SDNodeFlags Flags = N->getFlags();
-    if (!Flags.hasNoSignedZeros() || !Flags.hasNoInfs() ||
+
+    // We only need no signed zeros for the 0.25 case.
+    if ((!Flags.hasNoSignedZeros() && ExponentIs025) || !Flags.hasNoInfs() ||
         !Flags.hasApproximateFuncs())
       return SDValue();
 
@@ -11939,7 +11945,11 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
     // pow(X, 0.25) --> sqrt(sqrt(X))
     SDLoc DL(N);
     SDValue Sqrt = DAG.getNode(ISD::FSQRT, DL, VT, N->getOperand(0), Flags);
-    return DAG.getNode(ISD::FSQRT, DL, VT, Sqrt, Flags);
+    SDValue SqrtSqrt = DAG.getNode(ISD::FSQRT, DL, VT, Sqrt, Flags);
+    if (ExponentIs025)
+      return SqrtSqrt;
+    // pow(X, 0.75) --> sqrt(X) * sqrt(sqrt(X))
+    return DAG.getNode(ISD::FMUL, DL, VT, Sqrt, SqrtSqrt, Flags);
   }
 
   return SDValue();

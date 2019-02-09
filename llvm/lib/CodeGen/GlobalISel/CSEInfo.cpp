@@ -138,7 +138,7 @@ MachineInstr *GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
                                                     void *&InsertPos) {
   handleRecordedInsts();
   if (auto *Inst = getNodeIfExists(ID, MBB, InsertPos)) {
-    LLVM_DEBUG(dbgs() << "CSEInfo: Found Instr " << *Inst->MI << "\n";);
+    LLVM_DEBUG(dbgs() << "CSEInfo::Found Instr " << *Inst->MI;);
     return const_cast<MachineInstr *>(Inst->MI);
   }
   return nullptr;
@@ -157,14 +157,14 @@ void GISelCSEInfo::countOpcodeHit(unsigned Opc) {
 void GISelCSEInfo::recordNewInstruction(MachineInstr *MI) {
   if (shouldCSE(MI->getOpcode())) {
     TemporaryInsts.insert(MI);
-    LLVM_DEBUG(dbgs() << "CSEInfo: Recording new MI " << *MI);
+    LLVM_DEBUG(dbgs() << "CSEInfo::Recording new MI " << *MI);
   }
 }
 
 void GISelCSEInfo::handleRecordedInst(MachineInstr *MI) {
   assert(shouldCSE(MI->getOpcode()) && "Invalid instruction for CSE");
   auto *UMI = InstrMapping.lookup(MI);
-  LLVM_DEBUG(dbgs() << "CSEInfo: Handling recorded MI " << *MI);
+  LLVM_DEBUG(dbgs() << "CSEInfo::Handling recorded MI " << *MI);
   if (UMI) {
     // Invalidate this MI.
     invalidateUniqueMachineInstr(UMI);
@@ -230,7 +230,7 @@ void GISelCSEInfo::analyze(MachineFunction &MF) {
 }
 
 void GISelCSEInfo::releaseMemory() {
-  // print();
+  print();
   CSEMap.clear();
   InstrMapping.clear();
   UniqueInstrAllocator.Reset();
@@ -244,11 +244,11 @@ void GISelCSEInfo::releaseMemory() {
 }
 
 void GISelCSEInfo::print() {
-#ifndef NDEBUG
-  for (auto &It : OpcodeHitTable) {
-    dbgs() << "CSE Count for Opc " << It.first << " : " << It.second << "\n";
-  };
-#endif
+  LLVM_DEBUG(for (auto &It
+                  : OpcodeHitTable) {
+    dbgs() << "CSEInfo::CSE Hit for Opc " << It.first << " : " << It.second
+           << "\n";
+  };);
 }
 /// -----------------------------------------
 // ---- Profiling methods for FoldingSetNode --- //

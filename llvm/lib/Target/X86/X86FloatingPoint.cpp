@@ -1476,7 +1476,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     break;
   }
 
-  case TargetOpcode::INLINEASM: {
+  case TargetOpcode::INLINEASM:
+  case TargetOpcode::INLINEASM_BR: {
     // The inline asm MachineInstr currently only *uses* FP registers for the
     // 'f' constraint.  These should be turned into the current ST(x) register
     // in the machine instr.

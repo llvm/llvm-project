@@ -215,7 +215,7 @@ public:
   /// If none is specified, abort (GCC-compatible behaviour).
   std::string OverflowHandler;
 
-  /// The module currently being compiled as speficied by -fmodule-name.
+  /// The module currently being compiled as specified by -fmodule-name.
   std::string ModuleName;
 
   /// The name of the current module, of which the main source file

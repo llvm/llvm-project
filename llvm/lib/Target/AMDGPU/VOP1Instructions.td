@@ -47,7 +47,6 @@ class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP1On
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let SubtargetPredicate = isGCN;
 
   let VOP1 = 1;
   let VALU = 1;
@@ -155,7 +154,6 @@ def V_READFIRSTLANE_B32 :
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let SubtargetPredicate = isGCN;
 
   let VOP1 = 1;
   let VALU = 1;

@@ -5313,7 +5313,8 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 0;
   case TargetOpcode::BUNDLE:
     return getInstBundleSize(MI);
-  case TargetOpcode::INLINEASM: {
+  case TargetOpcode::INLINEASM:
+  case TargetOpcode::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());

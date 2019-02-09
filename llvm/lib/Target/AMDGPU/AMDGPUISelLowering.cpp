@@ -590,6 +590,7 @@ static bool hasSourceMods(const SDNode *N) {
   case ISD::FDIV:
   case ISD::FREM:
   case ISD::INLINEASM:
+  case ISD::INLINEASM_BR:
   case AMDGPUISD::INTERP_P1:
   case AMDGPUISD::INTERP_P2:
   case AMDGPUISD::DIV_SCALE:

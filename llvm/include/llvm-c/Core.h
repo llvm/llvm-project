@@ -65,6 +65,7 @@ typedef enum {
   LLVMInvoke         = 5,
   /* removed 6 due to API changes */
   LLVMUnreachable    = 7,
+  LLVMCallBr         = 67,
 
   /* Standard Unary Operators */
   LLVMFNeg           = 66,

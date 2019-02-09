@@ -784,6 +784,16 @@ if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
 
+option(LLVM_USE_NEWPM "Build LLVM using the experimental new pass manager" Off)
+mark_as_advanced(LLVM_USE_NEWPM)
+if (LLVM_USE_NEWPM)
+  append("-fexperimental-new-pass-manager"
+    CMAKE_CXX_FLAGS
+    CMAKE_C_FLAGS
+    CMAKE_EXE_LINKER_FLAGS
+    CMAKE_SHARED_LINKER_FLAGS)
+endif()
+
 option(LLVM_ENABLE_IR_PGO "Build LLVM and tools with IR PGO instrumentation (deprecated)" Off)
 mark_as_advanced(LLVM_ENABLE_IR_PGO)
 

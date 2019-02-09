@@ -10,8 +10,6 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   InstSI <outs, ins, "", pattern>,
   SIMCInstr <opName, SIEncodingFamily.NONE> {
 
-  let SubtargetPredicate = isGCN;
-
   let LGKM_CNT = 1;
   let DS = 1;
   let Size = 8;

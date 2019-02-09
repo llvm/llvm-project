@@ -1051,7 +1051,9 @@ TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
 }
 
 TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
-  SCOPED_TSAN_INTERCEPTOR(pthread_exit, retval);
+  {
+    SCOPED_INTERCEPTOR_RAW(pthread_exit, retval);
+  }
   REAL(pthread_exit)(retval);
 }
 

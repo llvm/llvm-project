@@ -11,16 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_SMTAPI_H
-#define LLVM_SUPPORT_SMTAPI_H
+#ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTSOLVER_H
+#define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTSOLVER_H
 
-#include "llvm/ADT/APFloat.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/Support/raw_ostream.h"
-#include <memory>
 
-namespace llvm {
+namespace clang {
+namespace ento {
 
 /// Generic base class for SMT sorts
 class SMTSort {
@@ -70,7 +69,7 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
@@ -117,7 +116,7 @@ public:
 
   virtual void print(raw_ostream &OS) const = 0;
 
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
 
 protected:
   /// Query the SMT solver and returns true if two sorts are equal (same kind
@@ -138,7 +137,7 @@ public:
   SMTSolver() = default;
   virtual ~SMTSolver() = default;
 
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
 
   // Returns an appropriate floating-point sort for the given bitwidth.
   SMTSortRef getFloatSort(unsigned BitWidth) {
@@ -400,6 +399,7 @@ using SMTSolverRef = std::shared_ptr<SMTSolver>;
 /// Convenience method to create and Z3Solver object
 SMTSolverRef CreateZ3Solver();
 
-} // namespace llvm
+} // namespace ento
+} // namespace clang
 
 #endif

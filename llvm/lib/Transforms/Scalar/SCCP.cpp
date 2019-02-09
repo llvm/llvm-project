@@ -638,6 +638,11 @@ private:
     visitTerminator(II);
   }
 
+  void visitCallBrInst    (CallBrInst &CBI) {
+    visitCallSite(&CBI);
+    visitTerminator(CBI);
+  }
+
   void visitCallSite      (CallSite CS);
   void visitResumeInst    (ResumeInst &I) { /*returns void*/ }
   void visitUnreachableInst(UnreachableInst &I) { /*returns void*/ }
@@ -730,6 +735,13 @@ void SCCPSolver::getFeasibleSuccessors(Instruction &TI,
 
     // If we didn't find our destination in the IBR successor list, then we
     // have undefined behavior. Its ok to assume no successor is executable.
+    return;
+  }
+
+  // In case of callbr, we pessimistically assume that all successors are
+  // feasible.
+  if (isa<CallBrInst>(&TI)) {
+    Succs.assign(TI.getNumSuccessors(), true);
     return;
   }
 
@@ -1597,6 +1609,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         return true;
       case Instruction::Call:
       case Instruction::Invoke:
+      case Instruction::CallBr:
         // There are two reasons a call can have an undef result
         // 1. It could be tracked.
         // 2. It could be constant-foldable.
