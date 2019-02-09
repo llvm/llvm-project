@@ -530,6 +530,9 @@ HANDLE_TARGET_OPCODE(G_FSIN)
 /// Floating point square root.
 HANDLE_TARGET_OPCODE(G_FSQRT)
 
+/// Floating point floor.
+HANDLE_TARGET_OPCODE(G_FFLOOR)
+
 /// Generic AddressSpaceCast.
 HANDLE_TARGET_OPCODE(G_ADDRSPACE_CAST)
 

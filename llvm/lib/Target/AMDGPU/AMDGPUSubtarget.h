@@ -332,7 +332,8 @@ protected:
   bool HasDPP;
   bool HasR128A16;
   bool HasDLInsts;
-  bool HasDotInsts;
+  bool HasDot1Insts;
+  bool HasDot2Insts;
   bool EnableSRAMECC;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
@@ -666,8 +667,12 @@ public:
     return HasDLInsts;
   }
 
-  bool hasDotInsts() const {
-    return HasDotInsts;
+  bool hasDot1Insts() const {
+    return HasDot1Insts;
+  }
+
+  bool hasDot2Insts() const {
+    return HasDot2Insts;
   }
 
   bool isSRAMECCEnabled() const {

@@ -269,10 +269,16 @@ def FeatureDLInsts : SubtargetFeature<"dl-insts",
   "Has v_fmac_f32 and v_xnor_b32 instructions"
 >;
 
-def FeatureDotInsts : SubtargetFeature<"dot-insts",
-  "HasDotInsts",
+def FeatureDot1Insts : SubtargetFeature<"dot1-insts",
+  "HasDot1Insts",
   "true",
-  "Has v_dot* instructions"
+  "Has v_dot4_i32_i8 and v_dot8_i32_i4 instructions"
+>;
+
+def FeatureDot2Insts : SubtargetFeature<"dot2-insts",
+  "HasDot2Insts",
+  "true",
+  "Has v_dot2_f32_f16, v_dot2_i32_i16, v_dot2_u32_u16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
 >;
 
 def FeatureSRAMECC : SubtargetFeature<"sram-ecc",
@@ -570,7 +576,8 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDotInsts,
+   FeatureDot1Insts,
+   FeatureDot2Insts,
    FeatureSRAMECC,
    FeatureCodeObjectV3]>;
 
@@ -769,8 +776,11 @@ def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<"FeatureDLInsts">;
 
-def HasDotInsts : Predicate<"Subtarget->hasDotInsts()">,
-  AssemblerPredicate<"FeatureDotInsts">;
+def HasDot1Insts : Predicate<"Subtarget->hasDot1Insts()">,
+  AssemblerPredicate<"FeatureDot1Insts">;
+
+def HasDot2Insts : Predicate<"Subtarget->hasDot2Insts()">,
+  AssemblerPredicate<"FeatureDot2Insts">;
 
 
 def EnableLateCFGStructurize : Predicate<
