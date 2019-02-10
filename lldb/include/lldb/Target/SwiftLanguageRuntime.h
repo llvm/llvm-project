@@ -384,6 +384,7 @@ protected:
   void SetupSwiftError();
   void SetupExclusivity();
   void SetupReflection();
+  void SetupABIBit();
 
   const CompilerType &GetBoxMetadataType();
 
