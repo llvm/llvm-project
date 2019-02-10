@@ -759,8 +759,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
 
         // Build a GEP to refer to the subobject.
         Address valueAddr =
-            CGF.Builder.CreateStructGEP(valueDest.getAddress(), 0,
-                                        CharUnits());
+            CGF.Builder.CreateStructGEP(valueDest.getAddress(), 0);
         valueDest = AggValueSlot::forAddr(valueAddr,
                                           valueDest.getQualifiers(),
                                           valueDest.isExternallyDestructed(),
@@ -780,8 +779,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       CGF.CreateAggTemp(atomicType, "atomic-to-nonatomic.temp");
     CGF.EmitAggExpr(E->getSubExpr(), atomicSlot);
 
-    Address valueAddr =
-      Builder.CreateStructGEP(atomicSlot.getAddress(), 0, CharUnits());
+    Address valueAddr = Builder.CreateStructGEP(atomicSlot.getAddress(), 0);
     RValue rvalue = RValue::getAggregate(valueAddr, atomicSlot.isVolatile());
     return EmitFinalDestCopy(valueType, rvalue);
   }

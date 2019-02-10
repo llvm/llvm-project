@@ -2814,46 +2814,20 @@ static Function *FindCXAAtExit(Module &M, TargetLibraryInfo *TLI) {
 /// Returns whether the given function is an empty C++ destructor and can
 /// therefore be eliminated.
 /// Note that we assume that other optimization passes have already simplified
-/// the code so we only look for a function with a single basic block, where
-/// the only allowed instructions are 'ret', 'call' to an empty C++ dtor and
-/// other side-effect free instructions.
-static bool cxxDtorIsEmpty(const Function &Fn,
-                           SmallPtrSet<const Function *, 8> &CalledFunctions) {
+/// the code so we simply check for 'ret'.
+static bool cxxDtorIsEmpty(const Function &Fn) {
   // FIXME: We could eliminate C++ destructors if they're readonly/readnone and
   // nounwind, but that doesn't seem worth doing.
   if (Fn.isDeclaration())
     return false;
 
-  if (++Fn.begin() != Fn.end())
-    return false;
-
-  const BasicBlock &EntryBlock = Fn.getEntryBlock();
-  for (BasicBlock::const_iterator I = EntryBlock.begin(), E = EntryBlock.end();
-       I != E; ++I) {
-    if (const CallInst *CI = dyn_cast<CallInst>(I)) {
-      // Ignore debug intrinsics.
-      if (isa<DbgInfoIntrinsic>(CI))
-        continue;
-
-      const Function *CalledFn = CI->getCalledFunction();
-
-      if (!CalledFn)
-        return false;
-
-      SmallPtrSet<const Function *, 8> NewCalledFunctions(CalledFunctions);
-
-      // Don't treat recursive functions as empty.
-      if (!NewCalledFunctions.insert(CalledFn).second)
-        return false;
-
-      if (!cxxDtorIsEmpty(*CalledFn, NewCalledFunctions))
-        return false;
-    } else if (isa<ReturnInst>(*I))
-      return true; // We're done.
-    else if (I->mayHaveSideEffects())
-      return false; // Destructor with side effects, bail.
+  for (auto &I : Fn.getEntryBlock()) {
+    if (isa<DbgInfoIntrinsic>(I))
+      continue;
+    if (isa<ReturnInst>(I))
+      return true;
+    break;
   }
-
   return false;
 }
 
@@ -2885,11 +2859,7 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
 
     Function *DtorFn =
       dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
-    if (!DtorFn)
-      continue;
-
-    SmallPtrSet<const Function *, 8> CalledFunctions;
-    if (!cxxDtorIsEmpty(*DtorFn, CalledFunctions))
+    if (!DtorFn || !cxxDtorIsEmpty(*DtorFn))
       continue;
 
     // Just remove the call.

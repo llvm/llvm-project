@@ -167,32 +167,24 @@ public:
     return Address(Ptr, Addr.getAlignment());
   }
 
+  /// Given
+  ///   %addr = {T1, T2...}* ...
+  /// produce
+  ///   %name = getelementptr inbounds %addr, i32 0, i32 index
+  ///
+  /// This API assumes that drilling into a struct like this is always an
+  /// inbounds operation.
   using CGBuilderBaseTy::CreateStructGEP;
-  Address CreateStructGEP(Address Addr, unsigned Index, CharUnits Offset,
+  Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::Twine &Name = "") {
-#ifndef NDEBUG
     llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
     const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
-    const llvm::StructLayout *SL = DL.getStructLayout(ElTy);
-    assert(SL->getElementOffset(Index) == (uint64_t)Offset.getQuantity());
-#endif
+    const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
+    auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
     return Address(CreateStructGEP(Addr.getElementType(),
                                    Addr.getPointer(), Index, Name),
                    Addr.getAlignment().alignmentAtOffset(Offset));
-  }
-  Address CreateStructGEP(Address Addr, unsigned Index,
-                          const llvm::StructLayout *Layout,
-                          const llvm::Twine &Name = "") {
-#ifndef NDEBUG
-    llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
-    const llvm::StructLayout *SL = DL.getStructLayout(ElTy);
-    assert(Layout == SL);
-#endif
-
-    auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
-    return CreateStructGEP(Addr, Index, Offset, Name);
   }
 
   /// Given
@@ -203,24 +195,6 @@ public:
   ///
   /// This API assumes that drilling into an array like this is always
   /// an inbounds operation.
-  ///
-  /// \param EltSize - the size of the type T in bytes
-  Address CreateConstArrayGEP(Address Addr, uint64_t Index, CharUnits EltSize,
-                              const llvm::Twine &Name = "") {
-#ifndef NDEBUG
-    llvm::ArrayType *ElTy = cast<llvm::ArrayType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
-    assert(DL.getTypeAllocSize(ElTy->getElementType()) ==
-           (uint64_t)EltSize.getQuantity());
-#endif
-
-    return Address(CreateInBoundsGEP(Addr.getPointer(),
-                                     {getSize(CharUnits::Zero()),
-                                      getSize(Index)},
-                                     Name),
-                   Addr.getAlignment().alignmentAtOffset(Index * EltSize));
-  }
-
   Address CreateConstArrayGEP(Address Addr, uint64_t Index,
                               const llvm::Twine &Name = "") {
     llvm::ArrayType *ElTy = cast<llvm::ArrayType>(Addr.getElementType());
@@ -239,16 +213,11 @@ public:
   /// produce
   ///   %name = getelementptr inbounds %addr, i64 index
   /// where i64 is actually the target word size.
-  ///
-  /// \param EltSize - the size of the type T in bytes
   Address CreateConstInBoundsGEP(Address Addr, uint64_t Index,
-                                 CharUnits EltSize,
                                  const llvm::Twine &Name = "") {
-#ifndef NDEBUG
     llvm::Type *ElTy = Addr.getElementType();
     const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
-    assert(DL.getTypeAllocSize(ElTy) == (uint64_t)EltSize.getQuantity());
-#endif
+    CharUnits EltSize = CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy));
 
     return Address(CreateInBoundsGEP(Addr.getElementType(), Addr.getPointer(),
                                      getSize(Index), Name),
@@ -260,15 +229,12 @@ public:
   /// produce
   ///   %name = getelementptr inbounds %addr, i64 index
   /// where i64 is actually the target word size.
-  ///
-  /// \param EltSize - the size of the type T in bytes
-  Address CreateConstGEP(Address Addr, uint64_t Index, CharUnits EltSize,
+  Address CreateConstGEP(Address Addr, uint64_t Index,
                          const llvm::Twine &Name = "") {
-#ifndef NDEBUG
     const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
-    assert(DL.getTypeAllocSize(Addr.getElementType()) ==
-           (uint64_t)EltSize.getQuantity());
-#endif
+    CharUnits EltSize =
+        CharUnits::fromQuantity(DL.getTypeAllocSize(Addr.getElementType()));
+
     return Address(CreateGEP(Addr.getElementType(), Addr.getPointer(),
                              getSize(Index), Name),
                    Addr.getAlignment().alignmentAtOffset(Index * EltSize));
@@ -289,13 +255,9 @@ public:
   }
 
   using CGBuilderBaseTy::CreateConstInBoundsGEP2_32;
-  Address CreateConstInBoundsGEP2_32(Address Addr, unsigned Idx0,
-                                      unsigned Idx1, const llvm::DataLayout &DL,
-                                      const llvm::Twine &Name = "") {
-#ifndef NDEBUG
-    const llvm::DataLayout &DL2 = BB->getParent()->getParent()->getDataLayout();
-    assert(DL == DL2);
-#endif
+  Address CreateConstInBoundsGEP2_32(Address Addr, unsigned Idx0, unsigned Idx1,
+                                     const llvm::Twine &Name = "") {
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
 
     auto *GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
         Addr.getElementType(), Addr.getPointer(), Idx0, Idx1, Name));

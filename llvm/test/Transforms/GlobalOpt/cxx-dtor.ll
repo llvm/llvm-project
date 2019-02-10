@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -S -passes='cgscc(inline),function(early-cse),globalopt' | FileCheck %s
 
 %0 = type { i32, void ()* }
 %struct.A = type { i8 }
