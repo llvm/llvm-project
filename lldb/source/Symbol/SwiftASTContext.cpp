@@ -5115,27 +5115,22 @@ bool SwiftASTContext::IsPossibleDynamicType(void *type,
   VALID_OR_RETURN(false);
 
   if (type && check_swift) {
-    // FIXME: use the dynamic_pointee_type.
-    Flags type_flags(GetTypeInfo(type, nullptr));
+    auto can_type = GetCanonicalSwiftType(type);
 
-    if (type_flags.AnySet(eTypeIsGenericTypeParam | eTypeIsClass |
-                          eTypeIsProtocol))
+    if (can_type->getClassOrBoundGenericClass() ||
+        can_type->isAnyExistentialType())
       return true;
 
-    if (type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration |
-                          eTypeIsTuple)) {
-      CompilerType compiler_type(GetCanonicalSwiftType(type));
-      return !SwiftASTContext::IsFullyRealized(compiler_type);
-    }
+    if (can_type->hasArchetype() || can_type->hasTypeParameter())
+      return true;
 
-    auto can_type = GetCanonicalSwiftType(type).getPointer();
-    if (can_type == GetASTContext()->TheRawPointerType.getPointer())
+    if (can_type == GetASTContext()->TheRawPointerType)
       return true;
-    if (can_type == GetASTContext()->TheUnknownObjectType.getPointer())
+    if (can_type == GetASTContext()->TheUnknownObjectType)
       return true;
-    if (can_type == GetASTContext()->TheNativeObjectType.getPointer())
+    if (can_type == GetASTContext()->TheNativeObjectType)
       return true;
-    if (can_type == GetASTContext()->TheBridgeObjectType.getPointer())
+    if (can_type == GetASTContext()->TheBridgeObjectType)
       return true;
   }
 
