@@ -1261,18 +1261,15 @@ define <2 x float> @load_v2f32_v2i32(<2 x i32> %trigger, <2 x float>* %addr, <2 
 ; SSE42-LABEL: load_v2f32_v2i32:
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; SSE42-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE42-NEXT:    pextrb $0, %xmm3, %eax
+; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; SSE42-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB10_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
-; SSE42-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm3[0,1],xmm1[2,3,4,5,6,7]
+; SSE42-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3,4,5,6,7]
 ; SSE42-NEXT:  LBB10_2: ## %else
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE42-NEXT:    pcmpeqq %xmm2, %xmm0
 ; SSE42-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB10_4
@@ -1357,18 +1354,15 @@ define <2 x i32> @load_v2i32_v2i32(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i3
 ; SSE42-LABEL: load_v2i32_v2i32:
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    movdqa %xmm0, %xmm3
-; SSE42-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,3],xmm3[4,5],xmm2[6,7]
-; SSE42-NEXT:    pcmpeqq %xmm2, %xmm3
-; SSE42-NEXT:    pextrb $0, %xmm3, %eax
+; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; SSE42-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE42-NEXT:    pextrb $0, %xmm0, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB11_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
 ; SSE42-NEXT:    movl (%rdi), %eax
 ; SSE42-NEXT:    pinsrq $0, %rax, %xmm1
 ; SSE42-NEXT:  LBB11_2: ## %else
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE42-NEXT:    pcmpeqq %xmm2, %xmm0
 ; SSE42-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB11_4
@@ -1459,18 +1453,16 @@ define <2 x float> @load_undef_v2f32_v2i32(<2 x i32> %trigger, <2 x float>* %add
 ; SSE42-LABEL: load_undef_v2f32_v2i32:
 ; SSE42:       ## %bb.0:
 ; SSE42-NEXT:    movdqa %xmm0, %xmm1
-; SSE42-NEXT:    pxor %xmm2, %xmm2
-; SSE42-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE42-NEXT:    pcmpeqq %xmm2, %xmm0
-; SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; SSE42-NEXT:    pxor %xmm0, %xmm0
+; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
+; SSE42-NEXT:    pcmpeqq %xmm0, %xmm1
+; SSE42-NEXT:    pextrb $0, %xmm1, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    ## implicit-def: $xmm0
 ; SSE42-NEXT:    je LBB12_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
 ; SSE42-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE42-NEXT:  LBB12_2: ## %else
-; SSE42-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; SSE42-NEXT:    pcmpeqq %xmm2, %xmm1
 ; SSE42-NEXT:    pextrb $8, %xmm1, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB12_4

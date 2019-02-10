@@ -17,13 +17,15 @@ Sections:
   - Name:            .dynamic
     Type:            SHT_DYNAMIC
     Flags:           [ SHF_ALLOC ]
-    Address:         0x0008
-    AddressAlign:    8
-    Content:         "0500000000000000000000000000000000000000000000000000000000000000"
-      # DT_STRTAB     0x0
-      # DT_NULL       0x0
-    Size:            32
+    Address:         0x0000000000000008
     Link:            .dynstr
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000000000
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
 ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_R ]

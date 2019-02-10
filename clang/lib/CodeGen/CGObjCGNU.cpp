@@ -2473,10 +2473,8 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
   Address ObjCSuper = CGF.CreateTempAlloca(ObjCSuperTy,
                               CGF.getPointerAlign());
 
-  Builder.CreateStore(Receiver,
-                   Builder.CreateStructGEP(ObjCSuper, 0, CharUnits::Zero()));
-  Builder.CreateStore(ReceiverClass,
-                   Builder.CreateStructGEP(ObjCSuper, 1, CGF.getPointerSize()));
+  Builder.CreateStore(Receiver, Builder.CreateStructGEP(ObjCSuper, 0));
+  Builder.CreateStore(ReceiverClass, Builder.CreateStructGEP(ObjCSuper, 1));
 
   ObjCSuper = EnforceType(Builder, ObjCSuper, PtrToObjCSuperTy);
 

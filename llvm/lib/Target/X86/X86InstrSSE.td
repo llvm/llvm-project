@@ -934,12 +934,12 @@ defm VCVTSI2SD   : sse12_vcvt_avx<0x2A, GR32, FR64, i32mem, "cvtsi2sd{l}",
 defm VCVTSI642SD : sse12_vcvt_avx<0x2A, GR64, FR64, i64mem, "cvtsi2sd{q}",
                                   WriteCvtI2SD>, XD, VEX_4V, VEX_W, VEX_LIG;
 
-let Predicates = [UseAVX] in {
-  def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
-                (VCVTSI2SSrm FR64:$dst, FR64:$src1, i32mem:$src), 0, "att">;
-  def : InstAlias<"vcvtsi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
-                (VCVTSI2SDrm FR64:$dst, FR64:$src1, i32mem:$src), 0, "att">;
+def : InstAlias<"vcvtsi2ss\t{$src, $src1, $dst|$dst, $src1, $src}",
+              (VCVTSI2SSrm FR64:$dst, FR64:$src1, i32mem:$src), 0, "att">;
+def : InstAlias<"vcvtsi2sd\t{$src, $src1, $dst|$dst, $src1, $src}",
+              (VCVTSI2SDrm FR64:$dst, FR64:$src1, i32mem:$src), 0, "att">;
 
+let Predicates = [UseAVX] in {
   def : Pat<(f32 (sint_to_fp (loadi32 addr:$src))),
             (VCVTSI2SSrm (f32 (IMPLICIT_DEF)), addr:$src)>;
   def : Pat<(f32 (sint_to_fp (loadi64 addr:$src))),
@@ -1143,7 +1143,7 @@ defm CVTDQ2PS : sse12_cvt_p<0x5B, VR128, i128mem, v4f32, v4i32, memop,
                             SSEPackedSingle, WriteCvtI2PS>,
                             PS, Requires<[UseSSE2]>;
 
-let Predicates = [UseAVX] in {
+// AVX aliases
 def : InstAlias<"vcvtss2si{l}\t{$src, $dst|$dst, $src}",
                 (VCVTSS2SIrr_Int GR32:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtss2si{l}\t{$src, $dst|$dst, $src}",
@@ -1160,8 +1160,8 @@ def : InstAlias<"vcvtsd2si{q}\t{$src, $dst|$dst, $src}",
                 (VCVTSD2SI64rr_Int GR64:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"vcvtsd2si{q}\t{$src, $dst|$dst, $src}",
                 (VCVTSD2SI64rm_Int GR64:$dst, sdmem:$src), 0, "att">;
-}
 
+// SSE aliases
 def : InstAlias<"cvtss2si{l}\t{$src, $dst|$dst, $src}",
                 (CVTSS2SIrr_Int GR32:$dst, VR128:$src), 0, "att">;
 def : InstAlias<"cvtss2si{l}\t{$src, $dst|$dst, $src}",
@@ -1476,15 +1476,11 @@ def VCVTPD2DQrr  : SDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                        VEX, Sched<[WriteCvtPD2I]>, VEX_WIG;
 
 // XMM only
-def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQrr VR128:$dst, VR128:$src), 0>;
 def VCVTPD2DQrm : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                       "vcvtpd2dq{x}\t{$src, $dst|$dst, $src}",
                       [(set VR128:$dst,
                         (v4i32 (X86cvtp2Int (loadv2f64 addr:$src))))]>, VEX,
                       Sched<[WriteCvtPD2ILd]>, VEX_WIG;
-def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
 
 // YMM only
 def VCVTPD2DQYrr : SDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR256:$src),
@@ -1497,11 +1493,16 @@ def VCVTPD2DQYrm : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
                        [(set VR128:$dst,
                          (v4i32 (X86cvtp2Int (loadv4f64 addr:$src))))]>,
                        VEX, VEX_L, Sched<[WriteCvtPD2IYLd]>, VEX_WIG;
+}
+
+def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
+                (VCVTPD2DQrr VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
+                (VCVTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
 def : InstAlias<"vcvtpd2dqy\t{$src, $dst|$dst, $src}",
                 (VCVTPD2DQYrr VR128:$dst, VR256:$src), 0>;
 def : InstAlias<"vcvtpd2dqy\t{$src, $dst|$dst, $src}",
                 (VCVTPD2DQYrm VR128:$dst, f256mem:$src), 0, "intel">;
-}
 
 def CVTPD2DQrm  : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                       "cvtpd2dq\t{$src, $dst|$dst, $src}",
@@ -1569,32 +1570,23 @@ let Predicates = [UseSSE2] in {
             (CVTTPS2DQrm addr:$src)>;
 }
 
-let Predicates = [HasAVX, NoVLX] in
+// The assembler can recognize rr 256-bit instructions by seeing a ymm
+// register, but the same isn't true when using memory operands instead.
+// Provide other assembly rr and rm forms to address this explicitly.
+let Predicates = [HasAVX, NoVLX] in {
+// XMM only
 def VCVTTPD2DQrr : VPDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                         "cvttpd2dq\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst,
                           (v4i32 (X86cvttp2si (v2f64 VR128:$src))))]>,
                         VEX, Sched<[WriteCvtPD2I]>, VEX_WIG;
-
-// The assembler can recognize rr 256-bit instructions by seeing a ymm
-// register, but the same isn't true when using memory operands instead.
-// Provide other assembly rr and rm forms to address this explicitly.
-
-// XMM only
-def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQrr VR128:$dst, VR128:$src), 0>;
-
-let Predicates = [HasAVX, NoVLX] in
 def VCVTTPD2DQrm : VPDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                         "cvttpd2dq{x}\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst,
                           (v4i32 (X86cvttp2si (loadv2f64 addr:$src))))]>,
                         VEX, Sched<[WriteCvtPD2ILd]>, VEX_WIG;
-def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
-                (VCVTTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
 
 // YMM only
-let Predicates = [HasAVX, NoVLX] in {
 def VCVTTPD2DQYrr : VPDI<0xE6, MRMSrcReg, (outs VR128:$dst), (ins VR256:$src),
                          "cvttpd2dq\t{$src, $dst|$dst, $src}",
                          [(set VR128:$dst,
@@ -1605,7 +1597,12 @@ def VCVTTPD2DQYrm : VPDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
                          [(set VR128:$dst,
                            (v4i32 (X86cvttp2si (loadv4f64 addr:$src))))]>,
                          VEX, VEX_L, Sched<[WriteCvtPD2IYLd]>, VEX_WIG;
-}
+} // Predicates = [HasAVX, NoVLX]
+
+def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
+                (VCVTTPD2DQrr VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vcvttpd2dqx\t{$src, $dst|$dst, $src}",
+                (VCVTTPD2DQrm VR128:$dst, f128mem:$src), 0, "intel">;
 def : InstAlias<"vcvttpd2dqy\t{$src, $dst|$dst, $src}",
                 (VCVTTPD2DQYrr VR128:$dst, VR256:$src), 0>;
 def : InstAlias<"vcvttpd2dqy\t{$src, $dst|$dst, $src}",
@@ -1719,25 +1716,17 @@ let Predicates = [UseSSE2] in {
 // The assembler can recognize rr 256-bit instructions by seeing a ymm
 // register, but the same isn't true when using memory operands instead.
 // Provide other assembly rr and rm forms to address this explicitly.
-let Predicates = [HasAVX, NoVLX] in
+let Predicates = [HasAVX, NoVLX] in {
+// XMM only
 def VCVTPD2PSrr : VPDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                        "cvtpd2ps\t{$src, $dst|$dst, $src}",
                        [(set VR128:$dst, (X86vfpround (v2f64 VR128:$src)))]>,
                        VEX, Sched<[WriteCvtPD2PS]>, VEX_WIG;
-
-// XMM only
-def : InstAlias<"vcvtpd2psx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSrr VR128:$dst, VR128:$src), 0>;
-let Predicates = [HasAVX, NoVLX] in
 def VCVTPD2PSrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                        "cvtpd2ps{x}\t{$src, $dst|$dst, $src}",
                        [(set VR128:$dst, (X86vfpround (loadv2f64 addr:$src)))]>,
                        VEX, Sched<[WriteCvtPD2PS.Folded]>, VEX_WIG;
-def : InstAlias<"vcvtpd2psx\t{$src, $dst|$dst, $src}",
-                (VCVTPD2PSrm VR128:$dst, f128mem:$src), 0, "intel">;
 
-// YMM only
-let Predicates = [HasAVX, NoVLX] in {
 def VCVTPD2PSYrr : VPDI<0x5A, MRMSrcReg, (outs VR128:$dst), (ins VR256:$src),
                         "cvtpd2ps\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst, (X86vfpround VR256:$src))]>,
@@ -1746,7 +1735,12 @@ def VCVTPD2PSYrm : VPDI<0x5A, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
                         "cvtpd2ps{y}\t{$src, $dst|$dst, $src}",
                         [(set VR128:$dst, (X86vfpround (loadv4f64 addr:$src)))]>,
                         VEX, VEX_L, Sched<[WriteCvtPD2PSY.Folded]>, VEX_WIG;
-}
+} // Predicates = [HasAVX, NoVLX]
+
+def : InstAlias<"vcvtpd2psx\t{$src, $dst|$dst, $src}",
+                (VCVTPD2PSrr VR128:$dst, VR128:$src), 0>;
+def : InstAlias<"vcvtpd2psx\t{$src, $dst|$dst, $src}",
+                (VCVTPD2PSrm VR128:$dst, f128mem:$src), 0, "intel">;
 def : InstAlias<"vcvtpd2psy\t{$src, $dst|$dst, $src}",
                 (VCVTPD2PSYrr VR128:$dst, VR256:$src), 0>;
 def : InstAlias<"vcvtpd2psy\t{$src, $dst|$dst, $src}",
@@ -6513,6 +6507,22 @@ let Predicates = [HasAVX2] in {
                                    VEX_4V, VEX_L, VEX_WIG;
 }
 
+// Emulate vXi32/vXi64 blends with vXf32/vXf64.
+// ExecutionDomainFixPass will cleanup domains later on.
+let Predicates = [HasAVX] in {
+def : Pat<(X86Blendi (v4i64 VR256:$src1), (v4i64 VR256:$src2), (iPTR imm:$src3)),
+          (VBLENDPDYrri VR256:$src1, VR256:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), (iPTR imm:$src3)),
+          (VBLENDPDrri VR128:$src1, VR128:$src2, imm:$src3)>;
+}
+
+let Predicates = [HasAVX1Only] in {
+def : Pat<(X86Blendi (v8i32 VR256:$src1), (v8i32 VR256:$src2), (iPTR imm:$src3)),
+          (VBLENDPSYrri VR256:$src1, VR256:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), (iPTR imm:$src3)),
+          (VBLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
+}
+
 defm BLENDPS : SS41I_blend_rmi<0x0C, "blendps", X86Blendi, v4f32,
                                VR128, memop, f128mem, 1, SSEPackedSingle,
                                SchedWriteFBlend.XMM, BlendCommuteImm4>;
@@ -6522,6 +6532,13 @@ defm BLENDPD : SS41I_blend_rmi<0x0D, "blendpd", X86Blendi, v2f64,
 defm PBLENDW : SS41I_blend_rmi<0x0E, "pblendw", X86Blendi, v8i16,
                                VR128, memop, i128mem, 1, SSEPackedInt,
                                SchedWriteBlend.XMM, BlendCommuteImm8>;
+
+let Predicates = [UseSSE41] in {
+def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), (iPTR imm:$src3)),
+          (BLENDPDrri VR128:$src1, VR128:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), (iPTR imm:$src3)),
+          (BLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
+}
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
 // more efficient to generate a blend with immediate instead of an insert*128.
