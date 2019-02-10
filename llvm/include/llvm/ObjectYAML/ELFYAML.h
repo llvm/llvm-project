@@ -43,6 +43,8 @@ LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_ELFDATA)
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, ELF_ELFOSABI)
 // Just use 64, since it can hold 32-bit values too.
 LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_EF)
+// Just use 64, since it can hold 32-bit values too.
+LLVM_YAML_STRONG_TYPEDEF(uint64_t, ELF_DYNTAG)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_PF)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_SHT)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ELF_REL)
@@ -107,8 +109,14 @@ struct SectionOrType {
   StringRef sectionNameOrType;
 };
 
+struct DynamicEntry {
+  ELF_DYNTAG Tag;
+  llvm::yaml::Hex64 Val;
+};
+
 struct Section {
   enum class SectionKind {
+    Dynamic,
     Group,
     RawContent,
     Relocation,
@@ -128,6 +136,17 @@ struct Section {
   Section(SectionKind Kind) : Kind(Kind) {}
   virtual ~Section();
 };
+
+struct DynamicSection : Section {
+  std::vector<DynamicEntry> Entries;
+
+  DynamicSection() : Section(SectionKind::Dynamic) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::Dynamic;
+  }
+};
+
 struct RawContentSection : Section {
   yaml::BinaryRef Content;
   llvm::yaml::Hex64 Size;
@@ -214,6 +233,7 @@ struct Object {
 } // end namespace ELFYAML
 } // end namespace llvm
 
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Section>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Symbol)
@@ -297,6 +317,11 @@ struct ScalarEnumerationTraits<ELFYAML::ELF_REL> {
 };
 
 template <>
+struct ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG> {
+  static void enumeration(IO &IO, ELFYAML::ELF_DYNTAG &Value);
+};
+
+template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_RSS> {
   static void enumeration(IO &IO, ELFYAML::ELF_RSS &Value);
 };
@@ -349,6 +374,10 @@ struct MappingTraits<ELFYAML::Symbol> {
 template <>
 struct MappingTraits<ELFYAML::LocalGlobalWeakSymbols> {
   static void mapping(IO &IO, ELFYAML::LocalGlobalWeakSymbols &Symbols);
+};
+
+template <> struct MappingTraits<ELFYAML::DynamicEntry> {
+  static void mapping(IO &IO, ELFYAML::DynamicEntry &Rel);
 };
 
 template <> struct MappingTraits<ELFYAML::Relocation> {
