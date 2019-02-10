@@ -262,12 +262,15 @@ define void @test_i1_uge(i1 *%A2) {
   ret void
 }
 
-; FIXME: This should not get folded to 0.
+; This should not get folded to 0.
 
 define i64 @PR40657(i8 %var2, i8 %var9) {
 ; CHECK-LABEL: PR40657:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    notb %sil
+; CHECK-NEXT:    addb %dil, %sil
+; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %var6 = trunc i8 %var9 to i1
   %var7 = trunc i8 175 to i1
@@ -278,5 +281,76 @@ define i64 @PR40657(i8 %var2, i8 %var9) {
   %res = sub nsw nuw i1 %var0, %var1
   %res.cast = zext i1 %res to i64
   ret i64 %res.cast
+}
+
+; FIXME: This should not get folded to 0.
+
+define i64 @PR40657_commute(i8 %var7, i8 %var8, i8 %var9) {
+; CHECK-LABEL: PR40657_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %var4 = trunc i8 %var9 to i1
+  %var5 = trunc i8 %var8 to i1
+  %var6 = trunc i8 %var7 to i1
+  %var3 = sub nsw nuw i1 %var5, %var6
+  %var0 = sub nuw i1 %var4, %var3
+  %var2 = sub i1 %var3, %var0
+  %var1 = icmp ne i1 %var0, %var2
+  %res = sub nsw nuw i1 %var0, %var1
+  %res.cast = zext i1 %res to i64
+  ret i64 %res.cast
+}
+
+define i64 @sub_to_shift_to_add(i32 %x, i32 %y, i64 %s1, i64 %s2) {
+; CHECK-LABEL: sub_to_shift_to_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    addl %esi, %esi
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    retq
+  %sub = sub i32 %x, %y
+  %cmp = icmp eq i32 %sub, %y
+  %r = select i1 %cmp, i64 %s1, i64 %s2
+  ret i64 %r
+}
+
+define <4 x float> @sub_to_shift_to_add_vec(<4 x i32> %x, <4 x i32> %y, <4 x float> %s1, <4 x float> %s2) {
+; SSE2-LABEL: sub_to_shift_to_add_vec:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    paddd %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    pandn %xmm3, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: sub_to_shift_to_add_vec:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    paddd %xmm1, %xmm1
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm3
+; SSE41-NEXT:    movaps %xmm3, %xmm0
+; SSE41-NEXT:    retq
+  %sub = sub <4 x i32> %x, %y
+  %cmp = icmp eq <4 x i32> %sub, %y
+  %r = select <4 x i1> %cmp, <4 x float> %s1, <4 x float> %s2
+  ret <4 x float> %r
+}
+
+define i64 @sub_constant_to_shift_to_add(i32 %x, i64 %s1, i64 %s2) {
+; CHECK-LABEL: sub_constant_to_shift_to_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    addl %edi, %edi
+; CHECK-NEXT:    cmpl $42, %edi
+; CHECK-NEXT:    cmovneq %rdx, %rax
+; CHECK-NEXT:    retq
+  %sub = sub i32 42, %x
+  %cmp = icmp eq i32 %sub, %x
+  %r = select i1 %cmp, i64 %s1, i64 %s2
+  ret i64 %r
 }
 

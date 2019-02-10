@@ -28,9 +28,10 @@ define i16 @foo(i16 %x, i16 %y, i16 %z) nounwind {
 define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: bar:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    shldw %cl, %dx, %ax
 ; X32-NEXT:    retl
 ;
@@ -38,6 +39,7 @@ define i16 @bar(i16 %x, i16 %y, i16 %z) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    andb $15, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shldw %cl, %di, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -75,9 +77,10 @@ define i16 @un(i16 %x, i16 %y, i16 %z) nounwind {
 define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X32-LABEL: bu:
 ; X32:       # %bb.0:
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X32-NEXT:    andb $15, %cl
 ; X32-NEXT:    shrdw %cl, %dx, %ax
 ; X32-NEXT:    retl
 ;
@@ -85,6 +88,7 @@ define i16 @bu(i16 %x, i16 %y, i16 %z) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    andb $15, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrdw %cl, %di, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax

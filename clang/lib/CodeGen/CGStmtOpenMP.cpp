@@ -3158,11 +3158,11 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     (void)Scope.Privatize();
     if (InputInfo.NumberOfTargetItems > 0) {
       InputInfo.BasePointersArray = CGF.Builder.CreateConstArrayGEP(
-          CGF.GetAddrOfLocalVar(BPVD), /*Index=*/0, CGF.getPointerSize());
+          CGF.GetAddrOfLocalVar(BPVD), /*Index=*/0);
       InputInfo.PointersArray = CGF.Builder.CreateConstArrayGEP(
-          CGF.GetAddrOfLocalVar(PVD), /*Index=*/0, CGF.getPointerSize());
+          CGF.GetAddrOfLocalVar(PVD), /*Index=*/0);
       InputInfo.SizesArray = CGF.Builder.CreateConstArrayGEP(
-          CGF.GetAddrOfLocalVar(SVD), /*Index=*/0, CGF.getSizeSize());
+          CGF.GetAddrOfLocalVar(SVD), /*Index=*/0);
     }
 
     Action.Enter(CGF);

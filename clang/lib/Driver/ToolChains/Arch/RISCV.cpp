@@ -170,7 +170,7 @@ static void getExtensionFeatures(const Driver &D,
     }
 
     // Check if duplicated extension.
-    if (std::find(AllExts.begin(), AllExts.end(), Ext) != AllExts.end()) {
+    if (llvm::is_contained(AllExts, Ext)) {
       std::string Error = "duplicated ";
       Error += Desc;
       D.Diag(diag::err_drv_invalid_riscv_ext_arch_name)

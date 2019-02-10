@@ -281,9 +281,15 @@ class Configuration(object):
         self.project_obj_root = self.get_lit_conf('project_obj_root')
         self.libcxx_obj_root = self.get_lit_conf('libcxx_obj_root')
         if not self.libcxx_obj_root and self.project_obj_root is not None:
-            possible_root = os.path.join(self.project_obj_root, 'projects', 'libcxx')
-            if os.path.isdir(possible_root):
-                self.libcxx_obj_root = possible_root
+            possible_roots = [
+                os.path.join(self.project_obj_root, 'libcxx'),
+                os.path.join(self.project_obj_root, 'projects', 'libcxx'),
+                os.path.join(self.project_obj_root, 'runtimes', 'libcxx'),
+            ]
+            for possible_root in possible_roots:
+                if os.path.isdir(possible_root):
+                    self.libcxx_obj_root = possible_root
+                    break
             else:
                 self.libcxx_obj_root = self.project_obj_root
 

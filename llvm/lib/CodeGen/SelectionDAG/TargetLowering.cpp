@@ -3074,7 +3074,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
             return DAG.getSetCC(dl, VT, N0.getOperand(0),
                                 DAG.getConstant(0, dl, N0.getValueType()),
                                 Cond);
-          if (N0.getNode()->hasOneUse()) {
+          // The shift is not valid if this is a bool (i1).
+          if (N0.getNode()->hasOneUse() && OpVT.getScalarSizeInBits() != 1) {
             assert(N0.getOpcode() == ISD::SUB && "Unexpected operation!");
             auto &DL = DAG.getDataLayout();
             // (Z-X) == X  --> Z == X<<1
