@@ -665,10 +665,10 @@ bool x86AssemblyInspectionEngine::mov_reg_to_local_stack_frame_p(
   return false;
 }
 
-// ret [0xc9] or [0xc2 imm8] or [0xca imm8]
+// ret [0xc3] or [0xcb] or [0xc2 imm16] or [0xca imm16]
 bool x86AssemblyInspectionEngine::ret_pattern_p() {
   uint8_t *p = m_cur_insn;
-  return *p == 0xc9 || *p == 0xc2 || *p == 0xca || *p == 0xc3;
+  return *p == 0xc3 || *p == 0xc2 || *p == 0xca || *p == 0xcb;
 }
 
 uint32_t x86AssemblyInspectionEngine::extract_4(uint8_t *b) {
