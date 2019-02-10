@@ -429,7 +429,7 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
 bool llvm::RecursivelyDeleteTriviallyDeadInstructions(
     Value *V, const TargetLibraryInfo *TLI, MemorySSAUpdater *MSSAU) {
   Instruction *I = dyn_cast<Instruction>(V);
-  if (!I || !I->use_empty() || !isInstructionTriviallyDead(I, TLI))
+  if (!I || !isInstructionTriviallyDead(I, TLI))
     return false;
 
   SmallVector<Instruction*, 16> DeadInsts;

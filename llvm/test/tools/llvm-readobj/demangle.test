@@ -156,21 +156,30 @@ Sections:
         Symbol: _Z3fooc
         Type:   R_X86_64_PC32
         Addend: 0x4
-  - Name:         .dynamic
-    Type:         SHT_DYNAMIC
-    Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
-    Address:      0x1000
-    AddressAlign: 0x1000
-    ## DT_STRTAB  - 0x0
-    ## DT_STRSZ   - 0x9
-    ## DT_SYMTAB  - 0x100
-    ## DT_SYMENT  - 0x18
-    ## DT_RELA    - 0x200
-    ## DT_RELASZ  - 0x18
-    ## DT_RELAENT - 0x18
-    ## DT_NULL    - 0x0
-    Content: "050000000000000000000000000000000a000000000000000900000000000000060000000000000000010000000000000b00000000000000180000000000000007000000000000000002000000000000080000000000000018000000000000000900000000000000180000000000000000000000000000000000000000000000"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000001000
+    Link:            .dynstr
+    AddressAlign:    0x0000000000001000
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000000000
+      - Tag:             DT_STRSZ
+        Value:           0x0000000000000009
+      - Tag:             DT_SYMTAB
+        Value:           0x0000000000000100
+      - Tag:             DT_SYMENT
+        Value:           0x0000000000000018
+      - Tag:             DT_RELA
+        Value:           0x0000000000000200
+      - Tag:             DT_RELASZ
+        Value:           0x0000000000000018
+      - Tag:             DT_RELAENT
+        Value:           0x0000000000000018
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
   - Name:  .text.foo
     Type:  SHT_PROGBITS
     Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]

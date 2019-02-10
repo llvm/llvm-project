@@ -71,18 +71,24 @@ Sections:
     ## st_name: 1; st_info: Global | Func; st_other: 0;
     ##   st_shndx: .text.foo; st_value: 0x2000; st_size: 0
     Content: "000000000000000000000000000000000000000000000000010000001200040000200000000000000000000000000000"
-  - Name:         .dynamic
-    Type:         SHT_DYNAMIC
-    Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
-    Address:      0x1000
-    AddressAlign: 0x1000
-    ## DT_STRTAB  - 0x0
-    ## DT_STRSZ   - 0x9
-    ## DT_SYMTAB  - 0x100
-    ## DT_SYMENT  - 0x18
-    ## DT_NULL    - 0x0
-    Content: "050000000000000000000000000000000a000000000000000900000000000000060000000000000000010000000000000b00000000000000180000000000000000000000000000000000000000000000"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000001000
+    Link:            .dynstr
+    AddressAlign:    0x0000000000001000
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000000000
+      - Tag:             DT_STRSZ
+        Value:           0x0000000000000009
+      - Tag:             DT_SYMTAB
+        Value:           0x0000000000000100
+      - Tag:             DT_SYMENT
+        Value:           0x0000000000000018
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
   - Name:  .text.foo
     Type:  SHT_PROGBITS
     Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]

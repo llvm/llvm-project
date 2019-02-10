@@ -4350,7 +4350,7 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
                 PN->getParent() == II->getUnwindDest())
               return false;
       // FIXME: Be conservative for callbr to avoid a quadratic search.
-      if (CallBrInst *CBI = dyn_cast<CallBrInst>(Caller))
+      if (isa<CallBrInst>(Caller))
         return false;
     }
   }

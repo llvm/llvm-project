@@ -21,6 +21,7 @@ namespace {
 template <class ELFT>
 class ELFDumper {
   typedef object::Elf_Sym_Impl<ELFT> Elf_Sym;
+  typedef typename ELFT::Dyn Elf_Dyn;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::Rel Elf_Rel;
@@ -50,7 +51,8 @@ class ELFDumper {
   template <class RelT>
   std::error_code dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
                                  ELFYAML::Relocation &R);
-
+  
+  ErrorOr<ELFYAML::DynamicSection *> dumpDynamicSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::RelocationSection *> dumpRelocSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
@@ -129,6 +131,13 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   SectionNames.resize(Sections.size());
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
+    case ELF::SHT_DYNAMIC: {
+      ErrorOr<ELFYAML::DynamicSection *> S = dumpDynamicSection(&Sec);
+      if (std::error_code EC = S.getError())
+        return EC;
+      Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
+      break;
+    }
     case ELF::SHT_NULL:
     case ELF::SHT_STRTAB:
       // Do not dump these sections.
@@ -348,6 +357,23 @@ ELFDumper<ELFT>::dumpCommonRelocationSection(const Elf_Shdr *Shdr,
   S.Info = NameOrErr.get();
 
   return obj2yaml_error::success;
+}
+
+template <class ELFT>
+ErrorOr<ELFYAML::DynamicSection *>
+ELFDumper<ELFT>::dumpDynamicSection(const Elf_Shdr *Shdr) {
+  auto S = make_unique<ELFYAML::DynamicSection>();
+  if (std::error_code EC = dumpCommonSection(Shdr, *S))
+    return EC;
+
+  auto DynTagsOrErr = Obj.template getSectionContentsAsArray<Elf_Dyn>(Shdr);
+  if (!DynTagsOrErr)
+    return errorToErrorCode(DynTagsOrErr.takeError());
+
+  for (const Elf_Dyn &Dyn : *DynTagsOrErr)
+    S->Entries.push_back({(ELFYAML::ELF_DYNTAG)Dyn.getTag(), Dyn.getVal()});
+
+  return S.release();
 }
 
 template <class ELFT>
