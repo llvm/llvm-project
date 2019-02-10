@@ -32951,6 +32951,24 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
     break;
   }
+  case X86ISD::HADD:
+  case X86ISD::HSUB:
+  case X86ISD::FHADD:
+  case X86ISD::FHSUB: {
+    // 256-bit horizontal ops are two 128-bit ops glued together. If we do not
+    // demand any of the high elements, then narrow the h-op to 128-bits:
+    // (hop ymm0, ymm1) --> insert undef, (hop xmm0, xmm1), 0
+    if (VT.is256BitVector() && DemandedElts.lshr(NumElts / 2) == 0) {
+      SDLoc DL(Op);
+      SDValue Ext0 = extract128BitVector(Op.getOperand(0), 0, TLO.DAG, DL);
+      SDValue Ext1 = extract128BitVector(Op.getOperand(1), 0, TLO.DAG, DL);
+      SDValue Hop = TLO.DAG.getNode(Opc, DL, Ext0.getValueType(), Ext0, Ext1);
+      SDValue UndefVec = TLO.DAG.getUNDEF(VT);
+      SDValue Insert = insert128BitVector(UndefVec, Hop, 0, TLO.DAG, DL);
+      return TLO.CombineTo(Op, Insert);
+    }
+    break;
+  }
   }
 
   // Simplify target shuffles.

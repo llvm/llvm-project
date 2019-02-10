@@ -7127,13 +7127,48 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
             N2, APInt(N2.getScalarValueSizeInBits(), BitWidth - 1)))
       return IsFSHL ? N0 : N1;
 
-  // fold (fsh* N0, N1, c) -> (fsh* N0, N1, c % BitWidth)
+  auto IsUndefOrZero = [](SDValue V) {
+    return V.isUndef() || isNullOrNullSplat(V, /*AllowUndefs*/ true);
+  };
+
   if (ConstantSDNode *Cst = isConstOrConstSplat(N2)) {
+    EVT ShAmtTy = N2.getValueType();
+
+    // fold (fsh* N0, N1, c) -> (fsh* N0, N1, c % BitWidth)
     if (Cst->getAPIntValue().uge(BitWidth)) {
       uint64_t RotAmt = Cst->getAPIntValue().urem(BitWidth);
       return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N0, N1,
-                         DAG.getConstant(RotAmt, SDLoc(N), N2.getValueType()));
+                         DAG.getConstant(RotAmt, SDLoc(N), ShAmtTy));
     }
+
+    unsigned ShAmt = Cst->getZExtValue();
+    if (ShAmt == 0)
+      return IsFSHL ? N0 : N1;
+
+    // fold fshl(undef_or_zero, N1, C) -> lshr(N1, BW-C)
+    // fold fshr(undef_or_zero, N1, C) -> lshr(N1, C)
+    // fold fshl(N0, undef_or_zero, C) -> shl(N0, C)
+    // fold fshr(N0, undef_or_zero, C) -> shl(N0, BW-C)
+    if (IsUndefOrZero(N0))
+      return DAG.getNode(ISD::SRL, SDLoc(N), VT, N1,
+                         DAG.getConstant(IsFSHL ? BitWidth - ShAmt : ShAmt,
+                                         SDLoc(N), ShAmtTy));
+    if (IsUndefOrZero(N1))
+      return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0,
+                         DAG.getConstant(IsFSHL ? ShAmt : BitWidth - ShAmt,
+                                         SDLoc(N), ShAmtTy));
+  }
+
+  // fold fshr(undef_or_zero, N1, N2) -> lshr(N1, N2)
+  // fold fshl(N0, undef_or_zero, N2) -> shl(N0, N2)
+  // iff We know the shift amount is in range.
+  // TODO: when is it worth doing SUB(BW, N2) as well?
+  if (isPowerOf2_32(BitWidth)) {
+    APInt ModuloBits(N2.getScalarValueSizeInBits(), BitWidth - 1);
+    if (IsUndefOrZero(N0) && !IsFSHL && DAG.MaskedValueIsZero(N2, ~ModuloBits))
+      return DAG.getNode(ISD::SRL, SDLoc(N), VT, N1, N2);
+    if (IsUndefOrZero(N1) && IsFSHL && DAG.MaskedValueIsZero(N2, ~ModuloBits))
+      return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0, N2);
   }
 
   // fold (fshl N0, N0, N2) -> (rotl N0, N2)
