@@ -3090,8 +3090,7 @@ void CGOpenMPRuntime::emitTaskgroupRegion(CodeGenFunction &CGF,
 static Address emitAddrOfVarFromArray(CodeGenFunction &CGF, Address Array,
                                       unsigned Index, const VarDecl *Var) {
   // Pull out the pointer to the variable.
-  Address PtrAddr =
-      CGF.Builder.CreateConstArrayGEP(Array, Index, CGF.getPointerSize());
+  Address PtrAddr = CGF.Builder.CreateConstArrayGEP(Array, Index);
   llvm::Value *Ptr = CGF.Builder.CreateLoad(PtrAddr);
 
   Address Addr = Address(Ptr, CGF.getContext().getDeclAlign(Var));
@@ -3207,8 +3206,7 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
     Address CopyprivateList =
         CGF.CreateMemTemp(CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
     for (unsigned I = 0, E = CopyprivateVars.size(); I < E; ++I) {
-      Address Elem = CGF.Builder.CreateConstArrayGEP(
-          CopyprivateList, I, CGF.getPointerSize());
+      Address Elem = CGF.Builder.CreateConstArrayGEP(CopyprivateList, I);
       CGF.Builder.CreateStore(
           CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
               CGF.EmitLValue(CopyprivateVars[I]).getPointer(), CGF.VoidPtrTy),
@@ -5105,7 +5103,6 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
     } else {
       KmpDependInfoRD = cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
     }
-    CharUnits DependencySize = C.getTypeSizeInChars(KmpDependInfoTy);
     // Define type kmp_depend_info[<Dependences.size()>];
     QualType KmpDependInfoArrayTy = C.getConstantArrayType(
         KmpDependInfoTy, llvm::APInt(/*numBits=*/64, NumDependencies),
@@ -5132,7 +5129,7 @@ void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
         Size = CGF.getTypeSize(Ty);
       }
       LValue Base = CGF.MakeAddrLValue(
-          CGF.Builder.CreateConstArrayGEP(DependenciesArray, I, DependencySize),
+          CGF.Builder.CreateConstArrayGEP(DependenciesArray, I),
           KmpDependInfoTy);
       // deps[i].base_addr = &<Dependences[i].second>;
       LValue BaseAddrLVal = CGF.EmitLValueForField(
@@ -5499,8 +5496,7 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
     if (PrivTy->isVariablyModifiedType()) {
       // Get array size and emit VLA type.
       ++Idx;
-      Address Elem =
-          CGF.Builder.CreateConstArrayGEP(LHS, Idx, CGF.getPointerSize());
+      Address Elem = CGF.Builder.CreateConstArrayGEP(LHS, Idx);
       llvm::Value *Ptr = CGF.Builder.CreateLoad(Elem);
       const VariableArrayType *VLA =
           CGF.getContext().getAsVariableArrayType(PrivTy);
@@ -5638,8 +5634,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
   auto IPriv = Privates.begin();
   unsigned Idx = 0;
   for (unsigned I = 0, E = RHSExprs.size(); I < E; ++I, ++IPriv, ++Idx) {
-    Address Elem =
-      CGF.Builder.CreateConstArrayGEP(ReductionList, Idx, CGF.getPointerSize());
+    Address Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx);
     CGF.Builder.CreateStore(
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
             CGF.EmitLValue(RHSExprs[I]).getPointer(), CGF.VoidPtrTy),
@@ -5647,8 +5642,7 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
       // Store array size.
       ++Idx;
-      Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx,
-                                             CGF.getPointerSize());
+      Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx);
       llvm::Value *Size = CGF.Builder.CreateIntCast(
           CGF.getVLASize(
                  CGF.getContext().getAsVariableArrayType((*IPriv)->getType()))
@@ -7168,7 +7162,7 @@ private:
           Address HB = CGF.Builder.CreateConstGEP(
               CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(LB,
                                                               CGF.VoidPtrTy),
-              TypeSize.getQuantity() - 1, CharUnits::One());
+              TypeSize.getQuantity() - 1);
           PartialStruct.HighestElem = {
               std::numeric_limits<decltype(
                   PartialStruct.HighestElem.first)>::max(),
@@ -7202,15 +7196,13 @@ private:
             Pointers.push_back(LB.getPointer());
             Sizes.push_back(Size);
             Types.push_back(Flags);
-            LB = CGF.Builder.CreateConstGEP(ComponentLB, 1,
-                                            CGF.getPointerSize());
+            LB = CGF.Builder.CreateConstGEP(ComponentLB, 1);
           }
           BasePointers.push_back(BP.getPointer());
           Pointers.push_back(LB.getPointer());
           Size = CGF.Builder.CreatePtrDiff(
               CGF.EmitCastToVoidPtr(
-                  CGF.Builder.CreateConstGEP(HB, 1, CharUnits::One())
-                      .getPointer()),
+                  CGF.Builder.CreateConstGEP(HB, 1).getPointer()),
               CGF.EmitCastToVoidPtr(LB.getPointer()));
           Sizes.push_back(Size);
           Types.push_back(Flags);
@@ -9491,10 +9483,8 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
   enum { LowerFD = 0, UpperFD, StrideFD };
   // Fill dims with data.
   for (unsigned I = 0, E = NumIterations.size(); I < E; ++I) {
-    LValue DimsLVal =
-        CGF.MakeAddrLValue(CGF.Builder.CreateConstArrayGEP(
-                               DimsAddr, I, C.getTypeSizeInChars(KmpDimTy)),
-                           KmpDimTy);
+    LValue DimsLVal = CGF.MakeAddrLValue(
+        CGF.Builder.CreateConstArrayGEP(DimsAddr, I), KmpDimTy);
     // dims.upper = num_iterations;
     LValue UpperLVal = CGF.EmitLValueForField(
         DimsLVal, *std::next(RD->field_begin(), UpperFD));
@@ -9517,9 +9507,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
       getThreadID(CGF, D.getBeginLoc()),
       llvm::ConstantInt::getSigned(CGM.Int32Ty, NumIterations.size()),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          CGF.Builder
-              .CreateConstArrayGEP(DimsAddr, 0, C.getTypeSizeInChars(KmpDimTy))
-              .getPointer(),
+          CGF.Builder.CreateConstArrayGEP(DimsAddr, 0).getPointer(),
           CGM.VoidPtrTy)};
 
   llvm::FunctionCallee RTLFn =
@@ -9547,19 +9535,13 @@ void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
     llvm::Value *CntVal = CGF.EmitScalarConversion(
         CGF.EmitScalarExpr(CounterVal), CounterVal->getType(), Int64Ty,
         CounterVal->getExprLoc());
-    CGF.EmitStoreOfScalar(
-        CntVal,
-        CGF.Builder.CreateConstArrayGEP(
-            CntAddr, I, CGM.getContext().getTypeSizeInChars(Int64Ty)),
-        /*Volatile=*/false, Int64Ty);
+    CGF.EmitStoreOfScalar(CntVal, CGF.Builder.CreateConstArrayGEP(CntAddr, I),
+                          /*Volatile=*/false, Int64Ty);
   }
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, C->getBeginLoc()),
       getThreadID(CGF, C->getBeginLoc()),
-      CGF.Builder
-          .CreateConstArrayGEP(CntAddr, 0,
-                               CGM.getContext().getTypeSizeInChars(Int64Ty))
-          .getPointer()};
+      CGF.Builder.CreateConstArrayGEP(CntAddr, 0).getPointer()};
   llvm::FunctionCallee RTLFn;
   if (C->getDependencyKind() == OMPC_DEPEND_source) {
     RTLFn = createRuntimeFunction(OMPRTL__kmpc_doacross_post);
