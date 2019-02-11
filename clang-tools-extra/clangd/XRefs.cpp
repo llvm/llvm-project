@@ -10,6 +10,8 @@
 #include "Logger.h"
 #include "SourceCode.h"
 #include "URI.h"
+#include "index/Index.h"
+#include "index/Merge.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -76,6 +78,32 @@ llvm::Optional<Location> toLSPLocation(const SymbolLocation &Loc,
   logIfOverflow(Loc);
   return LSPLoc;
 }
+
+SymbolLocation toIndexLocation(const Location &Loc, std::string &URIStorage) {
+  SymbolLocation SymLoc;
+  URIStorage = Loc.uri.uri();
+  SymLoc.FileURI = URIStorage.c_str();
+  SymLoc.Start.setLine(Loc.range.start.line);
+  SymLoc.Start.setColumn(Loc.range.start.character);
+  SymLoc.End.setLine(Loc.range.end.line);
+  SymLoc.End.setColumn(Loc.range.end.character);
+  return SymLoc;
+}
+
+// Returns the preferred location between an AST location and an index location.
+SymbolLocation getPreferredLocation(const Location &ASTLoc,
+                                    const SymbolLocation &IdxLoc) {
+  // Also use a dummy symbol for the index location so that other fields (e.g.
+  // definition) are not factored into the preferrence.
+  Symbol ASTSym, IdxSym;
+  ASTSym.ID = IdxSym.ID = SymbolID("dummy_id");
+  std::string URIStore;
+  ASTSym.CanonicalDeclaration = toIndexLocation(ASTLoc, URIStore);
+  IdxSym.CanonicalDeclaration = IdxLoc;
+  auto Merged = mergeSymbol(ASTSym, IdxSym);
+  return Merged.CanonicalDeclaration;
+}
+
 
 struct MacroDecl {
   llvm::StringRef Name;
@@ -215,6 +243,7 @@ IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
+  IndexOpts.IndexParametersInDeclarations = true;
   indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
                      AST.getLocalTopLevelDecls(), DeclMacrosFinder, IndexOpts);
 
@@ -328,12 +357,23 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 
       // Special case: if the AST yielded a definition, then it may not be
       // the right *declaration*. Prefer the one from the index.
-      if (R.Definition) // from AST
+      if (R.Definition) { // from AST
         if (auto Loc = toLSPLocation(Sym.CanonicalDeclaration, *MainFilePath))
           R.PreferredDeclaration = *Loc;
-
-      if (!R.Definition)
+      } else {
         R.Definition = toLSPLocation(Sym.Definition, *MainFilePath);
+
+        if (Sym.CanonicalDeclaration) {
+          // Use merge logic to choose AST or index declaration.
+          // We only do this for declarations as definitions from AST
+          // is generally preferred (e.g. definitions in main file).
+          if (auto Loc =
+                  toLSPLocation(getPreferredLocation(R.PreferredDeclaration,
+                                                     Sym.CanonicalDeclaration),
+                                *MainFilePath))
+            R.PreferredDeclaration = *Loc;
+        }
+      }
     });
   }
 
@@ -400,6 +440,7 @@ findRefs(const std::vector<const Decl *> &Decls, ParsedAST &AST) {
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
+  IndexOpts.IndexParametersInDeclarations = true;
   indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
                      AST.getLocalTopLevelDecls(), RefFinder, IndexOpts);
   return std::move(RefFinder).take();

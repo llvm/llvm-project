@@ -126,7 +126,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FCEIL, G_FABS, G_FSQRT})
+  getActionDefinitionsBuilder({G_FCEIL, G_FABS, G_FSQRT, G_FFLOOR})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
       .fewerElementsIf(

@@ -9,11 +9,9 @@
 # where "<NAME>" is substituted with the names specified in the input variables,
 # for each of the <NAME>_SOURCE_DIR given.
 
-get_filename_component(LLVM_DIR "${CMAKE_SCRIPT_MODE_FILE}" PATH)
-get_filename_component(LLVM_DIR "${LLVM_DIR}" PATH)
-get_filename_component(LLVM_DIR "${LLVM_DIR}" PATH)
+get_filename_component(LLVM_CMAKE_DIR "${CMAKE_SCRIPT_MODE_FILE}" PATH)
 
-list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}/cmake/modules")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 
 include(VersionFromVCS)
 

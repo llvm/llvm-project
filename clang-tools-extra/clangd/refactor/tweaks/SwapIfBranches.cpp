@@ -37,10 +37,8 @@ public:
   const char *id() const override final;
 
   bool prepare(const Selection &Inputs) override;
+  Expected<tooling::Replacements> apply(const Selection &Inputs) override;
   std::string title() const override;
-
-protected:
-  Expected<tooling::Replacements> execute(const Selection &Inputs) override;
 
 private:
   const IfStmt *If = nullptr;
@@ -62,8 +60,7 @@ bool SwapIfBranches::prepare(const Selection &Inputs) {
          dyn_cast_or_null<CompoundStmt>(If->getElse());
 }
 
-Expected<tooling::Replacements>
-SwapIfBranches::execute(const Selection &Inputs) {
+Expected<tooling::Replacements> SwapIfBranches::apply(const Selection &Inputs) {
   auto &Ctx = Inputs.AST.getASTContext();
   auto &SrcMgr = Ctx.getSourceManager();
 

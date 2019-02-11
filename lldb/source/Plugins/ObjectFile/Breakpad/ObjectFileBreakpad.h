@@ -82,7 +82,7 @@ public:
 
   ArchSpec GetArchitecture() override { return m_arch; }
 
-  bool GetUUID(UUID *uuid) override;
+  UUID GetUUID() override { return m_uuid; }
 
   FileSpecList GetDebugSymbolFilePaths() override { return FileSpecList(); }
 

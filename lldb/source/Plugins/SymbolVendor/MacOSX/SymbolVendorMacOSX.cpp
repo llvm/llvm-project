@@ -39,9 +39,8 @@ static bool UUIDsMatch(Module *module, ObjectFile *ofile,
                        lldb_private::Stream *feedback_strm) {
   if (module && ofile) {
     // Make sure the UUIDs match
-    lldb_private::UUID dsym_uuid;
-
-    if (!ofile->GetUUID(&dsym_uuid)) {
+    lldb_private::UUID dsym_uuid = ofile->GetUUID();
+    if (!dsym_uuid) {
       if (feedback_strm) {
         feedback_strm->PutCString(
             "warning: failed to get the uuid for object file: '");
@@ -162,8 +161,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
           char dsym_path[PATH_MAX];
           if (module_sp->GetSourceMappingList().IsEmpty() &&
               dsym_fspec.GetPath(dsym_path, sizeof(dsym_path))) {
-            lldb_private::UUID dsym_uuid;
-            if (dsym_objfile_sp->GetUUID(&dsym_uuid)) {
+            lldb_private::UUID dsym_uuid = dsym_objfile_sp->GetUUID();
+            if (dsym_uuid) {
               std::string uuid_str = dsym_uuid.GetAsString();
               if (!uuid_str.empty()) {
                 char *resources = strstr(dsym_path, "/Contents/Resources/");

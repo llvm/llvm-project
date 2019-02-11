@@ -22,7 +22,6 @@
 #include "ClangdUnit.h"
 #include "Protocol.h"
 #include "Selection.h"
-#include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -48,7 +47,7 @@ public:
     ParsedAST &AST;
     /// A location of the cursor in the editor.
     SourceLocation Cursor;
-    /// The AST nodes that were selected.
+    // The AST nodes that were selected.
     SelectionTree ASTSelection;
     // FIXME: provide a way to get sources and ASTs for other files.
   };
@@ -64,20 +63,13 @@ public:
   /// should be moved into 'apply'.
   /// Returns true iff the action is available and apply() can be called on it.
   virtual bool prepare(const Selection &Sel) = 0;
-  /// Format and apply the actual changes generated from the second stage of the
-  /// action.
+  /// Run the second stage of the action that would produce the actual changes.
   /// EXPECTS: prepare() was called and returned true.
-  Expected<tooling::Replacements> apply(const Selection &Sel,
-                                        const format::FormatStyle &Style);
+  virtual Expected<tooling::Replacements> apply(const Selection &Sel) = 0;
   /// A one-line title of the action that should be shown to the users in the
   /// UI.
   /// EXPECTS: prepare() was called and returned true.
   virtual std::string title() const = 0;
-
-protected:
-  /// Run the second stage of the action that would produce the actual changes.
-  /// EXPECTS: prepare() was called and returned true.
-  virtual Expected<tooling::Replacements> execute(const Selection &Sel) = 0;
 };
 
 // All tweaks must be registered in the .cpp file next to their definition.

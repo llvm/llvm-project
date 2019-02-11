@@ -1168,6 +1168,19 @@ define float @test_copysign_extended(half %a, half %b) #0 {
 ; CHECK-FP16-NEXT: frintm h0, h0
 ; CHECK-FP16-NEXT: ret
 
+; FALLBACK-NOT: remark:{{.*}}test_floor
+; FALLBACK-FP16-NOT: remark:{{.*}}test_floor
+
+; GISEL-CVT-LABEL: test_floor:
+; GISEL-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; GISEL-CVT-NEXT: frintm [[INT32:s[0-9]+]], [[FLOAT32]]
+; GISEL-CVT-NEXT: fcvt h0, [[INT32]]
+; GISEL-CVT-NEXT: ret
+
+; GISEL-FP16-LABEL: test_floor:
+; GISEL-FP16-NEXT: frintm h0, h0
+; GISEL-FP16-NEXT: ret
+
 define half @test_floor(half %a) #0 {
   %r = call half @llvm.floor.f16(half %a)
   ret half %r

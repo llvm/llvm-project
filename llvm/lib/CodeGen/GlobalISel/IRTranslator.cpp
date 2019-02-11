@@ -806,6 +806,10 @@ IRTranslator::getSimpleUnaryIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FEXP2;
     case Intrinsic::fabs:
       return TargetOpcode::G_FABS;
+    case Intrinsic::canonicalize:
+      return TargetOpcode::G_FCANONICALIZE;
+    case Intrinsic::floor:
+      return TargetOpcode::G_FFLOOR;
     case Intrinsic::log:
       return TargetOpcode::G_FLOG;
     case Intrinsic::log2:

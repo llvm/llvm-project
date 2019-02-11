@@ -455,6 +455,12 @@ def G_FABS : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_FCANONICALIZE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Floating Point Binary ops.
 //------------------------------------------------------------------------------
