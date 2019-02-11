@@ -20,10 +20,12 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringExtractorGDBRemote.h"
 
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
-#include "lldb/Utility/StringExtractorGDBRemote.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -307,9 +309,9 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
       // supported.
       bool read_all_registers_at_once =
           !gdb_process->GetGDBRemote().GetpPacketSupported(GetID());
-      reg_ctx_sp.reset(new GDBRemoteRegisterContext(
+      reg_ctx_sp = std::make_shared<GDBRemoteRegisterContext>(
           *this, concrete_frame_idx, gdb_process->m_register_info,
-          read_all_registers_at_once));
+          read_all_registers_at_once);
     }
   } else {
     Unwind *unwinder = GetUnwinder();

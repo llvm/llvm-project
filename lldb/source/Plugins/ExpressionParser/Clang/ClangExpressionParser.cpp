@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cctype>
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -91,6 +90,9 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+
+#include <cctype>
+#include <memory>
 
 using namespace clang;
 using namespace llvm;
@@ -1199,11 +1201,11 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     custom_passes.EarlyPasses->run(*llvm_module_ap);
   }
 
-  execution_unit_sp.reset(
-      new IRExecutionUnit(m_llvm_context, // handed off here
+  execution_unit_sp = std::make_shared<IRExecutionUnit>(
+      m_llvm_context, // handed off here
                           llvm_module_ap, // handed off here
                           function_name, exe_ctx.GetTargetSP(), sc,
-                          m_compiler->getTargetOpts().Features));
+      m_compiler->getTargetOpts().Features);
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());

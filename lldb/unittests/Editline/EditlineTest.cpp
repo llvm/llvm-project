@@ -257,8 +257,8 @@ public:
       return;
 
     // Dump output.
-    _sp_output_thread.reset(
-        new std::thread([&] { _el_adapter.ConsumeAllOutput(); }));
+    _sp_output_thread =
+        std::make_shared<std::thread>([&] { _el_adapter.ConsumeAllOutput(); });
   }
 
   void TearDown() {

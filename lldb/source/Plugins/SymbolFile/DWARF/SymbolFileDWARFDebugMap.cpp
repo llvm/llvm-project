@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileDWARFDebugMap.h"
-
 #include "DWARFDebugAranges.h"
 
 #include "lldb/Core/Module.h"
@@ -35,6 +34,8 @@
 
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -412,7 +413,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       comp_unit_info->oso_sp = pos->second;
     } else {
       ObjectFile *obj_file = GetObjectFile();
-      comp_unit_info->oso_sp.reset(new OSOInfo());
+      comp_unit_info->oso_sp = std::make_shared<OSOInfo>();
       m_oso_map[{comp_unit_info->oso_path, comp_unit_info->oso_mod_time}] =
           comp_unit_info->oso_sp;
       const char *oso_path = comp_unit_info->oso_path.GetCString();
@@ -456,11 +457,10 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
                              .getArchName()
                              .str()
                              .c_str());
-      comp_unit_info->oso_sp->module_sp.reset(new DebugMapModule(
+      comp_unit_info->oso_sp->module_sp = std::make_shared<DebugMapModule>(
           obj_file->GetModule(), GetCompUnitInfoIndex(comp_unit_info), oso_file,
-          oso_arch, oso_object ? &oso_object : NULL, 0,
-          oso_object ? comp_unit_info->oso_mod_time
-                     : llvm::sys::TimePoint<>()));
+          oso_arch, oso_object ? &oso_object : nullptr, 0,
+          oso_object ? comp_unit_info->oso_mod_time : llvm::sys::TimePoint<>());
     }
   }
   if (comp_unit_info->oso_sp)
@@ -582,9 +582,10 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
         // User zero as the ID to match the compile unit at offset zero in each
         // .o file since each .o file can only have one compile unit for now.
         lldb::user_id_t cu_id = 0;
-        m_compile_unit_infos[cu_idx].compile_unit_sp.reset(
-            new CompileUnit(m_obj_file->GetModule(), NULL, so_file_spec, cu_id,
-                            eLanguageTypeUnknown, eLazyBoolCalculate));
+        m_compile_unit_infos[cu_idx].compile_unit_sp =
+            std::make_shared<CompileUnit>(
+                m_obj_file->GetModule(), nullptr, so_file_spec, cu_id,
+                eLanguageTypeUnknown, eLazyBoolCalculate);
 
         if (m_compile_unit_infos[cu_idx].compile_unit_sp) {
           // Let our symbol vendor know about this compile unit

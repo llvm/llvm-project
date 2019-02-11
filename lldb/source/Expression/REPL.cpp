@@ -19,6 +19,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
 
+#include <memory>
+
 using namespace lldb_private;
 
 REPL::REPL(LLVMCastKind kind, Target &target) : m_target(target), m_kind(kind) {
@@ -71,15 +73,15 @@ std::string REPL::GetSourcePath() {
 lldb::IOHandlerSP REPL::GetIOHandler() {
   if (!m_io_handler_sp) {
     Debugger &debugger = m_target.GetDebugger();
-    m_io_handler_sp.reset(
-        new IOHandlerEditline(debugger, IOHandler::Type::REPL,
+    m_io_handler_sp = std::make_shared<IOHandlerEditline>(
+        debugger, IOHandler::Type::REPL,
                               "lldb-repl", // Name of input reader for history
                               llvm::StringRef("> "), // prompt
                               llvm::StringRef(". "), // Continuation prompt
                               true,                  // Multi-line
                               true, // The REPL prompt is always colored
                               1,    // Line number
-                              *this));
+        *this);
 
     // Don't exit if CTRL+C is pressed
     static_cast<IOHandlerEditline *>(m_io_handler_sp.get())

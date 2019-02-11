@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
-
 #include "RenderScriptRuntime.h"
 #include "RenderScriptScriptGroup.h"
 
@@ -39,6 +37,10 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Status.h"
+
+#include "llvm/ADT/StringSwitch.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1211,7 +1213,7 @@ void RenderScriptRuntime::CaptureDebugHintScriptGroup2(
       }
     }
     if (!group) {
-      group.reset(new RSScriptGroupDescriptor);
+      group = std::make_shared<RSScriptGroupDescriptor>();
       group->m_name = group_name;
       m_scriptGroups.push_back(group);
     } else {
@@ -2854,7 +2856,7 @@ bool RenderScriptRuntime::LoadModule(const lldb::ModuleSP &module_sp) {
     switch (GetModuleKind(module_sp)) {
     case eModuleKindKernelObj: {
       RSModuleDescriptorSP module_desc;
-      module_desc.reset(new RSModuleDescriptor(module_sp));
+      module_desc = std::make_shared<RSModuleDescriptor>(module_sp);
       if (module_desc->ParseRSInfo()) {
         m_rsmodules.push_back(module_desc);
         module_desc->WarnIfVersionMismatch(GetProcess()

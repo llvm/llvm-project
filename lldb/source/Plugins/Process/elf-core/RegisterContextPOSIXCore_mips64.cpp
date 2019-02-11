@@ -11,21 +11,23 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
 
+#include <memory>
+
 using namespace lldb_private;
 
 RegisterContextCorePOSIX_mips64::RegisterContextCorePOSIX_mips64(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_mips64(thread, 0, register_info) {
-  m_gpr_buffer.reset(
-      new DataBufferHeap(gpregset.GetDataStart(), gpregset.GetByteSize()));
+  m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
+                                                  gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
   DataExtractor fpregset = getRegset(
       notes, register_info->GetTargetArchitecture().GetTriple(), FPR_Desc);
-  m_fpr_buffer.reset(
-      new DataBufferHeap(fpregset.GetDataStart(), fpregset.GetByteSize()));
+  m_fpr_buffer = std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
+                                                  fpregset.GetByteSize());
   m_fpr.SetData(m_fpr_buffer);
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }

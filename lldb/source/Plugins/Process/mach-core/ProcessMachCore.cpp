@@ -12,7 +12,6 @@
 
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"
-#include <mutex>
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -38,6 +37,9 @@
 #include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
+
+#include <memory>
+#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -70,8 +72,8 @@ lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
       llvm::MachO::mach_header mach_header;
       if (ObjectFileMachO::ParseHeader(data, &data_offset, mach_header)) {
         if (mach_header.filetype == llvm::MachO::MH_CORE)
-          process_sp.reset(
-              new ProcessMachCore(target_sp, listener_sp, *crash_file));
+          process_sp = std::make_shared<ProcessMachCore>(target_sp, listener_sp,
+                                                         *crash_file);
       }
     }
   }

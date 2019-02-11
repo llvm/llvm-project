@@ -25,6 +25,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -408,8 +410,8 @@ void ThreadPlanCallFunction::DidPush() {
   GetThread().SetStopInfoToNothing();
 
 #ifndef SINGLE_STEP_EXPRESSIONS
-  m_subplan_sp.reset(
-      new ThreadPlanRunToAddress(m_thread, m_start_addr, m_stop_other_threads));
+  m_subplan_sp = std::make_shared<ThreadPlanRunToAddress>(
+      m_thread, m_start_addr, m_stop_other_threads);
 
   m_thread.QueueThreadPlan(m_subplan_sp, false);
   m_subplan_sp->SetPrivate(true);

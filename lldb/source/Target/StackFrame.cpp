@@ -33,6 +33,8 @@
 
 #include "lldb/lldb-enumerations.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -422,7 +424,7 @@ VariableList *StackFrame::GetVariableList(bool get_file_globals) {
       const bool get_child_variables = true;
       const bool can_create = true;
       const bool stop_if_child_block_is_inlined_function = true;
-      m_variable_list_sp.reset(new VariableList());
+      m_variable_list_sp = std::make_shared<VariableList>();
       frame_block->AppendBlockVariables(can_create, get_child_variables,
                                         stop_if_child_block_is_inlined_function,
                                         [](Variable *v) { return true; },
@@ -1173,7 +1175,7 @@ ValueObjectSP StackFrame::TrackGlobalVariable(const VariableSP &variable_sp,
     VariableList *var_list = GetVariableList(true);
     // If this frame has no variables, create a new list
     if (var_list == nullptr)
-      m_variable_list_sp.reset(new VariableList());
+      m_variable_list_sp = std::make_shared<VariableList>();
 
     // Add the global/static variable to this frame
     m_variable_list_sp->AddVariable(variable_sp);
