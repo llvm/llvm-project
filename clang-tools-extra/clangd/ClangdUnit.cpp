@@ -96,14 +96,13 @@ private:
 class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
-      : File(File), ParsedCallback(ParsedCallback) {}
+      : File(File), ParsedCallback(ParsedCallback) {
+    addSystemHeadersMapping(&CanonIncludes);
+  }
 
   IncludeStructure takeIncludes() { return std::move(Includes); }
 
-  CanonicalIncludes takeCanonicalIncludes() {
-    addSystemHeadersMapping(&CanonIncludes);
-    return std::move(CanonIncludes);
-  }
+  CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   void AfterExecute(CompilerInstance &CI) override {
     if (!ParsedCallback)

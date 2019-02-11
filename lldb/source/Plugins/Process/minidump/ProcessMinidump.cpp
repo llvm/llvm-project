@@ -41,84 +41,51 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace minidump;
 
-namespace {
-
-/// A minimal ObjectFile implementation providing a dummy object file for the
-/// cases when the real module binary is not available. This allows the module
-/// to show up in "image list" and symbols to be added to it.
-class PlaceholderObjectFile : public ObjectFile {
+//------------------------------------------------------------------
+/// A placeholder module used for minidumps, where the original
+/// object files may not be available (so we can't parse the object
+/// files to extract the set of sections/segments)
+///
+/// This placeholder module has a single synthetic section (.module_image)
+/// which represents the module memory range covering the whole module.
+//------------------------------------------------------------------
+class PlaceholderModule : public Module {
 public:
-  PlaceholderObjectFile(const lldb::ModuleSP &module_sp,
-                        const ModuleSpec &module_spec, lldb::offset_t base,
-                        lldb::offset_t size)
-      : ObjectFile(module_sp, &module_spec.GetFileSpec(), /*file_offset*/ 0,
-                   /*length*/ 0, /*data_sp*/ nullptr, /*data_offset*/ 0),
-        m_arch(module_spec.GetArchitecture()), m_uuid(module_spec.GetUUID()),
-        m_base(base), m_size(size) {
-    m_symtab_ap = llvm::make_unique<Symtab>(this);
+  PlaceholderModule(const ModuleSpec &module_spec) :
+    Module(module_spec.GetFileSpec(), module_spec.GetArchitecture()) {
+    if (module_spec.GetUUID().IsValid())
+      SetUUID(module_spec.GetUUID());
   }
 
-  ConstString GetPluginName() override { return ConstString("placeholder"); }
-  uint32_t GetPluginVersion() override { return 1; }
-  bool ParseHeader() override { return true; }
-  Type CalculateType() override { return eTypeUnknown; }
-  Strata CalculateStrata() override { return eStrataUnknown; }
-  uint32_t GetDependentModules(FileSpecList &file_list) override { return 0; }
-  bool IsExecutable() const override { return false; }
-  ArchSpec GetArchitecture() override { return m_arch; }
-  Symtab *GetSymtab() override { return m_symtab_ap.get(); }
-  bool IsStripped() override { return true; }
-  ByteOrder GetByteOrder() const override { return m_arch.GetByteOrder(); }
-
-  uint32_t GetAddressByteSize() const override {
-    return m_arch.GetAddressByteSize();
-  }
-
-  bool GetUUID(UUID *uuid) override {
-    *uuid = m_uuid;
-    return true;
-  }
-
-  Address GetBaseAddress() override {
-    return Address(m_sections_ap->GetSectionAtIndex(0), 0);
-  }
-
-  void CreateSections(SectionList &unified_section_list) override {
-    m_sections_ap = llvm::make_unique<SectionList>();
-    auto section_sp = std::make_shared<Section>(
-        GetModule(), this, /*sect_id*/ 0, ConstString(".module_image"),
-        eSectionTypeOther, m_base, m_size, /*file_offset*/ 0, /*file_size*/ 0,
-        /*log2align*/ 0, /*flags*/ 0);
-    m_sections_ap->AddSection(section_sp);
-    unified_section_list.AddSection(std::move(section_sp));
-  }
-
-  bool SetLoadAddress(Target &target, addr_t value,
-                      bool value_is_offset) override {
-    assert(!value_is_offset);
-    assert(value == m_base);
-
-    // Create sections if they haven't been created already.
-    GetModule()->GetSectionList();
-    assert(m_sections_ap->GetNumSections(0) == 1);
-
+  // Creates a synthetic module section covering the whole module image (and
+  // sets the section load address as well)
+  void CreateImageSection(const MinidumpModule *module, Target& target) {
+    const ConstString section_name(".module_image");
+    lldb::SectionSP section_sp(new Section(
+        shared_from_this(),     // Module to which this section belongs.
+        nullptr,                // ObjectFile
+        0,                      // Section ID.
+        section_name,           // Section name.
+        eSectionTypeContainer,  // Section type.
+        module->base_of_image,  // VM address.
+        module->size_of_image,  // VM size in bytes of this section.
+        0,                      // Offset of this section in the file.
+        module->size_of_image,  // Size of the section as found in the file.
+        12,                     // Alignment of the section (log2)
+        0,                      // Flags for this section.
+        1));                    // Number of host bytes per target byte
+    section_sp->SetPermissions(ePermissionsExecutable | ePermissionsReadable);
+    GetSectionList()->AddSection(section_sp);
     target.GetSectionLoadList().SetSectionLoadAddress(
-        m_sections_ap->GetSectionAtIndex(0), m_base);
-    return true;
+        section_sp, module->base_of_image);
   }
 
-  void Dump(Stream *s) override {
-    s->Format("Placeholder object file for {0} loaded at [{1:x}-{2:x})\n",
-              GetFileSpec(), m_base, m_base + m_size);
-  }
+ObjectFile *GetObjectFile() override { return nullptr; }
 
-private:
-  ArchSpec m_arch;
-  UUID m_uuid;
-  lldb::offset_t m_base;
-  lldb::offset_t m_size;
+  SectionList *GetSectionList() override {
+    return Module::GetUnifiedSectionList();
+  }
 };
-} // namespace
 
 ConstString ProcessMinidump::GetPluginNameStatic() {
   static ConstString g_name("minidump");
@@ -390,7 +357,6 @@ void ProcessMinidump::ReadModuleList() {
     auto file_spec = FileSpec(name.getValue(), GetArchitecture().GetTriple());
     FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
-    module_spec.GetArchitecture() = GetArchitecture();
     Status error;
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);
     if (!module_sp || error.Fail()) {
@@ -407,8 +373,10 @@ void ProcessMinidump::ReadModuleList() {
                     name.getValue().c_str());
       }
 
-      module_sp = Module::CreateModuleFromObjectFile<PlaceholderObjectFile>(
-          module_spec, module->base_of_image, module->size_of_image);
+      auto placeholder_module =
+          std::make_shared<PlaceholderModule>(module_spec);
+      placeholder_module->CreateImageSection(module, GetTarget());
+      module_sp = placeholder_module;
       GetTarget().GetImages().Append(module_sp);
     }
 
