@@ -1736,8 +1736,10 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
 }
 
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
-    ValueObject &in_value, SwiftASTContext &scratch_ctx,
-    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    ValueObject &in_value, CompilerType protocol_type,
+    SwiftASTContext &scratch_ctx,
+    lldb::DynamicValueType use_dynamic,
+    TypeAndOrName &class_type_or_name,
     Address &address) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
@@ -1745,8 +1747,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
   assert(IsScratchContextLocked(target) &&
           "Swift scratch context not locked ahead");
   auto &remote_ast = GetRemoteASTContext(scratch_ctx);
-
-  CompilerType protocol_type(in_value.GetCompilerType());
 
   lldb::addr_t existential_address;
   bool use_local_buffer = false;
@@ -2259,7 +2259,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
         in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsProtocol))
     success = GetDynamicTypeAndAddress_Protocol(
-        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
+        in_value, val_type, *scratch_ctx, use_dynamic,
+        class_type_or_name, address);
   else if (type_info.AnySet(eTypeIsGenericTypeParam))
     // ..._GenericTypeParam performs the archetype binding *and* sets address.
     success = GetDynamicTypeAndAddress_GenericTypeParam(
@@ -2274,8 +2275,19 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     if (!bound_type)
       return false;
 
-    success = GetDynamicTypeAndAddress_Value(in_value, bound_type, use_dynamic,
-                                             class_type_or_name, address);
+    Flags subst_type_info(bound_type.GetTypeInfo());
+    if (subst_type_info.AnySet(eTypeIsClass)) {
+      success = GetDynamicTypeAndAddress_Class(in_value, *scratch_ctx, use_dynamic,
+                                               class_type_or_name, address);
+    } else if (subst_type_info.AnySet(eTypeIsProtocol)) {
+      success = GetDynamicTypeAndAddress_Protocol(in_value, bound_type,
+                                                  *scratch_ctx, use_dynamic,
+                                                  class_type_or_name, address);
+    } else {
+      success = GetDynamicTypeAndAddress_Value(in_value, bound_type,
+                                               use_dynamic, class_type_or_name,
+                                               address);
+    }
   }
 
   if (success)
