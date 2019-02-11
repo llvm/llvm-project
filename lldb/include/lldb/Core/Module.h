@@ -164,17 +164,14 @@ public:
     module_sp->m_objfile_sp =
         std::make_shared<ObjFilePlugin>(module_sp, std::forward<Args>(args)...);
 
-    // Once we get the object file, set module ArchSpec to the one we get from
-    // the object file. If the object file does not have an architecture, we
-    // consider the creation a failure.
-    ArchSpec arch = module_sp->m_objfile_sp->GetArchitecture();
-    if (!arch)
-      return nullptr;
-    module_sp->m_arch = arch;
-
-    // Also copy the object file's FileSpec.
-    module_sp->m_file = module_sp->m_objfile_sp->GetFileSpec();
-    return module_sp;
+    // Once we get the object file, update our module with the object file's
+    // architecture since it might differ in vendor/os if some parts were
+    // unknown.
+    if (ArchSpec arch = module_sp->m_objfile_sp->GetArchitecture()) {
+      module_sp->m_arch = arch;
+      return module_sp;
+    }
+    return nullptr;
   }
 
   //------------------------------------------------------------------
