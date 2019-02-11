@@ -966,6 +966,43 @@ of the condition.
   }];
 }
 
+def FortifyStdLibDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``fortify_stdlib`` attribute applies to declarations of C stdlib functions
+(memcpy, sprintf, ...), and causes clang to emit calls to their fortified
+variants with ``__builtin_object_size``. This attribute is intended for use
+within standard C library implementations and should not generally be used for
+user applications. For instance:
+
+.. code-block:: c
+
+  __attribute__((fortify_stdlib(0, 0)))
+  int sprintf(char *buf, const char *fmt, ...);
+
+  int main() {
+    char buf[5];
+    sprintf(buf, "%f", 42.0);
+    // Clang generates code equivalent to:
+    // __sprintf_chk(buf, 0, __builtin_object_size(0), "%f", 42.0);
+  }
+
+The first argument to the attribute is the integer `type` argument passed to
+`__builtin_object_size` (you can read more about `__builtin_object_size`
+`here <https://gcc.gnu.org/onlinedocs/gcc-4.8.5/gcc/Object-Size-Checking.html>`_),
+The second argument to this attribute is the flag that the fortified format
+functions accept.
+
+Only a specific set of standard library functions are supported:
+  - memcpy, memmove, memset
+  - stpcpy, strcat, strcpy
+  - strlcat, strlcpy
+  - strncat, strncpy, stpncpy
+  - snprintf, vsnprintf, sprintf, vsprintf
+  - fprintf, vfprintf, printf, vprintf
+}];
+}
+
 def ConvergentDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
