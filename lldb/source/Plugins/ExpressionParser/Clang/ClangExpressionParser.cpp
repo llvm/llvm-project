@@ -1280,8 +1280,8 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           process->SetDynamicCheckers(dynamic_checkers);
 
           if (log)
-            log->Printf("== [ClangUserExpression::Evaluate] Finished "
-                        "installing dynamic checkers ==");
+            log->Printf("== [ClangExpressionParser::PrepareForExecution] "
+                        "Finished installing dynamic checkers ==");
         }
 
         IRDynamicChecks ir_dynamic_checks(*process->GetDynamicCheckers(),
