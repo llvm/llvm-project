@@ -33,6 +33,7 @@ void testStrlcpy(const char *src) {
   strlcpy(dest, src, ulen);
   strlcpy(dest + 5, src, 5);
   strlcpy(dest + 5, src, 10); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value sizeof(<destination buffer>) or lower}}
+  strlcpy(dest, "aaaaaaaaaaaaaaa", 10); // no-warning
 }
 
 void testStrlcat(const char *src) {
@@ -51,4 +52,5 @@ void testStrlcat(const char *src) {
   strlcat(dest, src, ulen);
   strlcpy(dest, src, 5);
   strlcat(dest + 5, src, badlen); // expected-warning {{The third argument allows to potentially copy more bytes than it should. Replace with the value sizeof(<destination buffer>) or lower}}
+  strlcat(dest, "aaaaaaaaaaaaaaa", 10); // no-warning
 }
