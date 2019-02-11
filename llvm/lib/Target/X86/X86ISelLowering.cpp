@@ -7273,9 +7273,9 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   unsigned NumElems = Elts.size();
 
   int LastLoadedElt = -1;
-  SmallBitVector LoadMask(NumElems, false);
-  SmallBitVector ZeroMask(NumElems, false);
-  SmallBitVector UndefMask(NumElems, false);
+  APInt LoadMask = APInt::getNullValue(NumElems);
+  APInt ZeroMask = APInt::getNullValue(NumElems);
+  APInt UndefMask = APInt::getNullValue(NumElems);
 
   // For each element in the initializer, see if we've found a load, zero or an
   // undef.
@@ -7285,11 +7285,11 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       return SDValue();
 
     if (Elt.isUndef())
-      UndefMask[i] = true;
+      UndefMask.setBit(i);
     else if (X86::isZeroNode(Elt) || ISD::isBuildVectorAllZeros(Elt.getNode()))
-      ZeroMask[i] = true;
+      ZeroMask.setBit(i);
     else if (ISD::isNON_EXTLoad(Elt.getNode())) {
-      LoadMask[i] = true;
+      LoadMask.setBit(i);
       LastLoadedElt = i;
       // Each loaded element must be the correct fractional portion of the
       // requested vector load.
@@ -7298,20 +7298,21 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     } else
       return SDValue();
   }
-  assert((ZeroMask | UndefMask | LoadMask).count() == NumElems &&
+  assert((ZeroMask.countPopulation() + UndefMask.countPopulation() +
+          LoadMask.countPopulation()) == NumElems &&
          "Incomplete element masks");
 
   // Handle Special Cases - all undef or undef/zero.
-  if (UndefMask.count() == NumElems)
+  if (UndefMask.countPopulation() == NumElems)
     return DAG.getUNDEF(VT);
 
   // FIXME: Should we return this as a BUILD_VECTOR instead?
-  if ((ZeroMask | UndefMask).count() == NumElems)
+  if ((ZeroMask.countPopulation() + UndefMask.countPopulation()) == NumElems)
     return VT.isInteger() ? DAG.getConstant(0, DL, VT)
                           : DAG.getConstantFP(0.0, DL, VT);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  int FirstLoadedElt = LoadMask.find_first();
+  int FirstLoadedElt = LoadMask.countTrailingZeros();
   SDValue EltBase = peekThroughBitcasts(Elts[FirstLoadedElt]);
   LoadSDNode *LDBase = cast<LoadSDNode>(EltBase);
   EVT LDBaseVT = EltBase.getValueType();

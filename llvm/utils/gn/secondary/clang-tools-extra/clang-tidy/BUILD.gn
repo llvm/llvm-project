@@ -4,6 +4,7 @@ static_library("clang-tidy") {
   output_name = "clangTidy"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    "//clang/include/clang/StaticAnalyzer/Checkers",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
@@ -16,10 +17,6 @@ static_library("clang-tidy") {
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
-
-    # TODO(mbonadei): Add support for Clang Static Analyzer checkers.
-    # Without this, "clang-analyzer-" will not work.
-    # ClangSACheckers
   ]
 
   if (clang_enable_static_analyzer) {
