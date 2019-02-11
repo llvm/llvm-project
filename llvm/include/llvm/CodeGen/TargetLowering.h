@@ -3919,9 +3919,10 @@ public:
   SDValue lowerCmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) const;
 
 private:
-  SDValue simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
-                               ISD::CondCode Cond, DAGCombinerInfo &DCI,
-                               const SDLoc &DL) const;
+  SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+                           const SDLoc &DL, DAGCombinerInfo &DCI) const;
+  SDValue foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+                             const SDLoc &DL, DAGCombinerInfo &DCI) const;
 
   SDValue optimizeSetCCOfSignedTruncationCheck(EVT SCCVT, SDValue N0,
                                                SDValue N1, ISD::CondCode Cond,

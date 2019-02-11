@@ -932,32 +932,14 @@ define i32 @partial_reduction_add_v8i32(<8 x i32> %x) {
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX1-FAST-LABEL: partial_reduction_add_v8i32:
-; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
-; AVX1-FAST-NEXT:    vzeroupper
-; AVX1-FAST-NEXT:    retq
-;
-; AVX2-FAST-LABEL: partial_reduction_add_v8i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-FAST-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
-;
-; AVX512-FAST-LABEL: partial_reduction_add_v8i32:
-; AVX512-FAST:       # %bb.0:
-; AVX512-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-FAST-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX512-FAST-NEXT:    vphaddd %ymm0, %ymm0, %ymm0
-; AVX512-FAST-NEXT:    vmovd %xmm0, %eax
-; AVX512-FAST-NEXT:    vzeroupper
-; AVX512-FAST-NEXT:    retq
+; AVX-FAST-LABEL: partial_reduction_add_v8i32:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vmovd %xmm0, %eax
+; AVX-FAST-NEXT:    vzeroupper
+; AVX-FAST-NEXT:    retq
   %x23 = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %x0213 = add <8 x i32> %x, %x23
   %x13 = shufflevector <8 x i32> %x0213, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1058,32 +1040,14 @@ define i32 @partial_reduction_sub_v8i32(<8 x i32> %x) {
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX1-FAST-LABEL: partial_reduction_sub_v8i32:
-; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vphsubd %xmm0, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
-; AVX1-FAST-NEXT:    vzeroupper
-; AVX1-FAST-NEXT:    retq
-;
-; AVX2-FAST-LABEL: partial_reduction_sub_v8i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX2-FAST-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vphsubd %ymm0, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
-;
-; AVX512-FAST-LABEL: partial_reduction_sub_v8i32:
-; AVX512-FAST:       # %bb.0:
-; AVX512-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-FAST-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
-; AVX512-FAST-NEXT:    vphsubd %ymm0, %ymm0, %ymm0
-; AVX512-FAST-NEXT:    vmovd %xmm0, %eax
-; AVX512-FAST-NEXT:    vzeroupper
-; AVX512-FAST-NEXT:    retq
+; AVX-FAST-LABEL: partial_reduction_sub_v8i32:
+; AVX-FAST:       # %bb.0:
+; AVX-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vphsubd %xmm0, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vmovd %xmm0, %eax
+; AVX-FAST-NEXT:    vzeroupper
+; AVX-FAST-NEXT:    retq
   %x23 = shufflevector <8 x i32> %x, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   %x0213 = sub <8 x i32> %x, %x23
   %x13 = shufflevector <8 x i32> %x0213, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>

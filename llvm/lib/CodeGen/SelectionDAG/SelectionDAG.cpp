@@ -8622,9 +8622,9 @@ ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N, bool AllowUndefs) {
   return nullptr;
 }
 
-bool llvm::isNullOrNullSplat(SDValue N) {
+bool llvm::isNullOrNullSplat(SDValue N, bool AllowUndefs) {
   // TODO: may want to use peekThroughBitcast() here.
-  ConstantSDNode *C = isConstOrConstSplat(N);
+  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
   return C && C->isNullValue();
 }
 
