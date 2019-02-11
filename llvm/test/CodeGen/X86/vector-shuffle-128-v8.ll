@@ -1167,9 +1167,10 @@ define <8 x i16> @shuffle_v8i16_0213cedf(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-SLOW-LABEL: shuffle_v8i16_0213cedf:
 ; AVX512VL-SLOW:       # %bb.0:
-; AVX512VL-SLOW-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,5,7]
 ; AVX512VL-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,1,3,4,5,6,7]
-; AVX512VL-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512VL-SLOW-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,5,7]
+; AVX512VL-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX512VL-SLOW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
 ; AVX512VL-FAST-LABEL: shuffle_v8i16_0213cedf:
@@ -1556,14 +1557,14 @@ define <8 x i16> @shuffle_v8i16_XX4X8acX(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; SSE41-LABEL: shuffle_v8i16_XX4X8acX:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,4,5,6,7,0,1,4,5,8,9,4,5]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,u,u,0,1,4,5,8,9,4,5]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: shuffle_v8i16_XX4X8acX:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,4,5,4,5,6,7,0,1,4,5,8,9,4,5]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,u,u,u,u,u,u,u,0,1,4,5,8,9,4,5]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    retq

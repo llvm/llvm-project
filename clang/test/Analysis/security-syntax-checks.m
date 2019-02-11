@@ -13,6 +13,9 @@
 # define BUILTIN(f) f
 #endif /* USE_BUILTINS */
 
+#include "Inputs/system-header-simulator-for-valist.h"
+#include "Inputs/system-header-simulator-for-simple-stream.h"
+
 typedef typeof(sizeof(int)) size_t;
 
 
@@ -238,3 +241,82 @@ void test_mkstemp() {
   mkdtemp("XXXXXX");
 }
 
+
+//===----------------------------------------------------------------------===
+// deprecated or unsafe buffer handling
+//===----------------------------------------------------------------------===
+typedef int wchar_t;
+
+int sprintf(char *str, const char *format, ...);
+//int vsprintf (char *s, const char *format, va_list arg);
+int scanf(const char *format, ...);
+int wscanf(const wchar_t *format, ...);
+int fscanf(FILE *stream, const char *format, ...);
+int fwscanf(FILE *stream, const wchar_t *format, ...);
+int vscanf(const char *format, va_list arg);
+int vwscanf(const wchar_t *format, va_list arg);
+int vfscanf(FILE *stream, const char *format, va_list arg);
+int vfwscanf(FILE *stream, const wchar_t *format, va_list arg);
+int sscanf(const char *s, const char *format, ...);
+int swscanf(const wchar_t *ws, const wchar_t *format, ...);
+int vsscanf(const char *s, const char *format, va_list arg);
+int vswscanf(const wchar_t *ws, const wchar_t *format, va_list arg);
+int swprintf(wchar_t *ws, size_t len, const wchar_t *format, ...);
+int snprintf(char *s, size_t n, const char *format, ...);
+int vswprintf(wchar_t *ws, size_t len, const wchar_t *format, va_list arg);
+int vsnprintf(char *s, size_t n, const char *format, va_list arg);
+void *memcpy(void *destination, const void *source, size_t num);
+void *memmove(void *destination, const void *source, size_t num);
+char *strncpy(char *destination, const char *source, size_t num);
+char *strncat(char *destination, const char *source, size_t num);
+void *memset(void *ptr, int value, size_t num);
+
+void test_deprecated_or_unsafe_buffer_handling_1() {
+  char buf [5];
+  wchar_t wbuf [5];
+  int a;
+  FILE *file;
+  sprintf(buf, "a"); // expected-warning{{Call to function 'sprintf' is insecure}}
+  scanf("%d", &a); // expected-warning{{Call to function 'scanf' is insecure}}
+  scanf("%s", buf); // expected-warning{{Call to function 'scanf' is insecure}}
+  scanf("%4s", buf); // expected-warning{{Call to function 'scanf' is insecure}}
+  wscanf((const wchar_t*) L"%s", buf); // expected-warning{{Call to function 'wscanf' is insecure}}
+  fscanf(file, "%d", &a); // expected-warning{{Call to function 'fscanf' is insecure}}
+  fscanf(file, "%s", buf); // expected-warning{{Call to function 'fscanf' is insecure}}
+  fscanf(file, "%4s", buf); // expected-warning{{Call to function 'fscanf' is insecure}}
+  fwscanf(file, (const wchar_t*) L"%s", wbuf); // expected-warning{{Call to function 'fwscanf' is insecure}}
+  sscanf("5", "%d", &a); // expected-warning{{Call to function 'sscanf' is insecure}}
+  sscanf("5", "%s", buf); // expected-warning{{Call to function 'sscanf' is insecure}}
+  sscanf("5", "%4s", buf); // expected-warning{{Call to function 'sscanf' is insecure}}
+  swscanf(L"5", (const wchar_t*) L"%s", wbuf); // expected-warning{{Call to function 'swscanf' is insecure}}
+  swprintf(L"5", 1, (const wchar_t*) L"%s", wbuf); // expected-warning{{Call to function 'swprintf' is insecure}}
+  snprintf("5", 1, "%s", buf); // expected-warning{{Call to function 'snprintf' is insecure}}
+  memcpy(buf, wbuf, 1); // expected-warning{{Call to function 'memcpy' is insecure}}
+  memmove(buf, wbuf, 1); // expected-warning{{Call to function 'memmove' is insecure}}
+  strncpy(buf, "a", 1); // expected-warning{{Call to function 'strncpy' is insecure}}
+  strncat(buf, "a", 1); // expected-warning{{Call to function 'strncat' is insecure}}
+  memset(buf, 'a', 1); // expected-warning{{Call to function 'memset' is insecure}}
+}
+
+void test_deprecated_or_unsafe_buffer_handling_2(const char *format, ...) {
+  char buf [5];
+  FILE *file;
+  va_list args;
+  va_start(args, format);
+  vsprintf(buf, format, args); // expected-warning{{Call to function 'vsprintf' is insecure}}
+  vscanf(format, args); // expected-warning{{Call to function 'vscanf' is insecure}}
+  vfscanf(file, format, args); // expected-warning{{Call to function 'vfscanf' is insecure}}
+  vsscanf("a", format, args); // expected-warning{{Call to function 'vsscanf' is insecure}}
+  vsnprintf("a", 1, format, args); // expected-warning{{Call to function 'vsnprintf' is insecure}}
+}
+
+void test_deprecated_or_unsafe_buffer_handling_3(const wchar_t *format, ...) {
+  wchar_t wbuf [5];
+  FILE *file;
+  va_list args;
+  va_start(args, format);
+  vwscanf(format, args); // expected-warning{{Call to function 'vwscanf' is insecure}}
+  vfwscanf(file, format, args); // expected-warning{{Call to function 'vfwscanf' is insecure}}
+  vswscanf(L"a", format, args); // expected-warning{{Call to function 'vswscanf' is insecure}}
+  vswprintf(L"a", 1, format, args); // expected-warning{{Call to function 'vswprintf' is insecure}}
+}

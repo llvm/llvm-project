@@ -17,6 +17,7 @@ if [ "$System" = "FreeBSD" ]; then
 else
     MAKE=make
 fi
+generator="Unix Makefiles"
 
 # Base SVN URL for the sources.
 Base_url="http://llvm.org/svn/llvm-project"
@@ -57,6 +58,7 @@ function usage() {
     echo " -test-asserts        Test with asserts on. [default: no]"
     echo " -no-compare-files    Don't test that phase 2 and 3 files are identical."
     echo " -use-gzip            Use gzip instead of xz."
+    echo " -use-ninja           Use ninja instead of make/gmake."
     echo " -configure-flags FLAGS  Extra flags to pass to the configure step."
     echo " -svn-path DIR        Use the specified DIR instead of a release."
     echo "                      For example -svn-path trunk or -svn-path branches/release_37"
@@ -110,6 +112,10 @@ while [ $# -gt 0 ]; do
                 shift
                 NumJobs="$1"
             fi
+            ;;
+        -use-ninja )
+            MAKE=ninja
+            generator=Ninja
             ;;
         -build-dir | --build-dir | -builddir | --builddir )
             shift
@@ -277,6 +283,8 @@ if [ "$System" != "Darwin" ]; then
   check_program_exists 'objdump'
 fi
 
+check_program_exists ${MAKE}
+
 # Make sure that the URLs are valid.
 function check_valid_urls() {
     for proj in $projects ; do
@@ -365,12 +373,12 @@ function configure_llvmCore() {
     echo "# Configuring llvm $Release-$RC $Flavor"
 
     echo "#" env CC="$c_compiler" CXX="$cxx_compiler" \
-        cmake -G "Unix Makefiles" \
+        cmake -G "$generator" \
         -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
         $ExtraConfigureFlags $BuildDir/llvm.src \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
     env CC="$c_compiler" CXX="$cxx_compiler" \
-        cmake -G "Unix Makefiles" \
+        cmake -G "$generator" \
         -DCMAKE_BUILD_TYPE=$BuildType -DLLVM_ENABLE_ASSERTIONS=$Assertions \
         $ExtraConfigureFlags $BuildDir/llvm.src \
         2>&1 | tee $LogDir/llvm.configure-Phase$Phase-$Flavor.log
@@ -384,16 +392,20 @@ function build_llvmCore() {
     ObjDir="$3"
     DestDir="$4"
 
+    Verbose="VERBOSE=1"
+    if [ ${MAKE} = 'ninja' ]; then
+      Verbose="-v"
+    fi
+
     cd $ObjDir
     echo "# Compiling llvm $Release-$RC $Flavor"
-    echo "# ${MAKE} -j $NumJobs VERBOSE=1"
-    ${MAKE} -j $NumJobs VERBOSE=1 \
+    echo "# ${MAKE} -j $NumJobs $Verbose"
+    ${MAKE} -j $NumJobs $Verbose \
         2>&1 | tee $LogDir/llvm.make-Phase$Phase-$Flavor.log
 
     echo "# Installing llvm $Release-$RC $Flavor"
     echo "# ${MAKE} install"
-    ${MAKE} install \
-        DESTDIR="${DestDir}" \
+    DESTDIR="${DestDir}" ${MAKE} install \
         2>&1 | tee $LogDir/llvm.install-Phase$Phase-$Flavor.log
     cd $BuildDir
 }
@@ -403,8 +415,15 @@ function test_llvmCore() {
     Flavor="$2"
     ObjDir="$3"
 
+    KeepGoing="-k"
+    if [ ${MAKE} = 'ninja' ]; then
+      # Ninja doesn't have a documented "keep-going-forever" mode, we need to
+      # set a limit on how many jobs can fail before we give up.
+      KeepGoing="-k 100"
+    fi
+
     cd $ObjDir
-    if ! ( ${MAKE} -j $NumJobs -k check-all \
+    if ! ( ${MAKE} -j $NumJobs $KeepGoing check-all \
         2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
       deferred_error $Phase $Flavor "check-all failed"
     fi
@@ -412,8 +431,9 @@ function test_llvmCore() {
     if [ $do_test_suite = 'yes' ]; then
       cd $TestSuiteBuildDir
       env CC="$c_compiler" CXX="$cxx_compiler" \
-          cmake $TestSuiteSrcDir -DTEST_SUITE_LIT=$Lit
-      if ! ( ${MAKE} -j $NumJobs -k check \
+          cmake $TestSuiteSrcDir -G "$generator" -DTEST_SUITE_LIT=$Lit
+
+      if ! ( ${MAKE} -j $NumJobs $KeepGoing check \
           2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
         deferred_error $Phase $Flavor "test suite failed"
       fi

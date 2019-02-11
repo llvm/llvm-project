@@ -96,14 +96,13 @@ private:
 class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
-      : File(File), ParsedCallback(ParsedCallback) {}
+      : File(File), ParsedCallback(ParsedCallback) {
+    addSystemHeadersMapping(&CanonIncludes);
+  }
 
   IncludeStructure takeIncludes() { return std::move(Includes); }
 
-  CanonicalIncludes takeCanonicalIncludes() {
-    addSystemHeadersMapping(&CanonIncludes);
-    return std::move(CanonIncludes);
-  }
+  CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   void AfterExecute(CompilerInstance &CI) override {
     if (!ParsedCallback)
@@ -309,8 +308,9 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   llvm::Optional<IncludeFixer> FixIncludes;
   auto BuildDir = VFS->getCurrentWorkingDirectory();
   if (Opts.SuggestMissingIncludes && Index && !BuildDir.getError()) {
+    auto Style = getFormatStyleForFile(MainInput.getFile(), Content, VFS.get());
     auto Inserter = std::make_shared<IncludeInserter>(
-        MainInput.getFile(), Content, Opts.Style, BuildDir.get(),
+        MainInput.getFile(), Content, Style, BuildDir.get(),
         Clang->getPreprocessor().getHeaderSearchInfo());
     if (Preamble) {
       for (const auto &Inc : Preamble->Includes.MainFileIncludes)

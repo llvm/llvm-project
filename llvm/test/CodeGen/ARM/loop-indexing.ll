@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv7em -mattr=+fp-armv8 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BASE --check-prefix=CHECK-DEFAULT --check-prefix=CHECK-T2
+; RUN: llc -mtriple=thumbv7em -mattr=+fp-armv8 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT --check-prefix=CHECK-T2
 ; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT --check-prefix=CHECK-T2
 ; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-backedge-indexing=false %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
 ; RUN: llc -mtriple=thumbv8m.base %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
@@ -13,10 +13,10 @@
 ; CHECK-LABEL: test_fma
 ; CHECK: @ %loop
 
-; CHECK-BASE: vldr s{{.*}}, #8]
-; CHECK-BASE: vldr s{{.*}}, #8]
-; CHECK-BASE: vldr s{{.*}}, #12]
-; CHECK-BASE: vldr s{{.*}}, #12]
+; CHECK-DEFAULT: vldr s{{.*}}, #8]
+; CHECK-DEFAULT: vldr s{{.*}}, #8]
+; CHECK-DEFAULT: vldr s{{.*}}, #12]
+; CHECK-DEFAULT: vldr s{{.*}}, #12]
 
 ; CHECK-COMPLEX: vldr s{{.*}}, #8]
 ; CHECK-COMPLEX: vldr s{{.*}}, #8]
@@ -56,14 +56,10 @@ exit:
 ; CHECK-LABEL: convolve_16bit
 ; TODO: Both arrays should use indexing
 ; CHECK-DEFAULT: ldr{{.*}}, #8]!
-; CHECK-DEFAULT: ldr{{.*}}, #10]
-; CHECK-DEFAULT: ldr{{.*}}, #4]
-; CHECK-DEFAULT: ldr{{.*}}, #6]
+; CHECK-DEFAULT-NOT: ldr{{.*}}]!
 
 ; CHECK-COMPLEX: ldr{{.*}}, #8]!
-; CHECK-COMPLEX: ldr{{.*}}, #10]
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: ldr{{.*}}, #6]
+; CHECK-COMPLEX-NOT: ldr{{.*}}]!
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
@@ -172,31 +168,13 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ; CHECK-LABEL: mul_8x8
 ; CHECK: @ %for.body
 
-; CHECK-DEFAULT: ldrb{{.*}}, #3]
-; CHECK-DEFAULT: ldrb{{.*}}, #3]
 ; CHECK-DEFAULT: str{{.*}}, #16]!
 ; CHECK-DEFAULT: ldrb{{.*}}, #4]!
 ; CHECK-DEFAULT: ldrb{{.*}}, #4]!
-; CHECK-DEFAULT: str{{.*}}, #4]
-; CHECK-DEFAULT: ldrb{{.*}}, #1]
-; CHECK-DEFAULT: ldrb{{.*}}, #1]
-; CHECK-DEFAULT: str{{.*}}, #8]
-; CHECK-DEFAULT: ldrb{{.*}}, #2]
-; CHECK-DEFAULT: ldrb{{.*}}, #2]
-; CHECK-DEFAULT: str{{.*}}, #12]
 
-; CHECK-COMPLEX: ldrb{{.*}}, #3]
-; CHECK-COMPLEX: ldrb{{.*}}, #3]
 ; CHECK-COMPLEX: str{{.*}}, #16]!
 ; CHECK-COMPLEX: ldrb{{.*}}, #4]!
 ; CHECK-COMPLEX: ldrb{{.*}}, #4]!
-; CHECK-COMPLEX: str{{.*}}, #4]
-; CHECK-COMPLEX: ldrb{{.*}}, #1]
-; CHECK-COMPLEX: ldrb{{.*}}, #1]
-; CHECK-COMPLEX: str{{.*}}, #8]
-; CHECK-COMPLEX: ldrb{{.*}}, #2]
-; CHECK-COMPLEX: ldrb{{.*}}, #2]
-; CHECK-COMPLEX: str{{.*}}, #12]
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
@@ -297,18 +275,8 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-LABEL: mul_16x8
 ; CHECK: @ %for.body 
 
-; CHECK-DEFAULT: ldrsh{{.*}}, #2]
-; CHECK-DEFAULT: ldrb{{.*}}, #-1]
 ; CHECK-DEFAULT: str{{.*}}, #16]!
-; CHECK-DEFAULT: ldrb{{.*}},
-; CHECK-DEFAULT: ldrsh{{.*}}, #2]
-; CHECK-DEFAULT: str{{.*}}, #4]
-; CHECK-DEFAULT: ldrsh{{.*}}, #4]
-; CHECK-DEFAULT: ldrb{{.*}}, #1]
-; CHECK-DEFAULT: str{{.*}}, #8]
 ; CHECK-DEFAULT: ldrsh{{.*}}, #8]!
-; CHECK-DEFAULT: ldrb{{.*}}, #2]
-; CHECK-DEFAULT: str{{.*}}, #12]
 
 ; CHECK-COMPLEX: ldrsh{{.*}}, #8]!
 ; CHECK-COMPLEX: str{{.*}}, #16]!
@@ -413,32 +381,14 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-LABEL: mul_16x16
 ; CHECK: @ %for.body
 
-; TODO: pre-inc store
-; CHECK-DEFAULT: ldrsh{{.*}}, #2]
-; CHECK-DEFAULT: ldrsh{{.*}}, #2]
+; TODO: pre-indexed loads
+; CHECK-DEFAULT-NOT: ldrsh{{.*}}]!
 ; CHECK-DEFAULT: str{{.*}}, #16]!
-; CHECK-DEFAULT: ldrsh{{.*}}, #2]
-; CHECK-DEFAULT: ldrsh{{.*}}, #2]
-; CHECK-DEFAULT: str{{.*}}, #4]
-; CHECK-DEFAULT: ldrsh{{.*}}, #4]
-; CHECK-DEFAULT: ldrsh{{.*}}, #4]
-; CHECK-DEFAULT: str{{.*}}, #8]
-; CHECK-DEFAULT: ldrsh{{.*}}, #8]
-; CHECK-DEFAULT: ldrsh{{.*}}, #8]
-; CHECK-DEFAULT: str{{.*}}, #12]
+; CHECK-DEFAULT-NOT: ldrsh{{.*}}]!
 
-; CHECK-COMPLEX: ldrsh
-; CHECK-COMPLEX: ldrsh
-; CHECK-COMPLEX: str
-; CHECK-COMPLEX: ldrsh{{.*}}, #2]
-; CHECK-COMPLEX: ldrsh{{.*}}, #2]
-; CHECK-COMPLEX: str{{.*}}, #4]
-; CHECK-COMPLEX: ldrsh{{.*}}, #4]
-; CHECK-COMPLEX: ldrsh{{.*}}, #4]
-; CHECK-COMPLEX: str{{.*}}, #8]
-; CHECK-COMPLEX: ldrsh{{.*}}, #6]
-; CHECK-COMPLEX: ldrsh{{.*}}, #6]
-; CHECK-COMPLEX: str{{.*}}, #12]
+; CHECK-COMPLEX: ldrsh{{.*}}]!
+; CHECK-COMPLEX: ldrsh{{.*}}]!
+; CHECK-COMPLEX: str{{.*}}]!
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
@@ -769,31 +719,15 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 ; CHECK-LABEL: mac_8x8_2d
 ; CHECK: @ %for.body4.us
 
-; CHECK-BASE: ldrb{{.*}}
-; CHECK-BASE: ldrb{{.*}}, #3]
-; CHECK-BASE: str{{.*}}, lsl #2]
-; CHECK-BASE: ldrb{{.*}}
-; CHECK-BASE: ldrb{{.*}}, #4]!
-; CHECK-BASE: str{{.*}}, lsl #2]
-; CHECK-BASE: ldrb{{.*}}
-; CHECK-BASE: ldrb{{.*}}, #1]
-; CHECK-BASE: str{{.*}}, lsl #2]
-; CHECK-BASE: ldrb{{.*}}
-; CHECK-BASE: ldrb{{.*}}, #2]
-; CHECK-BASE: str{{.*}}, lsl #2]
+; TODO: Both input arrays could use pre-indexed loads.
+; TODO: pre-indexed stores.
+; CHECK-DEFAULT: ldrb{{.*}}, #4]!
+; CHECK-DEFAULT-NOT: ldr{{.*}}]!
+; CHECK-DEFAULT-NOT: str{{.*}}]!
 
-; CHECK-COMPLEX: ldrb{{.*}}
-; CHECK-COMPLEX: ldrb{{.*}}
-; CHECK-COMPLEX: str{{.*}}, lsl #2]
-; CHECK-COMPLEX: ldrb{{.*}}
-; CHECK-COMPLEX: ldrb{{.*}}, #1]
-; CHECK-COMPLEX: str{{.*}}, lsl #2]
-; CHECK-COMPLEX: ldrb{{.*}}
-; CHECK-COMPLEX: ldrb{{.*}}, #2]
-; CHECK-COMPLEX: str{{.*}}, lsl #2]
-; CHECK-COMPLEX: ldrb{{.*}}
-; CHECK-COMPLEX: ldrb{{.*}}, #3]
-; CHECK-COMPLEX: str{{.*}}, lsl #2]
+; TODO: Increased complexity shouldn't prevent indexed accesses.
+; CHECK-COMPLEX-NOT: ldr{{.*}}]!
+; CHECK-COMPLEX-NOT: str{{.*}}]!
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
@@ -903,15 +837,12 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 ; CHECK-LABEL: mac_16x16_2d
 ; CHECK: @ %for.body4.us
 
-; CHECK-BASE: ldrsh{{.*}}, #8]!
-; CHECK-BASE: ldrsh{{.*}}, #2]
-; CHECK-BASE: ldrsh{{.*}}, #4]
-; CHECK-BASE: ldrsh{{.*}}, #6]
+; TODO: pre-indexed loads for both input arrays.
+; CHECK-DEFAULT: ldrsh{{.*}}, #8]!
+; CHECK-DEFAULT-NOT: ldr{{.*}}]!
 
-; CHECK-COMPLEX: ldrsh{{.*}}, lsl #1]
-; CHECK-COMPLEX: ldrsh{{.*}}, #2]
-; CHECK-COMPLEX: ldrsh{{.*}}, #4]
-; CHECK-COMPLEX: ldrsh{{.*}}, #6]
+; TODO: increased complexity should lead to better codegen.
+; CHECK-COMPLEX-NOT: ldr{{.*}}]!
 
 ; DISABLED-NOT: ldr{{.*}}]!
 
@@ -1092,15 +1023,11 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK-LABEL: mul32x32_forwards
 ; CHECK: @ %for.body
 
-; CHECK-DEFAULT: ldr{{.*}}, #4]
-; CHECK-DEFAULT: ldr{{.*}}, #4]
-; CHECK-DEFAULT: str{{.*}}, #4]
-; CHECK-DEFAULT: ldr{{.*}}, #8]
-; CHECK-DEFAULT: ldr{{.*}}, #8]
-; CHECK-DEFAULT: str{{.*}}, #8]
-; CHECK-DEFAULT: ldr{{.*}}, #12]
-; CHECK-DEFAULT: ldr{{.*}}, #12]
-; CHECK-DEFAULT: str{{.*}}, #12]
+; TODO: Would be good for the complexity limit didn't have to be increased to
+; enable the pre-indexed accesses.
+
+; CHECK-DEFAULT-NOT: ldr{{.*}}]!
+; CHECK-DEFAULT-NOT: str{{.*}}]!
 
 ; CHECK-COMPLEX: ldr{{.*}}, #16]!
 ; CHECK-COMPLEX: ldr{{.*}}, #16]!

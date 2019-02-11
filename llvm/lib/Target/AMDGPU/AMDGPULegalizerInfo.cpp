@@ -156,7 +156,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
 
   auto &FPOpActions = getActionDefinitionsBuilder(
-    { G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA})
+    { G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA, G_FCANONICALIZE})
     .legalFor({S32, S64});
 
   if (ST.has16BitInsts()) {

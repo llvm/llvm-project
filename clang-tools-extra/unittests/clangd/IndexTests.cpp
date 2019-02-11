@@ -253,6 +253,22 @@ TEST(MergeTest, PreferSymbolWithDefn) {
   EXPECT_EQ(M.Name, "right");
 }
 
+TEST(MergeTest, PreferSymbolLocationInCodegenFile) {
+  Symbol L, R;
+
+  L.ID = R.ID = SymbolID("hello");
+  L.CanonicalDeclaration.FileURI = "file:/x.proto.h";
+  R.CanonicalDeclaration.FileURI = "file:/x.proto";
+
+  Symbol M = mergeSymbol(L, R);
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/x.proto");
+
+  // Prefer L if both have codegen suffix.
+  L.CanonicalDeclaration.FileURI = "file:/y.proto";
+  M = mergeSymbol(L, R);
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/y.proto");
+}
+
 TEST(MergeIndexTest, Refs) {
   FileIndex Dyn;
   FileIndex StaticIndex;

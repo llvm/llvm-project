@@ -263,7 +263,7 @@ static Error addSymbolsToRenameFromFile(StringMap<StringRef> &SymbolsToRename,
   SmallVector<StringRef, 16> Lines;
   auto BufOrErr = MemoryBuffer::getFile(Filename);
   if (!BufOrErr)
-    return createError(Filename, BufOrErr.getError());
+    return createFileError(Filename, BufOrErr.getError());
 
   BufOrErr.get()->getBuffer().split(Lines, '\n');
   size_t NumLines = Lines.size();

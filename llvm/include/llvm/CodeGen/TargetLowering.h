@@ -194,7 +194,11 @@ public:
           IsNest(false), IsByVal(false), IsInAlloca(false), IsReturned(false),
           IsSwiftSelf(false), IsSwiftError(false) {}
 
-    void setAttributes(ImmutableCallSite *CS, unsigned ArgIdx);
+    void setAttributes(const CallBase *Call, unsigned ArgIdx);
+
+    void setAttributes(ImmutableCallSite *CS, unsigned ArgIdx) {
+      return setAttributes(cast<CallBase>(CS->getInstruction()), ArgIdx);
+    }
   };
   using ArgListTy = std::vector<ArgListEntry>;
 

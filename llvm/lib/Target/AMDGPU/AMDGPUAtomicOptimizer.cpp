@@ -30,6 +30,7 @@ namespace {
 enum DPP_CTRL {
   DPP_ROW_SR1 = 0x111,
   DPP_ROW_SR2 = 0x112,
+  DPP_ROW_SR3 = 0x113,
   DPP_ROW_SR4 = 0x114,
   DPP_ROW_SR8 = 0x118,
   DPP_WF_SR1 = 0x138,
@@ -211,8 +212,6 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
                                            Instruction::BinaryOps Op,
                                            unsigned ValIdx,
                                            bool ValDivergent) const {
-  LLVMContext &Context = I.getContext();
-
   // Start building just before the instruction.
   IRBuilder<> B(&I);
 
@@ -250,20 +249,17 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   Value *const V = I.getOperand(ValIdx);
 
   // We need to know how many lanes are active within the wavefront, and we do
-  // this by getting the exec register, which tells us all the lanes that are
-  // active.
-  MDNode *const RegName =
-      llvm::MDNode::get(Context, llvm::MDString::get(Context, "exec"));
-  Value *const Metadata = llvm::MetadataAsValue::get(Context, RegName);
-  CallInst *const Exec =
-      B.CreateIntrinsic(Intrinsic::read_register, {B.getInt64Ty()}, {Metadata});
-  setConvergent(Exec);
+  // this by doing a ballot of active lanes.
+  CallInst *const Ballot =
+      B.CreateIntrinsic(Intrinsic::amdgcn_icmp, {B.getInt32Ty()},
+                        {B.getInt32(1), B.getInt32(0), B.getInt32(33)});
+  setConvergent(Ballot);
 
   // We need to know how many lanes are active within the wavefront that are
   // below us. If we counted each lane linearly starting from 0, a lane is
   // below us only if its associated index was less than ours. We do this by
   // using the mbcnt intrinsic.
-  Value *const BitCast = B.CreateBitCast(Exec, VecTy);
+  Value *const BitCast = B.CreateBitCast(Ballot, VecTy);
   Value *const ExtractLo = B.CreateExtractElement(BitCast, B.getInt32(0));
   Value *const ExtractHi = B.CreateExtractElement(BitCast, B.getInt32(1));
   CallInst *const PartialMbcnt = B.CreateIntrinsic(
@@ -279,44 +275,43 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
   if (ValDivergent) {
+    Value *const Identity = B.getIntN(TyBitWidth, 0);
+
     // First we need to set all inactive invocations to 0, so that they can
     // correctly contribute to the final result.
-    CallInst *const SetInactive = B.CreateIntrinsic(
-        Intrinsic::amdgcn_set_inactive, Ty, {V, B.getIntN(TyBitWidth, 0)});
+    CallInst *const SetInactive =
+        B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
     setConvergent(SetInactive);
-    NewV = SetInactive;
 
-    const unsigned Iters = 6;
-    const unsigned DPPCtrl[Iters] = {DPP_ROW_SR1,     DPP_ROW_SR2,
-                                     DPP_ROW_SR4,     DPP_ROW_SR8,
-                                     DPP_ROW_BCAST15, DPP_ROW_BCAST31};
-    const unsigned RowMask[Iters] = {0xf, 0xf, 0xf, 0xf, 0xa, 0xc};
+    CallInst *const FirstDPP =
+        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Ty,
+                          {Identity, SetInactive, B.getInt32(DPP_WF_SR1),
+                           B.getInt32(0xf), B.getInt32(0xf), B.getFalse()});
+    setConvergent(FirstDPP);
+    NewV = FirstDPP;
 
-    // This loop performs an inclusive scan across the wavefront, with all lanes
+    const unsigned Iters = 7;
+    const unsigned DPPCtrl[Iters] = {
+        DPP_ROW_SR1, DPP_ROW_SR2,     DPP_ROW_SR3,    DPP_ROW_SR4,
+        DPP_ROW_SR8, DPP_ROW_BCAST15, DPP_ROW_BCAST31};
+    const unsigned RowMask[Iters] = {0xf, 0xf, 0xf, 0xf, 0xf, 0xa, 0xc};
+    const unsigned BankMask[Iters] = {0xf, 0xf, 0xf, 0xe, 0xc, 0xf, 0xf};
+
+    // This loop performs an exclusive scan across the wavefront, with all lanes
     // active (by using the WWM intrinsic).
     for (unsigned Idx = 0; Idx < Iters; Idx++) {
-      CallInst *const DPP = B.CreateIntrinsic(Intrinsic::amdgcn_mov_dpp, Ty,
-                                              {NewV, B.getInt32(DPPCtrl[Idx]),
-                                               B.getInt32(RowMask[Idx]),
-                                               B.getInt32(0xf), B.getFalse()});
+      Value *const UpdateValue = Idx < 3 ? FirstDPP : NewV;
+      CallInst *const DPP = B.CreateIntrinsic(
+          Intrinsic::amdgcn_update_dpp, Ty,
+          {Identity, UpdateValue, B.getInt32(DPPCtrl[Idx]),
+           B.getInt32(RowMask[Idx]), B.getInt32(BankMask[Idx]), B.getFalse()});
       setConvergent(DPP);
-      Value *const WWM = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, DPP);
 
-      NewV = B.CreateBinOp(Op, NewV, WWM);
-      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
+      NewV = B.CreateBinOp(Op, NewV, DPP);
     }
 
-    // NewV has returned the inclusive scan of V, but for the lane offset we
-    // require an exclusive scan. We do this by shifting the values from the
-    // entire wavefront right by 1, and by setting the bound_ctrl (last argument
-    // to the intrinsic below) to true, we can guarantee that 0 will be shifted
-    // into the 0'th invocation.
-    CallInst *const DPP =
-        B.CreateIntrinsic(Intrinsic::amdgcn_mov_dpp, {Ty},
-                          {NewV, B.getInt32(DPP_WF_SR1), B.getInt32(0xf),
-                           B.getInt32(0xf), B.getTrue()});
-    setConvergent(DPP);
-    LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, DPP);
+    LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
+    NewV = B.CreateBinOp(Op, NewV, SetInactive);
 
     // Read the value from the last lane, which has accumlated the values of
     // each active lane in the wavefront. This will be our new value with which
@@ -344,9 +339,12 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     } else {
       llvm_unreachable("Unhandled atomic bit width");
     }
+
+    // Finally mark the readlanes in the WWM section.
+    NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
   } else {
     // Get the total number of active lanes we have by using popcount.
-    Instruction *const Ctpop = B.CreateUnaryIntrinsic(Intrinsic::ctpop, Exec);
+    Instruction *const Ctpop = B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot);
     Value *const CtpopCast = B.CreateIntCast(Ctpop, Ty, false);
 
     // Calculate the new value we will be contributing to the atomic operation
