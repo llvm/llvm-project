@@ -341,6 +341,12 @@ class ResourceManager {
   // before those become usable again.
   SmallDenseMap<ResourceRef, unsigned> BusyResources;
 
+  // Set of processor resource units available on the target.
+  uint64_t ProcResUnitMask;
+
+  // Set of processor resource units that are available during this cycle.
+  uint64_t AvailableProcResUnits;
+
   // Returns the actual resource unit that will be used.
   ResourceRef selectPipe(uint64_t ResourceID);
 
@@ -388,7 +394,14 @@ public:
   // Release a previously reserved processor resource.
   void releaseResource(uint64_t ResourceID);
 
-  bool canBeIssued(const InstrDesc &Desc) const;
+  // Returns a zero mask if resources requested by Desc are all available during
+  // this cycle. It returns a non-zero mask value only if there are unavailable
+  // processor resources; each bit set in the mask represents a busy processor
+  // resource unit.
+  uint64_t checkAvailability(const InstrDesc &Desc) const;
+
+  uint64_t getProcResUnitMask() const { return ProcResUnitMask; }
+  uint64_t getAvailableProcResUnits() const { return AvailableProcResUnits; }
 
   void issueInstruction(
       const InstrDesc &Desc,

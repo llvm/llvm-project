@@ -137,18 +137,20 @@ MainLoop::RunImpl::RunImpl(MainLoop &loop) : loop(loop) {
 }
 
 sigset_t MainLoop::RunImpl::get_sigmask() {
-#if SIGNAL_POLLING_UNSUPPORTED
-  return 0;
-#else
   sigset_t sigmask;
+#if defined(_WIN32)
+  sigmask = 0;
+#elif SIGNAL_POLLING_UNSUPPORTED
+  sigemptyset(&sigmask);
+#else
   int ret = pthread_sigmask(SIG_SETMASK, nullptr, &sigmask);
   assert(ret == 0);
   (void) ret;
 
   for (const auto &sig : loop.m_signals)
     sigdelset(&sigmask, sig.first);
-  return sigmask;
 #endif
+  return sigmask;
 }
 
 #ifdef __ANDROID__

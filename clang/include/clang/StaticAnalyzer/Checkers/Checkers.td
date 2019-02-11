@@ -622,6 +622,13 @@ def UncheckedReturn : Checker<"UncheckedReturn">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def DeprecatedOrUnsafeBufferHandling :
+  Checker<"DeprecatedOrUnsafeBufferHandling">,
+  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+           "functions">,
+  Dependencies<[SecuritySyntaxChecker]>,
+  Documentation<HasDocumentation>;
+
 } // end "security.insecureAPI"
 
 let ParentPackage = Security in {

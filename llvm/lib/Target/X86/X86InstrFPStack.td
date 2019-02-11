@@ -16,8 +16,6 @@
 // FPStack specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def SDTX86FpGet2    : SDTypeProfile<2, 0, [SDTCisVT<0, f80>,
-                                           SDTCisVT<1, f80>]>;
 def SDTX86Fld       : SDTypeProfile<1, 2, [SDTCisFP<0>,
                                            SDTCisPtrTy<1>,
                                            SDTCisVT<2, OtherVT>]>;

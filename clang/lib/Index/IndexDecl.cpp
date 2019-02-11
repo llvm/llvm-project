@@ -88,12 +88,11 @@ public:
                                  /*isBase=*/false, isIBType);
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent);
     if (IndexCtx.shouldIndexFunctionLocalSymbols()) {
-      // Only index parameters in definitions, parameters in declarations are
-      // not useful.
       if (const ParmVarDecl *Parm = dyn_cast<ParmVarDecl>(D)) {
         auto *DC = Parm->getDeclContext();
         if (auto *FD = dyn_cast<FunctionDecl>(DC)) {
-          if (FD->isThisDeclarationADefinition())
+          if (IndexCtx.shouldIndexParametersInDeclarations() ||
+              FD->isThisDeclarationADefinition())
             IndexCtx.handleDecl(Parm);
         } else if (auto *MD = dyn_cast<ObjCMethodDecl>(DC)) {
           if (MD->isThisDeclarationADefinition())
@@ -102,7 +101,8 @@ public:
           IndexCtx.handleDecl(Parm);
         }
       } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-        if (FD->isThisDeclarationADefinition()) {
+        if (IndexCtx.shouldIndexParametersInDeclarations() ||
+            FD->isThisDeclarationADefinition()) {
           for (auto PI : FD->parameters()) {
             IndexCtx.handleDecl(PI);
           }

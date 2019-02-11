@@ -242,6 +242,13 @@ public:
 
   static bool Equal(const FileSpec &a, const FileSpec &b, bool full);
 
+  /// Attempt to guess path style for a given path string. It returns a style,
+  /// if it was able to make a reasonable guess, or None if it wasn't. The guess
+  /// will be correct if the input path was a valid absolute path on the system
+  /// which produced it. On other paths the result of this function is
+  /// unreliable (e.g. "c:\foo.txt" is a valid relative posix path).
+  static llvm::Optional<Style> GuessPathStyle(llvm::StringRef absolute_path);
+
   //------------------------------------------------------------------
   /// Case sensitivity of path.
   ///

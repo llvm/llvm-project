@@ -1701,7 +1701,8 @@ define <4 x i64> @combine_vec_sdiv_by_pow2b_v4i64(<4 x i64> %x) {
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlq $62, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vpsrlq $2, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrlq $2, %xmm2, %xmm3
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [9223372036854775808,2305843009213693952]
 ; AVX1-NEXT:    vpxor %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubq %xmm3, %xmm2, %xmm2
@@ -1889,7 +1890,8 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm5
 ; AVX1-NEXT:    vpsrlq $62, %xmm5, %xmm5
 ; AVX1-NEXT:    vpaddq %xmm5, %xmm0, %xmm5
-; AVX1-NEXT:    vpsrlq $2, %xmm5, %xmm5
+; AVX1-NEXT:    vpsrlq $2, %xmm5, %xmm6
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3],xmm6[4,5,6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [9223372036854775808,2305843009213693952]
 ; AVX1-NEXT:    vpxor %xmm6, %xmm5, %xmm5
 ; AVX1-NEXT:    vpsubq %xmm6, %xmm5, %xmm5
@@ -1909,7 +1911,8 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlq $62, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddq %xmm2, %xmm1, %xmm2
-; AVX1-NEXT:    vpsrlq $2, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrlq $2, %xmm2, %xmm4
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm4[4,5,6,7]
 ; AVX1-NEXT:    vpxor %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubq %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2

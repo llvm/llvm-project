@@ -118,7 +118,8 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     : Resources(SM.getNumProcResourceKinds()),
       Strategies(SM.getNumProcResourceKinds()),
       Resource2Groups(SM.getNumProcResourceKinds(), 0),
-      ProcResID2Mask(SM.getNumProcResourceKinds()) {
+      ProcResID2Mask(SM.getNumProcResourceKinds()),
+      ProcResUnitMask(0) {
   computeProcResourceMasks(SM, ProcResID2Mask);
 
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
@@ -133,8 +134,10 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     uint64_t Mask = ProcResID2Mask[I];
     unsigned Index = getResourceStateIndex(Mask);
     const ResourceState &RS = *Resources[Index];
-    if (!RS.isAResourceGroup())
+    if (!RS.isAResourceGroup()) {
+      ProcResUnitMask |= Mask;
       continue;
+    }
 
     uint64_t GroupMaskIdx = 1ULL << (Index - 1);
     Mask -= GroupMaskIdx;
@@ -146,6 +149,8 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
       Mask ^= Unit;
     }
   }
+
+  AvailableProcResUnits = ProcResUnitMask;
 }
 
 void ResourceManager::setCustomStrategyImpl(std::unique_ptr<ResourceStrategy> S,
@@ -199,6 +204,8 @@ void ResourceManager::use(const ResourceRef &RR) {
   if (RS.isReady())
     return;
 
+  AvailableProcResUnits ^= RR.first;
+
   // Notify groups that RR.first is no longer available.
   uint64_t Users = Resource2Groups[RSID];
   while (Users) {
@@ -219,6 +226,8 @@ void ResourceManager::release(const ResourceRef &RR) {
   RS.releaseSubResource(RR.second);
   if (!WasFullyUsed)
     return;
+
+  AvailableProcResUnits ^= RR.first;
 
   // Notify groups that RR.first is now available again.
   uint64_t Users = Resource2Groups[RSID];
@@ -260,13 +269,16 @@ void ResourceManager::releaseBuffers(ArrayRef<uint64_t> Buffers) {
     Resources[getResourceStateIndex(R)]->releaseBuffer();
 }
 
-bool ResourceManager::canBeIssued(const InstrDesc &Desc) const {
-  return all_of(
-      Desc.Resources, [&](const std::pair<uint64_t, const ResourceUsage> &E) {
-        unsigned NumUnits = E.second.isReserved() ? 0U : E.second.NumUnits;
-        unsigned Index = getResourceStateIndex(E.first);
-        return Resources[Index]->isReady(NumUnits);
-      });
+uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
+  uint64_t BusyResourceMask = 0;
+  for (const std::pair<uint64_t, const ResourceUsage> &E : Desc.Resources) {
+    unsigned NumUnits = E.second.isReserved() ? 0U : E.second.NumUnits;
+    unsigned Index = getResourceStateIndex(E.first);
+    if (!Resources[Index]->isReady(NumUnits))
+      BusyResourceMask |= E.first;
+  }
+
+  return BusyResourceMask & ProcResUnitMask;
 }
 
 void ResourceManager::issueInstruction(

@@ -1458,17 +1458,15 @@ public:
 
   /// Returns whether \p Loc is expanded from a macro in a system header.
   bool isInSystemMacro(SourceLocation loc) const {
-    if(!loc.isMacroID())
+    if (!loc.isMacroID())
       return false;
 
     // This happens when the macro is the result of a paste, in that case
     // its spelling is the scratch memory, so we take the parent context.
-    if (isWrittenInScratchSpace(getSpellingLoc(loc))) {
+    if (isWrittenInScratchSpace(getSpellingLoc(loc)))
       return isInSystemHeader(getSpellingLoc(getImmediateMacroCallerLoc(loc)));
-    }
-    else {
-      return isInSystemHeader(getSpellingLoc(loc));
-    }
+
+    return isInSystemHeader(getSpellingLoc(loc));
   }
 
   /// The size of the SLocEntry that \p FID represents.

@@ -212,6 +212,39 @@ TEST(FileIndexTest, IncludeCollected) {
               "<the/good/header.h>");
 }
 
+TEST(FileIndexTest, HasSystemHeaderMappingsInPreamble) {
+  FileIndex Index;
+  const std::string Header = R"cpp(
+    class Foo {};
+  )cpp";
+  auto MainFile = testPath("foo.cpp");
+  auto HeaderFile = testPath("algorithm");
+  std::vector<const char *> Cmd = {"clang", "-xc++", MainFile.c_str(),
+                                   "-include", HeaderFile.c_str()};
+  // Preparse ParseInputs.
+  ParseInputs PI;
+  PI.CompileCommand.Directory = testRoot();
+  PI.CompileCommand.Filename = MainFile;
+  PI.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
+  PI.Contents = "";
+  PI.FS = buildTestFS({{MainFile, ""}, {HeaderFile, Header}});
+
+  // Prepare preamble.
+  auto CI = buildCompilerInvocation(PI);
+  auto PreambleData = buildPreamble(
+      MainFile, *buildCompilerInvocation(PI), /*OldPreamble=*/nullptr,
+      tooling::CompileCommand(), PI, std::make_shared<PCHContainerOperations>(),
+      /*StoreInMemory=*/true,
+      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
+          const CanonicalIncludes &Includes) {
+        Index.updatePreamble(MainFile, Ctx, PP, Includes);
+      });
+  auto Symbols = runFuzzyFind(Index, "");
+  EXPECT_THAT(Symbols, ElementsAre(_));
+  EXPECT_THAT(Symbols.begin()->IncludeHeaders.front().IncludeHeader,
+              "<algorithm>");
+}
+
 TEST(FileIndexTest, TemplateParamsInLabel) {
   auto Source = R"cpp(
 template <class Ty>

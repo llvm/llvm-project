@@ -8132,7 +8132,7 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
 /// convention or require stack pointer adjustment. Only a subset of the
 /// intrinsic's operands need to participate in the calling convention.
 void SelectionDAGBuilder::populateCallLoweringInfo(
-    TargetLowering::CallLoweringInfo &CLI, ImmutableCallSite CS,
+    TargetLowering::CallLoweringInfo &CLI, const CallBase *Call,
     unsigned ArgIdx, unsigned NumArgs, SDValue Callee, Type *ReturnTy,
     bool IsPatchPoint) {
   TargetLowering::ArgListTy Args;
@@ -8142,21 +8142,21 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
   // Attributes for args start at offset 1, after the return attribute.
   for (unsigned ArgI = ArgIdx, ArgE = ArgIdx + NumArgs;
        ArgI != ArgE; ++ArgI) {
-    const Value *V = CS->getOperand(ArgI);
+    const Value *V = Call->getOperand(ArgI);
 
     assert(!V->getType()->isEmptyTy() && "Empty type passed to intrinsic.");
 
     TargetLowering::ArgListEntry Entry;
     Entry.Node = getValue(V);
     Entry.Ty = V->getType();
-    Entry.setAttributes(&CS, ArgI);
+    Entry.setAttributes(Call, ArgI);
     Args.push_back(Entry);
   }
 
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
-      .setCallee(CS.getCallingConv(), ReturnTy, Callee, std::move(Args))
-      .setDiscardResult(CS->use_empty())
+      .setCallee(Call->getCallingConv(), ReturnTy, Callee, std::move(Args))
+      .setDiscardResult(Call->use_empty())
       .setIsPatchPoint(IsPatchPoint);
 }
 
@@ -8300,8 +8300,8 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
     IsAnyRegCC ? Type::getVoidTy(*DAG.getContext()) : CS->getType();
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  populateCallLoweringInfo(CLI, CS, NumMetaOpers, NumCallArgs, Callee, ReturnTy,
-                           true);
+  populateCallLoweringInfo(CLI, cast<CallBase>(CS.getInstruction()),
+                           NumMetaOpers, NumCallArgs, Callee, ReturnTy, true);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   SDNode *CallEnd = Result.second.getNode();
