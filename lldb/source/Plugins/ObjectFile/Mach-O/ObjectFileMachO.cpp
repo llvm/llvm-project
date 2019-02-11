@@ -917,7 +917,7 @@ size_t ObjectFileMachO::GetModuleSpecifications(
 
         spec.GetArchitecture() = GetArchitecture(header, data, data_offset);
         if (spec.GetArchitecture().IsValid()) {
-          GetUUID(header, data, data_offset, spec.GetUUID());
+          spec.GetUUID() = GetUUID(header, data, data_offset);
           specs.Append(spec);
         }
       }
@@ -5048,10 +5048,9 @@ void ObjectFileMachO::Dump(Stream *s) {
   }
 }
 
-bool ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
+UUID ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
                               const lldb_private::DataExtractor &data,
-                              lldb::offset_t lc_offset,
-                              lldb_private::UUID &uuid) {
+                              lldb::offset_t lc_offset) {
   uint32_t i;
   struct uuid_command load_cmd;
 
@@ -5073,16 +5072,15 @@ bool ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
                                        0xbb, 0x14, 0xf0, 0x0d};
 
         if (!memcmp(uuid_bytes, opencl_uuid, 16))
-          return false;
+          return UUID();
 
-        uuid = UUID::fromOptionalData(uuid_bytes, 16);
-        return true;
+        return UUID::fromOptionalData(uuid_bytes, 16);
       }
-      return false;
+      return UUID();
     }
     offset = cmd_offset + load_cmd.cmdsize;
   }
-  return false;
+  return UUID();
 }
 
 static llvm::StringRef GetOSName(uint32_t cmd) {
@@ -5269,14 +5267,14 @@ ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
   return arch;
 }
 
-bool ObjectFileMachO::GetUUID(lldb_private::UUID *uuid) {
+UUID ObjectFileMachO::GetUUID() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    return GetUUID(m_header, m_data, offset, *uuid);
+    return GetUUID(m_header, m_data, offset);
   }
-  return false;
+  return UUID();
 }
 
 uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
@@ -5756,8 +5754,7 @@ ObjectFile::Type ObjectFileMachO::CalculateType() {
     if (GetAddressByteSize() == 4) {
       // 32 bit kexts are just object files, but they do have a valid
       // UUID load command.
-      UUID uuid;
-      if (GetUUID(&uuid)) {
+      if (GetUUID()) {
         // this checking for the UUID load command is not enough we could
         // eventually look for the symbol named "OSKextGetCurrentIdentifier" as
         // this is required of kexts
@@ -5800,8 +5797,7 @@ ObjectFile::Strata ObjectFileMachO::CalculateStrata() {
   {
     // 32 bit kexts are just object files, but they do have a valid
     // UUID load command.
-    UUID uuid;
-    if (GetUUID(&uuid)) {
+    if (GetUUID()) {
       // this checking for the UUID load command is not enough we could
       // eventually look for the symbol named "OSKextGetCurrentIdentifier" as
       // this is required of kexts

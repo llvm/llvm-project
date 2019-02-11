@@ -335,7 +335,7 @@ const lldb_private::UUID &Module::GetUUID() {
       ObjectFile *obj_file = GetObjectFile();
 
       if (obj_file != nullptr) {
-        obj_file->GetUUID(&m_uuid);
+        m_uuid = obj_file->GetUUID();
         m_did_set_uuid = true;
       }
     }

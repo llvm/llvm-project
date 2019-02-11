@@ -408,10 +408,10 @@ public:
   /// bytes for the object file (or memory for memory based object files).
   ///
   /// @return
-  ///     Returns \b true if a UUID was successfully extracted into
-  ///     \a uuid, \b false otherwise.
+  ///     The object file's UUID. In case of an error, an empty UUID is
+  ///     returned.
   //------------------------------------------------------------------
-  virtual bool GetUUID(lldb_private::UUID *uuid) = 0;
+  virtual UUID GetUUID() = 0;
 
   //------------------------------------------------------------------
   /// Gets the symbol file spec list for this object file.

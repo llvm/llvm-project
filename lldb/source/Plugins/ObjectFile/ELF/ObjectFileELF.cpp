@@ -897,49 +897,43 @@ bool ObjectFileELF::ParseHeader() {
   return m_header.Parse(m_data, &offset);
 }
 
-bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
+UUID ObjectFileELF::GetUUID() {
   // Need to parse the section list to get the UUIDs, so make sure that's been
   // done.
   if (!ParseSectionHeaders() && GetType() != ObjectFile::eTypeCoreFile)
-    return false;
+    return UUID();
 
-  using u32le = llvm::support::ulittle32_t;
-  if (m_uuid.IsValid()) {
-    // We have the full build id uuid.
-    *uuid = m_uuid;
-    return true;
-  } else if (GetType() == ObjectFile::eTypeCoreFile) {
-    uint32_t core_notes_crc = 0;
+  if (!m_uuid) {
+    using u32le = llvm::support::ulittle32_t;
+    if (GetType() == ObjectFile::eTypeCoreFile) {
+      uint32_t core_notes_crc = 0;
 
-    if (!ParseProgramHeaders())
-      return false;
+      if (!ParseProgramHeaders())
+        return UUID();
 
-    core_notes_crc = CalculateELFNotesSegmentsCRC32(m_program_headers, m_data);
+      core_notes_crc =
+          CalculateELFNotesSegmentsCRC32(m_program_headers, m_data);
 
-    if (core_notes_crc) {
-      // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make it look
-      // different form .gnu_debuglink crc - followed by 4 bytes of note
-      // segments crc.
-      u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
-      m_uuid = UUID::fromData(data, sizeof(data));
-    }
-  } else {
-    if (!m_gnu_debuglink_crc)
-      m_gnu_debuglink_crc =
-          calc_gnu_debuglink_crc32(m_data.GetDataStart(), m_data.GetByteSize());
-    if (m_gnu_debuglink_crc) {
-      // Use 4 bytes of crc from the .gnu_debuglink section.
-      u32le data(m_gnu_debuglink_crc);
-      m_uuid = UUID::fromData(&data, sizeof(data));
+      if (core_notes_crc) {
+        // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make it
+        // look different form .gnu_debuglink crc - followed by 4 bytes of note
+        // segments crc.
+        u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
+        m_uuid = UUID::fromData(data, sizeof(data));
+      }
+    } else {
+      if (!m_gnu_debuglink_crc)
+        m_gnu_debuglink_crc = calc_gnu_debuglink_crc32(m_data.GetDataStart(),
+                                                       m_data.GetByteSize());
+      if (m_gnu_debuglink_crc) {
+        // Use 4 bytes of crc from the .gnu_debuglink section.
+        u32le data(m_gnu_debuglink_crc);
+        m_uuid = UUID::fromData(&data, sizeof(data));
+      }
     }
   }
 
-  if (m_uuid.IsValid()) {
-    *uuid = m_uuid;
-    return true;
-  }
-
-  return false;
+  return m_uuid;
 }
 
 lldb_private::FileSpecList ObjectFileELF::GetDebugSymbolFilePaths() {

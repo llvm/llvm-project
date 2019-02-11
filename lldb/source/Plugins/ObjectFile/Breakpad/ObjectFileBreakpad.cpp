@@ -122,11 +122,6 @@ Symtab *ObjectFileBreakpad::GetSymtab() {
   return nullptr;
 }
 
-bool ObjectFileBreakpad::GetUUID(UUID *uuid) {
-  *uuid = m_uuid;
-  return true;
-}
-
 void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
   if (m_sections_ap)
     return;

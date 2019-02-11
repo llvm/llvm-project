@@ -840,7 +840,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   }
 }
 
-bool ObjectFilePECOFF::GetUUID(UUID *uuid) { return false; }
+UUID ObjectFilePECOFF::GetUUID() { return UUID(); }
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
   ModuleSP module_sp(GetModule());
