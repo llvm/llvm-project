@@ -74,6 +74,7 @@
 
 #include <algorithm>
 #include <map>
+#include <memory>
 
 #include <ctype.h>
 #include <string.h>
@@ -131,7 +132,7 @@ public:
   }
 
   PluginProperties() {
-    m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_properties);
   }
 
@@ -776,9 +777,9 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
                 cu_die.GetAttributeValueAsUnsigned(DW_AT_language, 0));
 
             bool is_optimized = dwarf_cu->GetIsOptimized();
-            cu_sp.reset(new CompileUnit(
+            cu_sp = std::make_shared<CompileUnit>(
                 module_sp, dwarf_cu, cu_file_spec, dwarf_cu->GetID(),
-                cu_language, is_optimized ? eLazyBoolYes : eLazyBoolNo));
+                cu_language, is_optimized ? eLazyBoolYes : eLazyBoolNo);
             if (cu_sp) {
               // If we just created a compile unit with an invalid file spec,
               // try and get the first entry in the supports files from the
@@ -3281,7 +3282,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       VariableListSP variables(sc.comp_unit->GetVariableList(false));
 
       if (variables.get() == NULL) {
-        variables.reset(new VariableList());
+        variables = std::make_shared<VariableList>();
         sc.comp_unit->SetVariableList(variables);
 
         DIEArray die_offsets;
@@ -3700,10 +3701,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               type_sp->GetType()->GetByteSize().getValueOr(0),
               die.GetCU()->GetAddressByteSize());
 
-        var_sp.reset(new Variable(die.GetID(), name, mangled, type_sp, scope,
-                                  symbol_context_scope, scope_ranges, &decl,
-                                  location, is_external, is_artificial,
-                                  is_static_member));
+        var_sp = std::make_shared<Variable>(
+            die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
+            scope_ranges, &decl, location, is_external, is_artificial,
+            is_static_member);
 
         var_sp->SetLocationIsConstantValueData(location_is_const_value_data);
       } else {
@@ -3801,7 +3802,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
             if (sc.comp_unit != NULL) {
               variable_list_sp = sc.comp_unit->GetVariableList(false);
               if (variable_list_sp.get() == NULL) {
-                variable_list_sp.reset(new VariableList());
+                variable_list_sp = std::make_shared<VariableList>();
               }
             } else {
               GetObjectFile()->GetModule()->ReportError(
@@ -3840,7 +3841,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
                 const bool can_create = false;
                 variable_list_sp = block->GetBlockVariableList(can_create);
                 if (variable_list_sp.get() == NULL) {
-                  variable_list_sp.reset(new VariableList());
+                  variable_list_sp = std::make_shared<VariableList>();
                   block->SetVariableList(variable_list_sp);
                 }
               }

@@ -43,6 +43,7 @@
 #include "clang/AST/DeclTemplate.h"
 
 #include <map>
+#include <memory>
 #include <vector>
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
@@ -522,10 +523,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           }
         }
 
-        type_sp.reset(
-            new Type(die.GetID(), dwarf, type_name_const_str, byte_size, NULL,
-                     DIERef(encoding_uid).GetUID(dwarf), encoding_data_type,
-                     &decl, clang_type, resolve_state));
+        type_sp = std::make_shared<Type>(
+            die.GetID(), dwarf, type_name_const_str, byte_size, nullptr,
+            DIERef(encoding_uid).GetUID(dwarf), encoding_data_type, &decl,
+            clang_type, resolve_state);
 
         dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
       } break;
@@ -842,10 +843,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         // parameters in any class methods need it for the clang types for
         // function prototypes.
         LinkDeclContextToDIE(m_ast.GetDeclContextForType(clang_type), die);
-        type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
-                               byte_size, NULL, LLDB_INVALID_UID,
-                               Type::eEncodingIsUID, &decl, clang_type,
-                               Type::eResolveStateForward));
+        type_sp = std::make_shared<Type>(
+            die.GetID(), dwarf, type_name_const_str, byte_size, nullptr,
+            LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, clang_type,
+            Type::eResolveStateForward);
 
         type_sp->SetIsCompleteObjCClass(is_complete_objc_class);
 
@@ -1102,10 +1103,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           LinkDeclContextToDIE(
               ClangASTContext::GetDeclContextForType(clang_type), die);
 
-          type_sp.reset(new Type(
-              die.GetID(), dwarf, type_name_const_str, byte_size, NULL,
+          type_sp = std::make_shared<Type>(
+              die.GetID(), dwarf, type_name_const_str, byte_size, nullptr,
               DIERef(encoding_form).GetUID(dwarf), Type::eEncodingIsUID, &decl,
-              clang_type, Type::eResolveStateForward));
+              clang_type, Type::eResolveStateForward);
 
           if (ClangASTContext::StartTagDeclarationDefinition(clang_type)) {
             if (die.HasChildren()) {
@@ -1651,10 +1652,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             }
           }
         }
-        type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
-                               llvm::None, NULL, LLDB_INVALID_UID,
-                               Type::eEncodingIsUID, &decl, clang_type,
-                               Type::eResolveStateFull));
+        type_sp = std::make_shared<Type>(
+            die.GetID(), dwarf, type_name_const_str, llvm::None, nullptr,
+            LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, clang_type,
+            Type::eResolveStateFull);
         assert(type_sp.get());
       } break;
 
@@ -1802,10 +1803,11 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                   m_ast.CreateArrayType(array_element_type, 0, is_vector);
             }
             ConstString empty_name;
-            type_sp.reset(new Type(
+            type_sp = std::make_shared<Type>(
                 die.GetID(), dwarf, empty_name, array_element_bit_stride / 8,
-                NULL, DIERef(type_die_form).GetUID(dwarf), Type::eEncodingIsUID,
-                &decl, clang_type, Type::eResolveStateFull));
+                nullptr, DIERef(type_die_form).GetUID(dwarf),
+                Type::eEncodingIsUID, &decl, clang_type,
+                Type::eResolveStateFull);
             type_sp->SetEncodingType(element_type);
             m_ast.SetMetadataAsUserID(clang_type.GetOpaqueQualType(),
                                       die.GetID());
@@ -1849,10 +1851,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           if (llvm::Optional<uint64_t> clang_type_size =
                   clang_type.GetByteSize(nullptr)) {
             byte_size = *clang_type_size;
-            type_sp.reset(new Type(die.GetID(), dwarf, type_name_const_str,
-                                   byte_size, NULL, LLDB_INVALID_UID,
-                                   Type::eEncodingIsUID, NULL, clang_type,
-                                   Type::eResolveStateForward));
+            type_sp = std::make_shared<Type>(
+                die.GetID(), dwarf, type_name_const_str, byte_size, nullptr,
+                LLDB_INVALID_UID, Type::eEncodingIsUID, nullptr, clang_type,
+                Type::eResolveStateForward);
           }
         }
 
@@ -2652,10 +2654,11 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 
       if (dwarf->FixupAddress(func_range.GetBaseAddress())) {
         const user_id_t func_user_id = die.GetID();
-        func_sp.reset(new Function(&comp_unit,
+        func_sp =
+            std::make_shared<Function>(&comp_unit,
                                    func_user_id, // UserID is the DIE offset
                                    func_user_id, func_name, func_type,
-                                   func_range)); // first address range
+                                       func_range); // first address range
 
         if (func_sp.get() != NULL) {
           if (frame_base.IsValid())

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProcessMinidump.h"
+
 #include "ThreadMinidump.h"
 
 #include "lldb/Core/DumpDataExtractor.h"
@@ -34,8 +35,7 @@
 
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
-// C includes
-// C++ includes
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -644,7 +644,7 @@ public:
 
 CommandObject *ProcessMinidump::GetPluginCommandObject() {
   if (!m_command_sp)
-    m_command_sp.reset(new CommandObjectMultiwordProcessMinidump(
-        GetTarget().GetDebugger().GetCommandInterpreter()));
+    m_command_sp = std::make_shared<CommandObjectMultiwordProcessMinidump>(
+        GetTarget().GetDebugger().GetCommandInterpreter());
   return m_command_sp.get();
 }

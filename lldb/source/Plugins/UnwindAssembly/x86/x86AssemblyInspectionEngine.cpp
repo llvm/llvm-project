@@ -8,6 +8,8 @@
 
 #include "x86AssemblyInspectionEngine.h"
 
+#include <memory>
+
 #include "llvm-c/Disassembler.h"
 
 #include "lldb/Core/Address.h"
@@ -1172,7 +1174,7 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
       *new_row = *original_last_row;
       new_row->SetOffset(offset);
       unwind_plan.AppendRow(new_row);
-      row.reset(new UnwindPlan::Row());
+      row = std::make_shared<UnwindPlan::Row>();
       *row = *new_row;
       reinstate_unwind_state = false;
       unwind_plan_updated = true;

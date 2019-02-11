@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <memory>
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -366,7 +367,7 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp)
     AddAlias("image", cmd_obj_sp);
 
-  alias_arguments_vector_sp.reset(new OptionArgVector);
+  alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
   cmd_obj_sp = GetCommandSPExact("expression", false);
   if (cmd_obj_sp) {
@@ -396,7 +397,7 @@ void CommandInterpreter::Initialize() {
 
   cmd_obj_sp = GetCommandSPExact("process launch", false);
   if (cmd_obj_sp) {
-    alias_arguments_vector_sp.reset(new OptionArgVector);
+    alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
     AddAlias("r", cmd_obj_sp, "--");
     AddAlias("run", cmd_obj_sp, "--");
@@ -2973,7 +2974,7 @@ CommandInterpreter::GetIOHandler(bool force_create,
       flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult;
     }
 
-    m_command_io_handler_sp.reset(new IOHandlerEditline(
+    m_command_io_handler_sp = std::make_shared<IOHandlerEditline>(
         m_debugger, IOHandler::Type::CommandInterpreter,
         m_debugger.GetInputFile(), m_debugger.GetOutputFile(),
         m_debugger.GetErrorFile(), flags, "lldb", m_debugger.GetPrompt(),
@@ -2981,7 +2982,7 @@ CommandInterpreter::GetIOHandler(bool force_create,
         false, // Don't enable multiple line input, just single line commands
         m_debugger.GetUseColor(),
         0, // Don't show line numbers
-        *this));
+        *this);
   }
   return m_command_io_handler_sp;
 }

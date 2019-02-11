@@ -13,11 +13,13 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/TraceOptions.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
 SBTraceOptions::SBTraceOptions() {
-  m_traceoptions_sp.reset(new TraceOptions());
+  m_traceoptions_sp = std::make_shared<TraceOptions>();
 }
 
 lldb::TraceType SBTraceOptions::getType() const {

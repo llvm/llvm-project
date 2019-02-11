@@ -20,6 +20,8 @@
 
 #include "llvm/ADT/APSInt.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -82,7 +84,7 @@ SBType::~SBType() {}
 
 TypeImpl &SBType::ref() {
   if (m_opaque_sp.get() == NULL)
-    m_opaque_sp.reset(new TypeImpl());
+    m_opaque_sp = std::make_shared<TypeImpl>();
   return *m_opaque_sp;
 }
 
@@ -682,7 +684,7 @@ void SBTypeMemberFunction::reset(TypeMemberFunctionImpl *type_member_impl) {
 
 TypeMemberFunctionImpl &SBTypeMemberFunction::ref() {
   if (!m_opaque_sp)
-    m_opaque_sp.reset(new TypeMemberFunctionImpl());
+    m_opaque_sp = std::make_shared<TypeMemberFunctionImpl>();
   return *m_opaque_sp.get();
 }
 

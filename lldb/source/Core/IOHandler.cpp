@@ -997,16 +997,18 @@ public:
                            bool make_active) {
     WindowSP subwindow_sp;
     if (m_window) {
-      subwindow_sp.reset(new Window(
-          name, ::subwin(m_window, bounds.size.height, bounds.size.width,
+      subwindow_sp = std::make_shared<Window>(
+          name,
+          ::subwin(m_window, bounds.size.height, bounds.size.width,
                          bounds.origin.y, bounds.origin.x),
-          true));
+          true);
       subwindow_sp->m_is_subwin = true;
     } else {
-      subwindow_sp.reset(
-          new Window(name, ::newwin(bounds.size.height, bounds.size.width,
-                                    bounds.origin.y, bounds.origin.x),
-                     true));
+      subwindow_sp = std::make_shared<Window>(
+          name,
+          ::newwin(bounds.size.height, bounds.size.width, bounds.origin.y,
+                   bounds.origin.x),
+          true);
       subwindow_sp->m_is_subwin = false;
     }
     subwindow_sp->m_parent = this;
@@ -1883,7 +1885,7 @@ public:
 
   WindowSP &GetMainWindow() {
     if (!m_window_sp)
-      m_window_sp.reset(new Window("main", stdscr, false));
+      m_window_sp = std::make_shared<Window>("main", stdscr, false);
     return m_window_sp;
   }
 
@@ -2510,7 +2512,7 @@ public:
             return; // Children are already up to date
           if (!m_frame_delegate_sp) {
             // Always expand the thread item the first time we show it
-            m_frame_delegate_sp.reset(new FrameTreeDelegate());
+            m_frame_delegate_sp = std::make_shared<FrameTreeDelegate>();
           }
 
           m_stop_id = process_sp->GetStopID();
@@ -2602,7 +2604,8 @@ public:
         if (!m_thread_delegate_sp) {
           // Always expand the thread item the first time we show it
           // item.Expand();
-          m_thread_delegate_sp.reset(new ThreadTreeDelegate(m_debugger));
+          m_thread_delegate_sp =
+              std::make_shared<ThreadTreeDelegate>(m_debugger);
         }
 
         TreeItem t(&item, *m_thread_delegate_sp, false);

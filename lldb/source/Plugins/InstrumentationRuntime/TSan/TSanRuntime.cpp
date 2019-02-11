@@ -30,6 +30,8 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -1078,7 +1080,7 @@ lldb::ThreadCollectionSP
 ThreadSanitizerRuntime::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP info) {
   ThreadCollectionSP threads;
-  threads.reset(new ThreadCollection());
+  threads = std::make_shared<ThreadCollection>();
 
   if (info->GetObjectForDotSeparatedPath("instrumentation_class")
           ->GetStringValue() != "ThreadSanitizer")

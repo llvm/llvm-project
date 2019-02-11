@@ -11,14 +11,16 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
 
+#include <memory>
+
 using namespace lldb_private;
 
 RegisterContextCorePOSIX_arm::RegisterContextCorePOSIX_arm(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_arm(thread, 0, register_info) {
-  m_gpr_buffer.reset(
-      new DataBufferHeap(gpregset.GetDataStart(), gpregset.GetByteSize()));
+  m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
+                                                  gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 }
