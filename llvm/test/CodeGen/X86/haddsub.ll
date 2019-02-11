@@ -1392,11 +1392,10 @@ define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ; AVX-FAST-LABEL: fadd_reduce_v8f32:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX-FAST-NEXT:    vaddps %ymm0, %ymm1, %ymm0
+; AVX-FAST-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-FAST-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX-FAST-NEXT:    vhaddps %ymm0, %ymm0, %ymm0
-; AVX-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
 ; AVX-FAST-NEXT:    retq
   %r = call fast float @llvm.experimental.vector.reduce.fadd.f32.f32.v8f32(float %a0, <8 x float> %a1)
@@ -1431,9 +1430,8 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 ; AVX-FAST-LABEL: fadd_reduce_v4f64:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX-FAST-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
-; AVX-FAST-NEXT:    vhaddpd %ymm0, %ymm0, %ymm0
-; AVX-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX-FAST-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
 ; AVX-FAST-NEXT:    retq
   %r = call fast double @llvm.experimental.vector.reduce.fadd.f64.f64.v4f64(double %a0, <4 x double> %a1)

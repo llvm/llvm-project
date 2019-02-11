@@ -127,6 +127,32 @@ define <16 x i8> @demandedelts_pblendvb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> 
   ret <16 x i8> %5
 }
 
+define <2 x i64> @demandedbits_blendpd(i64 %a0, i64 %a2, <2 x double> %a3) {
+; CHECK-LABEL: demandedbits_blendpd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    orq $1, %rax
+; CHECK-NEXT:    orq $4, %rdi
+; CHECK-NEXT:    movq %rax, %xmm1
+; CHECK-NEXT:    movq %rdi, %xmm2
+; CHECK-NEXT:    movq {{.*#+}} xmm1 = xmm1[0],zero
+; CHECK-NEXT:    movq {{.*#+}} xmm2 = xmm2[0],zero
+; CHECK-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; CHECK-NEXT:    psrlq $11, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %1  = or i64 %a0, 1
+  %2  = or i64 %a0, 4
+  %3  = bitcast i64 %1 to double
+  %4  = bitcast i64 %2 to double
+  %5  = insertelement <2 x double> zeroinitializer, double %3, i32 0
+  %6  = insertelement <2 x double> zeroinitializer, double %4, i32 0
+  %7  = tail call <2 x double> @llvm.x86.sse41.blendvpd(<2 x double> %5, <2 x double> %6, <2 x double> %a3)
+  %8  = bitcast <2 x double> %7 to <2 x i64>
+  %9  = lshr <2 x i64> %8, <i64 11, i64 11>
+  ret <2 x i64> %9
+}
+
 declare <2 x double> @llvm.x86.sse41.blendpd(<2 x double>, <2 x double>, i32)
 declare <4 x float> @llvm.x86.sse41.blendps(<4 x float>, <4 x float>, i32)
 declare <8 x i16> @llvm.x86.sse41.pblendw(<8 x i16>, <8 x i16>, i32)
