@@ -283,19 +283,17 @@ class MsvcBuilder(Builder):
                     print('Using alternate compiler "{0}" to match selected target.'.format(self.compiler))
 
         if self.mode == 'link' or self.mode == 'compile-and-link':
-            self.linker = self._find_linker('link') if toolchain_type == 'msvc' else self._find_linker('lld-link')
+            self.linker = self._find_linker('link') if toolchain_type == 'msvc' else self._find_linker('lld-link', args.tools_dir)
             if not self.linker:
                 raise ValueError('Unable to find an appropriate linker.')
 
         self.compile_env, self.link_env = self._get_visual_studio_environment()
 
-    def _find_linker(self, name):
-        if sys.platform == 'win32':
-            name = name + '.exe'
+    def _find_linker(self, name, search_paths=[]):
         compiler_dir = os.path.dirname(self.compiler)
-        linker_path = os.path.join(compiler_dir, name)
-        if not os.path.exists(linker_path):
-            raise ValueError('Could not find \'{}\''.format(linker_path))
+        linker_path = find_executable(name, [compiler_dir] + search_paths)
+        if linker_path is None:
+            raise ValueError('Could not find \'{}\''.format(name))
         return linker_path
 
     def _get_vc_install_dir(self):
@@ -566,6 +564,7 @@ class MsvcBuilder(Builder):
         if self.toolchain_type == 'clang-cl':
             args.append('-Xclang')
             args.append('-fkeep-static-consts')
+            args.append('-fms-compatibility-version=19')
         args.append('/c')
 
         args.append('/Fo' + obj)

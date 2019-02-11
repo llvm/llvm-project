@@ -398,7 +398,9 @@ void SymbolFileBreakpad::ParseFileRecords() {
 
     if (record->Number >= m_files->size())
       m_files->resize(record->Number + 1);
-    (*m_files)[record->Number] = FileSpec(record->Name);
+    FileSpec::Style style = FileSpec::GuessPathStyle(record->Name)
+                                .getValueOr(FileSpec::Style::native);
+    (*m_files)[record->Number] = FileSpec(record->Name, style);
   }
 }
 

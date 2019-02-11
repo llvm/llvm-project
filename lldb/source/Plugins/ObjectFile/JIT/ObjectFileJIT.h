@@ -74,7 +74,7 @@ public:
 
   lldb_private::ArchSpec GetArchitecture() override;
 
-  bool GetUUID(lldb_private::UUID *uuid) override;
+  lldb_private::UUID GetUUID() override;
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 

@@ -24,6 +24,8 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
+#include <memory>
+
 //#define DEBUG_STACK_FRAMES 1
 
 using namespace lldb;
@@ -465,9 +467,9 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
             pc = reg_ctx_sp->GetPC();
           }
 
-          unwind_frame_sp.reset(new StackFrame(m_thread.shared_from_this(),
-                                               m_frames.size(), idx, reg_ctx_sp,
-                                               cfa, pc, nullptr));
+          unwind_frame_sp = std::make_shared<StackFrame>(
+              m_thread.shared_from_this(), m_frames.size(), idx, reg_ctx_sp,
+              cfa, pc, nullptr);
           m_frames.push_back(unwind_frame_sp);
         }
       } else {
@@ -483,9 +485,9 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         break;
       }
       const bool cfa_is_valid = true;
-      unwind_frame_sp.reset(
-          new StackFrame(m_thread.shared_from_this(), m_frames.size(), idx, cfa,
-                         cfa_is_valid, pc, StackFrame::Kind::Regular, nullptr));
+      unwind_frame_sp = std::make_shared<StackFrame>(
+          m_thread.shared_from_this(), m_frames.size(), idx, cfa, cfa_is_valid,
+          pc, StackFrame::Kind::Regular, nullptr);
 
       // Create synthetic tail call frames between the previous frame and the
       // newly-found frame. The new frame's index may change after this call,
@@ -663,9 +665,9 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
         addr_t pc, cfa;
         if (unwinder->GetFrameInfoAtIndex(idx, cfa, pc)) {
           const bool cfa_is_valid = true;
-          frame_sp.reset(new StackFrame(m_thread.shared_from_this(), idx, idx,
-                                        cfa, cfa_is_valid, pc,
-                                        StackFrame::Kind::Regular, nullptr));
+          frame_sp = std::make_shared<StackFrame>(
+              m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
+              StackFrame::Kind::Regular, nullptr);
 
           Function *function =
               frame_sp->GetSymbolContext(eSymbolContextFunction).function;

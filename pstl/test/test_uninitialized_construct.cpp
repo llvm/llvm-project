@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Tests for uninitialized_default_consruct, uninitialized_default_consruct_n,
-//           uninitialized_value_consruct,   uninitialized_value_consruct_n
+// Tests for uninitialized_default_construct, uninitialized_default_construct_n,
+//           uninitialized_value_construct,   uninitialized_value_construct_n
 
 #include "pstl_test_config.h"
 

@@ -122,7 +122,7 @@ public:
 
   lldb_private::ArchSpec GetArchitecture() override;
 
-  bool GetUUID(lldb_private::UUID *uuid) override;
+  lldb_private::UUID GetUUID() override;
 
   lldb_private::FileSpecList GetDebugSymbolFilePaths() override;
 

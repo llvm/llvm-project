@@ -26,6 +26,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
 
+#include <memory>
 #include <vector>
 
 using namespace clang;
@@ -707,7 +708,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
     return; // otherwise we may need to fall back
   }
 
-  context.m_namespace_map.reset(new ClangASTImporter::NamespaceMap);
+  context.m_namespace_map = std::make_shared<ClangASTImporter::NamespaceMap>();
 
   if (const NamespaceDecl *namespace_context =
           dyn_cast<NamespaceDecl>(context.m_decl_context)) {
