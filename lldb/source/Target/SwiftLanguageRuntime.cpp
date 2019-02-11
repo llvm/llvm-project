@@ -1792,85 +1792,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Protocol(
   return true;
 }
 
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
-    ValueObject &in_value, MetadataPromiseSP promise_sp,
-    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address) {
-  if (!promise_sp)
-    return false;
-
-  CompilerType var_type(in_value.GetCompilerType());
-  Status error;
-
-  if (!promise_sp->FulfillKindPromise())
-    return false;
-
-  switch (promise_sp->FulfillKindPromise().getValue()) {
-  case swift::MetadataKind::Class:
-  case swift::MetadataKind::ObjCClassWrapper: {
-    CompilerType dyn_type(promise_sp->FulfillTypePromise());
-    if (!dyn_type.IsValid())
-      return false;
-    class_type_or_name.SetCompilerType(dyn_type);
-    lldb::addr_t val_ptr_addr = in_value.GetAddressOf();
-    val_ptr_addr = GetProcess()->ReadPointerFromMemory(val_ptr_addr, error);
-    address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
-    return true;
-  } break;
-  case swift::MetadataKind::Optional:
-  case swift::MetadataKind::Struct:
-  case swift::MetadataKind::Tuple: {
-    CompilerType dyn_type(promise_sp->FulfillTypePromise());
-    if (!dyn_type.IsValid())
-      return false;
-    class_type_or_name.SetCompilerType(dyn_type);
-    lldb::addr_t val_ptr_addr = in_value.GetAddressOf();
-    address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
-    return true;
-  } break;
-  case swift::MetadataKind::Enum: {
-    CompilerType dyn_type(promise_sp->FulfillTypePromise());
-    if (!dyn_type.IsValid())
-      return false;
-    class_type_or_name.SetCompilerType(dyn_type);
-    lldb::addr_t val_ptr_addr = in_value.GetAddressOf();
-    {
-      auto swift_type = GetSwiftType(dyn_type);
-      if (swift_type->getOptionalObjectType())
-        val_ptr_addr = GetProcess()->ReadPointerFromMemory(val_ptr_addr, error);
-    }
-    address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
-    return true;
-  } break;
-  case swift::MetadataKind::Existential: {
-    CompilerType protocol_type(promise_sp->FulfillTypePromise());
-    lldb::addr_t existential_address = in_value.GetAddressOf();
-    if (!existential_address || existential_address == LLDB_INVALID_ADDRESS)
-      return false;
-    auto &target = m_process->GetTarget();
-    assert(IsScratchContextLocked(target) &&
-           "Swift scratch context not locked ahead");
-    auto scratch_ctx = in_value.GetSwiftASTContext();
-    auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
-    swift::remote::RemoteAddress remote_existential(existential_address);
-    auto result = remote_ast.getDynamicTypeAndAddressForExistential(
-        remote_existential, GetSwiftType(protocol_type));
-    if (!result.isSuccess())
-      return false;
-    auto type_and_address = result.getValue();
-    CompilerType dynamic_type(type_and_address.InstanceType);
-    class_type_or_name.SetCompilerType(dynamic_type);
-    address.SetLoadAddress(type_and_address.PayloadAddress.getAddressData(),
-                           &m_process->GetTarget());
-    return true;
-  } break;
-  default:
-    break;
-  }
-
-  return false;
-}
-
 SwiftLanguageRuntime::MetadataPromiseSP
 SwiftLanguageRuntime::GetPromiseForTypeNameAndFrame(const char *type_name,
                                                     StackFrame *frame) {
@@ -1965,50 +1886,6 @@ bool SwiftLanguageRuntime::GetAbstractTypeName(StreamString &name,
 
   name.Printf(u8"\u03C4_%d_%d%s", generic_type_param->getDepth(),
               generic_type_param->getIndex(), assoc.GetString().data());
-  return true;
-}
-
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
-    ValueObject &in_value, SwiftASTContext &scratch_ctx,
-    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-    Address &address) {
-  StreamString assoc;
-  StackFrame *frame(in_value.GetFrameSP().get());
-  StreamString type_name;
-  auto swift_type = GetSwiftType(in_value.GetCompilerType());
-  if (!GetAbstractTypeName(type_name, swift_type))
-    return false;
-  auto promise_sp = GetPromiseForTypeNameAndFrame(type_name.GetData(), frame);
-  if (!promise_sp)
-    return false;
-  if (!GetDynamicTypeAndAddress_Promise(in_value, promise_sp, use_dynamic,
-                                        class_type_or_name, address))
-    return false;
-
-  if (promise_sp->IsStaticallyDetermined())
-    return true;
-
-  // Ask RemoteAST about the dynamic type, as it might be different from the
-  // static one of the class.
-  Status error;
-  lldb::addr_t addr_of_meta = address.GetLoadAddress(&m_process->GetTarget());
-  addr_of_meta = m_process->ReadPointerFromMemory(addr_of_meta, error);
-  if (addr_of_meta == LLDB_INVALID_ADDRESS || addr_of_meta == 0 ||
-      error.Fail())
-    return true;
-
-  auto &remote_ast = GetRemoteASTContext(scratch_ctx);
-  swift::remote::RemoteAddress metadata_address(addr_of_meta);
-  auto instance_type =
-      remote_ast.getTypeForRemoteTypeMetadata(metadata_address,
-                                              /*skipArtificial*/ true);
-
-  // If we got this far, we know we already have a valid dynamic type
-  // in our hand. If RemoteAST gives us a different answer, update the
-  // type, otherwise return what we have.
-  if (instance_type)
-    class_type_or_name.SetCompilerType(
-        {&scratch_ctx, instance_type.getValue().getPointer()});
   return true;
 }
 
@@ -2261,10 +2138,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     success = GetDynamicTypeAndAddress_Protocol(
         in_value, val_type, *scratch_ctx, use_dynamic,
         class_type_or_name, address);
-  else if (type_info.AnySet(eTypeIsGenericTypeParam))
-    // ..._GenericTypeParam performs the archetype binding *and* sets address.
-    success = GetDynamicTypeAndAddress_GenericTypeParam(
-        in_value, *scratch_ctx, use_dynamic, class_type_or_name, address);
   else {
     // Perform archetype binding in the scratch context.
     auto *frame = in_value.GetExecutionContextRef().GetFrameSP().get();

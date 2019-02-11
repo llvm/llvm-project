@@ -357,11 +357,6 @@ protected:
                                          TypeAndOrName &class_type_or_name,
                                          Address &address);
 
-  bool GetDynamicTypeAndAddress_GenericTypeParam(
-      ValueObject &in_value, SwiftASTContext &scratch_ctx,
-      lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
-      Address &address);
-
   bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                        CompilerType &bound_type,
                                        lldb::DynamicValueType use_dynamic,
@@ -371,12 +366,6 @@ protected:
   bool GetDynamicTypeAndAddress_IndirectEnumCase(
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
       TypeAndOrName &class_type_or_name, Address &address);
-
-  bool GetDynamicTypeAndAddress_Promise(ValueObject &in_value,
-                                        MetadataPromiseSP promise_sp,
-                                        lldb::DynamicValueType use_dynamic,
-                                        TypeAndOrName &class_type_or_name,
-                                        Address &address);
 
   MetadataPromiseSP GetPromiseForTypeNameAndFrame(const char *type_name,
                                                   StackFrame *frame);
