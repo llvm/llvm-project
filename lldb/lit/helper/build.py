@@ -564,6 +564,7 @@ class MsvcBuilder(Builder):
         if self.toolchain_type == 'clang-cl':
             args.append('-Xclang')
             args.append('-fkeep-static-consts')
+            args.append('-fms-compatibility-version=19')
         args.append('/c')
 
         args.append('/Fo' + obj)
