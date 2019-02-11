@@ -1633,14 +1633,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     Address &address) {
   AddressType address_type;
   lldb::addr_t class_metadata_ptr = in_value.GetPointerValue(&address_type);
-  if (auto objc_runtime = GetObjCRuntime()) {
-    if (objc_runtime->IsTaggedPointer(class_metadata_ptr)) {
-      Value::ValueType value_type;
-      return objc_runtime->GetDynamicTypeAndAddress(
-          in_value, use_dynamic, class_type_or_name, address, value_type,
-          /* allow_swift = */ true);
-    }
-  }
   if (class_metadata_ptr == LLDB_INVALID_ADDRESS || class_metadata_ptr == 0)
     return false;
   address.SetRawAddress(class_metadata_ptr);
