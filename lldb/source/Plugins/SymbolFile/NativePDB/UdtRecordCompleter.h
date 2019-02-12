@@ -35,6 +35,9 @@ namespace npdb {
 class PdbAstBuilder;
 
 class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
+  using IndexedBase =
+      std::pair<uint64_t, std::unique_ptr<clang::CXXBaseSpecifier>>;
+
   union UdtTagRecord {
     UdtTagRecord() {}
     llvm::codeview::UnionRecord ur;
@@ -47,7 +50,7 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   clang::TagDecl &m_tag_decl;
   PdbAstBuilder &m_ast_builder;
   llvm::pdb::TpiStream &m_tpi;
-  std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> m_bases;
+  std::vector<IndexedBase> m_bases;
   ClangASTImporter::LayoutInfo m_layout;
 
 public:
@@ -64,8 +67,9 @@ public:
   void complete();
 
 private:
-  clang::QualType AddBaseClassForTypeIndex(llvm::codeview::TypeIndex ti,
-                                           llvm::codeview::MemberAccess access);
+  clang::QualType AddBaseClassForTypeIndex(
+      llvm::codeview::TypeIndex ti, llvm::codeview::MemberAccess access,
+      llvm::Optional<uint64_t> vtable_idx = llvm::Optional<uint64_t>());
   void AddMethod(llvm::StringRef name, llvm::codeview::TypeIndex type_idx,
                  llvm::codeview::MemberAccess access,
                  llvm::codeview::MethodOptions options,

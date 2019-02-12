@@ -29,7 +29,7 @@ DECLARE_REAL(void, free, void *ptr)
 
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
 #define OPERATOR_NEW_BODY(mangled_name, nothrow) \
-  if (cur_thread()->in_symbolizer) \
+  if (in_symbolizer()) \
     return InternalAlloc(size); \
   void *p = 0; \
   {  \
@@ -44,7 +44,7 @@ DECLARE_REAL(void, free, void *ptr)
   return p;
 
 #define OPERATOR_NEW_BODY_ALIGN(mangled_name, nothrow) \
-  if (cur_thread()->in_symbolizer) \
+  if (in_symbolizer()) \
     return InternalAlloc(size, nullptr, (uptr)align); \
   void *p = 0; \
   {  \
@@ -114,7 +114,7 @@ void *operator new[](__sanitizer::uptr size, std::align_val_t align,
 
 #define OPERATOR_DELETE_BODY(mangled_name) \
   if (ptr == 0) return;  \
-  if (cur_thread()->in_symbolizer) \
+  if (in_symbolizer()) \
     return InternalFree(ptr); \
   invoke_free_hook(ptr);  \
   SCOPED_INTERCEPTOR_RAW(mangled_name, ptr);  \

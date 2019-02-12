@@ -40,11 +40,10 @@ using namespace lldb_private;
 /// Default Constructor
 //------------------------------------------------------------------
 PlatformPOSIX::PlatformPOSIX(bool is_host)
-    : Platform(is_host), // This is the local host platform
+    : RemoteAwarePlatform(is_host), // This is the local host platform
       m_option_group_platform_rsync(new OptionGroupPlatformRSync()),
       m_option_group_platform_ssh(new OptionGroupPlatformSSH()),
-      m_option_group_platform_caching(new OptionGroupPlatformCaching()),
-      m_remote_platform_sp() {}
+      m_option_group_platform_caching(new OptionGroupPlatformCaching()) {}
 
 //------------------------------------------------------------------
 /// Destructor.
@@ -53,16 +52,6 @@ PlatformPOSIX::PlatformPOSIX(bool is_host)
 /// inherited from by the plug-in instance.
 //------------------------------------------------------------------
 PlatformPOSIX::~PlatformPOSIX() {}
-
-bool PlatformPOSIX::GetModuleSpec(const FileSpec &module_file_spec,
-                                  const ArchSpec &arch,
-                                  ModuleSpec &module_spec) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetModuleSpec(module_file_spec, arch,
-                                               module_spec);
-
-  return Platform::GetModuleSpec(module_file_spec, arch, module_spec);
-}
 
 lldb_private::OptionGroupOptions *PlatformPOSIX::GetConnectionOptions(
     lldb_private::CommandInterpreter &interpreter) {
@@ -77,14 +66,6 @@ lldb_private::OptionGroupOptions *PlatformPOSIX::GetConnectionOptions(
   }
 
   return m_options.at(&interpreter).get();
-}
-
-bool PlatformPOSIX::IsConnected() const {
-  if (IsHost())
-    return true;
-  else if (m_remote_platform_sp)
-    return m_remote_platform_sp->IsConnected();
-  return false;
 }
 
 lldb_private::Status PlatformPOSIX::RunShellCommand(
@@ -249,38 +230,6 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
   }
 
   return error;
-}
-
-Status PlatformPOSIX::GetFileWithUUID(const FileSpec &platform_file,
-                                      const UUID *uuid_ptr,
-                                      FileSpec &local_file) {
-  if (IsRemote() && m_remote_platform_sp)
-      return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
-                                                   local_file);
-
-  // Default to the local case
-  local_file = platform_file;
-  return Status();
-}
-
-bool PlatformPOSIX::GetProcessInfo(lldb::pid_t pid,
-                                     ProcessInstanceInfo &process_info) {
-  if (IsHost())
-    return Platform::GetProcessInfo(pid, process_info);
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  return false;
-}
-
-uint32_t
-PlatformPOSIX::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                               ProcessInstanceInfoList &process_infos) {
-  if (IsHost())
-    return Platform::FindProcesses(match_info, process_infos);
-  if (m_remote_platform_sp)
-    return
-      m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  return 0;
 }
 
 Status PlatformPOSIX::MakeDirectory(const FileSpec &file_spec,
@@ -649,74 +598,6 @@ bool PlatformPOSIX::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
     return Platform::SetRemoteWorkingDirectory(working_dir);
 }
 
-bool PlatformPOSIX::GetRemoteOSVersion() {
-  if (m_remote_platform_sp) {
-    m_os_version = m_remote_platform_sp->GetOSVersion();
-    return !m_os_version.empty();
-  }
-  return false;
-}
-
-bool PlatformPOSIX::GetRemoteOSBuildString(std::string &s) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSBuildString(s);
-  s.clear();
-  return false;
-}
-
-Environment PlatformPOSIX::GetEnvironment() {
-  if (IsRemote()) {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetEnvironment();
-    return Environment();
-  }
-  return Host::GetEnvironment();
-}
-
-bool PlatformPOSIX::GetRemoteOSKernelDescription(std::string &s) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSKernelDescription(s);
-  s.clear();
-  return false;
-}
-
-// Remote Platform subclasses need to override this function
-ArchSpec PlatformPOSIX::GetRemoteSystemArchitecture() {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteSystemArchitecture();
-  return ArchSpec();
-}
-
-const char *PlatformPOSIX::GetHostname() {
-  if (IsHost())
-    return Platform::GetHostname();
-
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetHostname();
-  return NULL;
-}
-
-const char *PlatformPOSIX::GetUserName(uint32_t uid) {
-  // Check the cache in Platform in case we have already looked this uid up
-  const char *user_name = Platform::GetUserName(uid);
-  if (user_name)
-    return user_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetUserName(uid);
-  return NULL;
-}
-
-const char *PlatformPOSIX::GetGroupName(uint32_t gid) {
-  const char *group_name = Platform::GetGroupName(gid);
-  if (group_name)
-    return group_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetGroupName(gid);
-  return NULL;
-}
-
 Status PlatformPOSIX::ConnectRemote(Args &args) {
   Status error;
   if (IsHost()) {
@@ -770,20 +651,6 @@ Status PlatformPOSIX::DisconnectRemote() {
   } else {
     if (m_remote_platform_sp)
       error = m_remote_platform_sp->DisconnectRemote();
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return error;
-}
-
-Status PlatformPOSIX::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Status error;
-
-  if (IsHost()) {
-    error = Platform::LaunchProcess(launch_info);
-  } else {
-    if (m_remote_platform_sp)
-      error = m_remote_platform_sp->LaunchProcess(launch_info);
     else
       error.SetErrorString("the platform is not currently connected");
   }
