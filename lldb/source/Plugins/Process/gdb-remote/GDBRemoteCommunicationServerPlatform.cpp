@@ -206,7 +206,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
                   port + m_port_offset);
   if (!socket_name.empty()) {
     response.PutCString("socket_name:");
-    response.PutCStringAsRawHex8(socket_name.c_str());
+    response.PutStringAsRawHex8(socket_name);
     response.PutChar(';');
   }
 

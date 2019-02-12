@@ -4930,7 +4930,7 @@ Status ProcessGDBRemote::GetFileLoadAddress(const FileSpec &file,
 
   StreamString packet;
   packet.PutCString("qFileLoadAddress:");
-  packet.PutCStringAsRawHex8(file_path.c_str());
+  packet.PutStringAsRawHex8(file_path);
 
   StringExtractorGDBRemote response;
   if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,

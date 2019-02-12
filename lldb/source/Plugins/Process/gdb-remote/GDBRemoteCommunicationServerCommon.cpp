@@ -191,13 +191,13 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   ArchSpec host_arch(HostInfo::GetArchitecture());
   const llvm::Triple &host_triple = host_arch.GetTriple();
   response.PutCString("triple:");
-  response.PutCStringAsRawHex8(host_triple.getTriple().c_str());
+  response.PutStringAsRawHex8(host_triple.getTriple());
   response.Printf(";ptrsize:%u;", host_arch.GetAddressByteSize());
 
   const char *distribution_id = host_arch.GetDistributionId().AsCString();
   if (distribution_id) {
     response.PutCString("distribution_id:");
-    response.PutCStringAsRawHex8(distribution_id);
+    response.PutStringAsRawHex8(distribution_id);
     response.PutCString(";");
   }
 
@@ -271,12 +271,12 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   std::string s;
   if (HostInfo::GetOSBuildString(s)) {
     response.PutCString("os_build:");
-    response.PutCStringAsRawHex8(s.c_str());
+    response.PutStringAsRawHex8(s);
     response.PutChar(';');
   }
   if (HostInfo::GetOSKernelDescription(s)) {
     response.PutCString("os_kernel:");
-    response.PutCStringAsRawHex8(s.c_str());
+    response.PutStringAsRawHex8(s);
     response.PutChar(';');
   }
 
@@ -287,12 +287,12 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
   // actually have a hostname as far as the remote lldb that is connecting to
   // this lldb-platform is concerned
   response.PutCString("hostname:");
-  response.PutCStringAsRawHex8("127.0.0.1");
+  response.PutStringAsRawHex8("127.0.0.1");
   response.PutChar(';');
 #else  // #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
   if (HostInfo::GetHostname(s)) {
     response.PutCString("hostname:");
-    response.PutCStringAsRawHex8(s.c_str());
+    response.PutStringAsRawHex8(s);
     response.PutChar(';');
   }
 #endif // #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
@@ -300,7 +300,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
 #else  // #if defined(__APPLE__)
   if (HostInfo::GetHostname(s)) {
     response.PutCString("hostname:");
-    response.PutCStringAsRawHex8(s.c_str());
+    response.PutStringAsRawHex8(s);
     response.PutChar(';');
   }
 #endif // #if defined(__APPLE__)
@@ -439,7 +439,7 @@ GDBRemoteCommunicationServerCommon::Handle_qUserName(
     std::string name;
     if (HostInfo::LookupUserName(uid, name)) {
       StreamString response;
-      response.PutCStringAsRawHex8(name.c_str());
+      response.PutStringAsRawHex8(name);
       return SendPacketNoLock(response.GetString());
     }
   }
@@ -460,7 +460,7 @@ GDBRemoteCommunicationServerCommon::Handle_qGroupName(
     std::string name;
     if (HostInfo::LookupGroupName(gid, name)) {
       StreamString response;
-      response.PutCStringAsRawHex8(name.c_str());
+      response.PutStringAsRawHex8(name);
       return SendPacketNoLock(response.GetString());
     }
   }
@@ -1084,20 +1084,20 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
     if (!Result)
       return SendErrorResponse(5);
     response.PutCString("md5:");
-    response.PutCStringAsRawHex8(Result->digest().c_str());
+    response.PutStringAsRawHex8(Result->digest());
   } else {
     response.PutCString("uuid:");
-    response.PutCStringAsRawHex8(uuid_str.c_str());
+    response.PutStringAsRawHex8(uuid_str);
   }
   response.PutChar(';');
 
   const auto &module_arch = matched_module_spec.GetArchitecture();
   response.PutCString("triple:");
-  response.PutCStringAsRawHex8(module_arch.GetTriple().getTriple().c_str());
+  response.PutStringAsRawHex8(module_arch.GetTriple().getTriple());
   response.PutChar(';');
 
   response.PutCString("file_path:");
-  response.PutCStringAsRawHex8(matched_module_spec.GetFileSpec().GetCString());
+  response.PutStringAsRawHex8(matched_module_spec.GetFileSpec().GetCString());
   response.PutChar(';');
   response.PutCString("file_offset:");
   response.PutHex64(file_offset);
@@ -1175,13 +1175,13 @@ void GDBRemoteCommunicationServerCommon::CreateProcessInfoResponse(
       proc_info.GetUserID(), proc_info.GetGroupID(),
       proc_info.GetEffectiveUserID(), proc_info.GetEffectiveGroupID());
   response.PutCString("name:");
-  response.PutCStringAsRawHex8(proc_info.GetExecutableFile().GetCString());
+  response.PutStringAsRawHex8(proc_info.GetExecutableFile().GetCString());
   response.PutChar(';');
   const ArchSpec &proc_arch = proc_info.GetArchitecture();
   if (proc_arch.IsValid()) {
     const llvm::Triple &proc_triple = proc_arch.GetTriple();
     response.PutCString("triple:");
-    response.PutCStringAsRawHex8(proc_triple.getTriple().c_str());
+    response.PutStringAsRawHex8(proc_triple.getTriple());
     response.PutChar(';');
   }
 }
@@ -1215,7 +1215,7 @@ void GDBRemoteCommunicationServerCommon::
 #else
     // We'll send the triple.
     response.PutCString("triple:");
-    response.PutCStringAsRawHex8(proc_triple.getTriple().c_str());
+    response.PutStringAsRawHex8(proc_triple.getTriple());
     response.PutChar(';');
 #endif
     std::string ostype = proc_triple.getOSName();
