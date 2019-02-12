@@ -118,7 +118,7 @@ bool TerminalState::Save(int fd, bool save_process_group) {
     m_tflags = ::fcntl(fd, F_GETFL, 0);
 #endif
 #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
-    if (m_termios_ap.get() == NULL)
+    if (m_termios_ap == NULL)
       m_termios_ap.reset(new struct termios);
     int err = ::tcgetattr(fd, m_termios_ap.get());
     if (err != 0)
@@ -191,7 +191,7 @@ bool TerminalState::TFlagsIsValid() const { return m_tflags != -1; }
 //----------------------------------------------------------------------
 bool TerminalState::TTYStateIsValid() const {
 #ifdef LLDB_CONFIG_TERMIOS_SUPPORTED
-  return m_termios_ap.get() != 0;
+  return m_termios_ap != 0;
 #else
   return false;
 #endif

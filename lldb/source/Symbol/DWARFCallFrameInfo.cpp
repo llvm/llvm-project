@@ -230,7 +230,7 @@ DWARFCallFrameInfo::GetCIE(dw_offset_t cie_offset) {
 
   if (pos != m_cie_map.end()) {
     // Parse and cache the CIE
-    if (pos->second.get() == nullptr)
+    if (pos->second == nullptr)
       pos->second = ParseCIE(cie_offset);
 
     return pos->second.get();

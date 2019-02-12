@@ -306,10 +306,12 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_fmul_v3s16
-    ; SI: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
-    ; SI: [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF1]](<3 x s16>)
+    ; SI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; SI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF1]](<4 x s16>), 0
+    ; SI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
+    ; SI: [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT1]](<3 x s16>)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
     ; SI: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
     ; SI: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[FPEXT]], [[FPEXT1]]
@@ -325,26 +327,31 @@ body: |
     ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16)
     ; SI: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s16>)
     ; VI-LABEL: name: test_fmul_v3s16
-    ; VI: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
-    ; VI: [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF1]](<3 x s16>)
+    ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; VI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF1]](<4 x s16>), 0
+    ; VI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
+    ; VI: [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT1]](<3 x s16>)
     ; VI: [[FMUL:%[0-9]+]]:_(s16) = G_FMUL [[UV]], [[UV3]]
     ; VI: [[FMUL1:%[0-9]+]]:_(s16) = G_FMUL [[UV1]], [[UV4]]
     ; VI: [[FMUL2:%[0-9]+]]:_(s16) = G_FMUL [[UV2]], [[UV5]]
     ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[FMUL]](s16), [[FMUL1]](s16), [[FMUL2]](s16)
     ; VI: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s16>)
     ; GFX9-LABEL: name: test_fmul_v3s16
-    ; GFX9: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[DEF1:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[DEF2:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[DEF]](<3 x s16>), 0
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[DEF1]](<3 x s16>), 0
-    ; GFX9: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[EXTRACT]], [[EXTRACT1]]
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[DEF2]], [[FMUL]](<2 x s16>), 0
-    ; GFX9: [[EXTRACT2:%[0-9]+]]:_(s16) = G_EXTRACT [[DEF]](<3 x s16>), 32
-    ; GFX9: [[EXTRACT3:%[0-9]+]]:_(s16) = G_EXTRACT [[DEF1]](<3 x s16>), 32
-    ; GFX9: [[FMUL1:%[0-9]+]]:_(s16) = G_FMUL [[EXTRACT2]], [[EXTRACT3]]
+    ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; GFX9: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF1]](<4 x s16>), 0
+    ; GFX9: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF2]](<4 x s16>), 0
+    ; GFX9: [[EXTRACT3:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT]](<3 x s16>), 0
+    ; GFX9: [[EXTRACT4:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[FMUL:%[0-9]+]]:_(<2 x s16>) = G_FMUL [[EXTRACT3]], [[EXTRACT4]]
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[EXTRACT2]], [[FMUL]](<2 x s16>), 0
+    ; GFX9: [[EXTRACT5:%[0-9]+]]:_(s16) = G_EXTRACT [[EXTRACT]](<3 x s16>), 32
+    ; GFX9: [[EXTRACT6:%[0-9]+]]:_(s16) = G_EXTRACT [[EXTRACT1]](<3 x s16>), 32
+    ; GFX9: [[FMUL1:%[0-9]+]]:_(s16) = G_FMUL [[EXTRACT5]], [[EXTRACT6]]
     ; GFX9: [[INSERT1:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[INSERT]], [[FMUL1]](s16), 32
     ; GFX9: S_NOP 0, implicit [[INSERT1]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF

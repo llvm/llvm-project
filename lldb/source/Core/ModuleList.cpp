@@ -87,7 +87,8 @@ enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
 } // namespace
 
 ModuleListProperties::ModuleListProperties() {
-  m_collection_sp.reset(new OptionValueProperties(ConstString("symbols")));
+  m_collection_sp =
+      std::make_shared<OptionValueProperties>(ConstString("symbols"));
   m_collection_sp->Initialize(g_properties);
 
   llvm::SmallString<128> path;
@@ -829,7 +830,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
   if (module_sp)
     return error;
 
-  module_sp.reset(new Module(module_spec));
+  module_sp = std::make_shared<Module>(module_spec);
   // Make sure there are a module and an object file since we can specify a
   // valid file path with an architecture that might not be in that file. By
   // getting the object file we can guarantee that the architecture matches
@@ -871,7 +872,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
 
       auto resolved_module_spec(module_spec);
       resolved_module_spec.GetFileSpec() = search_path_spec;
-      module_sp.reset(new Module(resolved_module_spec));
+      module_sp = std::make_shared<Module>(resolved_module_spec);
       if (module_sp->GetObjectFile()) {
         // If we get in here we got the correct arch, now we just need to
         // verify the UUID if one was given
@@ -970,7 +971,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
     }
 
     if (!module_sp) {
-      module_sp.reset(new Module(platform_module_spec));
+      module_sp = std::make_shared<Module>(platform_module_spec);
       // Make sure there are a module and an object file since we can specify a
       // valid file path with an architecture that might not be in that file.
       // By getting the object file we can guarantee that the architecture

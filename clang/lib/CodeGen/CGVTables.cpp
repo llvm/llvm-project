@@ -761,7 +761,6 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   // Create the variable that will hold the construction vtable.
   llvm::GlobalVariable *VTable =
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
-  CGM.setGVProperties(VTable, RD);
 
   // V-tables are always unnamed_addr.
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
@@ -774,6 +773,11 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   auto components = builder.beginStruct();
   createVTableInitializer(components, *VTLayout, RTTI);
   components.finishAndSetAsInitializer(VTable);
+
+  // Set properties only after the initializer has been set to ensure that the
+  // GV is treated as definition and not declaration.
+  assert(!VTable->isDeclaration() && "Shouldn't set properties on declaration");
+  CGM.setGVProperties(VTable, RD);
 
   CGM.EmitVTableTypeMetadata(VTable, *VTLayout.get());
 

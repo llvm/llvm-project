@@ -1528,7 +1528,7 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
     if (TC.isThreadModelSupported(A->getValue()))
       OS << "Thread model: " << A->getValue();
   } else
-    OS << "Thread model: " << TC.getThreadModel();
+    OS << "Thread model: " << TC.getThreadModel(C.getArgs());
   OS << '\n';
 
   // Print out the install directory.

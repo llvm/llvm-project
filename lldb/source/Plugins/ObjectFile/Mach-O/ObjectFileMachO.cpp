@@ -59,6 +59,8 @@
 #include <uuid/uuid.h>
 #endif
 
+#include <memory>
+
 #define THUMB_ADDRESS_BIT_MASK 0xfffffffffffffffeull
 using namespace lldb;
 using namespace lldb_private;
@@ -1310,7 +1312,7 @@ Symtab *ObjectFileMachO::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_ap.get() == NULL) {
+    if (m_symtab_ap == NULL) {
       m_symtab_ap.reset(new Symtab(this));
       std::lock_guard<std::recursive_mutex> symtab_guard(
           m_symtab_ap->GetMutex());
@@ -1645,7 +1647,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
   // conflict with any of the sections.
   SectionSP segment_sp;
   if (add_section && (const_segname || is_core)) {
-    segment_sp.reset(new Section(
+    segment_sp = std::make_shared<Section>(
         module_sp, // Module to which this section belongs
         this,      // Object file to which this sections belongs
         ++context.NextSegmentIdx
@@ -1663,7 +1665,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
         load_cmd.filesize, // Size in bytes of this section as found
         // in the file
         0,                // Segments have no alignment information
-        load_cmd.flags)); // Flags for this section
+        load_cmd.flags); // Flags for this section
 
     segment_sp->SetIsEncrypted(segment_is_encrypted);
     m_sections_ap->AddSection(segment_sp);
@@ -1784,7 +1786,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
           }
         } else {
           // Create a fake section for the section's named segment
-          segment_sp.reset(new Section(
+          segment_sp = std::make_shared<Section>(
               segment_sp, // Parent section
               module_sp,  // Module to which this section belongs
               this,       // Object file to which this section belongs
@@ -1805,7 +1807,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
               // this section as
               // found in the file
               sect64.align,
-              load_cmd.flags)); // Flags for this section
+              load_cmd.flags); // Flags for this section
           segment_sp->SetIsFake(true);
           segment_sp->SetPermissions(segment_permissions);
           m_sections_ap->AddSection(segment_sp);
@@ -4840,7 +4842,7 @@ void ObjectFileMachO::Dump(Stream *s) {
     if (sections)
       sections->Dump(s, NULL, true, UINT32_MAX);
 
-    if (m_symtab_ap.get())
+    if (m_symtab_ap)
       m_symtab_ap->Dump(s, NULL, eSortOrderNone);
   }
 }
@@ -5525,19 +5527,23 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
 
       switch (m_header.cputype) {
       case llvm::MachO::CPU_TYPE_ARM64:
-        reg_ctx_sp.reset(new RegisterContextDarwin_arm64_Mach(thread, data));
+        reg_ctx_sp =
+            std::make_shared<RegisterContextDarwin_arm64_Mach>(thread, data);
         break;
 
       case llvm::MachO::CPU_TYPE_ARM:
-        reg_ctx_sp.reset(new RegisterContextDarwin_arm_Mach(thread, data));
+        reg_ctx_sp =
+            std::make_shared<RegisterContextDarwin_arm_Mach>(thread, data);
         break;
 
       case llvm::MachO::CPU_TYPE_I386:
-        reg_ctx_sp.reset(new RegisterContextDarwin_i386_Mach(thread, data));
+        reg_ctx_sp =
+            std::make_shared<RegisterContextDarwin_i386_Mach>(thread, data);
         break;
 
       case llvm::MachO::CPU_TYPE_X86_64:
-        reg_ctx_sp.reset(new RegisterContextDarwin_x86_64_Mach(thread, data));
+        reg_ctx_sp =
+            std::make_shared<RegisterContextDarwin_x86_64_Mach>(thread, data);
         break;
       }
     }

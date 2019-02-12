@@ -63,6 +63,7 @@
 #include <deque>
 #include <errno.h>
 #include <exception>
+#include <fenv.h>
 #include <filesystem>
 #include <float.h>
 #include <forward_list>

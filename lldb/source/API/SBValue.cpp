@@ -46,6 +46,8 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -485,7 +487,7 @@ SBType SBValue::GetType() {
   lldb::ValueObjectSP value_sp(GetSP(locker));
   TypeImplSP type_sp;
   if (value_sp) {
-    type_sp.reset(new TypeImpl(value_sp->GetTypeImpl()));
+    type_sp = std::make_shared<TypeImpl>(value_sp->GetTypeImpl());
     sb_type.SetSP(type_sp);
   }
   if (log) {

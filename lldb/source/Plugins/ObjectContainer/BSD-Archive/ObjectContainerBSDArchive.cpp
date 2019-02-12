@@ -325,7 +325,7 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
                                         archive_data_offset, file, file_offset,
                                         length));
 
-      if (container_ap.get()) {
+      if (container_ap) {
         if (archive_sp) {
           // We already have this archive in our cache, use it
           container_ap->SetArchive(archive_sp);
@@ -344,7 +344,7 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
           new ObjectContainerBSDArchive(module_sp, data_sp, data_offset, file,
                                         file_offset, length));
 
-      if (container_ap.get()) {
+      if (container_ap) {
         // We already have this archive in our cache, use it
         container_ap->SetArchive(archive_sp);
         return container_ap.release();

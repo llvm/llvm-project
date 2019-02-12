@@ -14,6 +14,8 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Stream.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -28,14 +30,14 @@ SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs)
     : m_opaque_sp() {
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_sp.reset(new TypeEnumMemberImpl(rhs.ref()));
+      m_opaque_sp = std::make_shared<TypeEnumMemberImpl>(rhs.ref());
   }
 }
 
 SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_sp.reset(new TypeEnumMemberImpl(rhs.ref()));
+      m_opaque_sp = std::make_shared<TypeEnumMemberImpl>(rhs.ref());
   }
   return *this;
 }
@@ -74,7 +76,7 @@ void SBTypeEnumMember::reset(TypeEnumMemberImpl *type_member_impl) {
 
 TypeEnumMemberImpl &SBTypeEnumMember::ref() {
   if (m_opaque_sp.get() == NULL)
-    m_opaque_sp.reset(new TypeEnumMemberImpl());
+    m_opaque_sp = std::make_shared<TypeEnumMemberImpl>();
   return *m_opaque_sp.get();
 }
 

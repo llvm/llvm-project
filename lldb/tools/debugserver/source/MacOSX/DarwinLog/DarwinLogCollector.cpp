@@ -12,6 +12,7 @@
 #include <dlfcn.h>
 
 #include <cinttypes>
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -229,7 +230,7 @@ public:
                                        "missing from configuration.");
       return false;
     }
-    m_filter_chain_sp.reset(new LogFilterChain(filter_default_accept));
+    m_filter_chain_sp = std::make_shared<LogFilterChain>(filter_default_accept);
     DNBLogThreadedIf(LOG_DARWIN_LOG, "DarwinLog no-match rule: %s.",
                      filter_default_accept ? "accept" : "reject");
 
@@ -315,8 +316,8 @@ public:
         }
 
         // Create the filter.
-        filter_sp.reset(
-            new LogFilterExactMatch(filter_accepts, target_enum, exact_text));
+        filter_sp = std::make_shared<LogFilterExactMatch>(
+            filter_accepts, target_enum, exact_text);
       }
 
       // Add the filter to the chain.

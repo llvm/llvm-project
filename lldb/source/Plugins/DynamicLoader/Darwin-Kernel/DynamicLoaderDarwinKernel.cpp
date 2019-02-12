@@ -31,6 +31,8 @@
 
 #include "DynamicLoaderDarwinKernel.h"
 
+#include <memory>
+
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
 #include <stdio.h>
@@ -87,7 +89,7 @@ public:
   }
 
   DynamicLoaderDarwinKernelProperties() : Properties() {
-    m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_properties);
   }
 
@@ -112,7 +114,7 @@ typedef std::shared_ptr<DynamicLoaderDarwinKernelProperties>
 static const DynamicLoaderDarwinKernelPropertiesSP &GetGlobalProperties() {
   static DynamicLoaderDarwinKernelPropertiesSP g_settings_sp;
   if (!g_settings_sp)
-    g_settings_sp.reset(new DynamicLoaderDarwinKernelProperties());
+    g_settings_sp = std::make_shared<DynamicLoaderDarwinKernelProperties>();
   return g_settings_sp;
 }
 
@@ -791,8 +793,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       if (IsKernel()) {
         if (Symbols::DownloadObjectAndSymbolFile(module_spec, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-            m_module_sp.reset(new Module(module_spec.GetFileSpec(),
-                                         target.GetArchitecture()));
+            m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
+                                                   target.GetArchitecture());
             if (m_module_sp.get() &&
                 m_module_sp->MatchesModuleSpec(module_spec)) {
               ModuleList loaded_module_list;

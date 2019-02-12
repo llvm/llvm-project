@@ -8,12 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Process/Utility/ThreadMemory.h"
+
 #include "Plugins/Process/Utility/RegisterContextThreadMemory.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Unwind.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -44,8 +47,8 @@ void ThreadMemory::ClearStackFrames() {
 
 RegisterContextSP ThreadMemory::GetRegisterContext() {
   if (!m_reg_context_sp)
-    m_reg_context_sp.reset(
-        new RegisterContextThreadMemory(*this, m_register_data_addr));
+    m_reg_context_sp = std::make_shared<RegisterContextThreadMemory>(
+        *this, m_register_data_addr);
   return m_reg_context_sp;
 }
 

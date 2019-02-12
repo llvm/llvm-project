@@ -52,11 +52,13 @@
 //
 // BULK-MEMORY:#define __wasm_bulk_memory__ 1{{$}}
 //
+// We don't use -matomics directly and '-mthread-model posix' sets the atomics
+// target feature.
 // RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm32-unknown-unknown -matomics \
+// RUN:     -target wasm32-unknown-unknown -mthread-model posix \
 // RUN:   | FileCheck %s -check-prefix=ATOMICS
 // RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target wasm64-unknown-unknown -matomics \
+// RUN:     -target wasm64-unknown-unknown -mthread-model posix \
 // RUN:   | FileCheck %s -check-prefix=ATOMICS
 //
 // ATOMICS:#define __wasm_atomics__ 1{{$}}

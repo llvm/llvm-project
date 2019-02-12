@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Memory.h"
-#include <inttypes.h>
+
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+
+#include <cinttypes>
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -357,8 +360,8 @@ AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
   }
 
   if (addr != LLDB_INVALID_ADDRESS) {
-    block_sp.reset(
-        new AllocatedBlock(addr, page_byte_size, permissions, chunk_size));
+    block_sp = std::make_shared<AllocatedBlock>(addr, page_byte_size,
+                                                permissions, chunk_size);
     m_memory_map.insert(std::make_pair(permissions, block_sp));
   }
   return block_sp;

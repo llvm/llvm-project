@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -811,7 +812,7 @@ bool ScriptInterpreterPython::ExecuteOneLine(
             join_read_thread = true;
             FILE *outfile_handle =
                 fdopen(pipe.ReleaseWriteFileDescriptor(), "w");
-            output_file_sp.reset(new StreamFile(outfile_handle, true));
+            output_file_sp = std::make_shared<StreamFile>(outfile_handle, true);
             error_file_sp = output_file_sp;
             if (outfile_handle)
               ::setbuf(outfile_handle, nullptr);
@@ -827,12 +828,12 @@ bool ScriptInterpreterPython::ExecuteOneLine(
         debugger.AdoptTopIOHandlerFilesIfInvalid(input_file_sp, output_file_sp,
                                                  error_file_sp);
     } else {
-      input_file_sp.reset(new StreamFile());
+      input_file_sp = std::make_shared<StreamFile>();
       FileSystem::Instance().Open(input_file_sp->GetFile(),
                                   FileSpec(FileSystem::DEV_NULL),
                                   File::eOpenOptionRead);
 
-      output_file_sp.reset(new StreamFile());
+      output_file_sp = std::make_shared<StreamFile>();
       FileSystem::Instance().Open(output_file_sp->GetFile(),
                                   FileSpec(FileSystem::DEV_NULL),
                                   File::eOpenOptionWrite);
@@ -2220,7 +2221,7 @@ bool ScriptInterpreterPython::GetScriptedSummary(
   }
 
   if (new_callee && old_callee != new_callee)
-    callee_wrapper_sp.reset(new StructuredPythonObject(new_callee));
+    callee_wrapper_sp = std::make_shared<StructuredPythonObject>(new_callee);
 
   return ret_val;
 }
@@ -2879,7 +2880,7 @@ bool ScriptInterpreterPython::LoadScriptingModule(
               ScriptInterpreter::eScriptReturnTypeOpaqueObject,
               &module_pyobj) &&
           module_pyobj)
-        module_sp->reset(new StructuredPythonObject(module_pyobj));
+        *module_sp = std::make_shared<StructuredPythonObject>(module_pyobj);
     }
 
     return true;

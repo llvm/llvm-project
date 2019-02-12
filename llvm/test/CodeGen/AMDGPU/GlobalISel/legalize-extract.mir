@@ -191,11 +191,12 @@ legalized: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: extract_s8_v3s8_offset16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<3 x s8>) = G_TRUNC [[DEF]](<3 x s32>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<3 x s16>) = G_ANYEXT [[TRUNC]](<3 x s8>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[ANYEXT]](<3 x s16>), 32
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[EXTRACT]](s16)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[DEF]](<4 x s32>)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s8>) = G_EXTRACT [[TRUNC]](<4 x s8>), 0
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<3 x s16>) = G_ANYEXT [[EXTRACT]](<3 x s8>)
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[ANYEXT]](<3 x s16>), 32
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[EXTRACT1]](s16)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC1]](s8)
     ; CHECK: $vgpr0 = COPY [[ANYEXT1]](s32)
     %0:_(<3 x s8>) = G_IMPLICIT_DEF
@@ -211,15 +212,16 @@ legalized: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: extract_s8_v5s1_offset4
-    ; CHECK: [[DEF:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<5 x s1>) = G_TRUNC [[DEF]](<5 x s32>)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<5 x s16>) = G_ANYEXT [[TRUNC]](<5 x s1>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s16) = G_EXTRACT [[ANYEXT]](<5 x s16>), 80
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[EXTRACT]](s16)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<6 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<6 x s1>) = G_TRUNC [[DEF]](<6 x s32>)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<5 x s1>) = G_EXTRACT [[TRUNC]](<6 x s1>), 0
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<5 x s16>) = G_ANYEXT [[EXTRACT]](<5 x s1>)
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[ANYEXT]](<5 x s16>), 64
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[EXTRACT1]](s16)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC1]](s1)
     ; CHECK: $vgpr0 = COPY [[ANYEXT1]](s32)
     %0:_(<5 x s1>) = G_IMPLICIT_DEF
-    %1:_(s1) = G_EXTRACT %0, 5
+    %1:_(s1) = G_EXTRACT %0, 4
     %2:_(s32) = G_ANYEXT %1
     $vgpr0 = COPY %2
 ...
