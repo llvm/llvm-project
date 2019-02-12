@@ -622,7 +622,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     } else {
       // The thread name contains special chars, send as hex bytes.
       response.PutCString("hexname:");
-      response.PutCStringAsRawHex8(thread_name.c_str());
+      response.PutStringAsRawHex8(thread_name);
     }
     response.PutChar(';');
   }
@@ -662,7 +662,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
         response.PutCString("jstopinfo:");
         StreamString unescaped_response;
         threads_info_sp->Write(unescaped_response);
-        response.PutCStringAsRawHex8(unescaped_response.GetData());
+        response.PutStringAsRawHex8(unescaped_response.GetData());
         response.PutChar(';');
       } else
         LLDB_LOG(log, "failed to prepare a jstopinfo field for pid {0}",
@@ -763,7 +763,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   if (!description.empty()) {
     // Description may contains special chars, send as hex bytes.
     response.PutCString("description:");
-    response.PutCStringAsRawHex8(description.c_str());
+    response.PutStringAsRawHex8(description);
     response.PutChar(';');
   } else if ((tid_stop_info.reason == eStopReasonException) &&
              tid_stop_info.details.exception.type) {
@@ -1340,7 +1340,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qGetWorkingDir(
   FileSpec working_dir{m_process_launch_info.GetWorkingDirectory()};
   if (working_dir) {
     StreamString response;
-    response.PutCStringAsRawHex8(working_dir.GetCString());
+    response.PutStringAsRawHex8(working_dir.GetCString());
     return SendPacketNoLock(response.GetString());
   }
 
@@ -2425,7 +2425,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     // Return the error message.
 
     response.PutCString("error:");
-    response.PutCStringAsRawHex8(error.AsCString());
+    response.PutStringAsRawHex8(error.AsCString());
     response.PutChar(';');
   } else {
     // Range start and size.
@@ -2453,7 +2453,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
     ConstString name = region_info.GetName();
     if (name) {
       response.PutCString("name:");
-      response.PutCStringAsRawHex8(name.AsCString());
+      response.PutStringAsRawHex8(name.AsCString());
       response.PutChar(';');
     }
   }
