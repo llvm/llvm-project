@@ -75,20 +75,20 @@ define void @test6(double %A, double %B, double %C, double %D, double %E) nounwi
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    foo %st(0) %st(0)
+; CHECK-NEXT:    foo %st %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    bar %st(1) %st(0)
+; CHECK-NEXT:    bar %st(1) %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    baz %st(1) %st(0)
+; CHECK-NEXT:    baz %st(1) %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    baz %st(0)
+; CHECK-NEXT:    baz %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    retl
@@ -117,10 +117,10 @@ define void @testPR4185() {
 ; CHECK-NEXT:    flds LCPI6_0
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistpl %st(0)
+; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistpl %st(0)
+; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
 return:
@@ -138,10 +138,10 @@ define void @testPR4185b() {
 ; CHECK:       ## %bb.0: ## %return
 ; CHECK-NEXT:    flds LCPI7_0
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistl %st(0)
+; CHECK-NEXT:    fistl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistpl %st(0)
+; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
 return:
@@ -163,7 +163,7 @@ define void @testPR4459(x86_fp80 %a) {
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistpl %st(0)
+; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll _test3
@@ -191,7 +191,7 @@ define void @testPR4484(x86_fp80 %a) {
 ; CHECK-NEXT:    calll _test1
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%esp) ## 10-byte Folded Reload
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistpl %st(0)
+; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll _test3
@@ -211,18 +211,18 @@ define void @testPR4485(x86_fp80* %a) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    fldt (%eax)
 ; CHECK-NEXT:    flds LCPI10_0
-; CHECK-NEXT:    fmul %st(0), %st(1)
+; CHECK-NEXT:    fmul %st, %st(1)
 ; CHECK-NEXT:    flds LCPI10_1
-; CHECK-NEXT:    fmul %st(0), %st(2)
+; CHECK-NEXT:    fmul %st, %st(2)
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistpl %st(0)
+; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fldt (%eax)
-; CHECK-NEXT:    fmulp %st(1)
-; CHECK-NEXT:    fmulp %st(1)
+; CHECK-NEXT:    fmulp %st, %st(1)
+; CHECK-NEXT:    fmulp %st, %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fistpl %st(0)
+; CHECK-NEXT:    fistpl %st
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
 entry:
@@ -422,7 +422,7 @@ define i32 @PR10602() nounwind ssp {
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    fcomi %st(1), %st(0); pushf; pop %eax
+; CHECK-NEXT:    fcomi %st(1), %st; pushf; pop %eax
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    fstp %st(0)
@@ -505,9 +505,9 @@ define double @test_operand_rewrite() {
 ; CHECK-LABEL: test_operand_rewrite:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    foo %st(0), %st(1)
+; CHECK-NEXT:    foo %st, %st(1)
 ; CHECK-NEXT:    ## InlineAsm End
-; CHECK-NEXT:    fsubp %st(1)
+; CHECK-NEXT:    fsubp %st, %st(1)
 ; CHECK-NEXT:    retl
 entry:
   %0 = tail call { double, double } asm sideeffect "foo $0, $1", "={st},={st(1)},~{dirflag},~{fpsr},~{flags}"()
