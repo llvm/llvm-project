@@ -1,0 +1,5 @@
+# RUN: %clang %p/Inputs/hello.c -g -o "%t-'pat"
+# RUN: %lldb -s %s "%t-'pat" | FileCheck %s
+
+br set -p return
+# CHECK: Breakpoint 1: where = TestSingleQuote.test.tmp-'pat`main
