@@ -80,7 +80,7 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
     return status.ToError();
 
   args.AppendArgument(
-      ("localhost:" + Twine(listen_socket.GetLocalPortNumber())).str());
+      ("127.0.0.1:" + Twine(listen_socket.GetLocalPortNumber())).str());
 
   for (StringRef arg : ServerArgs)
     args.AppendArgument(arg);
