@@ -68,6 +68,7 @@ add_lldb_library(lldbTarget
   QueueList.cpp
   RegisterContext.cpp
   RegisterNumber.cpp
+  RemoteAwarePlatform.cpp
   SectionLoadHistory.cpp
   SectionLoadList.cpp
   StackFrame.cpp
