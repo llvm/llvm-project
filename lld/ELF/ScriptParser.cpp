@@ -329,7 +329,7 @@ void ScriptParser::readEntry() {
 void ScriptParser::readExtern() {
   expect("(");
   while (!errorCount() && !consume(")"))
-    Config->Undefined.push_back(next());
+    Config->Undefined.push_back(unquote(next()));
 }
 
 void ScriptParser::readGroup() {

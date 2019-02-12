@@ -36,7 +36,7 @@ FUZZER_FLAG_INT(
     "If one unit runs more than this number of seconds the process will abort.")
 FUZZER_FLAG_INT(error_exitcode, 77, "When libFuzzer itself reports a bug "
   "this exit code will be used.")
-FUZZER_FLAG_INT(timeout_exitcode, 77, "When libFuzzer reports a timeout "
+FUZZER_FLAG_INT(timeout_exitcode, 70, "When libFuzzer reports a timeout "
   "this exit code will be used.")
 FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")

@@ -1,8 +1,8 @@
 # FIXME: Disabled on Windows because -fPIC cannot be used to compile for Windows.
 UNSUPPORTED: windows
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable  %S/NullDerefTest.cpp -o %t-NullDerefTest
-RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -shared -o %dynamiclib1
-RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -shared -o %dynamiclib2
+RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO1.cpp -fPIC %ld_flags_rpath_so1 -O0 -shared -o %dynamiclib1
+RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSO2.cpp -fPIC %ld_flags_rpath_so2 -O0 -shared -o %dynamiclib2
 RUN: %cpp_compiler -mllvm -use-unknown-locations=Disable %S/DSOTestMain.cpp %S/DSOTestExtra.cpp %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t-DSOTest
 
 CHECK: COVERAGE:
@@ -11,10 +11,10 @@ RUN: not %run %t-NullDerefTest -print_coverage=1 2>&1 | FileCheck %s
 
 RUN: %run %t-DSOTest -print_coverage=1 -runs=0 2>&1 | FileCheck %s --check-prefix=DSO
 DSO: COVERAGE:
-DSO-DAG: COVERED_FUNC:{{.*}}1{{.*}}
-DSO-DAG: COVERED_FUNC:{{.*}}2{{.*}}
+DSO-DAG: COVERED_FUNC:{{.*}}DSO1
+DSO-DAG: COVERED_FUNC:{{.*}}DSO2
 DSO-DAG: COVERED_FUNC:{{.*}}LLVMFuzzerTestOneInput{{.*}}DSOTestMain
-DSO-DAG: UNCOVERED_PC:{{.*}}1
-DSO-DAG: UNCOVERED_PC:{{.*}}2
+DSO-DAG: UNCOVERED_PC:{{.*}}DSO1
+DSO-DAG: UNCOVERED_PC:{{.*}}DSO2
 DSO-DAG: UNCOVERED_PC:{{.*}}DSOTestMain
 DSO-DAG: UNCOVERED_FUNC:{{.*}}Uncovered1

@@ -1,0 +1,35 @@
+# RUN: not llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_extract
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    ; CHECK: Bad machine code: Too few operands
+    %0:_(s32) = G_EXTRACT
+
+    ; CHECK: Bad machine code: Too few operands
+    %1:_(s32) = G_EXTRACT 0
+
+    ; CHECK: Bad machine code: extract source must be a register
+    %2:_(s32) = G_EXTRACT 0, 1
+
+    ; CHECK: Bad machine code: extract offset must be a constant
+    %3:_(s32) = G_IMPLICIT_DEF
+    %4:_(s32) = G_CONSTANT i32 0
+    %5:_(s16) = G_EXTRACT %3, %4
+
+    ; CHECK: Bad machine code: extract source must be larger than result
+    %6:_(s32) = G_IMPLICIT_DEF
+    %7:_(s32) = G_EXTRACT %6, 0
+
+    ; CHECK: Bad machine code: extract reads past end of register
+    %8:_(s1) = G_EXTRACT %6, 32
+
+...

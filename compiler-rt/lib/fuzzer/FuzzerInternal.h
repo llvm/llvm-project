@@ -87,7 +87,7 @@ public:
 
   void HandleMalloc(size_t Size);
   static void MaybeExitGracefully();
-  void WriteToOutputCorpus(const Unit &U);
+  std::string WriteToOutputCorpus(const Unit &U);
 
 private:
   void AlarmCallback();

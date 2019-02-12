@@ -19,8 +19,8 @@
 
 typedef llvm::ImmutableSet<
     std::pair<clang::ento::SymbolRef, const clang::ento::SMTExpr *>>
-    ConstraintSMTTy;
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ConstraintSMT, ConstraintSMTTy)
+    ConstraintSMTType;
+REGISTER_TRAIT_WITH_PROGRAMSTATE(ConstraintSMT, ConstraintSMTType)
 
 namespace clang {
 namespace ento {

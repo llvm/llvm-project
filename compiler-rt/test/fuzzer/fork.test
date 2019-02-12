@@ -1,0 +1,5 @@
+# REQUIRES: linux
+CHECK: BINGO
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
+
+RUN: not %run %t-SimpleTest -fork=1 2>&1 | FileCheck %s

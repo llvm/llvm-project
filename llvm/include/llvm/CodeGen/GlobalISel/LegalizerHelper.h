@@ -86,7 +86,7 @@ public:
   /// Legalize a vector instruction by increasing the number of vector elements
   /// involved and ignoring the added elements later.
   LegalizeResult moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
-                                    LLT WideTy);
+                                    LLT MoreTy);
 
   /// Expose MIRBuilder so clients can set their own RecordInsertInstruction
   /// functions
@@ -119,6 +119,11 @@ private:
   // extending back with \p ExtOpcode.
   void narrowScalarDst(MachineInstr &MI, LLT NarrowTy, unsigned OpIdx,
                        unsigned ExtOpcode);
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Def by performing it with additional vector elements and extracting the
+  /// result elements, and replacing the vreg of the operand in place.
+  void moreElementsVectorDst(MachineInstr &MI, LLT MoreTy, unsigned OpIdx);
+
   LegalizeResult
   widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult

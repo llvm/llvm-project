@@ -26,6 +26,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/Log.h"
 
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -497,7 +498,8 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
     llvm::sort(start, end);
     addrs.erase(std::unique(start, end), end);
-    thread_plan_sp.reset(new ThreadPlanRunToAddress(thread, addrs, stop));
+    thread_plan_sp =
+        std::make_shared<ThreadPlanRunToAddress>(thread, addrs, stop);
   }
 
   return thread_plan_sp;

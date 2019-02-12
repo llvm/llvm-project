@@ -81,6 +81,10 @@ void DiscardOutput(int Fd);
 
 intptr_t GetHandleFromFd(int fd);
 
+void MkDir(const std::string &Path);
+void RmDir(const std::string &Path);
+void RmFilesInDir(const std::string &Path);
+
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_IO_H

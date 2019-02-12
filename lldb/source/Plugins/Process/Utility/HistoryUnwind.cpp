@@ -16,6 +16,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -42,9 +44,9 @@ HistoryUnwind::DoCreateRegisterContextForFrame(StackFrame *frame) {
     addr_t pc = frame->GetFrameCodeAddress().GetLoadAddress(
         &frame->GetThread()->GetProcess()->GetTarget());
     if (pc != LLDB_INVALID_ADDRESS) {
-      rctx.reset(new RegisterContextHistory(
+      rctx = std::make_shared<RegisterContextHistory>(
           *frame->GetThread().get(), frame->GetConcreteFrameIndex(),
-          frame->GetThread()->GetProcess()->GetAddressByteSize(), pc));
+          frame->GetThread()->GetProcess()->GetAddressByteSize(), pc);
     }
   }
   return rctx;

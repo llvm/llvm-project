@@ -57,8 +57,9 @@ name: test_unmerge_s16_v3s16
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_unmerge_s16_v3s16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
     ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)

@@ -223,8 +223,9 @@ body: |
   bb.0:
 
     ; SI-LABEL: name: test_fsqrt_v3s16
-    ; SI: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
+    ; SI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; SI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
     ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
     ; SI: [[FSQRT:%[0-9]+]]:_(s32) = G_FSQRT [[FPEXT]]
     ; SI: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FSQRT]](s32)
@@ -237,16 +238,18 @@ body: |
     ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16)
     ; SI: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s16>)
     ; VI-LABEL: name: test_fsqrt_v3s16
-    ; VI: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
+    ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; VI: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
     ; VI: [[FSQRT:%[0-9]+]]:_(s16) = G_FSQRT [[UV]]
     ; VI: [[FSQRT1:%[0-9]+]]:_(s16) = G_FSQRT [[UV1]]
     ; VI: [[FSQRT2:%[0-9]+]]:_(s16) = G_FSQRT [[UV2]]
     ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[FSQRT]](s16), [[FSQRT1]](s16), [[FSQRT2]](s16)
     ; VI: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s16>)
     ; GFX9-LABEL: name: test_fsqrt_v3s16
-    ; GFX9: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[DEF]](<3 x s16>)
+    ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; GFX9: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
     ; GFX9: [[FSQRT:%[0-9]+]]:_(s16) = G_FSQRT [[UV]]
     ; GFX9: [[FSQRT1:%[0-9]+]]:_(s16) = G_FSQRT [[UV1]]
     ; GFX9: [[FSQRT2:%[0-9]+]]:_(s16) = G_FSQRT [[UV2]]

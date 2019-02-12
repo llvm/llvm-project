@@ -18101,12 +18101,9 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
          "Unknown FP_TO_INT to lower!");
 
   // These are really Legal.
-  if (DstTy == MVT::i32 &&
-      isScalarFPTypeInSSEReg(Op.getOperand(0).getValueType()))
+  if (DstTy == MVT::i32 && isScalarFPTypeInSSEReg(TheVT))
     return std::make_pair(SDValue(), SDValue());
-  if (Subtarget.is64Bit() &&
-      DstTy == MVT::i64 &&
-      isScalarFPTypeInSSEReg(Op.getOperand(0).getValueType()))
+  if (Subtarget.is64Bit() && DstTy == MVT::i64 && isScalarFPTypeInSSEReg(TheVT))
     return std::make_pair(SDValue(), SDValue());
 
   // We lower FP->int64 into FISTP64 followed by a load from a temporary
@@ -18181,15 +18178,17 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     assert(DstTy == MVT::i64 && "Invalid FP_TO_SINT to lower!");
     Chain = DAG.getStore(Chain, DL, Value, StackSlot,
                          MachinePointerInfo::getFixedStack(MF, SSFI));
-    SDVTList Tys = DAG.getVTList(Op.getOperand(0).getValueType(), MVT::Other);
+    SDVTList Tys = DAG.getVTList(TheVT, MVT::Other);
     SDValue Ops[] = {
       Chain, StackSlot, DAG.getValueType(TheVT)
     };
 
+    unsigned FLDSize = TheVT.getStoreSize();
+    assert(FLDSize <= MemSize && "Stack slot not big enough");
     MachineMemOperand *MMO =
         MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, SSFI),
-                                MachineMemOperand::MOLoad, MemSize, MemSize);
-    Value = DAG.getMemIntrinsicNode(X86ISD::FLD, DL, Tys, Ops, DstTy, MMO);
+                                MachineMemOperand::MOLoad, FLDSize, FLDSize);
+    Value = DAG.getMemIntrinsicNode(X86ISD::FLD, DL, Tys, Ops, TheVT, MMO);
     Chain = Value.getValue(1);
     SSFI = MF.getFrameInfo().CreateStackObject(MemSize, MemSize, false);
     StackSlot = DAG.getFrameIndex(SSFI, PtrVT);

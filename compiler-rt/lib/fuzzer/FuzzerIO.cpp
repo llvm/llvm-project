@@ -125,4 +125,11 @@ void Printf(const char *Fmt, ...) {
   fflush(OutputFile);
 }
 
+void RmFilesInDir(const std::string &Path) {
+  Vector<std::string> Files;
+  ListFilesInDirRecursive(Path, 0, &Files, /*TopDir*/true);
+  for (auto &F : Files)
+    RemoveFile(F);
+}
+
 }  // namespace fuzzer

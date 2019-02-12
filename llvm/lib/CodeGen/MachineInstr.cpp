@@ -1291,8 +1291,10 @@ bool MachineInstr::hasOrderedMemoryRef() const {
     return true;
 
   // Check if any of our memory operands are ordered.
+  // TODO: This should probably be be isUnordered (see D57601), but the callers
+  // need audited and test cases written to be sure.
   return llvm::any_of(memoperands(), [](const MachineMemOperand *MMO) {
-    return !MMO->isUnordered();
+    return MMO->isVolatile() || MMO->isAtomic();
   });
 }
 

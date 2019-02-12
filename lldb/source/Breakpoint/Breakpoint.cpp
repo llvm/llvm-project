@@ -29,6 +29,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
@@ -158,8 +160,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
       SearchFilter::GetSerializationKey(), filter_dict);
   SearchFilterSP filter_sp;
   if (!success)
-    filter_sp.reset(
-        new SearchFilterForUnconstrainedSearches(target.shared_from_this()));
+    filter_sp = std::make_shared<SearchFilterForUnconstrainedSearches>(
+        target.shared_from_this());
   else {
     filter_sp = SearchFilter::CreateFromStructuredData(target, *filter_dict,
                                                        create_error);

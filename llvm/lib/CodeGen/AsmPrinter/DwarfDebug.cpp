@@ -2124,9 +2124,9 @@ void DwarfDebug::emitDebugLoc() {
 }
 
 void DwarfDebug::emitDebugLocDWO() {
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getDwarfLocDWOSection());
   for (const auto &List : DebugLocs.getLists()) {
+    Asm->OutStreamer->SwitchSection(
+        Asm->getObjFileLowering().getDwarfLocDWOSection());
     Asm->OutStreamer->EmitLabel(List.Label);
     for (const auto &Entry : DebugLocs.getEntries(List)) {
       // GDB only supports startx_length in pre-standard split-DWARF.

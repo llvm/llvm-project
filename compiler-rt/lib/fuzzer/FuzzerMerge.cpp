@@ -120,28 +120,28 @@ size_t Merger::ApproximateMemoryConsumption() const  {
   return Res;
 }
 
-// Decides which files need to be merged (add thost to NewFiles).
+// Decides which files need to be merged (add those to NewFiles).
 // Returns the number of new features added.
 size_t Merger::Merge(const Set<uint32_t> &InitialFeatures,
-                     Set<uint32_t> *AllFeatures,
+                     Set<uint32_t> *NewFeatures,
                      Vector<std::string> *NewFiles) {
   NewFiles->clear();
   assert(NumFilesInFirstCorpus <= Files.size());
-  *AllFeatures = InitialFeatures;
+  Set<uint32_t> AllFeatures = InitialFeatures;
 
   // What features are in the initial corpus?
   for (size_t i = 0; i < NumFilesInFirstCorpus; i++) {
     auto &Cur = Files[i].Features;
-    AllFeatures->insert(Cur.begin(), Cur.end());
+    AllFeatures.insert(Cur.begin(), Cur.end());
   }
-  size_t InitialNumFeatures = AllFeatures->size();
+  size_t InitialNumFeatures = AllFeatures.size();
 
   // Remove all features that we already know from all other inputs.
   for (size_t i = NumFilesInFirstCorpus; i < Files.size(); i++) {
     auto &Cur = Files[i].Features;
     Vector<uint32_t> Tmp;
-    std::set_difference(Cur.begin(), Cur.end(), AllFeatures->begin(),
-                        AllFeatures->end(), std::inserter(Tmp, Tmp.begin()));
+    std::set_difference(Cur.begin(), Cur.end(), AllFeatures.begin(),
+                        AllFeatures.end(), std::inserter(Tmp, Tmp.begin()));
     Cur.swap(Tmp);
   }
 
@@ -161,12 +161,17 @@ size_t Merger::Merge(const Set<uint32_t> &InitialFeatures,
     auto &Cur = Files[i].Features;
     // Printf("%s -> sz %zd ft %zd\n", Files[i].Name.c_str(),
     //       Files[i].Size, Cur.size());
-    size_t OldSize = AllFeatures->size();
-    AllFeatures->insert(Cur.begin(), Cur.end());
-    if (AllFeatures->size() > OldSize)
+    bool FoundNewFeatures = false;
+    for (auto Fe: Cur) {
+      if (AllFeatures.insert(Fe).second) {
+        FoundNewFeatures = true;
+        NewFeatures->insert(Fe);
+      }
+    }
+    if (FoundNewFeatures)
       NewFiles->push_back(Files[i].Name);
   }
-  return AllFeatures->size() - InitialNumFeatures;
+  return AllFeatures.size() - InitialNumFeatures;
 }
 
 Set<uint32_t> Merger::AllFeatures() const {
