@@ -145,16 +145,42 @@ static void updateStringLiteralType(Expr *E, QualType Ty) {
   while (true) {
     E->setType(Ty);
     E->setValueKind(VK_RValue);
-    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E))
+    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E)) {
       break;
-    else if (ParenExpr *PE = dyn_cast<ParenExpr>(E))
+    } else if (ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
       E = PE->getSubExpr();
-    else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
+    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      assert(UO->getOpcode() == UO_Extension);
       E = UO->getSubExpr();
-    else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E))
+    } else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E)) {
       E = GSE->getResultExpr();
-    else
+    } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
+      E = CE->getChosenSubExpr();
+    } else {
       llvm_unreachable("unexpected expr in string literal init");
+    }
+  }
+}
+
+/// Fix a compound literal initializing an array so it's correctly marked
+/// as an rvalue.
+static void updateGNUCompoundLiteralRValue(Expr *E) {
+  while (true) {
+    E->setValueKind(VK_RValue);
+    if (isa<CompoundLiteralExpr>(E)) {
+      break;
+    } else if (ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
+      E = PE->getSubExpr();
+    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      assert(UO->getOpcode() == UO_Extension);
+      E = UO->getSubExpr();
+    } else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E)) {
+      E = GSE->getResultExpr();
+    } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
+      E = CE->getChosenSubExpr();
+    } else {
+      llvm_unreachable("unexpected expr in array compound literal init");
+    }
   }
 }
 
@@ -5542,8 +5568,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     // array from a compound literal that creates an array of the same
     // type, so long as the initializer has no side effects.
     if (!S.getLangOpts().CPlusPlus && Initializer &&
-        (isa<ConstantExpr>(Initializer->IgnoreParens()) ||
-         isa<CompoundLiteralExpr>(Initializer->IgnoreParens())) &&
+        isa<CompoundLiteralExpr>(Initializer->IgnoreParens()) &&
         Initializer->getType()->isArrayType()) {
       const ArrayType *SourceAT
         = Context.getAsArrayType(Initializer->getType());
@@ -7956,6 +7981,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       S.Diag(Kind.getLocation(), diag::ext_array_init_copy)
         << Step->Type << CurInit.get()->getType()
         << CurInit.get()->getSourceRange();
+      updateGNUCompoundLiteralRValue(CurInit.get());
       LLVM_FALLTHROUGH;
     case SK_ArrayInit:
       // If the destination type is an incomplete array type, update the

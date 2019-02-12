@@ -1148,7 +1148,7 @@ bool AppleObjCRuntimeV2::HashTableSignature::NeedsUpdate(
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::GetClassDescriptorFromISA(ObjCISA isa) {
   ObjCLanguageRuntime::ClassDescriptorSP class_descriptor_sp;
-  if (m_non_pointer_isa_cache_ap.get())
+  if (m_non_pointer_isa_cache_ap)
     class_descriptor_sp = m_non_pointer_isa_cache_ap->GetClassDescriptor(isa);
   if (!class_descriptor_sp)
     class_descriptor_sp = ObjCLanguageRuntime::GetClassDescriptorFromISA(isa);
@@ -1310,7 +1310,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
   ValueList arguments;
   FunctionCaller *get_class_info_function = nullptr;
 
-  if (!m_get_class_info_code.get()) {
+  if (!m_get_class_info_code) {
     Status error;
     m_get_class_info_code.reset(GetTargetRef().GetUtilityFunctionForLanguage(
         g_get_dynamic_class_info_body, eLanguageTypeObjC,
@@ -1332,7 +1332,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
         m_get_class_info_code.reset();
       }
     }
-    if (!m_get_class_info_code.get())
+    if (!m_get_class_info_code)
       return DescriptorMapUpdateResult::Fail();
 
     // Next make the runner function for our implementation utility function.
@@ -1565,7 +1565,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
   ValueList arguments;
   FunctionCaller *get_shared_cache_class_info_function = nullptr;
 
-  if (!m_get_shared_cache_class_info_code.get()) {
+  if (!m_get_shared_cache_class_info_code) {
     Status error;
     m_get_shared_cache_class_info_code.reset(
         GetTargetRef().GetUtilityFunctionForLanguage(
@@ -1589,7 +1589,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
       }
     }
 
-    if (!m_get_shared_cache_class_info_code.get())
+    if (!m_get_shared_cache_class_info_code)
       return DescriptorMapUpdateResult::Fail();
 
     // Next make the function caller for our implementation utility function.
@@ -1946,7 +1946,7 @@ AppleObjCRuntimeV2::GetActualTypeName(ObjCLanguageRuntime::ObjCISA isa) {
 }
 
 DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
-  if (!m_decl_vendor_ap.get())
+  if (!m_decl_vendor_ap)
     m_decl_vendor_ap.reset(new AppleObjCDeclVendor(*this));
 
   return m_decl_vendor_ap.get();

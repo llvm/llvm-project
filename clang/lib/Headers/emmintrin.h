@@ -3567,7 +3567,7 @@ _mm_load_si128(__m128i const *__p)
 ///    A pointer to a memory location containing integer values.
 /// \returns A 128-bit integer vector containing the moved values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_loadu_si128(__m128i const *__p)
+_mm_loadu_si128(__m128i_u const *__p)
 {
   struct __loadu_si128 {
     __m128i_u __v;
@@ -3588,7 +3588,7 @@ _mm_loadu_si128(__m128i const *__p)
 /// \returns A 128-bit vector of [2 x i64]. The lower order bits contain the
 ///    moved value. The higher order bits are cleared.
 static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_loadl_epi64(__m128i const *__p)
+_mm_loadl_epi64(__m128i_u const *__p)
 {
   struct __mm_loadl_epi64_struct {
     long long __u;
@@ -4030,7 +4030,7 @@ _mm_store_si128(__m128i *__p, __m128i __b)
 /// \param __b
 ///    A 128-bit integer vector containing the values to be moved.
 static __inline__ void __DEFAULT_FN_ATTRS
-_mm_storeu_si128(__m128i *__p, __m128i __b)
+_mm_storeu_si128(__m128i_u *__p, __m128i __b)
 {
   struct __storeu_si128 {
     __m128i_u __v;
@@ -4142,7 +4142,7 @@ _mm_maskmoveu_si128(__m128i __d, __m128i __n, char *__p)
 ///    A 128-bit integer vector of [2 x i64]. The lower 64 bits contain the
 ///    value to be stored.
 static __inline__ void __DEFAULT_FN_ATTRS
-_mm_storel_epi64(__m128i *__p, __m128i __a)
+_mm_storel_epi64(__m128i_u *__p, __m128i __a)
 {
   struct __mm_storel_epi64_struct {
     long long __u;

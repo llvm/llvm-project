@@ -925,8 +925,8 @@ void ResultBuilder::AdjustResultPriorityForDecl(Result &R) {
   }
 }
 
-DeclContext::lookup_result getConstructors(ASTContext &Context,
-                                           const CXXRecordDecl *Record) {
+static DeclContext::lookup_result getConstructors(ASTContext &Context,
+                                                  const CXXRecordDecl *Record) {
   QualType RecordTy = Context.getTypeDeclType(Record);
   DeclarationName ConstructorName =
       Context.DeclarationNames.getCXXConstructorName(

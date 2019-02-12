@@ -141,7 +141,7 @@ void ValueObjectSynthetic::CreateSynthFilter() {
     }
   }
   m_synth_filter_ap = (m_synth_sp->GetFrontEnd(*valobj_for_frontend));
-  if (!m_synth_filter_ap.get())
+  if (!m_synth_filter_ap)
     m_synth_filter_ap = llvm::make_unique<DummySyntheticFrontEnd>(*m_parent);
 }
 
@@ -235,7 +235,7 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(size_t idx,
 
   ValueObject *valobj;
   if (!m_children_byindex.GetValueForKey(idx, valobj)) {
-    if (can_create && m_synth_filter_ap.get() != nullptr) {
+    if (can_create && m_synth_filter_ap != nullptr) {
       if (log)
         log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at "
                     "index %zu not cached and will be created",
@@ -301,13 +301,13 @@ size_t ValueObjectSynthetic::GetIndexOfChildWithName(const ConstString &name) {
   uint32_t found_index = UINT32_MAX;
   bool did_find = m_name_toindex.GetValueForKey(name.GetCString(), found_index);
 
-  if (!did_find && m_synth_filter_ap.get() != nullptr) {
+  if (!did_find && m_synth_filter_ap != nullptr) {
     uint32_t index = m_synth_filter_ap->GetIndexOfChildWithName(name);
     if (index == UINT32_MAX)
       return index;
     m_name_toindex.SetValueForKey(name.GetCString(), index);
     return index;
-  } else if (!did_find && m_synth_filter_ap.get() == nullptr)
+  } else if (!did_find && m_synth_filter_ap == nullptr)
     return UINT32_MAX;
   else /*if (iter != m_name_toindex.end())*/
     return found_index;

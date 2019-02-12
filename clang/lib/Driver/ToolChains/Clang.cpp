@@ -3823,7 +3823,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
   else
-    CmdArgs.push_back(Args.MakeArgString(TC.getThreadModel()));
+    CmdArgs.push_back(Args.MakeArgString(TC.getThreadModel(Args)));
 
   Args.AddLastArg(CmdArgs, options::OPT_fveclib);
 

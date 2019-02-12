@@ -50,7 +50,7 @@ void *test_builtin_os_log(void *buf) {
   // CHECK-O0: %[[V4:.*]] = ptrtoint %[[TY0]]* %[[V3]] to i64
   // CHECK-O0: call void @__os_log_helper_1_2_1_8_64(i8* %[[V0]], i64 %[[V4]])
   // CHECK-O0: %[[V5:.*]] = bitcast %[[TY0]]* %[[V3]] to i8*
-  // CHECK-O0-NOT call void (...) @llvm.objc.clang.arc.use({{.*}}
+  // CHECK-O0-NOT: call void (...) @llvm.objc.clang.arc.use({{.*}}
   // CHECK-O0: call void @llvm.objc.release(i8* %[[V5]])
   // CHECK-O0: ret i8* %[[V0]]
 }

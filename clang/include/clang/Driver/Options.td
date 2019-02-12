@@ -2184,8 +2184,6 @@ def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Featur
 def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
-def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
-def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 
 def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
   Flags<[HelpHidden]>,

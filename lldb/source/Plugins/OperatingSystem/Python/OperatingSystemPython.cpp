@@ -116,7 +116,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
 OperatingSystemPython::~OperatingSystemPython() {}
 
 DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
-  if (m_register_info_ap.get() == NULL) {
+  if (m_register_info_ap == NULL) {
     if (!m_interpreter || !m_python_object_sp)
       return NULL;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OS));
