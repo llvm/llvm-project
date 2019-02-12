@@ -62,7 +62,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
                                                  data_offset, file, file_offset,
                                                  file_size));
 
-            if (object_container_ap.get())
+            if (object_container_ap)
               object_file_sp = object_container_ap->GetObjectFile(file);
 
             if (object_file_sp.get())
@@ -111,7 +111,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
                                                    data_offset, file,
                                                    file_offset, file_size));
 
-              if (object_container_ap.get())
+              if (object_container_ap)
                 object_file_sp = object_container_ap->GetObjectFile(file);
 
               if (object_file_sp.get())
@@ -152,7 +152,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
               create_object_container_callback(module_sp, data_sp, data_offset,
                                                file, file_offset, file_size));
 
-          if (object_container_ap.get())
+          if (object_container_ap)
             object_file_sp = object_container_ap->GetObjectFile(file);
 
           if (object_file_sp.get())
@@ -615,7 +615,7 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (m_sections_ap.get() == nullptr) {
+  if (m_sections_ap == nullptr) {
     if (update_module_section_list) {
       ModuleSP module_sp(GetModule());
       if (module_sp) {

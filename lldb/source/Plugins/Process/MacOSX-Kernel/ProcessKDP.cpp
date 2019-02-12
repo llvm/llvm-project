@@ -233,7 +233,7 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
 
   std::unique_ptr<ConnectionFileDescriptor> conn_ap(
       new ConnectionFileDescriptor());
-  if (conn_ap.get()) {
+  if (conn_ap) {
     // Only try once for now.
     // TODO: check if we should be retrying?
     const uint32_t max_retry_count = 1;

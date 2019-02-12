@@ -300,7 +300,7 @@ UnwindAssemblyInstEmulation::CreateInstance(const ArchSpec &arch) {
       EmulateInstruction::FindPlugin(arch, eInstructionTypePrologueEpilogue,
                                      NULL));
   // Make sure that all prologue instructions are handled
-  if (inst_emulator_ap.get())
+  if (inst_emulator_ap)
     return new UnwindAssemblyInstEmulation(arch, inst_emulator_ap.release());
   return NULL;
 }

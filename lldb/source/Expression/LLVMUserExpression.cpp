@@ -115,10 +115,9 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       function_stack_bottom = m_stack_frame_bottom;
       function_stack_top = m_stack_frame_top;
 
-      IRInterpreter::Interpret(*module, *function, args,
-                               *m_execution_unit_sp.get(), interpreter_error,
-                               function_stack_bottom, function_stack_top,
-                               exe_ctx);
+      IRInterpreter::Interpret(*module, *function, args, *m_execution_unit_sp,
+                               interpreter_error, function_stack_bottom,
+                               function_stack_top, exe_ctx);
 
       if (!interpreter_error.Success()) {
         diagnostic_manager.Printf(eDiagnosticSeverityError,

@@ -3467,7 +3467,7 @@ Target::StopHook::StopHook(const StopHook &rhs)
       m_commands(rhs.m_commands), m_specifier_sp(rhs.m_specifier_sp),
       m_thread_spec_ap(), m_active(rhs.m_active) {
   if (rhs.m_thread_spec_ap)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
+    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap));
 }
 
 Target::StopHook::~StopHook() = default;

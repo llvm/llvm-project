@@ -1938,7 +1938,7 @@ public:
     m_property_getter_name = rhs.m_property_getter_name;
     m_property_attributes = rhs.m_property_attributes;
 
-    if (rhs.m_metadata_ap.get()) {
+    if (rhs.m_metadata_ap) {
       m_metadata_ap.reset(new ClangASTMetadata());
       *m_metadata_ap = *rhs.m_metadata_ap;
     }

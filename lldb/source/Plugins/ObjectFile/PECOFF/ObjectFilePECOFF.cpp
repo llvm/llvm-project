@@ -552,7 +552,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_ap.get() == NULL) {
+    if (m_symtab_ap == NULL) {
       SectionList *sect_list = GetSectionList();
       m_symtab_ap.reset(new Symtab(this));
       std::lock_guard<std::recursive_mutex> guard(m_symtab_ap->GetMutex());
@@ -951,7 +951,7 @@ void ObjectFilePECOFF::Dump(Stream *s) {
     if (sections)
       sections->Dump(s, NULL, true, UINT32_MAX);
 
-    if (m_symtab_ap.get())
+    if (m_symtab_ap)
       m_symtab_ap->Dump(s, NULL, eSortOrderNone);
 
     if (m_dos_header.e_magic)

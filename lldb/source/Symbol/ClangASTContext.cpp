@@ -773,7 +773,7 @@ void ClangASTContext::Terminate() {
 }
 
 void ClangASTContext::Finalize() {
-  if (m_ast_ap.get()) {
+  if (m_ast_ap) {
     GetASTMap().Erase(m_ast_ap.get());
     if (!m_ast_owned)
       m_ast_ap.release();
@@ -853,7 +853,7 @@ void ClangASTContext::setASTContext(clang::ASTContext *ast_ctx) {
 }
 
 ASTContext *ClangASTContext::getASTContext() {
-  if (m_ast_ap.get() == nullptr) {
+  if (m_ast_ap == nullptr) {
     m_ast_owned = true;
     m_ast_ap.reset(new ASTContext(*getLanguageOptions(), *getSourceManager(),
                                   *getIdentifierTable(), *getSelectorTable(),
@@ -893,20 +893,20 @@ ClangASTContext *ClangASTContext::GetASTContext(clang::ASTContext *ast) {
 }
 
 Builtin::Context *ClangASTContext::getBuiltinContext() {
-  if (m_builtins_ap.get() == nullptr)
+  if (m_builtins_ap == nullptr)
     m_builtins_ap.reset(new Builtin::Context());
   return m_builtins_ap.get();
 }
 
 IdentifierTable *ClangASTContext::getIdentifierTable() {
-  if (m_identifier_table_ap.get() == nullptr)
+  if (m_identifier_table_ap == nullptr)
     m_identifier_table_ap.reset(
         new IdentifierTable(*ClangASTContext::getLanguageOptions(), nullptr));
   return m_identifier_table_ap.get();
 }
 
 LangOptions *ClangASTContext::getLanguageOptions() {
-  if (m_language_options_ap.get() == nullptr) {
+  if (m_language_options_ap == nullptr) {
     m_language_options_ap.reset(new LangOptions());
     ParseLangArgs(*m_language_options_ap, InputKind::ObjCXX, GetTargetTriple());
     //        InitializeLangOptions(*m_language_options_ap, InputKind::ObjCXX);
@@ -915,13 +915,13 @@ LangOptions *ClangASTContext::getLanguageOptions() {
 }
 
 SelectorTable *ClangASTContext::getSelectorTable() {
-  if (m_selector_table_ap.get() == nullptr)
+  if (m_selector_table_ap == nullptr)
     m_selector_table_ap.reset(new SelectorTable());
   return m_selector_table_ap.get();
 }
 
 clang::FileManager *ClangASTContext::getFileManager() {
-  if (m_file_manager_ap.get() == nullptr) {
+  if (m_file_manager_ap == nullptr) {
     clang::FileSystemOptions file_system_options;
     m_file_manager_ap.reset(new clang::FileManager(file_system_options));
   }
@@ -929,14 +929,14 @@ clang::FileManager *ClangASTContext::getFileManager() {
 }
 
 clang::SourceManager *ClangASTContext::getSourceManager() {
-  if (m_source_manager_ap.get() == nullptr)
+  if (m_source_manager_ap == nullptr)
     m_source_manager_ap.reset(
         new clang::SourceManager(*getDiagnosticsEngine(), *getFileManager()));
   return m_source_manager_ap.get();
 }
 
 clang::DiagnosticsEngine *ClangASTContext::getDiagnosticsEngine() {
-  if (m_diagnostics_engine_ap.get() == nullptr) {
+  if (m_diagnostics_engine_ap == nullptr) {
     llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_id_sp(new DiagnosticIDs());
     m_diagnostics_engine_ap.reset(
         new DiagnosticsEngine(diag_id_sp, new DiagnosticOptions()));
@@ -945,7 +945,7 @@ clang::DiagnosticsEngine *ClangASTContext::getDiagnosticsEngine() {
 }
 
 clang::MangleContext *ClangASTContext::getMangleContext() {
-  if (m_mangle_ctx_ap.get() == nullptr)
+  if (m_mangle_ctx_ap == nullptr)
     m_mangle_ctx_ap.reset(getASTContext()->createMangleContext());
   return m_mangle_ctx_ap.get();
 }
@@ -975,16 +975,16 @@ private:
 };
 
 DiagnosticConsumer *ClangASTContext::getDiagnosticConsumer() {
-  if (m_diagnostic_consumer_ap.get() == nullptr)
+  if (m_diagnostic_consumer_ap == nullptr)
     m_diagnostic_consumer_ap.reset(new NullDiagnosticConsumer);
 
   return m_diagnostic_consumer_ap.get();
 }
 
 std::shared_ptr<clang::TargetOptions> &ClangASTContext::getTargetOptions() {
-  if (m_target_options_rp.get() == nullptr && !m_target_triple.empty()) {
+  if (m_target_options_rp == nullptr && !m_target_triple.empty()) {
     m_target_options_rp = std::make_shared<clang::TargetOptions>();
-    if (m_target_options_rp.get() != nullptr)
+    if (m_target_options_rp != nullptr)
       m_target_options_rp->Triple = m_target_triple;
   }
   return m_target_options_rp;
@@ -992,7 +992,7 @@ std::shared_ptr<clang::TargetOptions> &ClangASTContext::getTargetOptions() {
 
 TargetInfo *ClangASTContext::getTargetInfo() {
   // target_triple should be something like "x86_64-apple-macosx"
-  if (m_target_info_ap.get() == nullptr && !m_target_triple.empty())
+  if (m_target_info_ap == nullptr && !m_target_triple.empty())
     m_target_info_ap.reset(TargetInfo::CreateTargetInfo(*getDiagnosticsEngine(),
                                                         getTargetOptions()));
   return m_target_info_ap.get();

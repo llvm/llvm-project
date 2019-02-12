@@ -843,7 +843,7 @@ SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() const {
 dw_offset_t DWARFUnit::GetBaseObjOffset() const { return m_base_obj_offset; }
 
 const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
-  if (m_func_aranges_ap.get() == NULL) {
+  if (m_func_aranges_ap == NULL) {
     m_func_aranges_ap.reset(new DWARFDebugAranges());
     Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
 
@@ -870,6 +870,6 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
     const bool minimize = false;
     m_func_aranges_ap->Sort(minimize);
   }
-  return *m_func_aranges_ap.get();
+  return *m_func_aranges_ap;
 }
 

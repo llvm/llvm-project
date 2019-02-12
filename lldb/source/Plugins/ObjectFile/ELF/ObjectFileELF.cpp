@@ -1058,7 +1058,7 @@ Address ObjectFileELF::GetBaseAddress() {
 // ParseDependentModules
 //----------------------------------------------------------------------
 size_t ObjectFileELF::ParseDependentModules() {
-  if (m_filespec_ap.get())
+  if (m_filespec_ap)
     return m_filespec_ap->GetSize();
 
   m_filespec_ap.reset(new FileSpecList());
@@ -2816,7 +2816,7 @@ Symtab *ObjectFileELF::GetSymtab() {
   if (module_obj_file && module_obj_file != this)
     return module_obj_file->GetSymtab();
 
-  if (m_symtab_ap.get() == NULL) {
+  if (m_symtab_ap == NULL) {
     SectionList *section_list = module_sp->GetSectionList();
     if (!section_list)
       return NULL;

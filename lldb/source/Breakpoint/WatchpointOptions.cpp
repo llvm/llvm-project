@@ -39,8 +39,8 @@ WatchpointOptions::WatchpointOptions(const WatchpointOptions &rhs)
     : m_callback(rhs.m_callback), m_callback_baton_sp(rhs.m_callback_baton_sp),
       m_callback_is_synchronous(rhs.m_callback_is_synchronous),
       m_thread_spec_ap() {
-  if (rhs.m_thread_spec_ap.get() != nullptr)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
+  if (rhs.m_thread_spec_ap != nullptr)
+    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap));
 }
 
 //----------------------------------------------------------------------
@@ -51,8 +51,8 @@ operator=(const WatchpointOptions &rhs) {
   m_callback = rhs.m_callback;
   m_callback_baton_sp = rhs.m_callback_baton_sp;
   m_callback_is_synchronous = rhs.m_callback_is_synchronous;
-  if (rhs.m_thread_spec_ap.get() != nullptr)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
+  if (rhs.m_thread_spec_ap != nullptr)
+    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap));
   return *this;
 }
 
@@ -117,7 +117,7 @@ const ThreadSpec *WatchpointOptions::GetThreadSpecNoCreate() const {
 }
 
 ThreadSpec *WatchpointOptions::GetThreadSpec() {
-  if (m_thread_spec_ap.get() == nullptr)
+  if (m_thread_spec_ap == nullptr)
     m_thread_spec_ap.reset(new ThreadSpec());
 
   return m_thread_spec_ap.get();
@@ -152,7 +152,7 @@ void WatchpointOptions::GetDescription(Stream *s,
     } else
       s->PutCString(" Options: ");
 
-    if (m_thread_spec_ap.get())
+    if (m_thread_spec_ap)
       m_thread_spec_ap->GetDescription(s, level);
     else if (level == eDescriptionLevelBrief)
       s->PutCString("thread spec: no ");
