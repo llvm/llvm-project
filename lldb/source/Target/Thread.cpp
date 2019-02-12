@@ -566,7 +566,7 @@ bool Thread::RestoreRegisterStateFromCheckpoint(
         // Clear out all stack frames as our world just changed.
         ClearStackFrames();
         reg_ctx_sp->InvalidateIfNeeded(true);
-        if (m_unwinder_ap.get())
+        if (m_unwinder_ap)
           m_unwinder_ap->Clear();
         return ret;
       }

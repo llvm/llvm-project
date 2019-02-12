@@ -542,7 +542,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   m_file_manager.reset(new clang::FileManager(file_system_options));
 
   if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(*m_file_manager.get());
+    m_compiler->createSourceManager(*m_file_manager);
 
   m_compiler->createFileManager();
   m_compiler->createPreprocessor(TU_Complete);
@@ -1130,7 +1130,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   std::unique_ptr<llvm::Module> llvm_module_ap(
       m_code_generator->ReleaseModule());
 
-  if (!llvm_module_ap.get()) {
+  if (!llvm_module_ap) {
     err.SetErrorToGenericError();
     err.SetErrorString("IR doesn't contain a module");
     return err;

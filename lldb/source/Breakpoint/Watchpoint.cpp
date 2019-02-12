@@ -272,7 +272,7 @@ bool Watchpoint::InvokeCallback(StoppointCallbackContext *context) {
 
 void Watchpoint::SetCondition(const char *condition) {
   if (condition == nullptr || condition[0] == '\0') {
-    if (m_condition_ap.get())
+    if (m_condition_ap)
       m_condition_ap.reset();
   } else {
     // Pass nullptr for expr_prefix (no translation-unit level definitions).
@@ -291,7 +291,7 @@ void Watchpoint::SetCondition(const char *condition) {
 }
 
 const char *Watchpoint::GetConditionText() const {
-  if (m_condition_ap.get())
+  if (m_condition_ap)
     return m_condition_ap->GetUserText();
   else
     return nullptr;
