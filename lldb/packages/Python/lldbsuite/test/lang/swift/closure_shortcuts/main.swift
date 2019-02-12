@@ -8,7 +8,11 @@ func main() -> Int {
               //%self.expect('frame var $1', substrs=['foo'])
   )
 
-  return 0
+  var tinky = [1,2].map({$0 * 2})
+
+  return 0 //%self.expect('expr tinky.map({$0 * 2})', substrs=['[0] = 2', '[1] = 4'])
+           //%self.expect('expr [2,4].map({$0 * 2})', substrs=['[0] = 4', '[1] = 8'])
+           //%self.expect('expr $0', substrs=['unresolved identifier \'$0\''], error=True)
 }
 
 _ = main()
