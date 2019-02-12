@@ -40,6 +40,22 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* As `discussed on the mailing list
+  <https://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_,
+  building LLVM will soon require more recent toolchains as follows:
+
+  ============= ====
+  Clang         3.5
+  Apple Clang   6.0
+  GCC           5.1
+  Visual Studio 2017
+  ============= ====
+
+  A new CMake check when configuring LLVM provides a soft-error if your
+  toolchain will become unsupported soon. You can opt out of the soft-error by
+  setting the ``LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN`` CMake variable to
+  ``ON``.
+
 * The **llvm-cov** tool can now export lcov trace files using the
   `-format=lcov` option of the `export` command.
 
