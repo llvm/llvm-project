@@ -1,6 +1,7 @@
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -280,6 +281,11 @@ int main(int argc, const char **argv) {
   CommonOptionsParser OP(argc, argv, InstrCategory,
                          "Utility for generating the macros for LLDB's "
                          "instrumentation framework.");
-  ClangTool T(OP.getCompilations(), OP.getSourcePathList());
+
+  auto PCHOpts = std::make_shared<PCHContainerOperations>();
+  PCHOpts->registerWriter(llvm::make_unique<ObjectFilePCHContainerWriter>());
+  PCHOpts->registerReader(llvm::make_unique<ObjectFilePCHContainerReader>());
+
+  ClangTool T(OP.getCompilations(), OP.getSourcePathList(), PCHOpts);
   return T.run(newFrontendActionFactory<SBAction>().get());
 }
