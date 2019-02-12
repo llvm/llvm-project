@@ -24,6 +24,7 @@ typedef u32 uint32_t;
 typedef u64 uint64_t;
 
 void __tsan_init() {
+  cur_thread_init();
   Initialize(cur_thread());
 }
 
@@ -123,6 +124,33 @@ void __sanitizer_unaligned_store64(uu64 *addr, u64 v) {
   __tsan_unaligned_write8(addr);
   *addr = v;
 }
+
+#if !SANITIZER_MAC && !SANITIZER_ANDROID
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__tsan_get_current_fiber() {
+  return cur_thread();
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void *__tsan_create_fiber(unsigned flags) {
+  return FiberCreate(cur_thread(), CALLERPC, flags);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_destroy_fiber(void *fiber) {
+  FiberDestroy(cur_thread(), CALLERPC, static_cast<ThreadState *>(fiber));
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_switch_to_fiber(void *fiber, unsigned flags) {
+  FiberSwitch(cur_thread(), CALLERPC, static_cast<ThreadState *>(fiber), flags);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __tsan_set_fiber_name(void *fiber, const char *name) {
+  ThreadSetName(static_cast<ThreadState *>(fiber), name);
+}
+#endif // !SANITIZER_MAC && !SANITIZER_ANDROID
 }  // extern "C"
 
 void __tsan_acquire(void *addr) {

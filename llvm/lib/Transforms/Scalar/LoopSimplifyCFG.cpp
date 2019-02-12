@@ -406,23 +406,40 @@ private:
                                                      DeadLoopBlocks.end());
       MSSAU->removeBlocks(DeadLoopBlocksSet);
     }
+
+    // The function LI.erase has some invariants that need to be preserved when
+    // it tries to remove a loop which is not the top-level loop. In particular,
+    // it requires loop's preheader to be strictly in loop's parent. We cannot
+    // just remove blocks one by one, because after removal of preheader we may
+    // break this invariant for the dead loop. So we detatch and erase all dead
+    // loops beforehand.
+    for (auto *BB : DeadLoopBlocks)
+      if (LI.isLoopHeader(BB)) {
+        assert(LI.getLoopFor(BB) != &L && "Attempt to remove current loop!");
+        Loop *DL = LI.getLoopFor(BB);
+        if (DL->getParentLoop()) {
+          for (auto *PL = DL->getParentLoop(); PL; PL = PL->getParentLoop())
+            for (auto *BB : DL->getBlocks())
+              PL->removeBlockFromLoop(BB);
+          DL->getParentLoop()->removeChildLoop(DL);
+          LI.addTopLevelLoop(DL);
+        }
+        LI.erase(DL);
+      }
+
     for (auto *BB : DeadLoopBlocks) {
       assert(BB != L.getHeader() &&
              "Header of the current loop cannot be dead!");
       LLVM_DEBUG(dbgs() << "Deleting dead loop block " << BB->getName()
                         << "\n");
-      if (LI.isLoopHeader(BB)) {
-        assert(LI.getLoopFor(BB) != &L && "Attempt to remove current loop!");
-        LI.erase(LI.getLoopFor(BB));
-      }
       LI.removeBlock(BB);
     }
 
-    DetatchDeadBlocks(DeadLoopBlocks, &DTUpdates);
+    DetatchDeadBlocks(DeadLoopBlocks, &DTUpdates, /*KeepOneInputPHIs*/true);
     DTU.applyUpdates(DTUpdates);
     DTUpdates.clear();
     for (auto *BB : DeadLoopBlocks)
-      BB->eraseFromParent();
+      DTU.deleteBB(BB);
 
     NumLoopBlocksDeleted += DeadLoopBlocks.size();
   }

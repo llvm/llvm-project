@@ -133,7 +133,6 @@ Sections:
     Type:         SHT_DYNSYM
     Flags:        [ SHF_ALLOC ]
     Link:         .dynstr
-    Info:         1
     Address:      0x100
     AddressAlign: 0x100
     EntSize:      0x18

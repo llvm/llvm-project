@@ -92,18 +92,17 @@ SymbolLocation toIndexLocation(const Location &Loc, std::string &URIStorage) {
 
 // Returns the preferred location between an AST location and an index location.
 SymbolLocation getPreferredLocation(const Location &ASTLoc,
-                                    const SymbolLocation &IdxLoc) {
+                                    const SymbolLocation &IdxLoc,
+                                    std::string &Scratch) {
   // Also use a dummy symbol for the index location so that other fields (e.g.
   // definition) are not factored into the preferrence.
   Symbol ASTSym, IdxSym;
   ASTSym.ID = IdxSym.ID = SymbolID("dummy_id");
-  std::string URIStore;
-  ASTSym.CanonicalDeclaration = toIndexLocation(ASTLoc, URIStore);
+  ASTSym.CanonicalDeclaration = toIndexLocation(ASTLoc, Scratch);
   IdxSym.CanonicalDeclaration = IdxLoc;
   auto Merged = mergeSymbol(ASTSym, IdxSym);
   return Merged.CanonicalDeclaration;
 }
-
 
 struct MacroDecl {
   llvm::StringRef Name;
@@ -352,6 +351,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     LookupRequest QueryRequest;
     for (auto It : ResultIndex)
       QueryRequest.IDs.insert(It.first);
+    std::string Scratch;
     Index->lookup(QueryRequest, [&](const Symbol &Sym) {
       auto &R = Result[ResultIndex.lookup(Sym.ID)];
 
@@ -367,10 +367,10 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
           // Use merge logic to choose AST or index declaration.
           // We only do this for declarations as definitions from AST
           // is generally preferred (e.g. definitions in main file).
-          if (auto Loc =
-                  toLSPLocation(getPreferredLocation(R.PreferredDeclaration,
-                                                     Sym.CanonicalDeclaration),
-                                *MainFilePath))
+          if (auto Loc = toLSPLocation(
+                  getPreferredLocation(R.PreferredDeclaration,
+                                       Sym.CanonicalDeclaration, Scratch),
+                  *MainFilePath))
             R.PreferredDeclaration = *Loc;
         }
       }

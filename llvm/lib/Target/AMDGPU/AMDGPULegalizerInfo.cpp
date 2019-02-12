@@ -149,8 +149,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     // Don't worry about the size constraint.
     .legalIf(all(isPointer(0), isPointer(1)));
 
-  getActionDefinitionsBuilder(G_FCONSTANT)
-    .legalFor({S32, S64, S16});
+  if (ST.has16BitInsts()) {
+    getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalFor({S32, S64, S16})
+      .clampScalar(0, S16, S64);
+  } else {
+    getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalFor({S32, S64})
+      .clampScalar(0, S32, S64);
+  }
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
     .legalFor({S1, S32, S64, V2S32, V4S32, V2S16, V4S16, GlobalPtr,

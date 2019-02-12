@@ -50,13 +50,13 @@ using namespace llvm;
 void llvm::DetatchDeadBlocks(
     ArrayRef<BasicBlock *> BBs,
     SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-    bool DontDeleteUselessPHIs) {
+    bool KeepOneInputPHIs) {
   for (auto *BB : BBs) {
     // Loop through all of our successors and make sure they know that one
     // of their predecessors is going away.
     SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
     for (BasicBlock *Succ : successors(BB)) {
-      Succ->removePredecessor(BB, DontDeleteUselessPHIs);
+      Succ->removePredecessor(BB, KeepOneInputPHIs);
       if (Updates && UniqueSuccessors.insert(Succ).second)
         Updates->push_back({DominatorTree::Delete, BB, Succ});
     }
@@ -82,12 +82,12 @@ void llvm::DetatchDeadBlocks(
 }
 
 void llvm::DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU,
-                           bool DontDeleteUselessPHIs) {
-  DeleteDeadBlocks({BB}, DTU, DontDeleteUselessPHIs);
+                           bool KeepOneInputPHIs) {
+  DeleteDeadBlocks({BB}, DTU, KeepOneInputPHIs);
 }
 
 void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
-                            bool DontDeleteUselessPHIs) {
+                            bool KeepOneInputPHIs) {
 #ifndef NDEBUG
   // Make sure that all predecessors of each dead block is also dead.
   SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
@@ -98,7 +98,7 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
 #endif
 
   SmallVector<DominatorTree::UpdateType, 4> Updates;
-  DetatchDeadBlocks(BBs, DTU ? &Updates : nullptr, DontDeleteUselessPHIs);
+  DetatchDeadBlocks(BBs, DTU ? &Updates : nullptr, KeepOneInputPHIs);
 
   if (DTU)
     DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);

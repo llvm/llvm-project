@@ -3170,7 +3170,7 @@ _mm256_load_si256(__m256i const *__p)
 ///    A pointer to a 256-bit integer vector containing integer values.
 /// \returns A 256-bit integer vector containing the moved values.
 static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_loadu_si256(__m256i const *__p)
+_mm256_loadu_si256(__m256i_u const *__p)
 {
   struct __loadu_si256 {
     __m256i_u __v;
@@ -3305,7 +3305,7 @@ _mm256_store_si256(__m256i *__p, __m256i __a)
 /// \param __a
 ///    A 256-bit integer vector containing the values to be moved.
 static __inline void __DEFAULT_FN_ATTRS
-_mm256_storeu_si256(__m256i *__p, __m256i __a)
+_mm256_storeu_si256(__m256i_u *__p, __m256i __a)
 {
   struct __storeu_si256 {
     __m256i_u __v;
@@ -4838,7 +4838,7 @@ _mm256_loadu2_m128d(double const *__addr_hi, double const *__addr_lo)
 ///    address of the memory location does not have to be aligned.
 /// \returns A 256-bit integer vector containing the concatenated result.
 static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_loadu2_m128i(__m128i const *__addr_hi, __m128i const *__addr_lo)
+_mm256_loadu2_m128i(__m128i_u const *__addr_hi, __m128i_u const *__addr_lo)
 {
   __m256i __v256 = _mm256_castsi128_si256(_mm_loadu_si128(__addr_lo));
   return _mm256_insertf128_si256(__v256, _mm_loadu_si128(__addr_hi), 1);
@@ -4922,7 +4922,7 @@ _mm256_storeu2_m128d(double *__addr_hi, double *__addr_lo, __m256d __a)
 /// \param __a
 ///    A 256-bit integer vector.
 static __inline void __DEFAULT_FN_ATTRS
-_mm256_storeu2_m128i(__m128i *__addr_hi, __m128i *__addr_lo, __m256i __a)
+_mm256_storeu2_m128i(__m128i_u *__addr_hi, __m128i_u *__addr_lo, __m256i __a)
 {
   __m128i __v128;
 

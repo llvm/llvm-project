@@ -13,6 +13,7 @@
 #include "DWPError.h"
 #include "DWPStringPool.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -159,6 +160,7 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
   uint32_t Name;
   dwarf::Form Form;
   CompileUnitIdentifiers ID;
+  Optional<uint64_t> Signature = None;
   while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
          (Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(&AbbrevOffset))) &&
          (Name != 0 || Form != 0)) {
@@ -180,13 +182,16 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
-      ID.Signature = InfoData.getU64(&Offset);
+      Signature = InfoData.getU64(&Offset);
       break;
     default:
       DWARFFormValue::skipValue(Form, InfoData, &Offset,
                                 dwarf::FormParams({Version, AddrSize, Format}));
     }
   }
+  if (!Signature)
+    return make_error<DWPError>("compile unit missing dwo_id");
+  ID.Signature = *Signature;
   return ID;
 }
 
@@ -560,7 +565,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
           AbbrevSection, InfoSection, CurStrOffsetSection, CurStrSection);
       if (!EID)
-        return EID.takeError();
+        return createFileError(Input, EID.takeError());
       const auto &ID = *EID;
       auto P = IndexEntries.insert(std::make_pair(ID.Signature, CurEntry));
       if (!P.second)
@@ -588,7 +593,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           getSubsection(CurStrOffsetSection, E, DW_SECT_STR_OFFSETS),
           CurStrSection);
       if (!EID)
-        return EID.takeError();
+        return createFileError(Input, EID.takeError());
       const auto &ID = *EID;
       if (!P.second)
         return buildDuplicateError(*P.first, ID, Input);

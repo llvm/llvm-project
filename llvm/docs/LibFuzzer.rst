@@ -655,9 +655,9 @@ that has libFuzzer from
 `LLVM Snapshot Builds <https://llvm.org/builds/>`_.
 
 Using libFuzzer on Windows without ASAN is unsupported. Building fuzzers with the
-`/MD` (dynamic runtime library) compile option is unsupported. Support for these
-may be added in the future. Linking fuzzers with the `/INCREMENTAL` link option
-(or the `/DEBUG` option which implies it) is also unsupported.
+``/MD`` (dynamic runtime library) compile option is unsupported. Support for these
+may be added in the future. Linking fuzzers with the ``/INCREMENTAL`` link option
+(or the ``/DEBUG`` option which implies it) is also unsupported.
 
 Send any questions or comments to the mailing list: libfuzzer(#)googlegroups.com
 

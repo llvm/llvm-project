@@ -17,7 +17,7 @@
 // GNU-NEXT:     stack size: <corrupt length: 0x4>
 // GNU-NEXT:     no copy on protected <corrupt length: 0x1>
 // GNU-NEXT:     X86 features: <corrupt length: 0x0>
-// GNU-NEXT:     X86 features: IBT, <unknown flags: 0xf000f000f000f000>
+// GNU-NEXT:     X86 features: IBT, <unknown flags: 0xf000f000>
 // GNU-NEXT:     <corrupt type (0x2) datasz: 0x1>
 
 // LLVM:      Notes [
@@ -40,7 +40,7 @@
 // LLVM-NEXT:         stack size: <corrupt length: 0x4>
 // LLVM-NEXT:         no copy on protected <corrupt length: 0x1>
 // LLVM-NEXT:         X86 features: <corrupt length: 0x0>
-// LLVM-NEXT:         X86 features: IBT, <unknown flags: 0xf000f000f000f000>
+// LLVM-NEXT:         X86 features: IBT, <unknown flags: 0xf000f000>
 // LLVM-NEXT:         <corrupt type (0x2) datasz: 0x1>
 // LLVM-NEXT:       ]
 // LLVM-NEXT:     }
@@ -72,8 +72,8 @@ begin:
 
   /* CET property note */
   .long 0xc0000002  /* Type: GNU_PROPERTY_X86_FEATURE_1_AND */
-  .long 8           /* Data size */
-  .quad 2           /* GNU_PROPERTY_X86_FEATURE_1_SHSTK */
+  .long 4           /* Data size */
+  .long 2           /* GNU_PROPERTY_X86_FEATURE_1_SHSTK */
   .p2align 3        /* Align to 8 byte for 64 bit */
 
   /* CET property note with padding */
@@ -83,8 +83,8 @@ begin:
   .p2align 3        /* Align to 8 byte for 64 bit */
 
   .long 0xc0000002  /* Type: GNU_PROPERTY_X86_FEATURE_1_AND */
-  .long 8           /* Data size */
-  .quad 0           /* Empty flags, not an error */
+  .long 4           /* Data size */
+  .long 0           /* Empty flags, not an error */
   .p2align 3        /* Align to 8 byte for 64 bit */
   
   /* All notes below are broken. Test we are able to report them. */
@@ -118,8 +118,8 @@ begin:
 
   /* CET note with bad flags */
   .long 0xc0000002         /* Type: GNU_PROPERTY_X86_FEATURE_1_AND */
-  .long 8                  /* Data size */
-  .quad 0xf000f000f000f001 /* GNU_PROPERTY_X86_FEATURE_1_IBT and bad bits */
+  .long 4                  /* Data size */
+  .long 0xf000f001         /* GNU_PROPERTY_X86_FEATURE_1_IBT and bad bits */
   .p2align 3               /* Align to 8 byte for 64 bit */
   
   /* GNU_PROPERTY_NO_COPY_ON_PROTECTED with pr_datasz and without data */

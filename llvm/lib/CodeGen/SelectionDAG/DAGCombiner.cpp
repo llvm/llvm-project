@@ -4123,6 +4123,32 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
       SDValue Zero = DAG.getConstant(0, DL, OpVT);
       return DAG.getSetCC(DL, VT, Or, Zero, CC1);
     }
+
+    // Turn compare of constants whose difference is 1 bit into add+and+setcc.
+    if ((IsAnd && CC1 == ISD::SETNE) || (!IsAnd && CC1 == ISD::SETEQ)) {
+      // Match a shared variable operand and 2 non-opaque constant operands.
+      ConstantSDNode *C0 = isConstOrConstSplat(LR);
+      ConstantSDNode *C1 = isConstOrConstSplat(RR);
+      if (LL == RL && C0 && C1 && !C0->isOpaque() && !C1->isOpaque()) {
+        // Canonicalize larger constant as C0.
+        if (C1->getAPIntValue().ugt(C0->getAPIntValue()))
+          std::swap(C0, C1);
+
+        // The difference of the constants must be a single bit.
+        const APInt &C0Val = C0->getAPIntValue();
+        const APInt &C1Val = C1->getAPIntValue();
+        if ((C0Val - C1Val).isPowerOf2()) {
+          // and/or (setcc X, C0, ne), (setcc X, C1, ne/eq) -->
+          // setcc ((add X, -C1), ~(C0 - C1)), 0, ne/eq
+          SDValue OffsetC = DAG.getConstant(-C1Val, DL, OpVT);
+          SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LL, OffsetC);
+          SDValue MaskC = DAG.getConstant(~(C0Val - C1Val), DL, OpVT);
+          SDValue And = DAG.getNode(ISD::AND, DL, OpVT, Add, MaskC);
+          SDValue Zero = DAG.getConstant(0, DL, OpVT);
+          return DAG.getSetCC(DL, VT, And, Zero, CC0);
+        }
+      }
+    }
   }
 
   // Canonicalize equivalent operands to LL == RL.
