@@ -218,7 +218,7 @@ TEST(FileIndexTest, HasSystemHeaderMappingsInPreamble) {
     class Foo {};
   )cpp";
   auto MainFile = testPath("foo.cpp");
-  auto HeaderFile = testPath("bits/alloc_traits.h");
+  auto HeaderFile = testPath("algorithm");
   std::vector<const char *> Cmd = {"clang", "-xc++", MainFile.c_str(),
                                    "-include", HeaderFile.c_str()};
   // Preparse ParseInputs.
@@ -242,7 +242,7 @@ TEST(FileIndexTest, HasSystemHeaderMappingsInPreamble) {
   auto Symbols = runFuzzyFind(Index, "");
   EXPECT_THAT(Symbols, ElementsAre(_));
   EXPECT_THAT(Symbols.begin()->IncludeHeaders.front().IncludeHeader,
-              "<memory>");
+              "<algorithm>");
 }
 
 TEST(FileIndexTest, TemplateParamsInLabel) {
