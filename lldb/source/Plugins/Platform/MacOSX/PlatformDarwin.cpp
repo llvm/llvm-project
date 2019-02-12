@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <memory>
 #include <mutex>
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -262,7 +263,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
                         module_spec.GetFileSpec().GetFilename().AsCString());
           ModuleSpec local_spec(module_cache_spec,
                                 module_spec.GetArchitecture());
-          module_sp.reset(new Module(local_spec));
+          module_sp = std::make_shared<Module>(local_spec);
           module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
           return Status();
         }
@@ -300,7 +301,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
         }
 
         ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
-        module_sp.reset(new Module(local_spec));
+        module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
         Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
         if (log)
@@ -328,7 +329,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
                       module_spec.GetFileSpec().GetDirectory().AsCString(),
                       module_spec.GetFileSpec().GetFilename().AsCString());
         ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
-        module_sp.reset(new Module(local_spec));
+        module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
         return Status();
       } else

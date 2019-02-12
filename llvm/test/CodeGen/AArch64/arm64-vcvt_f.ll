@@ -1,39 +1,61 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 ; RUN: llc < %s -O0 -fast-isel -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* \
+; RUN:          -mtriple=arm64-eabi -aarch64-neon-syntax=apple \
+; RUN:          | FileCheck %s --check-prefixes=GISEL,FALLBACK
 
+; FALLBACK-NOT: remark{{.*}}G_FPEXT{{.*}}(in function: test_vcvt_f64_f32)
+; FALLBACK-NOT: remark{{.*}}fpext{{.*}}(in function: test_vcvt_f64_f32)
 define <2 x double> @test_vcvt_f64_f32(<2 x float> %x) nounwind readnone ssp {
 ; CHECK-LABEL: test_vcvt_f64_f32:
+; GISEL-LABEL: test_vcvt_f64_f32:
   %vcvt1.i = fpext <2 x float> %x to <2 x double>
 ; CHECK: fcvtl	v0.2d, v0.2s
+; GISEL: fcvtl	v0.2d, v0.2s
   ret <2 x double> %vcvt1.i
 ; CHECK: ret
+; GISEL: ret
 }
 
+; FALLBACK-NOT: remark{{.*}}G_FPEXT{{.*}}(in function: test_vcvt_high_f64_f32)
+; FALLBACK-NOT: remark{{.*}}fpext{{.*}}(in function: test_vcvt_high_f64_f32)
 define <2 x double> @test_vcvt_high_f64_f32(<4 x float> %x) nounwind readnone ssp {
 ; CHECK-LABEL: test_vcvt_high_f64_f32:
+; GISEL-LABEL: test_vcvt_high_f64_f32:
   %cvt_in = shufflevector <4 x float> %x, <4 x float> undef, <2 x i32> <i32 2, i32 3>
   %vcvt1.i = fpext <2 x float> %cvt_in to <2 x double>
 ; CHECK: fcvtl2	v0.2d, v0.4s
+; GISEL: fcvtl2	v0.2d, v0.4s
   ret <2 x double> %vcvt1.i
 ; CHECK: ret
+; GISEL: ret
 }
 
+; FALLBACK-NOT: remark{{.*}}G_FPEXT{{.*}}(in function: test_vcvt_f32_f64)
+; FALLBACK-NOT: remark{{.*}}fpext{{.*}}(in function: test_vcvt_f32_f64)
 define <2 x float> @test_vcvt_f32_f64(<2 x double> %v) nounwind readnone ssp {
 ; CHECK-LABEL: test_vcvt_f32_f64:
+; GISEL-LABEL: test_vcvt_f32_f64:
   %vcvt1.i = fptrunc <2 x double> %v to <2 x float>
 ; CHECK: fcvtn
+; GISEL: fcvtn
   ret <2 x float> %vcvt1.i
 ; CHECK: ret
+; GISEL: ret
 }
 
+; FALLBACK-NOT: remark{{.*}}G_FPEXT{{.*}}(in function: test_vcvt_high_f32_f64)
+; FALLBACK-NOT: remark{{.*}}fpext{{.*}}(in function: test_vcvt_high_f32_f64)
 define <4 x float> @test_vcvt_high_f32_f64(<2 x float> %x, <2 x double> %v) nounwind readnone ssp {
 ; CHECK-LABEL: test_vcvt_high_f32_f64:
-
+; GISEL-LABEL: test_vcvt_high_f32_f64:
   %cvt = fptrunc <2 x double> %v to <2 x float>
   %vcvt2.i = shufflevector <2 x float> %x, <2 x float> %cvt, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK: fcvtn2
+; GISEL: fcvtn2
   ret <4 x float> %vcvt2.i
 ; CHECK: ret
+; GISEL: ret
 }
 
 define <2 x float> @test_vcvtx_f32_f64(<2 x double> %v) nounwind readnone ssp {

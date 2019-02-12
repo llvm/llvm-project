@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cctype>
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -88,6 +87,9 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+
+#include <cctype>
+#include <memory>
 
 using namespace clang;
 using namespace llvm;
@@ -484,7 +486,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   m_file_manager.reset(new clang::FileManager(file_system_options));
 
   if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(*m_file_manager.get());
+    m_compiler->createSourceManager(*m_file_manager);
 
   m_compiler->createFileManager();
   m_compiler->createPreprocessor(TU_Complete);
@@ -1049,7 +1051,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   std::unique_ptr<llvm::Module> llvm_module_ap(
       m_code_generator->ReleaseModule());
 
-  if (!llvm_module_ap.get()) {
+  if (!llvm_module_ap) {
     err.SetErrorToGenericError();
     err.SetErrorString("IR doesn't contain a module");
     return err;
@@ -1104,11 +1106,11 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     custom_passes.EarlyPasses->run(*llvm_module_ap);
   }
 
-  execution_unit_sp.reset(
-      new IRExecutionUnit(m_llvm_context, // handed off here
+  execution_unit_sp = std::make_shared<IRExecutionUnit>(
+      m_llvm_context, // handed off here
                           llvm_module_ap, // handed off here
                           function_name, exe_ctx.GetTargetSP(), sc,
-                          m_compiler->getTargetOpts().Features));
+      m_compiler->getTargetOpts().Features);
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
@@ -1185,8 +1187,8 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           process->SetDynamicCheckers(dynamic_checkers);
 
           if (log)
-            log->Printf("== [ClangUserExpression::Evaluate] Finished "
-                        "installing dynamic checkers ==");
+            log->Printf("== [ClangExpressionParser::PrepareForExecution] "
+                        "Finished installing dynamic checkers ==");
         }
 
         IRDynamicChecks ir_dynamic_checks(*process->GetDynamicCheckers(),

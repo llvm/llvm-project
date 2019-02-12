@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 
 #include "llvm/Support/ScopedPrinter.h"
@@ -163,15 +164,15 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
 {
   if (process == nullptr) {
     // Global process properties, set them up one time
-    m_collection_sp.reset(
-        new ProcessOptionValueProperties(ConstString("process")));
+    m_collection_sp =
+        std::make_shared<ProcessOptionValueProperties>(ConstString("process"));
     m_collection_sp->Initialize(g_properties);
     m_collection_sp->AppendProperty(
         ConstString("thread"), ConstString("Settings specific to threads."),
         true, Thread::GetGlobalProperties()->GetValueProperties());
   } else {
-    m_collection_sp.reset(
-        new ProcessOptionValueProperties(Process::GetGlobalProperties().get()));
+    m_collection_sp = std::make_shared<ProcessOptionValueProperties>(
+        Process::GetGlobalProperties().get());
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         ProcessProperties::OptionValueChangedCallback, this);
@@ -4670,7 +4671,8 @@ void Process::SetSTDIOFileDescriptor(int fd) {
       // Now read thread is set up, set up input reader.
 
       if (!m_process_input_reader)
-        m_process_input_reader.reset(new IOHandlerProcessSTDIO(this, fd));
+        m_process_input_reader =
+            std::make_shared<IOHandlerProcessSTDIO>(this, fd);
     }
   }
 }
@@ -5944,7 +5946,8 @@ ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
     return threads;
   }
 
-  threads.reset(new ThreadCollection(memory_history->GetHistoryThreads(addr)));
+  threads = std::make_shared<ThreadCollection>(
+      memory_history->GetHistoryThreads(addr));
 
   return threads;
 }

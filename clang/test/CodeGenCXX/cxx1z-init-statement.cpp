@@ -5,7 +5,7 @@ void f() {
   // CHECK:      %[[A:.*]] = alloca i32, align 4
   // CHECK-NEXT: store i32 5, i32* %[[A]], align 4
   // CHECK-NEXT: %[[B:.*]] = load i32, i32* %[[A]], align 4
-  // CHECK-NEXT  %[[C:.*]] = icmp slt i32 %[[B]], 8
+  // CHECK-NEXT: %[[C:.*]] = icmp slt i32 %[[B]], 8
   if (int a = 5; a < 8)
     ;
 }

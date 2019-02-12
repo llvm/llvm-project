@@ -362,7 +362,7 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<tooling::Replacements> CB) {
-  auto Action = [Sel, this](decltype(CB) CB, std::string File,
+  auto Action = [Sel](decltype(CB) CB, std::string File,
                             std::string TweakID,
                             Expected<InputsAndAST> InpAST) {
     if (!InpAST)

@@ -380,7 +380,7 @@ static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysis &AA,
 /// \param Query     The UpwardsMemoryQuery we used for our search.
 /// \param AA        The AliasAnalysis we used for our search.
 /// \param AllowImpreciseClobber Always false, unless we do relaxed verify.
-static void
+LLVM_ATTRIBUTE_UNUSED static void
 checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
                    const MemoryLocation &StartLoc, const MemorySSA &MSSA,
                    const UpwardsMemoryQuery &Query, AliasAnalysis &AA,
@@ -1778,34 +1778,16 @@ void MemorySSA::verifyMemorySSA() const {
   verifyOrdering(F);
   verifyDominationNumbers(F);
   Walker->verify(this);
-  verifyClobberSanity(F);
-}
-
-/// Check sanity of the clobbering instruction for access MA.
-void MemorySSA::checkClobberSanityAccess(const MemoryAccess *MA) const {
-  if (const auto *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
-    if (!MUD->isOptimized())
-      return;
-    auto *I = MUD->getMemoryInst();
-    auto Loc = MemoryLocation::getOrNone(I);
-    if (Loc == None)
-      return;
-    auto *Clobber = MUD->getOptimized();
-    UpwardsMemoryQuery Q(I, MUD);
-    checkClobberSanity(MUD, Clobber, *Loc, *this, Q, *AA, true);
-  }
-}
-
-void MemorySSA::verifyClobberSanity(const Function &F) const {
-#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
-  for (const BasicBlock &BB : F) {
-    const AccessList *Accesses = getBlockAccesses(&BB);
-    if (!Accesses)
-      continue;
-    for (const MemoryAccess &MA : *Accesses)
-      checkClobberSanityAccess(&MA);
-  }
-#endif
+  // Previously, the verification used to also verify that the clobberingAccess
+  // cached by MemorySSA is the same as the clobberingAccess found at a later
+  // query to AA. This does not hold true in general due to the current fragility
+  // of BasicAA which has arbitrary caps on the things it analyzes before giving
+  // up. As a result, transformations that are correct, will lead to BasicAA
+  // returning different Alias answers before and after that transformation.
+  // Invalidating MemorySSA is not an option, as the results in BasicAA can be so
+  // random, in the worst case we'd need to rebuild MemorySSA from scratch after
+  // every transformation, which defeats the purpose of using it. For such an
+  // example, see test4 added in D51960.
 }
 
 /// Verify that all of the blocks we believe to have valid domination numbers

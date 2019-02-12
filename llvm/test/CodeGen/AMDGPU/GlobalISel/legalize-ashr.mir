@@ -623,8 +623,9 @@ body: |
     ; GFX9: [[EXTRACT5:%[0-9]+]]:_(s16) = G_EXTRACT [[EXTRACT1]](<3 x s16>), 32
     ; GFX9: [[ASHR:%[0-9]+]]:_(<2 x s16>) = G_ASHR [[EXTRACT2]], [[EXTRACT4]](<2 x s16>)
     ; GFX9: [[ASHR1:%[0-9]+]]:_(s16) = G_ASHR [[EXTRACT3]], [[EXTRACT5]](s16)
-    ; GFX9: [[DEF:%[0-9]+]]:_(<3 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[DEF]], [[ASHR]](<2 x s16>), 0
+    ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[EXTRACT6:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[EXTRACT6]], [[ASHR]](<2 x s16>), 0
     ; GFX9: [[INSERT1:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[INSERT]], [[ASHR1]](s16), 32
     ; GFX9: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[INSERT1]](<3 x s16>), 0

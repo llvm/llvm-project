@@ -73,6 +73,7 @@
 #include "llvm/Support/FileSystem.h"
 
 #include <map>
+#include <memory>
 
 #include <ctype.h>
 #include <string.h>
@@ -130,7 +131,7 @@ public:
   }
 
   PluginProperties() {
-    m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_properties);
   }
 
@@ -658,11 +659,11 @@ const DWARFDataExtractor &SymbolFileDWARF::get_gnu_debugaltlink() {
 }
 
 DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
-  if (m_abbr.get() == NULL) {
+  if (m_abbr == NULL) {
     const DWARFDataExtractor &debug_abbrev_data = get_debug_abbrev_data();
     if (debug_abbrev_data.GetByteSize() > 0) {
       m_abbr.reset(new DWARFDebugAbbrev());
-      if (m_abbr.get())
+      if (m_abbr)
         m_abbr->Parse(debug_abbrev_data);
     }
   }
@@ -674,13 +675,13 @@ const DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() const {
 }
 
 DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
-  if (m_info.get() == NULL) {
+  if (m_info == NULL) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
     if (get_debug_info_data().GetByteSize() > 0) {
       m_info.reset(new DWARFDebugInfo());
-      if (m_info.get()) {
+      if (m_info) {
         m_info->SetDwarfData(this);
       }
     }
@@ -712,7 +713,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
 }
 
 DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
-  if (m_ranges.get() == NULL) {
+  if (m_ranges == NULL) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
@@ -722,7 +723,7 @@ DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
     else if (get_debug_rnglists_data().GetByteSize() > 0)
       m_ranges.reset(new DWARFDebugRngLists());
 
-    if (m_ranges.get())
+    if (m_ranges)
       m_ranges->Extract(this);
   }
   return m_ranges.get();
@@ -770,9 +771,9 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
                 cu_die.GetAttributeValueAsUnsigned(DW_AT_language, 0));
 
             bool is_optimized = dwarf_cu->GetIsOptimized();
-            cu_sp.reset(new CompileUnit(
+            cu_sp = std::make_shared<CompileUnit>(
                 module_sp, dwarf_cu, cu_file_spec, dwarf_cu->GetID(),
-                cu_language, is_optimized ? eLazyBoolYes : eLazyBoolNo));
+                cu_language, is_optimized ? eLazyBoolYes : eLazyBoolNo);
             if (cu_sp) {
               // If we just created a compile unit with an invalid file spec,
               // try and get the first entry in the supports files from the
@@ -971,7 +972,7 @@ static void ParseDWARFLineTableCallback(dw_offset_t offset,
     LineTable *line_table = info->line_table;
 
     // If this is our first time here, we need to create a sequence container.
-    if (!info->sequence_ap.get()) {
+    if (!info->sequence_ap) {
       info->sequence_ap.reset(line_table->CreateLineSequenceContainer());
       assert(info->sequence_ap.get());
     }
@@ -1002,7 +1003,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
                                                    DW_INVALID_OFFSET);
       if (cu_line_offset != DW_INVALID_OFFSET) {
         std::unique_ptr<LineTable> line_table_ap(new LineTable(&comp_unit));
-        if (line_table_ap.get()) {
+        if (line_table_ap) {
           ParseDWARFLineTableCallbackInfo info;
           info.line_table = line_table_ap.get();
 
@@ -3126,7 +3127,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       VariableListSP variables(sc.comp_unit->GetVariableList(false));
 
       if (variables.get() == NULL) {
-        variables.reset(new VariableList());
+        variables = std::make_shared<VariableList>();
         sc.comp_unit->SetVariableList(variables);
 
         DIEArray die_offsets;
@@ -3540,10 +3541,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
               type_sp->GetType()->GetByteSize().getValueOr(0),
               die.GetCU()->GetAddressByteSize());
 
-        var_sp.reset(new Variable(die.GetID(), name, mangled, type_sp, scope,
-                                  symbol_context_scope, scope_ranges, &decl,
-                                  location, is_external, is_artificial,
-                                  is_static_member));
+        var_sp = std::make_shared<Variable>(
+            die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
+            scope_ranges, &decl, location, is_external, is_artificial,
+            is_static_member);
 
         var_sp->SetLocationIsConstantValueData(location_is_const_value_data);
       } else {
@@ -3641,7 +3642,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
             if (sc.comp_unit != NULL) {
               variable_list_sp = sc.comp_unit->GetVariableList(false);
               if (variable_list_sp.get() == NULL) {
-                variable_list_sp.reset(new VariableList());
+                variable_list_sp = std::make_shared<VariableList>();
               }
             } else {
               GetObjectFile()->GetModule()->ReportError(
@@ -3680,7 +3681,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
                 const bool can_create = false;
                 variable_list_sp = block->GetBlockVariableList(can_create);
                 if (variable_list_sp.get() == NULL) {
-                  variable_list_sp.reset(new VariableList());
+                  variable_list_sp = std::make_shared<VariableList>();
                   block->SetVariableList(variable_list_sp);
                 }
               }

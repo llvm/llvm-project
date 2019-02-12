@@ -478,3 +478,33 @@ define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> 
   ret <4 x i1> %and
 }
 
+define i1 @or_icmps_const_1bit_diff(i64 %x) {
+; CHECK-LABEL: or_icmps_const_1bit_diff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpdi 3, 17
+; CHECK-NEXT:    cmpdi 1, 3, 13
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    crnor 20, 2, 6
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %a = icmp eq i64 %x, 17
+  %b = icmp eq i64 %x, 13
+  %r = or i1 %a, %b
+  ret i1 %r
+}
+
+define i1 @and_icmps_const_1bit_diff(i32 %x) {
+; CHECK-LABEL: and_icmps_const_1bit_diff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpwi 3, 4625
+; CHECK-NEXT:    cmpwi 1, 3, 4641
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    cror 20, 6, 2
+; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    blr
+  %a = icmp ne i32 %x, 4625
+  %b = icmp ne i32 %x, 4641
+  %r = and i1 %a, %b
+  ret i1 %r
+}
+

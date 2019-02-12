@@ -262,10 +262,6 @@ if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
-if (LIBCXXABI_USE_COMPILER_RT)
-  list(APPEND LIBCXXABI_LINK_FLAGS "-rtlib=compiler-rt")
-endif()
-
 # Let the library headers know they are currently being used to build the
 # library.
 add_definitions(-D_LIBCXXABI_BUILDING_LIBRARY)

@@ -136,9 +136,16 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
   return true;
 }
 
-
 void RawPrint(const char *Str) {
   write(2, Str, strlen(Str));
+}
+
+void MkDir(const std::string &Path) {
+  mkdir(Path.c_str(), 0700);
+}
+
+void RmDir(const std::string &Path) {
+  rmdir(Path.c_str());
 }
 
 }  // namespace fuzzer

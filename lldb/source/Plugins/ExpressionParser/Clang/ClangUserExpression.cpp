@@ -63,11 +63,9 @@ ClangUserExpression::ClangUserExpression(
     ValueObject *ctx_obj)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
                          options),
-      m_type_system_helper(*m_target_wp.lock().get(),
-                           options.GetExecutionPolicy() ==
-                               eExecutionPolicyTopLevel),
-      m_result_delegate(exe_scope.CalculateTarget()),
-      m_ctx_obj(ctx_obj) {
+      m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
+                                                    eExecutionPolicyTopLevel),
+      m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
   switch (m_language) {
   case lldb::eLanguageTypeC_plus_plus:
     m_allow_cxx = true;
@@ -824,7 +822,7 @@ ClangUserExpression::ClangUserExpressionHelper::ASTTransformer(
 }
 
 void ClangUserExpression::ClangUserExpressionHelper::CommitPersistentDecls() {
-  if (m_result_synthesizer_up.get()) {
+  if (m_result_synthesizer_up) {
     m_result_synthesizer_up->CommitPersistentDecls();
   }
 }

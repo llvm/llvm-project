@@ -336,6 +336,14 @@ void RawPrint(const char *Str) {
   _write(2, Str, strlen(Str));
 }
 
+void MkDir(const std::string &Path) {
+  Printf("MkDir: unimplemented\n");
+}
+
+void RmDir(const std::string &Path) {
+  Printf("RmDir: unimplemented\n");
+}
+
 }  // namespace fuzzer
 
 #endif // LIBFUZZER_WINDOWS
