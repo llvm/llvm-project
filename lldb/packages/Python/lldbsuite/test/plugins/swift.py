@@ -47,7 +47,15 @@ def getSwiftCompiler():
         candidates.append(
             os.path.join(
                 lldb_root_path,
+                "llvm-build/Release+Asserts/swift-macosx-x86_64/bin/swiftc"))
+        candidates.append(
+            os.path.join(
+                lldb_root_path,
                 "llvm-build/DebugAssert/swift-macosx-x86_64/bin/swiftc"))
+        candidates.append(
+            os.path.join(
+                lldb_root_path,
+                "llvm-build/Debug+Asserts/swift-macosx-x86_64/bin/swiftc"))
         candidates.append(
             os.path.join(
                 lldb_root_path,
