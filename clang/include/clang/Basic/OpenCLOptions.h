@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_OPENCLOPTIONS_H
 #define LLVM_CLANG_BASIC_OPENCLOPTIONS_H
 
+#include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang {
@@ -42,25 +43,29 @@ public:
 
   // Is supported as either an extension or an (optional) core feature for
   // OpenCL version \p CLVer.
-  bool isSupported(llvm::StringRef Ext, unsigned CLVer) const {
+  bool isSupported(llvm::StringRef Ext, LangOptions LO) const {
+    // In C++ mode all extensions should work at least as in v2.0.
+    auto CLVer = LO.OpenCLCPlusPlus ? 200 : LO.OpenCLVersion;
     auto I = OptMap.find(Ext)->getValue();
     return I.Supported && I.Avail <= CLVer;
   }
 
   // Is supported (optional) OpenCL core features for OpenCL version \p CLVer.
   // For supported extension, return false.
-  bool isSupportedCore(llvm::StringRef Ext, unsigned CLVer) const {
+  bool isSupportedCore(llvm::StringRef Ext, LangOptions LO) const {
+    // In C++ mode all extensions should work at least as in v2.0.
+    auto CLVer = LO.OpenCLCPlusPlus ? 200 : LO.OpenCLVersion;
     auto I = OptMap.find(Ext)->getValue();
-    return I.Supported && I.Avail <= CLVer &&
-      I.Core != ~0U && CLVer >= I.Core;
+    return I.Supported && I.Avail <= CLVer && I.Core != ~0U && CLVer >= I.Core;
   }
 
   // Is supported OpenCL extension for OpenCL version \p CLVer.
   // For supported (optional) core feature, return false.
- bool isSupportedExtension(llvm::StringRef Ext, unsigned CLVer) const {
+  bool isSupportedExtension(llvm::StringRef Ext, LangOptions LO) const {
+    // In C++ mode all extensions should work at least as in v2.0.
+    auto CLVer = LO.OpenCLCPlusPlus ? 200 : LO.OpenCLVersion;
     auto I = OptMap.find(Ext)->getValue();
-    return I.Supported && I.Avail <= CLVer &&
-      (I.Core == ~0U || CLVer < I.Core);
+    return I.Supported && I.Avail <= CLVer && (I.Core == ~0U || CLVer < I.Core);
   }
 
   void enable(llvm::StringRef Ext, bool V = true) {
@@ -122,10 +127,10 @@ public:
       I->second.Enabled = false;
   }
 
-  void enableSupportedCore(unsigned CLVer) {
-    for (llvm::StringMap<Info>::iterator I = OptMap.begin(),
-         E = OptMap.end(); I != E; ++I)
-      if (isSupportedCore(I->getKey(), CLVer))
+  void enableSupportedCore(LangOptions LO) {
+    for (llvm::StringMap<Info>::iterator I = OptMap.begin(), E = OptMap.end();
+         I != E; ++I)
+      if (isSupportedCore(I->getKey(), LO))
         I->second.Enabled = true;
   }
 
@@ -133,6 +138,6 @@ public:
   friend class ASTReader;
 };
 
-}  // end namespace clang
+} // end namespace clang
 
 #endif
