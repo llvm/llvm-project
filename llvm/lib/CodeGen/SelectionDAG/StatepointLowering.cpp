@@ -366,10 +366,6 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     // We use TargetFrameIndex so that isel will not select it into LEA
     Loc = Builder.DAG.getTargetFrameIndex(Index, Builder.getFrameIndexTy());
 
-    // TODO: We can create TokenFactor node instead of
-    //       chaining stores one after another, this may allow
-    //       a bit more optimal scheduling for them
-
 #ifndef NDEBUG
     // Right now we always allocate spill slots that are of the same
     // size as the value we're about to spill (the size of spillee can
@@ -398,6 +394,9 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
 static void lowerIncomingStatepointValue(SDValue Incoming, bool LiveInOnly,
                                          SmallVectorImpl<SDValue> &Ops,
                                          SelectionDAGBuilder &Builder) {
+  // Note: We know all of these spills are independent, but don't bother to
+  // exploit that chain wise.  DAGCombine will happily do so as needed, so
+  // doing it here would be a small compile time win at most.
   SDValue Chain = Builder.getRoot();
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Incoming)) {
@@ -984,11 +983,11 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   }
 
   SDValue SpillSlot =
-      DAG.getTargetFrameIndex(*DerivedPtrLocation, getFrameIndexTy());
+    DAG.getTargetFrameIndex(*DerivedPtrLocation, getFrameIndexTy());
 
-  // Be conservative: flush all pending loads
-  // TODO: Probably we can be less restrictive on this,
-  // it may allow more scheduling opportunities.
+  // Note: We know all of these reloads are independent, but don't bother to
+  // exploit that chain wise.  DAGCombine will happily do so as needed, so
+  // doing it here would be a small compile time win at most.
   SDValue Chain = getRoot();
 
   SDValue SpillLoad =
@@ -998,7 +997,6 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
                   MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
                                                     *DerivedPtrLocation));
 
-  // Again, be conservative, don't emit pending loads
   DAG.setRoot(SpillLoad.getValue(1));
 
   assert(SpillLoad.getNode());

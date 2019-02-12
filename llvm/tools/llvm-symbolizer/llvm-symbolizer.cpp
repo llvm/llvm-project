@@ -143,6 +143,10 @@ static cl::list<std::string> ClInputAddresses(cl::Positional,
                                               cl::desc("<input addresses>..."),
                                               cl::ZeroOrMore);
 
+static cl::opt<std::string>
+    ClFallbackDebugPath("fallback-debug-path", cl::init(""),
+                        cl::desc("Fallback path for debug binaries."));
+
 template<typename T>
 static bool error(Expected<T> &ResOrErr) {
   if (ResOrErr)
@@ -234,7 +238,8 @@ int main(int argc, char **argv) {
     ClDemangle = !ClNoDemangle;
 
   LLVMSymbolizer::Options Opts(ClPrintFunctions, ClUseSymbolTable, ClDemangle,
-                               ClUseRelativeAddress, ClDefaultArch);
+                               ClUseRelativeAddress, ClDefaultArch,
+                               ClFallbackDebugPath);
 
   for (const auto &hint : ClDsymHint) {
     if (sys::path::extension(hint) == ".dSYM") {

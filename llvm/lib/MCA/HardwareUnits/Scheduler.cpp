@@ -139,7 +139,9 @@ InstRef Scheduler::select() {
     if (QueueIndex == ReadySet.size() ||
         Strategy->compare(IR, ReadySet[QueueIndex])) {
       const InstrDesc &D = IR.getInstruction()->getDesc();
-      if (Resources->canBeIssued(D))
+      uint64_t BusyResourceMask = Resources->checkAvailability(D);
+      BusyResourceUnits |= BusyResourceMask;
+      if (!BusyResourceMask)
         QueueIndex = I;
     }
   }
@@ -195,6 +197,8 @@ void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
     IR.getInstruction()->cycleEvent();
 
   promoteToReadySet(Ready);
+
+  BusyResourceUnits = 0;
 }
 
 bool Scheduler::mustIssueImmediately(const InstRef &IR) const {

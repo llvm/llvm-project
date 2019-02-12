@@ -854,7 +854,6 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   IO.mapOptional("Link", Section.Link, StringRef());
   IO.mapOptional("AddressAlign", Section.AddressAlign, Hex64(0));
   IO.mapOptional("EntSize", Section.EntSize);
-  IO.mapOptional("Info", Section.Info, StringRef());
 }
 
 static void sectionMapping(IO &IO, ELFYAML::DynamicSection &Section) {
@@ -875,12 +874,14 @@ static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
 
 static void sectionMapping(IO &IO, ELFYAML::RelocationSection &Section) {
   commonSectionMapping(IO, Section);
+  IO.mapOptional("Info", Section.RelocatableSec, StringRef());
   IO.mapOptional("Relocations", Section.Relocations);
 }
 
-static void groupSectionMapping(IO &IO, ELFYAML::Group &group) {
-  commonSectionMapping(IO, group);
-  IO.mapRequired("Members", group.Members);
+static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
+  commonSectionMapping(IO, Group);
+  IO.mapOptional("Info", Group.Signature, StringRef());
+  IO.mapRequired("Members", Group.Members);
 }
 
 void MappingTraits<ELFYAML::SectionOrType>::mapping(

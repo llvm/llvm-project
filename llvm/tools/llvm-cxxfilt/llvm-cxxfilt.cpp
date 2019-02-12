@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -51,7 +52,7 @@ static cl::alias TypesShort("t", cl::desc("alias for --types"),
 static cl::list<std::string>
 Decorated(cl::Positional, cl::desc("<mangled>"), cl::ZeroOrMore);
 
-static void demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
+static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
   int Status;
 
   const char *Decorated = Mangled.c_str();
@@ -72,10 +73,28 @@ static void demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
     Undecorated = itaniumDemangle(Decorated + 6, nullptr, nullptr, &Status);
   }
 
-  OS << (Undecorated ? Undecorated : Mangled) << '\n';
-  OS.flush();
-
+  std::string Result(Undecorated ? Undecorated : Mangled);
   free(Undecorated);
+  return Result;
+}
+
+// If 'Split' is true, then 'Mangled' is broken into individual words and each
+// word is demangled.  Otherwise, the entire string is treated as a single
+// mangled item.  The result is output to 'OS'.
+static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
+  std::string Result;
+  if (Split) {
+    SmallVector<StringRef, 16> Words;
+    SplitString(Mangled, Words);
+    for (auto Word : Words)
+      Result += demangle(OS, Word) + ' ';
+    // Remove the trailing space character.
+    if (Result.back() == ' ')
+      Result.pop_back();
+  } else
+    Result = demangle(OS, Mangled);
+  OS << Result << '\n';
+  OS.flush();
 }
 
 int main(int argc, char **argv) {
@@ -85,10 +104,10 @@ int main(int argc, char **argv) {
 
   if (Decorated.empty())
     for (std::string Mangled; std::getline(std::cin, Mangled);)
-      demangle(llvm::outs(), Mangled);
+      demangleLine(llvm::outs(), Mangled, true);
   else
     for (const auto &Symbol : Decorated)
-      demangle(llvm::outs(), Symbol);
+      demangleLine(llvm::outs(), Symbol, false);
 
   return EXIT_SUCCESS;
 }

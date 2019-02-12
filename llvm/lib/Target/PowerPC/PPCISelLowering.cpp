@@ -118,6 +118,8 @@ STATISTIC(NumSiblingCalls, "Number of sibling calls");
 
 static bool isNByteElemShuffleMask(ShuffleVectorSDNode *, unsigned, int);
 
+static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl);
+
 // FIXME: Remove this once the bug has been fixed!
 extern cl::opt<bool> ANDIGlueBug;
 
@@ -638,6 +640,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     // We can custom expand all VECTOR_SHUFFLEs to VPERM, others we can handle
     // with merges, splats, etc.
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v16i8, Custom);
+
+    // Vector truncates to sub-word integer that fit in an Altivec/VSX register
+    // are cheap, so handle them before they get expanded to scalar.
+    setOperationAction(ISD::TRUNCATE, MVT::v8i8, Custom);
+    setOperationAction(ISD::TRUNCATE, MVT::v4i8, Custom);
+    setOperationAction(ISD::TRUNCATE, MVT::v2i8, Custom);
+    setOperationAction(ISD::TRUNCATE, MVT::v4i16, Custom);
+    setOperationAction(ISD::TRUNCATE, MVT::v2i16, Custom);
 
     setOperationAction(ISD::AND   , MVT::v4i32, Legal);
     setOperationAction(ISD::OR    , MVT::v4i32, Legal);
@@ -6794,6 +6804,61 @@ SDValue PPCTargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
                      Op.getOperand(0));
 }
 
+SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
+                                               SelectionDAG &DAG) const {
+
+  // Implements a vector truncate that fits in a vector register as a shuffle.
+  // We want to legalize vector truncates down to where the source fits in
+  // a vector register (and target is therefore smaller than vector register
+  // size).  At that point legalization will try to custom lower the sub-legal
+  // result and get here - where we can contain the truncate as a single target
+  // operation.
+
+  // For example a trunc <2 x i16> to <2 x i8> could be visualized as follows:
+  //   <MSB1|LSB1, MSB2|LSB2> to <LSB1, LSB2>
+  //
+  // We will implement it for big-endian ordering as this (where x denotes
+  // undefined):
+  //   < MSB1|LSB1, MSB2|LSB2, uu, uu, uu, uu, uu, uu> to
+  //   < LSB1, LSB2, u, u, u, u, u, u, u, u, u, u, u, u, u, u>
+  // 
+  // The same operation in little-endian ordering will be:
+  //   <uu, uu, uu, uu, uu, uu, LSB2|MSB2, LSB1|MSB1> to
+  //   <u, u, u, u, u, u, u, u, u, u, u, u, u, u, LSB2, LSB1>
+
+  assert(Op.getValueType().isVector() && "Vector type expected.");
+
+  SDLoc DL(Op);
+  SDValue N1 = Op.getOperand(0);
+  unsigned SrcSize = N1.getValueType().getSizeInBits();
+  assert(SrcSize <= 128 && "Source must fit in an Altivec/VSX vector");
+  SDValue WideSrc = SrcSize == 128 ? N1 : widenVec(DAG, N1, DL);
+
+  EVT TrgVT = Op.getValueType();
+  unsigned TrgNumElts = TrgVT.getVectorNumElements();
+  EVT EltVT = TrgVT.getVectorElementType();
+  unsigned WideNumElts = 128 / EltVT.getSizeInBits();
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), EltVT, WideNumElts);
+
+  // First list the elements we want to keep.
+  unsigned SizeMult = SrcSize / TrgVT.getSizeInBits();
+  SmallVector<int, 16> ShuffV;
+  if (Subtarget.isLittleEndian())
+    for (unsigned i = 0; i < TrgNumElts; ++i)
+      ShuffV.push_back(i * SizeMult);
+  else
+    for (unsigned i = 1; i <= TrgNumElts; ++i)
+      ShuffV.push_back(i * SizeMult - 1);
+
+  // Populate the remaining elements with undefs.
+  for (unsigned i = TrgNumElts; i < WideNumElts; ++i)
+    // ShuffV.push_back(i + WideNumElts);
+    ShuffV.push_back(WideNumElts + 1);
+
+  SDValue Conv = DAG.getNode(ISD::BITCAST, DL, WideVT, WideSrc);
+  return DAG.getVectorShuffle(WideVT, DL, Conv, DAG.getUNDEF(WideVT), ShuffV);
+}
+
 /// LowerSELECT_CC - Lower floating point select_cc's into fsel instruction when
 /// possible.
 SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
@@ -9641,6 +9706,14 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     Results.push_back(LowerFP_TO_INT(SDValue(N, 0), DAG, dl));
     return;
+  case ISD::TRUNCATE: {
+    EVT TrgVT = N->getValueType(0);
+    if (TrgVT.isVector() &&
+        isOperationCustom(N->getOpcode(), TrgVT) &&
+        N->getOperand(0).getValueType().getSizeInBits() <= 128)
+      Results.push_back(LowerTRUNCATEVector(SDValue(N, 0), DAG));
+    return;
+  }
   case ISD::BITCAST:
     // Don't handle bitcast here.
     return;

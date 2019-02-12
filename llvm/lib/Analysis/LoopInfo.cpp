@@ -254,35 +254,13 @@ void Loop::setLoopID(MDNode *LoopID) const {
 }
 
 void Loop::setLoopAlreadyUnrolled() {
-  MDNode *LoopID = getLoopID();
-  // First remove any existing loop unrolling metadata.
-  SmallVector<Metadata *, 4> MDs;
-  // Reserve first location for self reference to the LoopID metadata node.
-  MDs.push_back(nullptr);
-
-  if (LoopID) {
-    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-      bool IsUnrollMetadata = false;
-      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-      if (MD) {
-        const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-        IsUnrollMetadata = S && S->getString().startswith("llvm.loop.unroll.");
-      }
-      if (!IsUnrollMetadata)
-        MDs.push_back(LoopID->getOperand(i));
-    }
-  }
-
-  // Add unroll(disable) metadata to disable future unrolling.
   LLVMContext &Context = getHeader()->getContext();
-  SmallVector<Metadata *, 1> DisableOperands;
-  DisableOperands.push_back(MDString::get(Context, "llvm.loop.unroll.disable"));
-  MDNode *DisableNode = MDNode::get(Context, DisableOperands);
-  MDs.push_back(DisableNode);
 
-  MDNode *NewLoopID = MDNode::get(Context, MDs);
-  // Set operand 0 to refer to the loop id itself.
-  NewLoopID->replaceOperandWith(0, NewLoopID);
+  MDNode *DisableUnrollMD =
+      MDNode::get(Context, MDString::get(Context, "llvm.loop.unroll.disable"));
+  MDNode *LoopID = getLoopID();
+  MDNode *NewLoopID = makePostTransformationMetadata(
+      Context, LoopID, {"llvm.loop.unroll."}, {DisableUnrollMD});
   setLoopID(NewLoopID);
 }
 
@@ -758,6 +736,46 @@ MDNode *llvm::findOptionMDForLoop(const Loop *TheLoop, StringRef Name) {
 
 bool llvm::isValidAsAccessGroup(MDNode *Node) {
   return Node->getNumOperands() == 0 && Node->isDistinct();
+}
+
+MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
+                                             MDNode *OrigLoopID,
+                                             ArrayRef<StringRef> RemovePrefixes,
+                                             ArrayRef<MDNode *> AddAttrs) {
+  // First remove any existing loop metadata related to this transformation.
+  SmallVector<Metadata *, 4> MDs;
+
+  // Reserve first location for self reference to the LoopID metadata node.
+  TempMDTuple TempNode = MDNode::getTemporary(Context, None);
+  MDs.push_back(TempNode.get());
+
+  // Remove metadata for the transformation that has been applied or that became
+  // outdated.
+  if (OrigLoopID) {
+    for (unsigned i = 1, ie = OrigLoopID->getNumOperands(); i < ie; ++i) {
+      bool IsVectorMetadata = false;
+      Metadata *Op = OrigLoopID->getOperand(i);
+      if (MDNode *MD = dyn_cast<MDNode>(Op)) {
+        const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+        if (S)
+          IsVectorMetadata =
+              llvm::any_of(RemovePrefixes, [S](StringRef Prefix) -> bool {
+                return S->getString().startswith(Prefix);
+              });
+      }
+      if (!IsVectorMetadata)
+        MDs.push_back(Op);
+    }
+  }
+
+  // Add metadata to avoid reapplying a transformation, such as
+  // llvm.loop.unroll.disable and llvm.loop.isvectorized.
+  MDs.append(AddAttrs.begin(), AddAttrs.end());
+
+  MDNode *NewLoopID = MDNode::getDistinct(Context, MDs);
+  // Replace the temporary node with a self-reference.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  return NewLoopID;
 }
 
 //===----------------------------------------------------------------------===//

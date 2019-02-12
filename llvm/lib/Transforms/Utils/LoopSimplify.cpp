@@ -662,9 +662,9 @@ ReprocessLoop:
       DT->eraseNode(ExitingBlock);
 
       BI->getSuccessor(0)->removePredecessor(
-          ExitingBlock, /* DontDeleteUselessPHIs */ PreserveLCSSA);
+          ExitingBlock, /* KeepOneInputPHIs */ PreserveLCSSA);
       BI->getSuccessor(1)->removePredecessor(
-          ExitingBlock, /* DontDeleteUselessPHIs */ PreserveLCSSA);
+          ExitingBlock, /* KeepOneInputPHIs */ PreserveLCSSA);
       ExitingBlock->eraseFromParent();
     }
   }

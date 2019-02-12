@@ -19404,10 +19404,12 @@ SDValue DAGCombiner::FindBetterChain(LSBaseSDNode *N, SDValue OldChain) {
   return DAG.getNode(ISD::TokenFactor, SDLoc(N), MVT::Other, Aliases);
 }
 
+namespace {
 // TODO: Replace with with std::monostate when we move to C++17.
 struct UnitT { } Unit;
 bool operator==(const UnitT &, const UnitT &) { return true; }
 bool operator!=(const UnitT &, const UnitT &) { return false; }
+} // namespace
 
 // This function tries to collect a bunch of potentially interesting
 // nodes to improve the chains of, all at once. This might seem

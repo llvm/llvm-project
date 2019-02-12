@@ -112,7 +112,7 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, TargetTransformInfo *, Loop *,
                 AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                OptimizationRemarkEmitter *ORE);
+                bool, OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -124,8 +124,8 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                 OptimizationRemarkEmitter *ORE);
+                 MemorySSAUpdater *, ICFLoopSafetyInfo *, bool,
+                 OptimizationRemarkEmitter *);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -276,6 +276,7 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
                         MemorySSAUpdater *MSSAU, bool TargetExecutesOncePerLoop,
+                        bool NoOfMemAccessesTooLarge,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.

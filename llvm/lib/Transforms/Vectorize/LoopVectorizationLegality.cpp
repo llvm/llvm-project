@@ -104,6 +104,25 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
              << "LV: Interleaving disabled by the pass manager\n");
 }
 
+void LoopVectorizeHints::setAlreadyVectorized() {
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+
+  MDNode *IsVectorizedMD = MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.isvectorized"),
+       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
+  MDNode *LoopID = TheLoop->getLoopID();
+  MDNode *NewLoopID =
+      makePostTransformationMetadata(Context, LoopID,
+                                     {Twine(Prefix(), "vectorize.").str(),
+                                      Twine(Prefix(), "interleave.").str()},
+                                     {IsVectorizedMD});
+  TheLoop->setLoopID(NewLoopID);
+
+  // Update internal cache.
+  IsVectorized.Value = 1;
+}
+
 bool LoopVectorizeHints::allowVectorization(
     Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
@@ -229,57 +248,6 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
       break;
     }
   }
-}
-
-MDNode *LoopVectorizeHints::createHintMetadata(StringRef Name,
-                                               unsigned V) const {
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
-  Metadata *MDs[] = {
-      MDString::get(Context, Name),
-      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Context), V))};
-  return MDNode::get(Context, MDs);
-}
-
-bool LoopVectorizeHints::matchesHintMetadataName(MDNode *Node,
-                                                 ArrayRef<Hint> HintTypes) {
-  MDString *Name = dyn_cast<MDString>(Node->getOperand(0));
-  if (!Name)
-    return false;
-
-  for (auto H : HintTypes)
-    if (Name->getString().endswith(H.Name))
-      return true;
-  return false;
-}
-
-void LoopVectorizeHints::writeHintsToMetadata(ArrayRef<Hint> HintTypes) {
-  if (HintTypes.empty())
-    return;
-
-  // Reserve the first element to LoopID (see below).
-  SmallVector<Metadata *, 4> MDs(1);
-  // If the loop already has metadata, then ignore the existing operands.
-  MDNode *LoopID = TheLoop->getLoopID();
-  if (LoopID) {
-    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-      MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
-      // If node in update list, ignore old value.
-      if (!matchesHintMetadataName(Node, HintTypes))
-        MDs.push_back(Node);
-    }
-  }
-
-  // Now, add the missing hints.
-  for (auto H : HintTypes)
-    MDs.push_back(createHintMetadata(Twine(Prefix(), H.Name).str(), H.Value));
-
-  // Replace current metadata node with new one.
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
-  MDNode *NewLoopID = MDNode::get(Context, MDs);
-  // Set operand 0 to refer to the loop id itself.
-  NewLoopID->replaceOperandWith(0, NewLoopID);
-
-  TheLoop->setLoopID(NewLoopID);
 }
 
 bool LoopVectorizationRequirements::doesNotMeet(

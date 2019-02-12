@@ -179,9 +179,9 @@ getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
 
 /// Given a register bank, and size in bits, return the smallest register class
 /// that can represent that combination.
-const TargetRegisterClass *getMinClassForRegBank(const RegisterBank &RB,
-                                                 unsigned SizeInBits,
-                                                 bool GetAllRegSet = false) {
+static const TargetRegisterClass *
+getMinClassForRegBank(const RegisterBank &RB, unsigned SizeInBits,
+                      bool GetAllRegSet = false) {
   unsigned RegBankID = RB.getID();
 
   if (RegBankID == AArch64::GPRRegBankID) {

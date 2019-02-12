@@ -20,8 +20,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -326,6 +328,8 @@ CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
 }
 
 void CodeGenTarget::ReadInstructions() const {
+  NamedRegionTimer T("Read Instructions", "Time spent reading instructions",
+                     "CodeGenTarget", "CodeGenTarget", TimeRegions);
   std::vector<Record*> Insts = Records.getAllDerivedDefinitions("Instruction");
   if (Insts.size() <= 2)
     PrintFatalError("No 'Instruction' subclasses defined!");
