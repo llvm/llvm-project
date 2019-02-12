@@ -753,6 +753,8 @@ public:
     OverlayDir.assign(OverlayDirectory.str());
   }
 
+  const std::vector<YAMLVFSEntry> &getMappings() const { return Mappings; }
+
   void write(llvm::raw_ostream &OS);
 };
 
