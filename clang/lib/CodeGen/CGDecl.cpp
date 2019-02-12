@@ -1631,10 +1631,14 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
                   ? LangOptions::TrivialAutoVarInitKind::Uninitialized
                   : getContext().getLangOpts().getTrivialAutoVarInit()));
 
-  auto initializeWhatIsTechnicallyUninitialized = [&]() {
+  auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
         LangOptions::TrivialAutoVarInitKind::Uninitialized)
       return;
+
+    // Only initialize a __block's storage: we always initialize the header.
+    if (emission.IsEscapingByRef)
+      Loc = emitBlockByrefAddress(Loc, &D, /*follow=*/false);
 
     CharUnits Size = getContext().getTypeSizeInChars(type);
     if (!Size.isZero()) {
@@ -1713,7 +1717,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   };
 
   if (isTrivialInitializer(Init)) {
-    initializeWhatIsTechnicallyUninitialized();
+    initializeWhatIsTechnicallyUninitialized(Loc);
     return;
   }
 
@@ -1727,7 +1731,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   }
 
   if (!constant) {
-    initializeWhatIsTechnicallyUninitialized();
+    initializeWhatIsTechnicallyUninitialized(Loc);
     LValue lv = MakeAddrLValue(Loc, type);
     lv.setNonGC(true);
     return EmitExprAsInit(Init, &D, lv, capturedByInit);
