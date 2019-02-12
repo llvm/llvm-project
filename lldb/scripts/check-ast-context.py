@@ -291,6 +291,11 @@ def init_libclang(src_path, lib_path):
     clang.cindex.Cursor.dump = lambda self: printtree(self, depth=0)
     return True
 
+def compute_libcpp_include_path():
+    clang = subprocess.check_output(['xcrun', '-f', 'clang']).strip()
+    # Remove /bin/clang
+    base = os.path.dirname(os.path.dirname(clang))
+    return os.path.join(base, "include", "c++", "v1")
 
 def main():
     args = get_args()
@@ -322,6 +327,7 @@ def main():
         os.path.join(os.path.abspath(args.llvmbuild), 'include'),
         os.path.join(os.path.abspath(args.llvmbuild), 'tools', 'clang', 'include'),
         os.path.join(os.path.abspath(args.swiftbuild), 'include'),
+        compute_libcpp_include_path(),
     ]]
     lang = [CPP11()]
     sdk = [SDKRoot(args.sdk)]
