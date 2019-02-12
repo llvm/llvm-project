@@ -637,7 +637,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   // Filter out "fpsw" and "mxcsr". They aren't valid GCC asm clobber
   // constraints. Clang always adds fpsr to the clobber list anyway.
   llvm::erase_if(Clobbers, [](const std::string &C) {
-    return C == "fpsw" || C == "mxcsr";
+    return C == "fpsr" || C == "mxcsr";
   });
 
   // Build the vector of clobber StringRefs.
