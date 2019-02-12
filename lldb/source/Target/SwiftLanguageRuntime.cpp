@@ -2080,9 +2080,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     if (!result.isSuccess())
       return false;
     auto type_and_address = result.getValue();
-    CompilerType dynamic_type(type_and_address.first);
+    CompilerType dynamic_type(type_and_address.InstanceType);
     class_type_or_name.SetCompilerType(dynamic_type);
-    address.SetLoadAddress(type_and_address.second.getAddressData(),
+    address.SetLoadAddress(type_and_address.PayloadAddress.getAddressData(),
                            &m_process->GetTarget());
     return true;
   } break;
