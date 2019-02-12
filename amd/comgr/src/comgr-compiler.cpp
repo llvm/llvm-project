@@ -67,6 +67,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -867,10 +868,13 @@ amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
       continue;
 
     SMDiagnostic SMDiag;
-    auto InputPath = GetFilePath(Input, InputDir);
-    if (auto Status = OutputToFile(Input, InputPath))
-      return Status;
-    auto Mod = getLazyIRFileModule(InputPath, SMDiag, Context);
+    // The data in Input outlives Mod, and the linker destructs Mod after
+    // linking it into composite (i.e. ownership is not transferred to the
+    // composite) so MemoryBuffer::getMemBuffer is sufficient.
+    auto Mod =
+        getLazyIRModule(MemoryBuffer::getMemBuffer(
+                            StringRef(Input->data, Input->size), "", false),
+                        SMDiag, Context, true);
     if (!Mod) {
       SMDiag.print(Input->name, LogS, /* ShowColors */ false);
       return AMD_COMGR_STATUS_ERROR;
