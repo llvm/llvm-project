@@ -689,3 +689,17 @@ define i24 @rotl_select_weird_type(i24 %x, i24 %shamt) {
   ret i24 %r
 }
 
+; Test that the transform doesn't crash when there's an "or" with a ConstantExpr operand.
+
+@external_global = external global i8
+
+define i32 @rotl_constant_expr(i32 %shamt) {
+; CHECK-LABEL: @rotl_constant_expr(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 ptrtoint (i8* @external_global to i32), [[SHAMT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], shl (i32 ptrtoint (i8* @external_global to i32), i32 11)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shr = lshr i32 ptrtoint (i8* @external_global to i32), %shamt
+  %r = or i32 %shr, shl (i32 ptrtoint (i8* @external_global to i32), i32 11)
+  ret i32 %r
+}

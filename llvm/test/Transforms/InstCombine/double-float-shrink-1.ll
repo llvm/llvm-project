@@ -1,6 +1,8 @@
-; RUN: opt < %s -instcombine -S -mtriple x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,LINUX,LIN64
-; RUN: opt < %s -instcombine -S -mtriple x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,WIN64,WIN96,LIN64
-; RUN: opt < %s -instcombine -S -mtriple i386-pc-win32            | FileCheck %s --check-prefixes=CHECK,WIN32,WIN96
+; RUN: opt < %s -instcombine -S -mtriple x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,LINUX,LINMS
+; RUN: opt < %s -instcombine -S -mtriple x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,MSVC,LINMS
+; RUN: opt < %s -instcombine -S -mtriple x86_64-pc-windows-msvc16 | FileCheck %s --check-prefixes=CHECK,MSVC,MS64
+; RUN: opt < %s -instcombine -S -mtriple i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,MSVC,MS32
+; RUN: opt < %s -instcombine -S -mtriple i686-pc-windows-msvc17   | FileCheck %s --check-prefixes=CHECK,MSVC,MS32
 
 ; Check for and against shrinkage when using the
 ; unsafe-fp-math function attribute on a math lib
@@ -10,9 +12,11 @@
 
 define float @acos_test1(float %f)   {
 ; CHECK-LABEL: @acos_test1(
-; LIN64-NEXT:    [[ACOSF:%.*]] = call fast float @acosf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[ACOSF]]
-; WIN32:         [[ACOSF:%.*]] = call fast double @acos(double [[F:%.*]])
+; LINMS-NEXT:    [[ACOSF:%.*]] = call fast float @acosf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[ACOSF]]
+; MS64-NEXT:     [[ACOSF:%.*]] = call fast float @acosf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[ACOSF]]
+; MS32:          [[ACOSF:%.*]] = call fast double @acos(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @acos(double %conv)
@@ -35,7 +39,7 @@ define float @acosh_test1(float %f)   {
 ; CHECK-LABEL: @acosh_test1(
 ; LINUX-NEXT:    [[ACOSHF:%.*]] = call fast float @acoshf(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[ACOSHF]]
-; WIN96:         [[ACOSHF:%.*]] = call fast double @acosh(double [[F:%.*]])
+; MSVC:          [[ACOSHF:%.*]] = call fast double @acosh(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @acosh(double %conv)
@@ -56,9 +60,11 @@ define double @acosh_test2(float %f)   {
 
 define float @asin_test1(float %f)   {
 ; CHECK-LABEL: @asin_test1(
-; LIN64-NEXT:    [[ASINF:%.*]] = call fast float @asinf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[ASINF]]
-; WIN32:         [[ASINF:%.*]] = call fast double @asin(double [[F:%.*]])
+; LINMS-NEXT:    [[ASINF:%.*]] = call fast float @asinf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[ASINF]]
+; MS64-NEXT:     [[ASINF:%.*]] = call fast float @asinf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[ASINF]]
+; MS32:          [[ASINF:%.*]] = call fast double @asin(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @asin(double %conv)
@@ -81,7 +87,7 @@ define float @asinh_test1(float %f)   {
 ; CHECK-LABEL: @asinh_test1(
 ; LINUX-NEXT:   [[ASINHF:%.*]] = call fast float @asinhf(float [[F:%.*]])
 ; LINUX-NEXT:   ret float [[ASINHF]]
-; WIN96:        [[ASINHF:%.*]] = call fast double @asinh(double [[F:%.*]])
+; MSVC:         [[ASINHF:%.*]] = call fast double @asinh(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @asinh(double %conv)
@@ -102,9 +108,11 @@ define double @asinh_test2(float %f)   {
 
 define float @atan_test1(float %f)   {
 ; CHECK-LABEL: @atan_test1(
-; LIN64-NEXT:    [[ATANF:%.*]] = call fast float @atanf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[ATANF]]
-; WIN32:         [[ATANF:%.*]] = call fast double @atan(double [[F:%.*]])
+; LINMS-NEXT:    [[ATANF:%.*]] = call fast float @atanf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[ATANF]]
+; MS64-NEXT:     [[ATANF:%.*]] = call fast float @atanf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[ATANF]]
+; MS32:          [[ATANF:%.*]] = call fast double @atan(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @atan(double %conv)
@@ -127,7 +135,7 @@ define float @atanh_test1(float %f)   {
 ; CHECK-LABEL: @atanh_test1(
 ; LINUX-NEXT:    [[ATANHF:%.*]] = call fast float @atanhf(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[ATANHF]]
-; WIN96:         [[ATANHF:%.*]] = call fast double @atanh(double [[F:%.*]])
+; MSVC:          [[ATANHF:%.*]] = call fast double @atanh(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @atanh(double %conv)
@@ -150,7 +158,7 @@ define float @cbrt_test1(float %f)   {
 ; CHECK-LABEL: @cbrt_test1(
 ; LINUX-NEXT:    [[CBRTF:%.*]] = call fast float @cbrtf(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[CBRTF]]
-; WIN96:         [[CBRTF:%.*]] = call fast double @cbrt(double [[F:%.*]])
+; MSVC:          [[CBRTF:%.*]] = call fast double @cbrt(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @cbrt(double %conv)
@@ -171,9 +179,11 @@ define double @cbrt_test2(float %f)   {
 
 define float @exp_test1(float %f)   {
 ; CHECK-LABEL: @exp_test1(
-; LIN64-NEXT:    [[EXPF:%.*]] = call fast float @expf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[EXPF]]
-; WIN32:         [[EXPF:%.*]] = call fast double @exp(double [[F:%.*]])
+; LINMS-NEXT:    [[EXPF:%.*]] = call fast float @expf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[EXPF]]
+; MS64-NEXT:     [[EXPF:%.*]] = call fast float @expf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[EXPF]]
+; MS32:          [[EXPF:%.*]] = call fast double @exp(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @exp(double %conv)
@@ -196,7 +206,7 @@ define float @expm1_test1(float %f)   {
 ; CHECK-LABEL: @expm1_test1(
 ; LINUX-NEXT:    [[EXPM1F:%.*]] = call fast float @expm1f(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[EXPM1F]]
-; WIN96:         [[EXPM1F:%.*]] = call fast double @expm1(double [[F:%.*]])
+; MSVC:          [[EXPM1F:%.*]] = call fast double @expm1(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @expm1(double %conv)
@@ -243,9 +253,11 @@ define double @exp10_test2(float %f)   {
 
 define float @log_test1(float %f)   {
 ; CHECK-LABEL: @log_test1(
-; LIN64-NEXT:    [[LOGF:%.*]] = call fast float @logf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[LOGF]]
-; WIN32:         [[LOGF:%.*]] = call fast double @log(double [[F:%.*]])
+; LINMS-NEXT:    [[LOGF:%.*]] = call fast float @logf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[LOGF]]
+; MS64-NEXT:     [[LOGF:%.*]] = call fast float @logf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[LOGF]]
+; MS32:          [[LOGF:%.*]] = call fast double @log(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @log(double %conv)
@@ -266,9 +278,11 @@ define double @log_test2(float %f)   {
 
 define float @log10_test1(float %f)   {
 ; CHECK-LABEL: @log10_test1(
-; LIN64-NEXT:    [[LOG10F:%.*]] = call fast float @log10f(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[LOG10F]]
-; WIN32:         [[LOG10F:%.*]] = call fast double @log10(double [[F:%.*]])
+; LINMS-NEXT:    [[LOG10F:%.*]] = call fast float @log10f(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[LOG10F]]
+; MS64-NEXT:     [[LOG10F:%.*]] = call fast float @log10f(float [[F:%.*]])
+; MS64-NEXT:     ret float [[LOG10F]]
+; MS32:          [[LOG10F:%.*]] = call fast double @log10(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @log10(double %conv)
@@ -291,7 +305,7 @@ define float @log1p_test1(float %f)   {
 ; CHECK-LABEL: @log1p_test1(
 ; LINUX-NEXT:    [[LOG1PF:%.*]] = call fast float @log1pf(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[LOG1PF]]
-; WIN96:         [[LOG1PF:%.*]] = call fast double @log1p(double [[F:%.*]])
+; MSVC:          [[LOG1PF:%.*]] = call fast double @log1p(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @log1p(double %conv)
@@ -313,8 +327,8 @@ define double @log1p_test2(float %f)   {
 define float @log2_test1(float %f)   {
 ; CHECK-LABEL: @log2_test1(
 ; LINUX-NEXT:    [[LOG2F:%.*]] = call fast float @log2f(float [[F:%.*]])
-; LINUX-NEXT:     ret float [[LOG2F]]
-; WIN96:         [[LOG2F:%.*]] = call fast double @log2(double [[F:%.*]])
+; LINUX-NEXT:    ret float [[LOG2F]]
+; MSVC:          [[LOG2F:%.*]] = call fast double @log2(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @log2(double %conv)
@@ -335,9 +349,9 @@ define double @log2_test2(float %f)   {
 
 define float @logb_test1(float %f)   {
 ; CHECK-LABEL: @logb_test1(
-; LINUX-NEXT:    [[LOGBF:%.*]] = call fast float @logbf(float [[F:%.*]])
-; LINUX-NEXT:    ret float [[LOGBF]]
-; WIN96:         [[LOGBF:%.*]] = call fast double @logb(double [[F:%.*]])
+; LINMS-NEXT:    [[LOGBF:%.*]] = call fast float @logbf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[LOGBF]]
+; MS64:          [[LOGBF:%.*]] = call fast double @logb(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @logb(double %conv)
@@ -358,9 +372,11 @@ define double @logb_test2(float %f)   {
 
 define float @pow_test1(float %f, float %g)   {
 ; CHECK-LABEL: @pow_test1(
-; LIN64-NEXT:    [[POWF:%.*]] = call fast float @powf(float %f, float %g)
-; LIN64-NEXT:    ret float [[POWF]]
-; WIN32:         [[POWF:%.*]] = call fast double @pow(double %df, double %dg)
+; LINMS-NEXT:    [[POWF:%.*]] = call fast float @powf(float %f, float %g)
+; LINMS-NEXT:    ret float [[POWF]]
+; MS64-NEXT:     [[POWF:%.*]] = call fast float @powf(float %f, float %g)
+; MS64-NEXT:     ret float [[POWF]]
+; MS32:          [[POWF:%.*]] = call fast double @pow(double %df, double %dg)
 ;
   %df = fpext float %f to double
   %dg = fpext float %g to double
@@ -382,9 +398,11 @@ define double @pow_test2(float %f, float %g) {
 
 define float @sin_test1(float %f)   {
 ; CHECK-LABEL: @sin_test1(
-; LIN64-NEXT:    [[SINF:%.*]] = call fast float @sinf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[SINF]]
-; WIN32:         [[SINF:%.*]] = call fast double @sin(double [[F:%.*]])
+; LINMS-NEXT:    [[SINF:%.*]] = call fast float @sinf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[SINF]]
+; MS64-NEXT:     [[SINF:%.*]] = call fast float @sinf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[SINF]]
+; MS32:          [[SINF:%.*]] = call fast double @sin(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @sin(double %conv)
@@ -405,9 +423,11 @@ define double @sin_test2(float %f) {
 
 define float @sqrt_test1(float %f) {
 ; CHECK-LABEL: @sqrt_test1(
-; LIN64-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[SQRTF]]
-; WIN32:         [[SQRTF:%.*]] = call double @sqrt(double [[F:%.*]])
+; LINMS-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[SQRTF]]
+; MS64-NEXT:     [[SQRTF:%.*]] = call float @sqrtf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[SQRTF]]
+; MS32:          [[SQRTF:%.*]] = call double @sqrt(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call double @sqrt(double %conv)
@@ -428,9 +448,11 @@ define double @sqrt_test2(float %f) {
 
 define float @sqrt_int_test1(float %f) {
 ; CHECK-LABEL: @sqrt_int_test1(
-; LIN64-NEXT:    [[TMP1:%.*]] = call float @llvm.sqrt.f32(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[TMP1]]
-; WIN32:         [[TMP1:%.*]] = call double @llvm.sqrt.f64(double [[F:%.*]])
+; LINMS-NEXT:    [[TMP1:%.*]] = call float @llvm.sqrt.f32(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[TMP1]]
+; MS64-NEXT:     [[TMP1:%.*]] = call float @llvm.sqrt.f32(float [[F:%.*]])
+; MS64-NEXT:     ret float [[TMP1]]
+; MS32:          [[TMP1:%.*]] = call double @llvm.sqrt.f64(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call double @llvm.sqrt.f64(double %conv)
@@ -451,9 +473,11 @@ define double @sqrt_int_test2(float %f) {
 
 define float @tan_test1(float %f) {
 ; CHECK-LABEL: @tan_test1(
-; LIN64-NEXT:    [[TANF:%.*]] = call fast float @tanf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[TANF]]
-; WIN32:         [[TANF:%.*]] = call fast double @tan(double [[F:%.*]])
+; LINMS-NEXT:    [[TANF:%.*]] = call fast float @tanf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[TANF]]
+; MS64-NEXT:     [[TANF:%.*]] = call fast float @tanf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[TANF]]
+; MS32:          [[TANF:%.*]] = call fast double @tan(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @tan(double %conv)
@@ -473,9 +497,11 @@ define double @tan_test2(float %f) {
 }
 define float @tanh_test1(float %f) {
 ; CHECK-LABEL: @tanh_test1(
-; LIN64-NEXT:    [[TANHF:%.*]] = call fast float @tanhf(float [[F:%.*]])
-; LIN64-NEXT:    ret float [[TANHF]]
-; WIN32:         [[TANHF:%.*]] = call fast double @tanh(double [[F:%.*]])
+; LINMS-NEXT:    [[TANHF:%.*]] = call fast float @tanhf(float [[F:%.*]])
+; LINMS-NEXT:    ret float [[TANHF]]
+; MS64-NEXT:     [[TANHF:%.*]] = call fast float @tanhf(float [[F:%.*]])
+; MS64-NEXT:     ret float [[TANHF]]
+; MS32:          [[TANHF:%.*]] = call fast double @tanh(double [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @tanh(double %conv)
@@ -498,9 +524,9 @@ define double @tanh_test2(float %f) {
 ; flags are propagated for shrunken *binary* double FP calls.
 define float @max1(float %a, float %b) {
 ; CHECK-LABEL: @max1(
-; LIN64-NEXT:    [[FMAXF:%.*]] = call arcp float @fmaxf(float [[A:%.*]], float [[B:%.*]])
-; LIN64-NEXT:    ret float [[FMAXF]]
-; WIN32:         [[FMAXF:%.*]] = call arcp double @fmax(double [[A:%.*]], double [[B:%.*]])
+; LINUX-NEXT:    [[FMAXF:%.*]] = call arcp float @fmaxf(float [[A:%.*]], float [[B:%.*]])
+; LINUX-NEXT:    ret float [[FMAXF]]
+; MSVC:          [[FMAXF:%.*]] = call arcp double @fmax(double [[A:%.*]], double [[B:%.*]])
 ;
   %c = fpext float %a to double
   %d = fpext float %b to double

@@ -663,8 +663,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
 
 void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
     IO &IO, ELFYAML::ELF_DYNTAG &Value) {
-  const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
-  assert(Object && "The IO context is not initialized");
+  assert(IO.getContext() && "The IO context is not initialized");
 
 // TODO: For simplicity we do not handle target specific flags. They are
 // still supported and will be shown as a raw numeric values in the output.
@@ -991,8 +990,7 @@ struct NormalizedMips64RelType {
 
 void MappingTraits<ELFYAML::DynamicEntry>::mapping(IO &IO,
                                                    ELFYAML::DynamicEntry &Rel) {
-  const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
-  assert(Object && "The IO context is not initialized");
+  assert(IO.getContext() && "The IO context is not initialized");
 
   IO.mapRequired("Tag", Rel.Tag);
   IO.mapRequired("Value", Rel.Val);

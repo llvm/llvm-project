@@ -166,9 +166,9 @@ void ObjectFileJIT::Dump(Stream *s) {
   }
 }
 
-bool ObjectFileJIT::GetUUID(lldb_private::UUID *uuid) {
+UUID ObjectFileJIT::GetUUID() {
   // TODO: maybe get from delegate, not needed for first pass
-  return false;
+  return UUID();
 }
 
 uint32_t ObjectFileJIT::GetDependentModules(FileSpecList &files) {

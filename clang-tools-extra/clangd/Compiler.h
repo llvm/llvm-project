@@ -17,7 +17,6 @@
 
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "index/Index.h"
-#include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
@@ -39,7 +38,6 @@ public:
 struct ParseOptions {
   tidy::ClangTidyOptions ClangTidyOpts;
   bool SuggestMissingIncludes = false;
-  format::FormatStyle Style;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.

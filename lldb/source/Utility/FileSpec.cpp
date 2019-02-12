@@ -365,6 +365,17 @@ bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
   return a == b;
 }
 
+llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolute_path) {
+  if (absolute_path.startswith("/"))
+    return Style::posix;
+  if (absolute_path.startswith(R"(\\)"))
+    return Style::windows;
+  if (absolute_path.size() > 3 && llvm::isAlpha(absolute_path[0]) &&
+      absolute_path.substr(1, 2) == R"(:\)")
+    return Style::windows;
+  return llvm::None;
+}
+
 //------------------------------------------------------------------
 // Dump the object to the supplied stream. If the object contains a valid
 // directory name, it will be displayed followed by a directory delimiter, and

@@ -20,10 +20,21 @@
 namespace llvm {
 
 class StringRef;
+class MemoryBuffer;
 class MemoryBufferRef;
 class Module;
 class SMDiagnostic;
 class LLVMContext;
+
+/// If the given MemoryBuffer holds a bitcode image, return a Module
+/// for it which does lazy deserialization of function bodies.  Otherwise,
+/// attempt to parse it as LLVM Assembly and return a fully populated
+/// Module. The ShouldLazyLoadMetadata flag is passed down to the bitcode
+/// reader to optionally enable lazy metadata loading. This takes ownership
+/// of \p Buffer.
+std::unique_ptr<Module> getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer,
+                                        SMDiagnostic &Err, LLVMContext &Context,
+                                        bool ShouldLazyLoadMetadata = false);
 
 /// If the given file holds a bitcode image, return a Module
 /// for it which does lazy deserialization of function bodies.  Otherwise,

@@ -152,9 +152,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Opts.ClangTidyOpts = tidy::ClangTidyOptions::getDefaults();
   if (ClangTidyOptProvider)
     Opts.ClangTidyOpts = ClangTidyOptProvider->getOptions(File);
-  // FIXME: cache this.
-  Opts.Style =
-      getFormatStyleForFile(File, Contents, FSProvider.getFileSystem().get());
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   // FIXME: some build systems like Bazel will take time to preparing
   // environment to build the file, it would be nice if we could emit a
@@ -365,8 +362,9 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<tooling::Replacements> CB) {
-  auto Action = [Sel](decltype(CB) CB, std::string File, std::string TweakID,
-                      Expected<InputsAndAST> InpAST) {
+  auto Action = [Sel, this](decltype(CB) CB, std::string File,
+                            std::string TweakID,
+                            Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     auto Selection = tweakSelection(Sel, *InpAST);
@@ -375,7 +373,15 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     auto A = prepareTweak(TweakID, *Selection);
     if (!A)
       return CB(A.takeError());
-    return CB((*A)->apply(*Selection, InpAST->Inputs.Opts.Style));
+    auto RawReplacements = (*A)->apply(*Selection);
+    if (!RawReplacements)
+      return CB(RawReplacements.takeError());
+    // FIXME: this function has I/O operations (find .clang-format file), figure
+    // out a way to cache the format style.
+    auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                                       InpAST->Inputs.FS.get());
+    return CB(
+        cleanupAndFormat(InpAST->Inputs.Contents, *RawReplacements, Style));
   };
   WorkScheduler.runWithAST(
       "ApplyTweak", File,

@@ -93,7 +93,7 @@ public:
 
   lldb_private::ArchSpec GetArchitecture() override;
 
-  bool GetUUID(lldb_private::UUID *uuid) override;
+  lldb_private::UUID GetUUID() override;
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
@@ -140,11 +140,10 @@ public:
   uint32_t GetPluginVersion() override;
 
 protected:
-  static bool
+  static lldb_private::UUID
   GetUUID(const llvm::MachO::mach_header &header,
           const lldb_private::DataExtractor &data,
-          lldb::offset_t lc_offset, // Offset to the first load command
-          lldb_private::UUID &uuid);
+          lldb::offset_t lc_offset); // Offset to the first load command
 
   static lldb_private::ArchSpec
   GetArchitecture(const llvm::MachO::mach_header &header,

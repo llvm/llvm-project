@@ -11,6 +11,7 @@ import distutils.spawn
 import sys
 import re
 import libcxx.util
+from pprint import pformat
 
 
 def read_syms_from_list(slist):
@@ -48,7 +49,8 @@ def write_syms(sym_list, out=None, names_only=False):
     if names_only:
         out_list = [sym['name'] for sym in sym_list]
     for sym in out_list:
-        out_str += '%s\n' % sym
+        # Use pformat for consistent ordering of keys.
+        out_str += pformat(sym, width=100000) + '\n'
     if out is None:
         sys.stdout.write(out_str)
     else:

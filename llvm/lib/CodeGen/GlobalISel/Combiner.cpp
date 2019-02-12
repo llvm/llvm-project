@@ -50,7 +50,7 @@ public:
   }
 
   void erasingInstr(MachineInstr &MI) override {
-    LLVM_DEBUG(dbgs() << "Erased: " << MI << "\n");
+    LLVM_DEBUG(dbgs() << "Erasing: " << MI << "\n");
     WorkList.remove(&MI);
   }
   void createdInstr(MachineInstr &MI) override {

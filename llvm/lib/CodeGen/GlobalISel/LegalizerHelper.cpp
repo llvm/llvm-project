@@ -99,6 +99,9 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
   case FewerElements:
     LLVM_DEBUG(dbgs() << ".. Reduce number of elements\n");
     return fewerElementsVector(MI, Step.TypeIdx, Step.NewType);
+  case MoreElements:
+    LLVM_DEBUG(dbgs() << ".. Increase number of elements\n");
+    return moreElementsVector(MI, Step.TypeIdx, Step.NewType);
   case Custom:
     LLVM_DEBUG(dbgs() << ".. Custom legalization\n");
     return LI.legalizeCustom(MI, MRI, MIRBuilder, Observer) ? Legalized
@@ -877,6 +880,15 @@ void LegalizerHelper::narrowScalarDst(MachineInstr &MI, LLT NarrowTy,
   MO.setReg(DstTrunc);
 }
 
+void LegalizerHelper::moreElementsVectorDst(MachineInstr &MI, LLT WideTy,
+                                            unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+  MIRBuilder.buildExtract(MO.getReg(), DstExt, 0);
+  MO.setReg(DstExt);
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
                                         LLT WideTy) {
@@ -981,11 +993,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (Offset % SrcTy.getScalarSizeInBits() != 0)
       return UnableToLegalize;
 
+    Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
 
     MI.getOperand(2).setImm((WideTy.getSizeInBits() / SrcTy.getSizeInBits()) *
                             Offset);
     widenScalarDst(MI, WideTy.getScalarType(), 0);
+    Observer.changedInstr(MI);
 
     return Legalized;
   }
@@ -1354,9 +1368,11 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FMA:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_FDIV:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FLOG10:
@@ -2135,6 +2151,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FSUB:
   case G_FNEG:
   case G_FABS:
+  case G_FCANONICALIZE:
   case G_FDIV:
   case G_FREM:
   case G_FMA:
@@ -2145,6 +2162,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FLOG2:
   case G_FLOG10:
   case G_FCEIL:
+  case G_FFLOOR:
   case G_INTRINSIC_ROUND:
   case G_INTRINSIC_TRUNC:
   case G_FCOS:
@@ -2395,6 +2413,23 @@ LegalizerHelper::narrowScalarShift(MachineInstr &MI, unsigned TypeIdx,
   MIRBuilder.buildMerge(DstReg, ResultRegs);
   MI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
+                                    LLT MoreTy) {
+  MIRBuilder.setInstr(MI);
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case TargetOpcode::G_IMPLICIT_DEF: {
+    Observer.changingInstr(MI);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  default:
+    return UnableToLegalize;
+  }
 }
 
 LegalizerHelper::LegalizeResult

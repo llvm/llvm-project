@@ -40,6 +40,10 @@ bool IndexingContext::shouldIndexImplicitInstantiation() const {
   return IndexOpts.IndexImplicitInstantiation;
 }
 
+bool IndexingContext::shouldIndexParametersInDeclarations() const {
+  return IndexOpts.IndexParametersInDeclarations;
+}
+
 bool IndexingContext::handleDecl(const Decl *D,
                                  SymbolRoleSet Roles,
                                  ArrayRef<SymbolRelation> Relations) {

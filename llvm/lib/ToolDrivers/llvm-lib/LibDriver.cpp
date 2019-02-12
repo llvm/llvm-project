@@ -96,6 +96,47 @@ static std::string findInputFile(StringRef File, ArrayRef<StringRef> Paths) {
   return "";
 }
 
+static void fatalOpenError(llvm::Error E, Twine File) {
+  if (!E)
+    return;
+  handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+    llvm::errs() << "error opening '" << File << "': " << EIB.message() << '\n';
+    exit(1);
+  });
+}
+
+static void doList(opt::InputArgList& Args) {
+  // lib.exe prints the contents of the first archive file.
+  std::unique_ptr<MemoryBuffer> B;
+  for (auto *Arg : Args.filtered(OPT_INPUT)) {
+    // Create or open the archive object.
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf =
+        MemoryBuffer::getFile(Arg->getValue(), -1, false);
+    fatalOpenError(errorCodeToError(MaybeBuf.getError()), Arg->getValue());
+
+    if (identify_magic(MaybeBuf.get()->getBuffer()) == file_magic::archive) {
+      B = std::move(MaybeBuf.get());
+      break;
+    }
+  }
+
+  // lib.exe doesn't print an error if no .lib files are passed.
+  if (!B)
+    return;
+
+  Error Err = Error::success();
+  object::Archive Archive(B.get()->getMemBufferRef(), Err);
+  fatalOpenError(std::move(Err), B->getBufferIdentifier());
+
+  for (auto &C : Archive.children(Err)) {
+    Expected<StringRef> NameOrErr = C.getName();
+    fatalOpenError(NameOrErr.takeError(), B->getBufferIdentifier());
+    StringRef Name = NameOrErr.get();
+    llvm::outs() << Name << '\n';
+  }
+  fatalOpenError(std::move(Err), B->getBufferIdentifier());
+}
+
 int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
@@ -129,6 +170,11 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
   // If no input files, silently do nothing to match lib.exe.
   if (!Args.hasArgNoClaim(OPT_INPUT))
     return 0;
+
+  if (Args.hasArg(OPT_lst)) {
+    doList(Args);
+    return 0;
+  }
 
   std::vector<StringRef> SearchPaths = getSearchPaths(&Args, Saver);
 

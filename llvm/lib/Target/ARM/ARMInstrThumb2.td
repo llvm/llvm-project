@@ -2147,6 +2147,11 @@ def : T2Pat<(add        GPR:$src, imm0_4095_neg:$imm),
 def : T2Pat<(add        GPR:$src, imm0_65535_neg:$imm),
             (t2SUBrr    GPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>;
 
+// Do the same for v8m targets since they support movw with a 16-bit value.
+def : T1Pat<(add tGPR:$src, imm0_65535_neg:$imm),
+             (tSUBrr tGPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>,
+             Requires<[HasV8MBaseline]>;
+
 let AddedComplexity = 1 in
 def : T2Pat<(ARMaddc    rGPR:$src, imm1_255_neg:$imm),
             (t2SUBSri   rGPR:$src, imm1_255_neg:$imm)>;

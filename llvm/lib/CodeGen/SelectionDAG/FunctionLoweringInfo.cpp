@@ -342,6 +342,7 @@ void FunctionLoweringInfo::clear() {
   LiveOutRegInfo.clear();
   VisitedBBs.clear();
   ArgDbgValues.clear();
+  DescribedArgs.clear();
   ByValArgFrameIndexMap.clear();
   RegFixups.clear();
   RegsWithFixups.clear();

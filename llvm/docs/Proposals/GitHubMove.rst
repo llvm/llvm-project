@@ -852,6 +852,540 @@ Also, since the monorepo handles commits update across multiple projects, you're
 less like to encounter a build failure where a commit change an API in LLVM and
 another later one "fixes" the build in clang.
 
+Moving Local Branches to the Monorepo
+=====================================
+
+Suppose you have been developing against the existing LLVM git
+mirrors.  You have one or more git branches that you want to migrate
+to the "final monorepo".
+
+The simplest way to migrate such branches is with the
+``migrate-downstream-fork.py`` tool at
+https://github.com/jyknight/llvm-git-migration.
+
+Basic migration
+---------------
+
+Basic instructions for ``migrate-downstream-fork.py`` are in the
+Python script and are expanded on below to a more general recipe::
+
+  # Make a repository which will become your final local mirror of the
+  # monorepo.
+  mkdir my-monorepo
+  git -C my-monorepo init
+
+  # Add a remote to the monorepo.
+  git -C my-monorepo remote add upstream/monorepo https://github.com/llvm/llvm-project.git
+
+  # Add remotes for each git mirror you use, from upstream as well as
+  # your local mirror.  All projects are listed here but you need only
+  # import those for which you have local branches.
+  my_projects=( clang
+                clang-tools-extra
+                compiler-rt
+                debuginfo-tests
+                libcxx
+                libcxxabi
+                libunwind
+                lld
+                lldb
+                llvm
+                openmp
+                polly )
+  for p in ${my_projects[@]}; do
+    git -C my-monorepo remote add upstream/split/${p} https://github.com/llvm-mirror/${p}.git
+    git -C my-monorepo remote add local/split/${p} https://my.local.mirror.org/${p}.git
+  done
+
+  # Pull in all the commits.
+  git -C my-monorepo fetch --all
+
+  # Run migrate-downstream-fork to rewrite local branches on top of
+  # the upstream monorepo.
+  (
+     cd my-monorepo
+     migrate-downstream-fork.py \
+       refs/remotes/local \
+       refs/tags \
+       --new-repo-prefix=refs/remotes/upstream/monorepo \
+       --old-repo-prefix=refs/remotes/upstream/split \
+       --source-kind=split \
+       --revmap-out=monorepo-map.txt
+  )
+
+  # Octopus-merge the resulting local split histories to unify them.
+
+  # Assumes local work on local split mirrors is on master (and
+  # upstream is presumably represented by some other branch like
+  # upstream/master).
+  my_local_branch="master"
+
+  git -C my-monorepo branch --no-track local/octopus/master \
+    $(git -C my-monorepo merge-base refs/remotes/upstream/monorepo/master \
+                                    refs/remotes/local/split/llvm/${my_local_branch})
+  git -C my-monorepo checkout local/octopus/${my_local_branch}
+
+  subproject_branches=()
+  for p in ${my_projects[@]}; do
+    subproject_branch=${p}/local/monorepo/${my_local_branch}
+    git -C my-monorepo branch ${subproject_branch} \
+      refs/remotes/local/split/${p}/${my_local_branch}
+    if [[ "${p}" != "llvm" ]]; then
+      subproject_branches+=( ${subproject_branch} )
+    fi
+  done
+
+  git -C my-monorepo merge ${subproject_branches[@]}
+
+  for p in ${my_projects[@]}; do
+    subproject_branch=${p}/local/monorepo/${my_local_branch}
+    git -C my-monorepo branch -d ${subproject_branch}
+  done
+
+  # Create local branches for upstream monorepo branches.
+  for ref in $(git -C my-monorepo for-each-ref --format="%(refname)" \
+                   refs/remotes/upstream/monorepo); do
+    upstream_branch=${ref#refs/remotes/upstream/monorepo/}
+    git -C my-monorepo branch upstream/${upstream_branch} ${ref}
+  done
+
+The above gets you to a state like the following::
+
+  U1 - U2 - U3 <- upstream/master
+    \   \    \
+     \   \    - Llld1 - Llld2 -
+      \   \                    \
+       \   - Lclang1 - Lclang2-- Lmerge <- local/octopus/master
+        \                      /
+         - Lllvm1 - Lllvm2-----
+
+Each branched component has its branch rewritten on top of the
+monorepo and all components are unified by a giant octopus merge.
+
+If additional active local branches need to be preserved, the above
+operations following the assignment to ``my_local_branch`` should be
+done for each branch.  Ref paths will need to be updated to map the
+local branch to the corresponding upstream branch.  If local branches
+have no corresponding upstream branch, then the creation of
+``local/octopus/<local branch>`` need not use ``git-merge-base`` to
+pinpont its root commit; it may simply be branched from the
+appropriate component branch (say, ``llvm/local_release_X``).
+
+Zipping local history
+---------------------
+
+The octopus merge is suboptimal for many cases, because walking back
+through the history of one component leaves the other components fixed
+at a history that likely makes things unbuildable.
+
+Some downstream users track the order commits were made to subprojects
+with some kind of "umbrella" project that imports the project git
+mirrors as submodules, similar to the multirepo umbrella proposed
+above.  Such an umbrella repository looks something like this::
+
+   UM1 ---- UM2 -- UM3 -- UM4 ---- UM5 ---- UM6 ---- UM7 ---- UM8 <- master
+   |        |             |        |        |        |        |
+  Lllvm1   Llld1         Lclang1  Lclang2  Lllvm2   Llld2     Lmyproj1
+
+The vertical bars represent submodule updates to a particular local
+commit in the project mirror.  ``UM3`` in this case is a commit of
+some local umbrella repository state that is not a submodule update,
+perhaps a ``README`` or project build script update.  Commit ``UM8``
+updates a submodule of local project ``myproj``.
+
+The tool ``zip-downstream-fork.py`` at
+https://github.com/greened/llvm-git-migration/tree/zip can be used to
+convert the umbrella history into a monorepo-based history with
+commits in the order implied by submodule updates::
+
+  U1 - U2 - U3 <- upstream/master
+   \    \    \
+    \    -----\---------------                                    local/zip--.
+     \         \              \                                               |
+    - Lllvm1 - Llld1 - UM3 -  Lclang1 - Lclang2 - Lllvm2 - Llld2 - Lmyproj1 <-'
+
+
+The ``U*`` commits represent upstream commits to the monorepo master
+branch.  Each submodule update in the local ``UM*`` commits brought in
+a subproject tree at some local commit.  The trees in the ``L*1``
+commits represent merges from upstream.  These result in edges from
+the ``U*`` commits to their corresponding rewritten ``L*1`` commits.
+The ``L*2`` commits did not do any merges from upstream.
+
+Note that the merge from ``U2`` to ``Lclang1`` appears redundant, but
+if, say, ``U3`` changed some files in upstream clang, the ``Lclang1``
+commit appearing after the ``Llld1`` commit would actually represent a
+clang tree *earlier* in the upstream clang history.  We want the
+``local/zip`` branch to accurately represent the state of our umbrella
+history and so the edge ``U2 -> Lclang1`` is a visual reminder of what
+clang's tree actually looks like in ``Lclang1``.
+
+Even so, the edge ``U3 -> Llld1`` could be problematic for future
+merges from upstream.  git will think that we've already merged from
+``U3``, and we have, except for the state of the clang tree.  One
+possible migitation strategy is to manually diff clang between ``U2``
+and ``U3`` and apply those updates to ``local/zip``.  Another,
+possibly simpler strategy is to freeze local work on downstream
+branches and merge all submodules from the latest upstream before
+running ``zip-downstream-fork.py``.  If downstream merged each project
+from upstream in lockstep without any intervening local commits, then
+things should be fine without any special action.  We anticipate this
+to be the common case.
+
+The tree for ``Lclang1`` outside of clang will represent the state of
+things at ``U3`` since all of the upstream projects not participating
+in the umbrella history should be in a state respecting the commit
+``U3``.  The trees for llvm and lld should correctly represent commits
+``Lllvm1`` and ``Llld1``, respectively.
+
+Commit ``UM3`` changed files not related to submodules and we need
+somewhere to put them.  It is not safe in general to put them in the
+monorepo root directory because they may conflict with files in the
+monorepo.  Let's assume we want them in a directory ``local`` in the
+monorepo.
+
+**Example 1: Umbrella looks like the monorepo**
+
+For this example, we'll assume that each subproject appears in its own
+top-level directory in the umbrella, just as they do in the monorepo .
+Let's also assume that we want the files in directory ``myproj`` to
+appear in ``local/myproj``.
+
+Given the above run of ``migrate-downstream-fork.py``, a recipe to
+create the zipped history is below::
+
+  # Import any non-LLVM repositories the umbrella references.
+  git -C my-monorepo remote add localrepo \
+                                https://my.local.mirror.org/localrepo.git
+  git fetch localrepo
+
+  subprojects=( clang clang-tools-extra compiler-rt debuginfo-tests libclc
+                libcxx libcxxabi libunwind lld lldb llgo llvm openmp
+                parallel-libs polly pstl )
+
+  # Import histories for upstream split projects (this was probably
+  # already done for the ``migrate-downstream-fork.py`` run).
+  for project in ${subprojects[@]}; do
+    git remote add upstream/split/${project} \
+                   https://github.com/llvm-mirror/${subproject}.git
+    git fetch umbrella/split/${project}
+  done
+
+  # Import histories for downstream split projects (this was probably
+  # already done for the ``migrate-downstream-fork.py`` run).
+  for project in ${subprojects[@]}; do
+    git remote add local/split/${project} \
+                   https://my.local.mirror.org/${subproject}.git
+    git fetch local/split/${project}
+  done
+
+  # Import umbrella history.
+  git -C my-monorepo remote add umbrella \
+                                https://my.local.mirror.org/umbrella.git
+  git fetch umbrella
+
+  # Put myproj in local/myproj
+  echo "myproj local/myproj" > my-monorepo/submodule-map.txt
+
+  # Rewrite history
+  (
+    cd my-monorepo
+    zip-downstream-fork.py \
+      refs/remotes/umbrella \
+      --new-repo-prefix=refs/remotes/upstream/monorepo \
+      --old-repo-prefix=refs/remotes/upstream/split \
+      --revmap-in=monorepo-map.txt \
+      --revmap-out=zip-map.txt \
+      --subdir=local \
+      --submodule-map=submodule-map.txt \
+      --update-tags
+   )
+
+   # Create the zip branch (assuming umbrella master is wanted).
+   git -C my-monorepo branch --no-track local/zip/master refs/remotes/umbrella/master
+
+Note that if the umbrella has submodules to non-LLVM repositories,
+``zip-downstream-fork.py`` needs to know about them to be able to
+rewrite commits.  That is why the first step above is to fetch commits
+from such repositories.
+
+With ``--update-tags`` the tool will migrate annotated tags pointing
+to submodule commits that were inlined into the zipped history.  If
+the umbrella pulled in an upstream commit that happened to have a tag
+pointing to it, that tag will be migrated, which is almost certainly
+not what is wanted.  The tag can always be moved back to its original
+commit after rewriting, or the ``--update-tags`` option may be
+discarded and any local tags would then be migrated manually.
+
+**Example 2: Nested sources layout**
+
+The tool handles nested submodules (e.g. llvm is a submodule in
+umbrella and clang is a submodule in llvm).  The file
+``submodule-map.txt`` is a list of pairs, one per line.  The first
+pair item describes the path to a submodule in the umbrella
+repository.  The second pair item secribes the path where trees for
+that submodule should be written in the zipped history.  
+
+Let's say your umbrella repository is actually the llvm repository and
+it has submodules in the "nested sources" layout (clang in
+tools/clang, etc.).  Let's also say ``projects/myproj`` is a submodule
+pointing to some downstream repository.  The submodule map file should
+look like this (we still want myproj mapped the same way as
+previously)::
+
+  tools/clang clang
+  tools/clang/tools/extra clang-tools-extra
+  projects/compiler-rt compiler-rt
+  projects/debuginfo-tests debuginfo-tests
+  projects/libclc libclc
+  projects/libcxx libcxx
+  projects/libcxxabi libcxxabi
+  projects/libunwind libunwind
+  tools/lld lld
+  tools/lldb lldb
+  projects/openmp openmp
+  tools/polly polly
+  projects/myproj local/myproj
+
+If a submodule path does not appear in the map, the tools assumes it
+should be placed in the same place in the monorepo.  That means if you
+use the "nested sources" layout in your umrella, you *must* provide
+map entries for all of the projects in your umbrella (except llvm).
+Otherwise trees from submodule updates will appear underneath llvm in
+the zippped history.
+
+Because llvm is itself the umbrella, we use --subdir to write its
+content into ``llvm`` in the zippped history::
+
+  # Import any non-LLVM repositories the umbrella references.
+  git -C my-monorepo remote add localrepo \
+                                https://my.local.mirror.org/localrepo.git
+  git fetch localrepo
+
+  subprojects=( clang clang-tools-extra compiler-rt debuginfo-tests libclc
+                libcxx libcxxabi libunwind lld lldb llgo llvm openmp
+                parallel-libs polly pstl )
+
+  # Import histories for upstream split projects (this was probably
+  # already done for the ``migrate-downstream-fork.py`` run).
+  for project in ${subprojects[@]}; do
+    git remote add upstream/split/${project} \
+                   https://github.com/llvm-mirror/${subproject}.git
+    git fetch umbrella/split/${project}
+  done
+
+  # Import histories for downstream split projects (this was probably
+  # already done for the ``migrate-downstream-fork.py`` run).
+  for project in ${subprojects[@]}; do
+    git remote add local/split/${project} \
+                   https://my.local.mirror.org/${subproject}.git
+    git fetch local/split/${project}
+  done
+
+  # Import umbrella history.  We want this under a different refspec
+  # so zip-downstream-fork.py knows what it is.
+  git -C my-monorepo remote add umbrella \
+                                 https://my.local.mirror.org/llvm.git
+  git fetch umbrella
+
+  # Create the submodule map.
+  echo "tools/clang clang" > my-monorepo/submodule-map.txt
+  echo "tools/clang/tools/extra clang-tools-extra" >> my-monorepo/submodule-map.txt
+  echo "projects/compiler-rt compiler-rt" >> my-monorepo/submodule-map.txt
+  echo "projects/debuginfo-tests debuginfo-tests" >> my-monorepo/submodule-map.txt
+  echo "projects/libclc libclc" >> my-monorepo/submodule-map.txt
+  echo "projects/libcxx libcxx" >> my-monorepo/submodule-map.txt
+  echo "projects/libcxxabi libcxxabi" >> my-monorepo/submodule-map.txt
+  echo "projects/libunwind libunwind" >> my-monorepo/submodule-map.txt
+  echo "tools/lld lld" >> my-monorepo/submodule-map.txt
+  echo "tools/lldb lldb" >> my-monorepo/submodule-map.txt
+  echo "projects/openmp openmp" >> my-monorepo/submodule-map.txt
+  echo "tools/polly polly" >> my-monorepo/submodule-map.txt
+  echo "projects/myproj local/myproj" >> my-monorepo/submodule-map.txt
+
+  # Rewrite history
+  (
+    cd my-monorepo
+    zip-downstream-fork.py \
+      refs/remotes/umbrella \
+      --new-repo-prefix=refs/remotes/upstream/monorepo \
+      --old-repo-prefix=refs/remotes/upstream/split \
+      --revmap-in=monorepo-map.txt \
+      --revmap-out=zip-map.txt \
+      --subdir=llvm \
+      --submodule-map=submodule-map.txt \
+      --update-tags
+   )
+
+   # Create the zip branch (assuming umbrella master is wanted).
+   git -C my-monorepo branch --no-track local/zip/master refs/remotes/umbrella/master
+
+
+Comments at the top of ``zip-downstream-fork.py`` describe in more
+detail how the tool works and various implications of its operation.
+
+Importing local repositories
+----------------------------
+
+You may have additional repositories that integrate with the LLVM
+ecosystem, essentially extending it with new tools.  If such
+repositories are tightly coupled with LLVM, it may make sense to
+import them into your local mirror of the monorepo.
+
+If such repositores participated in the umbrella repository used
+during the zipping process above, they will automatically be added to
+the monorepo.  For downstream repositories that don't participate in
+an umbrella setup, the ``import-downstream-repo.py`` tool at
+https://github.com/greened/llvm-git-migration/tree/import can help with
+getting them into the monorepo.  A recipe follows::
+
+  # Import downstream repo history into the monorepo.
+  git -C my-monorepo remote add myrepo https://my.local.mirror.org/myrepo.git
+  git fetch myrepo
+
+  my_local_tags=( refs/tags/release
+                  refs/tags/hotfix )
+
+  (
+    cd my-monorepo
+    import-downstream-repo.py \
+      refs/remotes/myrepo \
+      ${my_local_tags[@]} \
+      --new-repo-prefix=refs/remotes/upstream/monorepo \
+      --subdir=myrepo \
+      --tag-prefix="myrepo-"
+   )
+
+   # Preserve release braches.
+   for ref in $(git -C my-monorepo for-each-ref --format="%(refname)" \
+                  refs/remotes/myrepo/release); do
+     branch=${ref#refs/remotes/myrepo/}
+     git -C my-monorepo branch --no-track myrepo/${branch} ${ref}
+   done
+
+   # Preserve master.
+   git -C my-monorepo branch --no-track myrepo/master refs/remotes/myrepo/master
+
+   # Merge master.
+   git -C my-monorepo checkout local/zip/master  # Or local/octopus/master
+   git -C my-monorepo merge myrepo/master
+
+You may want to merge other corresponding branches, for example
+``myrepo`` release branches if they were in lockstep with LLVM project
+releases.
+
+``--tag-prefix`` tells ``import-downstream-repo.py`` to rename
+annotated tags with the given prefix.  Due to limitations with
+``fast_filter_branch.py``, unannotated tags cannot be renamed
+(``fast_filter_branch.py`` considers them branches, not tags).  Since
+the upstream monorepo had its tags rewritten with an "llvmorg-"
+prefix, name conflicts should not be an issue.  ``--tag-prefix`` can
+be used to more clearly indicate which tags correspond to various
+imported repositories.
+
+Given this repository history::
+
+  R1 - R2 - R3 <- master
+       ^
+       |
+    release/1
+
+The above recipe results in a history like this::
+
+  U1 - U2 - U3 <- upstream/master
+   \    \    \
+    \    -----\---------------                                         local/zip--.
+     \         \              \                                                    |
+    - Lllvm1 - Llld1 - UM3 -  Lclang1 - Lclang2 - Lllvm2 - Llld2 - Lmyproj1 - M1 <-'
+                                                                             /
+                                                                 R1 - R2 - R3  <-.
+                                                                      ^           |
+                                                                      |           |
+                                                               myrepo-release/1   |
+                                                                                  |
+                                                                   myrepo/master--'
+
+Commits ``R1``, ``R2`` and ``R3`` have trees that *only* contain blobs
+from ``myrepo``.  If you require commits from ``myrepo`` to be
+interleaved with commits on local project branches (for example,
+interleaved with ``llvm1``, ``llvm2``, etc. above) and myrepo doesn't
+appear in an umbrella repository, a new tool will need to be
+developed.  Creating such a tool would involve:
+
+1. Modifying ``fast_filter_branch.py`` to optionally take a
+   revlist directly rather than generating it itself
+
+2. Creating a tool to generate an interleaved ordering of local
+   commits based on some criteria (``zip-downstream-fork.py`` uses the
+   umbrella history as its criterion)
+
+3. Generating such an ordering and feeding it to
+   ``fast_filter_branch.py`` as a revlist
+
+Some care will also likely need to be taken to handle merge commits,
+to ensure the parents of such commits migrate correctly.
+
+Scrubbing the Local Monorepo
+----------------------------
+
+Once all of the migrating, zipping and importing is done, it's time to
+clean up.  The python tools use ``git-fast-import`` which leaves a lot
+of cruft around and we want to shrink our new monorepo mirror as much
+as possible.  Here is one way to do it::
+
+  git -C my-monorepo checkout master
+
+  # Delete branches we no longer need.  Do this for any other branches
+  # you merged above.
+  git -C my-monorepo branch -D local/zip/master || true
+  git -C my-monorepo branch -D local/octopus/master || true
+
+  # Remove remotes.
+  git -C my-monorepo remote remove upstream/monorepo
+
+  for p in ${my_projects[@]}; do
+    git -C my-monorepo remote remove upstream/split/${p}
+    git -C my-monorepo remote remove local/split/${p}
+  done
+
+  git -C my-monorepo remote remove localrepo
+  git -C my-monorepo remote remove umbrella
+  git -C my-monorepo remote remove myrepo
+
+  # Add anything else here you don't need.  refs/tags/release is
+  # listed below assuming tags have been rewritten with a local prefix.
+  # If not, remove it from this list.
+  refs_to_clean=(
+    refs/original
+    refs/remotes
+    refs/tags/backups
+    refs/tags/release
+  )
+
+  git -C my-monorepo for-each-ref --format="%(refname)" ${refs_to_clean[@]} |
+    xargs -n1 --no-run-if-empty git -C my-monorepo update-ref -d
+
+  git -C my-monorepo reflog expire --all --expire=now
+
+  # fast_filter_branch.py might have gc running in the background.
+  while ! git -C my-monorepo \
+    -c gc.reflogExpire=0 \
+    -c gc.reflogExpireUnreachable=0 \
+    -c gc.rerereresolved=0 \
+    -c gc.rerereunresolved=0 \
+    -c gc.pruneExpire=now \
+    gc --prune=now; do
+    continue
+  done
+
+  # Takes a LOOOONG time!
+  git -C my-monorepo repack -A -d -f --depth=250 --window=250
+
+  git -C my-monorepo prune-packed
+  git -C my-monorepo prune
+
+You should now have a trim monorepo.  Upload it to your git server and
+happy hacking!
 
 References
 ==========

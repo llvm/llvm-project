@@ -19,13 +19,9 @@ body:             |
     ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_CONSTANT
     ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_TRUNC
     ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_AND
-    ; Note - these will be sensitive the opcode numbers. If
-    ; frequently modifying generic opcodes, we could just regex
-    ; the opcodes in the following lines instead of checking for
-    ; specific opcode numbers.
-    ; CHECK: CSEInfo::CSE Hit for Opc 42 : 1
-    ; CHECK: CSEInfo::CSE Hit for Opc 84 : 1
-    ; CHECK: CSEInfo::CSE Hit for Opc 83 : 1
+    ; CHECK: CSEInfo::CSE Hit for Opc {{[0-9]+}} : 1
+    ; CHECK: CSEInfo::CSE Hit for Opc {{[0-9]+}} : 1
+    ; CHECK: CSEInfo::CSE Hit for Opc {{[0-9]+}} : 1
     %0:_(s64) = COPY $x0
     %1:_(s8) = G_TRUNC %0(s64)
     %19:_(s32) = G_ZEXT %1(s8)

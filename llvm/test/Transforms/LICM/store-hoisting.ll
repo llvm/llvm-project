@@ -1,5 +1,6 @@
-; RUN: opt -S -basicaa -licm %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
+; RUN: opt -S -basicaa -licm %s | FileCheck -check-prefixes=CHECK,AST %s
+; RUN: opt -S -basicaa -licm -enable-mssa-loop-dependency=true %s | FileCheck  -check-prefixes=CHECK,MSSA %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck -check-prefixes=CHECK,AST %s
 
 define void @test(i32* %loc) {
 ; CHECK-LABEL: @test
@@ -46,8 +47,11 @@ exit2:
 
 define i32* @false_negative_2use(i32* %loc) {
 ; CHECK-LABEL: @false_negative_2use
-; CHECK-LABEL: exit:
-; CHECK: store i32 0, i32* %loc
+; AST-LABEL: exit:
+; AST: store i32 0, i32* %loc
+; MSSA-LABEL: entry:
+; MSSA: store i32 0, i32* %loc
+; MSSA-LABEL: loop:
 entry:
   br label %loop
 
@@ -119,6 +123,7 @@ exit:
   ret void
 }
 
+; Hoisting the store is actually valid here, as it dominates the load.
 define void @neg_ref(i32* %loc) {
 ; CHECK-LABEL: @neg_ref
 ; CHECK-LABEL: exit1:
@@ -132,6 +137,35 @@ loop:
   %iv = phi i32 [0, %entry], [%iv.next, %backedge]
   store i32 0, i32* %loc
   %v = load i32, i32* %loc
+  %earlycnd = icmp eq i32 %v, 198
+  br i1 %earlycnd, label %exit1, label %backedge
+  
+backedge:
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit2
+
+exit1:
+  ret void
+exit2:
+  ret void
+}
+
+; Hoisting the store here leads to a miscompile.
+define void @neg_ref2(i32* %loc) {
+; CHECK-LABEL: @neg_ref2
+; CHECK-LABEL: exit1:
+; CHECK: store i32 0, i32* %loc
+; CHECK-LABEL: exit2:
+; CHECK: store i32 0, i32* %loc
+entry:
+  store i32 198, i32* %loc
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %v = load i32, i32* %loc
+  store i32 0, i32* %loc
   %earlycnd = icmp eq i32 %v, 198
   br i1 %earlycnd, label %exit1, label %backedge
   

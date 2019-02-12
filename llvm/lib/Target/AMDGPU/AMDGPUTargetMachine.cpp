@@ -108,7 +108,7 @@ static cl::opt<bool> EnableSDWAPeephole(
 static cl::opt<bool> EnableDPPCombine(
   "amdgpu-dpp-combine",
   cl::desc("Enable DPP combiner"),
-  cl::init(false));
+  cl::init(true));
 
 // Enable address space based alias analysis
 static cl::opt<bool> EnableAMDGPUAliasAnalysis("enable-amdgpu-aa", cl::Hidden,

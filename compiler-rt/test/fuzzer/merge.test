@@ -1,4 +1,3 @@
-XFAIL: ios
 CHECK: BINGO
 
 RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-FullCoverageSetTest

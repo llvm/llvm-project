@@ -96,6 +96,13 @@ class Scheduler : public HardwareUnit {
   std::vector<InstRef> ReadySet;
   std::vector<InstRef> IssuedSet;
 
+  // A mask of busy resource units. It defaults to the empty set (i.e. a zero
+  // mask), and it is cleared at the beginning of every cycle.
+  // It is updated every time the scheduler fails to issue an instruction from
+  // the ready set due to unavailable pipeline resources.
+  // Each bit of the mask represents an unavailable resource.
+  uint64_t BusyResourceUnits;
+
   /// Verify the given selection strategy and set the Strategy member
   /// accordingly.  If no strategy is provided, the DefaultSchedulerStrategy is
   /// used.
@@ -126,7 +133,7 @@ public:
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : LSU(Lsu), Resources(std::move(RM)) {
+      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0) {
     initializeStrategy(std::move(SelectStrategy));
   }
 
@@ -193,6 +200,16 @@ public:
   /// instruction reference if there are no ready instructions, or if processor
   /// resources are not available.
   InstRef select();
+
+  /// Returns a mask of busy resources. Each bit of the mask identifies a unique
+  /// processor resource unit. In the absence of bottlenecks caused by resource
+  /// pressure, the mask value returned by this method is always zero.
+  uint64_t getBusyResourceUnits() const { return BusyResourceUnits; }
+  bool arePipelinesFullyUsed() const {
+    return !Resources->getAvailableProcResUnits();
+  }
+  bool isReadySetEmpty() const { return ReadySet.empty(); }
+  bool isWaitSetEmpty() const { return WaitSet.empty(); }
 
 #ifndef NDEBUG
   // Update the ready queues.

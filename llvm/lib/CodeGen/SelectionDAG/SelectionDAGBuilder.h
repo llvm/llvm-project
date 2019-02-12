@@ -733,7 +733,7 @@ public:
                                  SDValue Op);
 
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
-                                ImmutableCallSite CS, unsigned ArgIdx,
+                                const CallBase *Call, unsigned ArgIdx,
                                 unsigned NumArgs, SDValue Callee,
                                 Type *ReturnTy, bool IsPatchPoint);
 
@@ -797,13 +797,13 @@ public:
   void LowerStatepoint(ImmutableStatepoint ISP,
                        const BasicBlock *EHPadBB = nullptr);
 
-  void LowerCallSiteWithDeoptBundle(ImmutableCallSite CS, SDValue Callee,
+  void LowerCallSiteWithDeoptBundle(const CallBase *Call, SDValue Callee,
                                     const BasicBlock *EHPadBB);
 
   void LowerDeoptimizeCall(const CallInst *CI);
   void LowerDeoptimizingReturn();
 
-  void LowerCallSiteWithDeoptBundleImpl(ImmutableCallSite CS, SDValue Callee,
+  void LowerCallSiteWithDeoptBundleImpl(const CallBase *Call, SDValue Callee,
                                         const BasicBlock *EHPadBB,
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);

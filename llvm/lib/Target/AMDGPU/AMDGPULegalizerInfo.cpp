@@ -38,6 +38,24 @@ static LegalityPredicate isMultiple32(unsigned TypeIdx,
   };
 }
 
+static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    return Ty.isVector() &&
+           Ty.getNumElements() % 2 != 0 &&
+           Ty.getElementType().getSizeInBits() < 32;
+  };
+}
+
+static LegalizeMutation oneMoreElement(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    const LLT EltTy = Ty.getElementType();
+    return std::make_pair(TypeIdx, LLT::vector(Ty.getNumElements() + 1, EltTy));
+  };
+}
+
+
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                                          const GCNTargetMachine &TM) {
   using namespace TargetOpcode;
@@ -137,7 +155,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
     .legalFor({S1, S32, S64, V2S32, V4S32, V2S16, V4S16, GlobalPtr,
                ConstantPtr, LocalPtr, FlatPtr, PrivatePtr})
-    .legalFor({LLT::vector(3, 16)})// FIXME: Hack
+    .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .clampScalarOrElt(0, S32, S512)
     .legalIf(isMultiple32(0))
     .widenScalarToNextPow2(0, 32);
@@ -156,7 +174,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
 
   auto &FPOpActions = getActionDefinitionsBuilder(
-    { G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA})
+    { G_FADD, G_FMUL, G_FNEG, G_FABS, G_FMA, G_FCANONICALIZE})
     .legalFor({S32, S64});
 
   if (ST.has16BitInsts()) {

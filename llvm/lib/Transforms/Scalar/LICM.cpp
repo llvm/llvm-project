@@ -306,7 +306,8 @@ bool LoopInvariantCodeMotion::runOnLoop(
 
   std::unique_ptr<AliasSetTracker> CurAST;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
-  bool LocalDisablePromotion = false;
+  bool NoOfMemAccTooLarge = false;
+
   if (!MSSA) {
     LLVM_DEBUG(dbgs() << "LICM: Using Alias Set Tracker.\n");
     CurAST = collectAliasInfoForLoop(L, LI, AA);
@@ -321,12 +322,12 @@ bool LoopInvariantCodeMotion::runOnLoop(
           (void)MA;
           AccessCapCount++;
           if (AccessCapCount > AccessCapForMSSAPromotion) {
-            LocalDisablePromotion = true;
+            NoOfMemAccTooLarge = true;
             break;
           }
         }
       }
-      if (LocalDisablePromotion)
+      if (NoOfMemAccTooLarge)
         break;
     }
   }
@@ -350,10 +351,12 @@ bool LoopInvariantCodeMotion::runOnLoop(
   //
   if (L->hasDedicatedExits())
     Changed |= sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
-                          CurAST.get(), MSSAU.get(), &SafetyInfo, ORE);
+                          CurAST.get(), MSSAU.get(), &SafetyInfo,
+                          NoOfMemAccTooLarge, ORE);
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, L,
-                           CurAST.get(), MSSAU.get(), &SafetyInfo, ORE);
+                           CurAST.get(), MSSAU.get(), &SafetyInfo,
+                           NoOfMemAccTooLarge, ORE);
 
   // Now that all loop invariants have been removed from the loop, promote any
   // memory references to scalars that we can.
@@ -363,7 +366,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   // preheader for SSA updater, so also avoid sinking when no preheader
   // is available.
   if (!DisablePromotion && Preheader && L->hasDedicatedExits() &&
-      !LocalDisablePromotion) {
+      !NoOfMemAccTooLarge) {
     // Figure out the loop exits and their insertion points
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L->getUniqueExitBlocks(ExitBlocks);
@@ -457,7 +460,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                       DominatorTree *DT, TargetLibraryInfo *TLI,
                       TargetTransformInfo *TTI, Loop *CurLoop,
                       AliasSetTracker *CurAST, MemorySSAUpdater *MSSAU,
-                      ICFLoopSafetyInfo *SafetyInfo,
+                      ICFLoopSafetyInfo *SafetyInfo, bool NoOfMemAccTooLarge,
                       OptimizationRemarkEmitter *ORE) {
 
   // Verify inputs.
@@ -501,7 +504,8 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       //
       bool FreeInLoop = false;
       if (isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, ORE) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true,
+                             NoOfMemAccTooLarge, ORE) &&
           !I.mayHaveSideEffects()) {
         if (sink(I, LI, DT, CurLoop, SafetyInfo, MSSAU, ORE, FreeInLoop)) {
           if (!FreeInLoop) {
@@ -755,7 +759,7 @@ public:
 bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                        DominatorTree *DT, TargetLibraryInfo *TLI, Loop *CurLoop,
                        AliasSetTracker *CurAST, MemorySSAUpdater *MSSAU,
-                       ICFLoopSafetyInfo *SafetyInfo,
+                       ICFLoopSafetyInfo *SafetyInfo, bool NoOfMemAccTooLarge,
                        OptimizationRemarkEmitter *ORE) {
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
@@ -808,7 +812,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
       if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, ORE) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true,
+                             NoOfMemAccTooLarge, ORE) &&
           isSafeToExecuteUnconditionally(
               I, DT, CurLoop, SafetyInfo, ORE,
               CurLoop->getLoopPreheader()->getTerminator())) {
@@ -1035,6 +1040,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, AliasSetTracker *CurAST,
                               MemorySSAUpdater *MSSAU,
                               bool TargetExecutesOncePerLoop,
+                              bool NoOfMemAccTooLarge,
                               OptimizationRemarkEmitter *ORE) {
   // If we don't understand the instruction, bail early.
   if (!isHoistableAndSinkableInst(I))
@@ -1173,9 +1179,28 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
         return true;
       if (!EnableLicmCap) {
         auto *Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(SI);
-        if (MSSA->isLiveOnEntryDef(Source) ||
-            !CurLoop->contains(Source->getBlock()))
-          return true;
+        // If there are no clobbering Defs in the loop, we still need to check
+        // for interfering Uses. If there are more accesses than the Promotion
+        // cap, give up, we're not walking a list that long. Otherwise, walk the
+        // list, check each Use if it's optimized to an access outside the loop.
+        // If yes, store is safe to hoist. This is fairly restrictive, but
+        // conservatively correct.
+        // TODO: Cache set of Uses on the first walk in runOnLoop, update when
+        // moving accesses. Can also extend to dominating uses.
+        if ((!MSSA->isLiveOnEntryDef(Source) &&
+             CurLoop->contains(Source->getBlock())) ||
+            NoOfMemAccTooLarge)
+          return false;
+        for (auto *BB : CurLoop->getBlocks())
+          if (auto *Accesses = MSSA->getBlockAccesses(BB))
+            for (const auto &MA : *Accesses)
+              if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
+                auto *MD = MU->getDefiningAccess();
+                if (!MSSA->isLiveOnEntryDef(MD) &&
+                    CurLoop->contains(MD->getBlock()))
+                  return false;
+              }
+        return true;
       }
       return false;
     }

@@ -128,9 +128,10 @@ define i32 @test4(i32 %A, i32 %B, i8 %C) nounwind {
 define i16 @test5(i16 %A, i16 %B, i8 %C) nounwind {
 ; X86-LABEL: test5:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shldw %cl, %dx, %ax
 ; X86-NEXT:    retl
 ;
@@ -138,6 +139,7 @@ define i16 @test5(i16 %A, i16 %B, i8 %C) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andb $15, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shldw %cl, %si, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -181,9 +183,10 @@ define i32 @test6(i32 %A, i32 %B, i8 %C) nounwind {
 define i16 @test7(i16 %A, i16 %B, i8 %C) nounwind {
 ; X86-LABEL: test7:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    shrdw %cl, %dx, %ax
 ; X86-NEXT:    retl
 ;
@@ -191,6 +194,7 @@ define i16 @test7(i16 %A, i16 %B, i8 %C) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andb $15, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrdw %cl, %si, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax

@@ -41,13 +41,16 @@ public:
     bool RelativeAddresses : 1;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
+    std::string FallbackDebugPath;
 
     Options(FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName,
             bool UseSymbolTable = true, bool Demangle = true,
-            bool RelativeAddresses = false, std::string DefaultArch = "")
+            bool RelativeAddresses = false, std::string DefaultArch = "",
+            std::string FallbackDebugPath = "")
         : PrintFunctions(PrintFunctions), UseSymbolTable(UseSymbolTable),
           Demangle(Demangle), RelativeAddresses(RelativeAddresses),
-          DefaultArch(std::move(DefaultArch)) {}
+          DefaultArch(std::move(DefaultArch)),
+          FallbackDebugPath(std::move(FallbackDebugPath)) {}
   };
 
   LLVMSymbolizer(const Options &Opts = Options()) : Opts(Opts) {}

@@ -31,7 +31,6 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -285,9 +284,9 @@ struct PartiallyConstructedSafepointRecord {
 
 } // end anonymous namespace
 
-static ArrayRef<Use> GetDeoptBundleOperands(ImmutableCallSite CS) {
+static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   Optional<OperandBundleUse> DeoptBundle =
-      CS.getOperandBundle(LLVMContext::OB_deopt);
+      Call->getOperandBundle(LLVMContext::OB_deopt);
 
   if (!DeoptBundle.hasValue()) {
     assert(AllowStatepointWithNoDeoptInfo &&
@@ -369,14 +368,11 @@ static std::string suffixed_name_or(Value *V, StringRef Suffix,
 // given instruction. The  analysis is performed immediately before the
 // given instruction. Values defined by that instruction are not considered
 // live.  Values used by that instruction are considered live.
-static void
-analyzeParsePointLiveness(DominatorTree &DT,
-                          GCPtrLivenessData &OriginalLivenessData, CallSite CS,
-                          PartiallyConstructedSafepointRecord &Result) {
-  Instruction *Inst = CS.getInstruction();
-
+static void analyzeParsePointLiveness(
+    DominatorTree &DT, GCPtrLivenessData &OriginalLivenessData, CallBase *Call,
+    PartiallyConstructedSafepointRecord &Result) {
   StatepointLiveSetTy LiveSet;
-  findLiveSetAtInst(Inst, OriginalLivenessData, LiveSet);
+  findLiveSetAtInst(Call, OriginalLivenessData, LiveSet);
 
   if (PrintLiveSet) {
     dbgs() << "Live Variables:\n";
@@ -384,7 +380,7 @@ analyzeParsePointLiveness(DominatorTree &DT,
       dbgs() << " " << V->getName() << " " << *V << "\n";
   }
   if (PrintLiveSetSize) {
-    dbgs() << "Safepoint For: " << CS.getCalledValue()->getName() << "\n";
+    dbgs() << "Safepoint For: " << Call->getCalledValue()->getName() << "\n";
     dbgs() << "Number live values: " << LiveSet.size() << "\n";
   }
   Result.LiveSet = LiveSet;
@@ -1177,7 +1173,7 @@ findBasePointers(const StatepointLiveSetTy &live,
 /// Find the required based pointers (and adjust the live set) for the given
 /// parse point.
 static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
-                             CallSite CS,
+                             CallBase *Call,
                              PartiallyConstructedSafepointRecord &result) {
   MapVector<Value *, Value *> PointerToBase;
   findBasePointers(result.LiveSet, PointerToBase, &DT, DVCache);
@@ -1199,11 +1195,11 @@ static void findBasePointers(DominatorTree &DT, DefiningValueMapTy &DVCache,
 /// Given an updated version of the dataflow liveness results, update the
 /// liveset and base pointer maps for the call site CS.
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
-                                  CallSite CS,
+                                  CallBase *Call,
                                   PartiallyConstructedSafepointRecord &result);
 
 static void recomputeLiveInValues(
-    Function &F, DominatorTree &DT, ArrayRef<CallSite> toUpdate,
+    Function &F, DominatorTree &DT, ArrayRef<CallBase *> toUpdate,
     MutableArrayRef<struct PartiallyConstructedSafepointRecord> records) {
   // TODO-PERF: reuse the original liveness, then simply run the dataflow
   // again.  The old values are still live and will help it stabilize quickly.
@@ -1398,16 +1394,16 @@ public:
 
 } // end anonymous namespace
 
-static StringRef getDeoptLowering(CallSite CS) {
+static StringRef getDeoptLowering(CallBase *Call) {
   const char *DeoptLowering = "deopt-lowering";
-  if (CS.hasFnAttr(DeoptLowering)) {
-    // FIXME: CallSite has a *really* confusing interface around attributes
+  if (Call->hasFnAttr(DeoptLowering)) {
+    // FIXME: Calls have a *really* confusing interface around attributes
     // with values.
-    const AttributeList &CSAS = CS.getAttributes();
+    const AttributeList &CSAS = Call->getAttributes();
     if (CSAS.hasAttribute(AttributeList::FunctionIndex, DeoptLowering))
       return CSAS.getAttribute(AttributeList::FunctionIndex, DeoptLowering)
           .getValueAsString();
-    Function *F = CS.getCalledFunction();
+    Function *F = Call->getCalledFunction();
     assert(F && F->hasFnAttribute(DeoptLowering));
     return F->getFnAttribute(DeoptLowering).getValueAsString();
   }
@@ -1415,7 +1411,7 @@ static StringRef getDeoptLowering(CallSite CS) {
 }
 
 static void
-makeStatepointExplicitImpl(const CallSite CS, /* to replace */
+makeStatepointExplicitImpl(CallBase *Call, /* to replace */
                            const SmallVectorImpl<Value *> &BasePtrs,
                            const SmallVectorImpl<Value *> &LiveVariables,
                            PartiallyConstructedSafepointRecord &Result,
@@ -1426,19 +1422,18 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
   // immediately before the previous instruction under the assumption that all
   // arguments will be available here.  We can't insert afterwards since we may
   // be replacing a terminator.
-  Instruction *InsertBefore = CS.getInstruction();
-  IRBuilder<> Builder(InsertBefore);
+  IRBuilder<> Builder(Call);
 
   ArrayRef<Value *> GCArgs(LiveVariables);
   uint64_t StatepointID = StatepointDirectives::DefaultStatepointID;
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
 
-  ArrayRef<Use> CallArgs(CS.arg_begin(), CS.arg_end());
-  ArrayRef<Use> DeoptArgs = GetDeoptBundleOperands(CS);
+  ArrayRef<Use> CallArgs(Call->arg_begin(), Call->arg_end());
+  ArrayRef<Use> DeoptArgs = GetDeoptBundleOperands(Call);
   ArrayRef<Use> TransitionArgs;
   if (auto TransitionBundle =
-      CS.getOperandBundle(LLVMContext::OB_gc_transition)) {
+          Call->getOperandBundle(LLVMContext::OB_gc_transition)) {
     Flags |= uint32_t(StatepointFlags::GCTransition);
     TransitionArgs = TransitionBundle->Inputs;
   }
@@ -1449,21 +1444,21 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
   bool IsDeoptimize = false;
 
   StatepointDirectives SD =
-      parseStatepointDirectivesFromAttrs(CS.getAttributes());
+      parseStatepointDirectivesFromAttrs(Call->getAttributes());
   if (SD.NumPatchBytes)
     NumPatchBytes = *SD.NumPatchBytes;
   if (SD.StatepointID)
     StatepointID = *SD.StatepointID;
 
   // Pass through the requested lowering if any.  The default is live-through.
-  StringRef DeoptLowering = getDeoptLowering(CS);
+  StringRef DeoptLowering = getDeoptLowering(Call);
   if (DeoptLowering.equals("live-in"))
     Flags |= uint32_t(StatepointFlags::DeoptLiveIn);
   else {
     assert(DeoptLowering.equals("live-through") && "Unsupported value!");
   }
 
-  Value *CallTarget = CS.getCalledValue();
+  Value *CallTarget = Call->getCalledValue();
   if (Function *F = dyn_cast<Function>(CallTarget)) {
     if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize) {
       // Calls to llvm.experimental.deoptimize are lowered to calls to the
@@ -1490,57 +1485,56 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 
   // Create the statepoint given all the arguments
   Instruction *Token = nullptr;
-  if (CS.isCall()) {
-    CallInst *ToReplace = cast<CallInst>(CS.getInstruction());
-    CallInst *Call = Builder.CreateGCStatepointCall(
+  if (auto *CI = dyn_cast<CallInst>(Call)) {
+    CallInst *SPCall = Builder.CreateGCStatepointCall(
         StatepointID, NumPatchBytes, CallTarget, Flags, CallArgs,
         TransitionArgs, DeoptArgs, GCArgs, "safepoint_token");
 
-    Call->setTailCallKind(ToReplace->getTailCallKind());
-    Call->setCallingConv(ToReplace->getCallingConv());
+    SPCall->setTailCallKind(CI->getTailCallKind());
+    SPCall->setCallingConv(CI->getCallingConv());
 
     // Currently we will fail on parameter attributes and on certain
     // function attributes.  In case if we can handle this set of attributes -
     // set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    Call->setAttributes(legalizeCallAttributes(ToReplace->getAttributes()));
+    SPCall->setAttributes(legalizeCallAttributes(CI->getAttributes()));
 
-    Token = Call;
+    Token = SPCall;
 
     // Put the following gc_result and gc_relocate calls immediately after the
     // the old call (which we're about to delete)
-    assert(ToReplace->getNextNode() && "Not a terminator, must have next!");
-    Builder.SetInsertPoint(ToReplace->getNextNode());
-    Builder.SetCurrentDebugLocation(ToReplace->getNextNode()->getDebugLoc());
+    assert(CI->getNextNode() && "Not a terminator, must have next!");
+    Builder.SetInsertPoint(CI->getNextNode());
+    Builder.SetCurrentDebugLocation(CI->getNextNode()->getDebugLoc());
   } else {
-    InvokeInst *ToReplace = cast<InvokeInst>(CS.getInstruction());
+    auto *II = cast<InvokeInst>(Call);
 
     // Insert the new invoke into the old block.  We'll remove the old one in a
     // moment at which point this will become the new terminator for the
     // original block.
-    InvokeInst *Invoke = Builder.CreateGCStatepointInvoke(
-        StatepointID, NumPatchBytes, CallTarget, ToReplace->getNormalDest(),
-        ToReplace->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs,
-        GCArgs, "statepoint_token");
+    InvokeInst *SPInvoke = Builder.CreateGCStatepointInvoke(
+        StatepointID, NumPatchBytes, CallTarget, II->getNormalDest(),
+        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs, GCArgs,
+        "statepoint_token");
 
-    Invoke->setCallingConv(ToReplace->getCallingConv());
+    SPInvoke->setCallingConv(II->getCallingConv());
 
     // Currently we will fail on parameter attributes and on certain
     // function attributes.  In case if we can handle this set of attributes -
     // set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    Invoke->setAttributes(legalizeCallAttributes(ToReplace->getAttributes()));
+    SPInvoke->setAttributes(legalizeCallAttributes(II->getAttributes()));
 
-    Token = Invoke;
+    Token = SPInvoke;
 
     // Generate gc relocates in exceptional path
-    BasicBlock *UnwindBlock = ToReplace->getUnwindDest();
+    BasicBlock *UnwindBlock = II->getUnwindDest();
     assert(!isa<PHINode>(UnwindBlock->begin()) &&
            UnwindBlock->getUniquePredecessor() &&
            "can't safely insert in this block!");
 
     Builder.SetInsertPoint(&*UnwindBlock->getFirstInsertionPt());
-    Builder.SetCurrentDebugLocation(ToReplace->getDebugLoc());
+    Builder.SetCurrentDebugLocation(II->getDebugLoc());
 
     // Attach exceptional gc relocates to the landingpad.
     Instruction *ExceptionalToken = UnwindBlock->getLandingPadInst();
@@ -1551,7 +1545,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
                       Builder);
 
     // Generate gc relocates and returns for normal block
-    BasicBlock *NormalDest = ToReplace->getNormalDest();
+    BasicBlock *NormalDest = II->getNormalDest();
     assert(!isa<PHINode>(NormalDest->begin()) &&
            NormalDest->getUniquePredecessor() &&
            "can't safely insert in this block!");
@@ -1568,16 +1562,15 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
     // transform the tail-call like structure to a call to a void function
     // followed by unreachable to get better codegen.
     Replacements.push_back(
-        DeferredReplacement::createDeoptimizeReplacement(CS.getInstruction()));
+        DeferredReplacement::createDeoptimizeReplacement(Call));
   } else {
     Token->setName("statepoint_token");
-    if (!CS.getType()->isVoidTy() && !CS.getInstruction()->use_empty()) {
-      StringRef Name =
-          CS.getInstruction()->hasName() ? CS.getInstruction()->getName() : "";
-      CallInst *GCResult = Builder.CreateGCResult(Token, CS.getType(), Name);
+    if (!Call->getType()->isVoidTy() && !Call->use_empty()) {
+      StringRef Name = Call->hasName() ? Call->getName() : "";
+      CallInst *GCResult = Builder.CreateGCResult(Token, Call->getType(), Name);
       GCResult->setAttributes(
           AttributeList::get(GCResult->getContext(), AttributeList::ReturnIndex,
-                             CS.getAttributes().getRetAttributes()));
+                             Call->getAttributes().getRetAttributes()));
 
       // We cannot RAUW or delete CS.getInstruction() because it could be in the
       // live set of some other safepoint, in which case that safepoint's
@@ -1586,10 +1579,9 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
       // after the live sets have been made explicit in the IR, and we no longer
       // have raw pointers to worry about.
       Replacements.emplace_back(
-          DeferredReplacement::createRAUW(CS.getInstruction(), GCResult));
+          DeferredReplacement::createRAUW(Call, GCResult));
     } else {
-      Replacements.emplace_back(
-          DeferredReplacement::createDelete(CS.getInstruction()));
+      Replacements.emplace_back(DeferredReplacement::createDelete(Call));
     }
   }
 
@@ -1606,7 +1598,7 @@ makeStatepointExplicitImpl(const CallSite CS, /* to replace */
 // WARNING: Does not do any fixup to adjust users of the original live
 // values.  That's the callers responsibility.
 static void
-makeStatepointExplicit(DominatorTree &DT, CallSite CS,
+makeStatepointExplicit(DominatorTree &DT, CallBase *Call,
                        PartiallyConstructedSafepointRecord &Result,
                        std::vector<DeferredReplacement> &Replacements) {
   const auto &LiveSet = Result.LiveSet;
@@ -1625,7 +1617,7 @@ makeStatepointExplicit(DominatorTree &DT, CallSite CS,
   assert(LiveVec.size() == BaseVec.size());
 
   // Do the actual rewriting and delete the old statepoint
-  makeStatepointExplicitImpl(CS, BaseVec, LiveVec, Result, Replacements);
+  makeStatepointExplicitImpl(Call, BaseVec, LiveVec, Result, Replacements);
 }
 
 // Helper function for the relocationViaAlloca.
@@ -1895,25 +1887,25 @@ template <typename T> static void unique_unsorted(SmallVectorImpl<T> &Vec) {
 
 /// Insert holders so that each Value is obviously live through the entire
 /// lifetime of the call.
-static void insertUseHolderAfter(CallSite &CS, const ArrayRef<Value *> Values,
+static void insertUseHolderAfter(CallBase *Call, const ArrayRef<Value *> Values,
                                  SmallVectorImpl<CallInst *> &Holders) {
   if (Values.empty())
     // No values to hold live, might as well not insert the empty holder
     return;
 
-  Module *M = CS.getInstruction()->getModule();
+  Module *M = Call->getModule();
   // Use a dummy vararg function to actually hold the values live
   FunctionCallee Func = M->getOrInsertFunction(
       "__tmp_use", FunctionType::get(Type::getVoidTy(M->getContext()), true));
-  if (CS.isCall()) {
+  if (isa<CallInst>(Call)) {
     // For call safepoints insert dummy calls right after safepoint
-    Holders.push_back(CallInst::Create(Func, Values, "",
-                                       &*++CS.getInstruction()->getIterator()));
+    Holders.push_back(
+        CallInst::Create(Func, Values, "", &*++Call->getIterator()));
     return;
   }
   // For invoke safepooints insert dummy calls both in normal and
   // exceptional destination blocks
-  auto *II = cast<InvokeInst>(CS.getInstruction());
+  auto *II = cast<InvokeInst>(Call);
   Holders.push_back(CallInst::Create(
       Func, Values, "", &*II->getNormalDest()->getFirstInsertionPt()));
   Holders.push_back(CallInst::Create(
@@ -1921,7 +1913,7 @@ static void insertUseHolderAfter(CallSite &CS, const ArrayRef<Value *> Values,
 }
 
 static void findLiveReferences(
-    Function &F, DominatorTree &DT, ArrayRef<CallSite> toUpdate,
+    Function &F, DominatorTree &DT, ArrayRef<CallBase *> toUpdate,
     MutableArrayRef<struct PartiallyConstructedSafepointRecord> records) {
   GCPtrLivenessData OriginalLivenessData;
   computeLiveInValues(DT, F, OriginalLivenessData);
@@ -2024,7 +2016,7 @@ static bool AreEquivalentPhiNodes(PHINode &OrigRootPhi, PHINode &AlternateRootPh
 // to relocate. Remove this values from the live set, rematerialize them after
 // statepoint and record them in "Info" structure. Note that similar to
 // relocated values we don't do any user adjustments here.
-static void rematerializeLiveValues(CallSite CS,
+static void rematerializeLiveValues(CallBase *Call,
                                     PartiallyConstructedSafepointRecord &Info,
                                     TargetTransformInfo &TTI) {
   const unsigned int ChainLengthThreshold = 10;
@@ -2078,7 +2070,7 @@ static void rematerializeLiveValues(CallSite CS,
 
     // For invokes we need to rematerialize each chain twice - for normal and
     // for unwind basic blocks. Model this by multiplying cost by two.
-    if (CS.isInvoke()) {
+    if (isa<InvokeInst>(Call)) {
       Cost *= 2;
     }
     // If it's too expensive - skip it
@@ -2146,14 +2138,14 @@ static void rematerializeLiveValues(CallSite CS,
 
     // Different cases for calls and invokes. For invokes we need to clone
     // instructions both on normal and unwind path.
-    if (CS.isCall()) {
-      Instruction *InsertBefore = CS.getInstruction()->getNextNode();
+    if (isa<CallInst>(Call)) {
+      Instruction *InsertBefore = Call->getNextNode();
       assert(InsertBefore);
       Instruction *RematerializedValue = rematerializeChain(
           InsertBefore, RootOfChain, Info.PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
-      InvokeInst *Invoke = cast<InvokeInst>(CS.getInstruction());
+      auto *Invoke = cast<InvokeInst>(Call);
 
       Instruction *NormalInsertBefore =
           &*Invoke->getNormalDest()->getFirstInsertionPt();
@@ -2178,25 +2170,25 @@ static void rematerializeLiveValues(CallSite CS,
 
 static bool insertParsePoints(Function &F, DominatorTree &DT,
                               TargetTransformInfo &TTI,
-                              SmallVectorImpl<CallSite> &ToUpdate) {
+                              SmallVectorImpl<CallBase *> &ToUpdate) {
 #ifndef NDEBUG
   // sanity check the input
-  std::set<CallSite> Uniqued;
+  std::set<CallBase *> Uniqued;
   Uniqued.insert(ToUpdate.begin(), ToUpdate.end());
   assert(Uniqued.size() == ToUpdate.size() && "no duplicates please!");
 
-  for (CallSite CS : ToUpdate)
-    assert(CS.getInstruction()->getFunction() == &F);
+  for (CallBase *Call : ToUpdate)
+    assert(Call->getFunction() == &F);
 #endif
 
   // When inserting gc.relocates for invokes, we need to be able to insert at
   // the top of the successor blocks.  See the comment on
   // normalForInvokeSafepoint on exactly what is needed.  Note that this step
   // may restructure the CFG.
-  for (CallSite CS : ToUpdate) {
-    if (!CS.isInvoke())
+  for (CallBase *Call : ToUpdate) {
+    auto *II = dyn_cast<InvokeInst>(Call);
+    if (!II)
       continue;
-    auto *II = cast<InvokeInst>(CS.getInstruction());
     normalizeForInvokeSafepoint(II->getNormalDest(), II->getParent(), DT);
     normalizeForInvokeSafepoint(II->getUnwindDest(), II->getParent(), DT);
   }
@@ -2209,17 +2201,17 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // actual safepoint insertion as arguments.  This ensures reference operands
   // in the deopt argument list are considered live through the safepoint (and
   // thus makes sure they get relocated.)
-  for (CallSite CS : ToUpdate) {
+  for (CallBase *Call : ToUpdate) {
     SmallVector<Value *, 64> DeoptValues;
 
-    for (Value *Arg : GetDeoptBundleOperands(CS)) {
+    for (Value *Arg : GetDeoptBundleOperands(Call)) {
       assert(!isUnhandledGCPointerType(Arg->getType()) &&
              "support for FCA unimplemented");
       if (isHandledGCPointerType(Arg->getType()))
         DeoptValues.push_back(Arg);
     }
 
-    insertUseHolderAfter(CS, DeoptValues, Holders);
+    insertUseHolderAfter(Call, DeoptValues, Holders);
   }
 
   SmallVector<PartiallyConstructedSafepointRecord, 64> Records(ToUpdate.size());
@@ -2321,7 +2313,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   for (size_t i = 0; i < Records.size(); i++)
     makeStatepointExplicit(DT, ToUpdate[i], Records[i], Replacements);
 
-  ToUpdate.clear(); // prevent accident use of invalid CallSites
+  ToUpdate.clear(); // prevent accident use of invalid calls.
 
   for (auto &PR : Replacements)
     PR.doReplacement();
@@ -2386,7 +2378,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   return !Records.empty();
 }
 
-// Handles both return values and arguments for Functions and CallSites.
+// Handles both return values and arguments for Functions and calls.
 template <typename AttrHolder>
 static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
                                       unsigned Index) {
@@ -2478,12 +2470,13 @@ static void stripNonValidDataFromBody(Function &F) {
 
     stripInvalidMetadataFromInstruction(I);
 
-    if (CallSite CS = CallSite(&I)) {
-      for (int i = 0, e = CS.arg_size(); i != e; i++)
-        if (isa<PointerType>(CS.getArgument(i)->getType()))
-          RemoveNonValidAttrAtIndex(Ctx, CS, i + AttributeList::FirstArgIndex);
-      if (isa<PointerType>(CS.getType()))
-        RemoveNonValidAttrAtIndex(Ctx, CS, AttributeList::ReturnIndex);
+    if (auto *Call = dyn_cast<CallBase>(&I)) {
+      for (int i = 0, e = Call->arg_size(); i != e; i++)
+        if (isa<PointerType>(Call->getArgOperand(i)->getType()))
+          RemoveNonValidAttrAtIndex(Ctx, *Call,
+                                    i + AttributeList::FirstArgIndex);
+      if (isa<PointerType>(Call->getType()))
+        RemoveNonValidAttrAtIndex(Ctx, *Call, AttributeList::ReturnIndex);
     }
   }
 
@@ -2528,11 +2521,10 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   assert(shouldRewriteStatepointsIn(F) && "mismatch in rewrite decision");
 
   auto NeedsRewrite = [&TLI](Instruction &I) {
-    if (ImmutableCallSite CS = ImmutableCallSite(&I))
-      return !callsGCLeafFunction(CS, TLI) && !isStatepoint(CS);
+    if (const auto *Call = dyn_cast<CallBase>(&I))
+      return !callsGCLeafFunction(Call, TLI) && !isStatepoint(Call);
     return false;
   };
-
 
   // Delete any unreachable statepoints so that we don't have unrewritten
   // statepoints surviving this pass.  This makes testing easier and the
@@ -2545,7 +2537,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   // Gather all the statepoints which need rewritten.  Be careful to only
   // consider those in reachable code since we need to ask dominance queries
   // when rewriting.  We'll delete the unreachable ones in a moment.
-  SmallVector<CallSite, 64> ParsePointNeeded;
+  SmallVector<CallBase *, 64> ParsePointNeeded;
   for (Instruction &I : instructions(F)) {
     // TODO: only the ones with the flag set!
     if (NeedsRewrite(I)) {
@@ -2555,7 +2547,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // isReachableFromEntry() returns true.
       assert(DT.isReachableFromEntry(I.getParent()) &&
             "no unreachable blocks expected");
-      ParsePointNeeded.push_back(CallSite(&I));
+      ParsePointNeeded.push_back(cast<CallBase>(&I));
     }
   }
 
@@ -2815,11 +2807,10 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
 }
 
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
-                                  CallSite CS,
+                                  CallBase *Call,
                                   PartiallyConstructedSafepointRecord &Info) {
-  Instruction *Inst = CS.getInstruction();
   StatepointLiveSetTy Updated;
-  findLiveSetAtInst(Inst, RevisedLivenessData, Updated);
+  findLiveSetAtInst(Call, RevisedLivenessData, Updated);
 
   // We may have base pointers which are now live that weren't before.  We need
   // to update the PointerToBase structure to reflect this.

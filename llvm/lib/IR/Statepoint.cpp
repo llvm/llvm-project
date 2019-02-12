@@ -17,21 +17,15 @@
 
 using namespace llvm;
 
-static const Function *getCalledFunction(ImmutableCallSite CS) {
-  if (!CS.getInstruction())
-    return nullptr;
-  return CS.getCalledFunction();
-}
-
-bool llvm::isStatepoint(ImmutableCallSite CS) {
-  if (auto *F = getCalledFunction(CS))
+bool llvm::isStatepoint(const CallBase *Call) {
+  if (auto *F = Call->getCalledFunction())
     return F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint;
   return false;
 }
 
 bool llvm::isStatepoint(const Value *V) {
-  if (auto CS = ImmutableCallSite(V))
-    return isStatepoint(CS);
+  if (auto *Call = dyn_cast<CallBase>(V))
+    return isStatepoint(Call);
   return false;
 }
 
@@ -39,23 +33,21 @@ bool llvm::isStatepoint(const Value &V) {
   return isStatepoint(&V);
 }
 
-bool llvm::isGCRelocate(ImmutableCallSite CS) {
-  return CS.getInstruction() && isa<GCRelocateInst>(CS.getInstruction());
+bool llvm::isGCRelocate(const CallBase *Call) {
+  return isa<GCRelocateInst>(Call);
 }
 
 bool llvm::isGCRelocate(const Value *V) {
-  if (auto CS = ImmutableCallSite(V))
-    return isGCRelocate(CS);
+  if (auto *Call = dyn_cast<CallBase>(V))
+    return isGCRelocate(Call);
   return false;
 }
 
-bool llvm::isGCResult(ImmutableCallSite CS) {
-  return CS.getInstruction() && isa<GCResultInst>(CS.getInstruction());
-}
+bool llvm::isGCResult(const CallBase *Call) { return isa<GCResultInst>(Call); }
 
 bool llvm::isGCResult(const Value *V) {
-  if (auto CS = ImmutableCallSite(V))
-    return isGCResult(CS);
+  if (auto *Call = dyn_cast<CallBase>(V))
+    return isGCResult(Call);
   return false;
 }
 

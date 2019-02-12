@@ -557,15 +557,9 @@ long _InterlockedAdd(long volatile *Addend, long Value);
 __int64 _ReadStatusReg(int);
 void _WriteStatusReg(int, __int64);
 
-static inline unsigned short _byteswap_ushort (unsigned short val) {
-  return __builtin_bswap16(val);
-}
-static inline unsigned long _byteswap_ulong (unsigned long val) {
-  return __builtin_bswap32(val);
-}
-static inline unsigned __int64 _byteswap_uint64 (unsigned __int64 val) {
-  return __builtin_bswap64(val);
-}
+unsigned short __cdecl _byteswap_ushort(unsigned short val);
+unsigned long __cdecl _byteswap_ulong (unsigned long val);
+unsigned __int64 __cdecl _byteswap_uint64(unsigned __int64 val);
 #endif
 
 /*----------------------------------------------------------------------------*\
