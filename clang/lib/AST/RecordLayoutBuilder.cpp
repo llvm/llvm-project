@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
+#include "LayoutFieldRandomizer.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -18,9 +20,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
-
-#include <algorithm>
-#include <random>
 
 using namespace clang;
 
@@ -2988,23 +2987,19 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   const ASTRecordLayout *NewEntry = nullptr;
 
-  // FIXME Randstruct code should be called here!
-  // A staging area to easily reorder the fields
-  SmallVector<Decl *, 64> fields;
-  for (auto f : D->fields()) {
-    fields.push_back(f);
-  }
-
   bool ShouldBeRandomized = D->getAttr<RandomizeLayoutAttr>() != nullptr;
   if (ShouldBeRandomized) {
-      // FIXME Should call our Randstruct code once we port it.
-      auto rng = std::default_random_engine {};
-      std::shuffle(std::begin(fields), std::end(fields), rng);
+      // A staging area to easily reorder the fields
+      SmallVector<Decl *, 64> fields;
+      for (auto f : D->fields()) {
+        fields.push_back(f);
+      }
+
+      fields = rearrange(*this, fields);
 
       // This will rebuild the Decl chain of fields
       D->reorderFields(fields);
   }
-  // FIXME end Randstruct code
 
   if (isMsLayout(*this)) {
     MicrosoftRecordLayoutBuilder Builder(*this);
