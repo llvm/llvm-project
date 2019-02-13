@@ -12,6 +12,7 @@
 
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/DeclVendor.h"
+#include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Platform.h"
 
 #include <set>
