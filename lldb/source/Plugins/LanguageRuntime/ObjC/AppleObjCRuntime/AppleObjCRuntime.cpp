@@ -217,7 +217,7 @@ lldb::ModuleSP AppleObjCRuntime::GetObjCModule() {
 }
 
 Address *AppleObjCRuntime::GetPrintForDebuggerAddr() {
-  if (!m_PrintForDebugger_addr.get()) {
+  if (!m_PrintForDebugger_addr) {
     const ModuleList &modules = m_process->GetTarget().GetImages();
 
     SymbolContextList contexts;
@@ -329,7 +329,7 @@ bool AppleObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
   // reread it?
   m_objc_trampoline_handler_ap.reset(
       new AppleObjCTrampolineHandler(m_process->shared_from_this(), module_sp));
-  if (m_objc_trampoline_handler_ap.get() != NULL) {
+  if (m_objc_trampoline_handler_ap != NULL) {
     m_read_objc_library = true;
     return true;
   } else
@@ -339,7 +339,7 @@ bool AppleObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
 ThreadPlanSP AppleObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
                                                             bool stop_others) {
   ThreadPlanSP thread_plan_sp;
-  if (m_objc_trampoline_handler_ap.get())
+  if (m_objc_trampoline_handler_ap)
     thread_plan_sp = m_objc_trampoline_handler_ap->GetStepThroughDispatchPlan(
         thread, stop_others);
   return thread_plan_sp;
@@ -470,8 +470,8 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
   if (!cpp_runtime) return ValueObjectSP();
   auto cpp_exception = cpp_runtime->GetExceptionObjectForThread(thread_sp);
   if (!cpp_exception) return ValueObjectSP();
-  
-  auto descriptor = GetClassDescriptor(*cpp_exception.get());
+
+  auto descriptor = GetClassDescriptor(*cpp_exception);
   if (!descriptor || !descriptor->IsValid()) return ValueObjectSP();
   
   while (descriptor) {

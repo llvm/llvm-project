@@ -16,16 +16,12 @@
 // FPStack specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def SDTX86Fld       : SDTypeProfile<1, 2, [SDTCisFP<0>,
-                                           SDTCisPtrTy<1>,
-                                           SDTCisVT<2, OtherVT>]>;
-def SDTX86Fst       : SDTypeProfile<0, 3, [SDTCisFP<0>,
-                                           SDTCisPtrTy<1>,
-                                           SDTCisVT<2, OtherVT>]>;
-def SDTX86Fild      : SDTypeProfile<1, 2, [SDTCisFP<0>, SDTCisPtrTy<1>,
-                                           SDTCisVT<2, OtherVT>]>;
+def SDTX86Fld       : SDTypeProfile<1, 1, [SDTCisFP<0>,
+                                           SDTCisPtrTy<1>]>;
+def SDTX86Fst       : SDTypeProfile<0, 2, [SDTCisFP<0>,
+                                           SDTCisPtrTy<1>]>;
+def SDTX86Fild      : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 def SDTX86Fnstsw    : SDTypeProfile<1, 1, [SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
-def SDTX86FpToIMem  : SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 
 def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
@@ -40,15 +36,61 @@ def X86fildflag     : SDNode<"X86ISD::FILD_FLAG", SDTX86Fild,
                              [SDNPHasChain, SDNPOutGlue, SDNPMayLoad,
                               SDNPMemOperand]>;
 def X86fp_stsw      : SDNode<"X86ISD::FNSTSW16r", SDTX86Fnstsw>;
-def X86fp_to_i16mem : SDNode<"X86ISD::FP_TO_INT16_IN_MEM", SDTX86FpToIMem,
-                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def X86fp_to_i32mem : SDNode<"X86ISD::FP_TO_INT32_IN_MEM", SDTX86FpToIMem,
-                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def X86fp_to_i64mem : SDNode<"X86ISD::FP_TO_INT64_IN_MEM", SDTX86FpToIMem,
-                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
+                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
                              [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
                               SDNPMemOperand]>;
+
+def X86fstf32 : PatFrag<(ops node:$val, node:$ptr),
+                        (X86fst node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f32;
+}]>;
+def X86fstf64 : PatFrag<(ops node:$val, node:$ptr),
+                        (X86fst node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f64;
+}]>;
+def X86fstf80 : PatFrag<(ops node:$val, node:$ptr),
+                        (X86fst node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f80;
+}]>;
+
+def X86fldf32 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f32;
+}]>;
+def X86fldf64 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f64;
+}]>;
+def X86fldf80 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f80;
+}]>;
+
+def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
+
+def X86fildflag64 : PatFrag<(ops node:$ptr), (X86fildflag node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
+
+def X86fp_to_i16mem : PatFrag<(ops node:$val, node:$ptr),
+                              (X86fp_to_mem node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def X86fp_to_i32mem : PatFrag<(ops node:$val, node:$ptr),
+                              (X86fp_to_mem node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def X86fp_to_i64mem : PatFrag<(ops node:$val, node:$ptr),
+                              (X86fp_to_mem node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
 
 //===----------------------------------------------------------------------===//
 // FPStack pattern fragments
@@ -182,44 +224,44 @@ def _FpI16m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i16mem:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP32:$dst,
-                             (OpNode RFP32:$src1, (X86fild addr:$src2, i16))),
+                             (OpNode RFP32:$src1, (X86fild16 addr:$src2))),
                             (set RFP32:$dst,
-                             (OpNode (X86fild addr:$src2, i16), RFP32:$src1)))]>;
+                             (OpNode (X86fild16 addr:$src2), RFP32:$src1)))]>;
 def _FpI32m32 : FpIf32<(outs RFP32:$dst), (ins RFP32:$src1, i32mem:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP32:$dst,
-                             (OpNode RFP32:$src1, (X86fild addr:$src2, i32))),
+                             (OpNode RFP32:$src1, (X86fild32 addr:$src2))),
                             (set RFP32:$dst,
-                             (OpNode (X86fild addr:$src2, i32), RFP32:$src1)))]>;
+                             (OpNode (X86fild32 addr:$src2), RFP32:$src1)))]>;
 def _FpI16m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i16mem:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP64:$dst,
-                             (OpNode RFP64:$src1, (X86fild addr:$src2, i16))),
+                             (OpNode RFP64:$src1, (X86fild16 addr:$src2))),
                             (set RFP64:$dst,
-                             (OpNode (X86fild addr:$src2, i16), RFP64:$src1)))]>;
+                             (OpNode (X86fild16 addr:$src2), RFP64:$src1)))]>;
 def _FpI32m64 : FpIf64<(outs RFP64:$dst), (ins RFP64:$src1, i32mem:$src2),
                        OneArgFPRW,
                        [!if(Forward,
                             (set RFP64:$dst,
-                             (OpNode RFP64:$src1, (X86fild addr:$src2, i32))),
+                             (OpNode RFP64:$src1, (X86fild32 addr:$src2))),
                             (set RFP64:$dst,
-                             (OpNode (X86fild addr:$src2, i32), RFP64:$src1)))]>;
+                             (OpNode (X86fild32 addr:$src2), RFP64:$src1)))]>;
 def _FpI16m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i16mem:$src2),
                      OneArgFPRW,
                      [!if(Forward,
                           (set RFP80:$dst,
-                           (OpNode RFP80:$src1, (X86fild addr:$src2, i16))),
+                           (OpNode RFP80:$src1, (X86fild16 addr:$src2))),
                           (set RFP80:$dst,
-                           (OpNode (X86fild addr:$src2, i16), RFP80:$src1)))]>;
+                           (OpNode (X86fild16 addr:$src2), RFP80:$src1)))]>;
 def _FpI32m80 : FpI_<(outs RFP80:$dst), (ins RFP80:$src1, i32mem:$src2),
                      OneArgFPRW,
                      [!if(Forward,
                           (set RFP80:$dst,
-                           (OpNode RFP80:$src1, (X86fild addr:$src2, i32))),
+                           (OpNode RFP80:$src1, (X86fild32 addr:$src2))),
                           (set RFP80:$dst,
-                           (OpNode (X86fild addr:$src2, i32), RFP80:$src1)))]>;
+                           (OpNode (X86fild32 addr:$src2), RFP80:$src1)))]>;
 def _FI16m  : FPI<0xDE, fp, (outs), (ins i16mem:$src),
                   !strconcat("fi", asmstring, "{s}\t$src")>;
 def _FI32m  : FPI<0xDA, fp, (outs), (ins i32mem:$src),
@@ -431,23 +473,23 @@ def LD_Fp64m80 : FpI_<(outs RFP80:$dst), (ins f64mem:$src), ZeroArgFP,
 def LD_Fp32m80 : FpI_<(outs RFP80:$dst), (ins f32mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (f80 (extloadf32 addr:$src)))]>;
 def ILD_Fp16m32: FpIf32<(outs RFP32:$dst), (ins i16mem:$src), ZeroArgFP,
-                  [(set RFP32:$dst, (X86fild addr:$src, i16))]>;
+                  [(set RFP32:$dst, (X86fild16 addr:$src))]>;
 def ILD_Fp32m32: FpIf32<(outs RFP32:$dst), (ins i32mem:$src), ZeroArgFP,
-                  [(set RFP32:$dst, (X86fild addr:$src, i32))]>;
+                  [(set RFP32:$dst, (X86fild32 addr:$src))]>;
 def ILD_Fp64m32: FpIf32<(outs RFP32:$dst), (ins i64mem:$src), ZeroArgFP,
-                  [(set RFP32:$dst, (X86fild addr:$src, i64))]>;
+                  [(set RFP32:$dst, (X86fild64 addr:$src))]>;
 def ILD_Fp16m64: FpIf64<(outs RFP64:$dst), (ins i16mem:$src), ZeroArgFP,
-                  [(set RFP64:$dst, (X86fild addr:$src, i16))]>;
+                  [(set RFP64:$dst, (X86fild16 addr:$src))]>;
 def ILD_Fp32m64: FpIf64<(outs RFP64:$dst), (ins i32mem:$src), ZeroArgFP,
-                  [(set RFP64:$dst, (X86fild addr:$src, i32))]>;
+                  [(set RFP64:$dst, (X86fild32 addr:$src))]>;
 def ILD_Fp64m64: FpIf64<(outs RFP64:$dst), (ins i64mem:$src), ZeroArgFP,
-                  [(set RFP64:$dst, (X86fild addr:$src, i64))]>;
+                  [(set RFP64:$dst, (X86fild64 addr:$src))]>;
 def ILD_Fp16m80: FpI_<(outs RFP80:$dst), (ins i16mem:$src), ZeroArgFP,
-                  [(set RFP80:$dst, (X86fild addr:$src, i16))]>;
+                  [(set RFP80:$dst, (X86fild16 addr:$src))]>;
 def ILD_Fp32m80: FpI_<(outs RFP80:$dst), (ins i32mem:$src), ZeroArgFP,
-                  [(set RFP80:$dst, (X86fild addr:$src, i32))]>;
+                  [(set RFP80:$dst, (X86fild32 addr:$src))]>;
 def ILD_Fp64m80: FpI_<(outs RFP80:$dst), (ins i64mem:$src), ZeroArgFP,
-                  [(set RFP80:$dst, (X86fild addr:$src, i64))]>;
+                  [(set RFP80:$dst, (X86fild64 addr:$src))]>;
 } // SchedRW
 
 let SchedRW = [WriteStore], Uses = [FPCW] in {
@@ -691,21 +733,17 @@ def FXRSTOR64 : RI<0xAE, MRM1m, (outs), (ins opaquemem:$src),
 //===----------------------------------------------------------------------===//
 
 // Required for RET of f32 / f64 / f80 values.
-def : Pat<(X86fld addr:$src, f32), (LD_Fp32m addr:$src)>;
-def : Pat<(X86fld addr:$src, f64), (LD_Fp64m addr:$src)>;
-def : Pat<(X86fld addr:$src, f80), (LD_Fp80m addr:$src)>;
+def : Pat<(X86fldf32 addr:$src), (LD_Fp32m addr:$src)>;
+def : Pat<(X86fldf64 addr:$src), (LD_Fp64m addr:$src)>;
+def : Pat<(X86fldf80 addr:$src), (LD_Fp80m addr:$src)>;
 
 // Required for CALL which return f32 / f64 / f80 values.
-def : Pat<(X86fst RFP32:$src, addr:$op, f32), (ST_Fp32m addr:$op, RFP32:$src)>;
-def : Pat<(X86fst RFP64:$src, addr:$op, f32), (ST_Fp64m32 addr:$op,
-                                                          RFP64:$src)>;
-def : Pat<(X86fst RFP64:$src, addr:$op, f64), (ST_Fp64m addr:$op, RFP64:$src)>;
-def : Pat<(X86fst RFP80:$src, addr:$op, f32), (ST_Fp80m32 addr:$op,
-                                                          RFP80:$src)>;
-def : Pat<(X86fst RFP80:$src, addr:$op, f64), (ST_Fp80m64 addr:$op,
-                                                          RFP80:$src)>;
-def : Pat<(X86fst RFP80:$src, addr:$op, f80), (ST_FpP80m addr:$op,
-                                                         RFP80:$src)>;
+def : Pat<(X86fstf32 RFP32:$src, addr:$op), (ST_Fp32m addr:$op, RFP32:$src)>;
+def : Pat<(X86fstf32 RFP64:$src, addr:$op), (ST_Fp64m32 addr:$op, RFP64:$src)>;
+def : Pat<(X86fstf64 RFP64:$src, addr:$op), (ST_Fp64m addr:$op, RFP64:$src)>;
+def : Pat<(X86fstf32 RFP80:$src, addr:$op), (ST_Fp80m32 addr:$op, RFP80:$src)>;
+def : Pat<(X86fstf64 RFP80:$src, addr:$op), (ST_Fp80m64 addr:$op, RFP80:$src)>;
+def : Pat<(X86fstf80 RFP80:$src, addr:$op), (ST_FpP80m addr:$op, RFP80:$src)>;
 
 // Floating point constant -0.0 and -1.0
 def : Pat<(f32 fpimmneg0), (CHS_Fp32 (LD_Fp032))>, Requires<[FPStackf32]>;
@@ -716,7 +754,7 @@ def : Pat<(f80 fpimmneg0), (CHS_Fp80 (LD_Fp080))>;
 def : Pat<(f80 fpimmneg1), (CHS_Fp80 (LD_Fp180))>;
 
 // Used to conv. i64 to f64 since there isn't a SSE version.
-def : Pat<(X86fildflag addr:$src, i64), (ILD_Fp64m64 addr:$src)>;
+def : Pat<(X86fildflag64 addr:$src), (ILD_Fp64m64 addr:$src)>;
 
 // FP extensions map onto simple pseudo-value conversions if they are to/from
 // the FP stack.

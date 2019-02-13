@@ -384,6 +384,9 @@ struct ThreadState {
   // taken by epoch between synchs.
   // This way we can save one load from tls.
   u64 fast_synch_epoch;
+  // Technically `current` should be a separate THREADLOCAL variable;
+  // but it is placed here in order to share cache line with previous fields.
+  ThreadState* current;
   // This is a slow path flag. On fast path, fast_state.GetIgnoreBit() is read.
   // We do not distinguish beteween ignoring reads and writes
   // for better performance.
@@ -462,11 +465,20 @@ struct ThreadState {
 #if SANITIZER_MAC || SANITIZER_ANDROID
 ThreadState *cur_thread();
 void cur_thread_finalize();
+INLINE void cur_thread_init() { }
 #else
 __attribute__((tls_model("initial-exec")))
 extern THREADLOCAL char cur_thread_placeholder[];
 INLINE ThreadState *cur_thread() {
-  return reinterpret_cast<ThreadState *>(&cur_thread_placeholder);
+  return reinterpret_cast<ThreadState *>(cur_thread_placeholder)->current;
+}
+INLINE void cur_thread_init() {
+  ThreadState *thr = reinterpret_cast<ThreadState *>(cur_thread_placeholder);
+  if (UNLIKELY(!thr->current))
+    thr->current = thr;
+}
+INLINE void set_cur_thread(ThreadState *thr) {
+  reinterpret_cast<ThreadState *>(cur_thread_placeholder)->current = thr;
 }
 INLINE void cur_thread_finalize() { }
 #endif  // SANITIZER_MAC || SANITIZER_ANDROID
@@ -867,6 +879,16 @@ uptr ALWAYS_INLINE HeapEnd() {
   return HeapMemEnd() + PrimaryAllocator::AdditionalSize();
 }
 #endif
+
+ThreadState *FiberCreate(ThreadState *thr, uptr pc, unsigned flags);
+void FiberDestroy(ThreadState *thr, uptr pc, ThreadState *fiber);
+void FiberSwitch(ThreadState *thr, uptr pc, ThreadState *fiber, unsigned flags);
+
+// These need to match __tsan_switch_to_fiber_* flags defined in
+// tsan_interface.h. See documentation there as well.
+enum FiberSwitchFlags {
+  FiberSwitchFlagNoSync = 1 << 0, // __tsan_switch_to_fiber_no_sync
+};
 
 }  // namespace __tsan
 

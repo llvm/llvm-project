@@ -129,7 +129,6 @@ struct Section {
   ELF_SHF Flags;
   llvm::yaml::Hex64 Address;
   StringRef Link;
-  StringRef Info;
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
 
@@ -172,6 +171,7 @@ struct Group : Section {
   // Members of a group contain a flag and a list of section indices
   // that are part of the group.
   std::vector<SectionOrType> Members;
+  StringRef Signature; /* Info */
 
   Group() : Section(SectionKind::Group) {}
 
@@ -189,6 +189,7 @@ struct Relocation {
 
 struct RelocationSection : Section {
   std::vector<Relocation> Relocations;
+  StringRef RelocatableSec; /* Info */
 
   RelocationSection() : Section(SectionKind::Relocation) {}
 

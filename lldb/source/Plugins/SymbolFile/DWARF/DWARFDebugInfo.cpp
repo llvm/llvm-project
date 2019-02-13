@@ -43,7 +43,7 @@ void DWARFDebugInfo::SetDwarfData(SymbolFileDWARF *dwarf2Data) {
 }
 
 DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
-  if (m_cu_aranges_ap.get() == NULL && m_dwarf2Data) {
+  if (m_cu_aranges_ap == NULL && m_dwarf2Data) {
     Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
 
     m_cu_aranges_ap.reset(new DWARFDebugAranges());
@@ -60,8 +60,8 @@ DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
 
     // Make a list of all CUs represented by the arange data in the file.
     std::set<dw_offset_t> cus_with_data;
-    for (size_t n = 0; n < m_cu_aranges_ap.get()->GetNumRanges(); n++) {
-      dw_offset_t offset = m_cu_aranges_ap.get()->OffsetAtIndex(n);
+    for (size_t n = 0; n < m_cu_aranges_ap->GetNumRanges(); n++) {
+      dw_offset_t offset = m_cu_aranges_ap->OffsetAtIndex(n);
       if (offset != DW_INVALID_OFFSET)
         cus_with_data.insert(offset);
     }
@@ -89,7 +89,7 @@ DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
     const bool minimize = true;
     m_cu_aranges_ap->Sort(minimize);
   }
-  return *m_cu_aranges_ap.get();
+  return *m_cu_aranges_ap;
 }
 
 void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {

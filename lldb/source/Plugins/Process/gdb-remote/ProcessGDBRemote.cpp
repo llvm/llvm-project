@@ -1022,7 +1022,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
                   connect_url.str().c_str());
     std::unique_ptr<ConnectionFileDescriptor> conn_ap(
         new ConnectionFileDescriptor());
-    if (conn_ap.get()) {
+    if (conn_ap) {
       const uint32_t max_retry_count = 50;
       uint32_t retry_count = 0;
       while (!m_gdb_comm.IsConnected()) {
@@ -4930,7 +4930,7 @@ Status ProcessGDBRemote::GetFileLoadAddress(const FileSpec &file,
 
   StreamString packet;
   packet.PutCString("qFileLoadAddress:");
-  packet.PutCStringAsRawHex8(file_path.c_str());
+  packet.PutStringAsRawHex8(file_path);
 
   StringExtractorGDBRemote response;
   if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response,

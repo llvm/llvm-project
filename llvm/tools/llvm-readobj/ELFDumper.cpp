@@ -711,19 +711,12 @@ static void printVersionDependencySection(ELFDumper<ELFT> *Dumper,
   if (!Sec)
     return;
 
-  unsigned VerNeedNum = 0;
-  for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table()) {
-    if (Dyn.d_tag == DT_VERNEEDNUM) {
-      VerNeedNum = Dyn.d_un.d_val;
-      break;
-    }
-  }
-
   const uint8_t *SecData = (const uint8_t *)Obj->base() + Sec->sh_offset;
   const typename ELFO::Elf_Shdr *StrTab =
       unwrapOrError(Obj->getSection(Sec->sh_link));
 
   const uint8_t *P = SecData;
+  unsigned VerNeedNum = Sec->sh_info;
   for (unsigned I = 0; I < VerNeedNum; ++I) {
     const VerNeed *Need = reinterpret_cast<const VerNeed *>(P);
     DictScope Entry(W, "Dependency");
@@ -3677,14 +3670,12 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     return OS.str();
   case GNU_PROPERTY_X86_FEATURE_1_AND:
     OS << "X86 features: ";
-    if (DataSize != 4 && DataSize != 8) {
+    if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    uint64_t CFProtection =
-        (DataSize == 4)
-            ? support::endian::read32<ELFT::TargetEndianness>(Data.data())
-            : support::endian::read64<ELFT::TargetEndianness>(Data.data());
+    uint32_t CFProtection  =
+        support::endian::read32<ELFT::TargetEndianness>(Data.data());
     if (CFProtection == 0) {
       OS << "none";
       return OS.str();
@@ -3702,7 +3693,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
         OS << ", ";
     }
     if (CFProtection)
-      OS << format("<unknown flags: 0x%llx>", CFProtection);
+      OS << format("<unknown flags: 0x%x>", CFProtection);
     return OS.str();
   }
 }

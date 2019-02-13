@@ -1262,8 +1262,8 @@ static void sortSection(OutputSection *Sec,
     auto *ISD = cast<InputSectionDescription>(Sec->SectionCommands[0]);
     std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(),
                      [](const InputSection *A, const InputSection *B) -> bool {
-                       return A->File->PPC64SmallCodeModelRelocs &&
-                              !B->File->PPC64SmallCodeModelRelocs;
+                       return A->File->PPC64SmallCodeModelTocRelocs &&
+                              !B->File->PPC64SmallCodeModelTocRelocs;
                      });
     return;
   }

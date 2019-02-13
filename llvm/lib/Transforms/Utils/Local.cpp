@@ -1714,9 +1714,9 @@ DIExpression *llvm::salvageDebugInfoImpl(Instruction &I,
       // TODO: Salvage constants from each kind of binop we know about.
       return nullptr;
     }
-  } else if (isa<LoadInst>(&I)) {
-    // Rewrite the load into DW_OP_deref.
-    return DIExpression::prepend(SrcDIExpr, DIExpression::WithDeref);
+    // *Not* to do: we should not attempt to salvage load instructions,
+    // because the validity and lifetime of a dbg.value containing
+    // DW_OP_deref becomes difficult to analyze. See PR40628 for examples.
   }
   return nullptr;
 }

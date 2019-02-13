@@ -770,8 +770,9 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
           BuiltinMap[Ints[i].TargetPrefix];
 
       if (!BIM.insert(std::make_pair(BuiltinName, Ints[i].EnumName)).second)
-        PrintFatalError("Intrinsic '" + Ints[i].TheDef->getName() +
-                        "': duplicate " + CompilerName + " builtin name!");
+        PrintFatalError(Ints[i].TheDef->getLoc(),
+                        "Intrinsic '" + Ints[i].TheDef->getName() +
+                            "': duplicate " + CompilerName + " builtin name!");
       Table.GetOrAddStringOffset(BuiltinName);
     }
   }

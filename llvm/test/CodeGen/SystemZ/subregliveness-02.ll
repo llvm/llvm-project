@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -systemz-subreg-liveness < %s | FileCheck %s
 
 ; Check for successful compilation.
-; CHECK: meeb %f0, 0(%r1)
+; CHECK: meebr %f1, %f0
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"

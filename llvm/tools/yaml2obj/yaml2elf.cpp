@@ -270,15 +270,16 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
         SHeader.sh_link = getDotSymTabSecNo();
 
       unsigned Index;
-      if (!convertSectionIndex(SN2I, S->Name, S->Info, Index))
+      if (!convertSectionIndex(SN2I, S->Name, S->RelocatableSec, Index))
         return false;
       SHeader.sh_info = Index;
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
     } else if (auto S = dyn_cast<ELFYAML::Group>(Sec.get())) {
       unsigned SymIdx;
-      if (SymN2I.lookup(S->Info, SymIdx) && !to_integer(S->Info, SymIdx)) {
-        WithColor::error() << "Unknown symbol referenced: '" << S->Info
+      if (SymN2I.lookup(S->Signature, SymIdx) &&
+          !to_integer(S->Signature, SymIdx)) {
+        WithColor::error() << "Unknown symbol referenced: '" << S->Signature
                            << "' at YAML section '" << S->Name << "'.\n";
         return false;
       }

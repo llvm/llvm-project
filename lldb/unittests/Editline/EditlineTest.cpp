@@ -62,7 +62,7 @@ public:
 
   void CloseInput();
 
-  bool IsValid() const { return _editline_sp.get() != nullptr; }
+  bool IsValid() const { return _editline_sp != nullptr; }
 
   lldb_private::Editline &GetEditline() { return *_editline_sp; }
 

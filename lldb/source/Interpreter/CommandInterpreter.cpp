@@ -554,7 +554,7 @@ void CommandInterpreter::LoadCommandDictionary() {
                  CommandCompletions::eSourceFileCompletion,
           false));
 
-  if (break_regex_cmd_ap.get()) {
+  if (break_regex_cmd_ap) {
     bool success = true;
     for (size_t i = 0; i < num_regexes; i++) {
       success = break_regex_cmd_ap->AddRegexCommand(break_regexes[i][0],
@@ -603,7 +603,7 @@ void CommandInterpreter::LoadCommandDictionary() {
                  CommandCompletions::eSourceFileCompletion,
           false));
 
-  if (tbreak_regex_cmd_ap.get()) {
+  if (tbreak_regex_cmd_ap) {
     bool success = true;
     for (size_t i = 0; i < num_regexes; i++) {
       // If you add a resultant command string longer than 1024 characters be
@@ -632,7 +632,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(
           *this, "_regexp-attach", "Attach to process by ID or name.",
           "_regexp-attach <pid> | <process-name>", 2, 0, false));
-  if (attach_regex_cmd_ap.get()) {
+  if (attach_regex_cmd_ap) {
     if (attach_regex_cmd_ap->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                              "process attach --pid %1") &&
         attach_regex_cmd_ap->AddRegexCommand(
@@ -654,7 +654,7 @@ void CommandInterpreter::LoadCommandDictionary() {
                                     "moving one frame, a numeric argument can "
                                     "specify an arbitrary number.",
                                     "_regexp-down [<count>]", 2, 0, false));
-  if (down_regex_cmd_ap.get()) {
+  if (down_regex_cmd_ap) {
     if (down_regex_cmd_ap->AddRegexCommand("^$", "frame select -r -1") &&
         down_regex_cmd_ap->AddRegexCommand("^([0-9]+)$",
                                            "frame select -r -%1")) {
@@ -669,7 +669,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "Select an older stack frame.  Defaults to moving one "
           "frame, a numeric argument can specify an arbitrary number.",
           "_regexp-up [<count>]", 2, 0, false));
-  if (up_regex_cmd_ap.get()) {
+  if (up_regex_cmd_ap) {
     if (up_regex_cmd_ap->AddRegexCommand("^$", "frame select -r 1") &&
         up_regex_cmd_ap->AddRegexCommand("^([0-9]+)$", "frame select -r %1")) {
       CommandObjectSP up_regex_cmd_sp(up_regex_cmd_ap.release());
@@ -682,7 +682,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-display",
           "Evaluate an expression at every stop (see 'help target stop-hook'.)",
           "_regexp-display expression", 2, 0, false));
-  if (display_regex_cmd_ap.get()) {
+  if (display_regex_cmd_ap) {
     if (display_regex_cmd_ap->AddRegexCommand(
             "^(.+)$", "target stop-hook add -o \"expr -- %1\"")) {
       CommandObjectSP display_regex_cmd_sp(display_regex_cmd_ap.release());
@@ -696,7 +696,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-undisplay", "Stop displaying expression at every "
                                       "stop (specified by stop-hook index.)",
           "_regexp-undisplay stop-hook-number", 2, 0, false));
-  if (undisplay_regex_cmd_ap.get()) {
+  if (undisplay_regex_cmd_ap) {
     if (undisplay_regex_cmd_ap->AddRegexCommand("^([0-9]+)$",
                                                 "target stop-hook delete %1")) {
       CommandObjectSP undisplay_regex_cmd_sp(undisplay_regex_cmd_ap.release());
@@ -710,7 +710,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "gdb-remote", "Connect to a process via remote GDB server.  "
                                "If no host is specifed, localhost is assumed.",
           "gdb-remote [<hostname>:]<portnum>", 2, 0, false));
-  if (connect_gdb_remote_cmd_ap.get()) {
+  if (connect_gdb_remote_cmd_ap) {
     if (connect_gdb_remote_cmd_ap->AddRegexCommand(
             "^([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)$",
             "process connect --plugin gdb-remote connect://%1:%2") &&
@@ -728,7 +728,7 @@ void CommandInterpreter::LoadCommandDictionary() {
                                "If no UDP port is specified, port 41139 is "
                                "assumed.",
           "kdp-remote <hostname>[:<portnum>]", 2, 0, false));
-  if (connect_kdp_remote_cmd_ap.get()) {
+  if (connect_kdp_remote_cmd_ap) {
     if (connect_kdp_remote_cmd_ap->AddRegexCommand(
             "^([^:]+:[[:digit:]]+)$",
             "process connect --plugin kdp-remote udp://%1") &&
@@ -746,7 +746,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "displays at most that many "
           "frames.  The argument 'all' displays all threads.",
           "bt [<digit> | all]", 2, 0, false));
-  if (bt_regex_cmd_ap.get()) {
+  if (bt_regex_cmd_ap) {
     // accept but don't document "bt -c <number>" -- before bt was a regex
     // command if you wanted to backtrace three frames you would do "bt -c 3"
     // but the intention is to have this emulate the gdb "bt" command and so
@@ -775,7 +775,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-list -[<count>]      // List previous <count> lines\n"
           "_regexp-list                 // List subsequent lines",
           2, CommandCompletions::eSourceFileCompletion, false));
-  if (list_regex_cmd_ap.get()) {
+  if (list_regex_cmd_ap) {
     if (list_regex_cmd_ap->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                            "source list --line %1") &&
         list_regex_cmd_ap->AddRegexCommand(
@@ -806,7 +806,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-env                  // Show enrivonment\n"
           "_regexp-env <name>=<value>   // Set an environment variable",
           2, 0, false));
-  if (env_regex_cmd_ap.get()) {
+  if (env_regex_cmd_ap) {
     if (env_regex_cmd_ap->AddRegexCommand("^$",
                                           "settings show target.env-vars") &&
         env_regex_cmd_ap->AddRegexCommand("^([A-Za-z_][A-Za-z_0-9]*=.*)$",
@@ -825,7 +825,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-jump <file>:<line>\n"
           "_regexp-jump *<addr>\n",
           2, 0, false));
-  if (jump_regex_cmd_ap.get()) {
+  if (jump_regex_cmd_ap) {
     if (jump_regex_cmd_ap->AddRegexCommand("^\\*(.*)$",
                                            "thread jump --addr %1") &&
         jump_regex_cmd_ap->AddRegexCommand("^([0-9]+)$",

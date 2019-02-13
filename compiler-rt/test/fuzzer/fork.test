@@ -1,5 +1,16 @@
 # REQUIRES: linux
-CHECK: BINGO
+BINGO: BINGO
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
+RUN: not %run %t-SimpleTest -fork=1 2>&1 | FileCheck %s --check-prefix=BINGO
 
-RUN: not %run %t-SimpleTest -fork=1 2>&1 | FileCheck %s
+TIMEOUT: ERROR: libFuzzer: timeout
+RUN: %cpp_compiler %S/TimeoutTest.cpp -o %t-TimeoutTest
+RUN: not %run %t-TimeoutTest -fork=1 -timeout=1 -ignore_timeouts=0 2>&1 | FileCheck %s --check-prefix=TIMEOUT
+
+OOM: ERROR: libFuzzer: out-of-memory
+RUN: %cpp_compiler %S/OutOfMemoryTest.cpp -o %t-OutOfMemoryTest
+RUN: not %run %t-OutOfMemoryTest -fork=1 -ignore_ooms=0  -rss_limit_mb=128 2>&1 | FileCheck %s --check-prefix=OOM
+
+CRASH: SEGV on unknown address 0x000000000000
+RUN: %cpp_compiler %S/ShallowOOMDeepCrash.cpp -o %t-ShallowOOMDeepCrash
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 2>&1 | FileCheck %s --check-prefix=CRASH

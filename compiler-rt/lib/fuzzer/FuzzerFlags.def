@@ -43,6 +43,8 @@ FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
 FUZZER_FLAG_INT(help, 0, "Print help.")
 FUZZER_FLAG_INT(fork, 0, "Experimental mode where fuzzing happens "
                 "in a subprocess")
+FUZZER_FLAG_INT(ignore_timeouts, 1, "Ignore timeouts in fork mode")
+FUZZER_FLAG_INT(ignore_ooms, 1, "Ignore OOMs in fork mode")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
   "merged into the 1-st corpus. Only interesting units will be taken. "
   "This flag can be used to minimize a corpus.")

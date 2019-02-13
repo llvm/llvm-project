@@ -299,7 +299,7 @@ iterator_range<BasicBlock::phi_iterator> BasicBlock::phis() {
 /// called while the predecessor still refers to this block.
 ///
 void BasicBlock::removePredecessor(BasicBlock *Pred,
-                                   bool DontDeleteUselessPHIs) {
+                                   bool KeepOneInputPHIs) {
   assert((hasNUsesOrMore(16)||// Reduce cost of this assertion for complex CFGs.
           find(pred_begin(this), pred_end(this), Pred) != pred_end(this)) &&
          "removePredecessor: BB is not a predecessor!");
@@ -330,11 +330,11 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
   }
 
   // <= Two predecessors BEFORE I remove one?
-  if (max_idx <= 2 && !DontDeleteUselessPHIs) {
+  if (max_idx <= 2 && !KeepOneInputPHIs) {
     // Yup, loop through and nuke the PHI nodes
     while (PHINode *PN = dyn_cast<PHINode>(&front())) {
       // Remove the predecessor first.
-      PN->removeIncomingValue(Pred, !DontDeleteUselessPHIs);
+      PN->removeIncomingValue(Pred, !KeepOneInputPHIs);
 
       // If the PHI _HAD_ two uses, replace PHI node with its now *single* value
       if (max_idx == 2) {
@@ -359,7 +359,7 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
       // If all incoming values to the Phi are the same, we can replace the Phi
       // with that value.
       Value* PNV = nullptr;
-      if (!DontDeleteUselessPHIs && (PNV = PN->hasConstantValue()))
+      if (!KeepOneInputPHIs && (PNV = PN->hasConstantValue()))
         if (PNV != PN) {
           PN->replaceAllUsesWith(PNV);
           PN->eraseFromParent();

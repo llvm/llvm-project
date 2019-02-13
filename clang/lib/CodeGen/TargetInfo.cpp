@@ -7763,6 +7763,16 @@ public:
 };
 }
 
+static bool requiresAMDGPUProtectedVisibility(const Decl *D,
+                                              llvm::GlobalValue *GV) {
+  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
+    return false;
+
+  return D->hasAttr<OpenCLKernelAttr>() ||
+         (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+         (isa<VarDecl>(D) && D->hasAttr<CUDADeviceAttr>());
+}
+
 namespace {
 inline llvm::APSInt getConstexprInt(const Expr *E, const ASTContext &Ctx) {
   clang::Expr::EvalResult r;
@@ -7777,6 +7787,11 @@ inline llvm::APSInt getConstexprInt(const Expr *E, const ASTContext &Ctx) {
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+    GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    GV->setDSOLocal(true);
+  }
+
   if (GV->isDeclaration())
     return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);

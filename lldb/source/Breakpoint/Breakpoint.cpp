@@ -59,7 +59,7 @@ Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
 Breakpoint::Breakpoint(Target &new_target, Breakpoint &source_bp)
     : m_being_created(true), m_hardware(source_bp.m_hardware),
       m_target(new_target), m_name_list(source_bp.m_name_list),
-      m_options_up(new BreakpointOptions(*source_bp.m_options_up.get())),
+      m_options_up(new BreakpointOptions(*source_bp.m_options_up)),
       m_locations(*this),
       m_resolve_indirect_symbols(source_bp.m_resolve_indirect_symbols),
       m_hit_count(0) {

@@ -2,7 +2,7 @@
 // REQUIRES: lld
 
 // Test that we can display tag types.
-// RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s 
+// RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/tag-types.lldbinit | FileCheck %s
 
@@ -115,6 +115,12 @@ public:
 
 unsigned Derived2::StaticDataMember = 0;
 
+// Test virtual inheritance.
+class DerivedVirtual1 : public virtual Class {};
+
+// Test the correctness of the virtual bases order.
+class DerivedVirtual2 : public DerivedVirtual1, public virtual OneMember {};
+
 // Test scoped enums and unscoped enums.
 enum class EnumInt {
   A = 1,
@@ -133,6 +139,8 @@ int main(int argc, char **argv) {
   Union U;
   Derived D;
   Derived2 D2;
+  DerivedVirtual1 DV1;
+  DerivedVirtual2 DV2;
   EnumInt EI;
   EnumShort ES;
   
@@ -220,6 +228,12 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) type lookup -- Derived2
 // CHECK-NEXT: class Derived2 : protected Class, private Struct {
 // CHECK-NEXT:     static unsigned int StaticDataMember;
+// CHECK-NEXT: }
+// CHECK-NEXT: (lldb) type lookup -- DerivedVirtual1
+// CHECK-NEXT: class DerivedVirtual1 : virtual public Class {
+// CHECK-NEXT: }
+// CHECK-NEXT: (lldb) type lookup -- DerivedVirtual2
+// CHECK-NEXT: class DerivedVirtual2 : public DerivedVirtual1, virtual public Class, virtual public OneMember {
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- EnumInt
 // CHECK-NEXT: enum EnumInt {
