@@ -261,6 +261,7 @@ void CrashResistantMerge(const Vector<std::string> &Args,
                          const Set<uint32_t> &InitialFeatures,
                          Set<uint32_t> *NewFeatures, const std::string &CFPath,
                          bool V /*Verbose*/) {
+  if (NewCorpus.empty() && OldCorpus.empty()) return;  // Nothing to merge.
   size_t NumAttempts = 0;
   if (FileSize(CFPath)) {
     VPrintf(V, "MERGE-OUTER: non-empty control file provided: '%s'\n",
