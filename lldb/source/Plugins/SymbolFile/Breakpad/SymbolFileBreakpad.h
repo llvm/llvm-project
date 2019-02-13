@@ -69,9 +69,9 @@ public:
                          FileSpecList &support_files) override;
   size_t ParseTypes(CompileUnit &cu) override { return 0; }
 
-  bool
-  ParseImportedModules(const SymbolContext &sc,
-                       std::vector<ConstString> &imported_modules) override {
+  bool ParseImportedModules(
+      const SymbolContext &sc,
+      std::vector<lldb_private::SourceModule> &imported_modules) override {
     return false;
   }
 

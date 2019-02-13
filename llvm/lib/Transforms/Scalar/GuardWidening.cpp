@@ -178,17 +178,17 @@ class GuardWideningImpl {
                                      bool InvertCond);
 
   /// Helper to check if \p V can be hoisted to \p InsertPos.
-  bool isAvailableAt(Value *V, Instruction *InsertPos) {
-    SmallPtrSet<Instruction *, 8> Visited;
+  bool isAvailableAt(const Value *V, const Instruction *InsertPos) const {
+    SmallPtrSet<const Instruction *, 8> Visited;
     return isAvailableAt(V, InsertPos, Visited);
   }
 
-  bool isAvailableAt(Value *V, Instruction *InsertPos,
-                     SmallPtrSetImpl<Instruction *> &Visited);
+  bool isAvailableAt(const Value *V, const Instruction *InsertPos,
+                     SmallPtrSetImpl<const Instruction *> &Visited) const;
 
   /// Helper to hoist \p V to \p InsertPos.  Guaranteed to succeed if \c
   /// isAvailableAt returned true.
-  void makeAvailableAt(Value *V, Instruction *InsertPos);
+  void makeAvailableAt(Value *V, Instruction *InsertPos) const;
 
   /// Common helper used by \c widenGuard and \c isWideningCondProfitable.  Try
   /// to generate an expression computing the logical AND of \p Cond0 and (\p
@@ -205,23 +205,23 @@ class GuardWideningImpl {
   /// pre-existing instruction in the IR that computes the result of this range
   /// check.
   class RangeCheck {
-    Value *Base;
-    ConstantInt *Offset;
-    Value *Length;
+    const Value *Base;
+    const ConstantInt *Offset;
+    const Value *Length;
     ICmpInst *CheckInst;
 
   public:
-    explicit RangeCheck(Value *Base, ConstantInt *Offset, Value *Length,
-                        ICmpInst *CheckInst)
+    explicit RangeCheck(const Value *Base, const ConstantInt *Offset,
+                        const Value *Length, ICmpInst *CheckInst)
         : Base(Base), Offset(Offset), Length(Length), CheckInst(CheckInst) {}
 
-    void setBase(Value *NewBase) { Base = NewBase; }
-    void setOffset(ConstantInt *NewOffset) { Offset = NewOffset; }
+    void setBase(const Value *NewBase) { Base = NewBase; }
+    void setOffset(const ConstantInt *NewOffset) { Offset = NewOffset; }
 
-    Value *getBase() const { return Base; }
-    ConstantInt *getOffset() const { return Offset; }
+    const Value *getBase() const { return Base; }
+    const ConstantInt *getOffset() const { return Offset; }
     const APInt &getOffsetValue() const { return getOffset()->getValue(); }
-    Value *getLength() const { return Length; };
+    const Value *getLength() const { return Length; };
     ICmpInst *getCheckInst() const { return CheckInst; }
 
     void print(raw_ostream &OS, bool PrintTypes = false) {
@@ -243,19 +243,19 @@ class GuardWideningImpl {
   /// append them to \p Checks.  Returns true on success, may clobber \c Checks
   /// on failure.
   bool parseRangeChecks(Value *CheckCond, SmallVectorImpl<RangeCheck> &Checks) {
-    SmallPtrSet<Value *, 8> Visited;
+    SmallPtrSet<const Value *, 8> Visited;
     return parseRangeChecks(CheckCond, Checks, Visited);
   }
 
   bool parseRangeChecks(Value *CheckCond, SmallVectorImpl<RangeCheck> &Checks,
-                        SmallPtrSetImpl<Value *> &Visited);
+                        SmallPtrSetImpl<const Value *> &Visited);
 
   /// Combine the checks in \p Checks into a smaller set of checks and append
   /// them into \p CombinedChecks.  Return true on success (i.e. all of checks
   /// in \p Checks were combined into \p CombinedChecks).  Clobbers \p Checks
   /// and \p CombinedChecks on success and on failure.
   bool combineRangeChecks(SmallVectorImpl<RangeCheck> &Checks,
-                          SmallVectorImpl<RangeCheck> &CombinedChecks);
+                          SmallVectorImpl<RangeCheck> &CombinedChecks) const;
 
   /// Can we compute the logical AND of \p Cond0 and \p Cond1 for the price of
   /// computing only one of the two expressions?
@@ -494,8 +494,9 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
   return MaybeHoistingOutOfIf() ? WS_IllegalOrNegative : WS_Neutral;
 }
 
-bool GuardWideningImpl::isAvailableAt(Value *V, Instruction *Loc,
-                                      SmallPtrSetImpl<Instruction *> &Visited) {
+bool GuardWideningImpl::isAvailableAt(
+    const Value *V, const Instruction *Loc,
+    SmallPtrSetImpl<const Instruction *> &Visited) const {
   auto *Inst = dyn_cast<Instruction>(V);
   if (!Inst || DT.dominates(Inst, Loc) || Visited.count(Inst))
     return true;
@@ -515,7 +516,7 @@ bool GuardWideningImpl::isAvailableAt(Value *V, Instruction *Loc,
                 [&](Value *Op) { return isAvailableAt(Op, Loc, Visited); });
 }
 
-void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) {
+void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
   auto *Inst = dyn_cast<Instruction>(V);
   if (!Inst || DT.dominates(Inst, Loc))
     return;
@@ -613,7 +614,7 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
 
 bool GuardWideningImpl::parseRangeChecks(
     Value *CheckCond, SmallVectorImpl<GuardWideningImpl::RangeCheck> &Checks,
-    SmallPtrSetImpl<Value *> &Visited) {
+    SmallPtrSetImpl<const Value *> &Visited) {
   if (!Visited.insert(CheckCond).second)
     return true;
 
@@ -632,7 +633,7 @@ bool GuardWideningImpl::parseRangeChecks(
        IC->getPredicate() != ICmpInst::ICMP_UGT))
     return false;
 
-  Value *CmpLHS = IC->getOperand(0), *CmpRHS = IC->getOperand(1);
+  const Value *CmpLHS = IC->getOperand(0), *CmpRHS = IC->getOperand(1);
   if (IC->getPredicate() == ICmpInst::ICMP_UGT)
     std::swap(CmpLHS, CmpRHS);
 
@@ -685,13 +686,13 @@ bool GuardWideningImpl::parseRangeChecks(
 
 bool GuardWideningImpl::combineRangeChecks(
     SmallVectorImpl<GuardWideningImpl::RangeCheck> &Checks,
-    SmallVectorImpl<GuardWideningImpl::RangeCheck> &RangeChecksOut) {
+    SmallVectorImpl<GuardWideningImpl::RangeCheck> &RangeChecksOut) const {
   unsigned OldCount = Checks.size();
   while (!Checks.empty()) {
     // Pick all of the range checks with a specific base and length, and try to
     // merge them.
-    Value *CurrentBase = Checks.front().getBase();
-    Value *CurrentLength = Checks.front().getLength();
+    const Value *CurrentBase = Checks.front().getBase();
+    const Value *CurrentLength = Checks.front().getLength();
 
     SmallVector<GuardWideningImpl::RangeCheck, 3> CurrentChecks;
 
@@ -720,8 +721,8 @@ bool GuardWideningImpl::combineRangeChecks(
 
     // Note: std::sort should not invalidate the ChecksStart iterator.
 
-    ConstantInt *MinOffset = CurrentChecks.front().getOffset(),
-                *MaxOffset = CurrentChecks.back().getOffset();
+    const ConstantInt *MinOffset = CurrentChecks.front().getOffset();
+    const ConstantInt *MaxOffset = CurrentChecks.back().getOffset();
 
     unsigned BitWidth = MaxOffset->getValue().getBitWidth();
     if ((MaxOffset->getValue() - MinOffset->getValue())

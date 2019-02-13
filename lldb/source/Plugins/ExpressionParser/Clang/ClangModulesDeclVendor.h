@@ -36,7 +36,7 @@ public:
   //------------------------------------------------------------------
   /// Add a module to the list of modules to search.
   ///
-  /// @param[in] path
+  /// @param[in] module
   ///     The path to the exact module to be loaded.  E.g., if the desired
   ///     module is std.io, then this should be { "std", "io" }.
   ///
@@ -53,7 +53,8 @@ public:
   ///     compiler encountered a fatal error during a previous module
   ///     load, then this will always return false for this ModuleImporter.
   //------------------------------------------------------------------
-  virtual bool AddModule(ModulePath &path, ModuleVector *exported_modules,
+  virtual bool AddModule(const SourceModule &module,
+                         ModuleVector *exported_modules,
                          Stream &error_stream) = 0;
 
   //------------------------------------------------------------------

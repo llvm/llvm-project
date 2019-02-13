@@ -72,6 +72,7 @@
 
 #include "llvm/Support/FileSystem.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 
@@ -911,43 +912,57 @@ bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARF::ParseImportedModules(
     const lldb_private::SymbolContext &sc,
-    std::vector<lldb_private::ConstString> &imported_modules) {
+    std::vector<SourceModule> &imported_modules) {
   ASSERT_MODULE_LOCK(this);
   assert(sc.comp_unit);
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
-  if (dwarf_cu) {
-    if (ClangModulesDeclVendor::LanguageSupportsClangModules(
-            sc.comp_unit->GetLanguage())) {
-      UpdateExternalModuleListIfNeeded();
+  if (!dwarf_cu)
+    return false;
+  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(
+          sc.comp_unit->GetLanguage()))
+    return false;
+  UpdateExternalModuleListIfNeeded();
 
-      if (sc.comp_unit) {
-        const DWARFDIE die = dwarf_cu->DIE();
+  if (!sc.comp_unit)
+    return false;
 
-        if (die) {
-          for (DWARFDIE child_die = die.GetFirstChild(); child_die;
-               child_die = child_die.GetSibling()) {
-            if (child_die.Tag() == DW_TAG_imported_declaration) {
-              if (DWARFDIE module_die =
-                      child_die.GetReferencedDIE(DW_AT_import)) {
-                if (module_die.Tag() == DW_TAG_module) {
-                  if (const char *name = module_die.GetAttributeValueAsString(
-                          DW_AT_name, nullptr)) {
-                    ConstString const_name(name);
-                    imported_modules.push_back(const_name);
-                  }
-                }
-              }
-            }
-          }
-        }
-      } else {
-        for (const auto &pair : m_external_type_modules) {
-          imported_modules.push_back(pair.first);
-        }
+  const DWARFDIE die = dwarf_cu->DIE();
+  if (!die)
+    return false;
+
+  for (DWARFDIE child_die = die.GetFirstChild(); child_die;
+       child_die = child_die.GetSibling()) {
+    if (child_die.Tag() != DW_TAG_imported_declaration)
+      continue;
+
+    DWARFDIE module_die = child_die.GetReferencedDIE(DW_AT_import);
+    if (module_die.Tag() != DW_TAG_module)
+      continue;
+
+    if (const char *name =
+            module_die.GetAttributeValueAsString(DW_AT_name, nullptr)) {
+      SourceModule module;
+      module.path.push_back(ConstString(name));
+
+      DWARFDIE parent_die = module_die;
+      while ((parent_die = parent_die.GetParent())) {
+        if (parent_die.Tag() != DW_TAG_module)
+          break;
+        if (const char *name =
+                parent_die.GetAttributeValueAsString(DW_AT_name, nullptr))
+          module.path.push_back(ConstString(name));
       }
+      std::reverse(module.path.begin(), module.path.end());
+      if (const char *include_path = module_die.GetAttributeValueAsString(
+              DW_AT_LLVM_include_path, nullptr))
+        module.search_path = ConstString(include_path);
+      if (const char *sysroot = module_die.GetAttributeValueAsString(
+              DW_AT_LLVM_isysroot, nullptr))
+        module.sysroot = ConstString(sysroot);
+      imported_modules.push_back(module);
     }
   }
-  return false;
+  return true;
 }
 
 struct ParseDWARFLineTableCallbackInfo {

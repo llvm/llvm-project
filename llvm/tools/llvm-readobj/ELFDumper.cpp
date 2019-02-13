@@ -3650,12 +3650,12 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                                   ArrayRef<uint8_t> Data) {
   std::string str;
   raw_string_ostream OS(str);
-  uint32_t pr_data;
+  uint32_t PrData;
   auto DumpBit = [&](uint32_t Flag, StringRef Name) {
-    if (pr_data & Flag) {
-      pr_data &= ~Flag;
+    if (PrData & Flag) {
+      PrData &= ~Flag;
       OS << Name;
-      if (pr_data)
+      if (PrData)
         OS << ", ";
     }
   };
@@ -3684,15 +3684,15 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    pr_data = support::endian::read32<ELFT::TargetEndianness>(Data.data());
-    if (pr_data == 0) {
+    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (PrData == 0) {
       OS << "<None>";
       return OS.str();
     }
     DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
     DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
-    if (pr_data)
-      OS << format("<unknown flags: 0x%x>", pr_data);
+    if (PrData)
+      OS << format("<unknown flags: 0x%x>", PrData);
     return OS.str();
   case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
   case GNU_PROPERTY_X86_FEATURE_2_USED:
@@ -3702,8 +3702,8 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    pr_data = support::endian::read32<ELFT::TargetEndianness>(Data.data());
-    if (pr_data == 0) {
+    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (PrData == 0) {
       OS << "<None>";
       return OS.str();
     }
@@ -3717,8 +3717,8 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVE, "XSAVE");
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT, "XSAVEOPT");
     DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEC, "XSAVEC");
-    if (pr_data)
-      OS << format("<unknown flags: 0x%x>", pr_data);
+    if (PrData)
+      OS << format("<unknown flags: 0x%x>", PrData);
     return OS.str();
   }
 }

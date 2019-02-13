@@ -187,6 +187,10 @@ def GPR64z : RegisterOperand<GPR64> {
   let GIZeroRegister = XZR;
 }
 
+// GPR argument registers.
+def GPR32arg : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 0, 7)>;
+def GPR64arg : RegisterClass<"AArch64", [i64], 64, (sequence "X%u", 0, 7)>;
+
 // GPR register classes which include WZR/XZR AND SP/WSP. This is not a
 // constraint used by any instructions, it is used as a common super-class.
 def GPR32all : RegisterClass<"AArch64", [i32], 32, (add GPR32common, WZR, WSP)>;

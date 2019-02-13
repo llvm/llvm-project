@@ -1259,6 +1259,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   Features["cmov"]   = (EDX >> 15) & 1;
   Features["mmx"]    = (EDX >> 23) & 1;
+  Features["fxsr"]   = (EDX >> 24) & 1;
   Features["sse"]    = (EDX >> 25) & 1;
   Features["sse2"]   = (EDX >> 26) & 1;
 

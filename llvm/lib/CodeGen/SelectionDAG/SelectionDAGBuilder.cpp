@@ -108,6 +108,7 @@
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1131,6 +1132,13 @@ void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,
 
   for (auto &DDIMI : DanglingDebugInfoMap) {
     DanglingDebugInfoVector &DDIV = DDIMI.second;
+
+    // If debug info is to be dropped, run it through final checks to see
+    // whether it can be salvaged.
+    for (auto &DDI : DDIV)
+      if (isMatchingDbgValue(DDI))
+        salvageUnresolvedDbgValue(DDI);
+
     DDIV.erase(remove_if(DDIV, isMatchingDbgValue), DDIV.end());
   }
 }
@@ -1179,10 +1187,171 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
       } else
         LLVM_DEBUG(dbgs() << "Resolved dangling debug info for " << *DI
                           << "in EmitFuncArgumentDbgValue\n");
-    } else
+    } else {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+      auto Undef =
+          UndefValue::get(DDI.getDI()->getVariableLocation()->getType());
+      auto SDV =
+          DAG.getConstantDbgValue(Variable, Expr, Undef, dl, DbgSDNodeOrder);
+      DAG.AddDbgValue(SDV, nullptr, false);
+    }
   }
   DDIV.clear();
+}
+
+void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
+  Value *V = DDI.getDI()->getValue();
+  DILocalVariable *Var = DDI.getDI()->getVariable();
+  DIExpression *Expr = DDI.getDI()->getExpression();
+  DebugLoc DL = DDI.getdl();
+  DebugLoc InstDL = DDI.getDI()->getDebugLoc();
+  unsigned SDOrder = DDI.getSDNodeOrder();
+
+  // Currently we consider only dbg.value intrinsics -- we tell the salvager
+  // that DW_OP_stack_value is desired.
+  assert(isa<DbgValueInst>(DDI.getDI()));
+  bool StackValue = true;
+
+  // Can this Value can be encoded without any further work?
+  if (handleDebugValue(V, Var, Expr, DL, InstDL, SDOrder))
+    return;
+
+  // Attempt to salvage back through as many instructions as possible. Bail if
+  // a non-instruction is seen, such as a constant expression or global
+  // variable. FIXME: Further work could recover those too.
+  while (isa<Instruction>(V)) {
+    Instruction &VAsInst = *cast<Instruction>(V);
+    DIExpression *NewExpr = salvageDebugInfoImpl(VAsInst, Expr, StackValue);
+
+    // If we cannot salvage any further, and haven't yet found a suitable debug
+    // expression, bail out.
+    if (!NewExpr)
+      break;
+
+    // New value and expr now represent this debuginfo.
+    V = VAsInst.getOperand(0);
+    Expr = NewExpr;
+
+    // Some kind of simplification occurred: check whether the operand of the
+    // salvaged debug expression can be encoded in this DAG.
+    if (handleDebugValue(V, Var, Expr, DL, InstDL, SDOrder)) {
+      LLVM_DEBUG(dbgs() << "Salvaged debug location info for:\n  "
+                        << DDI.getDI() << "\nBy stripping back to:\n  " << V);
+      return;
+    }
+  }
+
+  // This was the final opportunity to salvage this debug information, and it
+  // couldn't be done. Place an undef DBG_VALUE at this location to terminate
+  // any earlier variable location.
+  auto Undef = UndefValue::get(DDI.getDI()->getVariableLocation()->getType());
+  auto SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
+  DAG.AddDbgValue(SDV, nullptr, false);
+
+  LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  " << DDI.getDI()
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "  Last seen at:\n    " << *DDI.getDI()->getOperand(0)
+                    << "\n");
+}
+
+bool SelectionDAGBuilder::handleDebugValue(const Value *V, DILocalVariable *Var,
+                                           DIExpression *Expr, DebugLoc dl,
+                                           DebugLoc InstDL, unsigned Order) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDDbgValue *SDV;
+  if (isa<ConstantInt>(V) || isa<ConstantFP>(V) || isa<UndefValue>(V) ||
+      isa<ConstantPointerNull>(V)) {
+    SDV = DAG.getConstantDbgValue(Var, Expr, V, dl, SDNodeOrder);
+    DAG.AddDbgValue(SDV, nullptr, false);
+    return true;
+  }
+
+  // If the Value is a frame index, we can create a FrameIndex debug value
+  // without relying on the DAG at all.
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
+    if (SI != FuncInfo.StaticAllocaMap.end()) {
+      auto SDV =
+          DAG.getFrameIndexDbgValue(Var, Expr, SI->second,
+                                    /*IsIndirect*/ false, dl, SDNodeOrder);
+      // Do not attach the SDNodeDbgValue to an SDNode: this variable location
+      // is still available even if the SDNode gets optimized out.
+      DAG.AddDbgValue(SDV, nullptr, false);
+      return true;
+    }
+  }
+
+  // Do not use getValue() in here; we don't want to generate code at
+  // this point if it hasn't been done yet.
+  SDValue N = NodeMap[V];
+  if (!N.getNode() && isa<Argument>(V)) // Check unused arguments map.
+    N = UnusedArgNodeMap[V];
+  if (N.getNode()) {
+    if (EmitFuncArgumentDbgValue(V, Var, Expr, dl, false, N))
+      return true;
+    SDV = getDbgValue(N, Var, Expr, dl, SDNodeOrder);
+    DAG.AddDbgValue(SDV, N.getNode(), false);
+    return true;
+  }
+
+  // Special rules apply for the first dbg.values of parameter variables in a
+  // function. Identify them by the fact they reference Argument Values, that
+  // they're parameters, and they are parameters of the current function. We
+  // need to let them dangle until they get an SDNode.
+  bool IsParamOfFunc = isa<Argument>(V) && Var->isParameter() &&
+                       !InstDL.getInlinedAt();
+  if (!IsParamOfFunc) {
+    // The value is not used in this block yet (or it would have an SDNode).
+    // We still want the value to appear for the user if possible -- if it has
+    // an associated VReg, we can refer to that instead.
+    auto VMI = FuncInfo.ValueMap.find(V);
+    if (VMI != FuncInfo.ValueMap.end()) {
+      unsigned Reg = VMI->second;
+      // If this is a PHI node, it may be split up into several MI PHI nodes
+      // (in FunctionLoweringInfo::set).
+      RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
+                       V->getType(), None);
+      if (RFV.occupiesMultipleRegs()) {
+        unsigned Offset = 0;
+        unsigned BitsToDescribe = 0;
+        if (auto VarSize = Var->getSizeInBits())
+          BitsToDescribe = *VarSize;
+        if (auto Fragment = Expr->getFragmentInfo())
+          BitsToDescribe = Fragment->SizeInBits;
+        for (auto RegAndSize : RFV.getRegsAndSizes()) {
+          unsigned RegisterSize = RegAndSize.second;
+          // Bail out if all bits are described already.
+          if (Offset >= BitsToDescribe)
+            break;
+          unsigned FragmentSize = (Offset + RegisterSize > BitsToDescribe)
+              ? BitsToDescribe - Offset
+              : RegisterSize;
+          auto FragmentExpr = DIExpression::createFragmentExpression(
+              Expr, Offset, FragmentSize);
+          if (!FragmentExpr)
+              continue;
+          SDV = DAG.getVRegDbgValue(Var, *FragmentExpr, RegAndSize.first,
+                                    false, dl, SDNodeOrder);
+          DAG.AddDbgValue(SDV, nullptr, false);
+          Offset += RegisterSize;
+        }
+      } else {
+        SDV = DAG.getVRegDbgValue(Var, Expr, Reg, false, dl, SDNodeOrder);
+        DAG.AddDbgValue(SDV, nullptr, false);
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void SelectionDAGBuilder::resolveOrClearDbgInfo() {
+  // Try to fixup any remaining dangling debug info -- and drop it if we can't.
+  for (auto &Pair : DanglingDebugInfoMap)
+    for (auto &DDI : Pair.getSecond())
+      salvageUnresolvedDbgValue(DDI);
+  clearDanglingDebugInfo();
 }
 
 /// getCopyFromRegs - If there was virtual register allocated for the value V
@@ -5456,101 +5625,16 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     if (!V)
       return nullptr;
 
-    SDDbgValue *SDV;
-    if (isa<ConstantInt>(V) || isa<ConstantFP>(V) || isa<UndefValue>(V) ||
-        isa<ConstantPointerNull>(V)) {
-      SDV = DAG.getConstantDbgValue(Variable, Expression, V, dl, SDNodeOrder);
-      DAG.AddDbgValue(SDV, nullptr, false);
+    if (handleDebugValue(V, Variable, Expression, DI.getDebugLoc(), dl,
+        SDNodeOrder))
       return nullptr;
-    }
 
-    // If the Value is a frame index, we can create a FrameIndex debug value
-    // without relying on the DAG at all.
-    if (const AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
-      auto SI = FuncInfo.StaticAllocaMap.find(AI);
-      if (SI != FuncInfo.StaticAllocaMap.end()) {
-        auto SDV =
-            DAG.getFrameIndexDbgValue(Variable, Expression, SI->second,
-                                      /*IsIndirect*/ false, dl, SDNodeOrder);
-        // Do not attach the SDNodeDbgValue to an SDNode: this variable location
-        // is still available even if the SDNode gets optimized out.
-        DAG.AddDbgValue(SDV, nullptr, false);
-        return nullptr;
-      }
-    }
+    // TODO: Dangling debug info will eventually either be resolved or produce
+    // an Undef DBG_VALUE. However in the resolution case, a gap may appear
+    // between the original dbg.value location and its resolved DBG_VALUE, which
+    // we should ideally fill with an extra Undef DBG_VALUE.
 
-    // Do not use getValue() in here; we don't want to generate code at
-    // this point if it hasn't been done yet.
-    SDValue N = NodeMap[V];
-    if (!N.getNode() && isa<Argument>(V)) // Check unused arguments map.
-      N = UnusedArgNodeMap[V];
-    if (N.getNode()) {
-      if (EmitFuncArgumentDbgValue(V, Variable, Expression, dl, false, N))
-        return nullptr;
-      SDV = getDbgValue(N, Variable, Expression, dl, SDNodeOrder);
-      DAG.AddDbgValue(SDV, N.getNode(), false);
-      return nullptr;
-    }
-
-    // The value is not used in this block yet (or it would have an SDNode).
-    // We still want the value to appear for the user if possible -- if it has
-    // an associated VReg, we can refer to that instead.
-    if (!isa<Argument>(V)) {
-      auto VMI = FuncInfo.ValueMap.find(V);
-      if (VMI != FuncInfo.ValueMap.end()) {
-        unsigned Reg = VMI->second;
-        // If this is a PHI node, it may be split up into several MI PHI nodes
-        // (in FunctionLoweringInfo::set).
-        RegsForValue RFV(V->getContext(), TLI, DAG.getDataLayout(), Reg,
-                         V->getType(), None);
-        if (RFV.occupiesMultipleRegs()) {
-          unsigned Offset = 0;
-          unsigned BitsToDescribe = 0;
-          if (auto VarSize = Variable->getSizeInBits())
-            BitsToDescribe = *VarSize;
-          if (auto Fragment = Expression->getFragmentInfo())
-            BitsToDescribe = Fragment->SizeInBits;
-          for (auto RegAndSize : RFV.getRegsAndSizes()) {
-            unsigned RegisterSize = RegAndSize.second;
-            // Bail out if all bits are described already.
-            if (Offset >= BitsToDescribe)
-              break;
-            unsigned FragmentSize = (Offset + RegisterSize > BitsToDescribe)
-                ? BitsToDescribe - Offset
-                : RegisterSize;
-            auto FragmentExpr = DIExpression::createFragmentExpression(
-                Expression, Offset, FragmentSize);
-            if (!FragmentExpr)
-                continue;
-            SDV = DAG.getVRegDbgValue(Variable, *FragmentExpr, RegAndSize.first,
-                                      false, dl, SDNodeOrder);
-            DAG.AddDbgValue(SDV, nullptr, false);
-            Offset += RegisterSize;
-          }
-        } else {
-          SDV = DAG.getVRegDbgValue(Variable, Expression, Reg, false, dl,
-                                    SDNodeOrder);
-          DAG.AddDbgValue(SDV, nullptr, false);
-        }
-        return nullptr;
-      }
-    }
-
-    // TODO: When we get here we will either drop the dbg.value completely, or
-    // we try to move it forward by letting it dangle for awhile. So we should
-    // probably add an extra DbgValue to the DAG here, with a reference to
-    // "noreg", to indicate that we have lost the debug location for the
-    // variable.
-
-    if (!V->use_empty() ) {
-      // Do not call getValue(V) yet, as we don't want to generate code.
-      // Remember it for later.
-      DanglingDebugInfoMap[V].emplace_back(&DI, dl, SDNodeOrder);
-      return nullptr;
-    }
-
-    LLVM_DEBUG(dbgs() << "Dropping debug location info for:\n  " << DI << "\n");
-    LLVM_DEBUG(dbgs() << "  Last seen at:\n    " << *V << "\n");
+    DanglingDebugInfoMap[V].emplace_back(&DI, dl, SDNodeOrder);
     return nullptr;
   }
 

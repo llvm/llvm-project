@@ -118,8 +118,8 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     : Resources(SM.getNumProcResourceKinds()),
       Strategies(SM.getNumProcResourceKinds()),
       Resource2Groups(SM.getNumProcResourceKinds(), 0),
-      ProcResID2Mask(SM.getNumProcResourceKinds()),
-      ProcResUnitMask(0) {
+      ProcResID2Mask(SM.getNumProcResourceKinds()), ProcResUnitMask(0),
+      ReservedResourceGroups(0) {
   computeProcResourceMasks(SM, ProcResID2Mask);
 
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
@@ -278,7 +278,10 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
       BusyResourceMask |= E.first;
   }
 
-  return BusyResourceMask & ProcResUnitMask;
+  BusyResourceMask &= ProcResUnitMask;
+  if (BusyResourceMask)
+    return BusyResourceMask;
+  return Desc.UsedProcResGroups & ReservedResourceGroups;
 }
 
 void ResourceManager::issueInstruction(
@@ -330,13 +333,17 @@ void ResourceManager::cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed) {
 
 void ResourceManager::reserveResource(uint64_t ResourceID) {
   ResourceState &Resource = *Resources[getResourceStateIndex(ResourceID)];
-  assert(!Resource.isReserved());
+  assert(Resource.isAResourceGroup() && !Resource.isReserved() &&
+         "Unexpected resource found!");
   Resource.setReserved();
+  ReservedResourceGroups ^= PowerOf2Floor(ResourceID);
 }
 
 void ResourceManager::releaseResource(uint64_t ResourceID) {
   ResourceState &Resource = *Resources[getResourceStateIndex(ResourceID)];
   Resource.clearReserved();
+  if (Resource.isAResourceGroup())
+    ReservedResourceGroups ^= PowerOf2Floor(ResourceID);
 }
 
 } // namespace mca

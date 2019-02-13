@@ -676,9 +676,23 @@ public:
   void dropDanglingDebugInfo(const DILocalVariable *Variable,
                              const DIExpression *Expr);
 
-  // If we saw an earlier dbg_value referring to V, generate the debug data
-  // structures now that we've seen its definition.
+  /// If we saw an earlier dbg_value referring to V, generate the debug data
+  /// structures now that we've seen its definition.
   void resolveDanglingDebugInfo(const Value *V, SDValue Val);
+
+  /// For the given dangling debuginfo record, perform last-ditch efforts to
+  /// resolve the debuginfo to something that is represented in this DAG. If
+  /// this cannot be done, produce an Undef debug value record.
+  void salvageUnresolvedDbgValue(DanglingDebugInfo &DDI);
+
+  /// For a given Value, attempt to create and record a SDDbgValue in the
+  /// SelectionDAG.
+  bool handleDebugValue(const Value *V, DILocalVariable *Var,
+                        DIExpression *Expr, DebugLoc CurDL,
+                        DebugLoc InstDL, unsigned Order);
+
+  /// Evict any dangling debug information, attempting to salvage it first.
+  void resolveOrClearDbgInfo();
 
   SDValue getValue(const Value *V);
   bool findValue(const Value *V) const;

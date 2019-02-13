@@ -29,35 +29,14 @@ namespace llvm {
 class raw_ostream;
 
 namespace optional_detail {
-
-/// Storage for any type.
-//
-template <class T> struct OptionalTrivialStorage {
+template <typename T> struct OptionalStorageBase {
   AlignedCharArrayUnion<T> storage;
   bool hasVal = false;
-  OptionalTrivialStorage() = default;
-  OptionalTrivialStorage(OptionalTrivialStorage const &) = default;
-  OptionalTrivialStorage(OptionalTrivialStorage &&) = default;
-  OptionalTrivialStorage &operator=(OptionalTrivialStorage const &) = default;
-  OptionalTrivialStorage &operator=(OptionalTrivialStorage &&) = default;
-  ~OptionalTrivialStorage() = default;
 
-  OptionalTrivialStorage(const T &y) : hasVal(true) {
-    new (storage.buffer) T(y);
-  }
-  OptionalTrivialStorage(T &&y) : hasVal(true) {
+  OptionalStorageBase() = default;
+  OptionalStorageBase(const T &y) : hasVal(true) { new (storage.buffer) T(y); }
+  OptionalStorageBase(T &&y) : hasVal(true) {
     new (storage.buffer) T(std::move(y));
-  }
-
-  OptionalTrivialStorage &operator=(const T &y) {
-    new (storage.buffer) T(y);
-    hasVal = true;
-    return *this;
-  }
-  OptionalTrivialStorage &operator=(T &&y) {
-    new (storage.buffer) T(std::move(y));
-    hasVal = true;
-    return *this;
   }
 
   T *getPointer() {
@@ -68,23 +47,32 @@ template <class T> struct OptionalTrivialStorage {
     assert(hasVal);
     return reinterpret_cast<const T *>(storage.buffer);
   }
-  void reset() { hasVal = false; }
+  OptionalStorageBase &operator=(T &&y) {
+    hasVal = true;
+    new (this->storage.buffer) T(std::move(y));
+    return *this;
+  }
+  OptionalStorageBase &operator=(const T &y) {
+    hasVal = true;
+    new (this->storage.buffer) T(y);
+    return *this;
+  }
+  void reset() { this->hasVal = false; }
 };
 
-template <typename T> struct OptionalStorage : OptionalTrivialStorage<T> {
-
+/// Storage for any type.
+template <typename T, bool = is_trivially_copyable<T>::value>
+struct OptionalStorage : OptionalStorageBase<T> {
   OptionalStorage() = default;
 
-  OptionalStorage(const T &y) : OptionalTrivialStorage<T>(y) {}
-  OptionalStorage(T &&y) : OptionalTrivialStorage<T>(std::move(y)) {}
-
-  OptionalStorage(const OptionalStorage &O) : OptionalTrivialStorage<T>() {
+  OptionalStorage(const T &y) : OptionalStorageBase<T>(y) {}
+  OptionalStorage(const OptionalStorage &O) : OptionalStorageBase<T>() {
     this->hasVal = O.hasVal;
     if (this->hasVal)
       new (this->storage.buffer) T(*O.getPointer());
   }
-
-  OptionalStorage(OptionalStorage &&O) : OptionalTrivialStorage<T>() {
+  OptionalStorage(T &&y) : OptionalStorageBase<T>(std::move(y)) {}
+  OptionalStorage(OptionalStorage &&O) : OptionalStorageBase<T>() {
     this->hasVal = O.hasVal;
     if (O.hasVal) {
       new (this->storage.buffer) T(std::move(*O.getPointer()));
@@ -95,11 +83,10 @@ template <typename T> struct OptionalStorage : OptionalTrivialStorage<T> {
     if (this->hasVal)
       *this->getPointer() = std::move(y);
     else {
-      OptionalTrivialStorage<T>::operator=(std::move(y));
+      OptionalStorageBase<T>::operator=(std::move(y));
     }
     return *this;
   }
-
   OptionalStorage &operator=(OptionalStorage &&O) {
     if (!O.hasVal)
       reset();
@@ -118,7 +105,7 @@ template <typename T> struct OptionalStorage : OptionalTrivialStorage<T> {
     if (this->hasVal)
       *this->getPointer() = y;
     else {
-      OptionalTrivialStorage<T>::operator=(y);
+      OptionalStorageBase<T>::operator=(y);
     }
     return *this;
   }
@@ -135,9 +122,28 @@ template <typename T> struct OptionalStorage : OptionalTrivialStorage<T> {
   void reset() {
     if (this->hasVal) {
       (*this->getPointer()).~T();
-      OptionalTrivialStorage<T>::reset();
     }
+    OptionalStorageBase<T>::reset();
   }
+};
+
+template <typename T> struct OptionalStorage<T, true> : OptionalStorageBase<T> {
+  OptionalStorage() = default;
+  OptionalStorage(const T &y) : OptionalStorageBase<T>(y) {}
+  OptionalStorage(const OptionalStorage &O) = default;
+  OptionalStorage(T &&y) : OptionalStorageBase<T>(std::move(y)) {}
+  OptionalStorage(OptionalStorage &&O) = default;
+  OptionalStorage &operator=(T &&y) {
+    OptionalStorageBase<T>::operator=(std::move(y));
+    return *this;
+  }
+  OptionalStorage &operator=(OptionalStorage &&O) = default;
+  OptionalStorage &operator=(const T &y) {
+    OptionalStorageBase<T>::operator=(y);
+    return *this;
+  }
+  OptionalStorage &operator=(const OptionalStorage &O) = default;
+  ~OptionalStorage() = default;
 };
 
 // Swift-only: The following partial template specialization was removed
@@ -165,9 +171,7 @@ template <typename T> struct OptionalStorage<T, true> {
 } // namespace optional_detail
 
 template <typename T> class Optional {
-  typename std::conditional<is_trivially_copyable<T>::value,
-                            optional_detail::OptionalTrivialStorage<T>,
-                            optional_detail::OptionalStorage<T>>::type Storage;
+  optional_detail::OptionalStorage<T> Storage;
 
 public:
   using value_type = T;
