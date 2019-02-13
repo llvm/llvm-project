@@ -548,11 +548,12 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
   if (swift_ast) {
     swift::ASTContext *ast = swift_ast->GetASTContext();
     swift::REPLCompletions completions;
-    static ConstString g_repl_module_name("repl");
+    SourceModule repl_module_info;
+    repl_module_info.path.push_back(ConstString("repl"));
     swift::ModuleDecl *repl_module =
-        swift_ast->GetModule(g_repl_module_name, error);
-    if (repl_module == NULL) {
-      repl_module = swift_ast->CreateModule(g_repl_module_name, error);
+        swift_ast->GetModule(repl_module_info, error);
+    if (!repl_module) {
+      repl_module = swift_ast->CreateModule(repl_module_info, error);
       const swift::SourceFile::ImplicitModuleImportKind implicit_import_kind =
           swift::SourceFile::ImplicitModuleImportKind::Stdlib;
       llvm::Optional<unsigned> bufferID;

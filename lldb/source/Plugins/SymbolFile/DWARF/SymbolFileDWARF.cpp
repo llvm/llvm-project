@@ -970,7 +970,7 @@ bool SymbolFileDWARF::ParseImportedModules(
   if (!dwarf_cu)
     return false;
   auto lang = sc.comp_unit->GetLanguage();
-  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(lang) ||
+  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(lang) &&
       !IsSwiftLanguage(lang))
     return false;
   UpdateExternalModuleListIfNeeded();
@@ -984,7 +984,8 @@ bool SymbolFileDWARF::ParseImportedModules(
 
   for (DWARFDIE child_die = die.GetFirstChild(); child_die;
        child_die = child_die.GetSibling()) {
-    if (child_die.Tag() != DW_TAG_imported_declaration)
+    if (child_die.Tag() != DW_TAG_imported_declaration &&
+        child_die.Tag() != DW_TAG_imported_module)
       continue;
 
     DWARFDIE module_die = child_die.GetReferencedDIE(DW_AT_import);
