@@ -11854,9 +11854,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // Ops[2] = Builder.CreateZExt(Ops[2], Int64Ty);
     // return Builder.CreateCall(F, Ops);
     llvm::Type *Int128Ty = Builder.getInt128Ty();
-    Value *Val = Builder.CreateOr(
-        Builder.CreateShl(Builder.CreateZExt(Ops[1], Int128Ty), 64),
-        Builder.CreateZExt(Ops[0], Int128Ty));
+    Value *HighPart128 =
+        Builder.CreateShl(Builder.CreateZExt(Ops[1], Int128Ty), 64);
+    Value *LowPart128 = Builder.CreateZExt(Ops[0], Int128Ty);
+    Value *Val = Builder.CreateOr(HighPart128, LowPart128);
     Value *Amt = Builder.CreateAnd(Builder.CreateZExt(Ops[2], Int128Ty),
                                    llvm::ConstantInt::get(Int128Ty, 0x3f));
     Value *Res;

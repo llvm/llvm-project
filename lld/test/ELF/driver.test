@@ -60,6 +60,7 @@
 # ERR9: cannot open output file utput=/no/such/file
 
 # RUN: not ld.lld %t -z foo 2>&1 | FileCheck -check-prefix=ERR10 %s
+# RUN: not ld.lld %t -z foo --version 2>&1 | FileCheck -check-prefix=ERR10 %s
 # ERR10: unknown -z value: foo
 
 ## Check we report "unknown -z value" error even with -v.

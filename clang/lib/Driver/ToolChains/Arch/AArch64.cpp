@@ -334,11 +334,56 @@ fp16_fml_fallthrough:
   if (Args.hasArg(options::OPT_ffixed_x7))
     Features.push_back("+reserve-x7");
 
+  if (Args.hasArg(options::OPT_ffixed_x9))
+    Features.push_back("+reserve-x9");
+
+  if (Args.hasArg(options::OPT_ffixed_x10))
+    Features.push_back("+reserve-x10");
+
+  if (Args.hasArg(options::OPT_ffixed_x11))
+    Features.push_back("+reserve-x11");
+
+  if (Args.hasArg(options::OPT_ffixed_x12))
+    Features.push_back("+reserve-x12");
+
+  if (Args.hasArg(options::OPT_ffixed_x13))
+    Features.push_back("+reserve-x13");
+
+  if (Args.hasArg(options::OPT_ffixed_x14))
+    Features.push_back("+reserve-x14");
+
+  if (Args.hasArg(options::OPT_ffixed_x15))
+    Features.push_back("+reserve-x15");
+
   if (Args.hasArg(options::OPT_ffixed_x18))
     Features.push_back("+reserve-x18");
 
   if (Args.hasArg(options::OPT_ffixed_x20))
     Features.push_back("+reserve-x20");
+
+  if (Args.hasArg(options::OPT_ffixed_x21))
+    Features.push_back("+reserve-x21");
+
+  if (Args.hasArg(options::OPT_ffixed_x22))
+    Features.push_back("+reserve-x22");
+
+  if (Args.hasArg(options::OPT_ffixed_x23))
+    Features.push_back("+reserve-x23");
+
+  if (Args.hasArg(options::OPT_ffixed_x24))
+    Features.push_back("+reserve-x24");
+
+  if (Args.hasArg(options::OPT_ffixed_x25))
+    Features.push_back("+reserve-x25");
+
+  if (Args.hasArg(options::OPT_ffixed_x26))
+    Features.push_back("+reserve-x26");
+
+  if (Args.hasArg(options::OPT_ffixed_x27))
+    Features.push_back("+reserve-x27");
+
+  if (Args.hasArg(options::OPT_ffixed_x28))
+    Features.push_back("+reserve-x28");
 
   if (Args.hasArg(options::OPT_fcall_saved_x8))
     Features.push_back("+call-saved-x8");
