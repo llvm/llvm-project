@@ -41,32 +41,6 @@ void Convert(float f, double d, long double ld) {
   l = ld;  //expected-warning{{conversion}}
 }
 
-void CompoundAssignment() {
-  int x = 3;
-
-  x += 1.234;  //expected-warning{{conversion}}
-  x -= -0.0;  //expected-warning{{conversion}}
-  x *= 1.1f;  //expected-warning{{conversion}}
-  x /= -2.2f;  //expected-warning{{conversion}}
-
-  int y = x += 1.4f;  //expected-warning{{conversion}}
-
-  float z = 1.1f;
-  double w = -2.2;
-
-  y += z + w;  //expected-warning{{conversion}}
-}
-
-# 1 "foo.h" 3
-//          ^ the following text comes from a system header file.
-#define SYSTEM_MACRO_FLOAT(x) do { (x) += 1.1; } while(0)
-# 1 "warn-float-conversion.cpp" 1
-//                              ^ start of a new file.
-void SystemMacro() {
-  float x = 0.0f;
-  SYSTEM_MACRO_FLOAT(x);
-}
-
 void Test() {
   int a1 = 10.0/2.0;  //expected-warning{{conversion}}
   int a2 = 1.0/2.0;  //expected-warning{{conversion}}

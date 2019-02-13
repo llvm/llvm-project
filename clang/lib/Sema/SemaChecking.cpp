@@ -10500,6 +10500,36 @@ static void DiagnoseImpCast(Sema &S, Expr *E, QualType T,
   DiagnoseImpCast(S, E, E->getType(), T, CContext, diag, pruneControlFlow);
 }
 
+/// Analyze the given compound assignment for the possible losing of
+/// floating-point precision.
+static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
+  assert(isa<CompoundAssignOperator>(E) &&
+         "Must be compound assignment operation");
+  // Recurse on the LHS and RHS in here
+  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+
+  if (E->getLHS()->getType()->isAtomicType())
+    S.Diag(E->getOperatorLoc(), diag::warn_atomic_implicit_seq_cst);
+
+  // Now check the outermost expression
+  const auto *ResultBT = E->getLHS()->getType()->getAs<BuiltinType>();
+  const auto *RBT = cast<CompoundAssignOperator>(E)
+                        ->getComputationResultType()
+                        ->getAs<BuiltinType>();
+
+  // If both source and target are floating points.
+  if (ResultBT && ResultBT->isFloatingPoint() && RBT && RBT->isFloatingPoint())
+    // Builtin FP kinds are ordered by increasing FP rank.
+    if (ResultBT->getKind() < RBT->getKind())
+      // We don't want to warn for system macro.
+      if (!S.SourceMgr.isInSystemMacro(E->getOperatorLoc()))
+        // warn about dropping FP rank.
+        DiagnoseImpCast(S, E->getRHS(), E->getLHS()->getType(),
+                        E->getOperatorLoc(),
+                        diag::warn_impcast_float_result_precision);
+}
+
 /// Diagnose an implicit cast from a floating point value to an integer value.
 static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
                                     SourceLocation CContext) {
@@ -10600,42 +10630,6 @@ static void DiagnoseFloatingImpCast(Sema &S, Expr *E, QualType T,
         << E->getType() << T.getUnqualifiedType() << PrettySourceValue
         << PrettyTargetValue << E->getSourceRange() << SourceRange(CContext);
   }
-}
-
-/// Analyze the given compound assignment for the possible losing of
-/// floating-point precision.
-static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
-  assert(isa<CompoundAssignOperator>(E) &&
-         "Must be compound assignment operation");
-  // Recurse on the LHS and RHS in here
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
-
-  if (E->getLHS()->getType()->isAtomicType())
-    S.Diag(E->getOperatorLoc(), diag::warn_atomic_implicit_seq_cst);
-
-  // Now check the outermost expression
-  const auto *ResultBT = E->getLHS()->getType()->getAs<BuiltinType>();
-  const auto *RBT = cast<CompoundAssignOperator>(E)
-                        ->getComputationResultType()
-                        ->getAs<BuiltinType>();
-
-  // The below checks assume source is floating point.
-  if (!ResultBT || !RBT || !RBT->isFloatingPoint()) return;
-
-  // If source is floating point but target is not.
-  if (!ResultBT->isFloatingPoint())
-    return DiagnoseFloatingImpCast(S, E, E->getRHS()->getType(),
-                                   E->getExprLoc());
-
-  // If both source and target are floating points.
-  // Builtin FP kinds are ordered by increasing FP rank.
-  if (ResultBT->getKind() < RBT->getKind() &&
-      // We don't want to warn for system macro.
-      !S.SourceMgr.isInSystemMacro(E->getOperatorLoc()))
-    // warn about dropping FP rank.
-    DiagnoseImpCast(S, E->getRHS(), E->getLHS()->getType(), E->getOperatorLoc(),
-                    diag::warn_impcast_float_result_precision);
 }
 
 static std::string PrettyPrintInRange(const llvm::APSInt &Value,
