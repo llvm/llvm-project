@@ -1260,7 +1260,7 @@ public:
     // and is responsible for deleting it when we're done.
     void SetThreadSpecifier(ThreadSpec *specifier);
 
-    ThreadSpec *GetThreadSpecifier() { return m_thread_spec_ap.get(); }
+    ThreadSpec *GetThreadSpecifier() { return m_thread_spec_up.get(); }
 
     bool IsActive() { return m_active; }
 
@@ -1272,7 +1272,7 @@ public:
     lldb::TargetSP m_target_sp;
     StringList m_commands;
     lldb::SymbolContextSpecifierSP m_specifier_sp;
-    std::unique_ptr<ThreadSpec> m_thread_spec_ap;
+    std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active;
 
     // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
@@ -1429,9 +1429,9 @@ protected:
   REPLMap m_repl_map;
 
   lldb::ClangASTImporterSP m_ast_importer_sp;
-  lldb::ClangModulesDeclVendorUP m_clang_modules_decl_vendor_ap;
+  lldb::ClangModulesDeclVendorUP m_clang_modules_decl_vendor_up;
 
-  lldb::SourceManagerUP m_source_manager_ap;
+  lldb::SourceManagerUP m_source_manager_up;
 
   typedef std::map<lldb::user_id_t, StopHookSP> StopHookCollection;
   StopHookCollection m_stop_hooks;

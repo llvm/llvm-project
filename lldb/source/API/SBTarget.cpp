@@ -1596,7 +1596,7 @@ lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
   lldb::SBModule sb_module;
   TargetSP target_sp(GetSP());
   if (target_sp)
-    sb_module.SetSP(target_sp->GetSharedModule(*module_spec.m_opaque_ap));
+    sb_module.SetSP(target_sp->GetSharedModule(*module_spec.m_opaque_up));
   return sb_module;
 }
 

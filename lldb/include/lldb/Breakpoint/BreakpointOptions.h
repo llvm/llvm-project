@@ -442,7 +442,7 @@ private:
   bool m_one_shot;
   uint32_t m_ignore_count; // Number of times to ignore this breakpoint
   std::unique_ptr<ThreadSpec>
-      m_thread_spec_ap;         // Thread for which this breakpoint will take
+      m_thread_spec_up;         // Thread for which this breakpoint will take
   std::string m_condition_text; // The condition to test.
   size_t m_condition_text_hash; // Its hash, so that locations know when the
                                 // condition is updated.

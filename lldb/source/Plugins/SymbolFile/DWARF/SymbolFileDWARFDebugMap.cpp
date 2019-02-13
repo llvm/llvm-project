@@ -180,8 +180,8 @@ public:
   GetSymbolVendor(bool can_create = true,
                   lldb_private::Stream *feedback_strm = NULL) override {
     // Scope for locker
-    if (m_symfile_ap.get() || !can_create)
-      return m_symfile_ap.get();
+    if (m_symfile_up.get() || !can_create)
+      return m_symfile_up.get();
 
     ModuleSP exe_module_sp(m_exe_module_wp.lock());
     if (exe_module_sp) {

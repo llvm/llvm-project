@@ -37,7 +37,7 @@ SBModule::SBModule(const lldb::ModuleSP &module_sp) : m_opaque_sp(module_sp) {}
 
 SBModule::SBModule(const SBModuleSpec &module_spec) : m_opaque_sp() {
   ModuleSP module_sp;
-  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_ap,
+  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_up,
                                              module_sp, NULL, NULL, NULL);
   if (module_sp)
     SetSP(module_sp);
@@ -493,7 +493,7 @@ lldb::SBTypeList SBModule::GetTypes(uint32_t type_mask) {
   TypeClass type_class = static_cast<TypeClass>(type_mask);
   TypeList type_list;
   vendor->GetTypes(NULL, type_class, type_list);
-  sb_type_list.m_opaque_ap->Append(type_list);
+  sb_type_list.m_opaque_up->Append(type_list);
   return sb_type_list;
 }
 

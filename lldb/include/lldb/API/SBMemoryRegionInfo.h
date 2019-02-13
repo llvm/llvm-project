@@ -104,7 +104,7 @@ private:
   // Unused.
   SBMemoryRegionInfo(const lldb_private::MemoryRegionInfo *lldb_object_ptr);
 
-  lldb::MemoryRegionInfoUP m_opaque_ap;
+  lldb::MemoryRegionInfoUP m_opaque_up;
 };
 
 } // namespace lldb

@@ -49,7 +49,7 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
       m_allow_cxx(false),
       m_allow_objc(false),
       m_transformed_text(),
-      m_execution_unit_sp(), m_materializer_ap(), m_jit_module_wp(),
+      m_execution_unit_sp(), m_materializer_up(), m_jit_module_wp(),
       m_language_flags(0), m_target(NULL), m_can_interpret(false),
       m_materialized_address(LLDB_INVALID_ADDRESS) {}
 
@@ -336,7 +336,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   if (m_options.GetREPLEnabled()) {
     Status materialize_error;
 
-    m_dematerializer_sp = m_materializer_ap->Materialize(
+    m_dematerializer_sp = m_materializer_up->Materialize(
         frame, *m_execution_unit_sp, LLDB_INVALID_ADDRESS, materialize_error);
 
     if (!materialize_error.Success()) {
@@ -360,8 +360,8 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
       const bool zero_memory = false;
 
       m_materialized_address = m_execution_unit_sp->Malloc(
-          m_materializer_ap->GetStructByteSize(),
-          m_materializer_ap->GetStructAlignment(),
+          m_materializer_up->GetStructByteSize(),
+          m_materializer_up->GetStructAlignment(),
           lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
           zero_memory, alloc_error);
 
@@ -401,7 +401,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
 
     Status materialize_error;
 
-    m_dematerializer_sp = m_materializer_ap->Materialize(
+    m_dematerializer_sp = m_materializer_up->Materialize(
         frame, *m_execution_unit_sp, struct_address, materialize_error);
 
     if (!materialize_error.Success()) {

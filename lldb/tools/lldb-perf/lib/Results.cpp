@@ -153,11 +153,11 @@ Results::ResultSP Results::Dictionary::AddUnsigned(const char *name,
                                                    uint64_t value) {
   assert(name && name[0]);
   if (description && description[0]) {
-    std::unique_ptr<Results::Dictionary> value_dict_ap(
+    std::unique_ptr<Results::Dictionary> value_dict_up(
         new Results::Dictionary());
-    value_dict_ap->AddString("description", NULL, description);
-    value_dict_ap->AddUnsigned("value", NULL, value);
-    m_dictionary[std::string(name)] = ResultSP(value_dict_ap.release());
+    value_dict_up->AddString("description", NULL, description);
+    value_dict_up->AddUnsigned("value", NULL, value);
+    m_dictionary[std::string(name)] = ResultSP(value_dict_up.release());
   } else
     m_dictionary[std::string(name)] =
         ResultSP(new Unsigned(name, description, value));
@@ -170,11 +170,11 @@ Results::ResultSP Results::Dictionary::AddDouble(const char *name,
   assert(name && name[0]);
 
   if (description && description[0]) {
-    std::unique_ptr<Results::Dictionary> value_dict_ap(
+    std::unique_ptr<Results::Dictionary> value_dict_up(
         new Results::Dictionary());
-    value_dict_ap->AddString("description", NULL, description);
-    value_dict_ap->AddDouble("value", NULL, value);
-    m_dictionary[std::string(name)] = ResultSP(value_dict_ap.release());
+    value_dict_up->AddString("description", NULL, description);
+    value_dict_up->AddDouble("value", NULL, value);
+    m_dictionary[std::string(name)] = ResultSP(value_dict_up.release());
   } else
     m_dictionary[std::string(name)] =
         ResultSP(new Double(name, description, value));
@@ -185,11 +185,11 @@ Results::ResultSP Results::Dictionary::AddString(const char *name,
                                                  const char *value) {
   assert(name && name[0]);
   if (description && description[0]) {
-    std::unique_ptr<Results::Dictionary> value_dict_ap(
+    std::unique_ptr<Results::Dictionary> value_dict_up(
         new Results::Dictionary());
-    value_dict_ap->AddString("description", NULL, description);
-    value_dict_ap->AddString("value", NULL, value);
-    m_dictionary[std::string(name)] = ResultSP(value_dict_ap.release());
+    value_dict_up->AddString("description", NULL, description);
+    value_dict_up->AddString("value", NULL, value);
+    m_dictionary[std::string(name)] = ResultSP(value_dict_up.release());
   } else
     m_dictionary[std::string(name)] =
         ResultSP(new String(name, description, value));
@@ -201,11 +201,11 @@ Results::ResultSP Results::Dictionary::Add(const char *name,
                                            const ResultSP &result_sp) {
   assert(name && name[0]);
   if (description && description[0]) {
-    std::unique_ptr<Results::Dictionary> value_dict_ap(
+    std::unique_ptr<Results::Dictionary> value_dict_up(
         new Results::Dictionary());
-    value_dict_ap->AddString("description", NULL, description);
-    value_dict_ap->Add("value", NULL, result_sp);
-    m_dictionary[std::string(name)] = ResultSP(value_dict_ap.release());
+    value_dict_up->AddString("description", NULL, description);
+    value_dict_up->Add("value", NULL, result_sp);
+    m_dictionary[std::string(name)] = ResultSP(value_dict_up.release());
   } else
     m_dictionary[std::string(name)] = result_sp;
   return m_dictionary[std::string(name)];

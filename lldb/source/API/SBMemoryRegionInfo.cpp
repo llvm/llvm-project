@@ -17,16 +17,16 @@ using namespace lldb;
 using namespace lldb_private;
 
 SBMemoryRegionInfo::SBMemoryRegionInfo()
-    : m_opaque_ap(new MemoryRegionInfo()) {}
+    : m_opaque_up(new MemoryRegionInfo()) {}
 
 SBMemoryRegionInfo::SBMemoryRegionInfo(const MemoryRegionInfo *lldb_object_ptr)
-    : m_opaque_ap(new MemoryRegionInfo()) {
+    : m_opaque_up(new MemoryRegionInfo()) {
   if (lldb_object_ptr)
     ref() = *lldb_object_ptr;
 }
 
 SBMemoryRegionInfo::SBMemoryRegionInfo(const SBMemoryRegionInfo &rhs)
-    : m_opaque_ap(new MemoryRegionInfo()) {
+    : m_opaque_up(new MemoryRegionInfo()) {
   ref() = rhs.ref();
 }
 
@@ -40,7 +40,7 @@ operator=(const SBMemoryRegionInfo &rhs) {
 
 SBMemoryRegionInfo::~SBMemoryRegionInfo() {}
 
-void SBMemoryRegionInfo::Clear() { m_opaque_ap->Clear(); }
+void SBMemoryRegionInfo::Clear() { m_opaque_up->Clear(); }
 
 bool SBMemoryRegionInfo::operator==(const SBMemoryRegionInfo &rhs) const {
   return ref() == rhs.ref();
@@ -50,47 +50,47 @@ bool SBMemoryRegionInfo::operator!=(const SBMemoryRegionInfo &rhs) const {
   return ref() != rhs.ref();
 }
 
-MemoryRegionInfo &SBMemoryRegionInfo::ref() { return *m_opaque_ap; }
+MemoryRegionInfo &SBMemoryRegionInfo::ref() { return *m_opaque_up; }
 
-const MemoryRegionInfo &SBMemoryRegionInfo::ref() const { return *m_opaque_ap; }
+const MemoryRegionInfo &SBMemoryRegionInfo::ref() const { return *m_opaque_up; }
 
 lldb::addr_t SBMemoryRegionInfo::GetRegionBase() {
-  return m_opaque_ap->GetRange().GetRangeBase();
+  return m_opaque_up->GetRange().GetRangeBase();
 }
 
 lldb::addr_t SBMemoryRegionInfo::GetRegionEnd() {
-  return m_opaque_ap->GetRange().GetRangeEnd();
+  return m_opaque_up->GetRange().GetRangeEnd();
 }
 
 bool SBMemoryRegionInfo::IsReadable() {
-  return m_opaque_ap->GetReadable() == MemoryRegionInfo::eYes;
+  return m_opaque_up->GetReadable() == MemoryRegionInfo::eYes;
 }
 
 bool SBMemoryRegionInfo::IsWritable() {
-  return m_opaque_ap->GetWritable() == MemoryRegionInfo::eYes;
+  return m_opaque_up->GetWritable() == MemoryRegionInfo::eYes;
 }
 
 bool SBMemoryRegionInfo::IsExecutable() {
-  return m_opaque_ap->GetExecutable() == MemoryRegionInfo::eYes;
+  return m_opaque_up->GetExecutable() == MemoryRegionInfo::eYes;
 }
 
 bool SBMemoryRegionInfo::IsMapped() {
-  return m_opaque_ap->GetMapped() == MemoryRegionInfo::eYes;
+  return m_opaque_up->GetMapped() == MemoryRegionInfo::eYes;
 }
 
 const char *SBMemoryRegionInfo::GetName() {
-  return m_opaque_ap->GetName().AsCString();
+  return m_opaque_up->GetName().AsCString();
 }
 
 bool SBMemoryRegionInfo::GetDescription(SBStream &description) {
   Stream &strm = description.ref();
-  const addr_t load_addr = m_opaque_ap->GetRange().base;
+  const addr_t load_addr = m_opaque_up->GetRange().base;
 
   strm.Printf("[0x%16.16" PRIx64 "-0x%16.16" PRIx64 " ", load_addr,
-              load_addr + m_opaque_ap->GetRange().size);
-  strm.Printf(m_opaque_ap->GetReadable() ? "R" : "-");
-  strm.Printf(m_opaque_ap->GetWritable() ? "W" : "-");
-  strm.Printf(m_opaque_ap->GetExecutable() ? "X" : "-");
+              load_addr + m_opaque_up->GetRange().size);
+  strm.Printf(m_opaque_up->GetReadable() ? "R" : "-");
+  strm.Printf(m_opaque_up->GetWritable() ? "W" : "-");
+  strm.Printf(m_opaque_up->GetExecutable() ? "X" : "-");
   strm.Printf("]");
 
   return true;

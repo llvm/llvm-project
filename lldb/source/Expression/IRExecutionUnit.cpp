@@ -37,15 +37,15 @@
 
 using namespace lldb_private;
 
-IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_ap,
-                                 std::unique_ptr<llvm::Module> &module_ap,
+IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
+                                 std::unique_ptr<llvm::Module> &module_up,
                                  ConstString &name,
                                  const lldb::TargetSP &target_sp,
                                  const SymbolContext &sym_ctx,
                                  std::vector<std::string> &cpu_features)
-    : IRMemoryMap(target_sp), m_context_ap(context_ap.release()),
-      m_module_ap(module_ap.release()), m_jit_module_wp(),
-      m_module(m_module_ap.get()), m_cpu_features(cpu_features), m_name(name),
+    : IRMemoryMap(target_sp), m_context_up(context_up.release()),
+      m_module_up(module_up.release()), m_jit_module_wp(),
+      m_module(m_module_up.get()), m_cpu_features(cpu_features), m_name(name),
       m_sym_ctx(sym_ctx), m_did_jit(false),
       m_function_load_addr(LLDB_INVALID_ADDRESS),
       m_function_end_load_addr(LLDB_INVALID_ADDRESS),
@@ -55,9 +55,9 @@ IRExecutionUnit::~IRExecutionUnit() {
   std::lock_guard<std::recursive_mutex> global_context_locker(
       IRExecutionUnit::GetLLVMGlobalContextMutex());
 
-  m_module_ap.reset();
-  m_execution_engine_ap.reset();
-  m_context_ap.reset();
+  m_module_up.reset();
+  m_execution_engine_up.reset();
+  m_context_up.reset();
 
   lldb::ModuleSP jit_module_sp(m_jit_module_wp.lock());
   if (jit_module_sp) {
@@ -286,10 +286,10 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     relocModel = llvm::Reloc::PIC_;
   }
 
-  m_module_ap->getContext().setInlineAsmDiagnosticHandler(ReportInlineAsmError,
+  m_module_up->getContext().setInlineAsmDiagnosticHandler(ReportInlineAsmError,
                                                           &error);
 
-  llvm::EngineBuilder builder(std::move(m_module_ap));
+  llvm::EngineBuilder builder(std::move(m_module_up));
 
   builder.setEngineKind(llvm::EngineKind::JIT)
       .setErrorStr(&error_string)
@@ -308,12 +308,12 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   llvm::TargetMachine *target_machine =
       builder.selectTarget(triple, mArch, mCPU, mAttrs);
 
-  m_execution_engine_ap.reset(builder.create(target_machine));
+  m_execution_engine_up.reset(builder.create(target_machine));
 
   m_strip_underscore =
-      (m_execution_engine_ap->getDataLayout().getGlobalPrefix() == '_');
+      (m_execution_engine_up->getDataLayout().getGlobalPrefix() == '_');
 
-  if (!m_execution_engine_ap) {
+  if (!m_execution_engine_up) {
     error.SetErrorToGenericError();
     error.SetErrorStringWithFormat("Couldn't JIT the function: %s",
                                    error_string.c_str());
@@ -342,15 +342,15 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   };
 
   if (process_sp->GetTarget().GetEnableSaveObjects()) {
-    m_object_cache_ap = llvm::make_unique<ObjectDumper>();
-    m_execution_engine_ap->setObjectCache(m_object_cache_ap.get());
+    m_object_cache_up = llvm::make_unique<ObjectDumper>();
+    m_execution_engine_up->setObjectCache(m_object_cache_up.get());
   }
 
   // Make sure we see all sections, including ones that don't have
   // relocations...
-  m_execution_engine_ap->setProcessAllSections(true);
+  m_execution_engine_up->setProcessAllSections(true);
 
-  m_execution_engine_ap->DisableLazyCompilation();
+  m_execution_engine_up->DisableLazyCompilation();
 
   for (llvm::Function &function : *m_module) {
     if (function.isDeclaration() || function.hasPrivateLinkage())
@@ -359,7 +359,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     const bool external =
         function.hasExternalLinkage() || function.hasLinkOnceODRLinkage();
 
-    void *fun_ptr = m_execution_engine_ap->getPointerToFunction(&function);
+    void *fun_ptr = m_execution_engine_up->getPointerToFunction(&function);
 
     if (!error.Success()) {
       // We got an error through our callback!
@@ -378,7 +378,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   }
 
   CommitAllocations(process_sp);
-  ReportAllocations(*m_execution_engine_ap);
+  ReportAllocations(*m_execution_engine_up);
 
   // We have to do this after calling ReportAllocations because for the MCJIT,
   // getGlobalValueAddress will cause the JIT to perform all relocations.  That
@@ -390,7 +390,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
       llvm::GlobalValue &val) {
     if (val.hasExternalLinkage() && !val.isDeclaration()) {
       uint64_t var_ptr_addr =
-          m_execution_engine_ap->getGlobalValueAddress(val.getName().str());
+          m_execution_engine_up->getGlobalValueAddress(val.getName().str());
 
       lldb::addr_t remote_addr = GetRemoteAddressForLocal(var_ptr_addr);
 
@@ -506,8 +506,14 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   return;
 }
 
+IRExecutionUnit::~IRExecutionUnit() {
+  m_module_up.reset();
+  m_execution_engine_up.reset();
+  m_context_up.reset();
+}
+
 IRExecutionUnit::MemoryManager::MemoryManager(IRExecutionUnit &parent)
-    : m_default_mm_ap(new llvm::SectionMemoryManager()), m_parent(parent) {}
+    : m_default_mm_up(new llvm::SectionMemoryManager()), m_parent(parent) {}
 
 IRExecutionUnit::MemoryManager::~MemoryManager() {}
 
@@ -609,7 +615,7 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateCodeSection(
     llvm::StringRef SectionName) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  uint8_t *return_value = m_default_mm_ap->allocateCodeSection(
+  uint8_t *return_value = m_default_mm_up->allocateCodeSection(
       Size, Alignment, SectionID, SectionName);
 
   m_parent.m_records.push_back(AllocationRecord(
@@ -640,7 +646,7 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
     llvm::StringRef SectionName, bool IsReadOnly) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  uint8_t *return_value = m_default_mm_ap->allocateDataSection(
+  uint8_t *return_value = m_default_mm_up->allocateDataSection(
       Size, Alignment, SectionID, SectionName, IsReadOnly);
 
   uint32_t permissions = lldb::ePermissionsReadable;

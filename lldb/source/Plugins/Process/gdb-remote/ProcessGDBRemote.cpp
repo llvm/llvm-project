@@ -1020,14 +1020,14 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
     if (log)
       log->Printf("ProcessGDBRemote::%s Connecting to %s", __FUNCTION__,
                   connect_url.str().c_str());
-    std::unique_ptr<ConnectionFileDescriptor> conn_ap(
+    std::unique_ptr<ConnectionFileDescriptor> conn_up(
         new ConnectionFileDescriptor());
-    if (conn_ap) {
+    if (conn_up) {
       const uint32_t max_retry_count = 50;
       uint32_t retry_count = 0;
       while (!m_gdb_comm.IsConnected()) {
-        if (conn_ap->Connect(connect_url, &error) == eConnectionStatusSuccess) {
-          m_gdb_comm.SetConnection(conn_ap.release());
+        if (conn_up->Connect(connect_url, &error) == eConnectionStatusSuccess) {
+          m_gdb_comm.SetConnection(conn_up.release());
           break;
         } else if (error.WasInterrupted()) {
           // If we were interrupted, don't keep retrying.
@@ -4032,9 +4032,9 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_ap.get() == NULL)
-    m_dyld_ap.reset(DynamicLoader::FindPlugin(this, NULL));
-  return m_dyld_ap.get();
+  if (m_dyld_up.get() == NULL)
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, NULL));
+  return m_dyld_up.get();
 }
 
 Status ProcessGDBRemote::SendEventData(const char *data) {

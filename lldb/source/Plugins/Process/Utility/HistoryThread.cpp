@@ -32,7 +32,7 @@ HistoryThread::HistoryThread(lldb_private::Process &process, lldb::tid_t tid,
       m_extended_unwind_token(LLDB_INVALID_ADDRESS), m_queue_name(),
       m_thread_name(), m_originating_unique_thread_id(tid),
       m_queue_id(LLDB_INVALID_QUEUE_ID) {
-  m_unwinder_ap.reset(new HistoryUnwind(*this, pcs, stop_id_is_valid));
+  m_unwinder_up.reset(new HistoryUnwind(*this, pcs, stop_id_is_valid));
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
     log->Printf("%p HistoryThread::HistoryThread", static_cast<void *>(this));
@@ -59,7 +59,7 @@ lldb::RegisterContextSP HistoryThread::GetRegisterContext() {
 
 lldb::RegisterContextSP
 HistoryThread::CreateRegisterContextForFrame(StackFrame *frame) {
-  return m_unwinder_ap->CreateRegisterContextForFrame(frame);
+  return m_unwinder_up->CreateRegisterContextForFrame(frame);
 }
 
 lldb::StackFrameListSP HistoryThread::GetStackFrameList() {

@@ -254,10 +254,10 @@ Status ProcessElfCore::DoLoadCore() {
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
-  if (m_dyld_ap.get() == NULL)
-    m_dyld_ap.reset(DynamicLoader::FindPlugin(
+  if (m_dyld_up.get() == NULL)
+    m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic().GetCString()));
-  return m_dyld_ap.get();
+  return m_dyld_up.get();
 }
 
 bool ProcessElfCore::UpdateThreadList(ThreadList &old_thread_list,

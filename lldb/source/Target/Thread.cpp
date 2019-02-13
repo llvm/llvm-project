@@ -256,7 +256,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
       m_curr_frames_sp(), m_prev_frames_sp(),
       m_resume_signal(LLDB_INVALID_SIGNAL_NUMBER),
       m_resume_state(eStateRunning), m_temporary_resume_state(eStateRunning),
-      m_unwinder_ap(), m_destroy_called(false),
+      m_unwinder_up(), m_destroy_called(false),
       m_override_should_notify(eLazyBoolCalculate),
       m_extended_info_fetched(false), m_extended_info() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
@@ -306,7 +306,7 @@ void Thread::DestroyThread() {
 
   m_stop_info_sp.reset();
   m_reg_context_sp.reset();
-  m_unwinder_ap.reset();
+  m_unwinder_up.reset();
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
@@ -566,8 +566,8 @@ bool Thread::RestoreRegisterStateFromCheckpoint(
         // Clear out all stack frames as our world just changed.
         ClearStackFrames();
         reg_ctx_sp->InvalidateIfNeeded(true);
-        if (m_unwinder_ap)
-          m_unwinder_ap->Clear();
+        if (m_unwinder_up)
+          m_unwinder_up->Clear();
         return ret;
       }
     }
@@ -2087,7 +2087,7 @@ size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
 }
 
 Unwind *Thread::GetUnwinder() {
-  if (!m_unwinder_ap) {
+  if (!m_unwinder_up) {
     const ArchSpec target_arch(CalculateTarget()->GetArchitecture());
     const llvm::Triple::ArchType machine = target_arch.GetMachine();
     switch (machine) {
@@ -2105,16 +2105,16 @@ Unwind *Thread::GetUnwinder() {
     case llvm::Triple::ppc64le:
     case llvm::Triple::systemz:
     case llvm::Triple::hexagon:
-      m_unwinder_ap.reset(new UnwindLLDB(*this));
+      m_unwinder_up.reset(new UnwindLLDB(*this));
       break;
 
     default:
       if (target_arch.GetTriple().getVendor() == llvm::Triple::Apple)
-        m_unwinder_ap.reset(new UnwindMacOSXFrameBackchain(*this));
+        m_unwinder_up.reset(new UnwindMacOSXFrameBackchain(*this));
       break;
     }
   }
-  return m_unwinder_ap.get();
+  return m_unwinder_up.get();
 }
 
 void Thread::Flush() {

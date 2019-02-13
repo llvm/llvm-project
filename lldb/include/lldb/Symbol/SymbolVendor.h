@@ -124,7 +124,7 @@ public:
   virtual size_t GetTypes(SymbolContextScope *sc_scope,
                           lldb::TypeClass type_mask, TypeList &type_list);
 
-  SymbolFile *GetSymbolFile() { return m_sym_file_ap.get(); }
+  SymbolFile *GetSymbolFile() { return m_sym_file_up.get(); }
 
   FileSpec GetMainFileSpec() const;
 
@@ -180,7 +180,7 @@ protected:
                                    // case it isn't the same as the module
                                    // object file (debug symbols in a separate
                                    // file)
-  std::unique_ptr<SymbolFile> m_sym_file_ap; // A single symbol file. Subclasses
+  std::unique_ptr<SymbolFile> m_sym_file_up; // A single symbol file. Subclasses
                                              // can add more of these if needed.
   Symtab *m_symtab; // Save a symtab once to not pass it through `AddSymbols` of
                     // the symbol file each time when it is needed

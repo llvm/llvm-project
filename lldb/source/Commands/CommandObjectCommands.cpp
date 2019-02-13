@@ -890,11 +890,11 @@ protected:
     auto command_name = args[0].ref;
     if (!m_interpreter.CommandExists(command_name)) {
       StreamString error_msg_stream;
-      const bool generate_apropos = true;
+      const bool generate_upropos = true;
       const bool generate_type_lookup = false;
       CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
           &error_msg_stream, command_name, llvm::StringRef(), llvm::StringRef(),
-          generate_apropos, generate_type_lookup);
+          generate_upropos, generate_type_lookup);
       result.AppendError(error_msg_stream.GetString());
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -988,7 +988,7 @@ protected:
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
     io_handler.SetIsDone(true);
-    if (m_regex_cmd_ap) {
+    if (m_regex_cmd_up) {
       StringList lines;
       if (lines.SplitIntoLines(data)) {
         const size_t num_lines = lines.GetSize();
@@ -1007,8 +1007,8 @@ protected:
           }
         }
       }
-      if (m_regex_cmd_ap->HasRegexEntries()) {
-        CommandObjectSP cmd_sp(m_regex_cmd_ap.release());
+      if (m_regex_cmd_up->HasRegexEntries()) {
+        CommandObjectSP cmd_sp(m_regex_cmd_up.release());
         m_interpreter.AddCommand(cmd_sp->GetCommandName(), cmd_sp, true);
       }
     }
@@ -1039,7 +1039,7 @@ protected:
 
     Status error;
     auto name = command[0].ref;
-    m_regex_cmd_ap = llvm::make_unique<CommandObjectRegexCommand>(
+    m_regex_cmd_up = llvm::make_unique<CommandObjectRegexCommand>(
         m_interpreter, name, m_options.GetHelp(), m_options.GetSyntax(), 10, 0,
         true);
 
@@ -1084,7 +1084,7 @@ protected:
                                  bool check_only) {
     Status error;
 
-    if (!m_regex_cmd_ap) {
+    if (!m_regex_cmd_up) {
       error.SetErrorStringWithFormat(
           "invalid regular expression command object for: '%.*s'",
           (int)regex_sed.size(), regex_sed.data());
@@ -1170,22 +1170,22 @@ protected:
       std::string subst(regex_sed.substr(second_separator_char_pos + 1,
                                          third_separator_char_pos -
                                              second_separator_char_pos - 1));
-      m_regex_cmd_ap->AddRegexCommand(regex.c_str(), subst.c_str());
+      m_regex_cmd_up->AddRegexCommand(regex.c_str(), subst.c_str());
     }
     return error;
   }
 
   void AddRegexCommandToInterpreter() {
-    if (m_regex_cmd_ap) {
-      if (m_regex_cmd_ap->HasRegexEntries()) {
-        CommandObjectSP cmd_sp(m_regex_cmd_ap.release());
+    if (m_regex_cmd_up) {
+      if (m_regex_cmd_up->HasRegexEntries()) {
+        CommandObjectSP cmd_sp(m_regex_cmd_up.release());
         m_interpreter.AddCommand(cmd_sp->GetCommandName(), cmd_sp, true);
       }
     }
   }
 
 private:
-  std::unique_ptr<CommandObjectRegexCommand> m_regex_cmd_ap;
+  std::unique_ptr<CommandObjectRegexCommand> m_regex_cmd_up;
 
   class CommandOptions : public Options {
   public:
