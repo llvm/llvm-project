@@ -1349,11 +1349,9 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
     return;
 
   while (auto pub_symbol = results->getNext()) {
-    auto section_idx = pub_symbol->getAddressSection() - 1;
-    if (section_idx >= section_list->GetSize())
-      continue;
+    auto section_id = pub_symbol->getAddressSection();
 
-    auto section = section_list->GetSectionAtIndex(section_idx);
+    auto section = section_list->FindSectionByID(section_id);
     if (!section)
       continue;
 
