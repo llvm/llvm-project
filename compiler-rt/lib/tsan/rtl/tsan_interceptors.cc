@@ -153,7 +153,7 @@ const int SIG_SETMASK = 2;
 #endif
 
 #define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED \
-  (!cur_thread()->is_inited)
+  (cur_thread_init(), !cur_thread()->is_inited)
 
 namespace __tsan {
 struct SignalDesc {
