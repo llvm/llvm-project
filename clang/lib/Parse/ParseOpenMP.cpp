@@ -314,7 +314,7 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
     Actions.ActOnOpenMPDeclareReductionCombinerStart(getCurScope(), D);
     ExprResult CombinerResult =
         Actions.ActOnFinishFullExpr(ParseAssignmentExpression().get(),
-                                    D->getLocation(), /*DiscardedValue*/ false);
+                                    D->getLocation(), /*DiscardedValue=*/true);
     Actions.ActOnOpenMPDeclareReductionCombinerEnd(D, CombinerResult.get());
 
     if (CombinerResult.isInvalid() && Tok.isNot(tok::r_paren) &&
@@ -356,7 +356,7 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
           if (Actions.getLangOpts().CPlusPlus) {
             InitializerResult = Actions.ActOnFinishFullExpr(
                 ParseAssignmentExpression().get(), D->getLocation(),
-                /*DiscardedValue*/ false);
+                /*DiscardedValue=*/true);
           } else {
             ConsumeToken();
             ParseOpenMPReductionInitializerForDecl(OmpPrivParm);
@@ -364,7 +364,7 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
         } else {
           InitializerResult = Actions.ActOnFinishFullExpr(
               ParseAssignmentExpression().get(), D->getLocation(),
-              /*DiscardedValue*/ false);
+              /*DiscardedValue=*/true);
         }
         Actions.ActOnOpenMPDeclareReductionInitializerEnd(
             D, InitializerResult.get(), OmpPrivParm);
@@ -1455,7 +1455,7 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
   ExprResult LHS(ParseCastExpression(
       /*isUnaryExpression=*/false, /*isAddressOfOperand=*/false, NotTypeCast));
   ExprResult Val(ParseRHSOfBinaryExpression(LHS, prec::Conditional));
-  Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc, /*DiscardedValue*/ false);
+  Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc);
 
   // Parse ')'.
   RLoc = Tok.getLocation();
@@ -1711,8 +1711,7 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPClauseKind Kind,
     SourceLocation ELoc = Tok.getLocation();
     ExprResult LHS(ParseCastExpression(false, false, NotTypeCast));
     Val = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
-    Val =
-        Actions.ActOnFinishFullExpr(Val.get(), ELoc, /*DiscardedValue*/ false);
+    Val = Actions.ActOnFinishFullExpr(Val.get(), ELoc);
   }
 
   // Parse ')'.
@@ -1997,8 +1996,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     Data.ColonLoc = Tok.getLocation();
     SourceLocation ELoc = ConsumeToken();
     ExprResult Tail = ParseAssignmentExpression();
-    Tail =
-        Actions.ActOnFinishFullExpr(Tail.get(), ELoc, /*DiscardedValue*/ false);
+    Tail = Actions.ActOnFinishFullExpr(Tail.get(), ELoc);
     if (Tail.isUsable())
       Data.TailExpr = Tail.get();
     else
