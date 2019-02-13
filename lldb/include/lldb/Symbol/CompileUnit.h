@@ -429,7 +429,7 @@ protected:
   FileSpecList m_support_files; ///< Files associated with this compile unit's
                                 ///line table and declarations.
   std::unique_ptr<LineTable>
-      m_line_table_ap; ///< Line table that will get parsed on demand.
+      m_line_table_up; ///< Line table that will get parsed on demand.
   DebugMacrosSP
       m_debug_macros_sp; ///< Debug macros that will get parsed on demand.
   lldb::VariableListSP m_variables; ///< Global and static variable list that

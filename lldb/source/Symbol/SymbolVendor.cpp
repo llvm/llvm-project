@@ -27,17 +27,17 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
                                        lldb_private::Stream *feedback_strm) {
-  std::unique_ptr<SymbolVendor> instance_ap;
+  std::unique_ptr<SymbolVendor> instance_up;
   SymbolVendorCreateInstance create_callback;
 
   for (size_t idx = 0;
        (create_callback = PluginManager::GetSymbolVendorCreateCallbackAtIndex(
             idx)) != nullptr;
        ++idx) {
-    instance_ap.reset(create_callback(module_sp, feedback_strm));
+    instance_up.reset(create_callback(module_sp, feedback_strm));
 
-    if (instance_ap) {
-      return instance_ap.release();
+    if (instance_up) {
+      return instance_up.release();
     }
   }
   // The default implementation just tries to create debug information using
@@ -53,17 +53,17 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
   }
   if (!sym_objfile_sp)
     sym_objfile_sp = module_sp->GetObjectFile()->shared_from_this();
-  instance_ap.reset(new SymbolVendor(module_sp));
-  instance_ap->AddSymbolFileRepresentation(sym_objfile_sp);
-  return instance_ap.release();
+  instance_up.reset(new SymbolVendor(module_sp));
+  instance_up->AddSymbolFileRepresentation(sym_objfile_sp);
+  return instance_up.release();
 }
 
 //----------------------------------------------------------------------
 // SymbolVendor constructor
 //----------------------------------------------------------------------
 SymbolVendor::SymbolVendor(const lldb::ModuleSP &module_sp)
-    : ModuleChild(module_sp), m_type_list(), m_compile_units(),
-      m_sym_file_ap(), m_symtab() {}
+    : ModuleChild(module_sp), m_type_list(), m_compile_units(), m_sym_file_up(),
+      m_symtab() {}
 
 //----------------------------------------------------------------------
 // Destructor
@@ -79,7 +79,7 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (objfile_sp) {
       m_objfile_sp = objfile_sp;
-      m_sym_file_ap.reset(SymbolFile::FindPlugin(objfile_sp.get()));
+      m_sym_file_up.reset(SymbolFile::FindPlugin(objfile_sp.get()));
     }
   }
 }
@@ -112,12 +112,12 @@ size_t SymbolVendor::GetNumCompileUnits() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_compile_units.empty()) {
-      if (m_sym_file_ap) {
+      if (m_sym_file_up) {
         // Resize our array of compile unit shared pointers -- which will each
         // remain NULL until someone asks for the actual compile unit
         // information. When this happens, the symbol file will be asked to
         // parse this compile unit information.
-        m_compile_units.resize(m_sym_file_ap->GetNumCompileUnits());
+        m_compile_units.resize(m_sym_file_up->GetNumCompileUnits());
       }
     }
   }
@@ -128,8 +128,8 @@ lldb::LanguageType SymbolVendor::ParseLanguage(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseLanguage(comp_unit);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseLanguage(comp_unit);
   }
   return eLanguageTypeUnknown;
 }
@@ -138,8 +138,8 @@ size_t SymbolVendor::ParseFunctions(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseFunctions(comp_unit);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseFunctions(comp_unit);
   }
   return 0;
 }
@@ -148,8 +148,8 @@ bool SymbolVendor::ParseLineTable(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseLineTable(comp_unit);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseLineTable(comp_unit);
   }
   return false;
 }
@@ -158,8 +158,8 @@ bool SymbolVendor::ParseDebugMacros(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseDebugMacros(comp_unit);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseDebugMacros(comp_unit);
   }
   return false;
 }
@@ -168,8 +168,8 @@ bool SymbolVendor::ParseSupportFiles(CompileUnit &comp_unit,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseSupportFiles(comp_unit, support_files);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseSupportFiles(comp_unit, support_files);
   }
   return false;
 }
@@ -178,8 +178,8 @@ bool SymbolVendor::ParseIsOptimized(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseIsOptimized(comp_unit);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseIsOptimized(comp_unit);
   }
   return false;
 }
@@ -189,8 +189,8 @@ bool SymbolVendor::ParseImportedModules(
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseImportedModules(sc, imported_modules);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseImportedModules(sc, imported_modules);
   }
   return false;
 }
@@ -199,8 +199,8 @@ size_t SymbolVendor::ParseBlocksRecursive(Function &func) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseBlocksRecursive(func);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseBlocksRecursive(func);
   }
   return 0;
 }
@@ -209,8 +209,8 @@ size_t SymbolVendor::ParseTypes(CompileUnit &comp_unit) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseTypes(comp_unit);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseTypes(comp_unit);
   }
   return 0;
 }
@@ -219,8 +219,8 @@ size_t SymbolVendor::ParseVariablesForContext(const SymbolContext &sc) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ParseVariablesForContext(sc);
+    if (m_sym_file_up)
+      return m_sym_file_up->ParseVariablesForContext(sc);
   }
   return 0;
 }
@@ -229,8 +229,8 @@ Type *SymbolVendor::ResolveTypeUID(lldb::user_id_t type_uid) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ResolveTypeUID(type_uid);
+    if (m_sym_file_up)
+      return m_sym_file_up->ResolveTypeUID(type_uid);
   }
   return nullptr;
 }
@@ -241,8 +241,8 @@ uint32_t SymbolVendor::ResolveSymbolContext(const Address &so_addr,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ResolveSymbolContext(so_addr, resolve_scope, sc);
+    if (m_sym_file_up)
+      return m_sym_file_up->ResolveSymbolContext(so_addr, resolve_scope, sc);
   }
   return 0;
 }
@@ -254,8 +254,8 @@ uint32_t SymbolVendor::ResolveSymbolContext(const FileSpec &file_spec,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->ResolveSymbolContext(file_spec, line, check_inlines,
+    if (m_sym_file_up)
+      return m_sym_file_up->ResolveSymbolContext(file_spec, line, check_inlines,
                                                  resolve_scope, sc_list);
   }
   return 0;
@@ -268,8 +268,8 @@ SymbolVendor::FindGlobalVariables(const ConstString &name,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->FindGlobalVariables(name, parent_decl_ctx,
+    if (m_sym_file_up)
+      return m_sym_file_up->FindGlobalVariables(name, parent_decl_ctx,
                                                 max_matches, variables);
   }
   return 0;
@@ -281,8 +281,8 @@ size_t SymbolVendor::FindGlobalVariables(const RegularExpression &regex,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->FindGlobalVariables(regex, max_matches, variables);
+    if (m_sym_file_up)
+      return m_sym_file_up->FindGlobalVariables(regex, max_matches, variables);
   }
   return 0;
 }
@@ -295,8 +295,8 @@ size_t SymbolVendor::FindFunctions(const ConstString &name,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->FindFunctions(name, parent_decl_ctx, name_type_mask,
+    if (m_sym_file_up)
+      return m_sym_file_up->FindFunctions(name, parent_decl_ctx, name_type_mask,
                                           include_inlines, append, sc_list);
   }
   return 0;
@@ -308,8 +308,8 @@ size_t SymbolVendor::FindFunctions(const RegularExpression &regex,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->FindFunctions(regex, include_inlines, append,
+    if (m_sym_file_up)
+      return m_sym_file_up->FindFunctions(regex, include_inlines, append,
                                           sc_list);
   }
   return 0;
@@ -323,8 +323,8 @@ size_t SymbolVendor::FindTypes(
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->FindTypes(name, parent_decl_ctx, append,
+    if (m_sym_file_up)
+      return m_sym_file_up->FindTypes(name, parent_decl_ctx, append,
                                       max_matches, searched_symbol_files,
                                       types);
   }
@@ -338,8 +338,8 @@ size_t SymbolVendor::FindTypes(const std::vector<CompilerContext> &context,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->FindTypes(context, append, types);
+    if (m_sym_file_up)
+      return m_sym_file_up->FindTypes(context, append, types);
   }
   if (!append)
     types.Clear();
@@ -351,8 +351,8 @@ size_t SymbolVendor::GetTypes(SymbolContextScope *sc_scope, TypeClass type_mask,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      return m_sym_file_ap->GetTypes(sc_scope, type_mask, type_list);
+    if (m_sym_file_up)
+      return m_sym_file_up->GetTypes(sc_scope, type_mask, type_list);
   }
   return 0;
 }
@@ -364,8 +364,8 @@ SymbolVendor::FindNamespace(const ConstString &name,
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_sym_file_ap)
-      namespace_decl_ctx = m_sym_file_ap->FindNamespace(name, parent_decl_ctx);
+    if (m_sym_file_up)
+      namespace_decl_ctx = m_sym_file_up->FindNamespace(name, parent_decl_ctx);
   }
   return namespace_decl_ctx;
 }
@@ -380,9 +380,9 @@ void SymbolVendor::Dump(Stream *s) {
     s->Printf("%p: ", static_cast<void *>(this));
     s->Indent();
     s->PutCString("SymbolVendor");
-    if (m_sym_file_ap) {
-      *s << " " << m_sym_file_ap->GetPluginName();
-      ObjectFile *objfile = m_sym_file_ap->GetObjectFile();
+    if (m_sym_file_up) {
+      *s << " " << m_sym_file_up->GetPluginName();
+      ObjectFile *objfile = m_sym_file_up->GetObjectFile();
       if (objfile) {
         const FileSpec &objfile_file_spec = objfile->GetFileSpec();
         if (objfile_file_spec) {
@@ -393,8 +393,8 @@ void SymbolVendor::Dump(Stream *s) {
       }
     }
     s->EOL();
-    if (m_sym_file_ap)
-      m_sym_file_ap->Dump(*s);
+    if (m_sym_file_up)
+      m_sym_file_up->Dump(*s);
     s->IndentMore();
     m_type_list.Dump(s, show_context);
 
@@ -422,7 +422,7 @@ CompUnitSP SymbolVendor::GetCompileUnitAtIndex(size_t idx) {
     if (idx < num_compile_units) {
       cu_sp = m_compile_units[idx];
       if (cu_sp.get() == nullptr) {
-        m_compile_units[idx] = m_sym_file_ap->ParseCompileUnitAtIndex(idx);
+        m_compile_units[idx] = m_sym_file_up->ParseCompileUnitAtIndex(idx);
         cu_sp = m_compile_units[idx];
       }
     }
@@ -431,8 +431,8 @@ CompUnitSP SymbolVendor::GetCompileUnitAtIndex(size_t idx) {
 }
 
 FileSpec SymbolVendor::GetMainFileSpec() const {
-  if (m_sym_file_ap) {
-    const ObjectFile *symfile_objfile = m_sym_file_ap->GetObjectFile();
+  if (m_sym_file_up) {
+    const ObjectFile *symfile_objfile = m_sym_file_up->GetObjectFile();
     if (symfile_objfile)
       return symfile_objfile->GetFileSpec();
   }
@@ -455,8 +455,8 @@ Symtab *SymbolVendor::GetSymtab() {
     return nullptr;
 
   m_symtab = objfile->GetSymtab();
-  if (m_symtab && m_sym_file_ap)
-    m_sym_file_ap->AddSymbols(*m_symtab);
+  if (m_symtab && m_sym_file_up)
+    m_sym_file_up->AddSymbols(*m_symtab);
 
   return m_symtab;
 }
@@ -476,8 +476,8 @@ void SymbolVendor::SectionFileAddressesChanged() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     ObjectFile *module_objfile = module_sp->GetObjectFile();
-    if (m_sym_file_ap) {
-      ObjectFile *symfile_objfile = m_sym_file_ap->GetObjectFile();
+    if (m_sym_file_up) {
+      ObjectFile *symfile_objfile = m_sym_file_up->GetObjectFile();
       if (symfile_objfile != module_objfile)
         symfile_objfile->SectionFileAddressesChanged();
     }

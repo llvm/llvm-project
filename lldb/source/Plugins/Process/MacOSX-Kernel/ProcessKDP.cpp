@@ -231,27 +231,27 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
     return error;
   }
 
-  std::unique_ptr<ConnectionFileDescriptor> conn_ap(
+  std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor());
-  if (conn_ap) {
+  if (conn_up) {
     // Only try once for now.
     // TODO: check if we should be retrying?
     const uint32_t max_retry_count = 1;
     for (uint32_t retry_count = 0; retry_count < max_retry_count;
          ++retry_count) {
-      if (conn_ap->Connect(remote_url, &error) == eConnectionStatusSuccess)
+      if (conn_up->Connect(remote_url, &error) == eConnectionStatusSuccess)
         break;
       usleep(100000);
     }
   }
 
-  if (conn_ap->IsConnected()) {
+  if (conn_up->IsConnected()) {
     const TCPSocket &socket =
-        static_cast<const TCPSocket &>(*conn_ap->GetReadObject());
+        static_cast<const TCPSocket &>(*conn_up->GetReadObject());
     const uint16_t reply_port = socket.GetLocalPortNumber();
 
     if (reply_port != 0) {
-      m_comm.SetConnection(conn_ap.release());
+      m_comm.SetConnection(conn_up.release());
 
       if (m_comm.SendRequestReattach(reply_port)) {
         if (m_comm.SendRequestConnect(reply_port, reply_port,
@@ -408,11 +408,11 @@ void ProcessKDP::DidAttach(ArchSpec &process_arch) {
 addr_t ProcessKDP::GetImageInfoAddress() { return m_kernel_load_addr; }
 
 lldb_private::DynamicLoader *ProcessKDP::GetDynamicLoader() {
-  if (m_dyld_ap.get() == NULL)
-    m_dyld_ap.reset(DynamicLoader::FindPlugin(
+  if (m_dyld_up.get() == NULL)
+    m_dyld_up.reset(DynamicLoader::FindPlugin(
         this,
         m_dyld_plugin_name.IsEmpty() ? NULL : m_dyld_plugin_name.GetCString()));
-  return m_dyld_ap.get();
+  return m_dyld_up.get();
 }
 
 Status ProcessKDP::WillResume() { return Status(); }

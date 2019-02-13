@@ -473,16 +473,16 @@ void ScriptInterpreterPython::IOHandlerInputComplete(IOHandler &io_handler,
       if (!bp_options)
         continue;
 
-      auto data_ap = llvm::make_unique<CommandDataPython>();
-      if (!data_ap)
+      auto data_up = llvm::make_unique<CommandDataPython>();
+      if (!data_up)
         break;
-      data_ap->user_source.SplitIntoLines(data);
+      data_up->user_source.SplitIntoLines(data);
 
-      if (GenerateBreakpointCommandCallbackData(data_ap->user_source,
-                                                data_ap->script_source)
+      if (GenerateBreakpointCommandCallbackData(data_up->user_source,
+                                                data_up->script_source)
               .Success()) {
         auto baton_sp = std::make_shared<BreakpointOptions::CommandBaton>(
-            std::move(data_ap));
+            std::move(data_up));
         bp_options->SetCallback(
             ScriptInterpreterPython::BreakpointCallbackFunction, baton_sp);
       } else if (!batch_mode) {
@@ -498,13 +498,13 @@ void ScriptInterpreterPython::IOHandlerInputComplete(IOHandler &io_handler,
   case eIOHandlerWatchpoint: {
     WatchpointOptions *wp_options =
         (WatchpointOptions *)io_handler.GetUserData();
-    auto data_ap = llvm::make_unique<WatchpointOptions::CommandData>();
-    data_ap->user_source.SplitIntoLines(data);
+    auto data_up = llvm::make_unique<WatchpointOptions::CommandData>();
+    data_up->user_source.SplitIntoLines(data);
 
-    if (GenerateWatchpointCommandCallbackData(data_ap->user_source,
-                                              data_ap->script_source)) {
+    if (GenerateWatchpointCommandCallbackData(data_up->user_source,
+                                              data_up->script_source)) {
       auto baton_sp =
-          std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_ap));
+          std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
       wp_options->SetCallback(
           ScriptInterpreterPython::WatchpointCallbackFunction, baton_sp);
     } else if (!batch_mode) {
@@ -797,15 +797,15 @@ bool ScriptInterpreterPython::ExecuteOneLine(
 #if defined(_WIN32)
           lldb::file_t read_file = pipe.GetReadNativeHandle();
           pipe.ReleaseReadFileDescriptor();
-          std::unique_ptr<ConnectionGenericFile> conn_ap(
+          std::unique_ptr<ConnectionGenericFile> conn_up(
               new ConnectionGenericFile(read_file, true));
 #else
-          std::unique_ptr<ConnectionFileDescriptor> conn_ap(
+          std::unique_ptr<ConnectionFileDescriptor> conn_up(
               new ConnectionFileDescriptor(pipe.ReleaseReadFileDescriptor(),
                                            true));
 #endif
-          if (conn_ap->IsConnected()) {
-            output_comm.SetConnection(conn_ap.release());
+          if (conn_up->IsConnected()) {
+            output_comm.SetConnection(conn_up.release());
             output_comm.SetReadThreadBytesReceivedCallback(
                 ReadThreadBytesReceived, &result->GetOutputStream());
             output_comm.StartReadThread();
@@ -1299,19 +1299,19 @@ Status ScriptInterpreterPython::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the breakpoint.
 Status ScriptInterpreterPython::SetBreakpointCommandCallback(
     BreakpointOptions *bp_options, const char *command_body_text) {
-  auto data_ap = llvm::make_unique<CommandDataPython>();
+  auto data_up = llvm::make_unique<CommandDataPython>();
 
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will wrap the body in an
   // auto-generated function, and return the function name in script_source.
   // That is what the callback will actually invoke.
 
-  data_ap->user_source.SplitIntoLines(command_body_text);
-  Status error = GenerateBreakpointCommandCallbackData(data_ap->user_source,
-                                                       data_ap->script_source);
+  data_up->user_source.SplitIntoLines(command_body_text);
+  Status error = GenerateBreakpointCommandCallbackData(data_up->user_source,
+                                                       data_up->script_source);
   if (error.Success()) {
     auto baton_sp =
-        std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_ap));
+        std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
     bp_options->SetCallback(ScriptInterpreterPython::BreakpointCallbackFunction,
                             baton_sp);
     return error;
@@ -1322,20 +1322,20 @@ Status ScriptInterpreterPython::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the watchpoint.
 void ScriptInterpreterPython::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *oneliner) {
-  auto data_ap = llvm::make_unique<WatchpointOptions::CommandData>();
+  auto data_up = llvm::make_unique<WatchpointOptions::CommandData>();
 
   // It's necessary to set both user_source and script_source to the oneliner.
   // The former is used to generate callback description (as in watchpoint
   // command list) while the latter is used for Python to interpret during the
   // actual callback.
 
-  data_ap->user_source.AppendString(oneliner);
-  data_ap->script_source.assign(oneliner);
+  data_up->user_source.AppendString(oneliner);
+  data_up->script_source.assign(oneliner);
 
-  if (GenerateWatchpointCommandCallbackData(data_ap->user_source,
-                                            data_ap->script_source)) {
+  if (GenerateWatchpointCommandCallbackData(data_up->user_source,
+                                            data_up->script_source)) {
     auto baton_sp =
-        std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_ap));
+        std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_up));
     wp_options->SetCallback(ScriptInterpreterPython::WatchpointCallbackFunction,
                             baton_sp);
   }

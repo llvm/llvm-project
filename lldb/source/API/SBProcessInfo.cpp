@@ -14,11 +14,11 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBProcessInfo::SBProcessInfo() : m_opaque_ap() {}
+SBProcessInfo::SBProcessInfo() : m_opaque_up() {}
 
-SBProcessInfo::SBProcessInfo(const SBProcessInfo &rhs) : m_opaque_ap() {
+SBProcessInfo::SBProcessInfo(const SBProcessInfo &rhs) : m_opaque_up() {
   if (rhs.IsValid()) {
-    ref() = *rhs.m_opaque_ap;
+    ref() = *rhs.m_opaque_up;
   }
 }
 
@@ -27,118 +27,118 @@ SBProcessInfo::~SBProcessInfo() {}
 SBProcessInfo &SBProcessInfo::operator=(const SBProcessInfo &rhs) {
   if (this != &rhs) {
     if (rhs.IsValid())
-      ref() = *rhs.m_opaque_ap;
+      ref() = *rhs.m_opaque_up;
     else
-      m_opaque_ap.reset();
+      m_opaque_up.reset();
   }
   return *this;
 }
 
 ProcessInstanceInfo &SBProcessInfo::ref() {
-  if (m_opaque_ap == nullptr) {
-    m_opaque_ap.reset(new ProcessInstanceInfo());
+  if (m_opaque_up == nullptr) {
+    m_opaque_up.reset(new ProcessInstanceInfo());
   }
-  return *m_opaque_ap;
+  return *m_opaque_up;
 }
 
 void SBProcessInfo::SetProcessInfo(const ProcessInstanceInfo &proc_info_ref) {
   ref() = proc_info_ref;
 }
 
-bool SBProcessInfo::IsValid() const { return m_opaque_ap != nullptr; }
+bool SBProcessInfo::IsValid() const { return m_opaque_up != nullptr; }
 
 const char *SBProcessInfo::GetName() {
   const char *name = nullptr;
-  if (m_opaque_ap) {
-    name = m_opaque_ap->GetName();
+  if (m_opaque_up) {
+    name = m_opaque_up->GetName();
   }
   return name;
 }
 
 SBFileSpec SBProcessInfo::GetExecutableFile() {
   SBFileSpec file_spec;
-  if (m_opaque_ap) {
-    file_spec.SetFileSpec(m_opaque_ap->GetExecutableFile());
+  if (m_opaque_up) {
+    file_spec.SetFileSpec(m_opaque_up->GetExecutableFile());
   }
   return file_spec;
 }
 
 lldb::pid_t SBProcessInfo::GetProcessID() {
   lldb::pid_t proc_id = LLDB_INVALID_PROCESS_ID;
-  if (m_opaque_ap) {
-    proc_id = m_opaque_ap->GetProcessID();
+  if (m_opaque_up) {
+    proc_id = m_opaque_up->GetProcessID();
   }
   return proc_id;
 }
 
 uint32_t SBProcessInfo::GetUserID() {
   uint32_t user_id = UINT32_MAX;
-  if (m_opaque_ap) {
-    user_id = m_opaque_ap->GetUserID();
+  if (m_opaque_up) {
+    user_id = m_opaque_up->GetUserID();
   }
   return user_id;
 }
 
 uint32_t SBProcessInfo::GetGroupID() {
   uint32_t group_id = UINT32_MAX;
-  if (m_opaque_ap) {
-    group_id = m_opaque_ap->GetGroupID();
+  if (m_opaque_up) {
+    group_id = m_opaque_up->GetGroupID();
   }
   return group_id;
 }
 
 bool SBProcessInfo::UserIDIsValid() {
   bool is_valid = false;
-  if (m_opaque_ap) {
-    is_valid = m_opaque_ap->UserIDIsValid();
+  if (m_opaque_up) {
+    is_valid = m_opaque_up->UserIDIsValid();
   }
   return is_valid;
 }
 
 bool SBProcessInfo::GroupIDIsValid() {
   bool is_valid = false;
-  if (m_opaque_ap) {
-    is_valid = m_opaque_ap->GroupIDIsValid();
+  if (m_opaque_up) {
+    is_valid = m_opaque_up->GroupIDIsValid();
   }
   return is_valid;
 }
 
 uint32_t SBProcessInfo::GetEffectiveUserID() {
   uint32_t user_id = UINT32_MAX;
-  if (m_opaque_ap) {
-    user_id = m_opaque_ap->GetEffectiveUserID();
+  if (m_opaque_up) {
+    user_id = m_opaque_up->GetEffectiveUserID();
   }
   return user_id;
 }
 
 uint32_t SBProcessInfo::GetEffectiveGroupID() {
   uint32_t group_id = UINT32_MAX;
-  if (m_opaque_ap) {
-    group_id = m_opaque_ap->GetEffectiveGroupID();
+  if (m_opaque_up) {
+    group_id = m_opaque_up->GetEffectiveGroupID();
   }
   return group_id;
 }
 
 bool SBProcessInfo::EffectiveUserIDIsValid() {
   bool is_valid = false;
-  if (m_opaque_ap) {
-    is_valid = m_opaque_ap->EffectiveUserIDIsValid();
+  if (m_opaque_up) {
+    is_valid = m_opaque_up->EffectiveUserIDIsValid();
   }
   return is_valid;
 }
 
 bool SBProcessInfo::EffectiveGroupIDIsValid() {
   bool is_valid = false;
-  if (m_opaque_ap) {
-    is_valid = m_opaque_ap->EffectiveGroupIDIsValid();
+  if (m_opaque_up) {
+    is_valid = m_opaque_up->EffectiveGroupIDIsValid();
   }
   return is_valid;
 }
 
 lldb::pid_t SBProcessInfo::GetParentProcessID() {
   lldb::pid_t proc_id = LLDB_INVALID_PROCESS_ID;
-  if (m_opaque_ap) {
-    proc_id = m_opaque_ap->GetParentProcessID();
+  if (m_opaque_up) {
+    proc_id = m_opaque_up->GetParentProcessID();
   }
   return proc_id;
 }

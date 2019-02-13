@@ -779,8 +779,8 @@ protected:
                                             /// functions
   lldb::ProcessWP m_process_wp;
   const lldb::addr_t m_memory_addr;
-  std::unique_ptr<lldb_private::SectionList> m_sections_ap;
-  std::unique_ptr<lldb_private::Symtab> m_symtab_ap;
+  std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  std::unique_ptr<lldb_private::Symtab> m_symtab_up;
   uint32_t m_synthetic_symbol_idx;
 
   //------------------------------------------------------------------

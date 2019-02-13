@@ -760,7 +760,7 @@ bool Options::HandleOptionArgumentCompletion(
     CompletionRequest &request, OptionElementVector &opt_element_vector,
     int opt_element_index, CommandInterpreter &interpreter) {
   auto opt_defs = GetDefinitions();
-  std::unique_ptr<SearchFilter> filter_ap;
+  std::unique_ptr<SearchFilter> filter_up;
 
   int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
   int opt_defs_index = opt_element_vector[opt_element_index].opt_defs_index;
@@ -831,7 +831,7 @@ bool Options::HandleOptionArgumentCompletion(
               interpreter.GetDebugger().GetSelectedTarget();
           // Search filters require a target...
           if (target_sp)
-            filter_ap.reset(new SearchFilterByModule(target_sp, module_spec));
+            filter_up.reset(new SearchFilterByModule(target_sp, module_spec));
         }
         break;
       }
@@ -839,7 +839,7 @@ bool Options::HandleOptionArgumentCompletion(
   }
 
   return CommandCompletions::InvokeCommonCompletionCallbacks(
-      interpreter, completion_mask, request, filter_ap.get());
+      interpreter, completion_mask, request, filter_up.get());
 }
 
 void OptionGroupOptions::Append(OptionGroup *group) {

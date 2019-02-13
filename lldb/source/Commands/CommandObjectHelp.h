@@ -29,7 +29,7 @@ public:
 
   static void GenerateAdditionalHelpAvenuesMessage(
       Stream *s, llvm::StringRef command, llvm::StringRef prefix,
-      llvm::StringRef subcommand, bool include_apropos = true,
+      llvm::StringRef subcommand, bool include_upropos = true,
       bool include_type_lookup = true);
 
   class CommandOptions : public Options {

@@ -92,7 +92,7 @@ private:
                                          // for the ThreadPlanStepThrough.
   lldb::ThreadPlanSP m_sub_plan_sp;      // Keep track of the last plan we were
                                     // running.  If it fails, we should stop.
-  std::unique_ptr<RegularExpression> m_avoid_regexp_ap;
+  std::unique_ptr<RegularExpression> m_avoid_regexp_up;
   bool m_step_past_prologue; // FIXME: For now hard-coded to true, we could put
                              // a switch in for this if there's
                              // demand for that.

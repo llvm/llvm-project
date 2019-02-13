@@ -177,7 +177,7 @@ protected:
       m_fpr_powerpc[k_num_fpr_registers_powerpc]; // floating point registers.
   uint32_t m_vmx_powerpc[k_num_vmx_registers_powerpc][4];
   std::unique_ptr<lldb_private::RegisterInfoInterface>
-      m_register_info_ap; // Register Info Interface (FreeBSD or Linux)
+      m_register_info_up; // Register Info Interface (FreeBSD or Linux)
 
   // Determines if an extended register set is supported on the processor
   // running the inferior process.

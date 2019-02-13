@@ -489,7 +489,7 @@ protected:
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<DWARFDebugInfo> m_info;
   std::unique_ptr<DWARFDebugLine> m_line;
-  std::unique_ptr<GlobalVariableMap> m_global_aranges_ap;
+  std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>
       DebugMacrosMap;
