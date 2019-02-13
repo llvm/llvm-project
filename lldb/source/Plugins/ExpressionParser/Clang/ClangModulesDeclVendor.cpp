@@ -22,6 +22,7 @@
 
 #include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
+#include "ModuleDependencyCollector.h"
 
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Host/Host.h"
@@ -31,6 +32,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
@@ -630,6 +632,18 @@ ClangModulesDeclVendor::Create(Target &target) {
 
   std::unique_ptr<clang::CompilerInstance> instance(
       new clang::CompilerInstance);
+
+  // When capturing a reproducer, hook up the file collector with clang to
+  // collector modules and headers.
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+    instance->setModuleDepCollector(
+        std::make_shared<ModuleDependencyCollectorAdaptor>(
+            fp.GetFileCollector()));
+    clang::DependencyOutputOptions &opts = instance->getDependencyOutputOpts();
+    opts.IncludeSystemHeaders = true;
+    opts.IncludeModuleFiles = true;
+  }
 
   instance->setDiagnostics(diagnostics_engine.get());
   instance->setInvocation(invocation);
