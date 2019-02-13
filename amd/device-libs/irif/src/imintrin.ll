@@ -1087,9 +1087,27 @@ bb:
 declare float @llvm.amdgcn.image.sample.d.2darray.f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; Function Attrs: alwaysinline nounwind readonly
-define protected <4 x float> @__llvm_amdgcn_image_gather4_lz_2d_v4f32_f32(i32 %arg, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+define protected <4 x float> @__llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_r(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
 bb:
-  %tmp = tail call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 %arg, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 1, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+define protected <4 x float> @__llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_g(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 2, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+define protected <4 x float> @__llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_b(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 4, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
+  ret <4 x float> %tmp
+}
+
+define protected <4 x float> @__llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_a(float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4) local_unnamed_addr #0 {
+bb:
+  %tmp = tail call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 8, float %arg1, float %arg2, <8 x i32> %arg3, <4 x i32> %arg4, i1 false, i32 0, i32 0) #1
   ret <4 x float> %tmp
 }
 
