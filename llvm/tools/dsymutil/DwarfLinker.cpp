@@ -2267,10 +2267,10 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
     if (LLVM_LIKELY(!Linker.Options.Update))
       Linker.generateUnitRanges(*CurrentUnit);
     CurrentUnit->fixupForwardReferences();
-    Linker.Streamer->emitCompileUnitHeader(*CurrentUnit);
-    if (!CurrentUnit->getOutputUnitDIE())
-      continue;
-    Linker.Streamer->emitDIE(*CurrentUnit->getOutputUnitDIE());
+    if (CurrentUnit->getOutputUnitDIE()) {
+      Linker.Streamer->emitCompileUnitHeader(*CurrentUnit);
+      Linker.Streamer->emitDIE(*CurrentUnit->getOutputUnitDIE());
+    }
   }
 }
 
