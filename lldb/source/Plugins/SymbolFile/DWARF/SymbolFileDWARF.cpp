@@ -72,6 +72,7 @@
 
 #include "llvm/Support/FileSystem.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 
@@ -916,90 +917,58 @@ bool SymbolFileDWARF::ParseIsOptimized(CompileUnit &comp_unit) {
 
 bool SymbolFileDWARF::ParseImportedModules(
     const lldb_private::SymbolContext &sc,
-    std::vector<lldb_private::ConstString> &imported_modules) {
+    std::vector<SourceModule> &imported_modules) {
   ASSERT_MODULE_LOCK(this);
   assert(sc.comp_unit);
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
-  if (dwarf_cu) {
-    if (IsSwiftLanguage(sc.comp_unit->GetLanguage())) {
-      const DWARFDIE cu_die = dwarf_cu->DIE();
-      bool found_one = false;
+  if (!dwarf_cu)
+    return false;
+  auto lang = sc.comp_unit->GetLanguage();
+  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(lang) ||
+      !IsSwiftLanguage(lang))
+    return false;
+  UpdateExternalModuleListIfNeeded();
 
-      if (cu_die) {
-        for (DWARFDIE child_die = cu_die.GetFirstChild(); child_die.IsValid();
-             child_die = child_die.GetSibling()) {
-          if (child_die.Tag() == DW_TAG_imported_module) {
-            dw_offset_t die_offset = child_die.GetAttributeValueAsReference(
-                DW_AT_import, DW_INVALID_OFFSET);
+  if (!sc.comp_unit)
+    return false;
 
-            if (die_offset != DW_INVALID_OFFSET) {
-              const DWARFDIE import_die = dwarf_cu->GetDIE(die_offset);
+  const DWARFDIE die = dwarf_cu->DIE();
+  if (!die)
+    return false;
 
-              if (import_die) {
-                const char *modulename = import_die.GetName();
+  for (DWARFDIE child_die = die.GetFirstChild(); child_die;
+       child_die = child_die.GetSibling()) {
+    if (child_die.Tag() != DW_TAG_imported_declaration)
+      continue;
 
-                if (modulename) {
-                  found_one = true;
-                  // Now we have to see if this imported_module tag is embedded
-                  // in a DW_TAG_MODULE,
-                  // that is how sub-module importation is expressed:
-                  std::string module_string(modulename);
+    DWARFDIE module_die = child_die.GetReferencedDIE(DW_AT_import);
+    if (module_die.Tag() != DW_TAG_module)
+      continue;
 
-                  for (DWARFDIE parent_die = import_die.GetParent();
-                       parent_die.IsValid() &&
-                       parent_die.Tag() == DW_TAG_module;
-                       parent_die = parent_die.GetParent()) {
-                    const char *parent_name = parent_die.GetName();
-                    if (parent_name) {
-                      module_string.insert(0, ".");
-                      module_string.insert(0, parent_name);
-                    }
-                  }
+    if (const char *name =
+            module_die.GetAttributeValueAsString(DW_AT_name, nullptr)) {
+      SourceModule module;
+      module.path.push_back(ConstString(name));
 
-                  imported_modules.push_back(
-                      ConstString(module_string.c_str()));
-                }
-              }
-            }
-          }
-        }
-
-        return found_one;
+      DWARFDIE parent_die = module_die;
+      while ((parent_die = parent_die.GetParent())) {
+        if (parent_die.Tag() != DW_TAG_module)
+          break;
+        if (const char *name =
+                parent_die.GetAttributeValueAsString(DW_AT_name, nullptr))
+          module.path.push_back(ConstString(name));
       }
-    } // IsSwiftLanguage
-
-    if (ClangModulesDeclVendor::LanguageSupportsClangModules(
-            sc.comp_unit->GetLanguage())) {
-      UpdateExternalModuleListIfNeeded();
-
-      if (sc.comp_unit) {
-        const DWARFDIE die = dwarf_cu->DIE();
-
-        if (die) {
-          for (DWARFDIE child_die = die.GetFirstChild(); child_die;
-               child_die = child_die.GetSibling()) {
-            if (child_die.Tag() == DW_TAG_imported_declaration) {
-              if (DWARFDIE module_die =
-                      child_die.GetReferencedDIE(DW_AT_import)) {
-                if (module_die.Tag() == DW_TAG_module) {
-                  if (const char *name = module_die.GetAttributeValueAsString(
-                          DW_AT_name, nullptr)) {
-                    ConstString const_name(name);
-                    imported_modules.push_back(const_name);
-                  }
-                }
-              }
-            }
-          }
-        }
-      } else {
-        for (const auto &pair : m_external_type_modules) {
-          imported_modules.push_back(pair.first);
-        }
-      }
+      std::reverse(module.path.begin(), module.path.end());
+      if (const char *include_path = module_die.GetAttributeValueAsString(
+              DW_AT_LLVM_include_path, nullptr))
+        module.search_path = ConstString(include_path);
+      if (const char *sysroot = module_die.GetAttributeValueAsString(
+              DW_AT_LLVM_isysroot, nullptr))
+        module.sysroot = ConstString(sysroot);
+      imported_modules.push_back(module);
     }
   }
-  return false;
+  return true;
 }
 
 struct ParseDWARFLineTableCallbackInfo {

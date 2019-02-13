@@ -116,24 +116,19 @@ public:
 
   void moduleImport(SourceLocation import_location, clang::ModuleIdPath path,
                     const clang::Module * /*null*/) override {
-    std::vector<ConstString> string_path;
+    SourceModule module;
 
-    for (const std::pair<IdentifierInfo *, SourceLocation> &component : path) {
-      string_path.push_back(ConstString(component.first->getName()));
-    }
+    for (const std::pair<IdentifierInfo *, SourceLocation> &component : path)
+      module.path.push_back(ConstString(component.first->getName()));
 
     StreamString error_stream;
 
     ClangModulesDeclVendor::ModuleVector exported_modules;
-
-    if (!m_decl_vendor.AddModule(string_path, &exported_modules,
-                                 m_error_stream)) {
+    if (!m_decl_vendor.AddModule(module, &exported_modules, m_error_stream))
       m_has_errors = true;
-    }
 
-    for (ClangModulesDeclVendor::ModuleID module : exported_modules) {
+    for (ClangModulesDeclVendor::ModuleID module : exported_modules)
       m_persistent_vars.AddHandLoadedClangModule(module);
-    }
   }
 
   bool hasErrors() { return m_has_errors; }

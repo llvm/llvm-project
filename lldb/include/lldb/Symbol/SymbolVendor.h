@@ -13,6 +13,7 @@
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/lldb-private.h"
@@ -60,8 +61,9 @@ public:
 
   virtual size_t ParseTypes(CompileUnit &comp_unit);
 
-  virtual bool ParseImportedModules(const SymbolContext &sc,
-                                    std::vector<ConstString> &imported_modules);
+  virtual bool
+  ParseImportedModules(const SymbolContext &sc,
+                       std::vector<SourceModule> &imported_modules);
 
   virtual size_t ParseBlocksRecursive(Function &func);
 
