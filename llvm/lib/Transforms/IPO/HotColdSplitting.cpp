@@ -33,6 +33,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -236,6 +237,12 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
 
   if (F.hasFnAttribute(Attribute::NoInline))
     return false;
+
+  // Support for outlining WinEH code has not been tested sufficiently. It may
+  // trigger verifier failures or miscompiles (see llvm.org/PR40710).
+  if (F.hasPersonalityFn())
+    if (isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+      return false;
 
   return true;
 }
