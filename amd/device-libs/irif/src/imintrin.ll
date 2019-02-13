@@ -900,7 +900,7 @@ declare <4 x half> @llvm.amdgcn.image.sample.l.3d.v4f16.f32(i32, float, float, f
 ; Function Attrs: alwaysinline nounwind readonly
 define protected <4 x half> @__llvm_amdgcn_image_sample_d_3d_v4f16_f32_f32(float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, float %arg8, float %arg9, <8 x i32> %arg10, <4 x i32> %arg11, i1 zeroext %arg12, i32 %arg13, i32 %arg14) local_unnamed_addr #0 {
 bb:
-  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.d.3d.v4f16.f32.f32(i32 15, float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, float %arg8, float %arg9, <8 x i32> %arg10, <4 x i32> %arg11, i1 zeroext %arg12, i32 %arg13, i32 %arg14) #1
+  %tmp = tail call <4 x half> @llvm.amdgcn.image.sample.d.3d.v4f16.f32.f32(i32 15, float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, float %arg8, float %arg9, <8 x i32> %arg10, <4 x i32> %arg11, i1 zeroext %arg12, i32 0, i32 0) #1
   ret <4 x half> %tmp
 }
 
@@ -1079,7 +1079,7 @@ declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32, float, float, flo
 ; Function Attrs: alwaysinline nounwind readonly
 define protected float @__llvm_amdgcn_image_sample_d_2darray_f32_f32_f32(float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, <8 x i32> %arg8, <4 x i32> %arg9, i1 zeroext %arg10, i32 %arg11, i32 %arg12) local_unnamed_addr #0 {
 bb:
-  %tmp = tail call float @llvm.amdgcn.image.sample.d.2darray.f32.f32.f32(i32 1, float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, <8 x i32> %arg8, <4 x i32> %arg9, i1 zeroext %arg10, i32 %arg11, i32 %arg12) #1
+  %tmp = tail call float @llvm.amdgcn.image.sample.d.2darray.f32.f32.f32(i32 1, float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, <8 x i32> %arg8, <4 x i32> %arg9, i1 zeroext %arg10, i32 0, i32 0) #1
   ret float %tmp
 }
 
