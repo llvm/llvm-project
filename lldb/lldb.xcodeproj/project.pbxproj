@@ -8077,7 +8077,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -x\nmkdir -p $BUILT_PRODUCTS_DIR/include\n$(find $LLVM_BUILD_DIR/  -path '*/bin/llvm-tblgen'|head -1) -I$LLVM_SOURCE_DIR/include -gen-opt-parser-defs $SRCROOT/tools/driver/Options.td -o $BUILT_PRODUCTS_DIR/include/Options.inc\n";
+			shellScript = "set -x\nmkdir -p $BUILT_PRODUCTS_DIR/include\n$(find $LLVM_BUILD_DIR/  -path '*/bin/llvm-tblgen'|head -1) -I$LLDB_PATH_TO_LLVM_SOURCE/include -gen-opt-parser-defs $SRCROOT/tools/driver/Options.td -o $BUILT_PRODUCTS_DIR/include/Options.inc\n";
 		};
 		DD8DC27122026E4400EB6F9E /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
