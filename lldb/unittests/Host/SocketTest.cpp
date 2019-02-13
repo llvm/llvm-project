@@ -179,7 +179,7 @@ TEST_F(SocketTest, TCPListen0ConnectAccept) {
       [=](const TCPSocket &s) {
         char connect_remote_address[64];
         snprintf(connect_remote_address, sizeof(connect_remote_address),
-                 "localhost:%u", s.GetLocalPortNumber());
+                 "127.0.0.1:%u", s.GetLocalPortNumber());
         return std::string(connect_remote_address);
       },
       &socket_a_up, &socket_b_up);
@@ -193,7 +193,7 @@ TEST_F(SocketTest, TCPGetAddress) {
       [=](const TCPSocket &s) {
         char connect_remote_address[64];
         snprintf(connect_remote_address, sizeof(connect_remote_address),
-                 "localhost:%u", s.GetLocalPortNumber());
+                 "127.0.0.1:%u", s.GetLocalPortNumber());
         return std::string(connect_remote_address);
       },
       &socket_a_up, &socket_b_up);

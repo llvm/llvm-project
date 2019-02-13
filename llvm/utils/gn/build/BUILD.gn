@@ -23,7 +23,8 @@ config("compiler_defaults") {
   if (host_os != "win") {
     if (is_debug) {
       cflags += [ "-g" ]
-    } else {
+    }
+    if (is_optimized) {
       cflags += [ "-O3" ]
     }
     cflags += [ "-fdiagnostics-color" ]
@@ -39,10 +40,15 @@ config("compiler_defaults") {
         "/FS",
       ]
       ldflags += [ "/DEBUG" ]
-    } else {
+    }
+    if (is_optimized) {
       cflags += [
         "/O2",
         "/Zc:inline",
+      ]
+      ldflags += [
+        "/OPT:REF",
+        "/OPT:ICF",
       ]
     }
     defines += [

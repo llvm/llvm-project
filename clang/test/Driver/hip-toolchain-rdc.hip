@@ -38,7 +38,6 @@
 
 // CHECK: [[LLC: ".*llc"]] [[OPT_BC_DEV1]] "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mattr=-code-object-v3"
 // CHECK-SAME: "-mcpu=gfx803" "-o" [[OBJ_DEV1:".*-gfx803-.*o"]]
 
 // CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "--no-undefined" "-shared"
@@ -66,7 +65,6 @@
 
 // CHECK: [[LLC]] [[OPT_BC_DEV2]] "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mattr=-code-object-v3"
 // CHECK-SAME: "-mcpu=gfx900" "-o" [[OBJ_DEV2:".*-gfx900-.*o"]]
 
 // CHECK: [[LLD]] "-flavor" "gnu" "--no-undefined" "-shared"

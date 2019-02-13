@@ -2242,7 +2242,9 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
       cloneDIE(InputDIE, DMO, *CurrentUnit, StringPool, 0 /* PC offset */,
                11 /* Unit Header size */, 0, CurrentUnit->getOutputUnitDIE());
     }
+
     Linker.OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
+
     if (Linker.Options.NoOutput)
       continue;
 
@@ -2251,9 +2253,12 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
     // actually exist in the DIE tree.
     if (LLVM_LIKELY(!Linker.Options.Update) || Linker.Options.Translator)
       Linker.patchLineTableForUnit(*CurrentUnit, DwarfContext, Ranges, DMO);
+
     Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
-    if (Linker.Options.Update)
+
+    if (LLVM_UNLIKELY(Linker.Options.Update))
       continue;
+
     Linker.patchRangesForUnit(*CurrentUnit, DwarfContext, DMO);
     Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
   }
@@ -2265,10 +2270,13 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
   for (auto &CurrentUnit : CompileUnits) {
     if (LLVM_LIKELY(!Linker.Options.Update))
       Linker.generateUnitRanges(*CurrentUnit);
+
     CurrentUnit->fixupForwardReferences();
-    Linker.Streamer->emitCompileUnitHeader(*CurrentUnit);
+
     if (!CurrentUnit->getOutputUnitDIE())
       continue;
+
+    Linker.Streamer->emitCompileUnitHeader(*CurrentUnit);
     Linker.Streamer->emitDIE(*CurrentUnit->getOutputUnitDIE());
   }
 }

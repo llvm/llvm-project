@@ -138,6 +138,14 @@ static const void *body(MD5_CTX *ctx, const void *data, ulong_t size) {
   return ptr;
 }
 
+#undef F
+#undef G
+#undef H
+#undef I
+#undef STEP
+#undef SET
+#undef GET
+
 void MD5_Init(MD5_CTX *ctx) {
   ctx->a = 0x67452301;
   ctx->b = 0xefcdab89;
