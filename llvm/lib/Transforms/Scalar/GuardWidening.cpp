@@ -82,6 +82,11 @@ static cl::opt<unsigned> FrequentBranchThreshold(
              "it is considered frequently taken"),
     cl::init(1000));
 
+static cl::opt<bool>
+    WidenBranchGuards("guard-widening-widen-branch-guards", cl::Hidden,
+                      cl::desc("Whether or not we should widen guards  "
+                               "expressed as branches by widenable conditions"),
+                      cl::init(true));
 
 namespace {
 
@@ -91,6 +96,10 @@ static Value *getCondition(Instruction *I) {
     assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
            "Bad guard intrinsic?");
     return GI->getArgOperand(0);
+  }
+  if (isGuardAsWidenableBranch(I)) {
+    auto *Cond = cast<BranchInst>(I)->getCondition();
+    return cast<BinaryOperator>(Cond)->getOperand(0);
   }
   return cast<BranchInst>(I)->getCondition();
 }
@@ -262,8 +271,16 @@ class GuardWideningImpl {
   void widenGuard(Instruction *ToWiden, Value *NewCondition,
                   bool InvertCondition) {
     Value *Result;
-    widenCondCommon(ToWiden->getOperand(0), NewCondition, ToWiden, Result,
+    widenCondCommon(getCondition(ToWiden), NewCondition, ToWiden, Result,
                     InvertCondition);
+    Value *WidenableCondition = nullptr;
+    if (isGuardAsWidenableBranch(ToWiden)) {
+      auto *Cond = cast<BranchInst>(ToWiden)->getCondition();
+      WidenableCondition = cast<BinaryOperator>(Cond)->getOperand(1);
+    }
+    if (WidenableCondition)
+      Result = BinaryOperator::CreateAnd(Result, WidenableCondition,
+                                         "guard.chk", ToWiden);
     setCondition(ToWiden, Result);
   }
 
@@ -279,6 +296,14 @@ public:
   /// The entry point for this pass.
   bool run();
 };
+}
+
+static bool isSupportedGuardInstruction(const Instruction *Insn) {
+  if (isGuard(Insn))
+    return true;
+  if (WidenBranchGuards && isGuardAsWidenableBranch(Insn))
+    return true;
+  return false;
 }
 
 bool GuardWideningImpl::run() {
@@ -300,7 +325,7 @@ bool GuardWideningImpl::run() {
     auto &CurrentList = GuardsInBlock[BB];
 
     for (auto &I : *BB)
-      if (isGuard(&I))
+      if (isSupportedGuardInstruction(&I))
         CurrentList.push_back(cast<Instruction>(&I));
 
     for (auto *II : CurrentList)
@@ -322,7 +347,7 @@ bool GuardWideningImpl::run() {
   for (auto *I : EliminatedGuardsAndBranches)
     if (!WidenedGuards.count(I)) {
       assert(isa<ConstantInt>(getCondition(I)) && "Should be!");
-      if (isGuard(I))
+      if (isSupportedGuardInstruction(I))
         eliminateGuard(I);
       else {
         assert(isa<BranchInst>(I) &&
@@ -452,6 +477,8 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
   auto MaybeHoistingOutOfIf = [&]() {
     auto *DominatingBlock = DominatingGuard->getParent();
     auto *DominatedBlock = DominatedInstr->getParent();
+    if (isGuardAsWidenableBranch(DominatingGuard))
+      DominatingBlock = cast<BranchInst>(DominatingGuard)->getSuccessor(0);
 
     // Same Block?
     if (DominatedBlock == DominatingBlock)

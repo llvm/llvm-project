@@ -3,44 +3,48 @@
 // RUN: llvm-readobj -elf-output-style GNU --notes %t | FileCheck %s --check-prefix=GNU
 // RUN: llvm-readobj -elf-output-style LLVM --notes %t | FileCheck %s --check-prefix=LLVM
 
-// GNU:      Displaying notes found at file offset 0x00000040 with length 0x000000b8:
+// GNU:      Displaying notes found at file offset 0x00000040 with length 0x000000d8:
 // GNU-NEXT:   Owner                 Data size       Description
-// GNU-NEXT:   GNU                   0x000000a8      NT_GNU_PROPERTY_TYPE_0 (property note)
+// GNU-NEXT:   GNU                   0x000000c8      NT_GNU_PROPERTY_TYPE_0 (property note)
 // GNU-NEXT:     Properties:  stack size: 0x100
 // GNU-NEXT:     stack size: 0x100
 // GNU-NEXT:     no copy on protected
-// GNU-NEXT:     X86 features: SHSTK
-// GNU-NEXT:     X86 features: IBT, SHSTK
-// GNU-NEXT:     X86 features: none
+// GNU-NEXT:     x86 feature: SHSTK
+// GNU-NEXT:     x86 feature: IBT, SHSTK
+// GNU-NEXT:     x86 feature: <None>
+// GNU-NEXT:     x86 feature needed: x86, x87
+// GNU-NEXT:     x86 feature used: XSAVEOPT, XSAVEC
 // GNU-NEXT:     <application-specific type 0xfefefefe>
 // GNU-NEXT:     stack size: <corrupt length: 0x0>
 // GNU-NEXT:     stack size: <corrupt length: 0x4>
 // GNU-NEXT:     no copy on protected <corrupt length: 0x1>
-// GNU-NEXT:     X86 features: <corrupt length: 0x0>
-// GNU-NEXT:     X86 features: IBT, <unknown flags: 0xf000f000>
+// GNU-NEXT:     x86 feature: <corrupt length: 0x0>
+// GNU-NEXT:     x86 feature: IBT, <unknown flags: 0xf000f000>
 // GNU-NEXT:     <corrupt type (0x2) datasz: 0x1>
 
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Offset: 0x40
-// LLVM-NEXT:     Size: 0xB8
+// LLVM-NEXT:     Size: 0xD8
 // LLVM-NEXT:     Note {
 // LLVM-NEXT:       Owner: GNU
-// LLVM-NEXT:       Data size: 0xA8
+// LLVM-NEXT:       Data size: 0xC8
 // LLVM-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
 // LLVM-NEXT:       Property [
 // LLVM-NEXT:         stack size: 0x100
 // LLVM-NEXT:         stack size: 0x100
 // LLVM-NEXT:         no copy on protected
-// LLVM-NEXT:         X86 features: SHSTK
-// LLVM-NEXT:         X86 features: IBT, SHSTK
-// LLVM-NEXT:         X86 features: none
+// LLVM-NEXT:         x86 feature: SHSTK
+// LLVM-NEXT:         x86 feature: IBT, SHSTK
+// LLVM-NEXT:         x86 feature: <None>
+// LLVM-NEXT:         x86 feature needed: x86, x87
+// LLVM-NEXT:         x86 feature used: XSAVEOPT, XSAVEC
 // LLVM-NEXT:         <application-specific type 0xfefefefe>
 // LLVM-NEXT:         stack size: <corrupt length: 0x0>
 // LLVM-NEXT:         stack size: <corrupt length: 0x4>
 // LLVM-NEXT:         no copy on protected <corrupt length: 0x1>
-// LLVM-NEXT:         X86 features: <corrupt length: 0x0>
-// LLVM-NEXT:         X86 features: IBT, <unknown flags: 0xf000f000>
+// LLVM-NEXT:         x86 feature: <corrupt length: 0x0>
+// LLVM-NEXT:         x86 feature: IBT, <unknown flags: 0xf000f000>
 // LLVM-NEXT:         <corrupt type (0x2) datasz: 0x1>
 // LLVM-NEXT:       ]
 // LLVM-NEXT:     }
@@ -86,6 +90,16 @@ begin:
   .long 4           /* Data size */
   .long 0           /* Empty flags, not an error */
   .p2align 3        /* Align to 8 byte for 64 bit */
+
+  .long 0xc0008001         /* Type: GNU_PROPERTY_X86_FEATURE_2_NEEDED */
+  .long 4                  /* Data size */
+  .long 0x00000003         /* X86 X87 */
+  .p2align 3               /* Align to 8 byte for 64 bit */
+
+  .long 0xc0010001         /* Type: GNU_PROPERTY_X86_FEATURE_2_USED */
+  .long 4                  /* Data size */
+  .long 0x00000300         /* XSAVEOPT XSAVEC */
+  .p2align 3               /* Align to 8 byte for 64 bit */
   
   /* All notes below are broken. Test we are able to report them. */
   
@@ -121,7 +135,7 @@ begin:
   .long 4                  /* Data size */
   .long 0xf000f001         /* GNU_PROPERTY_X86_FEATURE_1_IBT and bad bits */
   .p2align 3               /* Align to 8 byte for 64 bit */
-  
+
   /* GNU_PROPERTY_NO_COPY_ON_PROTECTED with pr_datasz and without data */
   .long 2           /* Type: GNU_PROPERTY_NO_COPY_ON_PROTECTED */
   .long 1           /* Data size (corrupted) */

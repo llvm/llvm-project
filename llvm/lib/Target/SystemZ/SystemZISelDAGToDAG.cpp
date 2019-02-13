@@ -1541,6 +1541,30 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
 
+  case ISD::ConstantFP: {
+    APFloat Imm = cast<ConstantFPSDNode>(Node)->getValueAPF();
+    if (Imm.isZero() || Imm.isNegZero())
+      break;
+    const SystemZInstrInfo *TII = getInstrInfo();
+    EVT VT = Node->getValueType(0);
+    unsigned Start, End;
+    unsigned BitWidth = VT.getSizeInBits();
+    bool Success = SystemZTargetLowering::analyzeFPImm(Imm, BitWidth, Start,
+              End, static_cast<const SystemZInstrInfo *>(TII)); (void)Success;
+    assert(Success && "Expected legal FP immediate");
+    SDLoc DL(Node);
+    unsigned Opcode = (BitWidth == 32 ? SystemZ::VGMF : SystemZ::VGMG);
+    SDNode *Res = CurDAG->getMachineNode(Opcode, DL, VT,
+                            CurDAG->getTargetConstant(Start, DL, MVT::i32),
+                            CurDAG->getTargetConstant(End, DL, MVT::i32));
+    unsigned SubRegIdx = (BitWidth == 32 ? SystemZ::subreg_h32
+                                         : SystemZ::subreg_h64);
+    Res = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, SDValue(Res, 0))
+            .getNode();
+    ReplaceNode(Node, Res);
+    return;
+  }
+
   case ISD::STORE: {
     if (tryFoldLoadStoreIntoMemOperand(Node))
       return;

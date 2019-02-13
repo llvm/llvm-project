@@ -29,36 +29,77 @@ namespace llvm {
 class raw_ostream;
 
 namespace optional_detail {
+
 /// Storage for any type.
-template <typename T, bool = is_trivially_copyable<T>::value> struct OptionalStorage {
+//
+template <class T> struct OptionalTrivialStorage {
   AlignedCharArrayUnion<T> storage;
   bool hasVal = false;
+  OptionalTrivialStorage() = default;
+  OptionalTrivialStorage(OptionalTrivialStorage const &) = default;
+  OptionalTrivialStorage(OptionalTrivialStorage &&) = default;
+  OptionalTrivialStorage &operator=(OptionalTrivialStorage const &) = default;
+  OptionalTrivialStorage &operator=(OptionalTrivialStorage &&) = default;
+  ~OptionalTrivialStorage() = default;
+
+  OptionalTrivialStorage(const T &y) : hasVal(true) {
+    new (storage.buffer) T(y);
+  }
+  OptionalTrivialStorage(T &&y) : hasVal(true) {
+    new (storage.buffer) T(std::move(y));
+  }
+
+  OptionalTrivialStorage &operator=(const T &y) {
+    new (storage.buffer) T(y);
+    hasVal = true;
+    return *this;
+  }
+  OptionalTrivialStorage &operator=(T &&y) {
+    new (storage.buffer) T(std::move(y));
+    hasVal = true;
+    return *this;
+  }
+
+  T *getPointer() {
+    assert(hasVal);
+    return reinterpret_cast<T *>(storage.buffer);
+  }
+  const T *getPointer() const {
+    assert(hasVal);
+    return reinterpret_cast<const T *>(storage.buffer);
+  }
+  void reset() { hasVal = false; }
+};
+
+template <typename T> struct OptionalStorage : OptionalTrivialStorage<T> {
 
   OptionalStorage() = default;
 
-  OptionalStorage(const T &y) : hasVal(true) { new (storage.buffer) T(y); }
-  OptionalStorage(const OptionalStorage &O) : hasVal(O.hasVal) {
-    if (hasVal)
-      new (storage.buffer) T(*O.getPointer());
+  OptionalStorage(const T &y) : OptionalTrivialStorage<T>(y) {}
+  OptionalStorage(T &&y) : OptionalTrivialStorage<T>(std::move(y)) {}
+
+  OptionalStorage(const OptionalStorage &O) : OptionalTrivialStorage<T>() {
+    this->hasVal = O.hasVal;
+    if (this->hasVal)
+      new (this->storage.buffer) T(*O.getPointer());
   }
-  OptionalStorage(T &&y) : hasVal(true) {
-    new (storage.buffer) T(std::forward<T>(y));
-  }
-  OptionalStorage(OptionalStorage &&O) : hasVal(O.hasVal) {
+
+  OptionalStorage(OptionalStorage &&O) : OptionalTrivialStorage<T>() {
+    this->hasVal = O.hasVal;
     if (O.hasVal) {
-      new (storage.buffer) T(std::move(*O.getPointer()));
+      new (this->storage.buffer) T(std::move(*O.getPointer()));
     }
   }
 
   OptionalStorage &operator=(T &&y) {
-    if (hasVal)
-      *getPointer() = std::move(y);
+    if (this->hasVal)
+      *this->getPointer() = std::move(y);
     else {
-      new (storage.buffer) T(std::move(y));
-      hasVal = true;
+      OptionalTrivialStorage<T>::operator=(std::move(y));
     }
     return *this;
   }
+
   OptionalStorage &operator=(OptionalStorage &&O) {
     if (!O.hasVal)
       reset();
@@ -74,11 +115,10 @@ template <typename T, bool = is_trivially_copyable<T>::value> struct OptionalSto
   // requirements (notably: the existence of a default ctor) when implemented
   // in that way. Careful SFINAE to avoid such pitfalls would be required.
   OptionalStorage &operator=(const T &y) {
-    if (hasVal)
-      *getPointer() = y;
+    if (this->hasVal)
+      *this->getPointer() = y;
     else {
-      new (storage.buffer) T(y);
-      hasVal = true;
+      OptionalTrivialStorage<T>::operator=(y);
     }
     return *this;
   }
@@ -93,19 +133,10 @@ template <typename T, bool = is_trivially_copyable<T>::value> struct OptionalSto
   ~OptionalStorage() { reset(); }
 
   void reset() {
-    if (hasVal) {
-      (*getPointer()).~T();
-      hasVal = false;
+    if (this->hasVal) {
+      (*this->getPointer()).~T();
+      OptionalTrivialStorage<T>::reset();
     }
-  }
-
-  T *getPointer() {
-    assert(hasVal);
-    return reinterpret_cast<T *>(storage.buffer);
-  }
-  const T *getPointer() const {
-    assert(hasVal);
-    return reinterpret_cast<const T *>(storage.buffer);
   }
 };
 
@@ -134,7 +165,9 @@ template <typename T> struct OptionalStorage<T, true> {
 } // namespace optional_detail
 
 template <typename T> class Optional {
-  optional_detail::OptionalStorage<T> Storage;
+  typename std::conditional<is_trivially_copyable<T>::value,
+                            optional_detail::OptionalTrivialStorage<T>,
+                            optional_detail::OptionalStorage<T>>::type Storage;
 
 public:
   using value_type = T;

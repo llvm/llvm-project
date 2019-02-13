@@ -470,16 +470,6 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
   ]
 >;
 
-class SubtargetFeatureISAVersion <int Major, int Minor, int Stepping,
-                                  list<SubtargetFeature> Implies>
-                                 : SubtargetFeature <
-  "isaver"#Major#"."#Minor#"."#Stepping,
-  "IsaVersion",
-  "ISAVersion"#Major#"_"#Minor#"_"#Stepping,
-  "Instruction set version number",
-  Implies
->;
-
 class FeatureSet<list<SubtargetFeature> Features_> {
   list<SubtargetFeature> Features = Features_;
 }

@@ -9,6 +9,7 @@
 ; CHECK:   DW_AT_name {{.*}}"subscript.get"
 ; CHECK:  DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]	({{.*}}
+; CHECK-NEXT:  [0x{{.*}}, 0x{{.*}}): DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4
 ; CHECK-NEXT:  [0x{{.*}}, 0x{{.*}}): DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4, DW_OP_regx D16, DW_OP_piece 0x8, DW_OP_regx D17, DW_OP_piece 0x4
 
 source_filename = "simd.ll"

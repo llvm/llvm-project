@@ -485,11 +485,9 @@ define <4 x i1> @and_eq_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> 
 define i1 @or_icmps_const_1bit_diff(i8 %x) {
 ; CHECK-LABEL: or_icmps_const_1bit_diff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpb $43, %dil
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    cmpb $45, %dil
+; CHECK-NEXT:    addb $-43, %dil
+; CHECK-NEXT:    testb $-3, %dil
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    retq
   %a = icmp eq i8 %x, 43
   %b = icmp eq i8 %x, 45
@@ -500,11 +498,9 @@ define i1 @or_icmps_const_1bit_diff(i8 %x) {
 define i1 @and_icmps_const_1bit_diff(i32 %x) {
 ; CHECK-LABEL: and_icmps_const_1bit_diff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpl $44, %edi
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    cmpl $60, %edi
+; CHECK-NEXT:    addl $-44, %edi
+; CHECK-NEXT:    testl $-17, %edi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    retq
   %a = icmp ne i32 %x, 44
   %b = icmp ne i32 %x, 60
@@ -512,3 +508,73 @@ define i1 @and_icmps_const_1bit_diff(i32 %x) {
   ret i1 %r
 }
 
+; Negative test - extra use prevents optimization
+
+define i1 @or_icmps_const_1bit_diff_extra_use(i8 %x, i8* %p) {
+; CHECK-LABEL: or_icmps_const_1bit_diff_extra_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpb $45, %dil
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    cmpb $43, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    sete (%rsi)
+; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    retq
+  %a = icmp eq i8 %x, 43
+  %b = icmp eq i8 %x, 45
+  %r = or i1 %a, %b
+  %z = zext i1 %a to i8
+  store i8 %z, i8* %p
+  ret i1 %r
+}
+
+; Negative test - constant diff is >1 bit
+
+define i1 @and_icmps_const_not1bit_diff(i32 %x) {
+; CHECK-LABEL: and_icmps_const_not1bit_diff:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $44, %edi
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    cmpl $92, %edi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    retq
+  %a = icmp ne i32 %x, 44
+  %b = icmp ne i32 %x, 92
+  %r = and i1 %a, %b
+  ret i1 %r
+}
+
+; Negative test - wrong comparison
+
+define i1 @and_icmps_const_1bit_diff_wrong_pred(i32 %x) {
+; CHECK-LABEL: and_icmps_const_1bit_diff_wrong_pred:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    cmpl $45, %edi
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    retq
+  %a = icmp eq i32 %x, 43
+  %b = icmp slt i32 %x, 45
+  %r = or i1 %a, %b
+  ret i1 %r
+}
+
+; Negative test - no common operand
+
+define i1 @and_icmps_const_1bit_diff_common_op(i32 %x, i32 %y) {
+; CHECK-LABEL: and_icmps_const_1bit_diff_common_op:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    cmpl $45, %esi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    retq
+  %a = icmp eq i32 %x, 43
+  %b = icmp eq i32 %y, 45
+  %r = or i1 %a, %b
+  ret i1 %r
+}

@@ -3650,6 +3650,16 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                                   ArrayRef<uint8_t> Data) {
   std::string str;
   raw_string_ostream OS(str);
+  uint32_t pr_data;
+  auto DumpBit = [&](uint32_t Flag, StringRef Name) {
+    if (pr_data & Flag) {
+      pr_data &= ~Flag;
+      OS << Name;
+      if (pr_data)
+        OS << ", ";
+    }
+  };
+
   switch (Type) {
   default:
     OS << format("<application-specific type 0x%x>", Type);
@@ -3669,31 +3679,46 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format(" <corrupt length: 0x%x>", DataSize);
     return OS.str();
   case GNU_PROPERTY_X86_FEATURE_1_AND:
-    OS << "X86 features: ";
+    OS << "x86 feature: ";
     if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    uint32_t CFProtection  =
-        support::endian::read32<ELFT::TargetEndianness>(Data.data());
-    if (CFProtection == 0) {
-      OS << "none";
+    pr_data = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (pr_data == 0) {
+      OS << "<None>";
       return OS.str();
     }
-    if (CFProtection & GNU_PROPERTY_X86_FEATURE_1_IBT) {
-      OS << "IBT";
-      CFProtection &= ~GNU_PROPERTY_X86_FEATURE_1_IBT;
-      if (CFProtection)
-        OS << ", ";
+    DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
+    if (pr_data)
+      OS << format("<unknown flags: 0x%x>", pr_data);
+    return OS.str();
+  case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
+  case GNU_PROPERTY_X86_FEATURE_2_USED:
+    OS << "x86 feature "
+       << (Type == GNU_PROPERTY_X86_FEATURE_2_NEEDED ? "needed: " : "used: ");
+    if (DataSize != 4) {
+      OS << format("<corrupt length: 0x%x>", DataSize);
+      return OS.str();
     }
-    if (CFProtection & GNU_PROPERTY_X86_FEATURE_1_SHSTK) {
-      OS << "SHSTK";
-      CFProtection &= ~GNU_PROPERTY_X86_FEATURE_1_SHSTK;
-      if (CFProtection)
-        OS << ", ";
+    pr_data = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (pr_data == 0) {
+      OS << "<None>";
+      return OS.str();
     }
-    if (CFProtection)
-      OS << format("<unknown flags: 0x%x>", CFProtection);
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_X86, "x86");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_X87, "x87");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_MMX, "MMX");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XMM, "XMM");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_YMM, "YMM");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_ZMM, "ZMM");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_FXSR, "FXSR");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVE, "XSAVE");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT, "XSAVEOPT");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEC, "XSAVEC");
+    if (pr_data)
+      OS << format("<unknown flags: 0x%x>", pr_data);
     return OS.str();
   }
 }

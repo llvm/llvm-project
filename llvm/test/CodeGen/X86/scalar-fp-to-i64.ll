@@ -1066,18 +1066,15 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; AVX512_64_WIN-NEXT:    flds __real@{{.*}}(%rip)
 ; AVX512_64_WIN-NEXT:    fld %st(1)
 ; AVX512_64_WIN-NEXT:    fsub %st(1), %st
-; AVX512_64_WIN-NEXT:    xorl %ecx, %ecx
+; AVX512_64_WIN-NEXT:    xorl %eax, %eax
 ; AVX512_64_WIN-NEXT:    fxch %st(1)
 ; AVX512_64_WIN-NEXT:    fucompi %st(2), %st
 ; AVX512_64_WIN-NEXT:    fcmovnbe %st(1), %st
 ; AVX512_64_WIN-NEXT:    fstp %st(1)
 ; AVX512_64_WIN-NEXT:    fisttpll (%rsp)
-; AVX512_64_WIN-NEXT:    setbe %cl
-; AVX512_64_WIN-NEXT:    shll $31, %ecx
-; AVX512_64_WIN-NEXT:    xorl {{[0-9]+}}(%rsp), %ecx
-; AVX512_64_WIN-NEXT:    shlq $32, %rcx
-; AVX512_64_WIN-NEXT:    movl (%rsp), %eax
-; AVX512_64_WIN-NEXT:    orq %rcx, %rax
+; AVX512_64_WIN-NEXT:    setbe %al
+; AVX512_64_WIN-NEXT:    shlq $63, %rax
+; AVX512_64_WIN-NEXT:    xorq (%rsp), %rax
 ; AVX512_64_WIN-NEXT:    popq %rcx
 ; AVX512_64_WIN-NEXT:    retq
 ;
@@ -1087,18 +1084,15 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; AVX512_64_LIN-NEXT:    flds {{.*}}(%rip)
 ; AVX512_64_LIN-NEXT:    fld %st(1)
 ; AVX512_64_LIN-NEXT:    fsub %st(1), %st
-; AVX512_64_LIN-NEXT:    xorl %ecx, %ecx
+; AVX512_64_LIN-NEXT:    xorl %eax, %eax
 ; AVX512_64_LIN-NEXT:    fxch %st(1)
 ; AVX512_64_LIN-NEXT:    fucompi %st(2), %st
 ; AVX512_64_LIN-NEXT:    fcmovnbe %st(1), %st
 ; AVX512_64_LIN-NEXT:    fstp %st(1)
 ; AVX512_64_LIN-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
-; AVX512_64_LIN-NEXT:    setbe %cl
-; AVX512_64_LIN-NEXT:    shll $31, %ecx
-; AVX512_64_LIN-NEXT:    xorl -{{[0-9]+}}(%rsp), %ecx
-; AVX512_64_LIN-NEXT:    shlq $32, %rcx
-; AVX512_64_LIN-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; AVX512_64_LIN-NEXT:    orq %rcx, %rax
+; AVX512_64_LIN-NEXT:    setbe %al
+; AVX512_64_LIN-NEXT:    shlq $63, %rax
+; AVX512_64_LIN-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; AVX512_64_LIN-NEXT:    retq
 ;
 ; SSE3_32_WIN-LABEL: x_to_u64:

@@ -122,6 +122,15 @@ def strip_non_alloc : Flag<["-", "--"], "strip-non-alloc">,
                       HelpText<"Remove all non-allocated sections">;
 def strip_unneeded : Flag<["-", "--"], "strip-unneeded">,
                      HelpText<"Remove all symbols not needed by relocations">;
+defm strip_unneeded_symbol 
+    : Eq<"strip-unneeded-symbol",
+         "Remove symbol <symbol> if it is not needed by relocations">,
+      MetaVarName<"symbol">;
+defm strip_unneeded_symbols
+    : Eq<"strip-unneeded-symbols",
+         "Reads a list of symbols from <filename> and removes them "
+         "if they are not needed by relocations">,
+      MetaVarName<"filename">;
 
 def extract_dwo
     : Flag<["-", "--"], "extract-dwo">,

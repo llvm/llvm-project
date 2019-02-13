@@ -598,14 +598,35 @@ define void @sitofp_8i8_8f64() #0 {
 ;
 
 define void @sitofp_2i64_2f32() #0 {
-; CHECK-LABEL: @sitofp_2i64_2f32(
-; CHECK-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; CHECK-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[CVT0:%.*]] = sitofp i64 [[LD0]] to float
-; CHECK-NEXT:    [[CVT1:%.*]] = sitofp i64 [[LD1]] to float
-; CHECK-NEXT:    store float [[CVT0]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 0), align 64
-; CHECK-NEXT:    store float [[CVT1]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 1), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @sitofp_2i64_2f32(
+; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
+; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
+; SSE-NEXT:    [[CVT0:%.*]] = sitofp i64 [[LD0]] to float
+; SSE-NEXT:    [[CVT1:%.*]] = sitofp i64 [[LD1]] to float
+; SSE-NEXT:    store float [[CVT0]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 0), align 64
+; SSE-NEXT:    store float [[CVT1]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 1), align 4
+; SSE-NEXT:    ret void
+;
+; AVX256NODQ-LABEL: @sitofp_2i64_2f32(
+; AVX256NODQ-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
+; AVX256NODQ-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
+; AVX256NODQ-NEXT:    [[CVT0:%.*]] = sitofp i64 [[LD0]] to float
+; AVX256NODQ-NEXT:    [[CVT1:%.*]] = sitofp i64 [[LD1]] to float
+; AVX256NODQ-NEXT:    store float [[CVT0]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 0), align 64
+; AVX256NODQ-NEXT:    store float [[CVT1]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 1), align 4
+; AVX256NODQ-NEXT:    ret void
+;
+; AVX512-LABEL: @sitofp_2i64_2f32(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @src64 to <2 x i64>*), align 64
+; AVX512-NEXT:    [[TMP2:%.*]] = sitofp <2 x i64> [[TMP1]] to <2 x float>
+; AVX512-NEXT:    store <2 x float> [[TMP2]], <2 x float>* bitcast ([16 x float]* @dst32 to <2 x float>*), align 64
+; AVX512-NEXT:    ret void
+;
+; AVX256DQ-LABEL: @sitofp_2i64_2f32(
+; AVX256DQ-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @src64 to <2 x i64>*), align 64
+; AVX256DQ-NEXT:    [[TMP2:%.*]] = sitofp <2 x i64> [[TMP1]] to <2 x float>
+; AVX256DQ-NEXT:    store <2 x float> [[TMP2]], <2 x float>* bitcast ([16 x float]* @dst32 to <2 x float>*), align 64
+; AVX256DQ-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
   %ld1 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8

@@ -739,8 +739,9 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   for (unsigned i = 0, e = TypeList.size(); i != e; ++i) {
     Record *Type = TypeList[i];
     if (!Type->isSubClassOf("ValueType"))
-      PrintFatalError("RegTypes list member '" + Type->getName() +
-        "' does not derive from the ValueType class!");
+      PrintFatalError(R->getLoc(),
+                      "RegTypes list member '" + Type->getName() +
+                          "' does not derive from the ValueType class!");
     VTs.push_back(getValueTypeByHwMode(Type, RegBank.getHwModes()));
   }
   assert(!VTs.empty() && "RegisterClass must contain at least one ValueType!");

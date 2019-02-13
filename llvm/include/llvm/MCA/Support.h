@@ -60,24 +60,13 @@ public:
     return (Denominator == 1) ? Numerator : (double)Numerator / Denominator;
   }
 
+  unsigned getNumerator() const { return Numerator; }
+  unsigned getDenominator() const { return Denominator; }
+
   // Add the components of RHS to this instance.  Instead of calculating
   // the final value here, we keep track of the numerator and denominator
   // separately, to reduce floating point error.
-  ResourceCycles &operator+=(const ResourceCycles &RHS) {
-    if (Denominator == RHS.Denominator)
-      Numerator += RHS.Numerator;
-    else {
-      // Create a common denominator for LHS and RHS by calculating the least
-      // common multiple from the GCD.
-      unsigned GCD = GreatestCommonDivisor64(Denominator, RHS.Denominator);
-      unsigned LCM = (Denominator * RHS.Denominator) / GCD;
-      unsigned LHSNumerator = Numerator * (LCM / Denominator);
-      unsigned RHSNumerator = RHS.Numerator * (LCM / RHS.Denominator);
-      Numerator = LHSNumerator + RHSNumerator;
-      Denominator = LCM;
-    }
-    return *this;
-  }
+  ResourceCycles &operator+=(const ResourceCycles &RHS);
 };
 
 /// Populates vector Masks with processor resource masks.
