@@ -590,12 +590,4 @@ TEST_F(OptionalTest, UseInUnitTests) {
   EXPECT_NONFATAL_FAILURE(EXPECT_EQ(llvm::None, Comparable::get()), "object");
 }
 
-#if __has_feature(is_trivially_copyable) && defined(_LIBCPP_VERSION)
-static_assert(std::is_trivially_copyable<Optional<int>>::value,
-              "Should be trivially copyable");
-static_assert(
-    !std::is_trivially_copyable<Optional<NonDefaultConstructible>>::value,
-    "Shouldn't be trivially copyable");
-#endif
-
 } // end anonymous namespace
