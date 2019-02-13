@@ -716,7 +716,8 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
         uint64_t ParamIdxFromOne = ArgValue.getZExtValue();
         uint64_t ParamIdxFromZero = ParamIdxFromOne - 1;
         if (!ArgValue.isStrictlyPositive() || ParamIdxFromOne > NumParams) {
-          S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_range)
+          S.Diag(AL.getLoc(),
+                 diag::err_attribute_argument_out_of_bounds_extra_info)
               << AL << Idx + 1 << NumParams;
           continue;
         }
@@ -1118,7 +1119,7 @@ static void handlePassObjectSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // __builtin_object_size. So, it has the same constraints as that second
   // argument; namely, it must be in the range [0, 3].
   if (Type > 3) {
-    S.Diag(E->getBeginLoc(), diag::err_attribute_argument_outof_range)
+    S.Diag(E->getBeginLoc(), diag::err_attribute_argument_out_of_range)
         << AL << 0 << 3 << E->getSourceRange();
     return;
   }
@@ -3299,7 +3300,7 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (prioritynum < 101 || prioritynum > 65535) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_outof_range)
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_out_of_range)
         << E->getSourceRange() << AL << 101 << 65535;
     AL.setInvalid();
     return;
@@ -6904,7 +6905,7 @@ static void handleFortifyStdLib(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   if (BOSType > 3) {
     S.Diag(AL.getArgAsExpr(0)->getBeginLoc(),
-           diag::err_attribute_argument_outof_range)
+           diag::err_attribute_argument_out_of_range)
         << AL << 0 << 3;
     return;
   }

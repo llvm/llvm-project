@@ -3212,6 +3212,9 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
     return getTargetCodeGenInfo().performAddrSpaceCast(*this, GV, AddrSpace,
                                                        ExpectedAS, Ty);
 
+  if (GV->isDeclaration())
+    getTargetCodeGenInfo().setTargetAttributes(D, GV, *this);
+
   return GV;
 }
 

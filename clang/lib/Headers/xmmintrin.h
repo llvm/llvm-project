@@ -1754,7 +1754,7 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_loadu_ps(const float *__p)
 {
   struct __loadu_ps {
-    __m128 __v;
+    __m128_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_ps*)__p)->__v;
 }
