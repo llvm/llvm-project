@@ -205,7 +205,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
       C.Relocations.push_back(
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
            Offset, Addend, &Sym});
-      return Target->TlsGdRelaxSkip;
+      return Target->getTlsGdRelaxSkip(Type);
     }
     if (Expr == R_TLSLD_HINT)
       return 1;
@@ -278,7 +278,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
            Offset, Addend, &Sym});
     }
-    return Target->TlsGdRelaxSkip;
+    return Target->getTlsGdRelaxSkip(Type);
   }
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
@@ -1000,10 +1000,18 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
     return;
 
-  if (Config->EMachine == EM_PPC64 && isPPC64SmallCodeModelReloc(Type))
-    Sec.File->PPC64SmallCodeModelRelocs = true;
+  // We can separate the small code model relocations into 2 categories:
+  // 1) Those that access the compiler generated .toc sections.
+  // 2) Those that access the linker allocated got entries.
+  // lld allocates got entries to symbols on demand. Since we don't try to sort
+  // the got entries in any way, we don't have to track which objects have
+  // got-based small code model relocs. The .toc sections get placed after the
+  // end of the linker allocated .got section and we do sort those so sections
+  // addressed with small code model relocations come first.
+  if (Config->EMachine == EM_PPC64 && isPPC64SmallCodeModelTocReloc(Type))
+    Sec.File->PPC64SmallCodeModelTocRelocs = true;
 
-  // Strenghten or relax relocations.
+  // Strengthen or relax relocations.
   //
   // GNU ifunc symbols must be accessed via PLT because their addresses
   // are determined by runtime.

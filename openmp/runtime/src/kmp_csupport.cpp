@@ -425,6 +425,19 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
 #endif
                   );
 
+  // Pop current CG root off list
+  KMP_DEBUG_ASSERT(this_thr->th.th_cg_roots);
+  kmp_cg_root_t *tmp = this_thr->th.th_cg_roots;
+  this_thr->th.th_cg_roots = tmp->up;
+  KA_TRACE(100, ("__kmpc_fork_teams: Thread %p popping node %p and moving up"
+                 " to node %p. cg_nthreads was %d\n",
+                 this_thr, tmp, this_thr->th.th_cg_roots, tmp->cg_nthreads));
+  __kmp_free(tmp);
+  // Restore current task's thread_limit from CG root
+  KMP_DEBUG_ASSERT(this_thr->th.th_cg_roots);
+  this_thr->th.th_current_task->td_icvs.thread_limit =
+      this_thr->th.th_cg_roots->cg_thread_limit;
+
   this_thr->th.th_teams_microtask = NULL;
   this_thr->th.th_teams_level = 0;
   *(kmp_int64 *)(&this_thr->th.th_teams_size) = 0L;

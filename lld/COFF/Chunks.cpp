@@ -670,16 +670,36 @@ const uint8_t ArmThunk[] = {
     0xe7, 0x44,             // L1: add  pc, ip
 };
 
-size_t RangeExtensionThunk::getSize() const {
+size_t RangeExtensionThunkARM::getSize() const {
   assert(Config->Machine == ARMNT);
   return sizeof(ArmThunk);
 }
 
-void RangeExtensionThunk::writeTo(uint8_t *Buf) const {
+void RangeExtensionThunkARM::writeTo(uint8_t *Buf) const {
   assert(Config->Machine == ARMNT);
   uint64_t Offset = Target->getRVA() - RVA - 12;
   memcpy(Buf + OutputSectionOff, ArmThunk, sizeof(ArmThunk));
   applyMOV32T(Buf + OutputSectionOff, uint32_t(Offset));
+}
+
+// A position independent ARM64 adrp+add thunk, with a maximum range of
+// +/- 4 GB, which is enough for any PE-COFF.
+const uint8_t Arm64Thunk[] = {
+    0x10, 0x00, 0x00, 0x90, // adrp x16, Dest
+    0x10, 0x02, 0x00, 0x91, // add  x16, x16, :lo12:Dest
+    0x00, 0x02, 0x1f, 0xd6, // br   x16
+};
+
+size_t RangeExtensionThunkARM64::getSize() const {
+  assert(Config->Machine == ARM64);
+  return sizeof(Arm64Thunk);
+}
+
+void RangeExtensionThunkARM64::writeTo(uint8_t *Buf) const {
+  assert(Config->Machine == ARM64);
+  memcpy(Buf + OutputSectionOff, Arm64Thunk, sizeof(Arm64Thunk));
+  applyArm64Addr(Buf + OutputSectionOff + 0, Target->getRVA(), RVA, 12);
+  applyArm64Imm(Buf + OutputSectionOff + 4, Target->getRVA() & 0xfff, 0);
 }
 
 void LocalImportChunk::getBaserels(std::vector<Baserel> *Res) {

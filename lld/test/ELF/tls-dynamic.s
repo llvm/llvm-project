@@ -48,28 +48,28 @@ c:
 // CHECK-NEXT:       SHF_ALLOC
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x30D0
+// CHECK-NEXT:     Address: 0x30E0
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 40
 
 // CHECK:      Relocations [
 // CHECK:        Section ({{.+}}) .rela.dyn {
-// CHECK-NEXT:     0x30D0 R_X86_64_DTPMOD64 - 0x0
-// CHECK-NEXT:     0x30E0 R_X86_64_DTPMOD64 c 0x0
-// CHECK-NEXT:     0x30E8 R_X86_64_DTPOFF64 c 0x0
-// CHECK-NEXT:     0x30F0 R_X86_64_TPOFF64 c 0x0
+// CHECK-NEXT:     0x30E0 R_X86_64_DTPMOD64 - 0x0
+// CHECK-NEXT:     0x30F0 R_X86_64_DTPMOD64 c 0x0
+// CHECK-NEXT:     0x30F8 R_X86_64_DTPOFF64 c 0x0
+// CHECK-NEXT:     0x3100 R_X86_64_TPOFF64 c 0x0
 // CHECK-NEXT:   }
 
-// 4297 = (0x20D0 + -4) - (0x1000 + 3) // PC relative offset to got entry.
-// 4285 = (0x20D0 + -4) - (0x100c + 3) // PC relative offset to got entry.
-// 4267 = (0x20E0 + -4) - (0x102e + 3) // PC relative offset to got entry.
-// 4263 = (0x20F0 + -4) - (0x1042 + 3) // PC relative offset to got entry.
+// 8409 = (0x30E0 + -4) - (0x1000 + 3) // PC relative offset to got entry.
+// 8397 = (0x30F0 + -4) - (0x100c + 3) // PC relative offset to got entry.
+// 8379 = (0x30F8 + -4) - (0x102e + 3) // PC relative offset to got entry.
+// 8375 = (0x3100 + -4) - (0x1042 + 3) // PC relative offset to got entry.
 
 // DIS:      Disassembly of section .text:
 // DIS-NEXT: .text:
-// DIS-NEXT:     1000: {{.+}} leaq    8393(%rip), %rdi
+// DIS-NEXT:     1000: {{.+}} leaq    8409(%rip), %rdi
 // DIS-NEXT:     1007: {{.+}} callq
-// DIS-NEXT:     100c: {{.+}} leaq    8381(%rip), %rdi
+// DIS-NEXT:     100c: {{.+}} leaq    8397(%rip), %rdi
 // DIS-NEXT:     1013: {{.+}} callq
 // DIS-NEXT:     1018: {{.+}} leaq    (%rax), %rcx
 // DIS-NEXT:     101f: {{.+}} leaq    4(%rax), %rcx
@@ -77,10 +77,10 @@ c:
 // DIS-NEXT:     1028: 00 00
 // DIS-NEXT:     102a: 00 00
 // DIS-NEXT:     102c: 00 00
-// DIS-NEXT:     102e: {{.+}} leaq    8363(%rip), %rdi
+// DIS-NEXT:     102e: {{.+}} leaq    8379(%rip), %rdi
 // DIS-NEXT:     1035: {{.+}} callq
 // DIS-NEXT:     103b: {{.+}} leaq    (%rax), %rcx
-// DIS-NEXT:     1042: {{.+}} movq    8359(%rip), %rax
+// DIS-NEXT:     1042: {{.+}} movq    8375(%rip), %rax
 // DIS-NEXT:     1049: {{.+}} movq    %fs:(%rax), %rax
 // DIS-NEXT:     104d: {{.+}} movabsq $0, %rax
 // DIS-NEXT:     1057: {{.+}} movabsq $4, %rax

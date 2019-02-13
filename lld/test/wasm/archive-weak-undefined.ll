@@ -15,5 +15,5 @@ entry:
   ret void
 }
 
-; CHECK: Name: undefined function ret32
+; CHECK: Name: 'undefined:ret32'
 ; CHECK-NOT: Name: ret32

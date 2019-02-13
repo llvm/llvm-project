@@ -348,6 +348,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       /* too few iterations: fall-through to kmp_sch_static_balanced */
     } // if
     /* FALL-THROUGH to static balanced */
+    KMP_FALLTHROUGH();
   } // case
 #endif
   case kmp_sch_static_balanced: {

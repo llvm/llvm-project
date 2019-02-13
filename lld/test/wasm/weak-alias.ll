@@ -186,43 +186,43 @@ entry:
 ; RELOC-NEXT:         Functions:       [ 1 ]
 ; RELOC-NEXT:   - Type:            CODE
 ; RELOC-NEXT:     Relocations:
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
 ; RELOC-NEXT:         Offset:          0x00000004
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           2
 ; RELOC-NEXT:         Offset:          0x00000013
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
 ; RELOC-NEXT:         Offset:          0x0000001C
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
 ; RELOC-NEXT:         Offset:          0x00000027
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
 ; RELOC-NEXT:         Offset:          0x00000032
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           1
 ; RELOC-NEXT:         Offset:          0x0000003A
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           1
 ; RELOC-NEXT:         Offset:          0x00000043
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
 ; RELOC-NEXT:         Offset:          0x00000050
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
 ; RELOC-NEXT:         Offset:          0x0000005D
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
 ; RELOC-NEXT:         Offset:          0x00000068
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+; RELOC-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; RELOC-NEXT:         Index:           2
 ; RELOC-NEXT:         Offset:          0x00000070
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; RELOC-NEXT:         Index:           2
 ; RELOC-NEXT:         Offset:          0x00000079
-; RELOC-NEXT:       - Type:            R_WEBASSEMBLY_GLOBAL_INDEX_LEB
+; RELOC-NEXT:       - Type:            R_WASM_GLOBAL_INDEX_LEB
 ; RELOC-NEXT:         Index:           6
 ; RELOC-NEXT:         Offset:          0x00000086
 ; RELOC-NEXT:     Functions:

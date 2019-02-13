@@ -287,18 +287,24 @@ static void pdbMakeAbsolute(SmallVectorImpl<char> &FileName) {
   // It's not absolute in any path syntax.  Relative paths necessarily refer to
   // the local file system, so we can make it native without ending up with a
   // nonsensical path.
-  sys::path::native(FileName);
   if (Config->PDBSourcePath.empty()) {
+    sys::path::native(FileName);
     sys::fs::make_absolute(FileName);
     return;
   }
-  // Only apply native and dot removal to the relative file path.  We want to
-  // leave the path the user specified untouched since we assume they specified
-  // it for a reason.
-  sys::path::remove_dots(FileName, /*remove_dot_dots=*/true);
 
+  // Try to guess whether /PDBSOURCEPATH is a unix path or a windows path.
+  // Since PDB's are more of a Windows thing, we make this conservative and only
+  // decide that it's a unix path if we're fairly certain.  Specifically, if
+  // it starts with a forward slash.
   SmallString<128> AbsoluteFileName = Config->PDBSourcePath;
-  sys::path::append(AbsoluteFileName, FileName);
+  sys::path::Style GuessedStyle = AbsoluteFileName.startswith("/")
+                                      ? sys::path::Style::posix
+                                      : sys::path::Style::windows;
+  sys::path::append(AbsoluteFileName, GuessedStyle, FileName);
+  sys::path::native(AbsoluteFileName, GuessedStyle);
+  sys::path::remove_dots(AbsoluteFileName, true, GuessedStyle);
+
   FileName = std::move(AbsoluteFileName);
 }
 
