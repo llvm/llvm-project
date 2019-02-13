@@ -72,7 +72,7 @@ protected:
   void SetOptions(VariablesOptionsImpl *lldb_object_ptr);
 
 private:
-  std::unique_ptr<VariablesOptionsImpl> m_opaque_ap;
+  std::unique_ptr<VariablesOptionsImpl> m_opaque_up;
 };
 
 } // namespace lldb

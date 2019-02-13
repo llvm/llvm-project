@@ -114,7 +114,7 @@ protected:
   void SetAddress(const lldb_private::Address *lldb_object_ptr);
 
 private:
-  std::unique_ptr<lldb_private::Address> m_opaque_ap;
+  std::unique_ptr<lldb_private::Address> m_opaque_up;
 };
 
 bool LLDB_API operator==(const SBAddress &lhs, const SBAddress &rhs);

@@ -51,7 +51,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 FreeBSDThread::FreeBSDThread(Process &process, lldb::tid_t tid)
-    : Thread(process, tid), m_frame_ap(), m_breakpoint(),
+    : Thread(process, tid), m_frame_up(), m_breakpoint(),
       m_thread_name_valid(false), m_thread_name(), m_posix_thread(nullptr) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
   LLDB_LOGV(log, "tid = {0}", tid);
@@ -276,10 +276,10 @@ bool FreeBSDThread::CalculateStopInfo() {
 }
 
 Unwind *FreeBSDThread::GetUnwinder() {
-  if (!m_unwinder_ap)
-    m_unwinder_ap.reset(new UnwindLLDB(*this));
+  if (!m_unwinder_up)
+    m_unwinder_up.reset(new UnwindLLDB(*this));
 
-  return m_unwinder_ap.get();
+  return m_unwinder_up.get();
 }
 
 void FreeBSDThread::DidStop() {

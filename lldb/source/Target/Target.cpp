@@ -98,7 +98,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_breakpoint_list(false), m_internal_breakpoint_list(true),
       m_watchpoint_list(), m_process_sp(), m_search_filter_sp(),
       m_image_search_paths(ImageSearchPathsChanged, this), m_ast_importer_sp(),
-      m_source_manager_ap(), m_stop_hooks(), m_stop_hook_next_id(0),
+      m_source_manager_up(), m_stop_hooks(), m_stop_hook_next_id(0),
       m_valid(true), m_suppress_stop_hooks(false),
       m_is_dummy_target(is_dummy_target),
       m_stats_storage(static_cast<int>(StatisticKind::StatisticMax))
@@ -2735,9 +2735,9 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
 }
 
 SourceManager &Target::GetSourceManager() {
-  if (!m_source_manager_ap)
-    m_source_manager_ap.reset(new SourceManager(shared_from_this()));
-  return *m_source_manager_ap;
+  if (!m_source_manager_up)
+    m_source_manager_up.reset(new SourceManager(shared_from_this()));
+  return *m_source_manager_up;
 }
 
 ClangModulesDeclVendor *Target::GetClangModulesDeclVendor() {
@@ -2748,13 +2748,13 @@ ClangModulesDeclVendor *Target::GetClangModulesDeclVendor() {
   {
     std::lock_guard<std::mutex> guard(s_clang_modules_decl_vendor_mutex);
 
-    if (!m_clang_modules_decl_vendor_ap) {
-      m_clang_modules_decl_vendor_ap.reset(
+    if (!m_clang_modules_decl_vendor_up) {
+      m_clang_modules_decl_vendor_up.reset(
           ClangModulesDeclVendor::Create(*this));
     }
   }
 
-  return m_clang_modules_decl_vendor_ap.get();
+  return m_clang_modules_decl_vendor_up.get();
 }
 
 Target::StopHookSP Target::CreateStopHook() {
@@ -3456,14 +3456,14 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 //--------------------------------------------------------------
 Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
     : UserID(uid), m_target_sp(target_sp), m_commands(), m_specifier_sp(),
-      m_thread_spec_ap(), m_active(true) {}
+      m_thread_spec_up(), m_active(true) {}
 
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
       m_commands(rhs.m_commands), m_specifier_sp(rhs.m_specifier_sp),
-      m_thread_spec_ap(), m_active(rhs.m_active) {
-  if (rhs.m_thread_spec_ap)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap));
+      m_thread_spec_up(), m_active(rhs.m_active) {
+  if (rhs.m_thread_spec_up)
+    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
 }
 
 Target::StopHook::~StopHook() = default;
@@ -3473,7 +3473,7 @@ void Target::StopHook::SetSpecifier(SymbolContextSpecifier *specifier) {
 }
 
 void Target::StopHook::SetThreadSpecifier(ThreadSpec *specifier) {
-  m_thread_spec_ap.reset(specifier);
+  m_thread_spec_up.reset(specifier);
 }
 
 void Target::StopHook::GetDescription(Stream *s,
@@ -3496,10 +3496,10 @@ void Target::StopHook::GetDescription(Stream *s,
     s->SetIndentLevel(indent_level + 2);
   }
 
-  if (m_thread_spec_ap) {
+  if (m_thread_spec_up) {
     StreamString tmp;
     s->Indent("Thread:\n");
-    m_thread_spec_ap->GetDescription(&tmp, level);
+    m_thread_spec_up->GetDescription(&tmp, level);
     s->SetIndentLevel(indent_level + 4);
     s->Indent(tmp.GetString());
     s->PutCString("\n");

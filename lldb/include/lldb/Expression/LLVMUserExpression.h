@@ -60,7 +60,7 @@ public:
   bool CanInterpret() override { return m_can_interpret; }
 
   virtual Materializer *GetMaterializer() override {
-    return m_materializer_ap.get();
+    return m_materializer_up.get();
   }
 
   //------------------------------------------------------------------
@@ -103,9 +103,9 @@ protected:
 
   std::shared_ptr<IRExecutionUnit>
       m_execution_unit_sp; ///< The execution unit the expression is stored in.
-  std::unique_ptr<Materializer> m_materializer_ap; ///< The materializer to use
-                                                   ///when running the
-                                                   ///expression.
+  std::unique_ptr<Materializer> m_materializer_up; ///< The materializer to use
+                                                   /// when running the
+                                                   /// expression.
   lldb::ModuleWP m_jit_module_wp;
 
   uint32_t

@@ -80,7 +80,7 @@ protected:
   void SetError(const lldb_private::Status &lldb_error);
 
 private:
-  std::unique_ptr<lldb_private::Status> m_opaque_ap;
+  std::unique_ptr<lldb_private::Status> m_opaque_up;
 
   void CreateIfNeeded();
 };

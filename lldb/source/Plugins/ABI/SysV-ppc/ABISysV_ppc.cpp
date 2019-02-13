@@ -618,16 +618,16 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         if (*byte_size <= altivec_reg->byte_size) {
           ProcessSP process_sp(thread.GetProcess());
           if (process_sp) {
-            std::unique_ptr<DataBufferHeap> heap_data_ap(
+            std::unique_ptr<DataBufferHeap> heap_data_up(
                 new DataBufferHeap(*byte_size, 0));
             const ByteOrder byte_order = process_sp->GetByteOrder();
             RegisterValue reg_value;
             if (reg_ctx->ReadRegister(altivec_reg, reg_value)) {
               Status error;
               if (reg_value.GetAsMemoryData(
-                      altivec_reg, heap_data_ap->GetBytes(),
-                      heap_data_ap->GetByteSize(), byte_order, error)) {
-                DataExtractor data(DataBufferSP(heap_data_ap.release()),
+                      altivec_reg, heap_data_up->GetBytes(),
+                      heap_data_up->GetByteSize(), byte_order, error)) {
+                DataExtractor data(DataBufferSP(heap_data_up.release()),
                                    byte_order,
                                    process_sp->GetTarget()
                                        .GetArchitecture()

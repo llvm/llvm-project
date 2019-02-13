@@ -108,8 +108,8 @@ ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     reg_ctx_sp = m_thread_reg_ctx_sp;
-  } else if (m_unwinder_ap) {
-    reg_ctx_sp = m_unwinder_ap->CreateRegisterContextForFrame(frame);
+  } else if (m_unwinder_up) {
+    reg_ctx_sp = m_unwinder_up->CreateRegisterContextForFrame(frame);
   }
 
   return reg_ctx_sp;

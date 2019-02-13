@@ -435,7 +435,7 @@ private:
 
 protected:
 #ifndef LLDB_DISABLE_LIBEDIT
-  std::unique_ptr<Editline> m_editline_ap;
+  std::unique_ptr<Editline> m_editline_up;
 #endif
   IOHandlerDelegate &m_delegate;
   std::string m_prompt;

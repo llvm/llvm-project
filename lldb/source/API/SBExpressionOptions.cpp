@@ -16,11 +16,11 @@ using namespace lldb;
 using namespace lldb_private;
 
 SBExpressionOptions::SBExpressionOptions()
-    : m_opaque_ap(new EvaluateExpressionOptions()) {}
+    : m_opaque_up(new EvaluateExpressionOptions()) {}
 
 SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs) {
-  m_opaque_ap.reset(new EvaluateExpressionOptions());
-  *(m_opaque_ap.get()) = rhs.ref();
+  m_opaque_up.reset(new EvaluateExpressionOptions());
+  *(m_opaque_up.get()) = rhs.ref();
 }
 
 const SBExpressionOptions &SBExpressionOptions::
@@ -34,104 +34,106 @@ operator=(const SBExpressionOptions &rhs) {
 SBExpressionOptions::~SBExpressionOptions() {}
 
 bool SBExpressionOptions::GetCoerceResultToId() const {
-  return m_opaque_ap->DoesCoerceToId();
+  return m_opaque_up->DoesCoerceToId();
 }
 
 void SBExpressionOptions::SetCoerceResultToId(bool coerce) {
-  m_opaque_ap->SetCoerceToId(coerce);
+  m_opaque_up->SetCoerceToId(coerce);
 }
 
 bool SBExpressionOptions::GetUnwindOnError() const {
-  return m_opaque_ap->DoesUnwindOnError();
+  return m_opaque_up->DoesUnwindOnError();
 }
 
 void SBExpressionOptions::SetUnwindOnError(bool unwind) {
-  m_opaque_ap->SetUnwindOnError(unwind);
+  m_opaque_up->SetUnwindOnError(unwind);
 }
 
 bool SBExpressionOptions::GetIgnoreBreakpoints() const {
-  return m_opaque_ap->DoesIgnoreBreakpoints();
+  return m_opaque_up->DoesIgnoreBreakpoints();
 }
 
 void SBExpressionOptions::SetIgnoreBreakpoints(bool ignore) {
-  m_opaque_ap->SetIgnoreBreakpoints(ignore);
+  m_opaque_up->SetIgnoreBreakpoints(ignore);
 }
 
 lldb::DynamicValueType SBExpressionOptions::GetFetchDynamicValue() const {
-  return m_opaque_ap->GetUseDynamic();
+  return m_opaque_up->GetUseDynamic();
 }
 
 void SBExpressionOptions::SetFetchDynamicValue(lldb::DynamicValueType dynamic) {
-  m_opaque_ap->SetUseDynamic(dynamic);
+  m_opaque_up->SetUseDynamic(dynamic);
 }
 
 uint32_t SBExpressionOptions::GetTimeoutInMicroSeconds() const {
-  return m_opaque_ap->GetTimeout() ? m_opaque_ap->GetTimeout()->count() : 0;
+  return m_opaque_up->GetTimeout() ? m_opaque_up->GetTimeout()->count() : 0;
 }
 
 void SBExpressionOptions::SetTimeoutInMicroSeconds(uint32_t timeout) {
-  m_opaque_ap->SetTimeout(timeout == 0 ? Timeout<std::micro>(llvm::None)
+  m_opaque_up->SetTimeout(timeout == 0 ? Timeout<std::micro>(llvm::None)
                                        : std::chrono::microseconds(timeout));
 }
 
 uint32_t SBExpressionOptions::GetOneThreadTimeoutInMicroSeconds() const {
-  return m_opaque_ap->GetOneThreadTimeout() ? m_opaque_ap->GetOneThreadTimeout()->count() : 0;
+  return m_opaque_up->GetOneThreadTimeout()
+             ? m_opaque_up->GetOneThreadTimeout()->count()
+             : 0;
 }
 
 void SBExpressionOptions::SetOneThreadTimeoutInMicroSeconds(uint32_t timeout) {
-  m_opaque_ap->SetOneThreadTimeout(timeout == 0
+  m_opaque_up->SetOneThreadTimeout(timeout == 0
                                        ? Timeout<std::micro>(llvm::None)
                                        : std::chrono::microseconds(timeout));
 }
 
 bool SBExpressionOptions::GetTryAllThreads() const {
-  return m_opaque_ap->GetTryAllThreads();
+  return m_opaque_up->GetTryAllThreads();
 }
 
 void SBExpressionOptions::SetTryAllThreads(bool run_others) {
-  m_opaque_ap->SetTryAllThreads(run_others);
+  m_opaque_up->SetTryAllThreads(run_others);
 }
 
 bool SBExpressionOptions::GetStopOthers() const {
-  return m_opaque_ap->GetStopOthers();
+  return m_opaque_up->GetStopOthers();
 }
 
 void SBExpressionOptions::SetStopOthers(bool run_others) {
-  m_opaque_ap->SetStopOthers(run_others);
+  m_opaque_up->SetStopOthers(run_others);
 }
 
 bool SBExpressionOptions::GetTrapExceptions() const {
-  return m_opaque_ap->GetTrapExceptions();
+  return m_opaque_up->GetTrapExceptions();
 }
 
 void SBExpressionOptions::SetTrapExceptions(bool trap_exceptions) {
-  m_opaque_ap->SetTrapExceptions(trap_exceptions);
+  m_opaque_up->SetTrapExceptions(trap_exceptions);
 }
 
 void SBExpressionOptions::SetLanguage(lldb::LanguageType language) {
-  m_opaque_ap->SetLanguage(language);
+  m_opaque_up->SetLanguage(language);
 }
 
 void SBExpressionOptions::SetCancelCallback(
     lldb::ExpressionCancelCallback callback, void *baton) {
-  m_opaque_ap->SetCancelCallback(callback, baton);
+  m_opaque_up->SetCancelCallback(callback, baton);
 }
 
 bool SBExpressionOptions::GetPlaygroundTransformEnabled() const {
-  return m_opaque_ap->GetPlaygroundTransformEnabled();
+  return m_opaque_up->GetPlaygroundTransformEnabled();
 }
 
 void SBExpressionOptions::SetPlaygroundTransformEnabled(
     bool enable_playground_transform) {
-  m_opaque_ap->SetPlaygroundTransformEnabled(enable_playground_transform);
+  m_opaque_up->SetPlaygroundTransformEnabled(enable_playground_transform);
 }
 
 bool SBExpressionOptions::GetREPLMode() const {
-  return m_opaque_ap->GetREPLEnabled();
+  return m_opaque_up->GetREPLEnabled();
 }
 
 void SBExpressionOptions::SetREPLMode(bool enable_repl_mode) {
-  m_opaque_ap->SetREPLEnabled(enable_repl_mode);
+  m_opaque_up->SetREPLEnabled(enable_repl_mode);
   // Don't trap exceptions in the REPL.  That would make it impossible
   // to call any swift code whose underlying framework used exceptions.
   if (enable_repl_mode == true)
@@ -139,59 +141,59 @@ void SBExpressionOptions::SetREPLMode(bool enable_repl_mode) {
 }
 
 bool SBExpressionOptions::GetGenerateDebugInfo() {
-  return m_opaque_ap->GetGenerateDebugInfo();
+  return m_opaque_up->GetGenerateDebugInfo();
 }
 
 void SBExpressionOptions::SetGenerateDebugInfo(bool b) {
-  return m_opaque_ap->SetGenerateDebugInfo(b);
+  return m_opaque_up->SetGenerateDebugInfo(b);
 }
 
 bool SBExpressionOptions::GetSuppressPersistentResult() {
-  return m_opaque_ap->GetResultIsInternal();
+  return m_opaque_up->GetResultIsInternal();
 }
 
 void SBExpressionOptions::SetSuppressPersistentResult(bool b) {
-  return m_opaque_ap->SetResultIsInternal(b);
+  return m_opaque_up->SetResultIsInternal(b);
 }
 
 const char *SBExpressionOptions::GetPrefix() const {
-  return m_opaque_ap->GetPrefix();
+  return m_opaque_up->GetPrefix();
 }
 
 void SBExpressionOptions::SetPrefix(const char *prefix) {
-  return m_opaque_ap->SetPrefix(prefix);
+  return m_opaque_up->SetPrefix(prefix);
 }
 
 bool SBExpressionOptions::GetAutoApplyFixIts() {
-  return m_opaque_ap->GetAutoApplyFixIts();
+  return m_opaque_up->GetAutoApplyFixIts();
 }
 
 void SBExpressionOptions::SetAutoApplyFixIts(bool b) {
-  return m_opaque_ap->SetAutoApplyFixIts(b);
+  return m_opaque_up->SetAutoApplyFixIts(b);
 }
 
 bool SBExpressionOptions::GetTopLevel() {
-  return m_opaque_ap->GetExecutionPolicy() == eExecutionPolicyTopLevel;
+  return m_opaque_up->GetExecutionPolicy() == eExecutionPolicyTopLevel;
 }
 
 void SBExpressionOptions::SetTopLevel(bool b) {
-  m_opaque_ap->SetExecutionPolicy(b ? eExecutionPolicyTopLevel
-                                    : m_opaque_ap->default_execution_policy);
+  m_opaque_up->SetExecutionPolicy(b ? eExecutionPolicyTopLevel
+                                    : m_opaque_up->default_execution_policy);
 }
 
 bool SBExpressionOptions::GetAllowJIT() {
-  return m_opaque_ap->GetExecutionPolicy() != eExecutionPolicyNever;
+  return m_opaque_up->GetExecutionPolicy() != eExecutionPolicyNever;
 }
 
 void SBExpressionOptions::SetAllowJIT(bool allow) {
-  m_opaque_ap->SetExecutionPolicy(allow ? m_opaque_ap->default_execution_policy
-                                    : eExecutionPolicyNever);
+  m_opaque_up->SetExecutionPolicy(allow ? m_opaque_up->default_execution_policy
+                                        : eExecutionPolicyNever);
 }
 
 EvaluateExpressionOptions *SBExpressionOptions::get() const {
-  return m_opaque_ap.get();
+  return m_opaque_up.get();
 }
 
 EvaluateExpressionOptions &SBExpressionOptions::ref() const {
-  return *(m_opaque_ap.get());
+  return *(m_opaque_up.get());
 }

@@ -404,9 +404,9 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   //
 
   if (m_options.GetREPLEnabled())
-    m_materializer_ap.reset(new SwiftREPLMaterializer());
+    m_materializer_up.reset(new SwiftREPLMaterializer());
   else
-    m_materializer_ap.reset(new Materializer());
+    m_materializer_up.reset(new Materializer());
 
   class OnExit {
   public:
@@ -472,7 +472,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   if (m_execution_unit_sp) {
     if (m_options.GetREPLEnabled()) {
-      llvm::cast<SwiftREPLMaterializer>(m_materializer_ap.get())
+      llvm::cast<SwiftREPLMaterializer>(m_materializer_up.get())
           ->RegisterExecutionUnit(m_execution_unit_sp.get());
     }
 

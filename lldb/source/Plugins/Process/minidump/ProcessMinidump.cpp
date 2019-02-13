@@ -409,10 +409,10 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
 // try to set up symbolic breakpoints, which in turn may force loading more
 // debug information than needed.
 JITLoaderList &ProcessMinidump::GetJITLoaders() {
-  if (!m_jit_loaders_ap) {
-    m_jit_loaders_ap = llvm::make_unique<JITLoaderList>();
+  if (!m_jit_loaders_up) {
+    m_jit_loaders_up = llvm::make_unique<JITLoaderList>();
   }
-  return *m_jit_loaders_ap;
+  return *m_jit_loaders_up;
 }
 
 #define INIT_BOOL(VAR, LONG, SHORT, DESC) \

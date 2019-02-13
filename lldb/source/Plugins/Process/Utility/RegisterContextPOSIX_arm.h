@@ -83,7 +83,7 @@ protected:
   struct RegisterContextPOSIX_arm::FPU
       m_fpr; // floating-point registers including extended register sets.
   std::unique_ptr<lldb_private::RegisterInfoInterface>
-      m_register_info_ap; // Register Info Interface (FreeBSD or Linux)
+      m_register_info_up; // Register Info Interface (FreeBSD or Linux)
 
   // Determines if an extended register set is supported on the processor
   // running the inferior process.

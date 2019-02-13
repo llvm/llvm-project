@@ -2543,7 +2543,7 @@ public:
 
   const lldb::ABISP &GetABI();
 
-  OperatingSystem *GetOperatingSystem() { return m_os_ap.get(); }
+  OperatingSystem *GetOperatingSystem() { return m_os_up.get(); }
 
   virtual LanguageRuntime *GetLanguageRuntime(lldb::LanguageType language,
                                               bool retry_if_null = true);
@@ -2561,7 +2561,7 @@ public:
   bool IsRunning() const;
 
   DynamicCheckerFunctions *GetDynamicCheckers() {
-    return m_dynamic_checkers_ap.get();
+    return m_dynamic_checkers_up.get();
   }
 
   void SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers);
@@ -2942,10 +2942,10 @@ protected:
   };
 
   void SetNextEventAction(Process::NextEventAction *next_event_action) {
-    if (m_next_event_action_ap.get())
-      m_next_event_action_ap->HandleBeingUnshipped();
+    if (m_next_event_action_up.get())
+      m_next_event_action_up->HandleBeingUnshipped();
 
-    m_next_event_action_ap.reset(next_event_action);
+    m_next_event_action_up.reset(next_event_action);
   }
 
   // This is the completer for Attaching:
@@ -3094,15 +3094,15 @@ protected:
   BreakpointSiteList m_breakpoint_site_list; ///< This is the list of breakpoint
                                              ///locations we intend to insert in
                                              ///the target.
-  lldb::DynamicLoaderUP m_dyld_ap;
-  lldb::JITLoaderListUP m_jit_loaders_ap;
-  lldb::DynamicCheckerFunctionsUP m_dynamic_checkers_ap; ///< The functions used
-                                                         ///by the expression
-                                                         ///parser to validate
-                                                         ///data that
-                                                         ///expressions use.
-  lldb::OperatingSystemUP m_os_ap;
-  lldb::SystemRuntimeUP m_system_runtime_ap;
+  lldb::DynamicLoaderUP m_dyld_up;
+  lldb::JITLoaderListUP m_jit_loaders_up;
+  lldb::DynamicCheckerFunctionsUP m_dynamic_checkers_up; ///< The functions used
+                                                         /// by the expression
+                                                         /// parser to validate
+                                                         /// data that
+                                                         /// expressions use.
+  lldb::OperatingSystemUP m_os_up;
+  lldb::SystemRuntimeUP m_system_runtime_up;
   lldb::UnixSignalsSP
       m_unix_signals_sp; /// This is the current signal set for this process.
   lldb::ABISP m_abi_sp;
@@ -3122,7 +3122,7 @@ protected:
                         /// with an explicit call to Kill or Detach?
   LanguageRuntimeCollection m_language_runtimes;
   InstrumentationRuntimeCollection m_instrumentation_runtimes;
-  std::unique_ptr<NextEventAction> m_next_event_action_ap;
+  std::unique_ptr<NextEventAction> m_next_event_action_up;
   std::vector<PreResumeCallbackAndBaton> m_pre_resume_actions;
   ProcessRunLock m_public_run_lock;
   ProcessRunLock m_private_run_lock;
