@@ -1274,14 +1274,20 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     if (!Symbol.isUndefined() && !Rest.startswith("@@@"))
       continue;
 
-    // FIXME: produce a better error message.
+    // FIXME: Get source locations for these errors or diagnose them earlier.
     if (Symbol.isUndefined() && Rest.startswith("@@") &&
-        !Rest.startswith("@@@"))
-      report_fatal_error("A @@ version cannot be undefined");
+        !Rest.startswith("@@@")) {
+      Asm.getContext().reportError(SMLoc(), "versioned symbol " + AliasName +
+                                                " must be defined");
+      continue;
+    }
 
-    if (Renames.count(&Symbol) && Renames[&Symbol] != Alias)
-      report_fatal_error(llvm::Twine("Multiple symbol versions defined for ") +
-                         Symbol.getName());
+    if (Renames.count(&Symbol) && Renames[&Symbol] != Alias) {
+      Asm.getContext().reportError(
+          SMLoc(), llvm::Twine("multiple symbol versions defined for ") +
+                       Symbol.getName());
+      continue;
+    }
 
     Renames.insert(std::make_pair(&Symbol, Alias));
   }

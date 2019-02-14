@@ -94,7 +94,7 @@ public:
 
   StringRef getPassName() const override;
 
-  const MCSubtargetInfo* getSTI() const;
+  const MCSubtargetInfo* getGlobalSTI() const;
 
   AMDGPUTargetStreamer* getTargetStreamer() const;
 

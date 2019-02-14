@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZISELLOWERING_H
 
 #include "SystemZ.h"
+#include "SystemZInstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -513,7 +514,8 @@ public:
   }
 
   static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask);
-
+  static bool analyzeFPImm(const APFloat &Imm, unsigned BitWidth,
+                 unsigned &Start, unsigned &End, const SystemZInstrInfo *TII);
 private:
   const SystemZSubtarget &Subtarget;
 

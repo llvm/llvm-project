@@ -6793,17 +6793,23 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     Mask.append(NumElts, 0);
     return true;
   }
+  case ISD::ZERO_EXTEND:
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
-    // TODO: Handle ISD::ZERO_EXTEND
     SDValue Src = N.getOperand(0);
-    MVT SrcVT = Src.getSimpleValueType();
+    EVT SrcVT = Src.getValueType();
+
+    // Zero-extended source must be a simple vector.
+    if (!SrcVT.isSimple() || (SrcVT.getSizeInBits() % 128) != 0 ||
+        (SrcVT.getScalarSizeInBits() % 8) != 0)
+      return false;
+
     unsigned NumSrcBitsPerElt = SrcVT.getScalarSizeInBits();
     DecodeZeroExtendMask(NumSrcBitsPerElt, NumBitsPerElt, NumElts, Mask);
 
     if (NumSizeInBits != SrcVT.getSizeInBits()) {
       assert((NumSizeInBits % SrcVT.getSizeInBits()) == 0 &&
              "Illegal zero-extension type");
-      SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
+      SrcVT = MVT::getVectorVT(SrcVT.getSimpleVT().getScalarType(),
                                NumSizeInBits / NumSrcBitsPerElt);
       Src = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), SrcVT,
                         DAG.getUNDEF(SrcVT), Src,

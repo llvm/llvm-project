@@ -78,6 +78,28 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
     *Epoch = E;
 }
 
+
+void IterateDirRecurisve(const std::string &Dir,
+                         void (*DirPreCallback)(const std::string &Dir),
+                         void (*DirPostCallback)(const std::string &Dir),
+                         void (*FileCallback)(const std::string &Dir)) {
+  DirPreCallback(Dir);
+  DIR *D = opendir(Dir.c_str());
+  if (!D) return;
+  while (auto E = readdir(D)) {
+    std::string Path = DirPlusFile(Dir, E->d_name);
+    if (E->d_type == DT_REG || E->d_type == DT_LNK ||
+        (E->d_type == DT_UNKNOWN && IsFile(Path)))
+      FileCallback(Path);
+    else if ((E->d_type == DT_DIR ||
+             (E->d_type == DT_UNKNOWN && IsDirectory(Path))) &&
+             *E->d_name != '.')
+      IterateDirRecurisve(Path, DirPreCallback, DirPostCallback, FileCallback);
+  }
+  closedir(D);
+  DirPostCallback(Dir);
+}
+
 char GetSeparator() {
   return '/';
 }

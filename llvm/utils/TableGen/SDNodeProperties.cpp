@@ -38,9 +38,9 @@ unsigned llvm::parseSDPatternOperatorProperties(Record *R) {
     } else if (Property->getName() == "SDNPVariadic") {
       Properties |= 1 << SDNPVariadic;
     } else {
-      PrintFatalError("Unknown SD Node property '" +
-                      Property->getName() + "' on node '" +
-                      R->getName() + "'!");
+      PrintFatalError(R->getLoc(), "Unknown SD Node property '" +
+                                       Property->getName() + "' on node '" +
+                                       R->getName() + "'!");
     }
   }
 

@@ -188,9 +188,10 @@ void ExecuteStage::notifyInstructionIssued(
   LLVM_DEBUG({
     dbgs() << "[E] Instruction Issued: #" << IR << '\n';
     for (const std::pair<ResourceRef, ResourceCycles> &Resource : Used) {
+      assert(Resource.second.getDenominator() == 1 && "Invalid cycles!");
       dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
              << Resource.first.second << "], ";
-      dbgs() << "cycles: " << Resource.second << '\n';
+      dbgs() << "cycles: " << Resource.second.getNumerator() << '\n';
     }
   });
 

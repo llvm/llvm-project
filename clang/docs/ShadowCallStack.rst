@@ -8,28 +8,45 @@ ShadowCallStack
 Introduction
 ============
 
-ShadowCallStack is an **experimental** instrumentation pass, currently only
-implemented for x86_64 and aarch64, that protects programs against return
-address overwrites (e.g. stack buffer overflows.) It works by saving a
-function's return address to a separately allocated 'shadow call stack'
-in the function prolog and checking the return address on the stack against
-the shadow call stack in the function epilog.
+ShadowCallStack is an instrumentation pass, currently only implemented for
+aarch64 and x86_64, that protects programs against return address overwrites
+(e.g. stack buffer overflows.) It works by saving a function's return address
+to a separately allocated 'shadow call stack' in the function prolog in
+non-leaf functions and loading the return address from the shadow call stack
+in the function epilog. The return address is also stored on the regular stack
+for compatibility with unwinders, but is otherwise unused.
+
+The aarch64 implementation is considered production ready, and
+an `implementation of the runtime`_ has been added to Android's libc
+(bionic). The x86_64 implementation was evaluated using Chromium and was
+found to have critical performance and security deficiencies, and may be
+removed in a future release of the compiler. This document only describes
+the aarch64 implementation; details on the x86_64 implementation are found
+in the `Clang 7.0.1 documentation`_.
+
+.. _`implementation of the runtime`: https://android.googlesource.com/platform/bionic/+/808d176e7e0dd727c7f929622ec017f6e065c582/libc/bionic/pthread_create.cpp#128
+.. _`Clang 7.0.1 documentation`: https://releases.llvm.org/7.0.1/tools/clang/docs/ShadowCallStack.html
 
 Comparison
 ----------
 
-To optimize for memory consumption and cache locality, the shadow call stack
-stores an index followed by an array of return addresses. This is in contrast
-to other schemes, like :doc:`SafeStack`, that mirror the entire stack and
-trade-off consuming more memory for shorter function prologs and epilogs with
-fewer memory accesses. Similarly, `Return Flow Guard`_ consumes more memory with
-shorter function prologs and epilogs than ShadowCallStack but suffers from the
-same race conditions (see `Security`_). Intel `Control-flow Enforcement Technology`_
-(CET) is a proposed hardware extension that would add native support to
-use a shadow stack to store/check return addresses at call/return time. It
-would not suffer from race conditions at calls and returns and not incur the
-overhead of function instrumentation, but it does require operating system
-support.
+To optimize for memory consumption and cache locality, the shadow call
+stack stores only an array of return addresses. This is in contrast to other
+schemes, like :doc:`SafeStack`, that mirror the entire stack and trade-off
+consuming more memory for shorter function prologs and epilogs with fewer
+memory accesses.
+
+`Return Flow Guard`_ is a pure software implementation of shadow call stacks
+on x86_64. It is similar to the ShadowCallStack x86_64 implementation but
+trades off higher memory usage for a shorter prologue and epilogue. Like
+x86_64 ShadowCallStack, it is inherently racy due to the architecture's use
+of the stack for calls and returns.
+
+Intel `Control-flow Enforcement Technology`_ (CET) is a proposed hardware
+extension that would add native support to use a shadow stack to store/check
+return addresses at call/return time. Being a hardware implementation, it
+would not suffer from race conditions and would not incur the overhead of
+function instrumentation, but it does require operating system support.
 
 .. _`Return Flow Guard`: https://xlab.tencent.com/en/2016/11/02/return-flow-guard/
 .. _`Control-flow Enforcement Technology`: https://software.intel.com/sites/default/files/managed/4d/2a/control-flow-enforcement-technology-preview.pdf
@@ -37,57 +54,96 @@ support.
 Compatibility
 -------------
 
-ShadowCallStack currently only supports x86_64 and aarch64. A runtime is not
-currently provided in compiler-rt so one must be provided by the compiled
-application.
+A runtime is not provided in compiler-rt so one must be provided by the
+compiled application or the operating system. Integrating the runtime into
+the operating system should be preferred since otherwise all thread creation
+and destruction would need to be intercepted by the application.
 
-On aarch64, the instrumentation makes use of the platform register ``x18``.
-On some platforms, ``x18`` is reserved, and on others, it is designated as
-a scratch register.  This generally means that any code that may run on the
-same thread as code compiled with ShadowCallStack must either target one
-of the platforms whose ABI reserves ``x18`` (currently Darwin, Fuchsia and
-Windows) or be compiled with the flag ``-ffixed-x18``.
+The instrumentation makes use of the platform register ``x18``.  On some
+platforms, ``x18`` is reserved, and on others, it is designated as a scratch
+register.  This generally means that any code that may run on the same thread
+as code compiled with ShadowCallStack must either target one of the platforms
+whose ABI reserves ``x18`` (currently Android, Darwin, Fuchsia and Windows)
+or be compiled with the flag ``-ffixed-x18``. If absolutely necessary, code
+compiled without ``-ffixed-x18`` may be run on the same thread as code that
+uses ShadowCallStack by saving the register value temporarily on the stack
+(`example in Android`_) but this should be done with care since it risks
+leaking the shadow call stack address.
+
+.. _`example in Android`: https://android-review.googlesource.com/c/platform/frameworks/base/+/803717
+
+Because of the use of register ``x18``, the ShadowCallStack feature is
+incompatible with any other feature that may use ``x18``. However, there
+is no inherent reason why ShadowCallStack needs to use register ``x18``
+specifically; in principle, a platform could choose to reserve and use another
+register for ShadowCallStack, but this would be incompatible with the AAPCS64.
+
+Special unwind information is required on functions that are compiled
+with ShadowCallStack and that may be unwound, i.e. functions compiled with
+``-fexceptions`` (which is the default in C++). Some unwinders (such as the
+libgcc 4.9 unwinder) do not understand this unwind info and will segfault
+when encountering it. LLVM libunwind processes this unwind info correctly,
+however. This means that if exceptions are used together with ShadowCallStack,
+the program must use a compatible unwinder.
 
 Security
 ========
 
 ShadowCallStack is intended to be a stronger alternative to
 ``-fstack-protector``. It protects from non-linear overflows and arbitrary
-memory writes to the return address slot; however, similarly to
-``-fstack-protector`` this protection suffers from race conditions because of
-the call-return semantics on x86_64. There is a short race between the call
-instruction and the first instruction in the function that reads the return
-address where an attacker could overwrite the return address and bypass
-ShadowCallStack. Similarly, there is a time-of-check-to-time-of-use race in the
-function epilog where an attacker could overwrite the return address after it
-has been checked and before it has been returned to. Modifying the call-return
-semantics to fix this on x86_64 would incur an unacceptable performance overhead
-due to return branch prediction.
+memory writes to the return address slot.
 
-The instrumentation makes use of the ``gs`` segment register on x86_64,
-or the ``x18`` register on aarch64, to reference the shadow call stack
-meaning that references to the shadow call stack do not have to be stored in
-memory. This makes it possible to implement a runtime that avoids exposing
-the address of the shadow call stack to attackers that can read arbitrary
-memory. However, attackers could still try to exploit side channels exposed
-by the operating system `[1]`_ `[2]`_ or processor `[3]`_ to discover the
-address of the shadow call stack.
+The instrumentation makes use of the ``x18`` register to reference the shadow
+call stack, meaning that references to the shadow call stack do not have
+to be stored in memory. This makes it possible to implement a runtime that
+avoids exposing the address of the shadow call stack to attackers that can
+read arbitrary memory. However, attackers could still try to exploit side
+channels exposed by the operating system `[1]`_ `[2]`_ or processor `[3]`_
+to discover the address of the shadow call stack.
 
 .. _`[1]`: https://eyalitkin.wordpress.com/2017/09/01/cartography-lighting-up-the-shadows/
 .. _`[2]`: https://www.blackhat.com/docs/eu-16/materials/eu-16-Goktas-Bypassing-Clangs-SafeStack.pdf
 .. _`[3]`: https://www.vusec.net/projects/anc/
 
-On x86_64, leaf functions are optimized to store the return address in a
-free register and avoid writing to the shadow call stack if a register is
-available. Very short leaf functions are uninstrumented if their execution
-is judged to be shorter than the race condition window intrinsic to the
-instrumentation.
+Unless care is taken when allocating the shadow call stack, it may be
+possible for an attacker to guess its address using the addresses of
+other allocations. Therefore, the address should be chosen to make this
+difficult. One way to do this is to allocate a large guard region without
+read/write permissions, randomly select a small region within it to be
+used as the address of the shadow call stack and mark only that region as
+read/write. This also mitigates somewhat against processor side channels.
+The intent is that the Android runtime `will do this`_, but the platform will
+first need to be `changed`_ to avoid using ``setrlimit(RLIMIT_AS)`` to limit
+memory allocations in certain processes, as this also limits the number of
+guard regions that can be allocated.
 
-On aarch64, the architecture's call and return instructions (``bl`` and
-``ret``) operate on a register rather than the stack, which means that
-leaf functions are generally protected from return address overwrites even
-without ShadowCallStack. It also means that ShadowCallStack on aarch64 is not
-vulnerable to the same types of time-of-check-to-time-of-use races as x86_64.
+.. _`will do this`: https://android-review.googlesource.com/c/platform/bionic/+/891622
+.. _`changed`: https://android-review.googlesource.com/c/platform/frameworks/av/+/837745
+
+The runtime will need the address of the shadow call stack in order to
+deallocate it when destroying the thread. If the entire program is compiled
+with ``-ffixed-x18``, this is trivial: the address can be derived from the
+value stored in ``x18`` (e.g. by masking out the lower bits). If a guard
+region is used, the address of the start of the guard region could then be
+stored at the start of the shadow call stack itself. But if it is possible
+for code compiled without ``-ffixed-x18`` to run on a thread managed by the
+runtime, which is the case on Android for example, the address must be stored
+somewhere else instead. On Android we store the address of the start of the
+guard region in TLS and deallocate the entire guard region including the
+shadow call stack at thread exit. This is considered acceptable given that
+the address of the start of the guard region is already somewhat guessable.
+
+One way in which the address of the shadow call stack could leak is in the
+``jmp_buf`` data structure used by ``setjmp`` and ``longjmp``. The Android
+runtime `avoids this`_ by only storing the low bits of ``x18`` in the
+``jmp_buf``, which requires the address of the shadow call stack to be
+aligned to its size.
+
+.. _`avoids this`: https://android.googlesource.com/platform/bionic/+/808d176e7e0dd727c7f929622ec017f6e065c582/libc/arch-arm64/bionic/setjmp.S#49
+
+The architecture's call and return instructions (``bl`` and ``ret``) operate on
+a register rather than the stack, which means that leaf functions are generally
+protected from return address overwrites even without ShadowCallStack.
 
 Usage
 =====
@@ -132,17 +188,7 @@ The following example code:
       return bar() + 1;
     }
 
-Generates the following x86_64 assembly when compiled with ``-O2``:
-
-.. code-block:: gas
-
-    push   %rax
-    callq  bar
-    add    $0x1,%eax
-    pop    %rcx
-    retq
-
-or the following aarch64 assembly:
+Generates the following aarch64 assembly when compiled with ``-O2``:
 
 .. code-block:: none
 
@@ -153,33 +199,7 @@ or the following aarch64 assembly:
     ldp     x29, x30, [sp], #16
     ret
 
-
-Adding ``-fsanitize=shadow-call-stack`` would output the following x86_64
-assembly:
-
-.. code-block:: gas
-
-    mov    (%rsp),%r10
-    xor    %r11,%r11
-    addq   $0x8,%gs:(%r11)
-    mov    %gs:(%r11),%r11
-    mov    %r10,%gs:(%r11)
-    push   %rax
-    callq  bar
-    add    $0x1,%eax
-    pop    %rcx
-    xor    %r11,%r11
-    mov    %gs:(%r11),%r10
-    mov    %gs:(%r10),%r10
-    subq   $0x8,%gs:(%r11)
-    cmp    %r10,(%rsp)
-    jne    trap
-    retq
-
-    trap:
-    ud2
-
-or the following aarch64 assembly:
+Adding ``-fsanitize=shadow-call-stack`` would output the following assembly:
 
 .. code-block:: none
 

@@ -577,9 +577,39 @@ bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   return false;
 }
 
+
+// Return true if Imm can be generated with a vector instruction, such as VGM.
+bool SystemZTargetLowering::
+analyzeFPImm(const APFloat &Imm, unsigned BitWidth, unsigned &Start,
+             unsigned &End, const SystemZInstrInfo *TII) {
+  APInt IntImm = Imm.bitcastToAPInt();
+  if (IntImm.getActiveBits() > 64)
+    return false;
+
+  // See if this immediate could be generated with VGM.
+  bool Success = TII->isRxSBGMask(IntImm.getZExtValue(), BitWidth, Start, End);
+  if (!Success)
+    return false;
+  // isRxSBGMask returns the bit numbers for a full 64-bit value,
+  // with 0 denoting 1 << 63 and 63 denoting 1.  Convert them to
+  // bit numbers for an BitsPerElement value, so that 0 denotes
+  // 1 << (BitsPerElement-1).
+  Start -= 64 - BitWidth;
+  End -= 64 - BitWidth;
+  return true;
+}
+
 bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // We can load zero using LZ?R and negative zero using LZ?R;LC?BR.
-  return Imm.isZero() || Imm.isNegZero();
+  if (Imm.isZero() || Imm.isNegZero())
+    return true;
+
+  if (!Subtarget.hasVector())
+    return false;
+  const SystemZInstrInfo *TII =
+      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  unsigned Start, End;
+  return analyzeFPImm(Imm, VT.getSizeInBits(), Start, End, TII);
 }
 
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {

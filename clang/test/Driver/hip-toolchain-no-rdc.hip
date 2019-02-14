@@ -34,7 +34,6 @@
 
 // CHECK: [[LLC: ".*llc"]] [[OPT_BC_DEV_A_803]] "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mattr=-code-object-v3"
 // CHECK-SAME: "-mcpu=gfx803" "-o" [[OBJ_DEV_A_803:".*-gfx803-.*o"]]
 
 // CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "--no-undefined" "-shared"
@@ -62,7 +61,6 @@
 
 // CHECK: [[LLC: ".*llc"]] [[OPT_BC_DEV_A_900]] "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mattr=-code-object-v3"
 // CHECK-SAME: "-mcpu=gfx900" "-o" [[OBJ_DEV_A_900:".*-gfx900-.*o"]]
 
 // CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "--no-undefined" "-shared"
@@ -105,7 +103,6 @@
 
 // CHECK: [[LLC: ".*llc"]] [[OPT_BC_DEV_B_803]] "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mattr=-code-object-v3"
 // CHECK-SAME: "-mcpu=gfx803" "-o" [[OBJ_DEV_B_803:".*-gfx803-.*o"]]
 
 // CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "--no-undefined" "-shared"
@@ -133,7 +130,6 @@
 
 // CHECK: [[LLC: ".*llc"]] [[OPT_BC_DEV_B_900]] "-mtriple=amdgcn-amd-amdhsa"
 // CHECK-SAME: "-filetype=obj"
-// CHECK-SAME: "-mattr=-code-object-v3"
 // CHECK-SAME: "-mcpu=gfx900" "-o" [[OBJ_DEV_B_900:".*-gfx900-.*o"]]
 
 // CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "--no-undefined" "-shared"
