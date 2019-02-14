@@ -464,7 +464,8 @@ private:
   void calcGapWeights(unsigned, SmallVectorImpl<float>&);
   unsigned canReassign(LiveInterval &VirtReg, unsigned PrevReg);
   bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool);
-  bool canEvictInterference(LiveInterval&, unsigned, bool, EvictionCost&);
+  bool canEvictInterference(LiveInterval&, unsigned, bool, EvictionCost&,
+                            const SmallVirtRegSet& = SmallVirtRegSet());
   bool canEvictInterferenceInRange(LiveInterval &VirtReg, unsigned PhysReg,
                                    SlotIndex Start, SlotIndex End,
                                    EvictionCost &MaxCost);
@@ -480,7 +481,8 @@ private:
   unsigned tryAssign(LiveInterval&, AllocationOrder&,
                      SmallVectorImpl<unsigned>&);
   unsigned tryEvict(LiveInterval&, AllocationOrder&,
-                    SmallVectorImpl<unsigned>&, unsigned = ~0u);
+                    SmallVectorImpl<unsigned>&, unsigned = ~0u,
+                    const SmallVirtRegSet& = SmallVirtRegSet());
   unsigned tryRegionSplit(LiveInterval&, AllocationOrder&,
                           SmallVectorImpl<unsigned>&);
   unsigned isSplitBenefitWorthCost(LiveInterval &VirtReg);
@@ -865,7 +867,8 @@ bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
 ///                when returning true.
 /// @returns True when interference can be evicted cheaper than MaxCost.
 bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
-                                    bool IsHint, EvictionCost &MaxCost) {
+                                    bool IsHint, EvictionCost &MaxCost,
+                                    const SmallVirtRegSet &FixedRegisters) {
   // It is only possible to evict virtual register interference.
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg)
     return false;
@@ -895,6 +898,13 @@ bool RAGreedy::canEvictInterference(LiveInterval &VirtReg, unsigned PhysReg,
       LiveInterval *Intf = Q.interferingVRegs()[i - 1];
       assert(TargetRegisterInfo::isVirtualRegister(Intf->reg) &&
              "Only expecting virtual register interference from query");
+
+      // Do not allow eviction of a virtual register if we are in the middle
+      // of last-chance recoloring and this virtual register is one that we
+      // have scavenged a physical register for.
+      if (FixedRegisters.count(Intf->reg))
+        return false;
+
       // Never evict spill products. They cannot split or spill.
       if (getStage(*Intf) == RS_Done)
         return false;
@@ -1093,7 +1103,8 @@ bool RAGreedy::isUnusedCalleeSavedReg(unsigned PhysReg) const {
 unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
                             AllocationOrder &Order,
                             SmallVectorImpl<unsigned> &NewVRegs,
-                            unsigned CostPerUseLimit) {
+                            unsigned CostPerUseLimit,
+                            const SmallVirtRegSet &FixedRegisters) {
   NamedRegionTimer T("evict", "Evict", TimerGroupName, TimerGroupDescription,
                      TimePassesIsEnabled);
 
@@ -1141,7 +1152,8 @@ unsigned RAGreedy::tryEvict(LiveInterval &VirtReg,
       continue;
     }
 
-    if (!canEvictInterference(VirtReg, PhysReg, false, BestCost))
+    if (!canEvictInterference(VirtReg, PhysReg, false, BestCost,
+                              FixedRegisters))
       continue;
 
     // Best so far.
@@ -2610,6 +2622,7 @@ unsigned RAGreedy::tryLastChanceRecoloring(LiveInterval &VirtReg,
   DenseMap<unsigned, unsigned> VirtRegToPhysReg;
   // Mark VirtReg as fixed, i.e., it will not be recolored pass this point in
   // this recoloring "session".
+  assert(!FixedRegisters.count(VirtReg.reg));
   FixedRegisters.insert(VirtReg.reg);
   SmallVector<unsigned, 4> CurrentNewVRegs;
 
@@ -3048,7 +3061,8 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   // get a second chance until they have been split.
   if (Stage != RS_Split)
     if (unsigned PhysReg =
-            tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit)) {
+            tryEvict(VirtReg, Order, NewVRegs, CostPerUseLimit,
+                     FixedRegisters)) {
       unsigned Hint = MRI->getSimpleHint(VirtReg.reg);
       // If VirtReg has a hint and that hint is broken record this
       // virtual register as a recoloring candidate for broken hint.

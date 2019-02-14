@@ -31,7 +31,7 @@ std::recursive_mutex &SymbolFile::GetModuleMutex() const {
 }
 
 SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
-  std::unique_ptr<SymbolFile> best_symfile_ap;
+  std::unique_ptr<SymbolFile> best_symfile_up;
   if (obj_file != nullptr) {
 
     // We need to test the abilities of this section list. So create what it
@@ -57,13 +57,13 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
          (create_callback = PluginManager::GetSymbolFileCreateCallbackAtIndex(
               idx)) != nullptr;
          ++idx) {
-      std::unique_ptr<SymbolFile> curr_symfile_ap(create_callback(obj_file));
+      std::unique_ptr<SymbolFile> curr_symfile_up(create_callback(obj_file));
 
-      if (curr_symfile_ap) {
-        const uint32_t sym_file_abilities = curr_symfile_ap->GetAbilities();
+      if (curr_symfile_up) {
+        const uint32_t sym_file_abilities = curr_symfile_up->GetAbilities();
         if (sym_file_abilities > best_symfile_abilities) {
           best_symfile_abilities = sym_file_abilities;
-          best_symfile_ap.reset(curr_symfile_ap.release());
+          best_symfile_up.reset(curr_symfile_up.release());
           // If any symbol file parser has all of the abilities, then we should
           // just stop looking.
           if ((kAllAbilities & sym_file_abilities) == kAllAbilities)
@@ -71,13 +71,13 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
         }
       }
     }
-    if (best_symfile_ap) {
+    if (best_symfile_up) {
       // Let the winning symbol file parser initialize itself more completely
       // now that it has been chosen
-      best_symfile_ap->InitializeObject();
+      best_symfile_up->InitializeObject();
     }
   }
-  return best_symfile_ap.release();
+  return best_symfile_up.release();
 }
 
 TypeList *SymbolFile::GetTypeList() {

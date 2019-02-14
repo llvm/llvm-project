@@ -128,7 +128,7 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS dsymutil)
   endif()
 
-  add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPS})
+  add_custom_target(lldb-test-deps DEPENDS ${LLDB_TEST_DEPS})
 
   add_subdirectory(test)
   add_subdirectory(unittests)

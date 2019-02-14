@@ -208,6 +208,13 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
 
   // Create an archive file.
   std::string OutputPath = getOutputPath(&Args, Members[0]);
+  // llvm-lib uses relative paths for both regular and thin archives, unlike
+  // standard GNU ar, which only uses relative paths for thin archives and
+  // basenames for regular archives.
+  for (NewArchiveMember &Member : Members)
+    Member.MemberName =
+        Saver.save(computeArchiveRelativePath(OutputPath, Member.MemberName));
+
   if (Error E =
           writeArchive(OutputPath, Members,
                        /*WriteSymtab=*/true, object::Archive::K_GNU,

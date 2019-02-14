@@ -856,13 +856,18 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         continue;
       }
 
-      using namespace PatternMatch;
-      if (((I.use_empty() &&
-            match(&I, m_Intrinsic<Intrinsic::invariant_start>())) ||
-           isGuard(&I)) &&
+      auto IsInvariantStart = [&](Instruction &I) {
+        using namespace PatternMatch;
+        return I.use_empty() &&
+               match(&I, m_Intrinsic<Intrinsic::invariant_start>());
+      };
+      auto MustExecuteWithoutWritesBefore = [&](Instruction &I) {
+        return SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop) &&
+               SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop);
+      };
+      if ((IsInvariantStart(I) || isGuard(&I)) &&
           CurLoop->hasLoopInvariantOperands(&I) &&
-          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop) &&
-          SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop)) {
+          MustExecuteWithoutWritesBefore(I)) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, ORE);
         HoistedInstructions.push_back(&I);

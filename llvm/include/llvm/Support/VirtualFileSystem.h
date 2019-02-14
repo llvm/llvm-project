@@ -298,7 +298,15 @@ public:
 
 /// Gets an \p vfs::FileSystem for the 'real' file system, as seen by
 /// the operating system.
+/// The working directory is linked to the process's working directory.
+/// (This is usually thread-hostile).
 IntrusiveRefCntPtr<FileSystem> getRealFileSystem();
+
+/// Create an \p vfs::FileSystem for the 'real' file system, as seen by
+/// the operating system.
+/// It has its own working directory, independent of (but initially equal to)
+/// that of the process.
+std::unique_ptr<FileSystem> createPhysicalFileSystem();
 
 /// A file system that allows overlaying one \p AbstractFileSystem on top
 /// of another.

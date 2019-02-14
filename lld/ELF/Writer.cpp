@@ -1677,6 +1677,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!Config->Relocatable)
     forEachRelSec(scanRelocations<ELFT>);
 
+  addIRelativeRelocs();
+
   if (In.Plt && !In.Plt->empty())
     In.Plt->addSymbols();
   if (In.Iplt && !In.Iplt->empty())

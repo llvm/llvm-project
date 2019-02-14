@@ -8,7 +8,7 @@ a(n =
 _Static_assert(n == 5, "");
 
 #define M(A)
-M(
+M( // expected-note {{expansion of macro 'M' requested here}}
 #pragma pack(pop) // expected-error {{embedding a #pragma directive within macro arguments is not supported}}
 )
 
@@ -18,7 +18,7 @@ void fail(const char *);
  ({ int result = 0; __VA_ARGS__; if (!result) { fail(#__VA_ARGS__); }; result })
 
 static inline int f(int k) {
-  return MUNCH( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{returning 'void'}}
+  return MUNCH( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{returning 'void'}} expected-note {{expansion of macro 'MUNCH' requested here}}
     if (k < 3)
       result = 24;
     else if (k > 4)

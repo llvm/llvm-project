@@ -394,11 +394,11 @@ void testSmallStructBitfieldsFirstUnnamed() {
   struct {
     int : 4;
     int y : 4;
-  } a, b, c;
+  } a, b, c; // expected-note{{'c' initialized here}}
 
   a.y = 2;
 
-  b = a; // expected-note{{Value assigned to 'c'}}
+  b = a;
   clang_analyzer_eval(b.y == 2); // expected-warning{{TRUE}}
                                  // expected-note@-1{{TRUE}}
 
@@ -411,11 +411,11 @@ void testSmallStructBitfieldsSecondUnnamed() {
   struct {
     int x : 4;
     int : 4;
-  } a, b, c;
+  } a, b, c; // expected-note{{'c' initialized here}}
 
   a.x = 1;
 
-  b = a; // expected-note{{Value assigned to 'c'}}
+  b = a;
   clang_analyzer_eval(b.x == 1); // expected-warning{{TRUE}}
                                  // expected-note@-1{{TRUE}}
 

@@ -55,35 +55,32 @@ define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
 ; AVX:       for.body:
 ; AVX-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; AVX-NEXT:    [[ACC1_056:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD13:%.*]], [[FOR_BODY]] ]
-; AVX-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP23:%.*]], [[FOR_BODY]] ]
+; AVX-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ zeroinitializer, [[ENTRY]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
 ; AVX-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[SRC:%.*]], i64 [[INDVARS_IV]]
 ; AVX-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX]], align 4
 ; AVX-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; AVX-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[DEST:%.*]], i64 [[INDVARS_IV]]
 ; AVX-NEXT:    store float [[ACC1_056]], float* [[ARRAYIDX2]], align 4
-; AVX-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i32 0
-; AVX-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; AVX-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP4]], i32 1
-; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
-; AVX-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP1]], i32 1
-; AVX-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP5]], [[TMP7]]
-; AVX-NEXT:    [[TMP9:%.*]] = fmul <2 x float> zeroinitializer, [[TMP0]]
-; AVX-NEXT:    [[TMP10:%.*]] = fadd <2 x float> [[TMP9]], [[TMP8]]
-; AVX-NEXT:    [[TMP11:%.*]] = fcmp olt <2 x float> [[TMP10]], <float 1.000000e+00, float 1.000000e+00>
-; AVX-NEXT:    [[TMP12:%.*]] = select <2 x i1> [[TMP11]], <2 x float> [[TMP10]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
-; AVX-NEXT:    [[TMP13:%.*]] = fcmp olt <2 x float> [[TMP12]], <float -1.000000e+00, float -1.000000e+00>
-; AVX-NEXT:    [[TMP14:%.*]] = fmul <2 x float> zeroinitializer, [[TMP12]]
-; AVX-NEXT:    [[TMP15:%.*]] = select <2 x i1> [[TMP13]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, <2 x float> [[TMP14]]
-; AVX-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP15]], i32 0
-; AVX-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP15]], i32 1
-; AVX-NEXT:    [[ADD13]] = fadd float [[TMP16]], [[TMP17]]
-; AVX-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> undef, float [[TMP17]], i32 0
-; AVX-NEXT:    [[TMP19:%.*]] = insertelement <2 x float> [[TMP18]], float [[ADD13]], i32 1
-; AVX-NEXT:    [[TMP20:%.*]] = fcmp olt <2 x float> [[TMP19]], <float 1.000000e+00, float 1.000000e+00>
-; AVX-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP20]], <2 x float> [[TMP19]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
-; AVX-NEXT:    [[TMP22:%.*]] = fcmp olt <2 x float> [[TMP21]], <float -1.000000e+00, float -1.000000e+00>
-; AVX-NEXT:    [[TMP23]] = select <2 x i1> [[TMP22]], <2 x float> <float -1.000000e+00, float -1.000000e+00>, <2 x float> [[TMP21]]
+; AVX-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> undef, <2 x i32> <i32 1, i32 0>
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
+; AVX-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP1]], i32 1
+; AVX-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[REORDER_SHUFFLE]], [[TMP3]]
+; AVX-NEXT:    [[TMP5:%.*]] = fmul <2 x float> zeroinitializer, [[TMP0]]
+; AVX-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[TMP5]], [[TMP4]]
+; AVX-NEXT:    [[TMP7:%.*]] = fcmp olt <2 x float> [[TMP6]], <float 1.000000e+00, float 1.000000e+00>
+; AVX-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP7]], <2 x float> [[TMP6]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; AVX-NEXT:    [[TMP9:%.*]] = fcmp olt <2 x float> [[TMP8]], <float -1.000000e+00, float -1.000000e+00>
+; AVX-NEXT:    [[TMP10:%.*]] = fmul <2 x float> zeroinitializer, [[TMP8]]
+; AVX-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP9]], <2 x float> <float -0.000000e+00, float -0.000000e+00>, <2 x float> [[TMP10]]
+; AVX-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
+; AVX-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[TMP11]], i32 1
+; AVX-NEXT:    [[ADD13]] = fadd float [[TMP12]], [[TMP13]]
+; AVX-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> undef, float [[TMP13]], i32 0
+; AVX-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[ADD13]], i32 1
+; AVX-NEXT:    [[TMP16:%.*]] = fcmp olt <2 x float> [[TMP15]], <float 1.000000e+00, float 1.000000e+00>
+; AVX-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP16]], <2 x float> [[TMP15]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; AVX-NEXT:    [[TMP18:%.*]] = fcmp olt <2 x float> [[TMP17]], <float -1.000000e+00, float -1.000000e+00>
+; AVX-NEXT:    [[TMP19]] = select <2 x i1> [[TMP18]], <2 x float> <float -1.000000e+00, float -1.000000e+00>, <2 x float> [[TMP17]]
 ; AVX-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 32
 ; AVX-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; AVX:       for.end:

@@ -748,9 +748,9 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   }
 
   // Build our vtable dispatch handler here:
-  m_vtables_ap.reset(new AppleObjCVTables(process_sp, m_objc_module_sp));
-  if (m_vtables_ap)
-    m_vtables_ap->ReadRegions();
+  m_vtables_up.reset(new AppleObjCVTables(process_sp, m_objc_module_sp));
+  if (m_vtables_up)
+    m_vtables_up->ReadRegions();
 }
 
 lldb::addr_t
@@ -864,8 +864,8 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
   if (!found_it) {
     uint32_t flags;
-    if (m_vtables_ap) {
-      found_it = m_vtables_ap->IsAddressInVTables(curr_pc, flags);
+    if (m_vtables_up) {
+      found_it = m_vtables_up->IsAddressInVTables(curr_pc, flags);
       if (found_it) {
         this_dispatch.name = "vtable";
         this_dispatch.stret_return =

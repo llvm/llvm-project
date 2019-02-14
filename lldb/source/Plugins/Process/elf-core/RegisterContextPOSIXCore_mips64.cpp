@@ -52,7 +52,7 @@ bool RegisterContextCorePOSIX_mips64::ReadRegister(const RegisterInfo *reg_info,
                                                    RegisterValue &value) {
   
   lldb::offset_t offset = reg_info->byte_offset;
-  lldb_private::ArchSpec arch = m_register_info_ap->GetTargetArchitecture();
+  lldb_private::ArchSpec arch = m_register_info_up->GetTargetArchitecture();
   uint64_t v;
   if (IsGPR(reg_info->kinds[lldb::eRegisterKindLLDB])) {
     if (reg_info->byte_size == 4 && !(arch.GetMachine() == llvm::Triple::mips64el))

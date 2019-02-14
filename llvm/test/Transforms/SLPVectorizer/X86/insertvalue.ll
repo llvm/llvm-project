@@ -216,24 +216,21 @@ top:
 define void @julia_load_array_of_i16([4 x i16]* %a, [4 x i16]* %b, [4 x i16]* %c) {
 ; CHECK-LABEL: @julia_load_array_of_i16(
 ; CHECK-NEXT:  top:
-; CHECK-NEXT:    [[A_ARR:%.*]] = load [4 x i16], [4 x i16]* [[A:%.*]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = extractvalue [4 x i16] [[A_ARR]], 0
-; CHECK-NEXT:    [[A2:%.*]] = extractvalue [4 x i16] [[A_ARR]], 2
-; CHECK-NEXT:    [[A1:%.*]] = extractvalue [4 x i16] [[A_ARR]], 1
-; CHECK-NEXT:    [[B_ARR:%.*]] = load [4 x i16], [4 x i16]* [[B:%.*]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = extractvalue [4 x i16] [[B_ARR]], 0
-; CHECK-NEXT:    [[B2:%.*]] = extractvalue [4 x i16] [[B_ARR]], 2
-; CHECK-NEXT:    [[B1:%.*]] = extractvalue [4 x i16] [[B_ARR]], 1
-; CHECK-NEXT:    [[A3:%.*]] = extractvalue [4 x i16] [[A_ARR]], 3
-; CHECK-NEXT:    [[C1:%.*]] = sub i16 [[A1]], [[B1]]
-; CHECK-NEXT:    [[B3:%.*]] = extractvalue [4 x i16] [[B_ARR]], 3
-; CHECK-NEXT:    [[C0:%.*]] = sub i16 [[A0]], [[B0]]
-; CHECK-NEXT:    [[C2:%.*]] = sub i16 [[A2]], [[B2]]
-; CHECK-NEXT:    [[C_ARR0:%.*]] = insertvalue [4 x i16] undef, i16 [[C0]], 0
-; CHECK-NEXT:    [[C_ARR1:%.*]] = insertvalue [4 x i16] [[C_ARR0]], i16 [[C1]], 1
-; CHECK-NEXT:    [[C3:%.*]] = sub i16 [[A3]], [[B3]]
-; CHECK-NEXT:    [[C_ARR2:%.*]] = insertvalue [4 x i16] [[C_ARR1]], i16 [[C2]], 2
-; CHECK-NEXT:    [[C_ARR3:%.*]] = insertvalue [4 x i16] [[C_ARR2]], i16 [[C3]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [4 x i16]* [[A:%.*]] to <4 x i16>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, <4 x i16>* [[TMP0]], align 4
+; CHECK-NEXT:    [[A_ARR:%.*]] = load [4 x i16], [4 x i16]* [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [4 x i16]* [[B:%.*]] to <4 x i16>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i16>, <4 x i16>* [[TMP2]], align 4
+; CHECK-NEXT:    [[B_ARR:%.*]] = load [4 x i16], [4 x i16]* [[B]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i16> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i16> [[TMP4]], i32 0
+; CHECK-NEXT:    [[C_ARR0:%.*]] = insertvalue [4 x i16] undef, i16 [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP4]], i32 1
+; CHECK-NEXT:    [[C_ARR1:%.*]] = insertvalue [4 x i16] [[C_ARR0]], i16 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[C_ARR2:%.*]] = insertvalue [4 x i16] [[C_ARR1]], i16 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[C_ARR3:%.*]] = insertvalue [4 x i16] [[C_ARR2]], i16 [[TMP8]], 3
 ; CHECK-NEXT:    store [4 x i16] [[C_ARR3]], [4 x i16]* [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -173,6 +173,9 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_os;             // __is_target_os
   IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
 
+  // Weak, only valid (and set) while InMacroArgs is true.
+  Token* ArgMacro;
+
   SourceLocation DATELoc, TIMELoc;
 
   // Next __COUNTER__ value, starts at 0.

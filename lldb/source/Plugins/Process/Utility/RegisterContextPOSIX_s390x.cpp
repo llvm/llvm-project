@@ -81,7 +81,7 @@ RegisterContextPOSIX_s390x::RegisterContextPOSIX_s390x(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
-  m_register_info_ap.reset(register_info);
+  m_register_info_up.reset(register_info);
 
   switch (register_info->m_target_arch.GetMachine()) {
   case llvm::Triple::systemz:
@@ -105,7 +105,7 @@ void RegisterContextPOSIX_s390x::Invalidate() {}
 void RegisterContextPOSIX_s390x::InvalidateAllRegisters() {}
 
 const RegisterInfo *RegisterContextPOSIX_s390x::GetRegisterInfo() {
-  return m_register_info_ap->GetRegisterInfo();
+  return m_register_info_up->GetRegisterInfo();
 }
 
 const RegisterInfo *
@@ -151,7 +151,7 @@ size_t RegisterContextPOSIX_s390x::GetRegisterSetCount() {
 
 const RegisterSet *RegisterContextPOSIX_s390x::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {
-    switch (m_register_info_ap->m_target_arch.GetMachine()) {
+    switch (m_register_info_up->m_target_arch.GetMachine()) {
     case llvm::Triple::systemz:
       return &g_reg_sets_s390x[set];
     default:

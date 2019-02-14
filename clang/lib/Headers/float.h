@@ -51,7 +51,7 @@
 #  undef FLT_MANT_DIG
 #  undef DBL_MANT_DIG
 #  undef LDBL_MANT_DIG
-#  if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__)
+#  if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
 #    undef DECIMAL_DIG
 #  endif
 #  undef FLT_DIG
@@ -78,7 +78,7 @@
 #  undef FLT_MIN
 #  undef DBL_MIN
 #  undef LDBL_MIN
-#  if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__)
+#  if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
 #    undef FLT_TRUE_MIN
 #    undef DBL_TRUE_MIN
 #    undef LDBL_TRUE_MIN
@@ -101,7 +101,7 @@
 #define DBL_MANT_DIG __DBL_MANT_DIG__
 #define LDBL_MANT_DIG __LDBL_MANT_DIG__
 
-#if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__)
+#if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
 #  define DECIMAL_DIG __DECIMAL_DIG__
 #endif
 
@@ -137,7 +137,7 @@
 #define DBL_MIN __DBL_MIN__
 #define LDBL_MIN __LDBL_MIN__
 
-#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__)
+#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
 #  define FLT_TRUE_MIN __FLT_DENORM_MIN__
 #  define DBL_TRUE_MIN __DBL_DENORM_MIN__
 #  define LDBL_TRUE_MIN __LDBL_DENORM_MIN__

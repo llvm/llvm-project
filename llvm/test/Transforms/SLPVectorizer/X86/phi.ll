@@ -146,44 +146,49 @@ define float @foo3(float* nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[REORDER_SHUFFLE]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> undef, float [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP3]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[R_052:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[TMP3]], [[ENTRY]] ], [ [[TMP12:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[TMP14:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x float> [ [[REORDER_SHUFFLE]], [[ENTRY]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP5]], 7.000000e+00
-; CHECK-NEXT:    [[ADD6]] = fadd float [[R_052]], [[MUL]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[ARRAYIDX14]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[TMP18:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x float> [ [[REORDER_SHUFFLE]], [[ENTRY]] ], [ [[TMP23:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x float> [ [[TMP5]], [[ENTRY]] ], [ [[TMP26:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP6]], 7.000000e+00
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i32 0
+; CHECK-NEXT:    [[ADD6:%.*]] = fadd float [[TMP9]], [[MUL]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* [[ARRAYIDX14]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[ARRAYIDX19]] to <2 x float>*
-; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x float>, <2 x float>* [[TMP9]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> <float 1.100000e+01, float 1.000000e+01, float 9.000000e+00, float undef>, float [[TMP4]], i32 3
-; CHECK-NEXT:    [[TMP12]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> undef, float [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP14]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[TMP8]], i32 2
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> [[TMP16]], float 8.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP18:%.*]] = fmul <4 x float> [[TMP11]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19]] = fadd <4 x float> [[TMP6]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP20]], 121
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float* [[ARRAYIDX19]] to <2 x float>*
+; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x float>, <2 x float>* [[TMP12]], align 4
+; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <2 x float> [[TMP13]], <2 x float> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> <float 1.100000e+01, float 1.000000e+01, float 9.000000e+00, float undef>, float [[TMP14]], i32 3
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> undef, float [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP18]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP17]], float [[TMP18]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[TMP11]], i32 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float 8.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x float> [[TMP15]], [[TMP21]]
+; CHECK-NEXT:    [[TMP23]] = fadd <4 x float> [[TMP7]], [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP24]], 121
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> undef, float [[ADD6]], i32 0
+; CHECK-NEXT:    [[TMP26]] = insertelement <2 x float> [[TMP25]], float [[TMP16]], i32 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x float> [[TMP19]], i32 3
-; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x float> [[TMP19]], i32 2
-; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP22]]
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x float> [[TMP19]], i32 1
-; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP23]]
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x float> [[TMP19]], i32 0
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP24]]
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x float> [[TMP23]], i32 3
+; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP27]]
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x float> [[TMP23]], i32 2
+; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP28]]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x float> [[TMP23]], i32 1
+; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP29]]
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x float> [[TMP23]], i32 0
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP30]]
 ; CHECK-NEXT:    ret float [[ADD31]]
 ;
 entry:

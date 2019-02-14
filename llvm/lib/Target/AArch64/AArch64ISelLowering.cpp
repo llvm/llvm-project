@@ -5211,50 +5211,20 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
   return DAG.getFrameIndex(FI, VT);
 }
 
+#define GET_REGISTER_MATCHER
+#include "AArch64GenAsmMatcher.inc"
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 unsigned AArch64TargetLowering::getRegisterByName(const char* RegName, EVT VT,
                                                   SelectionDAG &DAG) const {
-  unsigned Reg = StringSwitch<unsigned>(RegName)
-                       .Case("sp", AArch64::SP)
-                       .Case("x1", AArch64::X1)
-                       .Case("w1", AArch64::W1)
-                       .Case("x2", AArch64::X2)
-                       .Case("w2", AArch64::W2)
-                       .Case("x3", AArch64::X3)
-                       .Case("w3", AArch64::W3)
-                       .Case("x4", AArch64::X4)
-                       .Case("w4", AArch64::W4)
-                       .Case("x5", AArch64::X5)
-                       .Case("w5", AArch64::W5)
-                       .Case("x6", AArch64::X6)
-                       .Case("w6", AArch64::W6)
-                       .Case("x7", AArch64::X7)
-                       .Case("w7", AArch64::W7)
-                       .Case("x18", AArch64::X18)
-                       .Case("w18", AArch64::W18)
-                       .Case("x20", AArch64::X20)
-                       .Case("w20", AArch64::W20)
-                       .Default(0);
-  if (((Reg == AArch64::X1 || Reg == AArch64::W1) &&
-      !Subtarget->isXRegisterReserved(1)) ||
-      ((Reg == AArch64::X2 || Reg == AArch64::W2) &&
-      !Subtarget->isXRegisterReserved(2)) ||
-      ((Reg == AArch64::X3 || Reg == AArch64::W3) &&
-      !Subtarget->isXRegisterReserved(3)) ||
-      ((Reg == AArch64::X4 || Reg == AArch64::W4) &&
-      !Subtarget->isXRegisterReserved(4)) ||
-      ((Reg == AArch64::X5 || Reg == AArch64::W5) &&
-      !Subtarget->isXRegisterReserved(5)) ||
-      ((Reg == AArch64::X6 || Reg == AArch64::W6) &&
-      !Subtarget->isXRegisterReserved(6)) ||
-      ((Reg == AArch64::X7 || Reg == AArch64::W7) &&
-      !Subtarget->isXRegisterReserved(7)) ||
-      ((Reg == AArch64::X18 || Reg == AArch64::W18) &&
-      !Subtarget->isXRegisterReserved(18)) ||
-      ((Reg == AArch64::X20 || Reg == AArch64::W20) &&
-      !Subtarget->isXRegisterReserved(20)))
-    Reg = 0;
+  unsigned Reg = MatchRegisterName(RegName);
+  if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
+    const MCRegisterInfo *MRI = Subtarget->getRegisterInfo();
+    unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
+    if (!Subtarget->isXRegisterReserved(DwarfRegNum))
+      Reg = 0;
+  }
   if (Reg)
     return Reg;
   report_fatal_error(Twine("Invalid register name \""

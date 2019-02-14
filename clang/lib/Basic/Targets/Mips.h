@@ -401,6 +401,8 @@ public:
     return (ABI == "n32" || ABI == "n64") || getTargetOpts().ForceEnableInt128;
   }
 
+  unsigned getUnwindWordWidth() const override;
+
   bool validateTarget(DiagnosticsEngine &Diags) const override;
 };
 } // namespace targets

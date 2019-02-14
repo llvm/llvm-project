@@ -118,10 +118,10 @@ struct BitfieldInfo {
 };
 
 ClangASTImporter &DWARFASTParserClang::GetClangASTImporter() {
-  if (!m_clang_ast_importer_ap) {
-    m_clang_ast_importer_ap.reset(new ClangASTImporter);
+  if (!m_clang_ast_importer_up) {
+    m_clang_ast_importer_up.reset(new ClangASTImporter);
   }
-  return *m_clang_ast_importer_ap;
+  return *m_clang_ast_importer_up;
 }
 
 /// Detect a forward declaration that is nested in a DW_TAG_module.
@@ -608,7 +608,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         // the stack, put it on the heap. This function is often called
         // recursively and clang isn't good and sharing the stack space for
         // variables in different blocks.
-        std::unique_ptr<UniqueDWARFASTType> unique_ast_entry_ap(
+        std::unique_ptr<UniqueDWARFASTType> unique_ast_entry_up(
             new UniqueDWARFASTType());
 
         ConstString unique_typename(type_name_const_str);
@@ -628,8 +628,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
           if (dwarf->GetUniqueDWARFASTTypeMap().Find(
                   unique_typename, die, unique_decl,
-                  byte_size ? *byte_size : -1, *unique_ast_entry_ap)) {
-            type_sp = unique_ast_entry_ap->m_type_sp;
+                  byte_size ? *byte_size : -1, *unique_ast_entry_up)) {
+            type_sp = unique_ast_entry_up->m_type_sp;
             if (type_sp) {
               dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
               return type_sp;
@@ -853,12 +853,12 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         // Add our type to the unique type map so we don't end up creating many
         // copies of the same type over and over in the ASTContext for our
         // module
-        unique_ast_entry_ap->m_type_sp = type_sp;
-        unique_ast_entry_ap->m_die = die;
-        unique_ast_entry_ap->m_declaration = unique_decl;
-        unique_ast_entry_ap->m_byte_size = byte_size.getValueOr(0);
+        unique_ast_entry_up->m_type_sp = type_sp;
+        unique_ast_entry_up->m_die = die;
+        unique_ast_entry_up->m_declaration = unique_decl;
+        unique_ast_entry_up->m_byte_size = byte_size.getValueOr(0);
         dwarf->GetUniqueDWARFASTTypeMap().Insert(unique_typename,
-                                                 *unique_ast_entry_ap);
+                                                 *unique_ast_entry_up);
 
         if (is_forward_declaration && die.HasChildren()) {
           // Check to see if the DIE actually has a definition, some version of
@@ -1919,8 +1919,8 @@ public:
         m_property_getter_name(property_getter_name),
         m_property_attributes(property_attributes) {
     if (metadata != NULL) {
-      m_metadata_ap.reset(new ClangASTMetadata());
-      *m_metadata_ap = *metadata;
+      m_metadata_up.reset(new ClangASTMetadata());
+      *m_metadata_up = *metadata;
     }
   }
 
@@ -1938,9 +1938,9 @@ public:
     m_property_getter_name = rhs.m_property_getter_name;
     m_property_attributes = rhs.m_property_attributes;
 
-    if (rhs.m_metadata_ap) {
-      m_metadata_ap.reset(new ClangASTMetadata());
-      *m_metadata_ap = *rhs.m_metadata_ap;
+    if (rhs.m_metadata_up) {
+      m_metadata_up.reset(new ClangASTMetadata());
+      *m_metadata_up = *rhs.m_metadata_up;
     }
     return *this;
   }
@@ -1949,7 +1949,7 @@ public:
     return ClangASTContext::AddObjCClassProperty(
         m_class_opaque_type, m_property_name, m_property_opaque_type,
         m_ivar_decl, m_property_setter_name, m_property_getter_name,
-        m_property_attributes, m_metadata_ap.get());
+        m_property_attributes, m_metadata_up.get());
   }
 
 private:
@@ -1960,7 +1960,7 @@ private:
   const char *m_property_setter_name;
   const char *m_property_getter_name;
   uint32_t m_property_attributes;
-  std::unique_ptr<ClangASTMetadata> m_metadata_ap;
+  std::unique_ptr<ClangASTMetadata> m_metadata_up;
 };
 
 bool DWARFASTParserClang::ParseTemplateDIE(
@@ -2640,9 +2640,9 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         func_name.SetValue(ConstString(name), false);
 
       FunctionSP func_sp;
-      std::unique_ptr<Declaration> decl_ap;
+      std::unique_ptr<Declaration> decl_up;
       if (decl_file != 0 || decl_line != 0 || decl_column != 0)
-        decl_ap.reset(new Declaration(
+        decl_up.reset(new Declaration(
             comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
             decl_line, decl_column));
 
