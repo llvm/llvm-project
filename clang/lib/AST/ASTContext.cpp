@@ -9977,8 +9977,10 @@ VTableContextBase *ASTContext::getVTableContext() {
   return VTContext.get();
 }
 
-MangleContext *ASTContext::createMangleContext() {
-  switch (Target->getCXXABI().getKind()) {
+MangleContext *ASTContext::createMangleContext(const TargetInfo *T) {
+  if (!T)
+    T = Target;
+  switch (T->getCXXABI().getKind()) {
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericARM:

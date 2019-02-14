@@ -611,7 +611,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_ARM_SBREL:
     return Sym.getVA(A) - getARMStaticBase(Sym);
   case R_GOT:
-  case R_GOT_PLT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return Sym.getGotVA() + A;
   case R_GOTONLY_PC:
@@ -630,7 +629,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return Sym.getGotOffset() + A;
   case R_AARCH64_GOT_PAGE_PC:
-  case R_AARCH64_GOT_PAGE_PC_PLT:
   case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(Sym.getGotVA() + A) - getAArch64Page(P);
   case R_GOT_PC:
@@ -678,10 +676,6 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
            In.MipsGot->getGp(File);
   case R_AARCH64_PAGE_PC: {
     uint64_t Val = Sym.isUndefWeak() ? P + A : Sym.getVA(A);
-    return getAArch64Page(Val) - getAArch64Page(P);
-  }
-  case R_AARCH64_PLT_PAGE_PC: {
-    uint64_t Val = Sym.isUndefWeak() ? P + A : Sym.getPltVA() + A;
     return getAArch64Page(Val) - getAArch64Page(P);
   }
   case R_RISCV_PC_INDIRECT: {

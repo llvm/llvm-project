@@ -391,6 +391,7 @@ def warn_cxx98_compat_empty_fnmacro_arg : Warning<
   "empty macro arguments are incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def note_macro_here : Note<"macro %0 defined here">;
+def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 
 def err_pp_opencl_variadic_macros :
   Error<"variadic macros not supported in OpenCL">;

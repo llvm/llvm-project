@@ -13566,6 +13566,30 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_grow, ResultType);
     return Builder.CreateCall(Callee, Args);
   }
+  case WebAssembly::BI__builtin_wasm_memory_init: {
+    llvm::APSInt SegConst;
+    if (!E->getArg(0)->isIntegerConstantExpr(SegConst, getContext()))
+      llvm_unreachable("Constant arg isn't actually constant?");
+    llvm::APSInt MemConst;
+    if (!E->getArg(1)->isIntegerConstantExpr(MemConst, getContext()))
+      llvm_unreachable("Constant arg isn't actually constant?");
+    if (!MemConst.isNullValue())
+      ErrorUnsupported(E, "non-zero memory index");
+    Value *Args[] = {llvm::ConstantInt::get(getLLVMContext(), SegConst),
+                     llvm::ConstantInt::get(getLLVMContext(), MemConst),
+                     EmitScalarExpr(E->getArg(2)), EmitScalarExpr(E->getArg(3)),
+                     EmitScalarExpr(E->getArg(4))};
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_init);
+    return Builder.CreateCall(Callee, Args);
+  }
+  case WebAssembly::BI__builtin_wasm_data_drop: {
+    llvm::APSInt SegConst;
+    if (!E->getArg(0)->isIntegerConstantExpr(SegConst, getContext()))
+      llvm_unreachable("Constant arg isn't actually constant?");
+    Value *Arg = llvm::ConstantInt::get(getLLVMContext(), SegConst);
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_data_drop);
+    return Builder.CreateCall(Callee, {Arg});
+  }
   case WebAssembly::BI__builtin_wasm_throw: {
     Value *Tag = EmitScalarExpr(E->getArg(0));
     Value *Obj = EmitScalarExpr(E->getArg(1));

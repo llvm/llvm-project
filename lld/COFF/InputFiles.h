@@ -46,6 +46,7 @@ class Chunk;
 class Defined;
 class DefinedImportData;
 class DefinedImportThunk;
+class DefinedRegular;
 class Lazy;
 class SectionChunk;
 class Symbol;
@@ -157,6 +158,9 @@ public:
 
 private:
   const coff_section* getSection(uint32_t I);
+  const coff_section *getSection(COFFSymbolRef Sym) {
+    return getSection(Sym.getSectionNumber());
+  }
 
   void initializeChunks();
   void initializeSymbols();
@@ -182,6 +186,16 @@ private:
   void maybeAssociateSEHForMingw(
       COFFSymbolRef Sym, const llvm::object::coff_aux_section_definition *Def,
       const llvm::DenseMap<StringRef, uint32_t> &PrevailingSectionMap);
+
+  // Given a new symbol Sym with comdat selection Selection, if the new
+  // symbol is not (yet) Prevailing and the existing comdat leader set to
+  // Leader, emits a diagnostic if the new symbol and its selection doesn't
+  // match the existing symbol and its selection. If either old or new
+  // symbol have selection IMAGE_COMDAT_SELECT_LARGEST, Sym might replace
+  // the existing leader. In that case, Prevailing is set to true.
+  void handleComdatSelection(COFFSymbolRef Sym,
+                             llvm::COFF::COMDATType &Selection,
+                             bool &Prevailing, DefinedRegular *Leader);
 
   llvm::Optional<Symbol *>
   createDefined(COFFSymbolRef Sym,

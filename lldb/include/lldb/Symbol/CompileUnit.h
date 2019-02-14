@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SourceModule.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"

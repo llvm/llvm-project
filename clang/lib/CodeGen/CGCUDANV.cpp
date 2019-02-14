@@ -42,14 +42,25 @@ private:
   /// Convenience reference to the current module
   llvm::Module &TheModule;
   /// Keeps track of kernel launch stubs emitted in this module
-  llvm::SmallVector<llvm::Function *, 16> EmittedKernels;
-  llvm::SmallVector<std::pair<llvm::GlobalVariable *, unsigned>, 16> DeviceVars;
+  struct KernelInfo {
+    llvm::Function *Kernel;
+    const Decl *D;
+  };
+  llvm::SmallVector<KernelInfo, 16> EmittedKernels;
+  struct VarInfo {
+    llvm::GlobalVariable *Var;
+    const VarDecl *D;
+    unsigned Flag;
+  };
+  llvm::SmallVector<VarInfo, 16> DeviceVars;
   /// Keeps track of variable containing handle of GPU binary. Populated by
   /// ModuleCtorFunction() and used to create corresponding cleanup calls in
   /// ModuleDtorFunction()
   llvm::GlobalVariable *GpuBinaryHandle = nullptr;
   /// Whether we generate relocatable device code.
   bool RelocatableDeviceCode;
+  /// Mangle context for device.
+  std::unique_ptr<MangleContext> DeviceMC;
 
   llvm::FunctionCallee getSetupArgumentFn() const;
   llvm::FunctionCallee getLaunchFn() const;
@@ -106,13 +117,15 @@ private:
 
   void emitDeviceStubBodyLegacy(CodeGenFunction &CGF, FunctionArgList &Args);
   void emitDeviceStubBodyNew(CodeGenFunction &CGF, FunctionArgList &Args);
+  std::string getDeviceSideName(const Decl *ND);
 
 public:
   CGNVCUDARuntime(CodeGenModule &CGM);
 
   void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) override;
-  void registerDeviceVar(llvm::GlobalVariable &Var, unsigned Flags) override {
-    DeviceVars.push_back(std::make_pair(&Var, Flags));
+  void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
+                         unsigned Flags) override {
+    DeviceVars.push_back({&Var, VD, Flags});
   }
 
   /// Creates module constructor function
@@ -138,7 +151,9 @@ CGNVCUDARuntime::addUnderscoredPrefixToName(StringRef FuncName) const {
 CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
     : CGCUDARuntime(CGM), Context(CGM.getLLVMContext()),
       TheModule(CGM.getModule()),
-      RelocatableDeviceCode(CGM.getLangOpts().GPURelocatableDeviceCode) {
+      RelocatableDeviceCode(CGM.getLangOpts().GPURelocatableDeviceCode),
+      DeviceMC(CGM.getContext().createMangleContext(
+          CGM.getContext().getAuxTargetInfo())) {
   CodeGen::CodeGenTypes &Types = CGM.getTypes();
   ASTContext &Ctx = CGM.getContext();
 
@@ -187,9 +202,26 @@ llvm::FunctionType *CGNVCUDARuntime::getRegisterLinkedBinaryFnTy() const {
   return llvm::FunctionType::get(VoidTy, Params, false);
 }
 
+std::string CGNVCUDARuntime::getDeviceSideName(const Decl *D) {
+  auto *ND = cast<const NamedDecl>(D);
+  std::string DeviceSideName;
+  if (DeviceMC->shouldMangleDeclName(ND)) {
+    SmallString<256> Buffer;
+    llvm::raw_svector_ostream Out(Buffer);
+    DeviceMC->mangleName(ND, Out);
+    DeviceSideName = Out.str();
+  } else
+    DeviceSideName = ND->getIdentifier()->getName();
+  return DeviceSideName;
+}
+
 void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
-  EmittedKernels.push_back(CGF.CurFn);
+  assert(getDeviceSideName(CGF.CurFuncDecl) == CGF.CurFn->getName() ||
+         CGF.CGM.getContext().getTargetInfo().getCXXABI() !=
+             CGF.CGM.getContext().getAuxTargetInfo()->getCXXABI());
+
+  EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
                          CudaFeature::CUDA_USES_NEW_LAUNCH))
     emitDeviceStubBodyNew(CGF, Args);
@@ -367,13 +399,19 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   // __cuda_register_globals() and generate __cudaRegisterFunction() call for
   // each emitted kernel.
   llvm::Argument &GpuBinaryHandlePtr = *RegisterKernelsFunc->arg_begin();
-  for (llvm::Function *Kernel : EmittedKernels) {
-    llvm::Constant *KernelName = makeConstantString(Kernel->getName());
+  for (auto &&I : EmittedKernels) {
+    llvm::Constant *KernelName = makeConstantString(getDeviceSideName(I.D));
     llvm::Constant *NullPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
     llvm::Value *Args[] = {
-        &GpuBinaryHandlePtr, Builder.CreateBitCast(Kernel, VoidPtrTy),
-        KernelName, KernelName, llvm::ConstantInt::get(IntTy, -1), NullPtr,
-        NullPtr, NullPtr, NullPtr,
+        &GpuBinaryHandlePtr,
+        Builder.CreateBitCast(I.Kernel, VoidPtrTy),
+        KernelName,
+        KernelName,
+        llvm::ConstantInt::get(IntTy, -1),
+        NullPtr,
+        NullPtr,
+        NullPtr,
+        NullPtr,
         llvm::ConstantPointerNull::get(IntTy->getPointerTo())};
     Builder.CreateCall(RegisterFunc, Args);
   }
@@ -386,10 +424,10 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   llvm::FunctionCallee RegisterVar = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(IntTy, RegisterVarParams, false),
       addUnderscoredPrefixToName("RegisterVar"));
-  for (auto &Pair : DeviceVars) {
-    llvm::GlobalVariable *Var = Pair.first;
-    unsigned Flags = Pair.second;
-    llvm::Constant *VarName = makeConstantString(Var->getName());
+  for (auto &&Info : DeviceVars) {
+    llvm::GlobalVariable *Var = Info.Var;
+    unsigned Flags = Info.Flag;
+    llvm::Constant *VarName = makeConstantString(getDeviceSideName(Info.D));
     uint64_t VarSize =
         CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
     llvm::Value *Args[] = {

@@ -884,6 +884,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp___include_macros:
       case tok::pp_pragma:
         Diag(Result, diag::err_embedded_directive) << II->getName();
+        Diag(*ArgMacro, diag::note_macro_expansion_here)
+            << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
         return;
       default:
