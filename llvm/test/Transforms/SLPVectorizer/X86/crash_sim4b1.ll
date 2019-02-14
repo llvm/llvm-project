@@ -27,25 +27,24 @@ define void @SIM4() {
 ; CHECK:       land.rhs.lr.ph:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end98:
-; CHECK-NEXT:    [[FROM299:%.*]] = getelementptr inbounds [[STRUCT__EXON_T_12_103_220_363_480_649_740_857_1039_1065_1078_1091_1117_1130_1156_1169_1195_1221_1234_1286_1299_1312_1338_1429_1455_1468_1494_1520_1884_1897_1975_2066_2105_2170_2171:%.*]], %struct._exon_t.12.103.220.363.480.649.740.857.1039.1065.1078.1091.1117.1130.1156.1169.1195.1221.1234.1286.1299.1312.1338.1429.1455.1468.1494.1520.1884.1897.1975.2066.2105.2170.2171* undef, i64 0, i32 1
 ; CHECK-NEXT:    br i1 undef, label [[LAND_LHS_TRUE167]], label [[IF_THEN103:%.*]]
 ; CHECK:       if.then103:
 ; CHECK-NEXT:    [[DOTSUB100:%.*]] = select i1 undef, i32 250, i32 undef
 ; CHECK-NEXT:    [[MUL114:%.*]] = shl nsw i32 [[DOTSUB100]], 2
-; CHECK-NEXT:    [[FROM1115:%.*]] = getelementptr inbounds [[STRUCT__EXON_T_12_103_220_363_480_649_740_857_1039_1065_1078_1091_1117_1130_1156_1169_1195_1221_1234_1286_1299_1312_1338_1429_1455_1468_1494_1520_1884_1897_1975_2066_2105_2170_2171]], %struct._exon_t.12.103.220.363.480.649.740.857.1039.1065.1078.1091.1117.1130.1156.1169.1195.1221.1234.1286.1299.1312.1338.1429.1455.1468.1494.1520.1884.1897.1975.2066.2105.2170.2171* undef, i64 0, i32 0
+; CHECK-NEXT:    [[FROM1115:%.*]] = getelementptr inbounds [[STRUCT__EXON_T_12_103_220_363_480_649_740_857_1039_1065_1078_1091_1117_1130_1156_1169_1195_1221_1234_1286_1299_1312_1338_1429_1455_1468_1494_1520_1884_1897_1975_2066_2105_2170_2171:%.*]], %struct._exon_t.12.103.220.363.480.649.740.857.1039.1065.1078.1091.1117.1130.1156.1169.1195.1221.1234.1286.1299.1312.1338.1429.1455.1468.1494.1520.1884.1897.1975.2066.2105.2170.2171* undef, i64 0, i32 0
 ; CHECK-NEXT:    [[COND125:%.*]] = select i1 undef, i32 undef, i32 [[MUL114]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> undef, i32 [[COND125]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[DOTSUB100]], i32 1
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
-; CHECK-NEXT:    [[ROW_0_I:%.*]] = phi i32 [ undef, [[LAND_RHS_I874:%.*]] ], [ [[DOTSUB100]], [[IF_THEN103]] ]
-; CHECK-NEXT:    [[COL_0_I:%.*]] = phi i32 [ undef, [[LAND_RHS_I874]] ], [ [[COND125]], [[IF_THEN103]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ undef, [[LAND_RHS_I874:%.*]] ], [ [[TMP1]], [[IF_THEN103]] ]
 ; CHECK-NEXT:    br i1 undef, label [[LAND_RHS_I874]], label [[FOR_END_I:%.*]]
 ; CHECK:       land.rhs.i874:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_COND_I]], label [[FOR_END_I]]
 ; CHECK:       for.end.i:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN_I:%.*]], label [[IF_END_I:%.*]]
 ; CHECK:       if.then.i:
-; CHECK-NEXT:    [[ADD14_I:%.*]] = add nsw i32 [[ROW_0_I]], undef
-; CHECK-NEXT:    [[ADD15_I:%.*]] = add nsw i32 [[COL_0_I]], undef
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> undef, [[TMP2]]
 ; CHECK-NEXT:    br label [[EXTEND_BW_EXIT:%.*]]
 ; CHECK:       if.end.i:
 ; CHECK-NEXT:    [[ADD16_I:%.*]] = add i32 [[COND125]], [[DOTSUB100]]
@@ -66,14 +65,12 @@ define void @SIM4() {
 ; CHECK:       while.end275.i:
 ; CHECK-NEXT:    br label [[EXTEND_BW_EXIT]]
 ; CHECK:       extend_bw.exit:
-; CHECK-NEXT:    [[ADD14_I1262:%.*]] = phi i32 [ [[ADD14_I]], [[IF_THEN_I]] ], [ undef, [[WHILE_END275_I]] ]
-; CHECK-NEXT:    [[ADD15_I1261:%.*]] = phi i32 [ [[ADD15_I]], [[IF_THEN_I]] ], [ undef, [[WHILE_END275_I]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP3]], [[IF_THEN_I]] ], [ undef, [[WHILE_END275_I]] ]
 ; CHECK-NEXT:    br i1 false, label [[IF_THEN157:%.*]], label [[LAND_LHS_TRUE167]]
 ; CHECK:       if.then157:
-; CHECK-NEXT:    [[ADD158:%.*]] = add nsw i32 [[ADD14_I1262]], 1
-; CHECK-NEXT:    store i32 [[ADD158]], i32* [[FROM299]], align 4
-; CHECK-NEXT:    [[ADD160:%.*]] = add nsw i32 [[ADD15_I1261]], 1
-; CHECK-NEXT:    store i32 [[ADD160]], i32* [[FROM1115]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> <i32 1, i32 1>, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[FROM1115]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    br label [[LAND_LHS_TRUE167]]
 ; CHECK:       land.lhs.true167:
 ; CHECK-NEXT:    unreachable

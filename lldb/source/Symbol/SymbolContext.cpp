@@ -956,9 +956,9 @@ SymbolContext::FindBestGlobalDataSymbol(const ConstString &name, Status &error) 
 //----------------------------------------------------------------------
 
 SymbolContextSpecifier::SymbolContextSpecifier(const TargetSP &target_sp)
-    : m_target_sp(target_sp), m_module_spec(), m_module_sp(), m_file_spec_ap(),
+    : m_target_sp(target_sp), m_module_spec(), m_module_sp(), m_file_spec_up(),
       m_start_line(0), m_end_line(0), m_function_spec(), m_class_name(),
-      m_address_range_ap(), m_type(eNothingSpecified) {}
+      m_address_range_up(), m_type(eNothingSpecified) {}
 
 SymbolContextSpecifier::~SymbolContextSpecifier() {}
 
@@ -1007,7 +1007,7 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     // CompUnits can't necessarily be resolved here, since an inlined function
     // might show up in a number of CompUnits.  Instead we just convert to a
     // FileSpec and store it away.
-    m_file_spec_ap.reset(new FileSpec(spec_string));
+    m_file_spec_up.reset(new FileSpec(spec_string));
     m_type |= eFileSpecified;
     break;
   case eLineStartSpecified:
@@ -1039,12 +1039,12 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
 
 void SymbolContextSpecifier::Clear() {
   m_module_spec.clear();
-  m_file_spec_ap.reset();
+  m_file_spec_up.reset();
   m_function_spec.clear();
   m_class_name.clear();
   m_start_line = 0;
   m_end_line = 0;
-  m_address_range_ap.reset();
+  m_address_range_up.reset();
 
   m_type = eNothingSpecified;
 }
@@ -1070,7 +1070,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
     }
   }
   if (m_type & eFileSpecified) {
-    if (m_file_spec_ap) {
+    if (m_file_spec_up) {
       // If we don't have a block or a comp_unit, then we aren't going to match
       // a source file.
       if (sc.block == nullptr && sc.comp_unit == nullptr)
@@ -1084,7 +1084,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
         if (inline_info != nullptr) {
           was_inlined = true;
           if (!FileSpec::Equal(inline_info->GetDeclaration().GetFile(),
-                               *(m_file_spec_ap.get()), false))
+                               *(m_file_spec_up.get()), false))
             return false;
         }
       }
@@ -1092,7 +1092,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
       // Next check the comp unit, but only if the SymbolContext was not
       // inlined.
       if (!was_inlined && sc.comp_unit != nullptr) {
-        if (!FileSpec::Equal(*(sc.comp_unit), *(m_file_spec_ap.get()), false))
+        if (!FileSpec::Equal(*(sc.comp_unit), *(m_file_spec_up.get()), false))
           return false;
       }
     }
@@ -1165,8 +1165,8 @@ void SymbolContextSpecifier::GetDescription(
       s->Printf("Module: %s\n", m_module_spec.c_str());
   }
 
-  if (m_type == eFileSpecified && m_file_spec_ap != nullptr) {
-    m_file_spec_ap->GetPath(path_str, PATH_MAX);
+  if (m_type == eFileSpecified && m_file_spec_up != nullptr) {
+    m_file_spec_up->GetPath(path_str, PATH_MAX);
     s->Indent();
     s->Printf("File: %s", path_str);
     if (m_type == eLineStartSpecified) {
@@ -1203,10 +1203,10 @@ void SymbolContextSpecifier::GetDescription(
     s->Printf("Class name: %s.\n", m_class_name.c_str());
   }
 
-  if (m_type == eAddressRangeSpecified && m_address_range_ap != nullptr) {
+  if (m_type == eAddressRangeSpecified && m_address_range_up != nullptr) {
     s->Indent();
     s->PutCString("Address range: ");
-    m_address_range_ap->Dump(s, m_target_sp.get(),
+    m_address_range_up->Dump(s, m_target_sp.get(),
                              Address::DumpStyleLoadAddress,
                              Address::DumpStyleFileAddress);
     s->PutCString("\n");

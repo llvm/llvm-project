@@ -67,22 +67,6 @@ public:
 /// resources. This class is also responsible for tracking the progress of
 /// instructions from the dispatch stage, until the write-back stage.
 ///
-/// An instruction dispatched to the Scheduler is initially placed into either
-/// the 'WaitSet' or the 'ReadySet' depending on the availability of the input
-/// operands.
-///
-/// An instruction is moved from the WaitSet to the ReadySet when register
-/// operands become available, and all memory dependencies are met.
-/// Instructions that are moved from the WaitSet to the ReadySet transition
-/// in state from 'IS_DISPATCHED' to 'IS_READY'.
-///
-/// On every cycle, the Scheduler checks if it can promote instructions from the
-/// WaitSet to the ReadySet.
-///
-/// An Instruction is moved from the ReadySet the `IssuedSet` when it is issued
-/// to a (one or more) pipeline(s). This event also causes an instruction state
-/// transition (i.e. from state IS_READY, to state IS_EXECUTING). An Instruction
-/// leaves the IssuedSet when it reaches the write-back stage.
 class Scheduler : public HardwareUnit {
   LSUnit &LSU;
 
@@ -92,7 +76,38 @@ class Scheduler : public HardwareUnit {
   // Hardware resources that are managed by this scheduler.
   std::unique_ptr<ResourceManager> Resources;
 
+  // Instructions dispatched to the Scheduler are internally classified based on
+  // the instruction stage (see Instruction::InstrStage).
+  //
+  // An Instruction dispatched to the Scheduler is added to the WaitSet if not
+  // all its register operands are available, and at least one latency is unknown.
+  // By construction, the WaitSet only contains instructions that are in the
+  // IS_DISPATCHED stage.
+  //
+  // An Instruction transitions from the WaitSet to the PendingSet if the
+  // instruction is not ready yet, but the latency of every register read is known.
+  // Instructions in the PendingSet are expected to be in the IS_PENDING stage.
+  //
+  // Instructions in the PendingSet are immediately dominated only by
+  // instructions that have already been issued to the underlying pipelines.
+  // In the presence of bottlenecks caused by data dependencies, the PendingSet
+  // can be inspected to identify problematic data dependencies between
+  // instructions.
+  //
+  // An instruction is moved to the ReadySet when all register operands become
+  // available, and all memory dependencies are met.  Instructions that are
+  // moved from the PendingSet to the ReadySet transition in state from
+  // 'IS_PENDING' to 'IS_READY'.
+  //
+  // On every cycle, the Scheduler checks if it can promote instructions from the
+  // PendingSet to the ReadySet.
+  //
+  // An Instruction is moved from the ReadySet to the `IssuedSet` when it starts
+  // exection. This event also causes an instruction state transition (i.e. from
+  // state IS_READY, to state IS_EXECUTING). An Instruction leaves the IssuedSet
+  // only when it reaches the write-back stage.
   std::vector<InstRef> WaitSet;
+  std::vector<InstRef> PendingSet;
   std::vector<InstRef> ReadySet;
   std::vector<InstRef> IssuedSet;
 
@@ -118,9 +133,14 @@ class Scheduler : public HardwareUnit {
   // vector 'Executed'.
   void updateIssuedSet(SmallVectorImpl<InstRef> &Executed);
 
-  // Try to promote instructions from WaitSet to ReadySet.
+  // Try to promote instructions from the PendingSet to the ReadySet.
   // Add promoted instructions to the 'Ready' vector in input.
-  void promoteToReadySet(SmallVectorImpl<InstRef> &Ready);
+  // Returns true if at least one instruction was promoted.
+  bool promoteToReadySet(SmallVectorImpl<InstRef> &Ready);
+
+  // Try to promote instructions from the WaitSet to the PendingSet.
+  // Returns true if at least one instruction was promoted.
+  bool promoteToPendingSet();
 
 public:
   Scheduler(const MCSchedModel &Model, LSUnit &Lsu)

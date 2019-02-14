@@ -522,7 +522,7 @@ void CommandInterpreter::LoadCommandDictionary() {
 
   size_t num_regexes = llvm::array_lengthof(break_regexes);
 
-  std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-break",
           "Set a breakpoint using one of several shorthand formats.",
@@ -550,28 +550,29 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          2, CommandCompletions::eSymbolCompletion |
-                 CommandCompletions::eSourceFileCompletion,
+          2,
+          CommandCompletions::eSymbolCompletion |
+              CommandCompletions::eSourceFileCompletion,
           false));
 
-  if (break_regex_cmd_ap) {
+  if (break_regex_cmd_up) {
     bool success = true;
     for (size_t i = 0; i < num_regexes; i++) {
-      success = break_regex_cmd_ap->AddRegexCommand(break_regexes[i][0],
+      success = break_regex_cmd_up->AddRegexCommand(break_regexes[i][0],
                                                     break_regexes[i][1]);
       if (!success)
         break;
     }
     success =
-        break_regex_cmd_ap->AddRegexCommand("^$", "breakpoint list --full");
+        break_regex_cmd_up->AddRegexCommand("^$", "breakpoint list --full");
 
     if (success) {
-      CommandObjectSP break_regex_cmd_sp(break_regex_cmd_ap.release());
+      CommandObjectSP break_regex_cmd_sp(break_regex_cmd_up.release());
       m_command_dict[break_regex_cmd_sp->GetCommandName()] = break_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> tbreak_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> tbreak_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-tbreak",
           "Set a one-shot breakpoint using one of several shorthand formats.",
@@ -599,11 +600,12 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          2, CommandCompletions::eSymbolCompletion |
-                 CommandCompletions::eSourceFileCompletion,
+          2,
+          CommandCompletions::eSymbolCompletion |
+              CommandCompletions::eSourceFileCompletion,
           false));
 
-  if (tbreak_regex_cmd_ap) {
+  if (tbreak_regex_cmd_up) {
     bool success = true;
     for (size_t i = 0; i < num_regexes; i++) {
       // If you add a resultant command string longer than 1024 characters be
@@ -614,155 +616,158 @@ void CommandInterpreter::LoadCommandDictionary() {
       lldbassert(num_printed < 1024);
       UNUSED_IF_ASSERT_DISABLED(num_printed);
       success =
-          tbreak_regex_cmd_ap->AddRegexCommand(break_regexes[i][0], buffer);
+          tbreak_regex_cmd_up->AddRegexCommand(break_regexes[i][0], buffer);
       if (!success)
         break;
     }
     success =
-        tbreak_regex_cmd_ap->AddRegexCommand("^$", "breakpoint list --full");
+        tbreak_regex_cmd_up->AddRegexCommand("^$", "breakpoint list --full");
 
     if (success) {
-      CommandObjectSP tbreak_regex_cmd_sp(tbreak_regex_cmd_ap.release());
+      CommandObjectSP tbreak_regex_cmd_sp(tbreak_regex_cmd_up.release());
       m_command_dict[tbreak_regex_cmd_sp->GetCommandName()] =
           tbreak_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> attach_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> attach_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-attach", "Attach to process by ID or name.",
           "_regexp-attach <pid> | <process-name>", 2, 0, false));
-  if (attach_regex_cmd_ap) {
-    if (attach_regex_cmd_ap->AddRegexCommand("^([0-9]+)[[:space:]]*$",
+  if (attach_regex_cmd_up) {
+    if (attach_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                              "process attach --pid %1") &&
-        attach_regex_cmd_ap->AddRegexCommand(
+        attach_regex_cmd_up->AddRegexCommand(
             "^(-.*|.* -.*)$", "process attach %1") && // Any options that are
                                                       // specified get passed to
                                                       // 'process attach'
-        attach_regex_cmd_ap->AddRegexCommand("^(.+)$",
+        attach_regex_cmd_up->AddRegexCommand("^(.+)$",
                                              "process attach --name '%1'") &&
-        attach_regex_cmd_ap->AddRegexCommand("^$", "process attach")) {
-      CommandObjectSP attach_regex_cmd_sp(attach_regex_cmd_ap.release());
+        attach_regex_cmd_up->AddRegexCommand("^$", "process attach")) {
+      CommandObjectSP attach_regex_cmd_sp(attach_regex_cmd_up.release());
       m_command_dict[attach_regex_cmd_sp->GetCommandName()] =
           attach_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> down_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> down_regex_cmd_up(
       new CommandObjectRegexCommand(*this, "_regexp-down",
                                     "Select a newer stack frame.  Defaults to "
                                     "moving one frame, a numeric argument can "
                                     "specify an arbitrary number.",
                                     "_regexp-down [<count>]", 2, 0, false));
-  if (down_regex_cmd_ap) {
-    if (down_regex_cmd_ap->AddRegexCommand("^$", "frame select -r -1") &&
-        down_regex_cmd_ap->AddRegexCommand("^([0-9]+)$",
+  if (down_regex_cmd_up) {
+    if (down_regex_cmd_up->AddRegexCommand("^$", "frame select -r -1") &&
+        down_regex_cmd_up->AddRegexCommand("^([0-9]+)$",
                                            "frame select -r -%1")) {
-      CommandObjectSP down_regex_cmd_sp(down_regex_cmd_ap.release());
+      CommandObjectSP down_regex_cmd_sp(down_regex_cmd_up.release());
       m_command_dict[down_regex_cmd_sp->GetCommandName()] = down_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> up_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> up_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-up",
           "Select an older stack frame.  Defaults to moving one "
           "frame, a numeric argument can specify an arbitrary number.",
           "_regexp-up [<count>]", 2, 0, false));
-  if (up_regex_cmd_ap) {
-    if (up_regex_cmd_ap->AddRegexCommand("^$", "frame select -r 1") &&
-        up_regex_cmd_ap->AddRegexCommand("^([0-9]+)$", "frame select -r %1")) {
-      CommandObjectSP up_regex_cmd_sp(up_regex_cmd_ap.release());
+  if (up_regex_cmd_up) {
+    if (up_regex_cmd_up->AddRegexCommand("^$", "frame select -r 1") &&
+        up_regex_cmd_up->AddRegexCommand("^([0-9]+)$", "frame select -r %1")) {
+      CommandObjectSP up_regex_cmd_sp(up_regex_cmd_up.release());
       m_command_dict[up_regex_cmd_sp->GetCommandName()] = up_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> display_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> display_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-display",
           "Evaluate an expression at every stop (see 'help target stop-hook'.)",
           "_regexp-display expression", 2, 0, false));
-  if (display_regex_cmd_ap) {
-    if (display_regex_cmd_ap->AddRegexCommand(
+  if (display_regex_cmd_up) {
+    if (display_regex_cmd_up->AddRegexCommand(
             "^(.+)$", "target stop-hook add -o \"expr -- %1\"")) {
-      CommandObjectSP display_regex_cmd_sp(display_regex_cmd_ap.release());
+      CommandObjectSP display_regex_cmd_sp(display_regex_cmd_up.release());
       m_command_dict[display_regex_cmd_sp->GetCommandName()] =
           display_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> undisplay_regex_cmd_ap(
-      new CommandObjectRegexCommand(
-          *this, "_regexp-undisplay", "Stop displaying expression at every "
-                                      "stop (specified by stop-hook index.)",
-          "_regexp-undisplay stop-hook-number", 2, 0, false));
-  if (undisplay_regex_cmd_ap) {
-    if (undisplay_regex_cmd_ap->AddRegexCommand("^([0-9]+)$",
+  std::unique_ptr<CommandObjectRegexCommand> undisplay_regex_cmd_up(
+      new CommandObjectRegexCommand(*this, "_regexp-undisplay",
+                                    "Stop displaying expression at every "
+                                    "stop (specified by stop-hook index.)",
+                                    "_regexp-undisplay stop-hook-number", 2, 0,
+                                    false));
+  if (undisplay_regex_cmd_up) {
+    if (undisplay_regex_cmd_up->AddRegexCommand("^([0-9]+)$",
                                                 "target stop-hook delete %1")) {
-      CommandObjectSP undisplay_regex_cmd_sp(undisplay_regex_cmd_ap.release());
+      CommandObjectSP undisplay_regex_cmd_sp(undisplay_regex_cmd_up.release());
       m_command_dict[undisplay_regex_cmd_sp->GetCommandName()] =
           undisplay_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> connect_gdb_remote_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> connect_gdb_remote_cmd_up(
       new CommandObjectRegexCommand(
-          *this, "gdb-remote", "Connect to a process via remote GDB server.  "
-                               "If no host is specifed, localhost is assumed.",
+          *this, "gdb-remote",
+          "Connect to a process via remote GDB server.  "
+          "If no host is specifed, localhost is assumed.",
           "gdb-remote [<hostname>:]<portnum>", 2, 0, false));
-  if (connect_gdb_remote_cmd_ap) {
-    if (connect_gdb_remote_cmd_ap->AddRegexCommand(
+  if (connect_gdb_remote_cmd_up) {
+    if (connect_gdb_remote_cmd_up->AddRegexCommand(
             "^([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)$",
             "process connect --plugin gdb-remote connect://%1:%2") &&
-        connect_gdb_remote_cmd_ap->AddRegexCommand(
+        connect_gdb_remote_cmd_up->AddRegexCommand(
             "^([[:digit:]]+)$",
             "process connect --plugin gdb-remote connect://localhost:%1")) {
-      CommandObjectSP command_sp(connect_gdb_remote_cmd_ap.release());
+      CommandObjectSP command_sp(connect_gdb_remote_cmd_up.release());
       m_command_dict[command_sp->GetCommandName()] = command_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> connect_kdp_remote_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> connect_kdp_remote_cmd_up(
       new CommandObjectRegexCommand(
-          *this, "kdp-remote", "Connect to a process via remote KDP server.  "
-                               "If no UDP port is specified, port 41139 is "
-                               "assumed.",
+          *this, "kdp-remote",
+          "Connect to a process via remote KDP server.  "
+          "If no UDP port is specified, port 41139 is "
+          "assumed.",
           "kdp-remote <hostname>[:<portnum>]", 2, 0, false));
-  if (connect_kdp_remote_cmd_ap) {
-    if (connect_kdp_remote_cmd_ap->AddRegexCommand(
+  if (connect_kdp_remote_cmd_up) {
+    if (connect_kdp_remote_cmd_up->AddRegexCommand(
             "^([^:]+:[[:digit:]]+)$",
             "process connect --plugin kdp-remote udp://%1") &&
-        connect_kdp_remote_cmd_ap->AddRegexCommand(
+        connect_kdp_remote_cmd_up->AddRegexCommand(
             "^(.+)$", "process connect --plugin kdp-remote udp://%1:41139")) {
-      CommandObjectSP command_sp(connect_kdp_remote_cmd_ap.release());
+      CommandObjectSP command_sp(connect_kdp_remote_cmd_up.release());
       m_command_dict[command_sp->GetCommandName()] = command_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> bt_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> bt_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-bt",
           "Show the current thread's call stack.  Any numeric argument "
           "displays at most that many "
           "frames.  The argument 'all' displays all threads.",
           "bt [<digit> | all]", 2, 0, false));
-  if (bt_regex_cmd_ap) {
+  if (bt_regex_cmd_up) {
     // accept but don't document "bt -c <number>" -- before bt was a regex
     // command if you wanted to backtrace three frames you would do "bt -c 3"
     // but the intention is to have this emulate the gdb "bt" command and so
     // now "bt 3" is the preferred form, in line with gdb.
-    if (bt_regex_cmd_ap->AddRegexCommand("^([[:digit:]]+)$",
+    if (bt_regex_cmd_up->AddRegexCommand("^([[:digit:]]+)$",
                                          "thread backtrace -c %1") &&
-        bt_regex_cmd_ap->AddRegexCommand("^-c ([[:digit:]]+)$",
+        bt_regex_cmd_up->AddRegexCommand("^-c ([[:digit:]]+)$",
                                          "thread backtrace -c %1") &&
-        bt_regex_cmd_ap->AddRegexCommand("^all$", "thread backtrace all") &&
-        bt_regex_cmd_ap->AddRegexCommand("^$", "thread backtrace")) {
-      CommandObjectSP command_sp(bt_regex_cmd_ap.release());
+        bt_regex_cmd_up->AddRegexCommand("^all$", "thread backtrace all") &&
+        bt_regex_cmd_up->AddRegexCommand("^$", "thread backtrace")) {
+      CommandObjectSP command_sp(bt_regex_cmd_up.release());
       m_command_dict[command_sp->GetCommandName()] = command_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> list_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> list_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-list",
           "List relevant source code using one of several shorthand formats.",
@@ -775,30 +780,30 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-list -[<count>]      // List previous <count> lines\n"
           "_regexp-list                 // List subsequent lines",
           2, CommandCompletions::eSourceFileCompletion, false));
-  if (list_regex_cmd_ap) {
-    if (list_regex_cmd_ap->AddRegexCommand("^([0-9]+)[[:space:]]*$",
+  if (list_regex_cmd_up) {
+    if (list_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                            "source list --line %1") &&
-        list_regex_cmd_ap->AddRegexCommand(
+        list_regex_cmd_up->AddRegexCommand(
             "^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]"
             "]*$",
             "source list --file '%1' --line %2") &&
-        list_regex_cmd_ap->AddRegexCommand(
+        list_regex_cmd_up->AddRegexCommand(
             "^\\*?(0x[[:xdigit:]]+)[[:space:]]*$",
             "source list --address %1") &&
-        list_regex_cmd_ap->AddRegexCommand("^-[[:space:]]*$",
+        list_regex_cmd_up->AddRegexCommand("^-[[:space:]]*$",
                                            "source list --reverse") &&
-        list_regex_cmd_ap->AddRegexCommand(
+        list_regex_cmd_up->AddRegexCommand(
             "^-([[:digit:]]+)[[:space:]]*$",
             "source list --reverse --count %1") &&
-        list_regex_cmd_ap->AddRegexCommand("^(.+)$",
+        list_regex_cmd_up->AddRegexCommand("^(.+)$",
                                            "source list --name \"%1\"") &&
-        list_regex_cmd_ap->AddRegexCommand("^$", "source list")) {
-      CommandObjectSP list_regex_cmd_sp(list_regex_cmd_ap.release());
+        list_regex_cmd_up->AddRegexCommand("^$", "source list")) {
+      CommandObjectSP list_regex_cmd_sp(list_regex_cmd_up.release());
       m_command_dict[list_regex_cmd_sp->GetCommandName()] = list_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> env_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> env_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-env",
           "Shorthand for viewing and setting environment variables.",
@@ -806,17 +811,17 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-env                  // Show enrivonment\n"
           "_regexp-env <name>=<value>   // Set an environment variable",
           2, 0, false));
-  if (env_regex_cmd_ap) {
-    if (env_regex_cmd_ap->AddRegexCommand("^$",
+  if (env_regex_cmd_up) {
+    if (env_regex_cmd_up->AddRegexCommand("^$",
                                           "settings show target.env-vars") &&
-        env_regex_cmd_ap->AddRegexCommand("^([A-Za-z_][A-Za-z_0-9]*=.*)$",
+        env_regex_cmd_up->AddRegexCommand("^([A-Za-z_][A-Za-z_0-9]*=.*)$",
                                           "settings set target.env-vars %1")) {
-      CommandObjectSP env_regex_cmd_sp(env_regex_cmd_ap.release());
+      CommandObjectSP env_regex_cmd_sp(env_regex_cmd_up.release());
       m_command_dict[env_regex_cmd_sp->GetCommandName()] = env_regex_cmd_sp;
     }
   }
 
-  std::unique_ptr<CommandObjectRegexCommand> jump_regex_cmd_ap(
+  std::unique_ptr<CommandObjectRegexCommand> jump_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-jump", "Set the program counter to a new address.",
           "\n"
@@ -825,16 +830,16 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-jump <file>:<line>\n"
           "_regexp-jump *<addr>\n",
           2, 0, false));
-  if (jump_regex_cmd_ap) {
-    if (jump_regex_cmd_ap->AddRegexCommand("^\\*(.*)$",
+  if (jump_regex_cmd_up) {
+    if (jump_regex_cmd_up->AddRegexCommand("^\\*(.*)$",
                                            "thread jump --addr %1") &&
-        jump_regex_cmd_ap->AddRegexCommand("^([0-9]+)$",
+        jump_regex_cmd_up->AddRegexCommand("^([0-9]+)$",
                                            "thread jump --line %1") &&
-        jump_regex_cmd_ap->AddRegexCommand("^([^:]+):([0-9]+)$",
+        jump_regex_cmd_up->AddRegexCommand("^([^:]+):([0-9]+)$",
                                            "thread jump --file %1 --line %2") &&
-        jump_regex_cmd_ap->AddRegexCommand("^([+\\-][0-9]+)$",
+        jump_regex_cmd_up->AddRegexCommand("^([+\\-][0-9]+)$",
                                            "thread jump --by %1")) {
-      CommandObjectSP jump_regex_cmd_sp(jump_regex_cmd_ap.release());
+      CommandObjectSP jump_regex_cmd_sp(jump_regex_cmd_up.release());
       m_command_dict[jump_regex_cmd_sp->GetCommandName()] = jump_regex_cmd_sp;
     }
   }

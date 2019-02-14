@@ -202,7 +202,7 @@ protected:
   llvm::sys::RWMutex m_first_die_mutex;
   // A table similar to the .debug_aranges table, but this one points to the
   // exact DW_TAG_subprogram DIEs
-  std::unique_ptr<DWARFDebugAranges> m_func_aranges_ap;
+  std::unique_ptr<DWARFDebugAranges> m_func_aranges_up;
   dw_addr_t m_base_addr = 0;
   dw_offset_t m_length = 0;
   uint16_t m_version = 0;

@@ -153,6 +153,32 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
   return E;
 }
 
+/// Comparing internal representations of symbolic values (via
+/// SVal::operator==()) is a valid way to check if the value was updated,
+/// unless it's a LazyCompoundVal that may have a different internal
+/// representation every time it is loaded from the state. In this function we
+/// do an approximate comparison for lazy compound values, checking that they
+/// are the immediate snapshots of the tracked region's bindings within the
+/// node's respective states but not really checking that these snapshots
+/// actually contain the same set of bindings.
+bool hasVisibleUpdate(const ExplodedNode *LeftNode, SVal LeftVal,
+                      const ExplodedNode *RightNode, SVal RightVal) {
+  if (LeftVal == RightVal)
+    return true;
+
+  const auto LLCV = LeftVal.getAs<nonloc::LazyCompoundVal>();
+  if (!LLCV)
+    return false;
+
+  const auto RLCV = RightVal.getAs<nonloc::LazyCompoundVal>();
+  if (!RLCV)
+    return false;
+
+  return LLCV->getRegion() == RLCV->getRegion() &&
+    LLCV->getStore() == LeftNode->getState()->getStore() &&
+    RLCV->getStore() == RightNode->getState()->getStore();
+}
+
 //===----------------------------------------------------------------------===//
 // Definitions for bug reporter visitors.
 //===----------------------------------------------------------------------===//
@@ -1177,7 +1203,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
     if (Succ->getState()->getSVal(R) != V)
       return nullptr;
 
-    if (Pred->getState()->getSVal(R) == V) {
+    if (hasVisibleUpdate(Pred, Pred->getState()->getSVal(R), Succ, V)) {
       Optional<PostStore> PS = Succ->getLocationAs<PostStore>();
       if (!PS || PS->getLocationValue() != R)
         return nullptr;
@@ -1198,6 +1224,7 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
     // UndefinedVal.)
     if (Optional<CallEnter> CE = Succ->getLocationAs<CallEnter>()) {
       if (const auto *VR = dyn_cast<VarRegion>(R)) {
+
         const auto *Param = cast<ParmVarDecl>(VR->getDecl());
 
         ProgramStateManager &StateMgr = BRC.getStateManager();

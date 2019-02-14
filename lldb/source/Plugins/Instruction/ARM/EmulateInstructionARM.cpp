@@ -739,17 +739,17 @@ EmulateInstructionARM::CreateInstance(const ArchSpec &arch,
   if (EmulateInstructionARM::SupportsEmulatingInstructionsOfTypeStatic(
           inst_type)) {
     if (arch.GetTriple().getArch() == llvm::Triple::arm) {
-      std::unique_ptr<EmulateInstructionARM> emulate_insn_ap(
+      std::unique_ptr<EmulateInstructionARM> emulate_insn_up(
           new EmulateInstructionARM(arch));
 
-      if (emulate_insn_ap)
-        return emulate_insn_ap.release();
+      if (emulate_insn_up)
+        return emulate_insn_up.release();
     } else if (arch.GetTriple().getArch() == llvm::Triple::thumb) {
-      std::unique_ptr<EmulateInstructionARM> emulate_insn_ap(
+      std::unique_ptr<EmulateInstructionARM> emulate_insn_up(
           new EmulateInstructionARM(arch));
 
-      if (emulate_insn_ap)
-        return emulate_insn_ap.release();
+      if (emulate_insn_up)
+        return emulate_insn_up.release();
     }
   }
 

@@ -19,16 +19,18 @@ using namespace llvm;
 WebAssemblySelectionDAGInfo::~WebAssemblySelectionDAGInfo() = default; // anchor
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
-    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1, SDValue Op2,
-    SDValue Op3, unsigned Align, bool IsVolatile, bool AlwaysInline,
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, unsigned Align, bool IsVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   if (!DAG.getMachineFunction()
            .getSubtarget<WebAssemblySubtarget>()
            .hasBulkMemory())
     return SDValue();
 
-  return DAG.getNode(WebAssemblyISD::MEMORY_COPY, DL, MVT::Other, Chain, Op1,
-                     Op2, Op3);
+  SDValue MemIdx = DAG.getConstant(0, DL, MVT::i32);
+  return DAG.getNode(WebAssemblyISD::MEMORY_COPY, DL, MVT::Other,
+                     {Chain, MemIdx, MemIdx, Dst, Src,
+                      DAG.getZExtOrTrunc(Size, DL, MVT::i32)});
 }
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemmove(
@@ -38,4 +40,20 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemmove(
   return EmitTargetCodeForMemcpy(DAG, DL, Chain, Op1, Op2, Op3, Align,
                                  IsVolatile, false, DstPtrInfo,
                                  SrcPtrInfo);
+}
+
+SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemset(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Val,
+    SDValue Size, unsigned Align, bool IsVolatile,
+    MachinePointerInfo DstPtrInfo) const {
+  if (!DAG.getMachineFunction()
+           .getSubtarget<WebAssemblySubtarget>()
+           .hasBulkMemory())
+    return SDValue();
+
+  SDValue MemIdx = DAG.getConstant(0, DL, MVT::i32);
+  // Only low byte matters for val argument, so anyext the i8
+  return DAG.getNode(WebAssemblyISD::MEMORY_FILL, DL, MVT::Other, Chain, MemIdx,
+                     Dst, DAG.getAnyExtOrTrunc(Val, DL, MVT::i32),
+                     DAG.getZExtOrTrunc(Size, DL, MVT::i32));
 }

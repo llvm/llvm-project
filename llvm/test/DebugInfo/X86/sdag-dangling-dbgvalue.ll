@@ -101,6 +101,7 @@ entry3:
 ; Verify that the def comes before the for bar4.
 define i32 @test4() local_unnamed_addr #0 !dbg !40 {
 ; CHECK-LABEL: bb.0.entry4
+; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[FOO4]], !DIExpression()
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO4]], !DIExpression()
 ; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr64 =
 ; CHECK-NEXT:    DBG_VALUE [[REG4]], $noreg, ![[BAR4]], !DIExpression()
@@ -114,6 +115,7 @@ entry4:
 ; Verify that we do not get a DBG_VALUE that maps foo5 to @S here.
 define i32 @test5() local_unnamed_addr #0 !dbg !47 {
 ; CHECK-LABEL: bb.0.entry5:
+; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[FOO5]], !DIExpression()
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO5]], !DIExpression()
 ; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 =
 ; CHECK-NEXT:    DBG_VALUE [[REG5]], $noreg, ![[BAR5]], !DIExpression()

@@ -3,15 +3,17 @@
 // RUN: llvm-readobj -elf-output-style GNU --notes %t | FileCheck %s --check-prefix=GNU
 // RUN: llvm-readobj -elf-output-style LLVM --notes %t | FileCheck %s --check-prefix=LLVM
 
-// GNU:      Displaying notes found at file offset 0x00000040 with length 0x000000d8:
+// GNU:      Displaying notes found at file offset 0x00000040 with length 0x000000f8:
 // GNU-NEXT:   Owner                 Data size       Description
-// GNU-NEXT:   GNU                   0x000000c8      NT_GNU_PROPERTY_TYPE_0 (property note)
+// GNU-NEXT:   GNU                   0x000000e8      NT_GNU_PROPERTY_TYPE_0 (property note)
 // GNU-NEXT:     Properties:  stack size: 0x100
 // GNU-NEXT:     stack size: 0x100
 // GNU-NEXT:     no copy on protected
 // GNU-NEXT:     x86 feature: SHSTK
 // GNU-NEXT:     x86 feature: IBT, SHSTK
 // GNU-NEXT:     x86 feature: <None>
+// GNU-NEXT:     x86 ISA needed: CMOV, SSE, SSE2, SSE3, SSSE3, SSE4_1, SSE4_2, AVX, AVX2, FMA, AVX512F, AVX512CD
+// GNU-NEXT:     x86 ISA used: AVX512ER, AVX512PF, AVX512VL, AVX512DQ, AVX512BW, AVX512_4FMAPS, AVX512_4VNNIW, AVX512_BITALG, AVX512_IFMA, AVX512_VBMI, AVX512_VBMI2, AVX512_VNNI
 // GNU-NEXT:     x86 feature needed: x86, x87
 // GNU-NEXT:     x86 feature used: XSAVEOPT, XSAVEC
 // GNU-NEXT:     <application-specific type 0xfefefefe>
@@ -25,10 +27,10 @@
 // LLVM:      Notes [
 // LLVM-NEXT:   NoteSection {
 // LLVM-NEXT:     Offset: 0x40
-// LLVM-NEXT:     Size: 0xD8
+// LLVM-NEXT:     Size: 0xF8
 // LLVM-NEXT:     Note {
 // LLVM-NEXT:       Owner: GNU
-// LLVM-NEXT:       Data size: 0xC8
+// LLVM-NEXT:       Data size: 0xE8
 // LLVM-NEXT:       Type: NT_GNU_PROPERTY_TYPE_0 (property note)
 // LLVM-NEXT:       Property [
 // LLVM-NEXT:         stack size: 0x100
@@ -37,6 +39,8 @@
 // LLVM-NEXT:         x86 feature: SHSTK
 // LLVM-NEXT:         x86 feature: IBT, SHSTK
 // LLVM-NEXT:         x86 feature: <None>
+// LLVM-NEXT:         x86 ISA needed: CMOV, SSE, SSE2, SSE3, SSSE3, SSE4_1, SSE4_2, AVX, AVX2, FMA, AVX512F, AVX512CD
+// LLVM-NEXT:         x86 ISA used: AVX512ER, AVX512PF, AVX512VL, AVX512DQ, AVX512BW, AVX512_4FMAPS, AVX512_4VNNIW, AVX512_BITALG, AVX512_IFMA, AVX512_VBMI, AVX512_VBMI2, AVX512_VNNI
 // LLVM-NEXT:         x86 feature needed: x86, x87
 // LLVM-NEXT:         x86 feature used: XSAVEOPT, XSAVEC
 // LLVM-NEXT:         <application-specific type 0xfefefefe>
@@ -90,6 +94,16 @@ begin:
   .long 4           /* Data size */
   .long 0           /* Empty flags, not an error */
   .p2align 3        /* Align to 8 byte for 64 bit */
+
+  .long 0xc0008000         /* Type: GNU_PROPERTY_X86_ISA_1_NEEDED */
+  .long 4                  /* Data size */
+  .long 0x00000fff         /* CMOV, ... */
+  .p2align 3               /* Align to 8 byte for 64 bit */
+
+  .long 0xc0010000         /* Type: GNU_PROPERTY_X86_ISA_1_USED */
+  .long 4                  /* Data size */
+  .long 0x00fff000         /* AVX512_ER, ... */
+  .p2align 3               /* Align to 8 byte for 64 bit */
 
   .long 0xc0008001         /* Type: GNU_PROPERTY_X86_FEATURE_2_NEEDED */
   .long 4                  /* Data size */

@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c89 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++11 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++14 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++17 -ffreestanding %s
 // expected-no-diagnostics
 
 /* Basic floating point conformance checks against:
@@ -11,7 +14,7 @@
 /*
     C11,    5.2.4.2.2p11,   pp. 30
     C99,    5.2.4.2.2p9,    pp. 25
-    C89,    2.2.4.2 
+    C89,    2.2.4.2
 */
 #include <float.h>
 
@@ -42,7 +45,7 @@
 #endif
 
 
-#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__)
+#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
     #ifndef FLT_DECIMAL_DIG
         #error "Mandatory macro FLT_DECIMAL_DIG is missing."
     #elif   FLT_DECIMAL_DIG < 6
@@ -98,7 +101,7 @@
 #endif
 
 
-#if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__)
+#if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
     #ifndef DECIMAL_DIG
         #error "Mandatory macro DECIMAL_DIG is missing."
     #elif   DECIMAL_DIG < 10
@@ -212,13 +215,13 @@ _Static_assert(FLT_MANT_DIG == __FLT_MANT_DIG__, "");
 _Static_assert(DBL_MANT_DIG == __DBL_MANT_DIG__, "");
 _Static_assert(LDBL_MANT_DIG == __LDBL_MANT_DIG__, "");
 
-#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__)
+#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
 _Static_assert(FLT_DECIMAL_DIG == __FLT_DECIMAL_DIG__, "");
 _Static_assert(DBL_DECIMAL_DIG == __DBL_DECIMAL_DIG__, "");
 _Static_assert(LDBL_DECIMAL_DIG == __LDBL_DECIMAL_DIG__, "");
 #endif
 
-#if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__)
+#if __STDC_VERSION__ >= 199901L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
 _Static_assert(DECIMAL_DIG == __DECIMAL_DIG__, "");
 #endif
 

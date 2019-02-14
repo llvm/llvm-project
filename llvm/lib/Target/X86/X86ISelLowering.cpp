@@ -257,14 +257,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT     , MVT::i64  , Custom);
     setOperationAction(ISD::SINT_TO_FP     , MVT::i64  , Custom);
 
-    if (X86ScalarSSEf32) {
-      setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Promote);
-      // f32 and f64 cases are Legal, f80 case is not
-      setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
-    } else {
-      setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Custom);
-      setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
-    }
+    setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Custom);
+    setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
   } else {
     setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Promote);
     setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Expand);
@@ -18070,9 +18064,9 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 // Otherwise we lower it to a sequence ending with a FIST, return a
 // <FIST, StackSlot> pair, and the caller is responsible for loading
 // the final integer result from StackSlot.
-std::pair<SDValue,SDValue>
+SDValue
 X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
-                                   bool IsSigned, bool IsReplace) const {
+                                   bool IsSigned) const {
   SDLoc DL(Op);
 
   EVT DstTy = Op.getValueType();
@@ -18082,7 +18076,7 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
   if (TheVT != MVT::f32 && TheVT != MVT::f64 && TheVT != MVT::f80) {
     // f16 must be promoted before using the lowering in this routine.
     // fp128 does not use this lowering.
-    return std::make_pair(SDValue(), SDValue());
+    return SDValue();
   }
 
   // If using FIST to compute an unsigned i64, we'll need some fixup
@@ -18093,7 +18087,9 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                        (!Subtarget.is64Bit() ||
                         !isScalarFPTypeInSSEReg(TheVT));
 
-  if (!IsSigned && DstTy != MVT::i64 && !Subtarget.hasAVX512()) {
+  if (!IsSigned && DstTy != MVT::i64) {
+    assert(!Subtarget.hasAVX512() &&
+           "AVX512 should have already been handled!");
     // Replace the fp-to-uint32 operation with an fp-to-sint64 FIST.
     // The low 32 bits of the fist result will have the correct uint32 result.
     assert(DstTy == MVT::i32 && "Unexpected FP_TO_UINT");
@@ -18106,9 +18102,9 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
 
   // These are really Legal.
   if (DstTy == MVT::i32 && isScalarFPTypeInSSEReg(TheVT))
-    return std::make_pair(SDValue(), SDValue());
+    return SDValue();
   if (Subtarget.is64Bit() && DstTy == MVT::i64 && isScalarFPTypeInSSEReg(TheVT))
-    return std::make_pair(SDValue(), SDValue());
+    return SDValue();
 
   // We lower FP->int64 into FISTP64 followed by a load from a temporary
   // stack slot.
@@ -18116,8 +18112,6 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
   unsigned MemSize = DstTy.getSizeInBits()/8;
   int SSFI = MF.getFrameInfo().CreateStackObject(MemSize, MemSize, false);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
-
-  const unsigned Opc = X86ISD::FP_TO_INT_IN_MEM;
 
   SDValue Chain = DAG.getEntryNode();
   SDValue Value = Op.getOperand(0);
@@ -18190,51 +18184,41 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
     StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
   }
 
+  // Build the FP_TO_INT*_IN_MEM
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, SSFI),
                               MachineMemOperand::MOStore, MemSize, MemSize);
+  SDValue Ops[] = { Chain, Value, StackSlot };
+  SDValue FIST = DAG.getMemIntrinsicNode(X86ISD::FP_TO_INT_IN_MEM, DL,
+                                         DAG.getVTList(MVT::Other),
+                                         Ops, DstTy, MMO);
 
-  if (UnsignedFixup) {
+  if (!UnsignedFixup)
+    return DAG.getLoad(Op.getValueType(), SDLoc(Op), FIST, StackSlot,
+                       MachinePointerInfo());
 
-    // Insert the FIST, load its result as two i32's,
-    // and XOR the high i32 with Adjust.
+  // Insert the FIST, load its result as two i32's,
+  // and XOR the high i32 with Adjust.
 
-    SDValue FistOps[] = { Chain, Value, StackSlot };
-    SDValue FIST = DAG.getMemIntrinsicNode(Opc, DL, DAG.getVTList(MVT::Other),
-                                           FistOps, DstTy, MMO);
+  SDValue Low32 =
+      DAG.getLoad(MVT::i32, DL, FIST, StackSlot, MachinePointerInfo());
+  SDValue HighAddr = DAG.getMemBasePlusOffset(StackSlot, 4, DL);
 
-    SDValue Low32 =
-        DAG.getLoad(MVT::i32, DL, FIST, StackSlot, MachinePointerInfo());
-    SDValue HighAddr = DAG.getMemBasePlusOffset(StackSlot, 4, DL);
+  SDValue High32 =
+      DAG.getLoad(MVT::i32, DL, FIST, HighAddr, MachinePointerInfo());
+  High32 = DAG.getNode(ISD::XOR, DL, MVT::i32, High32, Adjust);
 
-    SDValue High32 =
-        DAG.getLoad(MVT::i32, DL, FIST, HighAddr, MachinePointerInfo());
-    High32 = DAG.getNode(ISD::XOR, DL, MVT::i32, High32, Adjust);
-
-    if (Subtarget.is64Bit()) {
-      // Join High32 and Low32 into a 64-bit result.
-      // (High32 << 32) | Low32
-      Low32 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Low32);
-      High32 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, High32);
-      High32 = DAG.getNode(ISD::SHL, DL, MVT::i64, High32,
-                           DAG.getConstant(32, DL, MVT::i8));
-      SDValue Result = DAG.getNode(ISD::OR, DL, MVT::i64, High32, Low32);
-      return std::make_pair(Result, SDValue());
-    }
-
-    SDValue ResultOps[] = { Low32, High32 };
-
-    SDValue pair = IsReplace
-      ? DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, ResultOps)
-      : DAG.getMergeValues(ResultOps, DL);
-    return std::make_pair(pair, SDValue());
-  } else {
-    // Build the FP_TO_INT*_IN_MEM
-    SDValue Ops[] = { Chain, Value, StackSlot };
-    SDValue FIST = DAG.getMemIntrinsicNode(Opc, DL, DAG.getVTList(MVT::Other),
-                                           Ops, DstTy, MMO);
-    return std::make_pair(FIST, StackSlot);
+  if (Subtarget.is64Bit()) {
+    // Join High32 and Low32 into a 64-bit result.
+    // (High32 << 32) | Low32
+    Low32 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Low32);
+    High32 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, High32);
+    High32 = DAG.getNode(ISD::SHL, DL, MVT::i64, High32,
+                         DAG.getConstant(32, DL, MVT::i8));
+    return DAG.getNode(ISD::OR, DL, MVT::i64, High32, Low32);
   }
+
+  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, { Low32, High32 });
 }
 
 static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
@@ -18708,12 +18692,12 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
 SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT;
   MVT VT = Op.getSimpleValueType();
+  SDValue Src = Op.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+  SDLoc dl(Op);
 
   if (VT.isVector()) {
-    SDValue Src = Op.getOperand(0);
-    SDLoc dl(Op);
-
-    if (VT == MVT::v2i1 && Src.getSimpleValueType() == MVT::v2f64) {
+    if (VT == MVT::v2i1 && SrcVT == MVT::v2f64) {
       MVT ResVT = MVT::v4i32;
       MVT TruncVT = MVT::v4i1;
       unsigned Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
@@ -18733,7 +18717,7 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
     }
 
     assert(Subtarget.hasDQI() && Subtarget.hasVLX() && "Requires AVX512DQVL!");
-    if (VT == MVT::v2i64 && Src.getSimpleValueType() == MVT::v2f32) {
+    if (VT == MVT::v2i64 && SrcVT  == MVT::v2f32) {
       return DAG.getNode(IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI, dl, VT,
                          DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, Src,
                                      DAG.getUNDEF(MVT::v2f32)));
@@ -18744,19 +18728,28 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
   assert(!VT.isVector());
 
-  std::pair<SDValue,SDValue> Vals = FP_TO_INTHelper(Op, DAG,
-    IsSigned, /*IsReplace=*/ false);
-  SDValue FIST = Vals.first, StackSlot = Vals.second;
+  if (!IsSigned && Subtarget.hasAVX512()) {
+    // Conversions from f32/f64 should be legal.
+    if (SrcVT != MVT::f80)
+      return Op;
+
+    // Use default expansion.
+    if (VT == MVT::i64)
+      return SDValue();
+  }
+
+  // Promote i16 to i32 if we can use a SSE operation.
+  if (VT == MVT::i16 && isScalarFPTypeInSSEReg(SrcVT)) {
+    assert(IsSigned && "Expected i16 FP_TO_UINT to have been promoted!");
+    SDValue Res = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, Src);
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+  }
+
+  if (SDValue V = FP_TO_INTHelper(Op, DAG, IsSigned))
+    return V;
+
   // If FP_TO_INTHelper failed, the node is actually supposed to be Legal.
-  if (!FIST.getNode())
-    return Op;
-
-  if (StackSlot.getNode())
-    // Load the result.
-    return DAG.getLoad(VT, SDLoc(Op), FIST, StackSlot, MachinePointerInfo());
-
-  // The node is the result.
-  return FIST;
+  return Op;
 }
 
 static SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) {
@@ -27020,17 +27013,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    std::pair<SDValue,SDValue> Vals =
-        FP_TO_INTHelper(SDValue(N, 0), DAG, IsSigned, /*IsReplace=*/ true);
-    SDValue FIST = Vals.first, StackSlot = Vals.second;
-    if (FIST.getNode()) {
-      // Return a load from the stack slot.
-      if (StackSlot.getNode())
-        Results.push_back(
-            DAG.getLoad(VT, dl, FIST, StackSlot, MachinePointerInfo()));
-      else
-        Results.push_back(FIST);
-    }
+    if (SDValue V = FP_TO_INTHelper(SDValue(N, 0), DAG, IsSigned))
+      Results.push_back(V);
     return;
   }
   case ISD::SINT_TO_FP: {

@@ -741,11 +741,11 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
 }
 
 bool Instruction::DumpEmulation(const ArchSpec &arch) {
-  std::unique_ptr<EmulateInstruction> insn_emulator_ap(
+  std::unique_ptr<EmulateInstruction> insn_emulator_up(
       EmulateInstruction::FindPlugin(arch, eInstructionTypeAny, nullptr));
-  if (insn_emulator_ap) {
-    insn_emulator_ap->SetInstruction(GetOpcode(), GetAddress(), nullptr);
-    return insn_emulator_ap->EvaluateInstruction(0);
+  if (insn_emulator_up) {
+    insn_emulator_up->SetInstruction(GetOpcode(), GetAddress(), nullptr);
+    return insn_emulator_up->EvaluateInstruction(0);
   }
 
   return false;
@@ -992,11 +992,11 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
   arch.SetTriple(llvm::Triple(value_sp->GetStringValue()));
 
   bool success = false;
-  std::unique_ptr<EmulateInstruction> insn_emulator_ap(
+  std::unique_ptr<EmulateInstruction> insn_emulator_up(
       EmulateInstruction::FindPlugin(arch, eInstructionTypeAny, nullptr));
-  if (insn_emulator_ap)
+  if (insn_emulator_up)
     success =
-        insn_emulator_ap->TestEmulation(out_stream, arch, data_dictionary);
+        insn_emulator_up->TestEmulation(out_stream, arch, data_dictionary);
 
   if (success)
     out_stream->Printf("Emulation test succeeded.");
@@ -1012,14 +1012,14 @@ bool Instruction::Emulate(
     EmulateInstruction::WriteMemoryCallback write_mem_callback,
     EmulateInstruction::ReadRegisterCallback read_reg_callback,
     EmulateInstruction::WriteRegisterCallback write_reg_callback) {
-  std::unique_ptr<EmulateInstruction> insn_emulator_ap(
+  std::unique_ptr<EmulateInstruction> insn_emulator_up(
       EmulateInstruction::FindPlugin(arch, eInstructionTypeAny, nullptr));
-  if (insn_emulator_ap) {
-    insn_emulator_ap->SetBaton(baton);
-    insn_emulator_ap->SetCallbacks(read_mem_callback, write_mem_callback,
+  if (insn_emulator_up) {
+    insn_emulator_up->SetBaton(baton);
+    insn_emulator_up->SetCallbacks(read_mem_callback, write_mem_callback,
                                    read_reg_callback, write_reg_callback);
-    insn_emulator_ap->SetInstruction(GetOpcode(), GetAddress(), nullptr);
-    return insn_emulator_ap->EvaluateInstruction(evaluate_options);
+    insn_emulator_up->SetInstruction(GetOpcode(), GetAddress(), nullptr);
+    return insn_emulator_up->EvaluateInstruction(evaluate_options);
   }
 
   return false;

@@ -2771,7 +2771,7 @@ QualType ASTContext::getFunctionTypeWithExceptionSpec(
 
   // Anything else must be a function type. Rebuild it with the new exception
   // specification.
-  const auto *Proto = cast<FunctionProtoType>(Orig);
+  const auto *Proto = Orig->getAs<FunctionProtoType>();
   return getFunctionType(
       Proto->getReturnType(), Proto->getParamTypes(),
       Proto->getExtProtoInfo().withExceptionSpec(ESI));
@@ -9981,8 +9981,10 @@ VTableContextBase *ASTContext::getVTableContext() {
   return VTContext.get();
 }
 
-MangleContext *ASTContext::createMangleContext() {
-  switch (Target->getCXXABI().getKind()) {
+MangleContext *ASTContext::createMangleContext(const TargetInfo *T) {
+  if (!T)
+    T = Target;
+  switch (T->getCXXABI().getKind()) {
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericARM:

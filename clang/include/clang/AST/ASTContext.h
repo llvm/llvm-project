@@ -2237,7 +2237,8 @@ public:
 
   VTableContextBase *getVTableContext();
 
-  MangleContext *createMangleContext();
+  /// If \p T is null pointer, assume the target in ASTContext.
+  MangleContext *createMangleContext(const TargetInfo *T = nullptr);
 
   void DeepCollectObjCIvars(const ObjCInterfaceDecl *OI, bool leafClass,
                             SmallVectorImpl<const ObjCIvarDecl*> &Ivars) const;

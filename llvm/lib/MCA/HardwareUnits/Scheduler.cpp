@@ -96,13 +96,49 @@ void Scheduler::issueInstruction(
   // other dependent instructions. Dependent instructions may be issued during
   // this same cycle if operands have ReadAdvance entries.  Promote those
   // instructions to the ReadySet and notify the caller that those are ready.
-  if (HasDependentUsers)
+  if (HasDependentUsers && promoteToPendingSet())
     promoteToReadySet(ReadyInstructions);
 }
 
-void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
+bool Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   // Scan the set of waiting instructions and promote them to the
-  // ready queue if operands are all ready.
+  // ready set if operands are all ready.
+  unsigned PromotedElements = 0;
+  for (auto I = PendingSet.begin(), E = PendingSet.end(); I != E;) {
+    InstRef &IR = *I;
+    if (!IR)
+      break;
+
+    // Check if this instruction is now ready. In case, force
+    // a transition in state using method 'update()'.
+    Instruction &IS = *IR.getInstruction();
+    if (!IS.isReady())
+      IS.updatePending();
+
+    // Check if there are still unsolved data dependencies.
+    if (!isReady(IR)) {
+      ++I;
+      continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
+                      << " promoted to the READY set.\n");
+
+    Ready.emplace_back(IR);
+    ReadySet.emplace_back(IR);
+
+    IR.invalidate();
+    ++PromotedElements;
+    std::iter_swap(I, E - PromotedElements);
+  }
+
+  PendingSet.resize(PendingSet.size() - PromotedElements);
+  return PromotedElements;
+}
+
+bool Scheduler::promoteToPendingSet() {
+  // Scan the set of waiting instructions and promote them to the
+  // pending set if operands are all ready.
   unsigned RemovedElements = 0;
   for (auto I = WaitSet.begin(), E = WaitSet.end(); I != E;) {
     InstRef &IR = *I;
@@ -112,17 +148,14 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
     // Check if this instruction is now ready. In case, force
     // a transition in state using method 'update()'.
     Instruction &IS = *IR.getInstruction();
-    if (!IS.isReady())
-      IS.update();
-
-    // Check if there are still unsolved data dependencies.
-    if (!isReady(IR)) {
+    if (IS.isDispatched() && !IS.updateDispatched()) {
       ++I;
       continue;
     }
+    LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
+                      << " promoted to the PENDING set.\n");
 
-    Ready.emplace_back(IR);
-    ReadySet.emplace_back(IR);
+    PendingSet.emplace_back(IR);
 
     IR.invalidate();
     ++RemovedElements;
@@ -130,6 +163,7 @@ void Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
   }
 
   WaitSet.resize(WaitSet.size() - RemovedElements);
+  return RemovedElements;
 }
 
 InstRef Scheduler::select() {
@@ -193,9 +227,13 @@ void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
 
   updateIssuedSet(Executed);
 
+  for (InstRef &IR : PendingSet)
+    IR.getInstruction()->cycleEvent();
+
   for (InstRef &IR : WaitSet)
     IR.getInstruction()->cycleEvent();
 
+  promoteToPendingSet();
   promoteToReadySet(Ready);
 
   BusyResourceUnits = 0;
@@ -219,6 +257,13 @@ void Scheduler::dispatch(const InstRef &IR) {
   bool IsMemOp = Desc.MayLoad || Desc.MayStore;
   if (IsMemOp)
     LSU.dispatch(IR);
+
+  if (IR.getInstruction()->isPending()) {
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
+                      << " to the PendingSet\n");
+    PendingSet.push_back(IR);
+    return;
+  }
 
   if (!isReady(IR)) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");

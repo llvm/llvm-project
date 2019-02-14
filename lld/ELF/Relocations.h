@@ -33,19 +33,11 @@ enum RelExpr {
   R_ABS,
   R_ADDEND,
   R_AARCH64_GOT_PAGE_PC,
-  // The expression is used for IFUNC support. Describes PC-relative
-  // address of the memory page of GOT entry. This entry is used for
-  // a redirection to IPLT.
-  R_AARCH64_GOT_PAGE_PC_PLT,
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_PAGE_PC,
-  R_AARCH64_PLT_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
   R_ARM_SBREL,
   R_GOT,
-  // The expression is used for IFUNC support. Evaluates to GOT entry,
-  // containing redirection to the IPLT.
-  R_GOT_PLT,
   R_GOTONLY_PC,
   R_GOTONLY_PC_FROM_END,
   R_GOTREL,
@@ -153,6 +145,8 @@ struct RelocationOffsetComparator {
 };
 
 template <class ELFT> void scanRelocations(InputSectionBase &);
+
+void addIRelativeRelocs();
 
 class ThunkSection;
 class Thunk;

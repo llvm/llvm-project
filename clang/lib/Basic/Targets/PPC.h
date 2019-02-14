@@ -131,19 +131,18 @@ public:
                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                         ArchDefinePpcsq)
               .Cases("power7", "pwr7",
-                    ArchDefinePwr7 | ArchDefinePwr6x | ArchDefinePwr6 |
-                        ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
-                        ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
+                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
+                         ArchDefinePpcsq)
               // powerpc64le automatically defaults to at least power8.
               .Cases("power8", "pwr8", "ppc64le",
-                    ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6x |
-                        ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
-                        ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
+                     ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
+                         ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
+                         ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power9", "pwr9",
-                    ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
-                        ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
-                        ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                        ArchDefinePpcsq)
+                     ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
+                         ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
+                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Default(ArchDefineNone);
     }
     return CPUKnown;

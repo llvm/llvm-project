@@ -123,9 +123,9 @@ Symtab *ObjectFileBreakpad::GetSymtab() {
 }
 
 void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
-  if (m_sections_ap)
+  if (m_sections_up)
     return;
-  m_sections_ap = llvm::make_unique<SectionList>();
+  m_sections_up = llvm::make_unique<SectionList>();
 
   llvm::Optional<Record::Kind> current_section;
   offset_t section_start;
@@ -141,7 +141,7 @@ void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
         ConstString(toString(*current_section)), eSectionTypeOther,
         /*file_vm_addr*/ 0, /*vm_size*/ 0, section_start,
         end_offset - section_start, /*log2align*/ 0, /*flags*/ 0);
-    m_sections_ap->AddSection(section_sp);
+    m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   };
   while (!text.empty()) {

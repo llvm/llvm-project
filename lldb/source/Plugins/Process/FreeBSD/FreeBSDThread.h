@@ -86,7 +86,7 @@ protected:
     return m_posix_thread;
   }
 
-  std::unique_ptr<lldb_private::StackFrame> m_frame_ap;
+  std::unique_ptr<lldb_private::StackFrame> m_frame_up;
 
   lldb::BreakpointSiteSP m_breakpoint;
 

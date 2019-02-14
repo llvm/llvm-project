@@ -172,15 +172,18 @@ int main(int, char**)
             M m3(std::move(m1), A());
             assert(m3 == m2);
             LIBCPP_ASSERT(m1.empty());
-            assert(Counter_base::gConstructed == 3*num);
+            assert(Counter_base::gConstructed >= (int)(3*num));
+            assert(Counter_base::gConstructed <= (int)(4*num));
 
             {
             M m4(std::move(m2), A(5));
-            assert(Counter_base::gConstructed == 3*num);
+            assert(Counter_base::gConstructed >= (int)(3*num));
+            assert(Counter_base::gConstructed <= (int)(5*num));
             assert(m4 == m3);
             LIBCPP_ASSERT(m2.empty());
             }
-            assert(Counter_base::gConstructed == 2*num);
+            assert(Counter_base::gConstructed >= (int)(2*num));
+            assert(Counter_base::gConstructed <= (int)(4*num));
         }
         assert(Counter_base::gConstructed == 0);
     }

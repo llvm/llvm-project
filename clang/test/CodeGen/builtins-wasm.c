@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +unimplemented-simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -fno-lax-vector-conversions -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
-// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +unimplemented-simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -fno-lax-vector-conversions -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
-// RUN: not %clang_cc1 -triple wasm64-unknown-unknown -target-feature +nontrapping-fptoint -target-feature +exception-handling -fno-lax-vector-conversions -O3 -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefixes MISSING-SIMD
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +unimplemented-simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -fno-lax-vector-conversions -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
+// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +unimplemented-simd128 -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -fno-lax-vector-conversions -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
+// RUN: not %clang_cc1 -triple wasm64-unknown-unknown -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -fno-lax-vector-conversions -O3 -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefixes MISSING-SIMD
 
 // SIMD convenience types
 typedef char i8x16 __attribute((vector_size(16)));
@@ -24,6 +24,18 @@ __SIZE_TYPE__ memory_grow(__SIZE_TYPE__ delta) {
   return __builtin_wasm_memory_grow(0, delta);
   // WEBASSEMBLY32: call i32 @llvm.wasm.memory.grow.i32(i32 0, i32 %{{.*}})
   // WEBASSEMBLY64: call i64 @llvm.wasm.memory.grow.i64(i32 0, i64 %{{.*}})
+}
+
+void memory_init(void *dest, int offset, int size) {
+  __builtin_wasm_memory_init(3, 0, dest, offset, size);
+  // WEBASSEMBLY32: call void @llvm.wasm.memory.init(i32 3, i32 0, i8* %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // WEBASSEMBLY64: call void @llvm.wasm.memory.init(i32 3, i32 0, i8* %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+}
+
+void data_drop() {
+  __builtin_wasm_data_drop(3);
+  // WEBASSEMBLY32: call void @llvm.wasm.data.drop(i32 3)
+  // WEBASSEMBLY64: call void @llvm.wasm.data.drop(i32 3)
 }
 
 void throw(unsigned int tag, void *obj) {
