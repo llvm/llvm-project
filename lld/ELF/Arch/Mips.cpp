@@ -175,7 +175,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   case R_MIPS_NONE:
     return R_NONE;
   default:
-    return R_INVALID;
+    error(getErrorLocation(Loc) + "unknown relocation (" + Twine(Type) +
+          ") against symbol " + toString(S));
+    return R_NONE;
   }
 }
 
@@ -631,7 +633,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     writeShuffleValue<E>(Loc, Val, 23, 2);
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    llvm_unreachable("unknown relocation");
   }
 }
 

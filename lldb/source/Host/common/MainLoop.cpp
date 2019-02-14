@@ -108,7 +108,7 @@ Status MainLoop::RunImpl::Poll() {
                       out_events, llvm::array_lengthof(out_events), nullptr);
 
   if (num_events < 0)
-    return Status("kevent() failed with error %d\n", num_events);
+    return Status(errno, eErrorTypePOSIX);
   return Status();
 }
 
@@ -382,9 +382,6 @@ Status MainLoop::Run() {
       return error;
 
     impl.ProcessEvents();
-
-    if (m_terminate_request)
-      return Status();
   }
   return Status();
 }
