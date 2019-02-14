@@ -52,6 +52,14 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .minScalar(0, s32)
       .minScalar(1, s32);
 
+  getActionDefinitionsBuilder(G_BRCOND)
+      .legalFor({s32})
+      .minScalar(0, s32);
+
+  getActionDefinitionsBuilder(G_PHI)
+      .legalFor({p0, s32})
+      .minScalar(0, s32);
+
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({s32})
       .clampScalar(0, s32, s32);

@@ -5661,7 +5661,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     if (!V)
       return nullptr;
 
-    if (handleDebugValue(V, Variable, Expression, DI.getDebugLoc(), dl,
+    if (handleDebugValue(V, Variable, Expression, dl, DI.getDebugLoc(),
         SDNodeOrder))
       return nullptr;
 

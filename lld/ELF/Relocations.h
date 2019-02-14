@@ -29,7 +29,6 @@ typedef uint32_t RelType;
 // from files are converted to these types so that the main code
 // doesn't have to know about architecture-specific details.
 enum RelExpr {
-  R_INVALID,
   R_ABS,
   R_ADDEND,
   R_AARCH64_GOT_PAGE_PC,

@@ -2825,8 +2825,11 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   if (!MI && !SubAdd)
     return false;
 
-  // The single candidate is called MI.
-  if (!MI) MI = SubAdd;
+  // If we found a SubAdd, use it as it will be closer to the CMP
+  if (SubAdd) {
+    MI = SubAdd;
+    IsThumb1 = false;
+  }
 
   // We can't use a predicated instruction - it doesn't always write the flags.
   if (isPredicated(*MI))

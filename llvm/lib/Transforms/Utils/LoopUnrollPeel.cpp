@@ -664,16 +664,14 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
   }
 
-  // If the loop is nested, we changed the parent loop, update SE.
-  if (Loop *ParentLoop = L->getParentLoop()) {
-    SE->forgetLoop(ParentLoop);
+  if (Loop *ParentLoop = L->getParentLoop())
+    L = ParentLoop;
 
-    // FIXME: Incrementally update loop-simplify
-    simplifyLoop(ParentLoop, DT, LI, SE, AC, PreserveLCSSA);
-  } else {
-    // FIXME: Incrementally update loop-simplify
-    simplifyLoop(L, DT, LI, SE, AC, PreserveLCSSA);
-  }
+  // We modified the loop, update SE.
+  SE->forgetTopmostLoop(L);
+
+  // FIXME: Incrementally update loop-simplify
+  simplifyLoop(L, DT, LI, SE, AC, PreserveLCSSA);
 
   NumPeeled++;
 

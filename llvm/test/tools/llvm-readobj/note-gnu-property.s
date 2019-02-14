@@ -14,8 +14,8 @@
 // GNU-NEXT:     x86 feature: <None>
 // GNU-NEXT:     x86 ISA needed: CMOV, SSE, SSE2, SSE3, SSSE3, SSE4_1, SSE4_2, AVX, AVX2, FMA, AVX512F, AVX512CD
 // GNU-NEXT:     x86 ISA used: AVX512ER, AVX512PF, AVX512VL, AVX512DQ, AVX512BW, AVX512_4FMAPS, AVX512_4VNNIW, AVX512_BITALG, AVX512_IFMA, AVX512_VBMI, AVX512_VBMI2, AVX512_VNNI
-// GNU-NEXT:     x86 feature needed: x86, x87
-// GNU-NEXT:     x86 feature used: XSAVEOPT, XSAVEC
+// GNU-NEXT:     x86 feature needed: x86, x87, MMX, XMM, YMM
+// GNU-NEXT:     x86 feature used: ZMM, FXSR, XSAVE, XSAVEOPT, XSAVEC
 // GNU-NEXT:     <application-specific type 0xfefefefe>
 // GNU-NEXT:     stack size: <corrupt length: 0x0>
 // GNU-NEXT:     stack size: <corrupt length: 0x4>
@@ -41,8 +41,8 @@
 // LLVM-NEXT:         x86 feature: <None>
 // LLVM-NEXT:         x86 ISA needed: CMOV, SSE, SSE2, SSE3, SSSE3, SSE4_1, SSE4_2, AVX, AVX2, FMA, AVX512F, AVX512CD
 // LLVM-NEXT:         x86 ISA used: AVX512ER, AVX512PF, AVX512VL, AVX512DQ, AVX512BW, AVX512_4FMAPS, AVX512_4VNNIW, AVX512_BITALG, AVX512_IFMA, AVX512_VBMI, AVX512_VBMI2, AVX512_VNNI
-// LLVM-NEXT:         x86 feature needed: x86, x87
-// LLVM-NEXT:         x86 feature used: XSAVEOPT, XSAVEC
+// LLVM-NEXT:         x86 feature needed: x86, x87, MMX, XMM, YMM
+// LLVM-NEXT:         x86 feature used: ZMM, FXSR, XSAVE, XSAVEOPT, XSAVEC
 // LLVM-NEXT:         <application-specific type 0xfefefefe>
 // LLVM-NEXT:         stack size: <corrupt length: 0x0>
 // LLVM-NEXT:         stack size: <corrupt length: 0x4>
@@ -56,7 +56,7 @@
 // LLVM-NEXT: ]
 
 .section ".note.gnu.property", "a"
-.align 4 
+.align 4
   .long 4           /* Name length is always 4 ("GNU") */
   .long end - begin /* Data length */
   .long 5           /* Type: NT_GNU_PROPERTY_TYPE_0 */
@@ -73,7 +73,7 @@ begin:
   .long 8           /* Data size */
   .long 0x100       /* Data (stack size) */
   .p2align 3        /* Align to 8 byte for 64 bit */
-  
+
   .long 2           /* Type: GNU_PROPERTY_NO_COPY_ON_PROTECTED */
   .long 0           /* Data size */
   .p2align 3        /* Align to 8 byte for 64 bit */
@@ -107,32 +107,32 @@ begin:
 
   .long 0xc0008001         /* Type: GNU_PROPERTY_X86_FEATURE_2_NEEDED */
   .long 4                  /* Data size */
-  .long 0x00000003         /* X86 X87 */
+  .long 0x0000001f         /* X86, ... */
   .p2align 3               /* Align to 8 byte for 64 bit */
 
   .long 0xc0010001         /* Type: GNU_PROPERTY_X86_FEATURE_2_USED */
   .long 4                  /* Data size */
-  .long 0x00000300         /* XSAVEOPT XSAVEC */
+  .long 0x000003e0         /* ZMM, ... */
   .p2align 3               /* Align to 8 byte for 64 bit */
-  
+
   /* All notes below are broken. Test we are able to report them. */
-  
+
   /* Broken note type */
   .long 0xfefefefe  /* Invalid type for testing */
   .long 0           /* Data size */
   .p2align 3        /* Align to 8 byte for 64 bit */
-  
+
   /* GNU_PROPERTY_STACK_SIZE with zero stack size */
   .long 1           /* Type: GNU_PROPERTY_STACK_SIZE */
   .long 0           /* Data size */
   .p2align 3        /* Align to 8 byte for 64 bit */
-  
+
   /* GNU_PROPERTY_STACK_SIZE with data size 4 (should be 8) */
   .long 1           /* Type: GNU_PROPERTY_STACK_SIZE */
   .long 4           /* Data size */
   .long 0x100       /* Data (stack size) */
   .p2align 3        /* Align to 8 byte for 64 bit */
-  
+
   /* GNU_PROPERTY_NO_COPY_ON_PROTECTED with pr_datasz and some data */
   .long 2           /* Type: GNU_PROPERTY_NO_COPY_ON_PROTECTED */
   .long 1           /* Data size (corrupted) */

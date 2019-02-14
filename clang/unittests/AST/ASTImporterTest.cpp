@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Define this to have ::testing::Combine available.
+// FIXME: Better solution for this?
+#define GTEST_HAS_COMBINE 1
+
 #include "clang/AST/ASTImporter.h"
 #include "MatchVerifier.h"
 #include "clang/AST/ASTContext.h"
@@ -459,6 +463,10 @@ public:
     TU *FromTU = findFromTU(From);
     assert(LookupTablePtr);
     return FromTU->import(*LookupTablePtr, ToAST.get(), From);
+  }
+
+  template <class DeclT> DeclT *Import(DeclT *From, Language Lang) {
+    return cast_or_null<DeclT>(Import(cast<Decl>(From), Lang));
   }
 
   QualType ImportType(QualType FromType, Decl *TUDecl, Language ToLang) {
@@ -2439,6 +2447,266 @@ TEST_P(ImportFunctions,
   // Check that the redecl chain is intact.
   EXPECT_EQ(ToBFOutOfClass->getPreviousDecl(), ToBFInClass);
   EXPECT_EQ(ToDFOutOfClass->getPreviousDecl(), ToDFInClass);
+}
+
+//FIXME Move these tests to a separate test file.
+namespace TypeAndValueParameterizedTests {
+
+// Type parameters for type-parameterized test fixtures.
+struct GetFunPattern {
+  using DeclTy = FunctionDecl;
+  BindableMatcher<Decl> operator()() { return functionDecl(hasName("f")); }
+};
+struct GetVarPattern {
+  using DeclTy = VarDecl;
+  BindableMatcher<Decl> operator()() { return varDecl(hasName("v")); }
+};
+
+// Values for the value-parameterized test fixtures.
+// FunctionDecl:
+auto *ExternF = "void f();";
+auto *StaticF = "static void f();";
+auto *AnonF = "namespace { void f(); }";
+// VarDecl:
+auto *ExternV = "extern int v;";
+auto *StaticV = "static int v;";
+auto *AnonV = "namespace { extern int v; }";
+
+// First value in tuple: Compile options.
+// Second value in tuple: Source code to be used in the test.
+using ImportVisibilityChainParams =
+    ::testing::WithParamInterface<std::tuple<ArgVector, const char *>>;
+// Fixture to test the redecl chain of Decls with the same visibility.  Gtest
+// makes it possible to have either value-parameterized or type-parameterized
+// fixtures.  However, we cannot have both value- and type-parameterized test
+// fixtures.  This is a value-parameterized test fixture in the gtest sense. We
+// intend to mimic gtest's type-parameters via the PatternFactory template
+// parameter.  We manually instantiate the different tests with the each types.
+template <typename PatternFactory>
+class ImportVisibilityChain
+    : public ASTImporterTestBase, public ImportVisibilityChainParams {
+protected:
+  using DeclTy = typename PatternFactory::DeclTy;
+  ArgVector getExtraArgs() const override { return std::get<0>(GetParam()); }
+  std::string getCode() const { return std::get<1>(GetParam()); }
+  BindableMatcher<Decl> getPattern() const { return PatternFactory()(); }
+
+  // Type-parameterized test.
+  void TypedTest_ImportChain() {
+    std::string Code = getCode() + getCode();
+    auto Pattern = getPattern();
+
+    TranslationUnitDecl *FromTu = getTuDecl(Code, Lang_CXX, "input0.cc");
+
+    auto *FromF0 = FirstDeclMatcher<DeclTy>().match(FromTu, Pattern);
+    auto *FromF1 = LastDeclMatcher<DeclTy>().match(FromTu, Pattern);
+
+    auto *ToF0 = Import(FromF0, Lang_CXX);
+    auto *ToF1 = Import(FromF1, Lang_CXX);
+
+    EXPECT_TRUE(ToF0);
+    ASSERT_TRUE(ToF1);
+    EXPECT_NE(ToF0, ToF1);
+    EXPECT_EQ(ToF1->getPreviousDecl(), ToF0);
+  }
+};
+
+// Manual instantiation of the fixture with each type.
+using ImportFunctionsVisibilityChain = ImportVisibilityChain<GetFunPattern>;
+using ImportVariablesVisibilityChain = ImportVisibilityChain<GetVarPattern>;
+// Value-parameterized test for the first type.
+TEST_P(ImportFunctionsVisibilityChain, ImportChain) {
+  TypedTest_ImportChain();
+}
+// Value-parameterized test for the second type.
+TEST_P(ImportVariablesVisibilityChain, ImportChain) {
+  TypedTest_ImportChain();
+}
+
+// Automatic instantiation of the value-parameterized tests.
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFunctionsVisibilityChain,
+                        ::testing::Combine(
+                           DefaultTestValuesForRunOptions,
+                           ::testing::Values(ExternF, StaticF, AnonF)), );
+INSTANTIATE_TEST_CASE_P(
+    ParameterizedTests, ImportVariablesVisibilityChain,
+    ::testing::Combine(
+        DefaultTestValuesForRunOptions,
+        // There is no point to instantiate with StaticV, because in C++ we can
+        // forward declare a variable only with the 'extern' keyword.
+        // Consequently, each fwd declared variable has external linkage.  This
+        // is different in the C language where any declaration without an
+        // initializer is a tentative definition, subsequent definitions may be
+        // provided but they must have the same linkage.  See also the test
+        // ImportVariableChainInC which test for this special C Lang case.
+        ::testing::Values(ExternV, AnonV)), );
+
+// First value in tuple: Compile options.
+// Second value in tuple: Tuple with informations for the test.
+// Code for first import (or initial code), code to import, whether the `f`
+// functions are expected to be linked in a declaration chain.
+// One value of this tuple is combined with every value of compile options.
+// The test can have a single tuple as parameter only.
+using ImportVisibilityParams = ::testing::WithParamInterface<
+    std::tuple<ArgVector, std::tuple<const char *, const char *, bool>>>;
+
+template <typename PatternFactory>
+class ImportVisibility
+    : public ASTImporterTestBase,
+      public ImportVisibilityParams {
+protected:
+  using DeclTy = typename PatternFactory::DeclTy;
+  ArgVector getExtraArgs() const override { return std::get<0>(GetParam()); }
+  std::string getCode0() const { return std::get<0>(std::get<1>(GetParam())); }
+  std::string getCode1() const { return std::get<1>(std::get<1>(GetParam())); }
+  bool shouldBeLinked() const { return std::get<2>(std::get<1>(GetParam())); }
+  BindableMatcher<Decl> getPattern() const { return PatternFactory()(); }
+
+  void TypedTest_ImportAfter() {
+    TranslationUnitDecl *ToTu = getToTuDecl(getCode0(), Lang_CXX);
+    TranslationUnitDecl *FromTu = getTuDecl(getCode1(), Lang_CXX, "input1.cc");
+
+    auto *ToF0 = FirstDeclMatcher<DeclTy>().match(ToTu, getPattern());
+    auto *FromF1 = FirstDeclMatcher<DeclTy>().match(FromTu, getPattern());
+
+    auto *ToF1 = Import(FromF1, Lang_CXX);
+
+    ASSERT_TRUE(ToF0);
+    ASSERT_TRUE(ToF1);
+    EXPECT_NE(ToF0, ToF1);
+
+    if (shouldBeLinked())
+      EXPECT_EQ(ToF1->getPreviousDecl(), ToF0);
+    else
+      EXPECT_FALSE(ToF1->getPreviousDecl());
+  }
+
+  void TypedTest_ImportAfterImport() {
+    TranslationUnitDecl *FromTu0 = getTuDecl(getCode0(), Lang_CXX, "input0.cc");
+    TranslationUnitDecl *FromTu1 = getTuDecl(getCode1(), Lang_CXX, "input1.cc");
+    auto *FromF0 =
+        FirstDeclMatcher<DeclTy>().match(FromTu0, getPattern());
+    auto *FromF1 =
+        FirstDeclMatcher<DeclTy>().match(FromTu1, getPattern());
+    auto *ToF0 = Import(FromF0, Lang_CXX);
+    auto *ToF1 = Import(FromF1, Lang_CXX);
+    ASSERT_TRUE(ToF0);
+    ASSERT_TRUE(ToF1);
+    EXPECT_NE(ToF0, ToF1);
+    if (shouldBeLinked())
+      EXPECT_EQ(ToF1->getPreviousDecl(), ToF0);
+    else
+      EXPECT_FALSE(ToF1->getPreviousDecl());
+  }
+};
+using ImportFunctionsVisibility = ImportVisibility<GetFunPattern>;
+using ImportVariablesVisibility = ImportVisibility<GetVarPattern>;
+
+// FunctionDecl.
+TEST_P(ImportFunctionsVisibility, ImportAfter) {
+  TypedTest_ImportAfter();
+}
+TEST_P(ImportFunctionsVisibility, ImportAfterImport) {
+  TypedTest_ImportAfterImport();
+}
+// VarDecl.
+TEST_P(ImportVariablesVisibility, ImportAfter) {
+  TypedTest_ImportAfter();
+}
+TEST_P(ImportVariablesVisibility, ImportAfterImport) {
+  TypedTest_ImportAfterImport();
+}
+
+bool ExpectLink = true;
+bool ExpectNotLink = false;
+
+INSTANTIATE_TEST_CASE_P(
+    ParameterizedTests, ImportFunctionsVisibility,
+    ::testing::Combine(
+        DefaultTestValuesForRunOptions,
+        ::testing::Values(std::make_tuple(ExternF, ExternF, ExpectLink),
+                          std::make_tuple(ExternF, StaticF, ExpectNotLink),
+                          std::make_tuple(ExternF, AnonF, ExpectNotLink),
+                          std::make_tuple(StaticF, ExternF, ExpectNotLink),
+                          std::make_tuple(StaticF, StaticF, ExpectNotLink),
+                          std::make_tuple(StaticF, AnonF, ExpectNotLink),
+                          std::make_tuple(AnonF, ExternF, ExpectNotLink),
+                          std::make_tuple(AnonF, StaticF, ExpectNotLink),
+                          std::make_tuple(AnonF, AnonF, ExpectNotLink))), );
+INSTANTIATE_TEST_CASE_P(
+    ParameterizedTests, ImportVariablesVisibility,
+    ::testing::Combine(
+        DefaultTestValuesForRunOptions,
+        ::testing::Values(std::make_tuple(ExternV, ExternV, ExpectLink),
+                          std::make_tuple(ExternV, StaticV, ExpectNotLink),
+                          std::make_tuple(ExternV, AnonV, ExpectNotLink),
+                          std::make_tuple(StaticV, ExternV, ExpectNotLink),
+                          std::make_tuple(StaticV, StaticV, ExpectNotLink),
+                          std::make_tuple(StaticV, AnonV, ExpectNotLink),
+                          std::make_tuple(AnonV, ExternV, ExpectNotLink),
+                          std::make_tuple(AnonV, StaticV, ExpectNotLink),
+                          std::make_tuple(AnonV, AnonV, ExpectNotLink))), );
+
+} // namespace TypeAndValueParameterizedTests
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportVariableChainInC) {
+    std::string Code = "static int v; static int v = 0;";
+    auto Pattern = varDecl(hasName("v"));
+
+    TranslationUnitDecl *FromTu = getTuDecl(Code, Lang_C, "input0.c");
+
+    auto *From0 = FirstDeclMatcher<VarDecl>().match(FromTu, Pattern);
+    auto *From1 = LastDeclMatcher<VarDecl>().match(FromTu, Pattern);
+
+    auto *To0 = Import(From0, Lang_C);
+    auto *To1 = Import(From1, Lang_C);
+
+    EXPECT_TRUE(To0);
+    ASSERT_TRUE(To1);
+    EXPECT_NE(To0, To1);
+    EXPECT_EQ(To1->getPreviousDecl(), To0);
+}
+
+TEST_P(ImportFunctions, ImportFromDifferentScopedAnonNamespace) {
+  TranslationUnitDecl *FromTu = getTuDecl(
+      "namespace NS0 { namespace { void f(); } }"
+      "namespace NS1 { namespace { void f(); } }",
+      Lang_CXX, "input0.cc");
+  auto Pattern = functionDecl(hasName("f"));
+
+  auto *FromF0 = FirstDeclMatcher<FunctionDecl>().match(FromTu, Pattern);
+  auto *FromF1 = LastDeclMatcher<FunctionDecl>().match(FromTu, Pattern);
+
+  auto *ToF0 = Import(FromF0, Lang_CXX);
+  auto *ToF1 = Import(FromF1, Lang_CXX);
+
+  EXPECT_TRUE(ToF0);
+  ASSERT_TRUE(ToF1);
+  EXPECT_NE(ToF0, ToF1);
+  EXPECT_FALSE(ToF1->getPreviousDecl());
+}
+
+TEST_P(ImportFunctions, ImportFunctionFromUnnamedNamespace) {
+  {
+    Decl *FromTU = getTuDecl("namespace { void f() {} } void g0() { f(); }",
+                             Lang_CXX, "input0.cc");
+    auto *FromD = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("g0")));
+
+    Import(FromD, Lang_CXX);
+  }
+  {
+    Decl *FromTU =
+        getTuDecl("namespace { void f() { int a; } } void g1() { f(); }",
+                  Lang_CXX, "input1.cc");
+    auto *FromD = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("g1")));
+    Import(FromD, Lang_CXX);
+  }
+
+  Decl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+  ASSERT_EQ(DeclCounter<FunctionDecl>().match(ToTU, functionDecl(hasName("f"))),
+            2u);
 }
 
 struct ImportFriendFunctions : ImportFunctions {};

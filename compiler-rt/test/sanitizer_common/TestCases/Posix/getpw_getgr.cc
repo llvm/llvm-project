@@ -72,8 +72,7 @@ int main(int argc, const char *argv[]) {
   test<passwd>(&getpwuid, 0);
   test<passwd>(&getpwnam, "root");
   test<group>(&getgrgid, 0);
-  // Disable this test for now since it seems to hit a bug in EGLIBC 2.19
-  //test<group>(&getgrnam, any_group.c_str());
+  test<group>(&getgrnam, any_group.c_str());
 
 #if !defined(__ANDROID__)
   setpwent();
@@ -92,8 +91,7 @@ int main(int argc, const char *argv[]) {
   test_r<passwd>(&getpwnam_r, "root");
 
   test_r<group>(&getgrgid_r, 0);
-  // Disable this test for now since it seems to hit a bug in EGLIBC 2.19
-  //test_r<group>(&getgrnam_r, any_group.c_str());
+  test_r<group>(&getgrnam_r, any_group.c_str());
 
 #if defined(__linux__)
   auto pwd_file = [] {
