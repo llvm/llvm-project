@@ -82,6 +82,10 @@ struct TargetIdentifier {
 amd_comgr_status_t ParseTargetIdentifier(llvm::StringRef IdentStr,
         TargetIdentifier &Ident);
 
+/// Ensure all required LLVM initialization functions have been invoked at least
+/// once in this process.
+void EnsureLLVMInitialized();
+
 struct DataObject {
 
   // Allocate a new DataObject and return a pointer to it.
@@ -181,7 +185,6 @@ struct DataAction {
   // duration of the COMGR library. Once initialized, they should never be
   // reset.
 
-  static bool llvm_initialized;   // must be statically initialized
 
   DataAction();
   ~DataAction();

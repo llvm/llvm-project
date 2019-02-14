@@ -41,6 +41,7 @@
 #include "comgr-metadata.h"
 #include "comgr-objdump.h"
 #include "comgr-symbol.h"
+#include "comgr-disassembly.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetSelect.h"
@@ -56,9 +57,6 @@
 
 using namespace llvm;
 using namespace COMGR;
-
-// static member initialization
-bool DataAction::llvm_initialized = false;
 
 // Module static functions
 
@@ -319,6 +317,19 @@ amd_comgr_status_t COMGR::ParseTargetIdentifier(StringRef IdentStr,
   Ident.Features.erase(Ident.Features.begin());
 
   return AMD_COMGR_STATUS_SUCCESS;
+}
+
+void COMGR::EnsureLLVMInitialized() {
+  static bool LLVMInitialized = false;
+  if (LLVMInitialized)
+    return;
+  LLVMInitializeAMDGPUTarget();
+  LLVMInitializeAMDGPUTargetInfo();
+  LLVMInitializeAMDGPUTargetMC();
+  LLVMInitializeAMDGPUDisassembler();
+  LLVMInitializeAMDGPUAsmParser();
+  LLVMInitializeAMDGPUAsmPrinter();
+  LLVMInitialized = true;
 }
 
 DataObject::DataObject(amd_comgr_data_kind_t kind)
@@ -1028,17 +1039,7 @@ amd_comgr_do_action(
       outsetp == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  // Initialize LLVM once
-  if (!DataAction::llvm_initialized) {
-    // initialized only once for the entire duration of using the API
-    LLVMInitializeAMDGPUTarget();
-    LLVMInitializeAMDGPUTargetInfo();
-    LLVMInitializeAMDGPUTargetMC();
-    LLVMInitializeAMDGPUDisassembler();
-    LLVMInitializeAMDGPUAsmParser();
-    LLVMInitializeAMDGPUAsmPrinter();
-    DataAction::llvm_initialized = true;
-  }
+  EnsureLLVMInitialized();
 
   switch (action_kind) {
   case AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE:
@@ -1405,8 +1406,7 @@ amd_comgr_status_t AMD_API amd_comgr_iterate_symbols(
       callback == NULL)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (!DataAction::llvm_initialized)
-    LLVMInitializeAMDGPUTargetInfo();  // just need this one only
+  EnsureLLVMInitialized();
 
   StringRef ins(datap->data, datap->size);
   status = helper.iterate_table(ins, datap->data_kind, callback, user_data);
@@ -1429,8 +1429,7 @@ amd_comgr_symbol_lookup(
         datap->data_kind == AMD_COMGR_DATA_KIND_EXECUTABLE))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (!DataAction::llvm_initialized)
-    LLVMInitializeAMDGPUTargetInfo();  // just need this one only
+  EnsureLLVMInitialized();
 
   // look through the symbol table for a symbol name based
   // on the data object.
@@ -1496,4 +1495,61 @@ amd_comgr_symbol_get_info(
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_API
+amd_comgr_create_disassembly_info(
+    const char *isa_name,
+    size_t (*read_memory_callback)(
+      uint64_t from,
+      char *to,
+      size_t size,
+      void *user_data),
+    void (*print_instruction_callback)(
+      const char *instruction,
+      void *user_data),
+    void (*print_address_annotation_callback)(
+      uint64_t address,
+      void *user_data),
+    amd_comgr_disassembly_info_t *disassembly_info) {
+
+  if (!isa_name || !metadata::isValidIsaName(isa_name) ||
+      !read_memory_callback || !print_instruction_callback ||
+      !print_address_annotation_callback || !disassembly_info)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  TargetIdentifier Ident;
+  if (auto Status = ParseTargetIdentifier(isa_name, Ident))
+    return Status;
+
+  EnsureLLVMInitialized();
+
+  return DisassemblyInfo::Create(
+      Ident, read_memory_callback, print_instruction_callback,
+      print_address_annotation_callback, disassembly_info);
+}
+
+amd_comgr_status_t AMD_API
+amd_comgr_destroy_disassembly_info(
+    amd_comgr_disassembly_info_t disassembly_info) {
+
+  DisassemblyInfo *DI = DisassemblyInfo::Convert(disassembly_info);
+
+  if (!DI)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  delete DI;
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_API amd_comgr_disassemble_instruction(
+    amd_comgr_disassembly_info_t disassembly_info, uint64_t address,
+    void *user_data, size_t *size) {
+
+  DisassemblyInfo *DI = DisassemblyInfo::Convert(disassembly_info);
+  if (!DI || !size)
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  return DI->DisassembleInstruction(address, user_data, *size);
 }

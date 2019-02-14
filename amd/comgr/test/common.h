@@ -36,8 +36,18 @@
 #ifndef COMGR_TEST_COMMON_H
 #define COMGR_TEST_COMMON_H
 
-void fail(const char *msg) {
-  printf("FAILED: %s", msg);
+#include <stdarg.h>
+
+void fail(const char *format, ...) {
+  va_list ap;
+  va_start(ap, format);
+
+  printf("FAILED: ");
+  vprintf(format, ap);
+  printf("\n");
+
+  va_end(ap);
+
   exit(1);
 }
 

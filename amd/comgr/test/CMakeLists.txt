@@ -48,6 +48,11 @@ add_executable(disasm_llvm_so_test disasm_llvm_so_test.c)
 target_link_libraries(disasm_llvm_so_test amd_comgr)
 add_test(NAME disasm_llvm_so_test COMMAND disasm_llvm_so_test)
 
+# Test : Disassembly of instructions
+add_executable(disasm_instr_test disasm_instr_test.c)
+target_link_libraries(disasm_instr_test amd_comgr)
+add_test(NAME disasm_instr_test COMMAND disasm_instr_test)
+
 # Test : TP-Metadata (Metadata properties for a target)
 add_executable(metadata_tp_test metadata_tp_test.c)
 target_link_libraries(metadata_tp_test amd_comgr)
@@ -130,6 +135,7 @@ if (NOT(UNIX))
     data_test
     disasm_llvm_reloc_test
     disasm_llvm_so_test
+    disasm_instr_test
     metadata_tp_test
     metadata_yaml_test
     metadata_msgpack_test

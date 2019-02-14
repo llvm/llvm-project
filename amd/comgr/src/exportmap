@@ -43,5 +43,8 @@ global: amd_comgr_status_string;
         amd_comgr_iterate_symbols;
         amd_comgr_symbol_lookup;
         amd_comgr_symbol_get_info;
+        amd_comgr_create_disassembly_info;
+        amd_comgr_destroy_disassembly_info;
+        amd_comgr_disassemble_instruction;
 local: *;
 };

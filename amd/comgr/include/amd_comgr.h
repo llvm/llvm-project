@@ -76,7 +76,7 @@
 #endif
 
 #define AMD_COMGR_INTERFACE_VERSION_MAJOR 1
-#define AMD_COMGR_INTERFACE_VERSION_MINOR 1
+#define AMD_COMGR_INTERFACE_VERSION_MINOR 2
 
 #ifdef __cplusplus
 extern "C" {
@@ -311,6 +311,16 @@ typedef struct amd_comgr_metadata_node_s {
 typedef struct amd_comgr_symbol_s {
   uint64_t handle;
 } amd_comgr_symbol_t;
+
+/**
+ * @brief A handle to a disassembly information object.
+ *
+ * A disassembly information object holds all the necessary information,
+ * excluding the input data, required to perform disassembly.
+ */
+typedef struct amd_comgr_disassembly_info_s {
+  uint64_t handle;
+} amd_comgr_disassembly_info_t;
 
 /**
  * @brief Return the number of isa names supported by this version of
@@ -1760,6 +1770,108 @@ amd_comgr_symbol_get_info(
   amd_comgr_symbol_t symbol,
   amd_comgr_symbol_info_t attribute,
   void *value);
+
+/**
+ * @brief Create a disassembly info object.
+ *
+ * @param[in] isa_name A null terminated string that is the isa name of the
+ * target to disassemble for. The isa name is defined as the Code Object Target
+ * Identification string, described at
+ * https://llvm.org/docs/AMDGPUUsage.html#code-object-target-identification
+ *
+ * @param[in] read_memory_callback Function called to request @p size bytes
+ * from the program address space at @p from be read into @p to. The requested
+ * @p size is never zero. Returns the number of bytes which could be read, with
+ * the guarantee that no additional bytes will be available in any subsequent
+ * call.
+ *
+ * @param[in] print_instruction_callback Function called after a successful
+ * disassembly. @p instruction is a null terminated string containing the
+ * disassembled instruction. The callback does not own @p instruction, and it
+ * cannot be referenced once the callback returns.
+ *
+ * @param[in] print_address_annotation_callback Function called after @c
+ * print_instruction_callback returns, once for each instruction operand which
+ * was resolved to an absolute address. @p address is the absolute address in
+ * the program address space. It is intended to append a symbolic
+ * form of the address, perhaps as a comment, after the instruction disassembly
+ * produced by @c print_instruction_callback.
+ *
+ * @param[out] disassembly_info A handle to the disassembly info object
+ * created.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The disassembly info object was created.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p isa_name is NULL or
+ * invalid; or @p read_memory_callback, @p print_instruction_callback,
+ * or @p print_address_annotation_callback is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to create the
+ * disassembly info object as out of resources.
+ */
+amd_comgr_status_t AMD_API
+amd_comgr_create_disassembly_info(
+  const char *isa_name,
+  size_t (*read_memory_callback)(
+    uint64_t from,
+    char *to,
+    size_t size,
+    void *user_data),
+  void (*print_instruction_callback)(
+    const char *instruction,
+    void *user_data),
+  void (*print_address_annotation_callback)(
+    uint64_t address,
+    void *user_data),
+  amd_comgr_disassembly_info_t *disassembly_info);
+
+/**
+ * @brief Destroy a disassembly info object.
+ *
+ * @param[in] disassembly_info A handle to the disassembly info object to
+ * destroy.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The disassembly info object was
+ * destroyed.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p disassembly_info is an
+ * invalid disassembly info object.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to destroy the
+ * disassembly info object as out of resources.
+ */
+amd_comgr_status_t AMD_API
+amd_comgr_destroy_disassembly_info(
+  amd_comgr_disassembly_info_t disassembly_info);
+
+/**
+ * @brief Disassemble a single instruction.
+ *
+ * @param[in] address The address of the first byte of the instruction in the
+ * program address space.
+ *
+ * @param[in] user_data Arbitrary user-data passed to each callback function
+ * during disassembly.
+ *
+ * @param[out] size The number of bytes consumed to decode the
+ * instruction, or consumed while failing to decode an invalid instruction.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The disassembly was successful.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR The disassembly failed.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p disassembly_info is
+ * invalid or @p size is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to disassemble the
+ * instruction as out of resources.
+ */
+amd_comgr_status_t AMD_API
+amd_comgr_disassemble_instruction(
+  amd_comgr_disassembly_info_t disassembly_info,
+  uint64_t address,
+  void *user_data,
+  size_t *size);
 
 /** @} */
 
