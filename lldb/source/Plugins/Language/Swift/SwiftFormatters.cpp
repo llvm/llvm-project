@@ -18,6 +18,7 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Status.h"
+#include "swift/AST/Types.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -979,8 +980,9 @@ llvm::Optional<std::vector<std::string>>
 ReadVector(Process &process, ValueObject &valobj,
            const SIMDElementFormatter &formatter, unsigned num_elements) {
   Status error;
+  static ConstString g_storage("_storage");
   static ConstString g_value("_value");
-  ValueObjectSP value_sp = valobj.GetChildAtNamePath({g_value});
+  ValueObjectSP value_sp = valobj.GetChildAtNamePath({g_storage, g_value});
   if (!value_sp)
     return llvm::None;
 
@@ -1032,17 +1034,80 @@ void PrintMatrix(Stream &stream,
 
 } // end anonymous namespace
 
-bool lldb_private::formatters::swift::AccelerateSIMD_SummaryProvider(
+bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   Status error;
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)
     return false;
+  Process &process = *process_sp.get();
 
+  CompilerType simd_type = valobj.GetCompilerType();
+  void *type_buffer = reinterpret_cast<void *>(simd_type.GetOpaqueQualType());
+  llvm::Optional<uint64_t> opt_type_size = simd_type.GetByteSize(nullptr);
+  if (!opt_type_size)
+    return false;
+  uint64_t type_size = *opt_type_size;
+
+  auto swift_type = reinterpret_cast<::swift::TypeBase *>(type_buffer);
+  auto bound_type = dyn_cast<::swift::BoundGenericType>(swift_type);
+  if (!bound_type)
+    return false;
+  auto generic_args = bound_type->getGenericArgs();
+  lldbassert(generic_args.size() == 1 && "broken SIMD type");
+  auto swift_arg_type = generic_args[0];
+  CompilerType arg_type(swift_arg_type);
+
+  llvm::Optional<uint64_t> opt_arg_size = arg_type.GetByteSize(nullptr);
+  if (!opt_arg_size)
+    return false;
+  uint64_t arg_size = *opt_arg_size;
+
+  lldb::addr_t object_address = valobj.GetAddressOf();
+  auto ptr_size = process.GetAddressByteSize();
+
+  uint64_t num_elements = type_size / arg_size;
+  stream.Printf("(");
+  for (uint64_t i = 0; i < num_elements; ++i) {
+    DataBufferSP buffer_sp(new DataBufferHeap(arg_size, 0));
+    uint8_t *data_ptr = buffer_sp->GetBytes();
+    process.ReadMemory(object_address, data_ptr, arg_size, error);
+    if (error.Fail())
+      return false;
+    DataExtractor DE(buffer_sp, process_sp->GetByteOrder(),
+                     process_sp->GetAddressByteSize());
+
+    auto simd_elem = ValueObject::CreateValueObjectFromData(
+        "simd_elem", DE, valobj.GetExecutionContextRef(), arg_type);
+    if (!simd_elem || simd_elem->GetError().Fail())
+      return false;
+
+    auto synthetic = simd_elem->GetSyntheticValue();
+    const char *value_string = synthetic->GetValueAsCString();
+    if (!value_string)
+      value_string = synthetic->GetSummaryAsCString();
+    if (!value_string)
+      return false;
+    object_address += arg_size;
+    stream.Printf("%s", value_string);
+    if (i < num_elements - 1)
+      stream.Printf(", ");
+  }
+  stream.Printf(")");
+  return true;
+}
+
+bool lldb_private::formatters::swift::LegacySIMD_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  Status error;
+  ProcessSP process_sp(valobj.GetProcessSP());
+  if (!process_sp)
+    return false;
   Process &process = *process_sp.get();
 
   // Get the type name without the "simd.simd_" prefix.
   ConstString full_type_name = valobj.GetTypeName();
+
   llvm::StringRef type_name = full_type_name.GetStringRef();
   if (type_name.startswith("simd."))
     type_name = type_name.drop_front(5);
