@@ -36,7 +36,7 @@ public:
     A* operator& () DELETE_FUNCTION;
 };
 
-int main()
+int main(int, char**)
 {
     {
     typedef A S;
@@ -67,4 +67,6 @@ int main()
     assert(ap->get() == 1); // original value
     }
 #endif
+
+  return 0;
 }

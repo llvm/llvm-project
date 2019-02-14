@@ -39,7 +39,7 @@ test(const char_type* A, const std::basic_string<char_type>& expected)
     assert(t.lookup_collatename(F(A), F(A + t.length(A))) == expected);
 }
 
-int main()
+int main(int, char**)
 {
     test("NUL", std::string("\x00", 1));
     test("alert", std::string("\x07"));
@@ -192,4 +192,6 @@ int main()
     std::locale::global(std::locale(LOCALE_cs_CZ_ISO8859_2));
     test(L"ch", std::wstring(L"ch"));
     std::locale::global(std::locale("C"));
+
+  return 0;
 }

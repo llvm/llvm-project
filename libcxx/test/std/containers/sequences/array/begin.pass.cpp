@@ -24,7 +24,7 @@ struct NoDefault {
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -48,4 +48,6 @@ int main()
       LIBCPP_ASSERT(ib != nullptr);
       LIBCPP_ASSERT(ie != nullptr);
     }
+
+  return 0;
 }

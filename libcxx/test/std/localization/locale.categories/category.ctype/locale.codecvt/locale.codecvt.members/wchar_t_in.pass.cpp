@@ -22,7 +22,7 @@
 
 typedef std::codecvt<wchar_t, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const std::basic_string<F::extern_type> from("some text");
@@ -39,4 +39,6 @@ int main()
     assert(static_cast<std::size_t>(to_next - to.data()) == expected.size());
     assert(static_cast<std::size_t>(to_next - to.data()) == expected.size());
     assert(to == expected);
+
+  return 0;
 }

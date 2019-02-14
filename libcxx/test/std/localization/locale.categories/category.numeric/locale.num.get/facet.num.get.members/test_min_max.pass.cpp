@@ -51,7 +51,7 @@ void check_limits()
     }
 }
 
-int main()
+int main(int, char**)
 {
     check_limits<short>();
     check_limits<unsigned short>();
@@ -61,4 +61,6 @@ int main()
     check_limits<unsigned long>();
     check_limits<long long>();
     check_limits<unsigned long long>();
+
+  return 0;
 }

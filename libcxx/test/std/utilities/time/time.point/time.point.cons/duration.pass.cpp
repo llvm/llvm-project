@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock Clock;
     typedef std::chrono::milliseconds Duration;
@@ -39,4 +39,6 @@ int main()
     static_assert(t.time_since_epoch() == Duration(3000), "");
     }
 #endif
+
+  return 0;
 }

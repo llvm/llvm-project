@@ -53,7 +53,7 @@ struct ImplicitT {
   int value;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, int> P1;
@@ -177,4 +177,6 @@ int main()
         static_assert(p2.second.value == 101, "");
     }
 #endif
+
+  return 0;
 }

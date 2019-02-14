@@ -56,8 +56,10 @@ struct TestFunc {
 };
 
 
-int main()
+int main(int, char**)
 {
     TestFunc<UserType>()();
     TestEachIntegralType<TestFunc>()();
+
+  return 0;
 }

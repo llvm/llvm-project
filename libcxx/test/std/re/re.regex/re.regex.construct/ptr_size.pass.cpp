@@ -24,7 +24,7 @@ test(const CharT* p, std::size_t len, unsigned mc)
     assert(r.mark_count() == mc);
 }
 
-int main()
+int main(int, char**)
 {
     test("\\(a\\)", 5, 0);
     test("\\(a[bc]\\)", 9, 0);
@@ -35,4 +35,6 @@ int main()
     test("(\0)(b)(c)(d)", 9, 3);
     test("(\0)(b)(c)(d)", 3, 1);
     test("(\0)(b)(c)(d)", 0, 0);
+
+  return 0;
 }

@@ -17,7 +17,7 @@
 #include <utility>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P;
@@ -26,4 +26,6 @@ int main()
         assert(std::get<1>(p) == 4);
         std::get<0>(p) = 5;
     }
+
+  return 0;
 }

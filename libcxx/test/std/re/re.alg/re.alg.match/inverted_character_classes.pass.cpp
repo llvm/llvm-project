@@ -15,7 +15,7 @@
 #include <regex>
 
 
-int main() {
+int main(int, char**) {
     assert(std::regex_match("X", std::regex("[X]")));
     assert(std::regex_match("X", std::regex("[XY]")));
     assert(!std::regex_match("X", std::regex("[^X]")));
@@ -40,4 +40,6 @@ int main() {
     assert(!std::regex_match("_", std::regex("[\\W]")));
     assert(std::regex_match("X", std::regex("[^\\W]")));
     assert(std::regex_match("_", std::regex("[^\\W]")));
+
+  return 0;
 }

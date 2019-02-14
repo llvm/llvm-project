@@ -1262,8 +1262,8 @@ static void sortSection(OutputSection *Sec,
     auto *ISD = cast<InputSectionDescription>(Sec->SectionCommands[0]);
     std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(),
                      [](const InputSection *A, const InputSection *B) -> bool {
-                       return A->File->PPC64SmallCodeModelRelocs &&
-                              !B->File->PPC64SmallCodeModelRelocs;
+                       return A->File->PPC64SmallCodeModelTocRelocs &&
+                              !B->File->PPC64SmallCodeModelTocRelocs;
                      });
     return;
   }
@@ -1676,6 +1676,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // we can correctly decide if a dynamic relocation is needed.
   if (!Config->Relocatable)
     forEachRelSec(scanRelocations<ELFT>);
+
+  addIRelativeRelocs();
 
   if (In.Plt && !In.Plt->empty())
     In.Plt->addSymbols();

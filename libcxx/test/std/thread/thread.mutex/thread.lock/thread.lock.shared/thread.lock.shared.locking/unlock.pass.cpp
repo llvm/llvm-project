@@ -30,7 +30,7 @@ struct mutex
 
 mutex m;
 
-int main()
+int main(int, char**)
 {
     std::shared_lock<mutex> lk(m);
     lk.unlock();
@@ -59,4 +59,6 @@ int main()
         assert(e.code().value() == EPERM);
     }
 #endif
+
+  return 0;
 }

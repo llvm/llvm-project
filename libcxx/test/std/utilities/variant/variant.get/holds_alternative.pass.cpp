@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include <variant>
 
-int main() {
+int main(int, char**) {
   {
     using V = std::variant<int>;
     constexpr V v;
@@ -34,4 +34,6 @@ int main() {
     const V v;
     ASSERT_NOEXCEPT(std::holds_alternative<int>(v));
   }
+
+  return 0;
 }

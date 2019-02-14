@@ -300,7 +300,6 @@ void TracePC::PrintCoverage() {
     if (FunctionStr.find("in ") == 0)
       FunctionStr = FunctionStr.substr(3);
     std::string LineStr = DescribePC("%l", VisualizePC);
-    size_t Line = std::stoul(LineStr);
     size_t NumEdges = Last - First;
     Vector<uintptr_t> UncoveredPCs;
     for (auto TE = First; TE < Last; TE++)
@@ -308,7 +307,8 @@ void TracePC::PrintCoverage() {
         UncoveredPCs.push_back(TE->PC);
     Printf("%sCOVERED_FUNC: hits: %zd", Counter ? "" : "UN", Counter);
     Printf(" edges: %zd/%zd", NumEdges - UncoveredPCs.size(), NumEdges);
-    Printf(" %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(), Line);
+    Printf(" %s %s:%s\n", FunctionStr.c_str(), FileStr.c_str(),
+           LineStr.c_str());
     if (Counter)
       for (auto PC : UncoveredPCs)
         Printf("  UNCOVERED_PC: %s\n",

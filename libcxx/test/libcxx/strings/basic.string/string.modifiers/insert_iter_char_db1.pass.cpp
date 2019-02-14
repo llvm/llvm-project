@@ -19,7 +19,7 @@
 #include <cassert>
 
 
-int main()
+int main(int, char**)
 {
 #if _LIBCPP_DEBUG >= 1
     {
@@ -30,4 +30,6 @@ int main()
         assert(false);
     }
 #endif
+
+  return 0;
 }

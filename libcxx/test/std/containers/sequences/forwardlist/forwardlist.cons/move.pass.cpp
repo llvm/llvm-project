@@ -20,7 +20,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef MoveOnly T;
@@ -67,4 +67,6 @@ int main()
         assert(c0.empty());
         assert(c.get_allocator() == A());
     }
+
+  return 0;
 }

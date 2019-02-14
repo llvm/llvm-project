@@ -63,7 +63,9 @@ void test ( T t ) {
     std::atomic<T> t0(t);
 }
 
-int main()
+int main(int, char**)
 {
     test(NotTriviallyCopyable(42));
+
+  return 0;
 }

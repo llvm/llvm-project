@@ -54,7 +54,7 @@ test(S s, typename S::size_type pos)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -74,4 +74,6 @@ int main()
     test(S("123"), 3);
     }
 #endif
+
+  return 0;
 }

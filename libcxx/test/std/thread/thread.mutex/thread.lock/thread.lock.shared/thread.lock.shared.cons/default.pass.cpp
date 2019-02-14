@@ -18,9 +18,11 @@
 #include <shared_mutex>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::shared_lock<std::shared_timed_mutex> ul;
     assert(!ul.owns_lock());
     assert(ul.mutex() == nullptr);
+
+  return 0;
 }

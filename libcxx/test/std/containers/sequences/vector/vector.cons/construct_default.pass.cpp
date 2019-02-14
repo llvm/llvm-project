@@ -60,7 +60,7 @@ test1(const typename C::allocator_type& a)
     LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
 }
 
-int main()
+int main(int, char**)
 {
     {
     test0<std::vector<int> >();
@@ -98,4 +98,6 @@ int main()
         assert(v.empty());
     }
 #endif
+
+  return 0;
 }

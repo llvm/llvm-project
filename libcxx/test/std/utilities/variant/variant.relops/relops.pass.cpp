@@ -269,7 +269,9 @@ void test_relational() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_equality();
   test_relational();
+
+  return 0;
 }

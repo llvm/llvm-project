@@ -16,7 +16,7 @@
 #include <Foundation/Foundation.h>
 // Project includes
 #include "lldb/Host/PseudoTerminal.h"
-#include "lldb/Target/FileAction.h"
+#include "lldb/Host/FileAction.h"
 
 #include "llvm/ADT/StringRef.h"
 

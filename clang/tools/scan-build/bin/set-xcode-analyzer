@@ -42,7 +42,7 @@ def ModifySpec(path, isBuiltinAnalyzer, pathToChecker):
         if line.find("Static Analyzer") >= 0:
           foundAnalyzer = True
       else:
-        m = re.search('^(\s*ExecPath\s*=\s*")', line)
+        m = re.search(r'^(\s*ExecPath\s*=\s*")', line)
         if m:
           line = "".join([m.group(0), pathToChecker, '";\n'])
           # Do not modify further ExecPath's later in the xcspec.

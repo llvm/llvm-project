@@ -19,7 +19,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::pair<const int, double> V;
@@ -109,4 +109,6 @@ int main()
     }
 #endif
 #endif
+
+  return 0;
 }

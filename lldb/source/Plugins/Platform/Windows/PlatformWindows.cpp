@@ -155,7 +155,7 @@ void PlatformWindows::Terminate(void) {
 //------------------------------------------------------------------
 /// Default Constructor
 //------------------------------------------------------------------
-PlatformWindows::PlatformWindows(bool is_host) : Platform(is_host) {}
+PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {}
 
 //------------------------------------------------------------------
 /// Destructor.
@@ -164,16 +164,6 @@ PlatformWindows::PlatformWindows(bool is_host) : Platform(is_host) {}
 /// inherited from by the plug-in instance.
 //------------------------------------------------------------------
 PlatformWindows::~PlatformWindows() = default;
-
-bool PlatformWindows::GetModuleSpec(const FileSpec &module_file_spec,
-                                    const ArchSpec &arch,
-                                    ModuleSpec &module_spec) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetModuleSpec(module_file_spec, arch,
-                                               module_spec);
-
-  return Platform::GetModuleSpec(module_file_spec, arch, module_spec);
-}
 
 Status PlatformWindows::ResolveExecutable(
     const ModuleSpec &ms, lldb::ModuleSP &exe_module_sp,
@@ -207,8 +197,9 @@ Status PlatformWindows::ResolveExecutable(
     }
   } else {
     if (m_remote_platform_sp) {
-      error = GetCachedExecutable(resolved_module_spec, exe_module_sp, nullptr,
-                                  *m_remote_platform_sp);
+      error =
+          GetCachedExecutable(resolved_module_spec, exe_module_sp,
+                              module_search_paths_ptr, *m_remote_platform_sp);
     } else {
       // We may connect to a process and use the provided executable (Don't use
       // local $PATH).
@@ -243,7 +234,8 @@ Status PlatformWindows::ResolveExecutable(
                idx, resolved_module_spec.GetArchitecture());
            ++idx) {
         error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
-                                            nullptr, nullptr, nullptr);
+                                            module_search_paths_ptr, nullptr,
+                                            nullptr);
         // Did we find an executable using one of the
         if (error.Success()) {
           if (exe_module_sp && exe_module_sp->GetObjectFile())
@@ -275,52 +267,6 @@ Status PlatformWindows::ResolveExecutable(
   }
 
   return error;
-}
-
-bool PlatformWindows::GetRemoteOSVersion() {
-  if (m_remote_platform_sp) {
-    m_os_version = m_remote_platform_sp->GetOSVersion();
-    return !m_os_version.empty();
-  }
-  return false;
-}
-
-bool PlatformWindows::GetRemoteOSBuildString(std::string &s) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSBuildString(s);
-  s.clear();
-  return false;
-}
-
-bool PlatformWindows::GetRemoteOSKernelDescription(std::string &s) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSKernelDescription(s);
-  s.clear();
-  return false;
-}
-
-// Remote Platform subclasses need to override this function
-ArchSpec PlatformWindows::GetRemoteSystemArchitecture() {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteSystemArchitecture();
-  return ArchSpec();
-}
-
-const char *PlatformWindows::GetHostname() {
-  if (IsHost())
-    return Platform::GetHostname();
-
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetHostname();
-  return nullptr;
-}
-
-bool PlatformWindows::IsConnected() const {
-  if (IsHost())
-    return true;
-  else if (m_remote_platform_sp)
-    return m_remote_platform_sp->IsConnected();
-  return false;
 }
 
 Status PlatformWindows::ConnectRemote(Args &args) {
@@ -369,46 +315,6 @@ Status PlatformWindows::DisconnectRemote() {
   return error;
 }
 
-bool PlatformWindows::GetProcessInfo(lldb::pid_t pid,
-                                     ProcessInstanceInfo &process_info) {
-  bool success = false;
-  if (IsHost()) {
-    success = Platform::GetProcessInfo(pid, process_info);
-  } else if (m_remote_platform_sp) {
-    success = m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  }
-  return success;
-}
-
-uint32_t
-PlatformWindows::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                               ProcessInstanceInfoList &process_infos) {
-  uint32_t match_count = 0;
-  if (IsHost()) {
-    // Let the base class figure out the host details
-    match_count = Platform::FindProcesses(match_info, process_infos);
-  } else {
-    // If we are remote, we can only return results if we are connected
-    if (m_remote_platform_sp)
-      match_count =
-          m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  }
-  return match_count;
-}
-
-Status PlatformWindows::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Status error;
-  if (IsHost()) {
-    error = Platform::LaunchProcess(launch_info);
-  } else {
-    if (m_remote_platform_sp)
-      error = m_remote_platform_sp->LaunchProcess(launch_info);
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return error;
-}
-
 ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
                                         Debugger &debugger, Target *target,
                                         Status &error) {
@@ -430,6 +336,14 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   // encapsulate all the logic of Launching and Attaching in the process
   // plugin, and PlatformWindows::DebugProcess is just a pass-through to get to
   // the process plugin.
+
+  if (IsRemote()) {
+    if (m_remote_platform_sp)
+      return m_remote_platform_sp->DebugProcess(launch_info, debugger, target,
+                                                error);
+    else
+      error.SetErrorString("the platform is not currently connected");
+  }
 
   if (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) {
     // This is a process attach.  Don't need to launch anything.
@@ -488,69 +402,6 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
   return process_sp;
 }
 
-const char *PlatformWindows::GetUserName(uint32_t uid) {
-  // Check the cache in Platform in case we have already looked this uid up
-  const char *user_name = Platform::GetUserName(uid);
-  if (user_name)
-    return user_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetUserName(uid);
-  return nullptr;
-}
-
-const char *PlatformWindows::GetGroupName(uint32_t gid) {
-  const char *group_name = Platform::GetGroupName(gid);
-  if (group_name)
-    return group_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetGroupName(gid);
-  return nullptr;
-}
-
-Status PlatformWindows::GetFileWithUUID(const FileSpec &platform_file,
-                                        const UUID *uuid_ptr,
-                                        FileSpec &local_file) {
-  if (IsRemote()) {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetFileWithUUID(platform_file, uuid_ptr,
-                                                   local_file);
-  }
-
-  // Default to the local case
-  local_file = platform_file;
-  return Status();
-}
-
-Status PlatformWindows::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr, ModuleSP *old_module_sp_ptr,
-    bool *did_create_ptr) {
-  Status error;
-  module_sp.reset();
-
-  if (IsRemote()) {
-    // If we have a remote platform always, let it try and locate the shared
-    // module first.
-    if (m_remote_platform_sp) {
-      error = m_remote_platform_sp->GetSharedModule(
-          module_spec, process, module_sp, module_search_paths_ptr,
-          old_module_sp_ptr, did_create_ptr);
-    }
-  }
-
-  if (!module_sp) {
-    // Fall back to the local platform and find the file locally
-    error = Platform::GetSharedModule(module_spec, process, module_sp,
-                                      module_search_paths_ptr,
-                                      old_module_sp_ptr, did_create_ptr);
-  }
-  if (module_sp)
-    module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
-  return error;
-}
-
 bool PlatformWindows::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                       ArchSpec &arch) {
   static SupportedArchList architectures;
@@ -566,21 +417,11 @@ void PlatformWindows::GetStatus(Stream &strm) {
 
 #ifdef _WIN32
   llvm::VersionTuple version = HostInfo::GetOSVersion();
-  strm << "Host: Windows " << version.getAsString() << '\n';
+  strm << "      Host: Windows " << version.getAsString() << '\n';
 #endif
 }
 
 bool PlatformWindows::CanDebugProcess() { return true; }
-
-Environment PlatformWindows::GetEnvironment() {
-  if (IsRemote()) {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetEnvironment();
-    return Environment();
-  }
-
-  return Host::GetEnvironment();
-}
 
 ConstString PlatformWindows::GetFullNameForDylib(ConstString basename) {
   if (basename.IsEmpty())

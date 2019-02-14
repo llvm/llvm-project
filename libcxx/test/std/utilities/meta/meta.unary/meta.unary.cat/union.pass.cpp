@@ -51,10 +51,12 @@ union Union
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_union<Union>();
 
 //  LWG#2582
     static_assert(!std::is_union<incomplete_type>::value, "");
+
+  return 0;
 }

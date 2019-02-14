@@ -41,7 +41,7 @@ const SwapTestcase TestCases[] =
 #undef LONG_STR1
 #undef LONG_STR2
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   {
@@ -76,4 +76,6 @@ int main()
     }
     assert(p1 == Val);
   }
+
+  return 0;
 }

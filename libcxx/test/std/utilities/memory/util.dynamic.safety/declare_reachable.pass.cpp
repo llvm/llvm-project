@@ -14,10 +14,12 @@
 #include <memory>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     int* p = new int;
     std::declare_reachable(p);
     assert(std::undeclare_reachable(p) == p);
     delete p;
+
+  return 0;
 }

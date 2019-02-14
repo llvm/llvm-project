@@ -48,7 +48,7 @@ void test_equality()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_equality<0>();
     test_equality<1>();
@@ -59,4 +59,6 @@ int main()
     test_equality<64>();
     test_equality<65>();
     test_equality<1000>();
+
+  return 0;
 }

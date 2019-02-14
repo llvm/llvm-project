@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fmodules %s -verify
-// RUN: %clang_cc1 -fmodules %s -verify -triple i686-windows
+// RUN: %clang_cc1 -std=c++14 -fmodules %s -verify
+// RUN: %clang_cc1 -std=c++14 -fmodules %s -verify -triple i686-windows
 // expected-no-diagnostics
 #pragma clang module build A
 module A {}

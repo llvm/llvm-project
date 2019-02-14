@@ -16,7 +16,7 @@
 #include <fstream>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     {
         std::ifstream fs;
@@ -24,4 +24,6 @@ int main()
     {
         std::wifstream fs;
     }
+
+  return 0;
 }

@@ -23,7 +23,7 @@
 #include "filesystem_test_helper.hpp"
 
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   const char* const value = "hello world";
@@ -38,4 +38,6 @@ int main()
     assert(p.c_str() == str_value);
     assert(p.native().c_str() == p.c_str());
   }
+
+  return 0;
 }

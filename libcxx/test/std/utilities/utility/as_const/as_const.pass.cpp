@@ -34,7 +34,7 @@ void test(T& t)
     assert(std::as_const<const volatile T>(t) == t);
 }
 
-int main()
+int main(int, char**)
 {
     int i = 3;
     double d = 4.0;
@@ -42,4 +42,6 @@ int main()
     test(i);
     test(d);
     test(s);
+
+  return 0;
 }

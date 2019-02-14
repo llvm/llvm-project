@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -30,4 +30,6 @@ int main()
     assert ( s2.ends_with('e'));
     assert (!s2.ends_with('x'));
     }
+
+  return 0;
 }

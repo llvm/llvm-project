@@ -25,7 +25,7 @@
 #include "filesystem_test_helper.hpp"
 
 
-int main()
+int main(int, char**)
 {
   using namespace fs;
   const char* In1 = "abcd/efg";
@@ -48,4 +48,6 @@ int main()
     path p = fs::u8path(In3, In3End);
     assert(p == In1);
   }
+
+  return 0;
 }

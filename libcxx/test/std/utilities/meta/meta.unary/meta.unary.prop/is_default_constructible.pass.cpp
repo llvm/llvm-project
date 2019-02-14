@@ -81,7 +81,7 @@ class B
     B();
 };
 
-int main()
+int main(int, char**)
 {
     test_is_default_constructible<A>();
     test_is_default_constructible<Union>();
@@ -122,4 +122,6 @@ int main()
     test_is_not_default_constructible<void() &&> ();
 #endif
 #endif
+
+  return 0;
 }

@@ -21,7 +21,7 @@
 #include <memory>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<std::unique_ptr<int> > T;
@@ -29,4 +29,6 @@ int main()
         std::unique_ptr<int> p = std::get<0>(std::move(t));
         assert(*p == 3);
     }
+
+  return 0;
 }

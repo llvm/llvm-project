@@ -13,7 +13,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l;
     assert(!std::isalnum(' ', l));
@@ -27,4 +27,6 @@ int main()
     assert( std::isalnum('f', l));
     assert( std::isalnum('9', l));
     assert(!std::isalnum('+', l));
+
+  return 0;
 }

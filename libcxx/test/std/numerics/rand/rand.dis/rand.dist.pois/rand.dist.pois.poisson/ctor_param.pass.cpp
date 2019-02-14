@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::poisson_distribution<> D;
@@ -25,4 +25,6 @@ int main()
         D d(p);
         assert(d.mean() == 0.25);
     }
+
+  return 0;
 }

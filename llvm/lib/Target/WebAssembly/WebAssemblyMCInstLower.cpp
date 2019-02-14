@@ -47,7 +47,7 @@ static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 MCSymbol *
 WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   const GlobalValue *Global = MO.getGlobal();
-  MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+  auto *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
 
   if (const auto *FuncTy = dyn_cast<FunctionType>(Global->getValueType())) {
     const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
@@ -56,9 +56,9 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
     SmallVector<MVT, 1> ResultMVTs;
     SmallVector<MVT, 4> ParamMVTs;
-    ComputeSignatureVTs(FuncTy, CurrentFunc, TM, ParamMVTs, ResultMVTs);
+    computeSignatureVTs(FuncTy, CurrentFunc, TM, ParamMVTs, ResultMVTs);
 
-    auto Signature = SignatureFromMVTs(ResultMVTs, ParamMVTs);
+    auto Signature = signatureFromMVTs(ResultMVTs, ParamMVTs);
     WasmSym->setSignature(Signature.get());
     Printer.addSignature(std::move(Signature));
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
@@ -70,8 +70,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
     const MachineOperand &MO) const {
   const char *Name = MO.getSymbolName();
-  MCSymbolWasm *WasmSym =
-      cast<MCSymbolWasm>(Printer.GetExternalSymbolSymbol(Name));
+  auto *WasmSym = cast<MCSymbolWasm>(Printer.GetExternalSymbolSymbol(Name));
   const WebAssemblySubtarget &Subtarget = Printer.getSubtarget();
 
   // Except for the two exceptions (__stack_pointer and __cpp_exception), all
@@ -109,7 +108,7 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
                                            : wasm::ValType::I32);
   } else { // Function symbols
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    GetLibcallSignature(Subtarget, Name, Returns, Params);
+    getLibcallSignature(Subtarget, Name, Returns, Params);
   }
   auto Signature =
       make_unique<wasm::WasmSignature>(std::move(Returns), std::move(Params));
@@ -119,7 +118,7 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   return WasmSym;
 }
 
-MCOperand WebAssemblyMCInstLower::LowerSymbolOperand(MCSymbol *Sym,
+MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(MCSymbol *Sym,
                                                      int64_t Offset,
                                                      bool IsFunc, bool IsGlob,
                                                      bool IsEvent) const {
@@ -160,13 +159,13 @@ static wasm::ValType getType(const TargetRegisterClass *RC) {
   llvm_unreachable("Unexpected register class");
 }
 
-void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
+void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
                                    MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 
   const MCInstrDesc &Desc = MI->getDesc();
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI->getOperand(I);
 
     MCOperand MCOp;
     switch (MO.getType()) {
@@ -187,8 +186,8 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_Immediate:
-      if (i < Desc.NumOperands) {
-        const MCOperandInfo &Info = Desc.OpInfo[i];
+      if (I < Desc.NumOperands) {
+        const MCOperandInfo &Info = Desc.OpInfo[I];
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
           MCSymbol *Sym = Printer.createTempSymbol("typeindex");
 
@@ -208,7 +207,7 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
           if (WebAssembly::isCallIndirect(*MI))
             Params.pop_back();
 
-          MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
+          auto *WasmSym = cast<MCSymbolWasm>(Sym);
           auto Signature = make_unique<wasm::WasmSignature>(std::move(Returns),
                                                             std::move(Params));
           WasmSym->setSignature(Signature.get());
@@ -238,7 +237,7 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
     case MachineOperand::MO_GlobalAddress:
       assert(MO.getTargetFlags() == WebAssemblyII::MO_NO_FLAG &&
              "WebAssembly does not use target flags on GlobalAddresses");
-      MCOp = LowerSymbolOperand(GetGlobalAddressSymbol(MO), MO.getOffset(),
+      MCOp = lowerSymbolOperand(GetGlobalAddressSymbol(MO), MO.getOffset(),
                                 MO.getGlobal()->getValueType()->isFunctionTy(),
                                 false, false);
       break;
@@ -247,7 +246,7 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
       // variable or a function.
       assert((MO.getTargetFlags() & ~WebAssemblyII::MO_SYMBOL_MASK) == 0 &&
              "WebAssembly uses only symbol flags on ExternalSymbols");
-      MCOp = LowerSymbolOperand(
+      MCOp = lowerSymbolOperand(
           GetExternalSymbolSymbol(MO), /*Offset=*/0,
           (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_FUNCTION) != 0,
           (MO.getTargetFlags() & WebAssemblyII::MO_SYMBOL_GLOBAL) != 0,
@@ -258,7 +257,7 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
       // because global addresses or other external symbols are handled above.
       assert(MO.getTargetFlags() == 0 &&
              "WebAssembly does not use target flags on MCSymbol");
-      MCOp = LowerSymbolOperand(MO.getMCSymbol(), /*Offset=*/0, false, false,
+      MCOp = lowerSymbolOperand(MO.getMCSymbol(), /*Offset=*/0, false, false,
                                 false);
       break;
     }

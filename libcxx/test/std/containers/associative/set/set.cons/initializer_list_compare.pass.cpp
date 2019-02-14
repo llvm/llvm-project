@@ -18,7 +18,7 @@
 #include <cassert>
 #include "../../../test_compare.h"
 
-int main()
+int main(int, char**)
 {
     typedef test_compare<std::less<int> > Cmp;
     typedef std::set<int, Cmp> C;
@@ -34,4 +34,6 @@ int main()
     assert(*++i == V(5));
     assert(*++i == V(6));
     assert(m.key_comp() == Cmp(10));
+
+  return 0;
 }

@@ -92,7 +92,7 @@ public:
     bool locked() const {return locked_;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         L0 l0;
@@ -518,4 +518,6 @@ int main()
     }
 #endif  // TEST_HAS_NO_EXCEPTIONS
 #endif // TEST_STD_VER >= 11
+
+  return 0;
 }

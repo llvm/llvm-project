@@ -119,6 +119,21 @@ TEST(IndexTest, IndexPreprocessorMacros) {
   EXPECT_THAT(Index->Symbols, UnorderedElementsAre());
 }
 
+TEST(IndexTest, IndexParametersInDecls) {
+  std::string Code = "void foo(int bar);";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  Opts.IndexFunctionLocals = true;
+  Opts.IndexParametersInDeclarations = true;
+  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols, Contains(QName("bar")));
+
+  Opts.IndexParametersInDeclarations = false;
+  Index->Symbols.clear();
+  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols, Not(Contains(QName("bar"))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang

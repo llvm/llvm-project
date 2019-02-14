@@ -41,7 +41,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::istream is((std::streambuf*)0);
@@ -76,4 +76,6 @@ int main()
         assert(!is.eof());
         assert( is.fail());
     }
+
+  return 0;
 }

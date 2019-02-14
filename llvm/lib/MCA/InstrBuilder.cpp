@@ -97,14 +97,14 @@ static void initializeUsedResources(InstrDesc &ID,
   });
 
   uint64_t UsedResourceUnits = 0;
+  uint64_t UsedResourceGroups = 0;
 
   // Remove cycles contributed by smaller resources.
   for (unsigned I = 0, E = Worklist.size(); I < E; ++I) {
     ResourcePlusCycles &A = Worklist[I];
     if (!A.second.size()) {
-      A.second.NumUnits = 0;
-      A.second.setReserved();
-      ID.Resources.emplace_back(A);
+      assert(countPopulation(A.first) > 1 && "Expected a group!");
+      UsedResourceGroups |= PowerOf2Floor(A.first);
       continue;
     }
 
@@ -126,6 +126,9 @@ static void initializeUsedResources(InstrDesc &ID,
       }
     }
   }
+
+  ID.UsedProcResUnits = UsedResourceUnits;
+  ID.UsedProcResGroups = UsedResourceGroups;
 
   // A SchedWrite may specify a number of cycles in which a resource group
   // is reserved. For example (on target x86; cpu Haswell):
@@ -179,10 +182,14 @@ static void initializeUsedResources(InstrDesc &ID,
 
   LLVM_DEBUG({
     for (const std::pair<uint64_t, ResourceUsage> &R : ID.Resources)
-      dbgs() << "\t\tMask=" << format_hex(R.first, 16) << ", "
+      dbgs() << "\t\tResource Mask=" << format_hex(R.first, 16) << ", "
+             << "Reserved=" << R.second.isReserved() << ", "
+             << "#Units=" << R.second.NumUnits << ", "
              << "cy=" << R.second.size() << '\n';
     for (const uint64_t R : ID.Buffers)
       dbgs() << "\t\tBuffer Mask=" << format_hex(R, 16) << '\n';
+    dbgs()   << "\t\t Used Units=" << format_hex(ID.UsedProcResUnits, 16) << '\n';
+    dbgs()   << "\t\tUsed Groups=" << format_hex(ID.UsedProcResGroups, 16) << '\n';
   });
 }
 

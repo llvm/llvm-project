@@ -107,7 +107,9 @@ void test_counted()
     assert(Counted::count == 0);
 }
 
-int main() {
+int main(int, char**) {
     test_counted();
     test_ctor_throws();
+
+  return 0;
 }

@@ -22,7 +22,7 @@
 #include <tuple>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     using T =  std::tuple<int, long, void*>;
     using E1 = typename std::tuple_element<1, T &>::type; // expected-error{{undefined template}}
@@ -30,4 +30,6 @@ int main()
     using E3 = typename std::tuple_element<4, T const>::type;
         // expected-error@__tuple:* 2 {{static_assert failed}}
 
+
+  return 0;
 }

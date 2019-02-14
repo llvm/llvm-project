@@ -39,7 +39,7 @@ protected:
     virtual string_type do_falsename() const {return "no";}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     {
@@ -96,4 +96,6 @@ int main()
             assert(ex == "yes");
         }
     }
+
+  return 0;
 }

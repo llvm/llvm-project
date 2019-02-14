@@ -19,7 +19,7 @@
 #include <filesystem>
 #include <cassert>
 
-int main() {
+int main(int, char**) {
   {
     std::ifstream fs;
     assert(!fs.is_open());
@@ -44,4 +44,6 @@ int main() {
     fs >> c;
     assert(c == L'r');
   }
+
+  return 0;
 }

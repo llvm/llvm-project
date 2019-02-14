@@ -31,10 +31,12 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(xsgetn_called == 0);
     assert(t.sgetn(0, 0) == 10);
     assert(xsgetn_called == 1);
+
+  return 0;
 }

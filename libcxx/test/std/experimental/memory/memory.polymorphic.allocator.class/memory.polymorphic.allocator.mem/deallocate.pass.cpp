@@ -41,7 +41,7 @@ void testForSizeAndAlign() {
     }
 }
 
-int main()
+int main(int, char**)
 {
     {
         ex::polymorphic_allocator<int> a;
@@ -58,4 +58,6 @@ int main()
         testForSizeAndAlign<73, MA>();
         testForSizeAndAlign<13, MA>();
     }
+
+  return 0;
 }

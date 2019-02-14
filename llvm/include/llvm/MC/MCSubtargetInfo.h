@@ -180,11 +180,6 @@ public:
     auto Found = std::lower_bound(ProcDesc.begin(), ProcDesc.end(), CPU);
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
-
-  /// Returns string representation of scheduler comment
-  virtual std::string getSchedInfoStr(MCInst const &MCI) const {
-    return {};
-  }
 };
 
 } // end namespace llvm

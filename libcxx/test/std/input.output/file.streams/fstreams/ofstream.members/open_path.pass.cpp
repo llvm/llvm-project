@@ -22,7 +22,7 @@
 
 namespace fs = std::filesystem;
 
-int main() {
+int main(int, char**) {
   fs::path p = get_temp_file_name();
   {
     std::ofstream fs;
@@ -58,4 +58,6 @@ int main() {
     assert(c == L'a');
   }
   std::remove(p.c_str());
+
+  return 0;
 }

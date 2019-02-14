@@ -24,7 +24,7 @@ make(int n)
     return c;
 }
 
-int main()
+int main(int, char**)
 {
     std::queue<int> q1 = make<std::queue<int> >(5);
     std::queue<int> q2 = make<std::queue<int> >(10);
@@ -33,4 +33,6 @@ int main()
     swap(q1, q2);
     assert(q1 == q2_save);
     assert(q2 == q1_save);
+
+  return 0;
 }

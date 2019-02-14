@@ -15,11 +15,13 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER > 14
     const int *p = std::addressof<const int>(0);
 #else
 #error
 #endif
+
+  return 0;
 }

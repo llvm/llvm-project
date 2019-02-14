@@ -35,6 +35,8 @@ foreach(arch ${SCUDO_TEST_ARCH})
   list(APPEND SCUDO_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 endforeach()
 
+add_subdirectory(standalone)
+
 add_lit_testsuite(check-scudo "Running the Scudo Hardened Allocator tests"
   ${SCUDO_TESTSUITES}
   DEPENDS ${SCUDO_TEST_DEPS})

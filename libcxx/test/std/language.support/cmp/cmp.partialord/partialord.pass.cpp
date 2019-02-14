@@ -155,9 +155,11 @@ constexpr bool test_constexpr() {
   return true;
 }
 
-int main() {
+int main(int, char**) {
   test_static_members();
   test_signatures();
   static_assert(test_conversion(), "conversion test failed");
   static_assert(test_constexpr(), "constexpr test failed");
+
+  return 0;
 }

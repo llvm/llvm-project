@@ -36,7 +36,7 @@ void test(const C& c)
     assert(c.count(4) == 1);
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multiset<int> C;
@@ -99,4 +99,6 @@ int main()
         test(c);
     }
 #endif
+
+  return 0;
 }

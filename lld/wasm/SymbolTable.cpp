@@ -28,6 +28,8 @@ SymbolTable *lld::wasm::Symtab;
 
 void SymbolTable::addFile(InputFile *File) {
   log("Processing: " + toString(File));
+  if (Config->Trace)
+    message(toString(File));
   File->parse();
 
   // LLVM bitcode file
@@ -73,21 +75,43 @@ void SymbolTable::reportRemainingUndefines() {
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
-  return SymMap.lookup(CachedHashStringRef(Name));
+  auto It = SymMap.find(CachedHashStringRef(Name));
+  if (It == SymMap.end() || It->second == -1)
+    return nullptr;
+  return SymVector[It->second];
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name, InputFile *File) {
-  bool Inserted = false;
-  Symbol *&Sym = SymMap[CachedHashStringRef(Name)];
-  if (!Sym) {
-    Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
-    Sym->IsUsedInRegularObj = false;
-    SymVector.emplace_back(Sym);
-    Inserted = true;
+std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
+  bool Trace = false;
+  auto P = SymMap.insert({CachedHashStringRef(Name), (int)SymVector.size()});
+  int &SymIndex = P.first->second;
+  bool IsNew = P.second;
+  if (SymIndex == -1) {
+    SymIndex = SymVector.size();
+    Trace = true;
+    IsNew = true;
   }
+
+  if (!IsNew)
+    return {SymVector[SymIndex], false};
+
+  Symbol *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+  Sym->IsUsedInRegularObj = false;
+  Sym->Traced = Trace;
+  SymVector.emplace_back(Sym);
+  return {Sym, true};
+}
+
+std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name,
+                                              const InputFile *File) {
+  Symbol *S;
+  bool WasInserted;
+  std::tie(S, WasInserted) = insertName(Name);
+
   if (!File || File->kind() == InputFile::ObjectKind)
-    Sym->IsUsedInRegularObj = true;
-  return {Sym, Inserted};
+    S->IsUsedInRegularObj = true;
+
+  return {S, WasInserted};
 }
 
 static void reportTypeError(const Symbol *Existing, const InputFile *File,
@@ -315,7 +339,8 @@ Symbol *SymbolTable::addDefinedEvent(StringRef Name, uint32_t Flags,
   return S;
 }
 
-Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef Module,
+Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
+                                          StringRef ImportModule,
                                           uint32_t Flags, InputFile *File,
                                           const WasmSignature *Sig) {
   LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << Name <<
@@ -326,7 +351,8 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef Module,
   std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted)
-    replaceSymbol<UndefinedFunction>(S, Name, Module, Flags, File, Sig);
+    replaceSymbol<UndefinedFunction>(S, Name, ImportName, ImportModule, Flags,
+                                     File, Sig);
   else if (auto *Lazy = dyn_cast<LazySymbol>(S))
     Lazy->fetch();
   else
@@ -352,7 +378,8 @@ Symbol *SymbolTable::addUndefinedData(StringRef Name, uint32_t Flags,
   return S;
 }
 
-Symbol *SymbolTable::addUndefinedGlobal(StringRef Name, uint32_t Flags,
+Symbol *SymbolTable::addUndefinedGlobal(StringRef Name, StringRef ImportName,
+                                        StringRef ImportModule, uint32_t Flags,
                                         InputFile *File,
                                         const WasmGlobalType *Type) {
   LLVM_DEBUG(dbgs() << "addUndefinedGlobal: " << Name << "\n");
@@ -362,7 +389,8 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef Name, uint32_t Flags,
   std::tie(S, WasInserted) = insert(Name, File);
 
   if (WasInserted)
-    replaceSymbol<UndefinedGlobal>(S, Name, Flags, File, Type);
+    replaceSymbol<UndefinedGlobal>(S, Name, ImportName, ImportModule, Flags,
+                                   File, Type);
   else if (auto *Lazy = dyn_cast<LazySymbol>(S))
     Lazy->fetch();
   else if (S->isDefined())
@@ -408,4 +436,65 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
 
 bool SymbolTable::addComdat(StringRef Name) {
   return Comdats.insert(CachedHashStringRef(Name)).second;
+}
+
+// Set a flag for --trace-symbol so that we can print out a log message
+// if a new symbol with the same name is inserted into the symbol table.
+void SymbolTable::trace(StringRef Name) {
+  SymMap.insert({CachedHashStringRef(Name), -1});
+}
+
+static const uint8_t UnreachableFn[] = {
+    0x03 /* ULEB length */, 0x00 /* ULEB num locals */,
+    0x00 /* opcode unreachable */, 0x0b /* opcode end */
+};
+
+// Replace the given symbol body with an unreachable function.
+// This is used by handleWeakUndefines in order to generate a callable
+// equivalent of an undefined function.
+InputFunction *SymbolTable::replaceWithUnreachable(Symbol *Sym,
+                                                   const WasmSignature &Sig,
+                                                   StringRef DebugName) {
+  auto *Func = make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
+  Func->setBody(UnreachableFn);
+  SyntheticFunctions.emplace_back(Func);
+  replaceSymbol<DefinedFunction>(Sym, Sym->getName(), Sym->getFlags(), nullptr, Func);
+  return Func;
+}
+
+// For weak undefined functions, there may be "call" instructions that reference
+// the symbol. In this case, we need to synthesise a dummy/stub function that
+// will abort at runtime, so that relocations can still provided an operand to
+// the call instruction that passes Wasm validation.
+void SymbolTable::handleWeakUndefines() {
+  for (Symbol *Sym : getSymbols()) {
+    if (!Sym->isUndefWeak())
+      continue;
+
+    const WasmSignature *Sig = nullptr;
+
+    if (auto *FuncSym = dyn_cast<FunctionSymbol>(Sym)) {
+      // It is possible for undefined functions not to have a signature (eg. if
+      // added via "--undefined"), but weak undefined ones do have a signature.
+      assert(FuncSym->Signature);
+      Sig = FuncSym->Signature;
+    } else if (auto *LazySym = dyn_cast<LazySymbol>(Sym)) {
+      // Lazy symbols may not be functions and therefore can have a null
+      // signature.
+      Sig = LazySym->Signature;
+    }
+
+    if (!Sig)
+      continue;
+
+    // Add a synthetic dummy for weak undefined functions.  These dummies will
+    // be GC'd if not used as the target of any "call" instructions.
+    StringRef DebugName = Saver.save("undefined:" + toString(*Sym));
+    InputFunction* Func = replaceWithUnreachable(Sym, *Sig, DebugName);
+    // Ensure it compares equal to the null pointer, and so that table relocs
+    // don't pull in the stub body (only call-operand relocs should do that).
+    Func->setTableIndex(0);
+    // Hide our dummy to prevent export.
+    Sym->setHidden(true);
+  }
 }

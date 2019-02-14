@@ -55,7 +55,7 @@ testN(int start, int N)
     test(c1);
 }
 
-int main()
+int main(int, char**)
 {
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
@@ -73,4 +73,6 @@ int main()
             testN<std::deque<int, min_allocator<int>> >(rng[i], rng[j]);
     }
 #endif
+
+  return 0;
 }

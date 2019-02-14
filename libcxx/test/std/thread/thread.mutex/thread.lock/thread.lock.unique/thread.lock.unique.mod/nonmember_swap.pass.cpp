@@ -26,7 +26,7 @@ struct mutex
 
 mutex m;
 
-int main()
+int main(int, char**)
 {
     std::unique_lock<mutex> lk1(m);
     std::unique_lock<mutex> lk2;
@@ -35,4 +35,6 @@ int main()
     assert(lk1.owns_lock() == false);
     assert(lk2.mutex() == &m);
     assert(lk2.owns_lock() == true);
+
+  return 0;
 }

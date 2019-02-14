@@ -74,7 +74,7 @@ void test_nullptr_conversions() {
 #endif
 
 
-int main()
+int main(int, char**)
 {
     static_assert(sizeof(std::nullptr_t) == sizeof(void*),
                   "sizeof(std::nullptr_t) == sizeof(void*)");
@@ -103,4 +103,6 @@ int main()
         test_comparisons<void(*)()>();
     }
     test_nullptr_conversions();
+
+  return 0;
 }

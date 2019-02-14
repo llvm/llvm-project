@@ -21,7 +21,7 @@
 #include "private_constructor.hpp"
 #include "is_transparent.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::pair<const int, double> V;
     {
@@ -233,4 +233,6 @@ int main()
     }
 
 #endif
+
+  return 0;
 }

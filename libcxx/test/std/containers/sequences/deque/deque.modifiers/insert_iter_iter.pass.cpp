@@ -259,7 +259,7 @@ test_move()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
@@ -285,4 +285,6 @@ int main()
     test_move<std::deque<MoveOnly, min_allocator<MoveOnly> > >();
     }
 #endif
+
+  return 0;
 }

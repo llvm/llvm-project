@@ -31,7 +31,7 @@
 
 using std::experimental::pmr::memory_resource;
 
-int main()
+int main(int, char**)
 {
     TestResource R(42);
     auto& P = R.getController();
@@ -85,4 +85,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

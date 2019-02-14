@@ -20,10 +20,12 @@
 #include <cassert>
 #include <cstdlib>
 
-int main()
+int main(int, char**)
 {
     int a1[] = {1, 2, 3};
     std::list<int> l1(a1, a1+3);
     std::list<int>::iterator i = l1.erase(next(l1.cbegin()), l1.cbegin());
     assert(false);
+
+  return 0;
 }

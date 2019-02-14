@@ -10,6 +10,8 @@
 // RUN: %build
 // RUN: %run
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

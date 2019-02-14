@@ -16,7 +16,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -32,4 +32,6 @@ int main()
         assert(in[4] == 'a');
         assert(in[5] == '1');
     }
+
+  return 0;
 }

@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::binary_negate<std::logical_and<int> > F;
     const F f = F(std::logical_and<int>());
@@ -25,4 +25,6 @@ int main()
     assert( f(36, 0));
     assert( f(0, 36));
     assert( f(0, 0));
+
+  return 0;
 }

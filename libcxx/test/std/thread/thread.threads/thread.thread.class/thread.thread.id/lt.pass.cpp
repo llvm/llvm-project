@@ -20,7 +20,7 @@
 #include <thread>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::thread::id id0;
     std::thread::id id1;
@@ -39,4 +39,6 @@ int main()
       assert( (id0 >  id2));
       assert( (id0 >= id2));
     }
+
+  return 0;
 }

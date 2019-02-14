@@ -151,7 +151,6 @@ FNR == 1 {
       $0 ~ /JOY_GET_X_OFFSET/ ||
       $0 ~ /CHIOGPICKER/ ||
       $0 ~ /SLIOCGUNIT/ ||
-      $0 ~ /SATIOSBUFSIZE/ ||
       $0 ~ /TUNSLMODE/ ||
       $0 ~ /CBQ_IF_ATTACH/ ||
       $0 ~ /CDNR_IF_ATTACH/ ||

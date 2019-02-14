@@ -209,11 +209,11 @@ fyl2xp1
 # CHECK-NEXT:  1      100   0.25                  U     f2xm1
 # CHECK-NEXT:  1      1     1.00                  U     fabs
 # CHECK-NEXT:  1      3     1.00                  U     fadd	%st, %st(1)
-# CHECK-NEXT:  1      3     1.00                  U     fadd	%st(2)
+# CHECK-NEXT:  1      3     1.00                  U     fadd	%st(2), %st
 # CHECK-NEXT:  2      10    1.00    *             U     fadds	(%ecx)
 # CHECK-NEXT:  2      10    1.00    *             U     faddl	(%ecx)
-# CHECK-NEXT:  1      3     1.00                  U     faddp	%st(1)
-# CHECK-NEXT:  1      3     1.00                  U     faddp	%st(2)
+# CHECK-NEXT:  1      3     1.00                  U     faddp	%st, %st(1)
+# CHECK-NEXT:  1      3     1.00                  U     faddp	%st, %st(2)
 # CHECK-NEXT:  3      13    2.00    *             U     fiadds	(%ecx)
 # CHECK-NEXT:  3      13    2.00    *             U     fiaddl	(%ecx)
 # CHECK-NEXT:  43     47    10.75                 U     fbld	(%ecx)
@@ -237,24 +237,24 @@ fyl2xp1
 # CHECK-NEXT:  2      8     1.00                  U     fcomps	(%ecx)
 # CHECK-NEXT:  2      8     1.00                  U     fcompl	(%eax)
 # CHECK-NEXT:  2      1     0.50                  U     fcompp
-# CHECK-NEXT:  3      1     0.50                  U     fcomi	%st(3)
-# CHECK-NEXT:  3      1     0.50                  U     fcompi	%st(3)
+# CHECK-NEXT:  3      1     0.50                  U     fcomi	%st(3), %st
+# CHECK-NEXT:  3      1     0.50                  U     fcompi	%st(3), %st
 # CHECK-NEXT:  1      100   0.25                  U     fcos
 # CHECK-NEXT:  2      2     1.00                  U     fdecstp
 # CHECK-NEXT:  1      24    1.00                  U     fdiv	%st, %st(1)
-# CHECK-NEXT:  1      20    1.00                  U     fdiv	%st(2)
+# CHECK-NEXT:  1      20    1.00                  U     fdiv	%st(2), %st
 # CHECK-NEXT:  2      31    1.00    *             U     fdivs	(%ecx)
 # CHECK-NEXT:  2      31    1.00    *             U     fdivl	(%eax)
-# CHECK-NEXT:  1      24    1.00                  U     fdivp	%st(1)
-# CHECK-NEXT:  1      24    1.00                  U     fdivp	%st(2)
+# CHECK-NEXT:  1      24    1.00                  U     fdivp	%st, %st(1)
+# CHECK-NEXT:  1      24    1.00                  U     fdivp	%st, %st(2)
 # CHECK-NEXT:  3      34    1.00    *             U     fidivs	(%ecx)
 # CHECK-NEXT:  3      34    1.00    *             U     fidivl	(%eax)
 # CHECK-NEXT:  1      20    1.00                  U     fdivr	%st, %st(1)
-# CHECK-NEXT:  1      24    1.00                  U     fdivr	%st(2)
+# CHECK-NEXT:  1      24    1.00                  U     fdivr	%st(2), %st
 # CHECK-NEXT:  2      27    1.00    *             U     fdivrs	(%ecx)
 # CHECK-NEXT:  2      27    1.00    *             U     fdivrl	(%eax)
-# CHECK-NEXT:  1      20    1.00                  U     fdivrp	%st(1)
-# CHECK-NEXT:  1      20    1.00                  U     fdivrp	%st(2)
+# CHECK-NEXT:  1      20    1.00                  U     fdivrp	%st, %st(1)
+# CHECK-NEXT:  1      20    1.00                  U     fdivrp	%st, %st(2)
 # CHECK-NEXT:  3      30    1.00    *             U     fidivrs	(%ecx)
 # CHECK-NEXT:  3      30    1.00    *             U     fidivrl	(%eax)
 # CHECK-NEXT:  1      1     0.50                  U     ffree	%st(0)
@@ -289,11 +289,11 @@ fyl2xp1
 # CHECK-NEXT:  2      1     1.00                  U     fldpi
 # CHECK-NEXT:  1      1     0.50                  U     fldz
 # CHECK-NEXT:  1      5     1.00                  U     fmul	%st, %st(1)
-# CHECK-NEXT:  1      5     1.00                  U     fmul	%st(2)
+# CHECK-NEXT:  1      5     1.00                  U     fmul	%st(2), %st
 # CHECK-NEXT:  2      12    1.00    *             U     fmuls	(%ecx)
 # CHECK-NEXT:  2      12    1.00    *             U     fmull	(%eax)
-# CHECK-NEXT:  1      5     1.00                  U     fmulp	%st(1)
-# CHECK-NEXT:  1      5     1.00                  U     fmulp	%st(2)
+# CHECK-NEXT:  1      5     1.00                  U     fmulp	%st, %st(1)
+# CHECK-NEXT:  1      5     1.00                  U     fmulp	%st, %st(2)
 # CHECK-NEXT:  3      15    1.00    *             U     fimuls	(%ecx)
 # CHECK-NEXT:  3      15    1.00    *             U     fimull	(%eax)
 # CHECK-NEXT:  1      1     0.50                  U     fnop
@@ -322,19 +322,19 @@ fyl2xp1
 # CHECK-NEXT:  2      2     0.50                  U     wait
 # CHECK-NEXT:  147    1     36.75                 U     fnsave	(%eax)
 # CHECK-NEXT:  1      3     1.00                  U     fsub	%st, %st(1)
-# CHECK-NEXT:  1      3     1.00                  U     fsub	%st(2)
+# CHECK-NEXT:  1      3     1.00                  U     fsub	%st(2), %st
 # CHECK-NEXT:  2      10    1.00    *             U     fsubs	(%ecx)
 # CHECK-NEXT:  2      10    1.00    *             U     fsubl	(%eax)
-# CHECK-NEXT:  1      3     1.00                  U     fsubp	%st(1)
-# CHECK-NEXT:  1      3     1.00                  U     fsubp	%st(2)
+# CHECK-NEXT:  1      3     1.00                  U     fsubp	%st, %st(1)
+# CHECK-NEXT:  1      3     1.00                  U     fsubp	%st, %st(2)
 # CHECK-NEXT:  3      13    2.00    *             U     fisubs	(%ecx)
 # CHECK-NEXT:  3      13    2.00    *             U     fisubl	(%eax)
 # CHECK-NEXT:  1      3     1.00                  U     fsubr	%st, %st(1)
-# CHECK-NEXT:  1      3     1.00                  U     fsubr	%st(2)
+# CHECK-NEXT:  1      3     1.00                  U     fsubr	%st(2), %st
 # CHECK-NEXT:  2      10    1.00    *             U     fsubrs	(%ecx)
 # CHECK-NEXT:  2      10    1.00    *             U     fsubrl	(%eax)
-# CHECK-NEXT:  1      3     1.00                  U     fsubrp	%st(1)
-# CHECK-NEXT:  1      3     1.00                  U     fsubrp	%st(2)
+# CHECK-NEXT:  1      3     1.00                  U     fsubrp	%st, %st(1)
+# CHECK-NEXT:  1      3     1.00                  U     fsubrp	%st, %st(2)
 # CHECK-NEXT:  3      13    2.00    *             U     fisubrs	(%ecx)
 # CHECK-NEXT:  3      13    2.00    *             U     fisubrl	(%eax)
 # CHECK-NEXT:  1      1     1.00                  U     ftst
@@ -343,8 +343,8 @@ fyl2xp1
 # CHECK-NEXT:  1      1     1.00                  U     fucomp	%st(1)
 # CHECK-NEXT:  1      1     1.00                  U     fucomp	%st(3)
 # CHECK-NEXT:  2      1     0.50                  U     fucompp
-# CHECK-NEXT:  3      1     0.50                  U     fucomi	%st(3)
-# CHECK-NEXT:  3      1     0.50                  U     fucompi	%st(3)
+# CHECK-NEXT:  3      1     0.50                  U     fucomi	%st(3), %st
+# CHECK-NEXT:  3      1     0.50                  U     fucompi	%st(3), %st
 # CHECK-NEXT:  2      2     0.50                  U     wait
 # CHECK-NEXT:  2      1     2.00                  U     fxam
 # CHECK-NEXT:  15     17    4.00                  U     fxch	%st(1)
@@ -376,11 +376,11 @@ fyl2xp1
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     f2xm1
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fabs
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fadd	%st, %st(1)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fadd	%st(2)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fadd	%st(2), %st
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     fadds	(%ecx)
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     faddl	(%ecx)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     faddp	%st(1)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     faddp	%st(2)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     faddp	%st, %st(1)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     faddp	%st, %st(2)
 # CHECK-NEXT:  -      -      -     2.00   0.50   0.50    -      -      -      -     fiadds	(%ecx)
 # CHECK-NEXT:  -      -      -     2.00   0.50   0.50    -      -      -      -     fiaddl	(%ecx)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     fbld	(%ecx)
@@ -404,24 +404,24 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     fcomps	(%ecx)
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     fcompl	(%eax)
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fcompp
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fcomi	%st(3)
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fcompi	%st(3)
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fcomi	%st(3), %st
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fcompi	%st(3), %st
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     fcos
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -      -      -     fdecstp
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdiv	%st, %st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdiv	%st(2)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdiv	%st(2), %st
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     fdivs	(%ecx)
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     fdivl	(%eax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivp	%st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivp	%st(2)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivp	%st, %st(1)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivp	%st, %st(2)
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     fidivs	(%ecx)
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     fidivl	(%eax)
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivr	%st, %st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivr	%st(2)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivr	%st(2), %st
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     fdivrs	(%ecx)
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     fdivrl	(%eax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivrp	%st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivrp	%st(2)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivrp	%st, %st(1)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fdivrp	%st, %st(2)
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     fidivrs	(%ecx)
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     fidivrl	(%eax)
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     ffree	%st(0)
@@ -456,11 +456,11 @@ fyl2xp1
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -      -      -      -     fldpi
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fldz
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fmul	%st, %st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fmul	%st(2)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fmul	%st(2), %st
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     fmuls	(%ecx)
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -     fmull	(%eax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fmulp	%st(1)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fmulp	%st(2)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fmulp	%st, %st(1)
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -     fmulp	%st, %st(2)
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     fimuls	(%ecx)
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     fimull	(%eax)
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fnop
@@ -489,19 +489,19 @@ fyl2xp1
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   0.50    -     wait
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     fnsave	(%eax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsub	%st, %st(1)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsub	%st(2)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsub	%st(2), %st
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     fsubs	(%ecx)
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     fsubl	(%eax)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubp	%st(1)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubp	%st(2)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubp	%st, %st(1)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubp	%st, %st(2)
 # CHECK-NEXT:  -      -      -     2.00   0.50   0.50    -      -      -      -     fisubs	(%ecx)
 # CHECK-NEXT:  -      -      -     2.00   0.50   0.50    -      -      -      -     fisubl	(%eax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubr	%st, %st(1)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubr	%st(2)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubr	%st(2), %st
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     fsubrs	(%ecx)
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     fsubrl	(%eax)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubrp	%st(1)
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubrp	%st(2)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubrp	%st, %st(1)
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fsubrp	%st, %st(2)
 # CHECK-NEXT:  -      -      -     2.00   0.50   0.50    -      -      -      -     fisubrs	(%ecx)
 # CHECK-NEXT:  -      -      -     2.00   0.50   0.50    -      -      -      -     fisubrl	(%eax)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     ftst
@@ -510,8 +510,8 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fucomp	%st(1)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     fucomp	%st(3)
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fucompp
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fucomi	%st(3)
-# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fucompi	%st(3)
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fucomi	%st(3), %st
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -     fucompi	%st(3), %st
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   0.50    -     wait
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -      -      -     fxam
 # CHECK-NEXT:  -      -     4.00   3.00    -      -      -     3.00   5.00    -     fxch	%st(1)

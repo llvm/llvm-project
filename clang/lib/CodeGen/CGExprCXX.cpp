@@ -40,13 +40,11 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
          isa<CXXOperatorCallExpr>(CE));
   assert(MD->isInstance() &&
          "Trying to emit a member or operator call expr on a static method!");
-  ASTContext &C = CGF.getContext();
 
   // Push the this ptr.
   const CXXRecordDecl *RD =
       CGF.CGM.getCXXABI().getThisArgumentTypeForMethod(MD);
-  Args.add(RValue::get(This),
-           RD ? C.getPointerType(C.getTypeDeclType(RD)) : C.VoidPtrTy);
+  Args.add(RValue::get(This), CGF.getTypes().DeriveThisType(RD, MD));
 
   // If there is an implicit parameter (e.g. VTT), emit it.
   if (ImplicitParam) {
@@ -251,13 +249,25 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     This = EmitLValue(Base);
   }
 
+  if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
+    // This is the MSVC p->Ctor::Ctor(...) extension. We assume that's
+    // constructing a new complete object of type Ctor.
+    assert(!RtlArgs);
+    assert(ReturnValue.isNull() && "Constructor shouldn't have return value");
+    CallArgList Args;
+    commonEmitCXXMemberOrOperatorCall(
+        *this, Ctor, This.getPointer(), /*ImplicitParam=*/nullptr,
+        /*ImplicitParamTy=*/QualType(), CE, Args, nullptr);
+
+    EmitCXXConstructorCall(Ctor, Ctor_Complete, /*ForVirtualBase=*/false,
+                           /*Delegating=*/false, This.getAddress(), Args,
+                           AggValueSlot::DoesNotOverlap, CE->getExprLoc(),
+                           /*NewPointerIsChecked=*/false);
+    return RValue::get(nullptr);
+  }
 
   if (MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion())) {
     if (isa<CXXDestructorDecl>(MD)) return RValue::get(nullptr);
-    if (isa<CXXConstructorDecl>(MD) &&
-        cast<CXXConstructorDecl>(MD)->isDefaultConstructor())
-      return RValue::get(nullptr);
-
     if (!MD->getParent()->mayInsertExtraPadding()) {
       if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()) {
         // We don't like to generate the trivial copy/move assignment operator
@@ -268,20 +278,6 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
                                (*(CE->arg_begin() + 1))->getType())
                          : EmitLValue(*CE->arg_begin());
         EmitAggregateAssign(This, RHS, CE->getType());
-        return RValue::get(This.getPointer());
-      }
-
-      if (isa<CXXConstructorDecl>(MD) &&
-          cast<CXXConstructorDecl>(MD)->isCopyOrMoveConstructor()) {
-        // Trivial move and copy ctor are the same.
-        assert(CE->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
-        const Expr *Arg = *CE->arg_begin();
-        LValue RHS = EmitLValue(Arg);
-        LValue Dest = MakeAddrLValue(This.getAddress(), Arg->getType());
-        // This is the MSVC p->Ctor::Ctor(...) extension. We assume that's
-        // constructing a new complete object of type Ctor.
-        EmitAggregateCopy(Dest, RHS, Arg->getType(),
-                          AggValueSlot::DoesNotOverlap);
         return RValue::get(This.getPointer());
       }
       llvm_unreachable("unknown trivial member function");
@@ -295,9 +291,6 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl))
     FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
         Dtor, StructorType::Complete);
-  else if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(CalleeDecl))
-    FInfo = &CGM.getTypes().arrangeCXXStructorDeclaration(
-        Ctor, StructorType::Complete);
   else
     FInfo = &CGM.getTypes().arrangeCXXMethodDeclaration(CalleeDecl);
 
@@ -320,14 +313,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     if (IsImplicitObjectCXXThis || isa<DeclRefExpr>(IOA))
       SkippedChecks.set(SanitizerKind::Null, true);
   }
-  EmitTypeCheck(
-      isa<CXXConstructorDecl>(CalleeDecl) ? CodeGenFunction::TCK_ConstructorCall
-                                          : CodeGenFunction::TCK_MemberCall,
-      CallLoc, This.getPointer(), C.getRecordType(CalleeDecl->getParent()),
-      /*Alignment=*/CharUnits::Zero(), SkippedChecks);
-
-  // FIXME: Uses of 'MD' past this point need to be audited. We may need to use
-  // 'CalleeDecl' instead.
+  EmitTypeCheck(CodeGenFunction::TCK_MemberCall, CallLoc, This.getPointer(),
+                C.getRecordType(CalleeDecl->getParent()),
+                /*Alignment=*/CharUnits::Zero(), SkippedChecks);
 
   // C++ [class.virtual]p12:
   //   Explicit qualification with the scope operator (5.1) suppresses the
@@ -337,7 +325,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   // because then we know what the type is.
   bool UseVirtualCall = CanUseVirtualCall && !DevirtualizedMethod;
 
-  if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(MD)) {
+  if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl)) {
     assert(CE->arg_begin() == CE->arg_end() &&
            "Destructor shouldn't have explicit parameters");
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
@@ -347,32 +335,31 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           cast<CXXMemberCallExpr>(CE));
     } else {
       CGCallee Callee;
-      if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)
-        Callee = BuildAppleKextVirtualCall(MD, Qualifier, Ty);
+      if (getLangOpts().AppleKext && Dtor->isVirtual() && HasQualifier)
+        Callee = BuildAppleKextVirtualCall(Dtor, Qualifier, Ty);
       else if (!DevirtualizedMethod)
         Callee = CGCallee::forDirect(
             CGM.getAddrOfCXXStructor(Dtor, StructorType::Complete, FInfo, Ty),
             GlobalDecl(Dtor, Dtor_Complete));
       else {
-        const CXXDestructorDecl *DDtor =
-          cast<CXXDestructorDecl>(DevirtualizedMethod);
         Callee = CGCallee::forDirect(
-            CGM.GetAddrOfFunction(GlobalDecl(DDtor, Dtor_Complete), Ty),
-            GlobalDecl(DDtor, Dtor_Complete));
+            CGM.GetAddrOfFunction(GlobalDecl(Dtor, Dtor_Complete), Ty),
+            GlobalDecl(Dtor, Dtor_Complete));
       }
-      EmitCXXMemberOrOperatorCall(
-          CalleeDecl, Callee, ReturnValue, This.getPointer(),
-          /*ImplicitParam=*/nullptr, QualType(), CE, nullptr);
+
+      EmitCXXDestructorCall(Dtor, Callee, This.getPointer(),
+                            /*ImplicitParam=*/nullptr,
+                            /*ImplicitParamTy=*/QualType(), nullptr,
+                            getFromDtorType(Dtor_Complete));
     }
     return RValue::get(nullptr);
   }
 
+  // FIXME: Uses of 'MD' past this point need to be audited. We may need to use
+  // 'CalleeDecl' instead.
+
   CGCallee Callee;
-  if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
-    Callee = CGCallee::forDirect(
-        CGM.GetAddrOfFunction(GlobalDecl(Ctor, Ctor_Complete), Ty),
-        GlobalDecl(Ctor, Ctor_Complete));
-  } else if (UseVirtualCall) {
+  if (UseVirtualCall) {
     Callee = CGCallee::forVirtual(CE, MD, This.getAddress(), Ty);
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&

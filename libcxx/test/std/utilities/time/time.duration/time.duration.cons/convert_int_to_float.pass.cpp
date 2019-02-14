@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::chrono::duration<int> i(3);
@@ -34,4 +34,6 @@ int main()
     static_assert(d.count() == 3000, "");
     }
 #endif
+
+  return 0;
 }

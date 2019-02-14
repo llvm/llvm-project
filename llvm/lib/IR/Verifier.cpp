@@ -466,6 +466,7 @@ private:
   void visitReturnInst(ReturnInst &RI);
   void visitSwitchInst(SwitchInst &SI);
   void visitIndirectBrInst(IndirectBrInst &BI);
+  void visitCallBrInst(CallBrInst &CBI);
   void visitSelectInst(SelectInst &SI);
   void visitUserOp1(Instruction &I);
   void visitUserOp2(Instruction &I) { visitUserOp1(I); }
@@ -2448,6 +2449,26 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
            "Indirectbr destinations must all have pointer type!", &BI);
 
   visitTerminator(BI);
+}
+
+void Verifier::visitCallBrInst(CallBrInst &CBI) {
+  Assert(CBI.isInlineAsm(), "Callbr is currently only used for asm-goto!",
+         &CBI);
+  Assert(CBI.getType()->isVoidTy(), "Callbr return value is not supported!",
+         &CBI);
+  for (unsigned i = 0, e = CBI.getNumSuccessors(); i != e; ++i)
+    Assert(CBI.getSuccessor(i)->getType()->isLabelTy(),
+           "Callbr successors must all have pointer type!", &CBI);
+  for (unsigned i = 0, e = CBI.getNumOperands(); i != e; ++i) {
+    Assert(i >= CBI.getNumArgOperands() || !isa<BasicBlock>(CBI.getOperand(i)),
+           "Using an unescaped label as a callbr argument!", &CBI);
+    if (isa<BasicBlock>(CBI.getOperand(i)))
+      for (unsigned j = i + 1; j != e; ++j)
+        Assert(CBI.getOperand(i) != CBI.getOperand(j),
+               "Duplicate callbr destination!", &CBI);
+  }
+
+  visitTerminator(CBI);
 }
 
 void Verifier::visitSelectInst(SelectInst &SI) {
@@ -4574,22 +4595,31 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
            "of ints");
     break;
   }
-  case Intrinsic::smul_fix: {
+  case Intrinsic::smul_fix:
+  case Intrinsic::umul_fix: {
     Value *Op1 = Call.getArgOperand(0);
     Value *Op2 = Call.getArgOperand(1);
     Assert(Op1->getType()->isIntOrIntVectorTy(),
-           "first operand of smul_fix must be an int type or vector "
+           "first operand of [us]mul_fix must be an int type or vector "
            "of ints");
     Assert(Op2->getType()->isIntOrIntVectorTy(),
-           "second operand of smul_fix must be an int type or vector "
+           "second operand of [us]mul_fix must be an int type or vector "
            "of ints");
 
     auto *Op3 = dyn_cast<ConstantInt>(Call.getArgOperand(2));
-    Assert(Op3, "third argument of smul_fix must be a constant integer");
+    Assert(Op3, "third argument of [us]mul_fix must be a constant integer");
     Assert(Op3->getType()->getBitWidth() <= 32,
-           "third argument of smul_fix must fit within 32 bits");
-    Assert(Op3->getZExtValue() < Op1->getType()->getScalarSizeInBits(),
-           "the scale of smul_fix must be less than the width of the operands");
+           "third argument of [us]mul_fix must fit within 32 bits");
+
+    if (ID == Intrinsic::smul_fix) {
+      Assert(
+          Op3->getZExtValue() < Op1->getType()->getScalarSizeInBits(),
+          "the scale of smul_fix must be less than the width of the operands");
+    } else {
+      Assert(Op3->getZExtValue() <= Op1->getType()->getScalarSizeInBits(),
+             "the scale of umul_fix must be less than or equal to the width of "
+             "the operands");
+    }
     break;
   }
   };

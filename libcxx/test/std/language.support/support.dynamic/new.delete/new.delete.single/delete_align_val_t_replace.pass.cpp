@@ -82,7 +82,7 @@ void operator delete(void* p, std::align_val_t) TEST_NOEXCEPT
 struct alignas(OverAligned) A {};
 struct alignas(std::max_align_t) B {};
 
-int main()
+int main(int, char**)
 {
     reset();
     {
@@ -112,4 +112,6 @@ int main()
         assert(0 == unsized_delete_nothrow_called);
         assert(1 == aligned_delete_called);
     }
+
+  return 0;
 }

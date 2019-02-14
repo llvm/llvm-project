@@ -1,0 +1,23 @@
+# RUN: llc -o - %s -mtriple=aarch64-- -mattr=+v8.1a -run-pass=postrapseudos | FileCheck %s
+---
+# CHECK-LABEL: name: copy_xseqpairs
+name: copy_xseqpairs
+body: |
+  bb.0:
+    ; CHECK: $x4_x5 = CASPALX $x4_x5, $x2_x3, $x0
+    ; CHECK: $x0 = ORRXrs $xzr, $x4, 0
+    ; CHECK: $x1 = ORRXrs $xzr, $x5, 0
+    $x4_x5 = CASPALX $x4_x5, $x2_x3, $x0
+    $x0_x1 = COPY $x4_x5
+...
+---
+# CHECK-LABEL: name: copy_wseqpairs
+name: copy_wseqpairs
+body: |
+  bb.0:
+    ; CHECK: $w4_w5 = CASPALW $w4_w5, $w2_w3, $x0
+    ; CHECK: $w0 = ORRWrs $wzr, $w4, 0
+    ; CHECK: $w1 = ORRWrs $wzr, $w5, 0
+    $w4_w5 = CASPALW $w4_w5, $w2_w3, $x0
+    $w0_w1 = COPY $w4_w5
+...

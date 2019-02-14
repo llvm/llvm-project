@@ -64,7 +64,7 @@ void f2()
     assert(d < Tolerance);  // within tolerance
 }
 
-int main()
+int main(int, char**)
 {
     {
         m.lock();
@@ -80,4 +80,6 @@ int main()
         m.unlock();
         t.join();
     }
+
+  return 0;
 }

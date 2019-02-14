@@ -72,7 +72,7 @@ inline constexpr MyBoolExplicit operator>=(const ComparesToMyBoolExplicit& LHS, 
 }
 
 
-int main() {
+int main(int, char**) {
   using V = std::variant<int, ComparesToMyBoolExplicit>;
   V v1(42);
   V v2(101);
@@ -84,4 +84,6 @@ int main() {
   (void)(v1 <= v2); // expected-note {{here}}
   (void)(v1 > v2); // expected-note {{here}}
   (void)(v1 >= v2); // expected-note {{here}}
+
+  return 0;
 }

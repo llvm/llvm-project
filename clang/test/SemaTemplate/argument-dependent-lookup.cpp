@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify %s
-// RUN: %clang_cc1 -verify %s -DHAVE_UNQUALIFIED_LOOKUP_RESULTS
+// RUN: %clang_cc1 -std=c++14 -verify %s
+// RUN: %clang_cc1 -std=c++14 -verify %s -DHAVE_UNQUALIFIED_LOOKUP_RESULTS
 // expected-no-diagnostics
 
 namespace address_of {

@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::string C;
@@ -39,4 +39,6 @@ int main()
         static_assert( std::is_nothrow_move_constructible<C>::value, "");
 #endif
     }
+
+  return 0;
 }

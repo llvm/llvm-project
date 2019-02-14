@@ -20,18 +20,7 @@ using namespace std;
 
 FileSpecList::FileSpecList() : m_files() {}
 
-FileSpecList::FileSpecList(const FileSpecList &rhs) = default;
-
 FileSpecList::~FileSpecList() = default;
-
-//------------------------------------------------------------------
-// Assignment operator
-//------------------------------------------------------------------
-const FileSpecList &FileSpecList::operator=(const FileSpecList &rhs) {
-  if (this != &rhs)
-    m_files = rhs.m_files;
-  return *this;
-}
 
 //------------------------------------------------------------------
 // Append the "file_spec" to the end of the file spec list.

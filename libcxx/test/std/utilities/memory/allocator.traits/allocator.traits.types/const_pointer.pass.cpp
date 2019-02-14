@@ -55,7 +55,7 @@ private:
   typedef void const_pointer;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::allocator_traits<A<char> >::const_pointer, Ptr<const char> >::value), "");
     static_assert((std::is_same<std::allocator_traits<B<char> >::const_pointer, const char*>::value), "");
@@ -63,4 +63,6 @@ int main()
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::allocator_traits<D<char> >::const_pointer, const char*>::value), "");
 #endif
+
+  return 0;
 }

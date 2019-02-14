@@ -17,8 +17,10 @@
 
 struct A;
 
-int main()
+int main(int, char**)
 {
     std::weak_ptr<A> p;
     assert(p.use_count() == 0);
+
+  return 0;
 }

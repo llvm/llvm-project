@@ -23,9 +23,11 @@ make(int n)
     return c;
 }
 
-int main()
+int main(int, char**)
 {
     std::stack<int> q(make<std::deque<int> >(5));
     std::stack<int> q2 = q;
     assert(q2 == q);
+
+  return 0;
 }

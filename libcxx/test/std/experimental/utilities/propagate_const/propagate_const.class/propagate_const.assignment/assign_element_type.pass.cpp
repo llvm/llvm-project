@@ -18,7 +18,7 @@
 
 using std::experimental::propagate_const;
 
-int main() {
+int main(int, char**) {
 
   typedef propagate_const<X> P;
 
@@ -30,4 +30,6 @@ int main() {
   p = x1;
 
   assert(*p==1);
+
+  return 0;
 }

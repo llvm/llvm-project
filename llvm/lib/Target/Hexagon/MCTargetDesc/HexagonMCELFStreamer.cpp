@@ -59,7 +59,7 @@ HexagonMCELFStreamer::HexagonMCELFStreamer(
       MCII(createHexagonMCInstrInfo()) {}
 
 void HexagonMCELFStreamer::EmitInstruction(const MCInst &MCB,
-                                           const MCSubtargetInfo &STI, bool) {
+                                           const MCSubtargetInfo &STI) {
   assert(MCB.getOpcode() == Hexagon::BUNDLE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) <= HEXAGON_PACKET_SIZE);
   assert(HexagonMCInstrInfo::bundleSize(MCB) > 0);

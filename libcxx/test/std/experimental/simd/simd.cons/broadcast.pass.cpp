@@ -78,8 +78,10 @@ void test_broadcast() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_broadcast<ex::native_simd<int>>();
   test_broadcast<ex::fixed_size_simd<int, 4>>();
   test_broadcast<ex::fixed_size_simd<int, 15>>();
+
+  return 0;
 }

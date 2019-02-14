@@ -55,7 +55,7 @@ struct A
     A(const A&);
 };
 
-int main()
+int main(int, char**)
 {
     test_has_not_nothrow_move_constructor<void>();
     test_has_not_nothrow_move_constructor<A>();
@@ -68,4 +68,6 @@ int main()
     test_is_nothrow_move_constructible<int*>();
     test_is_nothrow_move_constructible<const int*>();
     test_is_nothrow_move_constructible<bit_zero>();
+
+  return 0;
 }

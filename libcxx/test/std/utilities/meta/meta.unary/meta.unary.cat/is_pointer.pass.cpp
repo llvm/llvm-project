@@ -70,7 +70,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_pointer<void*>();
     test_is_pointer<int*>();
@@ -92,4 +92,6 @@ int main()
     test_is_not_pointer<NotEmpty>();
     test_is_not_pointer<Abstract>();
     test_is_not_pointer<incomplete_type>();
+
+  return 0;
 }

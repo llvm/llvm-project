@@ -17,8 +17,10 @@
 #include <mutex>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert(std::is_nothrow_default_constructible<std::mutex>::value, "");
     std::mutex m;
+
+  return 0;
 }

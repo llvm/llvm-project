@@ -1,6 +1,7 @@
 // Ensure compatiblity of UBSan unreachable with ASan in the presence of
 // noreturn functions.
-// RUN: %clang_cc1 -fsanitize=unreachable,address -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=unreachable,address        -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=unreachable,kernel-address -triple x86_64-linux -emit-llvm -o - %s | FileCheck %s
 
 void my_longjmp(void) __attribute__((noreturn));
 

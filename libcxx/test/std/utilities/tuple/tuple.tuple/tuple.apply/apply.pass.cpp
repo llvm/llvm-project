@@ -265,9 +265,11 @@ void test_return_type()
     test<13, int const volatile *>();
 }
 
-int main() {
+int main(int, char**) {
     test_constexpr_evaluation();
     test_call_quals_and_arg_types();
     test_return_type();
     test_noexcept();
+
+  return 0;
 }

@@ -55,7 +55,7 @@ struct J
 };
 
 
-int main()
+int main(int, char**)
 {
     static_assert(std::__has_operator_addressof<int>::value == false, "");
     static_assert(std::__has_operator_addressof<A>::value == false, "");
@@ -65,4 +65,6 @@ int main()
     static_assert(std::__has_operator_addressof<G>::value == true, "");
     static_assert(std::__has_operator_addressof<H>::value == true, "");
     static_assert(std::__has_operator_addressof<J>::value == true, "");
+
+  return 0;
 }

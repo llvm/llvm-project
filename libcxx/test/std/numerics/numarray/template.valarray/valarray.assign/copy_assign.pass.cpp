@@ -31,7 +31,7 @@ bool operator==(const S& lhs, const S& rhs)
     return lhs.x_ == rhs.x_;
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -82,4 +82,6 @@ int main()
             assert(v2[i] == v[i]);
         assert(!S::default_ctor_called);
     }
+
+  return 0;
 }

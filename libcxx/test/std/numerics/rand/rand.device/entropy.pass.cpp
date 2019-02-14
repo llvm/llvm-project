@@ -15,9 +15,11 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::random_device r;
     double e = r.entropy();
     ((void)e); // Prevent unused warning
+
+  return 0;
 }

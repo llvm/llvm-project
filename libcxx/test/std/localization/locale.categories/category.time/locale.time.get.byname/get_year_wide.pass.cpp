@@ -36,7 +36,7 @@ public:
         : F(nm, refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     std::ios ios(0);
     std::ios_base::iostate err;
@@ -81,4 +81,6 @@ int main()
         assert(t.tm_year == 109);
         assert(err == std::ios_base::eofbit);
     }
+
+  return 0;
 }

@@ -1608,11 +1608,13 @@ test5()
     assert(h.__is_black_ == true);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
     test3();
     test4();
     test5();
+
+  return 0;
 }

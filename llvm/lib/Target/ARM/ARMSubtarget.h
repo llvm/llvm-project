@@ -445,6 +445,10 @@ protected:
   /// What alignment is preferred for loop bodies, in log2(bytes).
   unsigned PrefLoopAlignment = 0;
 
+  /// OptMinSize - True if we're optimising for minimum code size, equal to
+  /// the function attribute.
+  bool OptMinSize = false;
+
   /// IsLittle - The target is Little Endian
   bool IsLittle;
 
@@ -467,7 +471,8 @@ public:
   /// of the specified triple.
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
-               const ARMBaseTargetMachine &TM, bool IsLittle);
+               const ARMBaseTargetMachine &TM, bool IsLittle,
+               bool MinSize = false);
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
@@ -709,6 +714,7 @@ public:
   bool disablePostRAScheduler() const { return DisablePostRAScheduler; }
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
+  bool optForMinSize() const { return OptMinSize; }
   bool isThumb1Only() const { return InThumbMode && !HasThumb2; }
   bool isThumb2() const { return InThumbMode && HasThumb2; }
   bool hasThumb2() const { return HasThumb2; }
@@ -735,9 +741,9 @@ public:
            isThumb1Only();
   }
 
-  bool useStride4VFPs(const MachineFunction &MF) const;
+  bool useStride4VFPs() const;
 
-  bool useMovt(const MachineFunction &MF) const;
+  bool useMovt() const;
 
   bool supportsTailCall() const { return SupportsTailCall; }
 

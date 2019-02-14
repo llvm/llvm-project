@@ -38,7 +38,7 @@
 #include "../input_iterator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::string_view sv = "12345678901234";
@@ -103,4 +103,6 @@ int main()
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
     }
+
+  return 0;
 }

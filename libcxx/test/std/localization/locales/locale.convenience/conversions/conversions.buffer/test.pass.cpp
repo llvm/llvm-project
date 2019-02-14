@@ -15,7 +15,7 @@
 #include <codecvt>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ofstream bytestream("myfile.txt");
@@ -32,4 +32,6 @@ int main()
         assert(ws == L"Hello");
     }
     std::remove("myfile.txt");
+
+  return 0;
 }

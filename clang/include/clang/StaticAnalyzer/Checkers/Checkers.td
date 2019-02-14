@@ -622,6 +622,13 @@ def UncheckedReturn : Checker<"UncheckedReturn">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def DeprecatedOrUnsafeBufferHandling :
+  Checker<"DeprecatedOrUnsafeBufferHandling">,
+  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+           "functions">,
+  Dependencies<[SecuritySyntaxChecker]>,
+  Documentation<HasDocumentation>;
+
 } // end "security.insecureAPI"
 
 let ParentPackage = Security in {
@@ -811,6 +818,14 @@ def GCDAntipattern : Checker<"GCDAntipattern">,
            "Dispatch">,
   Documentation<NotDocumented>;
 } // end "optin.performance"
+
+let ParentPackage = OSXOptIn in {
+
+def OSObjectCStyleCast : Checker<"OSObjectCStyleCast">,
+  HelpText<"Checker for C-style casts of OSObjects">,
+  Documentation<NotDocumented>;
+
+} // end "optin.osx"
 
 let ParentPackage = CocoaAlpha in {
 

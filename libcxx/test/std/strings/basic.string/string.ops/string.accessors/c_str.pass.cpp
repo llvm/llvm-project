@@ -30,7 +30,7 @@ test(const S& s)
         assert(T::eq(str[0], typename S::value_type()));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -48,4 +48,6 @@ int main()
     test(S("abcdefghijklmnopqrst"));
     }
 #endif
+
+  return 0;
 }

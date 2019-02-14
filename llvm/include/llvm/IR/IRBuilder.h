@@ -943,6 +943,42 @@ public:
         Callee, NormalDest, UnwindDest, Args, Name);
   }
 
+  /// \brief Create a callbr instruction.
+  CallBrInst *CreateCallBr(FunctionType *Ty, Value *Callee,
+                           BasicBlock *DefaultDest,
+                           ArrayRef<BasicBlock *> IndirectDests,
+                           ArrayRef<Value *> Args = None,
+                           const Twine &Name = "") {
+    return Insert(CallBrInst::Create(Ty, Callee, DefaultDest, IndirectDests,
+                                     Args), Name);
+  }
+  CallBrInst *CreateCallBr(FunctionType *Ty, Value *Callee,
+                           BasicBlock *DefaultDest,
+                           ArrayRef<BasicBlock *> IndirectDests,
+                           ArrayRef<Value *> Args,
+                           ArrayRef<OperandBundleDef> OpBundles,
+                           const Twine &Name = "") {
+    return Insert(
+        CallBrInst::Create(Ty, Callee, DefaultDest, IndirectDests, Args,
+                           OpBundles), Name);
+  }
+
+  CallBrInst *CreateCallBr(FunctionCallee Callee, BasicBlock *DefaultDest,
+                           ArrayRef<BasicBlock *> IndirectDests,
+                           ArrayRef<Value *> Args = None,
+                           const Twine &Name = "") {
+    return CreateCallBr(Callee.getFunctionType(), Callee.getCallee(),
+                        DefaultDest, IndirectDests, Args, Name);
+  }
+  CallBrInst *CreateCallBr(FunctionCallee Callee, BasicBlock *DefaultDest,
+                           ArrayRef<BasicBlock *> IndirectDests,
+                           ArrayRef<Value *> Args,
+                           ArrayRef<OperandBundleDef> OpBundles,
+                           const Twine &Name = "") {
+    return CreateCallBr(Callee.getFunctionType(), Callee.getCallee(),
+                        DefaultDest, IndirectDests, Args, Name);
+  }
+
   ResumeInst *CreateResume(Value *Exn) {
     return Insert(ResumeInst::Create(Exn));
   }

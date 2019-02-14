@@ -59,7 +59,7 @@ test1(const typename C::allocator_type& a)
     assert(c.get_allocator() == a);
 }
 
-int main()
+int main(int, char**)
 {
     {
     test0<std::vector<bool> >();
@@ -75,4 +75,6 @@ int main()
     test1<std::vector<bool, explicit_allocator<bool> > >(explicit_allocator<bool>());
     }
 #endif
+
+  return 0;
 }

@@ -30,7 +30,7 @@ public:
         : F(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     std::ios ios(0);
@@ -216,4 +216,6 @@ int main()
         assert(t.tm_wday == 6);
         assert(err == std::ios_base::eofbit);
     }
+
+  return 0;
 }

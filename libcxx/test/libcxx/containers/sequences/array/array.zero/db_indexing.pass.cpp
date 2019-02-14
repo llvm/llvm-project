@@ -29,7 +29,7 @@ inline bool CheckDebugThrows(Array& Arr, size_t Index) {
   return false;
 }
 
-int main()
+int main(int, char**)
 {
   {
     typedef std::array<int, 0> C;
@@ -49,4 +49,6 @@ int main()
     assert(CheckDebugThrows(cc, 0));
     assert(CheckDebugThrows(cc, 1));
   }
+
+  return 0;
 }

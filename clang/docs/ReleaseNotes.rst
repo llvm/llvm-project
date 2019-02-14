@@ -133,11 +133,12 @@ ABI Changes in Clang
 OpenMP Support in Clang
 ----------------------------------
 
-- ...
+- Added emission of the debug information for NVPTX target devices.
 
 CUDA Support in Clang
 ---------------------
 
+- Added emission of the debug information for the device code.
 
 Internal API Changes
 --------------------

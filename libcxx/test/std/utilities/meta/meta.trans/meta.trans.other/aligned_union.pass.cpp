@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::aligned_union<10, char >::type T1;
@@ -111,4 +111,6 @@ int main()
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 4, "");
     }
+
+  return 0;
 }

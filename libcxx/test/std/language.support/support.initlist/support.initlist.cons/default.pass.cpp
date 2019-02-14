@@ -19,7 +19,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
     std::initializer_list<A> il;
     assert(il.size() == 0);
@@ -28,4 +28,6 @@ int main()
     constexpr std::initializer_list<A> il2;
     static_assert(il2.size() == 0, "");
 #endif  // TEST_STD_VER > 11
+
+  return 0;
 }

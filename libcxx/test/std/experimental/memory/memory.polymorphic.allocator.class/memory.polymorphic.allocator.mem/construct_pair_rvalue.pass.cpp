@@ -114,7 +114,7 @@ void test_pmr_not_uses_allocator(std::pair<TT, UU>&& p)
     }
 }
 
-int main()
+int main(int, char**)
 {
     using ERT = std::experimental::erased_type;
     using PMR = ex::memory_resource*;
@@ -135,4 +135,6 @@ int main()
         test_pmr_not_uses_allocator<PMR>(std::move(p));
         test_pmr_uses_allocator<PMA>(std::move(p));
     }
+
+  return 0;
 }

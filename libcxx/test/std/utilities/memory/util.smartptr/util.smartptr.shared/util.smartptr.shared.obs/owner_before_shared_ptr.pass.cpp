@@ -16,7 +16,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     const std::shared_ptr<int> p1(new int);
     const std::shared_ptr<int> p2 = p1;
@@ -26,4 +26,6 @@ int main()
     assert(p1.owner_before(p3) || p3.owner_before(p1));
     assert(p3.owner_before(p1) == p3.owner_before(p2));
     ASSERT_NOEXCEPT(p1.owner_before(p2));
+
+  return 0;
 }

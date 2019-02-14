@@ -58,8 +58,10 @@ test()
     where(BR::egrep);
 }
 
-int main()
+int main(int, char**)
 {
     test<char>();
     test<wchar_t>();
+
+  return 0;
 }

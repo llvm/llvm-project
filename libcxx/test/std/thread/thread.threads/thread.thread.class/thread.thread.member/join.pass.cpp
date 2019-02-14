@@ -46,7 +46,7 @@ bool G::op_run = false;
 
 void foo() {}
 
-int main()
+int main(int, char**)
 {
     {
         G g;
@@ -73,4 +73,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

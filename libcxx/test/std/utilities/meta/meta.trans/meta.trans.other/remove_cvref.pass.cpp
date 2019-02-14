@@ -23,7 +23,7 @@ void test_remove_cvref()
     static_assert((std::is_same<         std::remove_cvref_t<T>,     U>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test_remove_cvref<void, void>();
     test_remove_cvref<int, int>();
@@ -48,4 +48,6 @@ int main()
     test_remove_cvref<int(int) volatile, int(int) volatile>();
     test_remove_cvref<int(int)  &, int(int)  &>();
     test_remove_cvref<int(int) &&, int(int) &&>();
+
+  return 0;
 }

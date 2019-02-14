@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::weibull_distribution<> D;
@@ -40,4 +40,6 @@ int main()
         assert(p.a() == 10);
         assert(p.b() == 5);
     }
+
+  return 0;
 }

@@ -20,7 +20,7 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<bool> v(100);
@@ -125,4 +125,6 @@ int main()
             assert(v[j] == 0);
     }
 #endif
+
+  return 0;
 }

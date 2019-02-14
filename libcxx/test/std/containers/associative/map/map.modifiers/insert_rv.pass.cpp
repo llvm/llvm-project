@@ -59,7 +59,7 @@ void do_insert_rv_test()
     assert(r.first->second == 3);
 }
 
-int main()
+int main(int, char**)
 {
     do_insert_rv_test<std::map<int, MoveOnly>, std::pair<int, MoveOnly>>();
     do_insert_rv_test<std::map<int, MoveOnly>, std::pair<const int, MoveOnly>>();
@@ -103,4 +103,6 @@ int main()
         assert(r.first->first == 3);
         assert(r.first->second == 3);
     }
+
+  return 0;
 }

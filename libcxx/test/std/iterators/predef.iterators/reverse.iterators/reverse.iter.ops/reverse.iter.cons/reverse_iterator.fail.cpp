@@ -29,9 +29,11 @@ test(U u)
 struct base {};
 struct derived {};
 
-int main()
+int main(int, char**)
 {
     derived d;
 
     test<base*>(&d);
+
+  return 0;
 }

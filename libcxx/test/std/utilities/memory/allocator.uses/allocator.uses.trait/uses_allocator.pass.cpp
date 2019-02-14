@@ -47,7 +47,7 @@ test()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<false, int, std::allocator<int> >();
     test<true, std::vector<int>, std::allocator<int> >();
@@ -71,4 +71,6 @@ int main()
 // #if TEST_STD_VER >= 11
 //     static_assert((!std::uses_allocator<E, int>::value), "");
 // #endif
+
+  return 0;
 }

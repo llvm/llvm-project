@@ -26,7 +26,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::random_device r;
@@ -45,4 +45,6 @@ int main()
     {
     }
 #endif
+
+  return 0;
 }

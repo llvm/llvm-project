@@ -218,9 +218,9 @@ COMMON_FLAG(bool, intercept_stat, true,
 COMMON_FLAG(bool, intercept_send, true,
             "If set, uses custom wrappers for send* functions "
             "to find more errors.")
-COMMON_FLAG(bool, decorate_proc_maps, false, "If set, decorate sanitizer "
-                                             "mappings in /proc/self/maps with "
-                                             "user-readable names")
+COMMON_FLAG(bool, decorate_proc_maps, (bool)SANITIZER_ANDROID,
+            "If set, decorate sanitizer mappings in /proc/self/maps with "
+            "user-readable names")
 COMMON_FLAG(int, exitcode, 1, "Override the program exit status if the tool "
                               "found an error")
 COMMON_FLAG(

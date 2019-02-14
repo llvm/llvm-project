@@ -32,7 +32,7 @@ test(S s1, S s2)
     assert(s1.capacity() >= s1.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -70,4 +70,6 @@ int main()
            "1234567890123456789012345678901234567890123456789012345678901234567890"),
          S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
     }
+
+  return 0;
 }

@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year = std::chrono::year;
 
@@ -49,4 +49,6 @@ int main()
     assert(year{ 20001}.ok());
 
     static_assert(!year{-32768}.ok(), "");
+
+  return 0;
 }

@@ -952,8 +952,7 @@ void MCStreamer::visitUsedExpr(const MCExpr &Expr) {
   }
 }
 
-void MCStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                                 bool) {
+void MCStreamer::EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &) {
   // Scan for values.
   for (unsigned i = Inst.getNumOperands(); i--;)
     if (Inst.getOperand(i).isExpr())

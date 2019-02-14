@@ -38,7 +38,7 @@ struct do_nothing
     void operator()(void*) const {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         char s[] = "1234567890";
@@ -64,4 +64,6 @@ int main()
     static_assert(it1[5] == '6', "");
     }
 #endif
+
+  return 0;
 }

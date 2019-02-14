@@ -29,7 +29,9 @@ test1()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test1();
+
+  return 0;
 }

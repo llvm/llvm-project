@@ -14,6 +14,8 @@
 #  error "<experimental/algorithm> must include <algorithm>"
 #endif
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

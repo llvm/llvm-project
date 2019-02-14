@@ -15,7 +15,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -43,4 +43,6 @@ int main()
         assert(distance(c.begin(), c.end()) == 2);
     }
 #endif
+
+  return 0;
 }

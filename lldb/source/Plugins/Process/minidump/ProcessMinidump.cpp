@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProcessMinidump.h"
+
 #include "ThreadMinidump.h"
 
 #include "lldb/Core/DumpDataExtractor.h"
@@ -34,8 +35,7 @@
 
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 
-// C includes
-// C++ includes
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -409,10 +409,10 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
 // try to set up symbolic breakpoints, which in turn may force loading more
 // debug information than needed.
 JITLoaderList &ProcessMinidump::GetJITLoaders() {
-  if (!m_jit_loaders_ap) {
-    m_jit_loaders_ap = llvm::make_unique<JITLoaderList>();
+  if (!m_jit_loaders_up) {
+    m_jit_loaders_up = llvm::make_unique<JITLoaderList>();
   }
-  return *m_jit_loaders_ap;
+  return *m_jit_loaders_up;
 }
 
 #define INIT_BOOL(VAR, LONG, SHORT, DESC) \
@@ -644,7 +644,7 @@ public:
 
 CommandObject *ProcessMinidump::GetPluginCommandObject() {
   if (!m_command_sp)
-    m_command_sp.reset(new CommandObjectMultiwordProcessMinidump(
-        GetTarget().GetDebugger().GetCommandInterpreter()));
+    m_command_sp = std::make_shared<CommandObjectMultiwordProcessMinidump>(
+        GetTarget().GetDebugger().GetCommandInterpreter());
   return m_command_sp.get();
 }

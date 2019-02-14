@@ -16,7 +16,7 @@
 
 #include "test_iterators.h"
 
-int main() {
+int main(int, char**) {
   int arr[] = {1, 2, 3};
   const int *b = std::begin(arr), *e = std::end(arr);
   typedef input_iterator<const int*> Iter;
@@ -33,4 +33,6 @@ int main() {
     std::minmax_element(Iter(b), Iter(e));
   }
 
+
+  return 0;
 }

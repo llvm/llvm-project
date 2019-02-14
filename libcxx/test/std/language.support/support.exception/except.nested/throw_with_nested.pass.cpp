@@ -42,7 +42,7 @@ public:
 struct Final final {};
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         try
@@ -128,4 +128,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

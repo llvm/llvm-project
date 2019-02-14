@@ -34,7 +34,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<> T1;
@@ -208,4 +208,6 @@ int main()
         static_assert(!(t1 >= t2), "");
     }
 #endif
+
+  return 0;
 }

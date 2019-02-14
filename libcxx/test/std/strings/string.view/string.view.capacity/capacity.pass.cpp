@@ -62,7 +62,7 @@ void test2 ( const CharT *s, size_t len ) {
     }
 }
 
-int main () {
+int main(int, char**) {
     test1<std::string_view> ();
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test1<std::u8string_view> ();
@@ -99,4 +99,6 @@ int main () {
     test2 ( U"a", 1 );
     test2 ( U"", 0 );
 #endif
+
+  return 0;
 }

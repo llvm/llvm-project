@@ -38,7 +38,7 @@ public:
 
 int my_facet::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l(std::locale::classic(), new my_facet(LOCALE_en_US_UTF_8));
@@ -70,4 +70,6 @@ int main()
         assert(my_facet::count == 1);
     }
     assert(my_facet::count == 0);
+
+  return 0;
 }

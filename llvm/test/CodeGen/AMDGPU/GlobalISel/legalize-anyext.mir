@@ -4,7 +4,7 @@
 ---
 name: test_anyext_s32_to_s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_anyext_s32_to_s64
@@ -19,7 +19,7 @@ body: |
 ---
 name: test_anyext_s16_to_s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_anyext_s16_to_s64
@@ -35,7 +35,7 @@ body: |
 ---
 name: test_anyext_s16_to_s32
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_anyext_s16_to_s32
@@ -51,7 +51,7 @@ body: |
 ---
 name: test_anyext_s1_to_s32
 body: |
-  bb.0.entry:
+  bb.0:
 
     ; CHECK-LABEL: name: test_anyext_s1_to_s32
     ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
@@ -65,7 +65,7 @@ body: |
 ---
 name: test_anyext_s1_to_s64
 body: |
-  bb.0.entry:
+  bb.0:
 
     ; CHECK-LABEL: name: test_anyext_s1_to_s64
     ; CHECK: [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
@@ -79,7 +79,7 @@ body: |
 ---
 name: test_anyext_v2s16_to_v2s32
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_anyext_v2s16_to_v2s32
@@ -97,21 +97,28 @@ body: |
 ---
 name: test_anyext_v3s16_to_v3s32
 body: |
-  bb.0.entry:
-    liveins: $vgpr0
+  bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_anyext_v3s16_to_v3s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[DEF]](<3 x s32>)
-    %0:_(<3 x s16>) = G_IMPLICIT_DEF
-    %1:_(<3 x s32>) = G_ANYEXT %0
-    $vgpr0_vgpr1_vgpr2 = COPY %1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[COPY]](<4 x s16>), 0
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %1:_(<3 x s16>) = G_EXTRACT %0, 0
+    %2:_(<3 x s32>) = G_ANYEXT %1
+    $vgpr0_vgpr1_vgpr2 = COPY %2
 ...
 
 ---
 name: test_anyext_v4s16_to_v4s32
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_anyext_v4s16_to_v4s32
@@ -125,7 +132,7 @@ body: |
 ---
 name: test_anyext_v2s32_to_v2s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_anyext_v2s32_to_v2s64
@@ -143,7 +150,7 @@ body: |
 ---
 name: test_anyext_v3s32_to_v3s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_anyext_v3s32_to_v3s64
@@ -163,7 +170,7 @@ body: |
 ---
 name: test_anyext_v4s32_to_v4s64
 body: |
-  bb.0.entry:
+  bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_anyext_v4s32_to_v4s64

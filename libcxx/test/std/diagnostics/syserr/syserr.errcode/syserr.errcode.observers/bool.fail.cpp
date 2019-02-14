@@ -22,7 +22,7 @@ bool test_func(void)
     return ec;   // conversion to bool is explicit; should fail.
 }
 
-int main()
+int main(int, char**)
 {
     return 0;
 }

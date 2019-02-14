@@ -10,10 +10,12 @@
 
 #include <tgmath.h>
 
-int main()
+int main(int, char**)
 {
     std::complex<double> cd;
     (void)cd;
     double x = sin(1.0);
     (void)x; // to placate scan-build
+
+  return 0;
 }

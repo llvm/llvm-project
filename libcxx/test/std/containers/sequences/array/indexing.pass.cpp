@@ -30,7 +30,7 @@ constexpr bool check_idx( size_t idx, double val )
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -104,4 +104,6 @@ int main()
         static_assert (check_idx(2, 3.5), "");
     }
 #endif
+
+  return 0;
 }

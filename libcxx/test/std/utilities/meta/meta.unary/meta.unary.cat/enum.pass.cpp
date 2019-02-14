@@ -46,10 +46,12 @@ void test_enum()
 enum Enum {zero, one};
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_enum<Enum>();
 
 //  LWG#2582
     static_assert(!std::is_enum<incomplete_type>::value, "");
+
+  return 0;
 }

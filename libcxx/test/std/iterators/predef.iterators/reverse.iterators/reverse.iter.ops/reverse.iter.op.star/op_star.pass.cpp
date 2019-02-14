@@ -43,7 +43,7 @@ test(It i, typename std::iterator_traits<It>::value_type x)
     assert(*r == x);
 }
 
-int main()
+int main(int, char**)
 {
     A a;
     test(&a+1, A());
@@ -58,4 +58,6 @@ int main()
         static_assert(*it2 == p[1], "");
     }
 #endif
+
+  return 0;
 }

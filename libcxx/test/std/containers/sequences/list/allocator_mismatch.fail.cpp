@@ -11,7 +11,9 @@
 
 #include <list>
 
-int main()
+int main(int, char**)
 {
     std::list<int, std::allocator<long> > l;
+
+  return 0;
 }

@@ -35,6 +35,15 @@ define i32 @Call3() sanitize_address {
 ; CHECK-NOT:    call void @__asan_handle_no_return
 ; CHECK:        call void @NoReturnFunc
 
+; Do *not* instrument functions without ASan
+define i32 @Call4() {
+  call void @NoReturnFunc() noreturn
+  unreachable
+}
+; CHECK-LABEL:  @Call4
+; CHECK-NOT:    call void @__asan_handle_no_return
+; CHECK:        call void @NoReturnFunc
+
 declare i32 @__gxx_personality_v0(...)
 
 define i64 @Invoke1() nounwind uwtable ssp sanitize_address personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {

@@ -189,4 +189,6 @@ static_assert(( std::__is_referenceable<void (Foo::*)(int, float, Foo &, ...) &&
 static_assert(( std::__is_referenceable<void (Foo::*)(int, float, Foo &, ...) const &&>::value), "");
 #endif
 
-int main () {}
+int main(int, char**) {
+  return 0;
+}

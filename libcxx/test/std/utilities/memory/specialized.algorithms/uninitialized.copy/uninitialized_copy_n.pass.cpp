@@ -47,7 +47,7 @@ struct Nasty
 
 int Nasty::counter_ = 0;
 
-int main()
+int main(int, char**)
 {
     {
     const int N = 5;
@@ -84,4 +84,6 @@ int main()
         assert(  p[i].i_ == i);
     }
     }
+
+  return 0;
 }

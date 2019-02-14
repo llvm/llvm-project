@@ -18,7 +18,7 @@
 #include <mutex>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using M = std::mutex;
     M m0, m1, m2;
@@ -42,4 +42,6 @@ int main()
         const LG Orig(m0, m1, m2);
         LG Copy(Orig); // expected-error{{call to deleted constructor of 'LG'}}
     }
+
+  return 0;
 }

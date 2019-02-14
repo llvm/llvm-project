@@ -92,7 +92,7 @@ void test_max_alloc() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
         A* ap = new(std::nothrow) A;
@@ -105,4 +105,6 @@ int main()
     {
         test_max_alloc();
     }
+
+  return 0;
 }

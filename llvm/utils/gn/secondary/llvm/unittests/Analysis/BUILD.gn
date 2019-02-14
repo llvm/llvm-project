@@ -18,6 +18,7 @@ unittest("AnalysisTests") {
     "CallGraphTest.cpp",
     "CaptureTrackingTest.cpp",
     "DivergenceAnalysisTest.cpp",
+    "DomTreeUpdaterTest.cpp",
     "GlobalsModRefTest.cpp",
     "LazyCallGraphTest.cpp",
     "LoopInfoTest.cpp",

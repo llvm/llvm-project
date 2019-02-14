@@ -66,7 +66,7 @@ void test()
     test0(S({1,2,3}), False, S({1,2,3}));
 }
 
-int main()
+int main(int, char**)
 {
     test<std::deque<int>>();
     test<std::deque<int, min_allocator<int>>> ();
@@ -74,4 +74,6 @@ int main()
 
     test<std::deque<long>>();
     test<std::deque<double>>();
+
+  return 0;
 }

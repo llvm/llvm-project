@@ -97,7 +97,7 @@ void test()
     assert(Three::count == 0);
 }
 
-int main()
+int main(int, char**)
 {
     {
     int i = 67;
@@ -114,4 +114,6 @@ int main()
 #if TEST_STD_VER >= 11
     test<min_allocator<void> >();
 #endif
+
+  return 0;
 }

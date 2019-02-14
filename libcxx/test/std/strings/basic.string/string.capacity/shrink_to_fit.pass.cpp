@@ -29,7 +29,7 @@ test(S s)
     assert(s.capacity() >= s.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -59,4 +59,6 @@ int main()
     test(s);
     }
 #endif
+
+  return 0;
 }

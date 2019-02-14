@@ -1717,35 +1717,35 @@ function(setup_dependency_debugging name)
   set_target_properties(${name} PROPERTIES RULE_LAUNCH_COMPILE ${sandbox_command})
 endfunction()
 
-# Figure out if we can track VC revisions.
-function(find_first_existing_file out_var)
-  foreach(file ${ARGN})
-    if(EXISTS "${file}")
-      set(${out_var} "${file}" PARENT_SCOPE)
-      return()
-    endif()
-  endforeach()
-endfunction()
-
-macro(find_first_existing_vc_file out_var path)
-    find_program(git_executable NAMES git git.exe git.cmd)
-    # Run from a subdirectory to force git to print an absolute path.
-    execute_process(COMMAND ${git_executable} rev-parse --git-dir
-      WORKING_DIRECTORY ${path}/cmake
-      RESULT_VARIABLE git_result
-      OUTPUT_VARIABLE git_dir
-      ERROR_QUIET)
-    if(git_result EQUAL 0)
-      string(STRIP "${git_dir}" git_dir)
-      set(${out_var} "${git_dir}/logs/HEAD")
-      # some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
-      if (NOT EXISTS "${git_dir}/logs/HEAD")
-        file(WRITE "${git_dir}/logs/HEAD" "")
+function(find_first_existing_vc_file path out_var)
+  if(EXISTS "${path}/.svn")
+    set(svn_files
+      "${path}/.svn/wc.db"   # SVN 1.7
+      "${path}/.svn/entries" # SVN 1.6
+    )
+    foreach(file IN LISTS svn_files)
+      if(EXISTS "${file}")
+        set(${out_var} "${file}" PARENT_SCOPE)
+        return()
       endif()
-    else()
-      find_first_existing_file(${out_var}
-        "${path}/.svn/wc.db"   # SVN 1.7
-        "${path}/.svn/entries" # SVN 1.6
-      )
+    endforeach()
+  else()
+    find_package(Git)
+    if(GIT_FOUND)
+      execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --git-dir
+        WORKING_DIRECTORY ${path}
+        RESULT_VARIABLE git_result
+        OUTPUT_VARIABLE git_output
+        ERROR_QUIET)
+      if(git_result EQUAL 0)
+        string(STRIP "${git_output}" git_output)
+        get_filename_component(git_dir ${git_output} ABSOLUTE BASE_DIR ${path})
+        # Some branchless cases (e.g. 'repo') may not yet have .git/logs/HEAD
+        if (NOT EXISTS "${git_dir}/logs/HEAD")
+          file(WRITE "${git_dir}/logs/HEAD" "")
+        endif()
+        set(${out_var} "${git_dir}/logs/HEAD" PARENT_SCOPE)
+      endif()
     endif()
-endmacro()
+  endif()
+endfunction()

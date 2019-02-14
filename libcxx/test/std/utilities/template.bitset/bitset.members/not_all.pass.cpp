@@ -39,7 +39,7 @@ void test_not_all()
         assert(v2[i] == ~v1[i]);
 }
 
-int main()
+int main(int, char**)
 {
     test_not_all<0>();
     test_not_all<1>();
@@ -50,4 +50,6 @@ int main()
     test_not_all<64>();
     test_not_all<65>();
     test_not_all<1000>();
+
+  return 0;
 }

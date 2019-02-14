@@ -35,7 +35,7 @@ void test_default_ctor()
 }
 
 
-int main()
+int main(int, char**)
 {
     test_default_ctor<0>();
     test_default_ctor<1>();
@@ -46,4 +46,6 @@ int main()
     test_default_ctor<64>();
     test_default_ctor<65>();
     test_default_ctor<1000>();
+
+  return 0;
 }

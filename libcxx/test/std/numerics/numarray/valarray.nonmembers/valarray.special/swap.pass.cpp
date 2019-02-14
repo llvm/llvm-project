@@ -18,7 +18,7 @@
 #include <cassert>
 #include <cstddef>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -84,4 +84,6 @@ int main()
         for (std::size_t i = 0; i < v2.size(); ++i)
             assert(v2[i] == v1_save[i]);
     }
+
+  return 0;
 }

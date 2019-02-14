@@ -21,9 +21,11 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::function<void(int)> F;
     F f1;
     F f2(std::allocator_arg, std::allocator<int>(), f1);
+
+  return 0;
 }

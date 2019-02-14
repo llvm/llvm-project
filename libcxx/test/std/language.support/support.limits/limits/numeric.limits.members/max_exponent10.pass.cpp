@@ -25,7 +25,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::max_exponent10 == expected, "max_exponent10 test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, 0>();
     test<char, 0>();
@@ -54,4 +54,6 @@ int main()
     test<float, FLT_MAX_10_EXP>();
     test<double, DBL_MAX_10_EXP>();
     test<long double, LDBL_MAX_10_EXP>();
+
+  return 0;
 }

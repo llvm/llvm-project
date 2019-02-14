@@ -13,7 +13,7 @@
 #include <iterator>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     std::forward_iterator_tag tag;
     ((void)tag); // Prevent unused warning
@@ -21,4 +21,6 @@ int main()
                                    std::forward_iterator_tag>::value), "");
     static_assert((!std::is_base_of<std::output_iterator_tag,
                                     std::forward_iterator_tag>::value), "");
+
+  return 0;
 }

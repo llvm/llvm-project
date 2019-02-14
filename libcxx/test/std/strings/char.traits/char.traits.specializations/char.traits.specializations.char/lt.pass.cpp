@@ -15,7 +15,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert( std::char_traits<char>::lt('\0', 'A'));
     assert(!std::char_traits<char>::lt('A', '\0'));
@@ -29,4 +29,6 @@ int main()
 
     assert( std::char_traits<char>::lt(' ', 'A'));
     assert( std::char_traits<char>::lt('A', '~'));
+
+  return 0;
 }

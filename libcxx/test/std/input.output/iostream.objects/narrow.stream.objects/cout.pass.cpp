@@ -14,7 +14,7 @@
 
 #include <iostream>
 
-int main()
+int main(int, char**)
 {
 #if 0
     std::cout << "Hello World!\n";
@@ -25,4 +25,6 @@ int main()
 #else  // 0
     (void)std::cout;
 #endif
+
+  return 0;
 }

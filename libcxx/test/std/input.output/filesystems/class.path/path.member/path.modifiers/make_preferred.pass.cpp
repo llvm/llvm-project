@@ -39,7 +39,7 @@ const MakePreferredTestcase TestCases[] =
     , {"\\foo\\/bar\\/baz\\"}
   };
 
-int main()
+int main(int, char**)
 {
   // This operation is an identity operation on linux.
   using namespace fs;
@@ -50,4 +50,6 @@ int main()
     assert(p.native() == TC.value);
     assert(&Ref == &p);
   }
+
+  return 0;
 }

@@ -419,7 +419,7 @@ test1()
 
 #endif  // TEST_STD_VER >= 11
 
-int main()
+int main(int, char**)
 {
     test<forward_iterator<int*> >();
     test<bidirectional_iterator<int*> >();
@@ -434,4 +434,6 @@ int main()
     test1<std::unique_ptr<int>*>();
 
 #endif
+
+  return 0;
 }

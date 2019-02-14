@@ -1,4 +1,4 @@
-#RUN: not llc -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+#RUN: not llc -march=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 # REQUIRES: global-isel, aarch64-registered-target
 
 ---
@@ -10,9 +10,33 @@ tracksRegLiveness: true
 liveins:
 body:             |
   bb.0:
-    ; CHECK: Bad machine code: Instruction cannot use a vector result type
+   ; CHECK: Bad machine code: Instruction cannot use a vector result type
+   ; CHECK: Bad machine code: inconsistent constant size
     %0:_(<2 x s32>) = G_CONSTANT i32 0
 
     ; CHECK: Bad machine code: Too few operands
     %1:_(s32) = G_CONSTANT
+
+    ; Not a cimm
+    ; CHECK: Bad machine code:  G_CONSTANT operand must be cimm
+    %2:_(s32) = G_CONSTANT 0
+
+    ; Not a cimm
+    ; CHECK: Bad machine code:  G_CONSTANT operand must be cimm
+    %3:_(s32) = G_CONSTANT float 1.0
+
+    ;  Size is bigger than result
+    ; CHECK: Bad machine code: inconsistent constant size
+    %4:_(s32) = G_CONSTANT i64 0
+
+    ; Size is smaller than result
+    ; CHECK: Bad machine code: inconsistent constant size
+    %4:_(s32) = G_CONSTANT i16 0
+
+    ; CHECK: Bad machine code: inconsistent constant size
+    %5:_(p0) = G_CONSTANT i32 0
+
+    ; CHECK: Bad machine code: inconsistent constant size
+    %6:_(p0) = G_CONSTANT i128 0
+
 ...

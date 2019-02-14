@@ -160,7 +160,7 @@ std::wstring unquote ( const wchar_t *p, wchar_t delim='"', wchar_t escape='\\' 
     return s;
 }
 
-int main()
+int main(int, char**)
 {
     round_trip    (  "" );
     round_trip_ws (  "" );
@@ -207,7 +207,11 @@ int main()
 
     assert ( unquote (  "" ) ==  "" ); // nothing there
     assert ( unquote ( L"" ) == L"" ); // nothing there
-    }
+
+    return 0;
+}
 #else
-int main() {}
+int main(int, char**) {
+  return 0;
+}
 #endif

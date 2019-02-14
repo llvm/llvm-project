@@ -48,7 +48,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("  \n    \n ");
@@ -142,4 +142,6 @@ int main()
         assert(is.gcount() == 1);
     }
 #endif
+
+  return 0;
 }

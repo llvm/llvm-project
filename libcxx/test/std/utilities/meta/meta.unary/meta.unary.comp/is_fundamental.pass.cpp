@@ -72,7 +72,7 @@ enum Enum {zero, one};
 typedef void (*FunctionPtr)();
 
 
-int main()
+int main(int, char**)
 {
     test_is_fundamental<std::nullptr_t>();
     test_is_fundamental<void>();
@@ -111,4 +111,6 @@ int main()
     test_is_not_fundamental<Enum>();
     test_is_not_fundamental<NotEmpty>();
     test_is_not_fundamental<Abstract>();
+
+  return 0;
 }

@@ -425,7 +425,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::USUBSAT:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
-  case ISD::SMULFIX: {
+  case ISD::SMULFIX:
+  case ISD::UMULFIX: {
     unsigned Scale = Node->getConstantOperandVal(2);
     Action = TLI.getFixedPointOperationAction(Node->getOpcode(),
                                               Node->getValueType(0), Scale);
@@ -784,6 +785,7 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::SADDSAT:
     return ExpandAddSubSat(Op);
   case ISD::SMULFIX:
+  case ISD::UMULFIX:
     return ExpandFixedPointMul(Op);
   case ISD::STRICT_FADD:
   case ISD::STRICT_FSUB:

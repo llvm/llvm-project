@@ -156,5 +156,6 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx, bool keep_result_in_memory) {
   m_expr_decl_map_up.reset(
-      new ClangExpressionDeclMap(keep_result_in_memory, nullptr, exe_ctx));
+      new ClangExpressionDeclMap(keep_result_in_memory, nullptr, exe_ctx,
+                                 nullptr));
 }

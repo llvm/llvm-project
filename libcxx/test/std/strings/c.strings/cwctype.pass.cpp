@@ -90,7 +90,7 @@
 #error wctrans defined
 #endif
 
-int main()
+int main(int, char**)
 {
     std::wint_t w = 0;
     ASSERT_SAME_TYPE(int, decltype(std::iswalnum(w)));
@@ -113,4 +113,6 @@ int main()
     ASSERT_SAME_TYPE(std::wint_t,    decltype(std::towupper(w)));
     ASSERT_SAME_TYPE(std::wint_t,    decltype(std::towctrans(w, std::wctrans_t())));
     ASSERT_SAME_TYPE(std::wctrans_t, decltype(std::wctrans("")));
+
+  return 0;
 }

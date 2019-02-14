@@ -69,7 +69,7 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
     return false;
 
   // Sanity-check @llvm.global_dtor's type.
-  StructType *ETy = dyn_cast<StructType>(InitList->getType()->getElementType());
+  auto *ETy = dyn_cast<StructType>(InitList->getType()->getElementType());
   if (!ETy || ETy->getNumElements() != 3 ||
       !ETy->getTypeAtIndex(0U)->isIntegerTy() ||
       !ETy->getTypeAtIndex(1U)->isPointerTy() ||
@@ -80,11 +80,11 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
   // associated symbol.
   std::map<uint16_t, MapVector<Constant *, std::vector<Constant *>>> DtorFuncs;
   for (Value *O : InitList->operands()) {
-    ConstantStruct *CS = dyn_cast<ConstantStruct>(O);
+    auto *CS = dyn_cast<ConstantStruct>(O);
     if (!CS)
       continue; // Malformed.
 
-    ConstantInt *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
+    auto *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
     if (!Priority)
       continue; // Malformed.
     uint16_t PriorityValue = Priority->getLimitedValue(UINT16_MAX);

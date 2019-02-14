@@ -69,10 +69,6 @@ other_reg:
         mtlr 0
         blr
 
-        .globl __tls_get_addr
-        .type __tls_get_addr,@function
-__tls_get_addr:
-
 
 # CheckGot: .got          00000018 00000000100200c0 DATA
 # .got is at 0x100200c0 so the toc-base is 100280c0.

@@ -62,7 +62,7 @@ public:
 
   void CloseInput();
 
-  bool IsValid() const { return _editline_sp.get() != nullptr; }
+  bool IsValid() const { return _editline_sp != nullptr; }
 
   lldb_private::Editline &GetEditline() { return *_editline_sp; }
 
@@ -257,8 +257,8 @@ public:
       return;
 
     // Dump output.
-    _sp_output_thread.reset(
-        new std::thread([&] { _el_adapter.ConsumeAllOutput(); }));
+    _sp_output_thread =
+        std::make_shared<std::thread>([&] { _el_adapter.ConsumeAllOutput(); });
   }
 
   void TearDown() {

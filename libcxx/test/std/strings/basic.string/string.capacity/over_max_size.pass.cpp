@@ -35,7 +35,7 @@ test(const S& s)
     assert ( false );
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -51,4 +51,6 @@ int main()
     test(S("12345678901234567890123456789012345678901234567890"));
     }
 #endif
+
+  return 0;
 }

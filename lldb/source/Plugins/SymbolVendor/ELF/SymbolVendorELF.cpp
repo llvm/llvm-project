@@ -75,8 +75,8 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (obj_name != obj_file_elf)
     return NULL;
 
-  lldb_private::UUID uuid;
-  if (!obj_file->GetUUID(&uuid))
+  lldb_private::UUID uuid = obj_file->GetUUID();
+  if (!uuid)
     return NULL;
 
   // Get the .gnu_debuglink file (if specified).

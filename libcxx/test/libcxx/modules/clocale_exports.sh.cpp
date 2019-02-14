@@ -19,9 +19,11 @@
 
 #define TEST(...) do { using T = decltype( __VA_ARGS__ ); } while(false)
 
-int main() {
+int main(int, char**) {
   std::lconv l; ((void)l);
 
   TEST(std::setlocale(0, ""));
   TEST(std::localeconv());
+
+  return 0;
 }

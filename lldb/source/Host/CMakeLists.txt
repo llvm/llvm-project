@@ -19,6 +19,7 @@ endmacro()
 
 add_host_subdirectory(common
   common/File.cpp
+  common/FileAction.cpp
   common/FileCache.cpp
   common/FileSystem.cpp
   common/GetOptInc.cpp
@@ -36,6 +37,8 @@ add_host_subdirectory(common
   common/NativeThreadProtocol.cpp
   common/OptionParser.cpp
   common/PipeBase.cpp
+  common/ProcessInfo.cpp
+  common/ProcessLaunchInfo.cpp
   common/ProcessRunLock.cpp
   common/PseudoTerminal.cpp
   common/Socket.cpp

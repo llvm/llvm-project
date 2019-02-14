@@ -25,11 +25,13 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(t.precision() == 6);
     std::streamsize p = t.precision(10);
     assert(p == 6);
     assert(t.precision() == 10);
+
+  return 0;
 }

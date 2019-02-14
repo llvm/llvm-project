@@ -41,11 +41,13 @@ struct plus_one
   }
 };
 
-int main()
+int main(int, char**)
 {
     using std::placeholders::_1;
 
     auto g = std::bind(power(), 2, _1);
     assert(g(5) == 32);
     assert(std::bind(plus_one(), g)(5) == 33);
+
+  return 0;
 }

@@ -79,7 +79,7 @@ enum enum2 : unsigned long {
   value = std::numeric_limits<unsigned long>::max()
 };
 
-int main()
+int main(int, char**)
 {
   check_integral_types<bool, int>();
   check_integral_types<char, int>();
@@ -105,4 +105,6 @@ int main()
   check_enum_types<enum1, decltype(((Enum1UT)1) + 1)>();
   typedef std::underlying_type<enum2>::type Enum2UT;
   check_enum_types<enum2, decltype(((Enum2UT)1) + 1)>();
+
+  return 0;
 }

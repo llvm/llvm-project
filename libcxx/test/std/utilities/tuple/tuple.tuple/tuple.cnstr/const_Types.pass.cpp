@@ -76,7 +76,7 @@ std::tuple<ImplicitCopy> testImplicitCopy3() {
     return i;
 }
 
-int main()
+int main(int, char**)
 {
     {
         // check that the literal '0' can implicitly initialize a stored pointer.
@@ -159,4 +159,6 @@ int main()
         assert(std::get<3>(t) == 0.0);
     }
 #endif
+
+  return 0;
 }

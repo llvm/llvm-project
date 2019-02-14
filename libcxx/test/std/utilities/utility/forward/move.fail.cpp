@@ -24,10 +24,12 @@ const move_only csource() {return move_only();}
 
 void test(move_only) {}
 
-int main()
+int main(int, char**)
 {
     move_only a;
     const move_only ca = move_only();
 
     test(std::move(ca)); // c
+
+  return 0;
 }

@@ -110,7 +110,7 @@ struct F
 
 bool F::constructed = false;
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -184,4 +184,6 @@ int main()
         assert(A3<F>::constructed);
         s->~S();
     }
+
+  return 0;
 }

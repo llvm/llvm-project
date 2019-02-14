@@ -85,7 +85,7 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-int main()
+int main(int, char**)
 {
     std::FILE* fp = 0;
     std::fpos_t fpos = std::fpos_t();
@@ -154,4 +154,6 @@ int main()
     static_assert((std::is_same<decltype(std::puts("")), int>::value), "");
     static_assert((std::is_same<decltype(std::vprintf(" ",va)), int>::value), "");
 #endif
+
+  return 0;
 }

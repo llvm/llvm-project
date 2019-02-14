@@ -57,6 +57,8 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+
+#include <memory>
 #include <mutex>
 
 using namespace lldb;
@@ -89,7 +91,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_breakpoint_list(false), m_internal_breakpoint_list(true),
       m_watchpoint_list(), m_process_sp(), m_search_filter_sp(),
       m_image_search_paths(ImageSearchPathsChanged, this), m_ast_importer_sp(),
-      m_source_manager_ap(), m_stop_hooks(), m_stop_hook_next_id(0),
+      m_source_manager_up(), m_stop_hooks(), m_stop_hook_next_id(0),
       m_valid(true), m_suppress_stop_hooks(false),
       m_is_dummy_target(is_dummy_target),
       m_stats_storage(static_cast<int>(StatisticKind::StatisticMax))
@@ -497,12 +499,13 @@ Target::GetSearchFilterForModule(const FileSpec *containingModule) {
   if (containingModule != nullptr) {
     // TODO: We should look into sharing module based search filters
     // across many breakpoints like we do for the simple target based one
-    filter_sp.reset(
-        new SearchFilterByModule(shared_from_this(), *containingModule));
+    filter_sp = std::make_shared<SearchFilterByModule>(shared_from_this(),
+                                                       *containingModule);
   } else {
     if (!m_search_filter_sp)
-      m_search_filter_sp.reset(
-          new SearchFilterForUnconstrainedSearches(shared_from_this()));
+      m_search_filter_sp =
+          std::make_shared<SearchFilterForUnconstrainedSearches>(
+              shared_from_this());
     filter_sp = m_search_filter_sp;
   }
   return filter_sp;
@@ -514,12 +517,13 @@ Target::GetSearchFilterForModuleList(const FileSpecList *containingModules) {
   if (containingModules && containingModules->GetSize() != 0) {
     // TODO: We should look into sharing module based search filters
     // across many breakpoints like we do for the simple target based one
-    filter_sp.reset(
-        new SearchFilterByModuleList(shared_from_this(), *containingModules));
+    filter_sp = std::make_shared<SearchFilterByModuleList>(shared_from_this(),
+                                                           *containingModules);
   } else {
     if (!m_search_filter_sp)
-      m_search_filter_sp.reset(
-          new SearchFilterForUnconstrainedSearches(shared_from_this()));
+      m_search_filter_sp =
+          std::make_shared<SearchFilterForUnconstrainedSearches>(
+              shared_from_this());
     filter_sp = m_search_filter_sp;
   }
   return filter_sp;
@@ -536,11 +540,11 @@ SearchFilterSP Target::GetSearchFilterForModuleAndCUList(
     // We could make a special "CU List only SearchFilter".  Better yet was if
     // these could be composable, but that will take a little reworking.
 
-    filter_sp.reset(new SearchFilterByModuleListAndCU(
-        shared_from_this(), FileSpecList(), *containingSourceFiles));
+    filter_sp = std::make_shared<SearchFilterByModuleListAndCU>(
+        shared_from_this(), FileSpecList(), *containingSourceFiles);
   } else {
-    filter_sp.reset(new SearchFilterByModuleListAndCU(
-        shared_from_this(), *containingModules, *containingSourceFiles));
+    filter_sp = std::make_shared<SearchFilterByModuleListAndCU>(
+        shared_from_this(), *containingModules, *containingSourceFiles);
   }
   return filter_sp;
 }
@@ -604,7 +608,8 @@ Target::CreateScriptedBreakpoint(const llvm::StringRef class_name,
   } else if (has_modules) {
     filter_sp = GetSearchFilterForModuleList(containingModules);
   } else {
-    filter_sp.reset(new SearchFilterForUnconstrainedSearches(shared_from_this()));
+    filter_sp = std::make_shared<SearchFilterForUnconstrainedSearches>(
+        shared_from_this());
   }
   
   StructuredDataImpl *extra_args_impl = new StructuredDataImpl();
@@ -847,7 +852,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   }
 
   if (!wp_sp) {
-    wp_sp.reset(new Watchpoint(*this, addr, size, type));
+    wp_sp = std::make_shared<Watchpoint>(*this, addr, size, type);
     wp_sp->SetWatchpointType(kind, notify);
     m_watchpoint_list.Add(wp_sp, true);
   }
@@ -1024,7 +1029,7 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
   }
 
   if (!break_store_ptr) {
-    break_store_sp.reset(new StructuredData::Array());
+    break_store_sp = std::make_shared<StructuredData::Array>();
     break_store_ptr = break_store_sp.get();
   }
 
@@ -2199,7 +2204,8 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
 UserExpression *Target::GetUserExpressionForLanguage(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
-    const EvaluateExpressionOptions &options, Status &error) {
+    const EvaluateExpressionOptions &options,
+    ValueObject *ctx_obj, Status &error) {
   Status type_system_error;
 
   TypeSystem *type_system =
@@ -2215,7 +2221,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   }
 
   user_expr = type_system->GetUserExpression(expr, prefix, language,
-                                             desired_type, options);
+                                             desired_type, options, ctx_obj);
   if (!user_expr)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
@@ -2289,7 +2295,7 @@ ClangASTContext *Target::GetScratchClangASTContext(bool create_on_demand) {
 ClangASTImporterSP Target::GetClangASTImporter() {
   if (m_valid) {
     if (!m_ast_importer_sp) {
-      m_ast_importer_sp.reset(new ClangASTImporter());
+      m_ast_importer_sp = std::make_shared<ClangASTImporter>();
     }
     return m_ast_importer_sp;
   }
@@ -2356,7 +2362,8 @@ Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
 ExpressionResults Target::EvaluateExpression(
     llvm::StringRef expr, ExecutionContextScope *exe_scope,
     lldb::ValueObjectSP &result_valobj_sp,
-    const EvaluateExpressionOptions &options, std::string *fixed_expression) {
+    const EvaluateExpressionOptions &options, std::string *fixed_expression,
+    ValueObject *ctx_obj) {
   result_valobj_sp.reset();
 
   ExpressionResults execution_results = eExpressionSetupError;
@@ -2397,7 +2404,9 @@ ExpressionResults Target::EvaluateExpression(
     execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
                                                  result_valobj_sp, error,
                                                  0, // Line Number
-                                                 fixed_expression);
+                                                 fixed_expression,
+                                                 nullptr, // Module
+                                                 ctx_obj);
   }
 
   m_suppress_stop_hooks = old_suppress_value;
@@ -2459,9 +2468,9 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
 }
 
 SourceManager &Target::GetSourceManager() {
-  if (!m_source_manager_ap)
-    m_source_manager_ap.reset(new SourceManager(shared_from_this()));
-  return *m_source_manager_ap;
+  if (!m_source_manager_up)
+    m_source_manager_up.reset(new SourceManager(shared_from_this()));
+  return *m_source_manager_up;
 }
 
 ClangModulesDeclVendor *Target::GetClangModulesDeclVendor() {
@@ -2472,13 +2481,13 @@ ClangModulesDeclVendor *Target::GetClangModulesDeclVendor() {
   {
     std::lock_guard<std::mutex> guard(s_clang_modules_decl_vendor_mutex);
 
-    if (!m_clang_modules_decl_vendor_ap) {
-      m_clang_modules_decl_vendor_ap.reset(
+    if (!m_clang_modules_decl_vendor_up) {
+      m_clang_modules_decl_vendor_up.reset(
           ClangModulesDeclVendor::Create(*this));
     }
   }
 
-  return m_clang_modules_decl_vendor_ap.get();
+  return m_clang_modules_decl_vendor_up.get();
 }
 
 Target::StopHookSP Target::CreateStopHook() {
@@ -3134,14 +3143,14 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 //--------------------------------------------------------------
 Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
     : UserID(uid), m_target_sp(target_sp), m_commands(), m_specifier_sp(),
-      m_thread_spec_ap(), m_active(true) {}
+      m_thread_spec_up(), m_active(true) {}
 
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
       m_commands(rhs.m_commands), m_specifier_sp(rhs.m_specifier_sp),
-      m_thread_spec_ap(), m_active(rhs.m_active) {
-  if (rhs.m_thread_spec_ap)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
+      m_thread_spec_up(), m_active(rhs.m_active) {
+  if (rhs.m_thread_spec_up)
+    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
 }
 
 Target::StopHook::~StopHook() = default;
@@ -3151,7 +3160,7 @@ void Target::StopHook::SetSpecifier(SymbolContextSpecifier *specifier) {
 }
 
 void Target::StopHook::SetThreadSpecifier(ThreadSpec *specifier) {
-  m_thread_spec_ap.reset(specifier);
+  m_thread_spec_up.reset(specifier);
 }
 
 void Target::StopHook::GetDescription(Stream *s,
@@ -3174,10 +3183,10 @@ void Target::StopHook::GetDescription(Stream *s,
     s->SetIndentLevel(indent_level + 2);
   }
 
-  if (m_thread_spec_ap) {
+  if (m_thread_spec_up) {
     StreamString tmp;
     s->Indent("Thread:\n");
-    m_thread_spec_ap->GetDescription(&tmp, level);
+    m_thread_spec_up->GetDescription(&tmp, level);
     s->SetIndentLevel(indent_level + 4);
     s->Indent(tmp.GetString());
     s->PutCString("\n");
@@ -3587,8 +3596,8 @@ TargetExperimentalProperties::TargetExperimentalProperties()
 TargetProperties::TargetProperties(Target *target)
     : Properties(), m_launch_info() {
   if (target) {
-    m_collection_sp.reset(
-        new TargetOptionValueProperties(target, Target::GetGlobalProperties()));
+    m_collection_sp = std::make_shared<TargetOptionValueProperties>(
+        target, Target::GetGlobalProperties());
 
     // Set callbacks to update launch_info whenever "settins set" updated any
     // of these properties
@@ -3636,8 +3645,8 @@ TargetProperties::TargetProperties(Target *target)
     DisableASLRValueChangedCallback(this, nullptr);
     DisableSTDIOValueChangedCallback(this, nullptr);
   } else {
-    m_collection_sp.reset(
-        new TargetOptionValueProperties(ConstString("target")));
+    m_collection_sp =
+        std::make_shared<TargetOptionValueProperties>(ConstString("target"));
     m_collection_sp->Initialize(g_properties);
     m_experimental_properties_up.reset(new TargetExperimentalProperties());
     m_collection_sp->AppendProperty(

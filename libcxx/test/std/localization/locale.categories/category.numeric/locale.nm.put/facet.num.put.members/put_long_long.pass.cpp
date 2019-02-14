@@ -39,7 +39,7 @@ protected:
     virtual std::string do_grouping() const {return std::string("\1\2\3");}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     {
@@ -340,4 +340,6 @@ int main()
         assert(ex == "-***1_00_0");
         assert(ios.width() == 0);
     }
+
+  return 0;
 }

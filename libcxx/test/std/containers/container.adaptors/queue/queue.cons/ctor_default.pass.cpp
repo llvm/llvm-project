@@ -15,7 +15,7 @@
 
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     std::queue<int, std::vector<int, limited_allocator<int, 10> > > q;
     assert(q.size() == 0);
@@ -24,4 +24,6 @@ int main()
     assert(q.size() == 2);
     assert(q.front() == 1);
     assert(q.back() == 2);
+
+  return 0;
 }

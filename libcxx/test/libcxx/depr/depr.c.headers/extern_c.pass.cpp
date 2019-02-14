@@ -39,4 +39,6 @@ extern "C" {
 #include <wctype.h>
 }
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

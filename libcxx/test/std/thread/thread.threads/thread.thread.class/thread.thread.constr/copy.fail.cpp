@@ -48,7 +48,7 @@ public:
 int G::n_alive = 0;
 bool G::op_run = false;
 
-int main()
+int main(int, char**)
 {
     {
         assert(G::n_alive == 0);
@@ -62,4 +62,6 @@ int main()
         assert(G::n_alive == 0);
         assert(G::op_run);
     }
+
+  return 0;
 }

@@ -1127,7 +1127,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   }
-  case ISD::SMULFIX: {
+  case ISD::SMULFIX:
+  case ISD::UMULFIX: {
     unsigned Scale = Node->getConstantOperandVal(2);
     Action = TLI.getFixedPointOperationAction(Node->getOpcode(),
                                               Node->getValueType(0), Scale);
@@ -3290,6 +3291,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandAddSubSat(Node, DAG));
     break;
   case ISD::SMULFIX:
+  case ISD::UMULFIX:
     Results.push_back(TLI.expandFixedPointMul(Node, DAG));
     break;
   case ISD::SADDO:
@@ -3421,7 +3423,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       // being a legal type for the architecture and thus has to be split to
       // two arguments.
       SDValue Ret;
-      if(DAG.getDataLayout().isLittleEndian()) {
+      if (DAG.getDataLayout().isLittleEndian()) {
         // Halves of WideVT are packed into registers in different order
         // depending on platform endianness. This is usually handled by
         // the C calling convention, but we can't defer to it in
@@ -3434,8 +3436,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       }
       assert(Ret.getOpcode() == ISD::MERGE_VALUES &&
              "Ret value is a collection of constituent nodes holding result.");
-      BottomHalf = Ret.getOperand(0);
-      TopHalf = Ret.getOperand(1);
+      if (DAG.getDataLayout().isLittleEndian()) {
+        // Same as above.
+        BottomHalf = Ret.getOperand(0);
+        TopHalf = Ret.getOperand(1);
+      } else {
+        BottomHalf = Ret.getOperand(1);
+        TopHalf = Ret.getOperand(0);
+      }
     }
 
     if (isSigned) {

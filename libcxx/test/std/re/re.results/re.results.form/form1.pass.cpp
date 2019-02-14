@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::match_results<const char*> m;
@@ -152,4 +152,6 @@ int main()
         assert(r == out + 34);
         assert(std::wstring(out) == L"match: cdefghi, m[1]: efg, m[2]: e");
     }
+
+  return 0;
 }

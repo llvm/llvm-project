@@ -93,7 +93,9 @@ private:
   }
 };
 
-int main()
+int main(int, char**)
 {
   StringContainerChecks<>::run();
+
+  return 0;
 }

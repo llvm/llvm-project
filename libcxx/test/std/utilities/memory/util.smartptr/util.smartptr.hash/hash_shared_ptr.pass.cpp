@@ -25,7 +25,7 @@
 struct A {};
 #endif
 
-int main()
+int main(int, char**)
 {
   {
     int* ptr = new int;
@@ -40,4 +40,6 @@ int main()
     test_hash_enabled_for_type<std::shared_ptr<A>>();
   }
 #endif
+
+  return 0;
 }

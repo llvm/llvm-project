@@ -25,7 +25,9 @@ test1()
     assert(e1() == 152607844u);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
+
+  return 0;
 }

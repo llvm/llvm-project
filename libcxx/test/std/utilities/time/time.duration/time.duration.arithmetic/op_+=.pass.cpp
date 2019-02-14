@@ -28,7 +28,7 @@ constexpr bool test_constexpr()
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     std::chrono::seconds s(3);
@@ -41,4 +41,6 @@ int main()
 #if TEST_STD_VER > 14
     static_assert(test_constexpr(), "");
 #endif
+
+  return 0;
 }

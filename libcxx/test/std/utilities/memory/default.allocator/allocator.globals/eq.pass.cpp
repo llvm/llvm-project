@@ -21,10 +21,12 @@
 #include <memory>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::allocator<int> a1;
     std::allocator<int> a2;
     assert(a1 == a2);
     assert(!(a1 != a2));
+
+  return 0;
 }

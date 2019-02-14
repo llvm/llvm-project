@@ -141,7 +141,7 @@ void test1()
     test(S("pniotcfrhqsmgdkjbael"), "htaobedqikfplcgjsmrn", S::npos);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -162,4 +162,6 @@ int main()
     static_assert (sv2.find_first_not_of( "lecar", 0) == 1, "" );
     }
 #endif
+
+  return 0;
 }

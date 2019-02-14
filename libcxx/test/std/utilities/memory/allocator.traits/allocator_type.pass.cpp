@@ -24,7 +24,9 @@ struct A
     typedef T value_type;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::allocator_traits<A<char> >::allocator_type, A<char> >::value), "");
+
+  return 0;
 }

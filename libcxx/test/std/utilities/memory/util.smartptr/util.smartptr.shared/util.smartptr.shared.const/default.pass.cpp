@@ -13,9 +13,11 @@
 #include <memory>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::shared_ptr<int> p;
     assert(p.use_count() == 0);
     assert(p.get() == 0);
+
+  return 0;
 }

@@ -23,8 +23,10 @@ test(C c)
     std::back_insert_iterator<C> i(c);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::vector<int>());
     test(nasty_vector<int>());
+
+  return 0;
 }

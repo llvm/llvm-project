@@ -63,7 +63,7 @@ void swap(T&, T&) {}
 
 } // end namespace MyNS2
 
-int main()
+int main(int, char**)
 {
     using namespace MyNS;
     {
@@ -94,4 +94,6 @@ int main()
         static_assert(std::is_swappable_v<int>, "");
         static_assert(!std::is_swappable_v<M>, "");
     }
+
+  return 0;
 }

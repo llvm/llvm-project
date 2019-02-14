@@ -32,7 +32,7 @@ test(T expected)
     assert(std::numeric_limits<const volatile T>::is_bounded || !std::numeric_limits<const volatile T>::is_signed);
 }
 
-int main()
+int main(int, char**)
 {
     test<bool>(false);
     test<char>(CHAR_MIN);
@@ -61,4 +61,6 @@ int main()
     test<float>(FLT_MIN);
     test<double>(DBL_MIN);
     test<long double>(LDBL_MIN);
+
+  return 0;
 }

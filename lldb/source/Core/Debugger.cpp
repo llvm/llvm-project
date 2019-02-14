@@ -763,8 +763,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
       m_terminal_state(), m_target_list(*this), m_platform_list(),
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
-      m_source_manager_ap(), m_source_file_cache(),
-      m_command_interpreter_ap(llvm::make_unique<CommandInterpreter>(
+      m_source_manager_up(), m_source_file_cache(),
+      m_command_interpreter_up(llvm::make_unique<CommandInterpreter>(
           *this, eScriptLanguageDefault, false)),
       m_input_reader_stack(), m_instance_name(), m_loaded_plugins(),
       m_event_handler_thread(), m_io_handler_thread(),
@@ -776,7 +776,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (log_callback)
     m_log_callback_stream_sp =
         std::make_shared<StreamCallback>(log_callback, baton);
-  m_command_interpreter_ap->Initialize();
+  m_command_interpreter_up->Initialize();
   // Always add our default platform to the platform list
   PlatformSP default_platform_sp(Platform::GetHostPlatform());
   assert(default_platform_sp);
@@ -793,11 +793,11 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       ConstString("symbols"), ConstString("Symbol lookup and cache settings."),
       true, ModuleList::GetGlobalModuleListProperties().GetValueProperties());
-  if (m_command_interpreter_ap) {
+  if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         ConstString("interpreter"),
         ConstString("Settings specify to the debugger's command interpreter."),
-        true, m_command_interpreter_ap->GetValueProperties());
+        true, m_command_interpreter_up->GetValueProperties());
   }
   OptionValueSInt64 *term_width =
       m_collection_sp->GetPropertyAtIndexAsOptionValueSInt64(
@@ -856,7 +856,7 @@ void Debugger::Clear() {
     if (m_input_file_sp)
       m_input_file_sp->GetFile().Close();
 
-    m_command_interpreter_ap->Clear();
+    m_command_interpreter_up->Clear();
   });
 }
 
@@ -870,11 +870,11 @@ void Debugger::SetCloseInputOnEOF(bool b) {
 }
 
 bool Debugger::GetAsyncExecution() {
-  return !m_command_interpreter_ap->GetSynchronous();
+  return !m_command_interpreter_up->GetSynchronous();
 }
 
 void Debugger::SetAsyncExecution(bool async_execution) {
-  m_command_interpreter_ap->SetSynchronous(!async_execution);
+  m_command_interpreter_up->SetSynchronous(!async_execution);
 }
 
 void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership) {
@@ -1286,9 +1286,9 @@ bool Debugger::EnableLog(llvm::StringRef channel,
 }
 
 SourceManager &Debugger::GetSourceManager() {
-  if (!m_source_manager_ap)
-    m_source_manager_ap = llvm::make_unique<SourceManager>(shared_from_this());
-  return *m_source_manager_ap;
+  if (!m_source_manager_up)
+    m_source_manager_up = llvm::make_unique<SourceManager>(shared_from_this());
+  return *m_source_manager_up;
 }
 
 // This function handles events that were broadcast by the process.
@@ -1536,7 +1536,7 @@ void Debugger::DefaultEventHandler() {
   listener_sp->StartListeningForEventSpec(m_broadcaster_manager_sp,
                                           thread_event_spec);
   listener_sp->StartListeningForEvents(
-      m_command_interpreter_ap.get(),
+      m_command_interpreter_up.get(),
       CommandInterpreter::eBroadcastBitQuitCommandReceived |
           CommandInterpreter::eBroadcastBitAsynchronousOutputData |
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
@@ -1563,7 +1563,7 @@ void Debugger::DefaultEventHandler() {
             }
           } else if (broadcaster_class == broadcaster_class_thread) {
             HandleThreadEvent(event_sp);
-          } else if (broadcaster == m_command_interpreter_ap.get()) {
+          } else if (broadcaster == m_command_interpreter_up.get()) {
             if (event_type &
                 CommandInterpreter::eBroadcastBitQuitCommandReceived) {
               done = true;

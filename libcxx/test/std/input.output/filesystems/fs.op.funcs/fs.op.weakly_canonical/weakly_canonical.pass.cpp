@@ -25,7 +25,7 @@
 #include "filesystem_test_helper.hpp"
 
 
-int main() {
+int main(int, char**) {
   // clang-format off
   struct {
     std::string input;

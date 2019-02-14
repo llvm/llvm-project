@@ -22,7 +22,7 @@ void test_remove_pointer()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_remove_pointer<void, void>();
     test_remove_pointer<int, int>();
@@ -40,4 +40,6 @@ int main()
     test_remove_pointer<int(*)[3], int[3]>();
     test_remove_pointer<int*&, int*&>();
     test_remove_pointer<const int*&, const int*&>();
+
+  return 0;
 }

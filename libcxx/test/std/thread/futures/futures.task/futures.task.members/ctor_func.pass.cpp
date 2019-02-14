@@ -39,7 +39,7 @@ int A::n_copies = 0;
 
 int func(int i) { return i; }
 
-int main()
+int main(int, char**)
 {
     {
         std::packaged_task<double(int, char)> p(A(5));
@@ -76,4 +76,6 @@ int main()
         p(4);
         assert(f.get() == 4);
     }
+
+  return 0;
 }

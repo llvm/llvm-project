@@ -17,7 +17,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -63,4 +63,6 @@ int main()
         assert(c.get_allocator() == A());
     }
 #endif
+
+  return 0;
 }

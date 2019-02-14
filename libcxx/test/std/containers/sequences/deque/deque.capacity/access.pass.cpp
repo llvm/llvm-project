@@ -47,7 +47,7 @@ make(int size, int start = 0 )
     return c;
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::deque<int> c = make<std::deque<int> >(10);
@@ -87,4 +87,6 @@ int main()
         assert(c.back() == 9);
     }
 #endif
+
+  return 0;
 }

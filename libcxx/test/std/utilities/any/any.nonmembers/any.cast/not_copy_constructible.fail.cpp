@@ -43,7 +43,7 @@ struct no_move {
 // is triggered by these tests.
 // expected-error@not_copy_constructible.fail.cpp:* 0+ {{call to unavailable function 'any_cast': introduced in macOS 10.14}}
 
-int main() {
+int main(int, char**) {
     any a;
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be an lvalue reference or a CopyConstructible type"}}
     // expected-error@any:* {{static_cast from 'no_copy' to 'no_copy' uses deleted function}}
@@ -58,4 +58,6 @@ int main() {
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be an rvalue reference or a CopyConstructible type"}}
     // expected-error@any:* {{static_cast from 'typename remove_reference<no_move &>::type' (aka 'no_move') to 'no_move' uses deleted function}}
     any_cast<no_move>(static_cast<any &&>(a));
+
+  return 0;
 }

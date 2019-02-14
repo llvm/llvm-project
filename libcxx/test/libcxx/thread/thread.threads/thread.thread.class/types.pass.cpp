@@ -21,7 +21,9 @@
 #include <thread>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::thread::native_handle_type, pthread_t>::value), "");
+
+  return 0;
 }

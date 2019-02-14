@@ -18,8 +18,10 @@
 
 #include "../../rep.h"
 
-int main()
+int main(int, char**)
 {
     std::chrono::duration<Rep> d(Rep(15));
     d = d / 5;
+
+  return 0;
 }

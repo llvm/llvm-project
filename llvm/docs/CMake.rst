@@ -578,6 +578,13 @@ LLVM-specific variables
   may not compile at all, or might fail at runtime due to known bugs in these
   toolchains.
 
+**LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN**:BOOL
+  If enabled, the compiler version check will only warn when using a toolchain
+  which is about to be deprecated, instead of emitting an error.
+
+**LLVM_USE_NEWPM**:BOOL
+  If enabled, use the experimental new pass manager.
+
 CMake Caches
 ============
 

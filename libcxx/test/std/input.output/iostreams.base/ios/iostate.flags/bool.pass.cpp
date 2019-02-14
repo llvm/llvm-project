@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     std::ios ios(0);
     assert(static_cast<bool>(ios) == !ios.fail());
@@ -30,4 +30,6 @@ int main()
 #if TEST_STD_VER >= 11
     static_assert((!std::is_convertible<std::ios, bool>::value), "");
 #endif
+
+  return 0;
 }

@@ -45,7 +45,7 @@ f(double x, double m, double n)
     return I(m * x / (m*x + n), static_cast<unsigned>(m/2), static_cast<unsigned>(n/2));
 }
 
-int main()
+int main(int, char**)
 {
     // Purposefully only testing even integral values of m and n (for now)
     {
@@ -105,4 +105,6 @@ int main()
         for (int i = 0; i < N; ++i)
             assert(std::abs(f(u[i], p.m(), p.n()) - double(i)/N) < .01);
     }
+
+  return 0;
 }

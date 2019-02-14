@@ -77,8 +77,10 @@ test2()
         unsigned long long>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
+
+  return 0;
 }

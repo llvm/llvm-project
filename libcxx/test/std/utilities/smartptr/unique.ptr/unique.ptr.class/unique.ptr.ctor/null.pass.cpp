@@ -61,7 +61,7 @@ void test_pointer_deleter_ctor() {
   }
 }
 
-int main() {
+int main(int, char**) {
   {
     // test_pointer_ctor<int>();
     test_pointer_deleter_ctor<int>();
@@ -70,4 +70,6 @@ int main() {
     test_pointer_ctor<int[]>();
     test_pointer_deleter_ctor<int[]>();
   }
+
+  return 0;
 }

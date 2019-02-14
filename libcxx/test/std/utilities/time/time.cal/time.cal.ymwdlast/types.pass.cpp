@@ -16,10 +16,12 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year_month_weekday_last = std::chrono::year_month_weekday_last;
 
     static_assert(std::is_trivially_copyable_v<year_month_weekday_last>, "");
     static_assert(std::is_standard_layout_v<year_month_weekday_last>, "");
+
+  return 0;
 }

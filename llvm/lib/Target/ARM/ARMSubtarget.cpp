@@ -92,10 +92,12 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
-                           const ARMBaseTargetMachine &TM, bool IsLittle)
+                           const ARMBaseTargetMachine &TM, bool IsLittle,
+                           bool MinSize)
     : ARMGenSubtargetInfo(TT, CPU, FS), UseMulOps(UseFusedMulOps),
-      CPUString(CPU), IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options),
-      TM(TM), FrameLowering(initializeFrameLowering(CPU, FS)),
+      CPUString(CPU), OptMinSize(MinSize), IsLittle(IsLittle),
+      TargetTriple(TT), Options(TM.Options), TM(TM),
+      FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only()
@@ -373,20 +375,20 @@ bool ARMSubtarget::enablePostRAScheduler() const {
 
 bool ARMSubtarget::enableAtomicExpand() const { return hasAnyDataBarrier(); }
 
-bool ARMSubtarget::useStride4VFPs(const MachineFunction &MF) const {
+bool ARMSubtarget::useStride4VFPs() const {
   // For general targets, the prologue can grow when VFPs are allocated with
   // stride 4 (more vpush instructions). But WatchOS uses a compact unwind
   // format which it's more important to get right.
   return isTargetWatchABI() ||
-         (useWideStrideVFP() && !MF.getFunction().optForMinSize());
+         (useWideStrideVFP() && !OptMinSize);
 }
 
-bool ARMSubtarget::useMovt(const MachineFunction &MF) const {
+bool ARMSubtarget::useMovt() const {
   // NOTE Windows on ARM needs to use mov.w/mov.t pairs to materialise 32-bit
   // immediates as it is inherently position independent, and may be out of
   // range otherwise.
   return !NoMovt && hasV8MBaselineOps() &&
-         (isTargetWindows() || !MF.getFunction().optForMinSize() || genExecuteOnly());
+         (isTargetWindows() || !OptMinSize || genExecuteOnly());
 }
 
 bool ARMSubtarget::useFastISel() const {

@@ -20,7 +20,7 @@
 #include <locale>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::locale::facet, std::money_put<char> >::value), "");
     static_assert((std::is_base_of<std::locale::facet, std::money_put<wchar_t> >::value), "");
@@ -30,4 +30,6 @@ int main()
     static_assert((std::is_same<std::money_put<wchar_t>::iter_type, std::ostreambuf_iterator<wchar_t> >::value), "");
     static_assert((std::is_same<std::money_put<char>::string_type, std::string>::value), "");
     static_assert((std::is_same<std::money_put<wchar_t>::string_type, std::wstring>::value), "");
+
+  return 0;
 }

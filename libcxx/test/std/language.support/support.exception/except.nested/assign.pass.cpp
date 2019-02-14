@@ -26,7 +26,7 @@ public:
     friend bool operator==(const A& x, const A& y) {return x.data_ == y.data_;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::nested_exception e0;
@@ -59,4 +59,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

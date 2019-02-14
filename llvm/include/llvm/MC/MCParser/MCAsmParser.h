@@ -129,9 +129,6 @@ protected: // Can only create subclasses.
   /// Flag tracking whether any errors have been encountered.
   bool HadError = false;
 
-  /// Enable print [latency:throughput] in output file.
-  bool EnablePrintSchedInfo = false;
-
   bool ShowParsedOperands = false;
 
 public:
@@ -164,9 +161,6 @@ public:
 
   bool getShowParsedOperands() const { return ShowParsedOperands; }
   void setShowParsedOperands(bool Value) { ShowParsedOperands = Value; }
-
-  void setEnablePrintSchedInfo(bool Value) { EnablePrintSchedInfo = Value; }
-  bool shouldPrintSchedInfo() const { return EnablePrintSchedInfo; }
 
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;

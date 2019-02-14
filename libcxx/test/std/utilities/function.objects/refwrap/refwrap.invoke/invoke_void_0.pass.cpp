@@ -61,7 +61,9 @@ test_void_0()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_void_0();
+
+  return 0;
 }

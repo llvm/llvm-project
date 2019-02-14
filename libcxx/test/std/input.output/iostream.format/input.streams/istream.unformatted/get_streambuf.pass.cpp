@@ -52,7 +52,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("testing\n...");
@@ -84,4 +84,6 @@ int main()
         assert(!is.fail());
         assert(is.gcount() == 3);
     }
+
+  return 0;
 }

@@ -119,20 +119,20 @@ public:
   }
 };
 
-void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
+void computeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
                           SmallVectorImpl<MVT> &ValueVTs);
 
 // Compute the signature for a given FunctionType (Ty). Note that it's not the
 // signature for F (F is just used to get varous context)
-void ComputeSignatureVTs(const FunctionType *Ty, const Function &F,
+void computeSignatureVTs(const FunctionType *Ty, const Function &F,
                          const TargetMachine &TM, SmallVectorImpl<MVT> &Params,
                          SmallVectorImpl<MVT> &Results);
 
-void ValTypesFromMVTs(const ArrayRef<MVT> &In,
+void valTypesFromMVTs(const ArrayRef<MVT> &In,
                       SmallVectorImpl<wasm::ValType> &Out);
 
 std::unique_ptr<wasm::WasmSignature>
-SignatureFromMVTs(const SmallVectorImpl<MVT> &Results,
+signatureFromMVTs(const SmallVectorImpl<MVT> &Results,
                   const SmallVectorImpl<MVT> &Params);
 
 } // end namespace llvm

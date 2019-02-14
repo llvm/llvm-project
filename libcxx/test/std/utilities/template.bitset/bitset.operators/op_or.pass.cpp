@@ -39,7 +39,7 @@ void test_op_or()
     assert((v1 | v2) == (v3 |= v2));
 }
 
-int main()
+int main(int, char**)
 {
     test_op_or<0>();
     test_op_or<1>();
@@ -50,4 +50,6 @@ int main()
     test_op_or<64>();
     test_op_or<65>();
     test_op_or<1000>();
+
+  return 0;
 }

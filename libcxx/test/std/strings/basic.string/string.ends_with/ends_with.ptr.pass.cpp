@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -59,4 +59,6 @@ int main()
     assert (!sNot.ends_with("abcde"));
     assert ( sNot.ends_with("def"));
     }
+
+  return 0;
 }

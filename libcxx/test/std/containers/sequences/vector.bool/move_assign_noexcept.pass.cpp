@@ -56,7 +56,7 @@ struct some_alloc3
     typedef std::false_type is_always_equal;
 };
 
-int main()
+int main(int, char**)
 {
 #if defined(_LIBCPP_VERSION)
     {
@@ -97,4 +97,6 @@ int main()
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");
     }
 #endif
+
+  return 0;
 }

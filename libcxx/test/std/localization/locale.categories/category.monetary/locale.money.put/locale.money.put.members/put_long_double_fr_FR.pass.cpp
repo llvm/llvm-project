@@ -78,7 +78,7 @@ static std::wstring convert_thousands_sep(std::wstring const& in) {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     std::ios ios(0);
     std::string loc_name(LOCALE_fr_FR_UTF_8);
@@ -524,4 +524,6 @@ int main()
         assert(ios.width() == 0);
     }
 }
+
+  return 0;
 }

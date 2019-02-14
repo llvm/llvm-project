@@ -83,24 +83,28 @@ write_lit_config("lit_site_cfg") {
     assert(false, "unimplemented host_cpu " + host_cpu)
   }
 
+  if (host_os == "win") {
+    extra_values += [ "EXEEXT=.exe" ]
+  } else {
+    extra_values += [ "EXEEXT=" ]
+  }
+
   if (host_os == "mac") {
-    extra_values += [
-      "EXEEXT=",
-      "HOST_OS=Darwin",
-      "SHLIBEXT=.dylib",
-    ]
-  } else if (host_os == "linux") {
-    extra_values += [
-      "EXEEXT=",
-      "HOST_OS=Linux",
-      "SHLIBEXT=.so",
-    ]
+    extra_values += [ "SHLIBEXT=.dylib" ]
   } else if (host_os == "win") {
-    extra_values += [
-      "EXEEXT=.exe",
-      "HOST_OS=Windows",
-      "SHLIBEXT=.dll",
-    ]
+    extra_values += [ "SHLIBEXT=.dll" ]
+  } else {
+    extra_values += [ "SHLIBEXT=.so" ]
+  }
+
+  if (host_os == "freebsd") {
+    extra_values += [ "HOST_OS=FreeBSD" ]
+  } else if (host_os == "mac") {
+    extra_values += [ "HOST_OS=Darwin" ]
+  } else if (host_os == "linux") {
+    extra_values += [ "HOST_OS=Linux" ]
+  } else if (host_os == "win") {
+    extra_values += [ "HOST_OS=Windows" ]
   } else {
     assert(false, "unsupported host_os " + host_os)
   }

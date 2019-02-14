@@ -15,7 +15,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using namespace std::literals::chrono_literals;
 
@@ -57,4 +57,6 @@ int main()
     auto ns2 = 645.ns;
     assert ( ns == ns2 );
 
+
+  return 0;
 }

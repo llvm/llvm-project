@@ -14,4 +14,6 @@
 
 // expected-error@experimental/numeric:* {{"<experimental/numeric> has been removed. Use <numeric> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

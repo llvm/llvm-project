@@ -25,8 +25,10 @@ test()
     assert(i1 == I());
 }
 
-int main()
+int main(int, char**)
 {
     test<char>();
     test<wchar_t>();
+
+  return 0;
 }

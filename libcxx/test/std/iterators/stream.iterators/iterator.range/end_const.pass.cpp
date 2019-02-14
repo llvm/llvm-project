@@ -13,10 +13,12 @@
 #include <vector>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     int ia[] = {1, 2, 3};
     const std::vector<int> v(ia, ia + sizeof(ia)/sizeof(ia[0]));
     std::vector<int>::const_iterator i = end(v);
     assert(i == v.cend());
+
+  return 0;
 }

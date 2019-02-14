@@ -26,7 +26,9 @@ struct A
     double a4(unsigned i) const {return i-1;}
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::mem_fun1_t<short, A, int> F;
+
+  return 0;
 }

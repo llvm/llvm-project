@@ -448,7 +448,19 @@ public:
     ) GetExpressionPath;
     bool
     GetExpressionPath (lldb::SBStream &description, bool qualify_cxx_base_classes);
-    
+
+    lldb::SBValue
+    EvaluateExpression(const char *expr) const;
+
+    lldb::SBValue
+    EvaluateExpression(const char *expr,
+                       const SBExpressionOptions &options) const;
+
+    lldb::SBValue
+    EvaluateExpression(const char *expr,
+                       const SBExpressionOptions &options,
+                       const char *name) const;
+
     %pythoncode %{
         def __get_dynamic__ (self):
             '''Helper function for the "SBValue.dynamic" property.'''

@@ -29,7 +29,7 @@ struct S {
 constexpr std::pair<int, int> getP () { return { 3, 4 }; }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P;
@@ -49,4 +49,6 @@ int main()
     }
 #endif
 
+
+  return 0;
 }

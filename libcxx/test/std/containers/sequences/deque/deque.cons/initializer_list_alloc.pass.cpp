@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::deque<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
@@ -38,4 +38,6 @@ int main()
     assert(d[2] == 5);
     assert(d[3] == 6);
     }
+
+  return 0;
 }

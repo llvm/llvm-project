@@ -31,7 +31,7 @@ struct Type
 #endif
 };
 
-int main()
+int main(int, char**)
 {
     static_assert(sizeof(std::__invoke(&Type::f1, std::declval<Type        >())) == 1, "");
     static_assert(sizeof(std::__invoke(&Type::f2, std::declval<Type const  >())) == 2, "");
@@ -41,4 +41,6 @@ int main()
     static_assert(sizeof(std::__invoke(&Type::g3, std::declval<Type      &&>())) == 3, "");
     static_assert(sizeof(std::__invoke(&Type::g4, std::declval<Type const&&>())) == 4, "");
 #endif
+
+  return 0;
 }

@@ -54,7 +54,7 @@ void test_constexpr ()
 
 #endif
 
-int main()
+int main(int, char**)
 {
     test(std::chrono::milliseconds(7265000), std::chrono::hours(2));
     test(std::chrono::milliseconds(7265000), std::chrono::minutes(121));
@@ -78,4 +78,6 @@ int main()
     test_constexpr<std::chrono::duration<int, std::ratio<2, 3>>, 9, T1, 10> ();
     }
 #endif
+
+  return 0;
 }

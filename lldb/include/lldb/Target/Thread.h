@@ -1347,7 +1347,7 @@ protected:
                                             ///thread plan logic for the current
                                             ///resume.
   /// It gets set in Thread::ShouldResume.
-  std::unique_ptr<lldb_private::Unwind> m_unwinder_ap;
+  std::unique_ptr<lldb_private::Unwind> m_unwinder_up;
   bool m_destroy_called; // This is used internally to make sure derived Thread
                          // classes call DestroyThread.
   LazyBool m_override_should_notify;

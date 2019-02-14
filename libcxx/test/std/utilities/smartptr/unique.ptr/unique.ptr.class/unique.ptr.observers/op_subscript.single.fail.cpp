@@ -15,9 +15,11 @@
 #include <memory>
 #include <cassert>
 
-int main() {
+int main(int, char**) {
   std::unique_ptr<int> p(new int[3]);
   std::unique_ptr<int> const& cp = p;
   p[0];  // expected-error {{type 'std::unique_ptr<int>' does not provide a subscript operator}}
   cp[1]; // expected-error {{type 'const std::unique_ptr<int>' does not provide a subscript operator}}
+
+  return 0;
 }

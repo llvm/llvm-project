@@ -30,9 +30,11 @@ test()
     ((void)p);
 }
 
-int main()
+int main(int, char**)
 {
     test<int>();
     test<double>();
     test<void>();
+
+  return 0;
 }

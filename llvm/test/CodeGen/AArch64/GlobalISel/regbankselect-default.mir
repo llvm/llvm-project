@@ -437,8 +437,8 @@ registers:
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_constant_s32
-    ; CHECK: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT 123
-    %0(s32) = G_CONSTANT 123
+    ; CHECK: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 123
+    %0(s32) = G_CONSTANT i32 123
 ...
 
 ---
@@ -449,8 +449,8 @@ registers:
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_constant_p0
-    ; CHECK: [[C:%[0-9]+]]:gpr(p0) = G_CONSTANT 0
-    %0(p0) = G_CONSTANT 0
+    ; CHECK: [[C:%[0-9]+]]:gpr(p0) = G_CONSTANT i64 0
+    %0(p0) = G_CONSTANT i64 0
 ...
 
 ---

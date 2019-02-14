@@ -20,7 +20,7 @@ bool g(int x, int y)
     return x == y;
 }
 
-int main()
+int main(int, char**)
 {
     {
     int a1[] = {2, 1, 1, 4, 4, 4, 4, 3, 3};
@@ -38,4 +38,6 @@ int main()
     assert((c == std::list<int, min_allocator<int>>(a2, a2+4)));
     }
 #endif
+
+  return 0;
 }

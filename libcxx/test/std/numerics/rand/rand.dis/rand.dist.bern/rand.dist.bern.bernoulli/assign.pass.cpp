@@ -26,7 +26,9 @@ test1()
     assert(d1 == d2);
 }
 
-int main()
+int main(int, char**)
 {
     test1();
+
+  return 0;
 }

@@ -28,7 +28,9 @@ test()
     assert(m.suffix().matched == true);
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

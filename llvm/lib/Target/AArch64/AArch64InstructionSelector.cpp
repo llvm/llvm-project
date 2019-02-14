@@ -179,9 +179,9 @@ getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
 
 /// Given a register bank, and size in bits, return the smallest register class
 /// that can represent that combination.
-const TargetRegisterClass *getMinClassForRegBank(const RegisterBank &RB,
-                                                 unsigned SizeInBits,
-                                                 bool GetAllRegSet = false) {
+static const TargetRegisterClass *
+getMinClassForRegBank(const RegisterBank &RB, unsigned SizeInBits,
+                      bool GetAllRegSet = false) {
   unsigned RegBankID = RB.getID();
 
   if (RegBankID == AArch64::GPRRegBankID) {
@@ -840,7 +840,7 @@ void AArch64InstructionSelector::materializeLargeCMVal(
     constrainSelectedInstRegOperands(*MovI, TII, TRI, RBI);
     return DstReg;
   };
-  unsigned DstReg = BuildMovK(MovZ->getOperand(0).getReg(),
+  unsigned DstReg = BuildMovK(MovZ.getReg(0),
                               AArch64II::MO_G1 | AArch64II::MO_NC, 16, 0);
   DstReg = BuildMovK(DstReg, AArch64II::MO_G2 | AArch64II::MO_NC, 32, 0);
   BuildMovK(DstReg, AArch64II::MO_G3, 48, I.getOperand(0).getReg());

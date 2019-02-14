@@ -23,6 +23,8 @@ private:
     };
 
 
-int main() {
+int main(int, char**) {
     std::set<int, Comp<int> > m;
+
+  return 0;
 }

@@ -31,8 +31,10 @@
 
 int foo(int) { return 42; }
 
-int main() {
+int main(int, char**) {
 #if defined(__cpp_lib_invoke)
   assert(std::invoke(foo, 101) == 42);
 #endif
+
+  return 0;
 }

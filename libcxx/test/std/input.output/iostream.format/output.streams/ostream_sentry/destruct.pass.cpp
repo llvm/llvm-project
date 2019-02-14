@@ -35,7 +35,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ostream os((std::streambuf*)0);
@@ -75,4 +75,6 @@ int main()
         assert(sync_called == 1);
     }
 #endif
+
+  return 0;
 }

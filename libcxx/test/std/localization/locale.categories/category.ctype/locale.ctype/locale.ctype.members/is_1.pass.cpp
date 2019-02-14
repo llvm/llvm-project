@@ -15,7 +15,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -55,4 +55,6 @@ int main()
         assert(f.is(F::graph, L'.'));
         assert(!f.is(F::graph,  L'\x07'));
     }
+
+  return 0;
 }

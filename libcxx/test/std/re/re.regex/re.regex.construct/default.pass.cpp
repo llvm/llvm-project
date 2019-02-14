@@ -25,8 +25,10 @@ test()
     assert(r.mark_count() == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test<char>();
     test<wchar_t>();
+
+  return 0;
 }

@@ -16,12 +16,16 @@ def export_all_symbols: F<"export-all-symbols">,
 def gc_sections: F<"gc-sections">, HelpText<"Remove unused sections">;
 def icf: J<"icf=">, HelpText<"Identical code folding">;
 def image_base: S<"image-base">, HelpText<"Base address of the program">;
+def insert_timestamp: F<"insert-timestamp">,
+    HelpText<"Include PE header timestamp">;
 def kill_at: F<"kill-at">, HelpText<"Remove @n from exported symbols">;
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 def map: S<"Map">, HelpText<"Output a linker map">;
 def map_eq: J<"Map=">, Alias<map>;
+def no_insert_timestamp: F<"no-insert-timestamp">,
+    HelpText<"Don't include PE header timestamp">;
 def no_whole_archive: F<"no-whole-archive">,
     HelpText<"No longer include all object files for following archives">;
 def large_address_aware: Flag<["--"], "large-address-aware">,

@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::istreambuf_iterator<char> i(nullptr);
@@ -46,4 +46,6 @@ int main()
         std::istreambuf_iterator<wchar_t> i(inf.rdbuf());
         assert(i != std::istreambuf_iterator<wchar_t>());
     }
+
+  return 0;
 }

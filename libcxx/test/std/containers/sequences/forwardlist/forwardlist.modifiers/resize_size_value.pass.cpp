@@ -21,7 +21,7 @@
 #include "container_test_types.h"
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -98,4 +98,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

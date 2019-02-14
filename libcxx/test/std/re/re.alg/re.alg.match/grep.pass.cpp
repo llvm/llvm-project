@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::cmatch m;
@@ -46,4 +46,6 @@ int main()
                 std::regex_constants::grep)));
         assert(m.size() == 0);
     }
+
+  return 0;
 }

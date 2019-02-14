@@ -16,7 +16,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef char CharT;
@@ -44,4 +44,6 @@ int main()
         str = sm;
         assert(str == std::wstring(L"123"));
     }
+
+  return 0;
 }

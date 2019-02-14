@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::normal_distribution<> D;
@@ -24,4 +24,6 @@ int main()
         D::result_type m = d.max();
         assert(m == INFINITY);
     }
+
+  return 0;
 }

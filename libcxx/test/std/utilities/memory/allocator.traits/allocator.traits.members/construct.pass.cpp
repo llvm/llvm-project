@@ -81,7 +81,7 @@ struct A2
 
 int A2::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
         A0::count = 0;
@@ -149,4 +149,6 @@ int main()
         assert(b_construct == 1);
     }
 #endif
+
+  return 0;
 }

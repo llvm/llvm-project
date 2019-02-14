@@ -51,7 +51,7 @@ constexpr_test(It i, It x)
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     const char* s = "1234567890";
@@ -83,4 +83,6 @@ int main()
     static_assert( constexpr_test(s, s+1), "" );
     }
 #endif
+
+  return 0;
 }

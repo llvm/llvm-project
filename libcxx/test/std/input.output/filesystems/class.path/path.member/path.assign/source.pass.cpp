@@ -228,7 +228,7 @@ void RunStringMoveTest(const char* Expect) {
   }
 }
 
-int main() {
+int main(int, char**) {
   for (auto const& MS : PathList) {
     RunTestCase<char>(MS);
     RunTestCase<wchar_t>(MS);
@@ -237,4 +237,6 @@ int main() {
     RunStringMoveTest(MS);
   }
   test_sfinae();
+
+  return 0;
 }

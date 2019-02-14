@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 #if TEST_STD_VER >= 11
@@ -26,4 +26,6 @@ int main()
 #endif
     assert(std::char_traits<char16_t>::to_char_type(0) == 0);
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+
+  return 0;
 }

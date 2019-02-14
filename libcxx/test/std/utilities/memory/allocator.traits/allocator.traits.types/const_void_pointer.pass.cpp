@@ -57,7 +57,7 @@ private:
     typedef int const_void_pointer;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::allocator_traits<A<char> >::const_void_pointer, Ptr<const void> >::value), "");
     static_assert((std::is_same<std::allocator_traits<B<char> >::const_void_pointer, const void*>::value), "");
@@ -65,4 +65,6 @@ int main()
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::allocator_traits<D<char> >::const_void_pointer, const void*>::value), "");
 #endif
+
+  return 0;
 }

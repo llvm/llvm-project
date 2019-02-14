@@ -37,7 +37,7 @@ bool only_deletions ( const Unordered &whole, const Unordered &part ) {
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string> C;
@@ -385,4 +385,6 @@ int main()
     assert (only_deletions (m, m2));
     }
 #endif
+
+  return 0;
 }

@@ -26,7 +26,7 @@ private:
     int two;
 };
 
-int main()
+int main(int, char**)
 {
     {
 //  array
@@ -49,4 +49,6 @@ int main()
     std::basic_string<NotStandardLayout, test_traits<NotStandardLayout> > s;
 //  expected-error-re@string:* {{static_assert failed{{.*}} "Character type of basic_string must be standard-layout"}}
     }
+
+  return 0;
 }

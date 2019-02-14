@@ -15,7 +15,7 @@
 #include <cassert>
 #include <regex>
 
-int main()
+int main(int, char**)
 {
   // When match_not_null is on, the regex engine should reject empty matches and
   // move on to try other solutions.

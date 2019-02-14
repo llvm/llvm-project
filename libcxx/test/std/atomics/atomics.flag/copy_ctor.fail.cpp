@@ -15,8 +15,10 @@
 #include <atomic>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::atomic_flag f0;
     std::atomic_flag f(f0);
+
+  return 0;
 }

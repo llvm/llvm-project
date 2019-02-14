@@ -79,7 +79,7 @@ public:
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         typedef X T;
@@ -117,4 +117,6 @@ int main()
         optional<U> rhs(3);
         test<T>(rhs, true);
     }
+
+  return 0;
 }

@@ -50,7 +50,7 @@ unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(
   unsigned Cost = BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
       Opcode, Ty, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
 
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
+  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
     switch (Opcode) {
     case Instruction::LShr:
     case Instruction::AShr:

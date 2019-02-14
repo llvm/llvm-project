@@ -81,7 +81,7 @@ void test(const C& c)
     assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string> C;
@@ -144,4 +144,6 @@ int main()
         test(c);
     }
 #endif
+
+  return 0;
 }

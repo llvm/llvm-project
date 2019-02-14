@@ -6,6 +6,7 @@ set(LIBFUZZER_SOURCES
   FuzzerExtFunctionsWeak.cpp
   FuzzerExtFunctionsWindows.cpp
   FuzzerExtraCounters.cpp
+  FuzzerFork.cpp
   FuzzerIO.cpp
   FuzzerIOPosix.cpp
   FuzzerIOWindows.cpp
@@ -32,6 +33,7 @@ set(LIBFUZZER_HEADERS
   FuzzerExtFunctions.def
   FuzzerExtFunctions.h
   FuzzerFlags.def
+  FuzzerFork.h
   FuzzerIO.h
   FuzzerInterface.h
   FuzzerInternal.h

@@ -50,7 +50,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -83,4 +83,6 @@ int main()
         os << std::put_time(&t, L"%a %b %d %H:%M:%S %Y");
         assert(sb.str() == L"Sat Dec 31 23:55:59 2061");
     }
+
+  return 0;
 }

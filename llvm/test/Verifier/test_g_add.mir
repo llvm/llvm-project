@@ -1,4 +1,4 @@
-#RUN: not llc -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+#RUN: not llc -march=aarch64 -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
 # REQUIRES: global-isel, aarch64-registered-target
 
 ---
@@ -24,5 +24,14 @@ body:             |
     ; CHECK: Bad machine code: Too few operands
     ; CHECK: Bad machine code: Explicit definition marked as use
     G_ADD %0, %1
+
+    ; CHECK: Bad machine code: generic instruction must use register operands
+    %5:_(s32) = G_ADD %0, 1
+
+    %6:_(s64) = G_CONSTANT i64 0
+
+    ; CHECK: Bad machine code: Type mismatch in generic instruction
+    ; CHECK: Bad machine code: Generic virtual register does not allow subregister index
+    %8:_(s32) = G_ADD %6.sub_32:_(s64), %0
 
 ...

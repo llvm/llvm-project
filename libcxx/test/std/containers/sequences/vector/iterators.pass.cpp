@@ -28,7 +28,7 @@ struct A
     int second;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -166,4 +166,6 @@ int main()
         assert (ii1 - cii == 0);
     }
 #endif
+
+  return 0;
 }

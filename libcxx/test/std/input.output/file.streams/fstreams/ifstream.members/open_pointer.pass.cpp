@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ifstream fs;
@@ -42,4 +42,6 @@ int main()
         fs >> c;
         assert(c == L'r');
     }
+
+  return 0;
 }

@@ -20,7 +20,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_set<int> C;
@@ -90,4 +90,6 @@ int main()
         assert(k == c.end());
     }
 #endif
+
+  return 0;
 }

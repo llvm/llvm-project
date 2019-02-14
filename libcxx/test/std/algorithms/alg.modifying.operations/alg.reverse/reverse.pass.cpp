@@ -51,9 +51,11 @@ test()
     assert(id[3] == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+
+  return 0;
 }

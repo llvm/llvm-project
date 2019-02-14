@@ -39,7 +39,9 @@ union Union
     double __;
 };
 
-int main()
+int main(int, char**)
 {
     test_union<Union>();
+
+  return 0;
 }

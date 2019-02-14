@@ -23,7 +23,7 @@
 #include "test_macros.h"
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::tuple<> t = std::tuple_cat();
@@ -238,4 +238,6 @@ int main()
         );
         assert(t2 == std::make_tuple(std::make_tuple(1), std::make_tuple(2)));
     }
+
+  return 0;
 }

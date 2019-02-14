@@ -19,7 +19,9 @@
 
 #include <new>
 
-int main ()
+int main(int, char**)
 {
     ::operator new[](4, std::nothrow);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  return 0;
 }

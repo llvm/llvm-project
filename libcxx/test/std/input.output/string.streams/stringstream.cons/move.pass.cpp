@@ -18,7 +18,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::stringstream ss0(" 123 456 ");
@@ -48,4 +48,6 @@ int main()
         ss << i << ' ' << 123;
         assert(ss.str() == L"456 1236 ");
     }
+
+  return 0;
 }

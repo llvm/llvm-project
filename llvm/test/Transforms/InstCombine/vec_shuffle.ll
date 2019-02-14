@@ -182,9 +182,20 @@ define <2 x i8> @extract_subvector_of_shuffle(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %extract_subv
 }
 
-; Extra uses are ok.
 ; Undef elements in either mask are ok. Undefs from the 2nd shuffle mask should propagate to the new shuffle.
 ; The type of the inputs does not have to match the output type.
+
+define <4 x i8> @extract_subvector_of_shuffle_undefs_types(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @extract_subvector_of_shuffle_undefs_types(
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <4 x i32> <i32 undef, i32 2, i32 0, i32 undef>
+; CHECK-NEXT:    ret <4 x i8> [[EXTRACT_SUBV]]
+;
+  %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
+  %extract_subv = shufflevector <5 x i8> %shuf, <5 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  ret <4 x i8> %extract_subv
+}
+
+; Extra uses are not ok - we only do the transform when we can eliminate an instruction.
 
 declare void @use_v5i8(<5 x i8>)
 
@@ -192,7 +203,7 @@ define <4 x i8> @extract_subvector_of_shuffle_extra_use(<2 x i8> %x, <2 x i8> %y
 ; CHECK-LABEL: @extract_subvector_of_shuffle_extra_use(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    call void @use_v5i8(<5 x i8> [[SHUF]])
-; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <2 x i8> [[X]], <2 x i8> [[Y]], <4 x i32> <i32 undef, i32 2, i32 0, i32 undef>
+; CHECK-NEXT:    [[EXTRACT_SUBV:%.*]] = shufflevector <5 x i8> [[SHUF]], <5 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT:    ret <4 x i8> [[EXTRACT_SUBV]]
 ;
   %shuf = shufflevector <2 x i8> %x, <2 x i8> %y, <5 x i32> <i32 undef, i32 2, i32 0, i32 1, i32 0>
@@ -723,8 +734,8 @@ define <8 x i8> @pr19730(<16 x i8> %in0) {
 
 define i32 @pr19737(<4 x i32> %in0) {
 ; CHECK-LABEL: @pr19737(
-; CHECK-NEXT:    [[RV_RHS:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i32 0
-; CHECK-NEXT:    ret i32 [[RV_RHS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %shuffle.i = shufflevector <4 x i32> zeroinitializer, <4 x i32> %in0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %neg.i = xor <4 x i32> %shuffle.i, <i32 -1, i32 -1, i32 -1, i32 -1>

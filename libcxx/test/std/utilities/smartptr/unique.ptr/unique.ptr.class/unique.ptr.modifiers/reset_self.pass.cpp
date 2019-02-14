@@ -21,4 +21,6 @@ struct A {
   void reset() { ptr_.reset(); }
 };
 
-int main() { (new A)->reset(); }
+int main(int, char**) { (new A)->reset(); 
+  return 0;
+}

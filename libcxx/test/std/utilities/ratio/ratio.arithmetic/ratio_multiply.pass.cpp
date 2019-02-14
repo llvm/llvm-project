@@ -10,7 +10,7 @@
 
 #include <ratio>
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::ratio<1, 1> R1;
@@ -54,4 +54,6 @@ int main()
     typedef std::ratio_multiply<R1, R2>::type R;
     static_assert(R::num == 15519594064236LL && R::den == 5177331081415LL, "");
     }
+
+  return 0;
 }

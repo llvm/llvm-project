@@ -18,7 +18,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::istringstream inf1("abc");
@@ -98,4 +98,6 @@ int main()
         assert(!(i5 != i4));
         assert(!(i5 != i5));
     }
+
+  return 0;
 }

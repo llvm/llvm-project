@@ -40,7 +40,7 @@ struct B1 : B {};
 struct B2 : B {};
 struct D : private B1, private B2 {};
 
-int main()
+int main(int, char**)
 {
     test_is_base_of<B, D>();
     test_is_base_of<B1, D>();
@@ -53,4 +53,6 @@ int main()
     test_is_not_base_of<B&, D&>();
     test_is_not_base_of<B[3], D[3]>();
     test_is_not_base_of<int, int>();
+
+  return 0;
 }

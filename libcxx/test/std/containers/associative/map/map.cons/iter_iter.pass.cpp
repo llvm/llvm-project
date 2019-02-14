@@ -18,7 +18,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::pair<const int, double> V;
@@ -64,4 +64,6 @@ int main()
     assert(*next(m.begin(), 2) == V(3, 1));
     }
 #endif
+
+  return 0;
 }

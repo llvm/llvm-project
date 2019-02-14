@@ -38,7 +38,7 @@ struct test
         {return std::strstreambuf::overflow(c);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         test s(my_alloc, my_free);
@@ -47,4 +47,6 @@ int main()
         assert(called == 1);
     }
     assert(called == 2);
+
+  return 0;
 }

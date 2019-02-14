@@ -1751,7 +1751,7 @@ static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_loadu_epi16 (void const *__P)
 {
   struct __loadu_epi16 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi16*)__P)->__v;
 }
@@ -1777,7 +1777,7 @@ static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_loadu_epi8 (void const *__P)
 {
   struct __loadu_epi8 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   return ((struct __loadu_epi8*)__P)->__v;
 }
@@ -1803,7 +1803,7 @@ static __inline void __DEFAULT_FN_ATTRS512
 _mm512_storeu_epi16 (void *__P, __m512i __A)
 {
   struct __storeu_epi16 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi16*)__P)->__v = __A;
 }
@@ -1820,7 +1820,7 @@ static __inline void __DEFAULT_FN_ATTRS512
 _mm512_storeu_epi8 (void *__P, __m512i __A)
 {
   struct __storeu_epi8 {
-    __m512i __v;
+    __m512i_u __v;
   } __attribute__((__packed__, __may_alias__));
   ((struct __storeu_epi8*)__P)->__v = __A;
 }

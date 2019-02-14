@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
   // Test that assignment from {} and {ptr, len} are allowed and are not
   // ambiguous.
@@ -32,4 +32,6 @@ int main()
     s = {"abc", 2};
     assert(s == "ab");
   }
+
+  return 0;
 }

@@ -12,27 +12,29 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/RegisterValue.h"
 
+#include <memory>
+
 using namespace lldb_private;
 
 RegisterContextCorePOSIX_powerpc::RegisterContextCorePOSIX_powerpc(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_powerpc(thread, 0, register_info) {
-  m_gpr_buffer.reset(
-      new DataBufferHeap(gpregset.GetDataStart(), gpregset.GetByteSize()));
+  m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
+                                                  gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
   m_gpr.SetByteOrder(gpregset.GetByteOrder());
 
   ArchSpec arch = register_info->GetTargetArchitecture();
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
-  m_fpr_buffer.reset(
-      new DataBufferHeap(fpregset.GetDataStart(), fpregset.GetByteSize()));
+  m_fpr_buffer = std::make_shared<DataBufferHeap>(fpregset.GetDataStart(),
+                                                  fpregset.GetByteSize());
   m_fpr.SetData(m_fpr_buffer);
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 
   DataExtractor vregset = getRegset(notes, arch.GetTriple(), PPC_VMX_Desc);
-  m_vec_buffer.reset(
-      new DataBufferHeap(vregset.GetDataStart(), vregset.GetByteSize()));
+  m_vec_buffer = std::make_shared<DataBufferHeap>(vregset.GetDataStart(),
+                                                  vregset.GetByteSize());
   m_vec.SetData(m_vec_buffer);
   m_vec.SetByteOrder(vregset.GetByteOrder());
 }

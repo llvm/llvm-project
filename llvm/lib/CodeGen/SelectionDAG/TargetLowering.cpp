@@ -99,19 +99,19 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
 
 /// Set CallLoweringInfo attribute flags based on a call instruction
 /// and called function attributes.
-void TargetLoweringBase::ArgListEntry::setAttributes(ImmutableCallSite *CS,
+void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  IsSExt = CS->paramHasAttr(ArgIdx, Attribute::SExt);
-  IsZExt = CS->paramHasAttr(ArgIdx, Attribute::ZExt);
-  IsInReg = CS->paramHasAttr(ArgIdx, Attribute::InReg);
-  IsSRet = CS->paramHasAttr(ArgIdx, Attribute::StructRet);
-  IsNest = CS->paramHasAttr(ArgIdx, Attribute::Nest);
-  IsByVal = CS->paramHasAttr(ArgIdx, Attribute::ByVal);
-  IsInAlloca = CS->paramHasAttr(ArgIdx, Attribute::InAlloca);
-  IsReturned = CS->paramHasAttr(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = CS->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftError = CS->paramHasAttr(ArgIdx, Attribute::SwiftError);
-  Alignment  = CS->getParamAlignment(ArgIdx);
+  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
+  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
+  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
+  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
+  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
+  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
+  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
+  IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
+  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
+  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
+  Alignment = Call->getParamAlignment(ArgIdx);
 }
 
 /// Generate a libcall taking the given operands as arguments and returning a
@@ -1022,6 +1022,45 @@ bool TargetLowering::SimplifyDemandedBits(
       if (Known.One[BitWidth - ShAmt - 1])
         // New bits are known one.
         Known.One.setHighBits(ShAmt);
+    }
+    break;
+  }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    SDValue Op2 = Op.getOperand(2);
+    bool IsFSHL = (Op.getOpcode() == ISD::FSHL);
+
+    if (ConstantSDNode *SA = isConstOrConstSplat(Op2)) {
+      unsigned Amt = SA->getAPIntValue().urem(BitWidth);
+
+      // For fshl, 0-shift returns the 1st arg.
+      // For fshr, 0-shift returns the 2nd arg.
+      if (Amt == 0) {
+        if (SimplifyDemandedBits(IsFSHL ? Op0 : Op1, DemandedBits, DemandedElts,
+                                 Known, TLO, Depth + 1))
+          return true;
+        break;
+      }
+
+      // fshl: (Op0 << Amt) | (Op1 >> (BW - Amt))
+      // fshr: (Op0 << (BW - Amt)) | (Op1 >> Amt)
+      APInt Demanded0 = DemandedBits.lshr(IsFSHL ? Amt : (BitWidth - Amt));
+      APInt Demanded1 = DemandedBits << (IsFSHL ? (BitWidth - Amt) : Amt);
+      if (SimplifyDemandedBits(Op0, Demanded0, DemandedElts, Known2, TLO,
+                               Depth + 1))
+        return true;
+      if (SimplifyDemandedBits(Op1, Demanded1, DemandedElts, Known, TLO,
+                               Depth + 1))
+        return true;
+
+      Known2.One <<= (IsFSHL ? Amt : (BitWidth - Amt));
+      Known2.Zero <<= (IsFSHL ? Amt : (BitWidth - Amt));
+      Known.One.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
+      Known.Zero.lshrInPlace(IsFSHL ? (BitWidth - Amt) : Amt);
+      Known.One |= Known2.One;
+      Known.Zero |= Known2.Zero;
     }
     break;
   }
@@ -2097,10 +2136,9 @@ bool TargetLowering::isExtendedTrueVal(const ConstantSDNode *N, EVT VT,
 
 /// This helper function of SimplifySetCC tries to optimize the comparison when
 /// either operand of the SetCC node is a bitwise-and instruction.
-SDValue TargetLowering::simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
-                                             ISD::CondCode Cond,
-                                             DAGCombinerInfo &DCI,
-                                             const SDLoc &DL) const {
+SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
+                                         ISD::CondCode Cond, const SDLoc &DL,
+                                         DAGCombinerInfo &DCI) const {
   // Match these patterns in any of their permutations:
   // (X & Y) == Y
   // (X & Y) != Y
@@ -2251,6 +2289,49 @@ SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
   SDValue T2 = DAG.getSetCC(DL, SCCVT, T1, X, NewCond);
 
   return T2;
+}
+
+/// Try to fold an equality comparison with a {add/sub/xor} binary operation as
+/// the 1st operand (N0). Callers are expected to swap the N0/N1 parameters to
+/// handle the commuted versions of these patterns.
+SDValue TargetLowering::foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1,
+                                           ISD::CondCode Cond, const SDLoc &DL,
+                                           DAGCombinerInfo &DCI) const {
+  unsigned BOpcode = N0.getOpcode();
+  assert((BOpcode == ISD::ADD || BOpcode == ISD::SUB || BOpcode == ISD::XOR) &&
+         "Unexpected binop");
+  assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) && "Unexpected condcode");
+
+  // (X + Y) == X --> Y == 0
+  // (X - Y) == X --> Y == 0
+  // (X ^ Y) == X --> Y == 0
+  SelectionDAG &DAG = DCI.DAG;
+  EVT OpVT = N0.getValueType();
+  SDValue X = N0.getOperand(0);
+  SDValue Y = N0.getOperand(1);
+  if (X == N1)
+    return DAG.getSetCC(DL, VT, Y, DAG.getConstant(0, DL, OpVT), Cond);
+
+  if (Y != N1)
+    return SDValue();
+
+  // (X + Y) == Y --> X == 0
+  // (X ^ Y) == Y --> X == 0
+  if (BOpcode == ISD::ADD || BOpcode == ISD::XOR)
+    return DAG.getSetCC(DL, VT, X, DAG.getConstant(0, DL, OpVT), Cond);
+
+  // The shift would not be valid if the operands are boolean (i1).
+  if (!N0.hasOneUse() || OpVT.getScalarSizeInBits() == 1)
+    return SDValue();
+
+  // (X - Y) == Y --> X == Y << 1
+  EVT ShiftVT = getShiftAmountTy(OpVT, DAG.getDataLayout(),
+                                 !DCI.isBeforeLegalize());
+  SDValue One = DAG.getConstant(1, DL, ShiftVT);
+  SDValue YShl1 = DAG.getNode(ISD::SHL, DL, N1.getValueType(), Y, One);
+  if (!DCI.isCalledByLegalizer())
+    DCI.AddToWorklist(YShl1.getNode());
+  return DAG.getSetCC(DL, VT, X, YShl1, Cond);
 }
 
 /// Try to simplify a setcc built with the specified operands and cc. If it is
@@ -3022,62 +3103,21 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           LegalRHSImm = isLegalICmpImmediate(RHSC->getSExtValue());
       }
 
-      // Simplify (X+Z) == X -->  Z == 0
+      // (X+Y) == X --> Y == 0 and similar folds.
       // Don't do this if X is an immediate that can fold into a cmp
-      // instruction and X+Z has other uses. It could be an induction variable
+      // instruction and X+Y has other uses. It could be an induction variable
       // chain, and the transform would increase register pressure.
-      if (!LegalRHSImm || N0.getNode()->hasOneUse()) {
-        if (N0.getOperand(0) == N1)
-          return DAG.getSetCC(dl, VT, N0.getOperand(1),
-                              DAG.getConstant(0, dl, N0.getValueType()), Cond);
-        if (N0.getOperand(1) == N1) {
-          if (isCommutativeBinOp(N0.getOpcode()))
-            return DAG.getSetCC(dl, VT, N0.getOperand(0),
-                                DAG.getConstant(0, dl, N0.getValueType()),
-                                Cond);
-          if (N0.getNode()->hasOneUse()) {
-            assert(N0.getOpcode() == ISD::SUB && "Unexpected operation!");
-            auto &DL = DAG.getDataLayout();
-            // (Z-X) == X  --> Z == X<<1
-            SDValue SH = DAG.getNode(
-                ISD::SHL, dl, N1.getValueType(), N1,
-                DAG.getConstant(1, dl,
-                                getShiftAmountTy(N1.getValueType(), DL,
-                                                 !DCI.isBeforeLegalize())));
-            if (!DCI.isCalledByLegalizer())
-              DCI.AddToWorklist(SH.getNode());
-            return DAG.getSetCC(dl, VT, N0.getOperand(0), SH, Cond);
-          }
-        }
-      }
+      if (!LegalRHSImm || N0.hasOneUse())
+        if (SDValue V = foldSetCCWithBinOp(VT, N0, N1, Cond, dl, DCI))
+          return V;
     }
 
     if (N1.getOpcode() == ISD::ADD || N1.getOpcode() == ISD::SUB ||
-        N1.getOpcode() == ISD::XOR) {
-      // Simplify  X == (X+Z) -->  Z == 0
-      if (N1.getOperand(0) == N0)
-        return DAG.getSetCC(dl, VT, N1.getOperand(1),
-                        DAG.getConstant(0, dl, N1.getValueType()), Cond);
-      if (N1.getOperand(1) == N0) {
-        if (isCommutativeBinOp(N1.getOpcode()))
-          return DAG.getSetCC(dl, VT, N1.getOperand(0),
-                          DAG.getConstant(0, dl, N1.getValueType()), Cond);
-        if (N1.getNode()->hasOneUse()) {
-          assert(N1.getOpcode() == ISD::SUB && "Unexpected operation!");
-          auto &DL = DAG.getDataLayout();
-          // X == (Z-X)  --> X<<1 == Z
-          SDValue SH = DAG.getNode(
-              ISD::SHL, dl, N1.getValueType(), N0,
-              DAG.getConstant(1, dl, getShiftAmountTy(N0.getValueType(), DL,
-                                                      !DCI.isBeforeLegalize())));
-          if (!DCI.isCalledByLegalizer())
-            DCI.AddToWorklist(SH.getNode());
-          return DAG.getSetCC(dl, VT, SH, N1.getOperand(0), Cond);
-        }
-      }
-    }
+        N1.getOpcode() == ISD::XOR)
+      if (SDValue V = foldSetCCWithBinOp(VT, N1, N0, Cond, dl, DCI))
+        return V;
 
-    if (SDValue V = simplifySetCCWithAnd(VT, N0, N1, Cond, DCI, dl))
+    if (SDValue V = foldSetCCWithAnd(VT, N0, N1, Cond, dl, DCI))
       return V;
   }
 
@@ -3231,6 +3271,12 @@ const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const{
   return nullptr;
 }
 
+SDValue TargetLowering::LowerAsmOutputForConstraint(
+    SDValue &Chain, SDValue *Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
+    SelectionDAG &DAG) const {
+  return SDValue();
+}
+
 /// Lower the specified operand into the Ops vector.
 /// If it is invalid, don't add anything to Ops.
 void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
@@ -3244,7 +3290,8 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   switch (ConstraintLetter) {
   default: break;
   case 'X':     // Allows any operand; labels (basic block) use this.
-    if (Op.getOpcode() == ISD::BasicBlock) {
+    if (Op.getOpcode() == ISD::BasicBlock ||
+        Op.getOpcode() == ISD::TargetBlockAddress) {
       Ops.push_back(Op);
       return;
     }
@@ -3730,6 +3777,9 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
       OpInfo.CallOperandVal = v;
       return;
     }
+
+    if (Op.getNode() && Op.getOpcode() == ISD::TargetBlockAddress)
+      return;
 
     // Otherwise, try to resolve it to something we know about by looking at
     // the actual operand type.
@@ -5335,6 +5385,11 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
   EVT VT = LHS.getValueType();
   SDLoc dl(Node);
 
+  assert(LHS.getValueType().isInteger() && "Expected operands to be integers");
+  assert(RHS.getValueType().isInteger() && "Expected operands to be integers");
+  assert(LHS.getValueType() == RHS.getValueType() &&
+         "Expected both operands to be the same type");
+
   // usub.sat(a, b) -> umax(a, b) - b
   if (Opcode == ISD::USUBSAT && isOperationLegalOrCustom(ISD::UMAX, VT)) {
     SDValue Max = DAG.getNode(ISD::UMAX, dl, VT, LHS, RHS);
@@ -5345,11 +5400,6 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     SDValue InvRHS = DAG.getNOT(dl, RHS, VT);
     SDValue Min = DAG.getNode(ISD::UMIN, dl, VT, LHS, InvRHS);
     return DAG.getNode(ISD::ADD, dl, VT, Min, RHS);
-  }
-
-  if (VT.isVector()) {
-    // TODO: Consider not scalarizing here.
-    return SDValue();
   }
 
   unsigned OverflowOp;
@@ -5371,16 +5421,7 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
                      "addition or subtraction node.");
   }
 
-  assert(LHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
-  assert(RHS.getValueType().isScalarInteger() &&
-         "Expected operands to be integers. Vector of int arguments should "
-         "already be unrolled.");
-  assert(LHS.getValueType() == RHS.getValueType() &&
-         "Expected both operands to be the same type");
-
-  unsigned BitWidth = LHS.getValueSizeInBits();
+  unsigned BitWidth = LHS.getScalarValueSizeInBits();
   EVT ResultType = LHS.getValueType();
   EVT BoolVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResultType);
@@ -5415,7 +5456,9 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
 
 SDValue
 TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
-  assert(Node->getOpcode() == ISD::SMULFIX && "Expected opcode to be SMULFIX.");
+  assert((Node->getOpcode() == ISD::SMULFIX ||
+          Node->getOpcode() == ISD::UMULFIX) &&
+         "Expected opcode to be SMULFIX or UMULFIX.");
 
   SDLoc dl(Node);
   SDValue LHS = Node->getOperand(0);
@@ -5430,34 +5473,41 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
   }
 
+  unsigned VTSize = VT.getScalarSizeInBits();
+  bool Signed = Node->getOpcode() == ISD::SMULFIX;
+
+  assert(((Signed && Scale < VTSize) || (!Signed && Scale <= VTSize)) &&
+         "Expected scale to be less than the number of bits if signed or at "
+         "most the number of bits if unsigned.");
   assert(LHS.getValueType() == RHS.getValueType() &&
          "Expected both operands to be the same type");
-  assert(Scale < VT.getScalarSizeInBits() &&
-         "Expected scale to be less than the number of bits.");
 
   // Get the upper and lower bits of the result.
   SDValue Lo, Hi;
-  if (isOperationLegalOrCustom(ISD::SMUL_LOHI, VT)) {
-    SDValue Result =
-        DAG.getNode(ISD::SMUL_LOHI, dl, DAG.getVTList(VT, VT), LHS, RHS);
+  unsigned LoHiOp = Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
+  unsigned HiOp = Signed ? ISD::MULHS : ISD::MULHU;
+  if (isOperationLegalOrCustom(LoHiOp, VT)) {
+    SDValue Result = DAG.getNode(LoHiOp, dl, DAG.getVTList(VT, VT), LHS, RHS);
     Lo = Result.getValue(0);
     Hi = Result.getValue(1);
-  } else if (isOperationLegalOrCustom(ISD::MULHS, VT)) {
+  } else if (isOperationLegalOrCustom(HiOp, VT)) {
     Lo = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
-    Hi = DAG.getNode(ISD::MULHS, dl, VT, LHS, RHS);
+    Hi = DAG.getNode(HiOp, dl, VT, LHS, RHS);
   } else if (VT.isVector()) {
     return SDValue();
   } else {
-    report_fatal_error("Unable to expand signed fixed point multiplication.");
+    report_fatal_error("Unable to expand fixed point multiplication.");
   }
+
+  if (Scale == VTSize)
+    // Result is just the top half since we'd be shifting by the width of the
+    // operand.
+    return Hi;
 
   // The result will need to be shifted right by the scale since both operands
   // are scaled. The result is given to us in 2 halves, so we only want part of
   // both in the result.
   EVT ShiftTy = getShiftAmountTy(VT, DAG.getDataLayout());
-  Lo = DAG.getNode(ISD::SRL, dl, VT, Lo, DAG.getConstant(Scale, dl, ShiftTy));
-  Hi = DAG.getNode(
-      ISD::SHL, dl, VT, Hi,
-      DAG.getConstant(VT.getScalarSizeInBits() - Scale, dl, ShiftTy));
-  return DAG.getNode(ISD::OR, dl, VT, Lo, Hi);
+  return DAG.getNode(ISD::FSHR, dl, VT, Hi, Lo,
+                     DAG.getConstant(Scale, dl, ShiftTy));
 }

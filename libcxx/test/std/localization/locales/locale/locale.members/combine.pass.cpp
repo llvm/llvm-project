@@ -63,7 +63,7 @@ struct my_facet
 
 std::locale::id my_facet::id;
 
-int main()
+int main(int, char**)
 {
 {
     {
@@ -95,4 +95,6 @@ int main()
     assert(globalMemCounter.checkOutstandingNewEq(0));
 }
 #endif
+
+  return 0;
 }

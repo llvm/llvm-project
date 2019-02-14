@@ -1,0 +1,9 @@
+# RUN: cp %p/Inputs/foo.cpp %t.cpp
+# RUN: lldb-instr %t.cpp | FileCheck %s
+
+# CHECK: LLDB_REGISTER_METHOD(void, Foo, A, ());
+# CHECK: LLDB_REGISTER_METHOD(void, Foo, B, (int));
+# CHECK: LLDB_REGISTER_METHOD(int, Foo, C, (int));
+# CHECK: LLDB_REGISTER_METHOD_CONST(int, Foo, D, (bool));
+# CHECK: LLDB_REGISTER_STATIC_METHOD(void, Foo, E, ());
+# CHECK: LLDB_REGISTER_STATIC_METHOD(int, Foo, F, (int));

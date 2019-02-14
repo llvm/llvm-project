@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn--mesa3d -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN %s
 ; RUN: llc -mtriple=amdgcn--mesa3d -mcpu=gfx700 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN %s
-; RUN: llc -mtriple=amdgcn--mesa3d -mcpu=gfx800 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN %s
+; RUN: llc -mtriple=amdgcn--mesa3d -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN %s
 ; RUN: llc -mtriple=amdgcn--mesa3d -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN %s
 
 ; FUNC-LABEL: {{^}}system_acquire:

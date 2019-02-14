@@ -35,7 +35,7 @@ void test1(S&& lhs, typename S::value_type rhs, const S& x) {
 }
 #endif
 
-int main() {
+int main(int, char**) {
   {
     typedef std::string S;
     test0(S(""), '1', S("1"));
@@ -66,4 +66,6 @@ int main() {
     test1(S("abcdefghijklmnopqrst"), '1', S("abcdefghijklmnopqrst1"));
   }
 #endif
+
+  return 0;
 }

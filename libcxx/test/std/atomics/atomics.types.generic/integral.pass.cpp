@@ -167,7 +167,7 @@ void test()
 }
 
 
-int main()
+int main(int, char**)
 {
     test<std::atomic_char, char>();
     test<std::atomic_schar, signed char>();
@@ -220,4 +220,6 @@ int main()
     test<volatile std::atomic_uint32_t, uint32_t>();
     test<volatile std::atomic_int64_t,   int64_t>();
     test<volatile std::atomic_uint64_t, uint64_t>();
+
+  return 0;
 }

@@ -29,7 +29,7 @@ constexpr bool test_constexpr()
 }
 #endif
 
-int main()
+int main(int, char**)
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     char16_t s1[] = {1, 2, 3};
@@ -44,4 +44,6 @@ int main()
     static_assert(test_constexpr(), "" );
 #endif
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+
+  return 0;
 }

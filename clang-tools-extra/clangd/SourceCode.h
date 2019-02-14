@@ -144,6 +144,11 @@ format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
                                           llvm::StringRef Content,
                                           llvm::vfs::FileSystem *FS);
 
+// Cleanup and format the given replacements.
+llvm::Expected<tooling::Replacements>
+cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
+                 const format::FormatStyle &Style);
+
 } // namespace clangd
 } // namespace clang
 #endif

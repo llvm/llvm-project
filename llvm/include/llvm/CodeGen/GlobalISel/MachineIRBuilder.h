@@ -66,6 +66,7 @@ class DstOp {
 public:
   enum class DstType { Ty_LLT, Ty_Reg, Ty_RC };
   DstOp(unsigned R) : Reg(R), Ty(DstType::Ty_Reg) {}
+  DstOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(DstType::Ty_Reg) {}
   DstOp(const LLT &T) : LLTTy(T), Ty(DstType::Ty_LLT) {}
   DstOp(const TargetRegisterClass *TRC) : RC(TRC), Ty(DstType::Ty_RC) {}
 
@@ -125,6 +126,7 @@ class SrcOp {
 public:
   enum class SrcType { Ty_Reg, Ty_MIB, Ty_Predicate };
   SrcOp(unsigned R) : Reg(R), Ty(SrcType::Ty_Reg) {}
+  SrcOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(SrcType::Ty_Reg) {}
   SrcOp(const MachineInstrBuilder &MIB) : SrcMIB(MIB), Ty(SrcType::Ty_MIB) {}
   SrcOp(const CmpInst::Predicate P) : Pred(P), Ty(SrcType::Ty_Predicate) {}
 
@@ -201,6 +203,7 @@ protected:
   void validateTruncExt(const LLT &Dst, const LLT &Src, bool IsExtend);
 
   void validateBinaryOp(const LLT &Res, const LLT &Op0, const LLT &Op1);
+  void validateShiftOp(const LLT &Res, const LLT &Op0, const LLT &Op1);
 
   void validateSelectOp(const LLT &ResTy, const LLT &TstTy, const LLT &Op0Ty,
                         const LLT &Op1Ty);
@@ -585,6 +588,7 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildConstant(const DstOp &Res, int64_t Val);
+  MachineInstrBuilder buildConstant(const DstOp &Res, const APInt &Val);
 
   /// Build and insert \p Res = G_FCONSTANT \p Val
   ///
@@ -709,6 +713,11 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildBuildVector(const DstOp &Res,
                                        ArrayRef<unsigned> Ops);
+
+  /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
+  /// the number of elements
+  MachineInstrBuilder buildSplatVector(const DstOp &Res,
+                                       const SrcOp &Src);
 
   /// Build and insert \p Res = G_BUILD_VECTOR_TRUNC \p Op0, ...
   ///
@@ -1153,6 +1162,18 @@ public:
                                const SrcOp &Src1,
                                Optional<unsigned> Flags = None) {
     return buildInstr(TargetOpcode::G_SHL, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildLShr(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_LSHR, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildAShr(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_ASHR, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_AND \p Op0, \p Op1

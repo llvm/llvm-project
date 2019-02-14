@@ -30,7 +30,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using day = std::chrono::day;
     ASSERT_NOEXCEPT(++(std::declval<day&>())  );
@@ -48,4 +48,6 @@ int main()
         assert(static_cast<unsigned>(day++) == i + 1);
         assert(static_cast<unsigned>(day)   == i + 2);
     }
+
+  return 0;
 }

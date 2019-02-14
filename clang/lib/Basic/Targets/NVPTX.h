@@ -35,6 +35,16 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     3, // cuda_shared
 };
 
+/// The DWARF address class. Taken from
+/// https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
+static const int NVPTXDWARFAddrSpaceMap[] = {
+    -1, // Default, opencl_private or opencl_generic - not defined
+    5,  // opencl_global
+    -1,
+    8,  // opencl_local or cuda_shared
+    4,  // opencl_constant or cuda_constant
+};
+
 class LLVM_LIBRARY_VISIBILITY NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
   static const Builtin::Info BuiltinInfo[];
@@ -122,6 +132,20 @@ public:
     Opts.support("cl_khr_global_int32_extended_atomics");
     Opts.support("cl_khr_local_int32_base_atomics");
     Opts.support("cl_khr_local_int32_extended_atomics");
+  }
+
+  /// \returns If a target requires an address within a target specific address
+  /// space \p AddressSpace to be converted in order to be used, then return the
+  /// corresponding target specific DWARF address space.
+  ///
+  /// \returns Otherwise return None and no conversion will be emitted in the
+  /// DWARF.
+  Optional<unsigned>
+  getDWARFAddressSpace(unsigned AddressSpace) const override {
+    if (AddressSpace >= llvm::array_lengthof(NVPTXDWARFAddrSpaceMap) ||
+        NVPTXDWARFAddrSpaceMap[AddressSpace] < 0)
+      return llvm::None;
+    return NVPTXDWARFAddrSpaceMap[AddressSpace];
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {

@@ -16,6 +16,7 @@
 #include "Logger.h"
 #include "SourceCode.h"
 #include "Trace.h"
+#include "index/CanonicalIncludes.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/LangOptions.h"
@@ -95,15 +96,19 @@ private:
 class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
-      : File(File), ParsedCallback(ParsedCallback) {}
+      : File(File), ParsedCallback(ParsedCallback) {
+    addSystemHeadersMapping(&CanonIncludes);
+  }
 
   IncludeStructure takeIncludes() { return std::move(Includes); }
+
+  CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   void AfterExecute(CompilerInstance &CI) override {
     if (!ParsedCallback)
       return;
     trace::Span Tracer("Running PreambleCallback");
-    ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr());
+    ParsedCallback(CI.getASTContext(), CI.getPreprocessorPtr(), CanonIncludes);
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
@@ -115,10 +120,17 @@ public:
     return collectIncludeStructureCallback(*SourceMgr, &Includes);
   }
 
+  CommentHandler *getCommentHandler() override {
+    IWYUHandler = collectIWYUHeaderMaps(&CanonIncludes);
+    return IWYUHandler.get();
+  }
+
 private:
   PathRef File;
   PreambleParsedCallback ParsedCallback;
   IncludeStructure Includes;
+  CanonicalIncludes CanonIncludes;
+  std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   SourceManager *SourceMgr = nullptr;
 };
 
@@ -310,6 +322,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
                                             const clang::Diagnostic &Info) {
       return FixIncludes->fix(DiagLevl, Info);
     });
+    Clang->setExternalSemaSource(FixIncludes->unresolvedNameRecorder());
   }
 
   // Copy over the includes from the preamble, then combine with the
@@ -323,6 +336,17 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   // (We can't *just* use the replayed includes, they don't have Resolved path).
   Clang->getPreprocessor().addPPCallbacks(
       collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
+
+  // Copy over the includes from the preamble, then combine with the
+  // non-preamble includes below.
+  CanonicalIncludes CanonIncludes;
+  if (Preamble)
+    CanonIncludes = Preamble->CanonIncludes;
+  else
+    addSystemHeadersMapping(&CanonIncludes);
+  std::unique_ptr<CommentHandler> IWYUHandler =
+      collectIWYUHeaderMaps(&CanonIncludes);
+  Clang->getPreprocessor().addCommentHandler(IWYUHandler.get());
 
   if (!Action->Execute())
     log("Execute() failed when building AST for {0}", MainInput.getFile());
@@ -353,7 +377,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     Diags.insert(Diags.begin(), Preamble->Diags.begin(), Preamble->Diags.end());
   return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
                    std::move(ParsedDecls), std::move(Diags),
-                   std::move(Includes));
+                   std::move(Includes), std::move(CanonIncludes));
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
@@ -429,21 +453,28 @@ const IncludeStructure &ParsedAST::getIncludeStructure() const {
   return Includes;
 }
 
+const CanonicalIncludes &ParsedAST::getCanonicalIncludes() const {
+  return CanonIncludes;
+}
+
 PreambleData::PreambleData(PrecompiledPreamble Preamble,
                            std::vector<Diag> Diags, IncludeStructure Includes,
-                           std::unique_ptr<PreambleFileStatusCache> StatCache)
+                           std::unique_ptr<PreambleFileStatusCache> StatCache,
+                           CanonicalIncludes CanonIncludes)
     : Preamble(std::move(Preamble)), Diags(std::move(Diags)),
-      Includes(std::move(Includes)), StatCache(std::move(StatCache)) {}
+      Includes(std::move(Includes)), StatCache(std::move(StatCache)),
+      CanonIncludes(std::move(CanonIncludes)) {}
 
 ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     std::vector<Diag> Diags, IncludeStructure Includes)
+                     std::vector<Diag> Diags, IncludeStructure Includes,
+                     CanonicalIncludes CanonIncludes)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
-      Includes(std::move(Includes)) {
+      Includes(std::move(Includes)), CanonIncludes(std::move(CanonIncludes)) {
   assert(this->Clang);
   assert(this->Action);
 }
@@ -510,7 +541,8 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
          FileName);
     return std::make_shared<PreambleData>(
         std::move(*BuiltPreamble), PreambleDiagnostics.take(),
-        SerializedDeclsCollector.takeIncludes(), std::move(StatCache));
+        SerializedDeclsCollector.takeIncludes(), std::move(StatCache),
+        SerializedDeclsCollector.takeCanonicalIncludes());
   } else {
     elog("Could not build a preamble for file {0}", FileName);
     return nullptr;
@@ -534,10 +566,10 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
     // dirs.
   }
 
-  return ParsedAST::build(
-      llvm::make_unique<CompilerInvocation>(*Invocation), Preamble,
-      llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents), PCHs,
-      std::move(VFS), Inputs.Index ? Inputs.Index : nullptr, Inputs.Opts);
+  return ParsedAST::build(llvm::make_unique<CompilerInvocation>(*Invocation),
+                          Preamble,
+                          llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents),
+                          PCHs, std::move(VFS), Inputs.Index, Inputs.Opts);
 }
 
 SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,

@@ -33,7 +33,7 @@ struct B {
 };
 #endif
 
-int main()
+int main(int, char**)
 {
   {
     A a;
@@ -49,4 +49,6 @@ int main()
     b.it2 = b.d.cbefore_begin();
   }
 #endif
+
+  return 0;
 }

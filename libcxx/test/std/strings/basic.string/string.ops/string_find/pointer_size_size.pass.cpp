@@ -365,7 +365,7 @@ void test3()
     test(S("abcdeabcdeabcdeabcde"), "abcdeabcdeabcdeabcde", 21, 20, S::npos);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -383,4 +383,6 @@ int main()
     test3<S>();
     }
 #endif
+
+  return 0;
 }

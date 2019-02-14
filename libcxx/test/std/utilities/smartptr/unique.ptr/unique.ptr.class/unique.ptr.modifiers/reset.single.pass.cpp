@@ -17,7 +17,7 @@
 
 #include "unique_ptr_test_helper.h"
 
-int main() {
+int main(int, char**) {
   {
     std::unique_ptr<A> p(new A);
     assert(A::count == 1);
@@ -42,4 +42,6 @@ int main() {
   }
   assert(A::count == 0);
   assert(B::count == 0);
+
+  return 0;
 }

@@ -47,7 +47,7 @@ test(const S& s, typename S::size_type pos, typename S::size_type n)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -173,4 +173,6 @@ int main()
     test(S("dplqartnfgejichmoskb"), 21, 0);
     }
 #endif
+
+  return 0;
 }

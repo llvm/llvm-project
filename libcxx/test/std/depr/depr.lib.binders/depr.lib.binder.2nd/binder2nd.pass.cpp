@@ -51,8 +51,10 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     t.do_test();
+
+  return 0;
 }

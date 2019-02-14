@@ -27,7 +27,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef test_allocator<int> A;
@@ -209,4 +209,6 @@ int main()
         assert(c.max_load_factor() == 1);
     }
 #endif
+
+  return 0;
 }

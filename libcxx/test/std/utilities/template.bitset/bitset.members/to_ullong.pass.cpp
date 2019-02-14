@@ -44,7 +44,7 @@ void test_to_ullong()
     }
 }
 
-int main()
+int main(int, char**)
 {
 //     test_to_ullong<0>();
     test_to_ullong<1>();
@@ -55,4 +55,6 @@ int main()
     test_to_ullong<64>();
     test_to_ullong<65>();
     test_to_ullong<1000>();
+
+  return 0;
 }

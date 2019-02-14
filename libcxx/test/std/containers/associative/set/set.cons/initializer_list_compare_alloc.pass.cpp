@@ -21,7 +21,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_compare<std::less<int> > Cmp;
@@ -58,4 +58,6 @@ int main()
     assert(*++i == V(6));
     assert(m.get_allocator() == A(4));
     }
+
+  return 0;
 }

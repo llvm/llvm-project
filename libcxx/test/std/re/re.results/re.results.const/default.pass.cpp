@@ -26,8 +26,10 @@ test()
     assert(m.get_allocator() == std::allocator<std::sub_match<const CharT*> >());
 }
 
-int main()
+int main(int, char**)
 {
     test<char>();
     test<wchar_t>();
+
+  return 0;
 }

@@ -131,7 +131,9 @@ void allocator_tests() {
 }
 
 
-int main() {
+int main(int, char**) {
   compile_tests();
   allocator_tests();
+
+  return 0;
 }

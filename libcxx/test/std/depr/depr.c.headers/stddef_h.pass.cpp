@@ -22,7 +22,7 @@
 #error offsetof not defined
 #endif
 
-int main()
+int main(int, char**)
 {
     void *p = NULL;
     assert(!p);
@@ -65,4 +65,6 @@ int main()
                   std::alignment_of<void*>::value,
                   "std::alignment_of<max_align_t>::value >= "
                   "std::alignment_of<void*>::value");
+
+  return 0;
 }

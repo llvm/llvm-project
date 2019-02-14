@@ -1794,6 +1794,24 @@ void testNoCrashOnOffendingParameter() {
   allocateSomeMemory(offendingParameter, &ptr);
 } // expected-warning {{Potential leak of memory pointed to by 'ptr'}}
 
+
+// Test a false positive caused by a bug in liveness analysis.
+struct A {
+  int *buf;
+};
+struct B {
+  struct A *a;
+};
+void livenessBugRealloc(struct A *a) {
+  a->buf = realloc(a->buf, sizeof(int)); // no-warning
+}
+void testLivenessBug(struct B *in_b) {
+  struct B *b = in_b;
+  livenessBugRealloc(b->a);
+ ((void) 0); // An attempt to trick liveness analysis.
+  livenessBugRealloc(b->a);
+}
+
 // ----------------------------------------------------------------------------
 // False negatives.
 

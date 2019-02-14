@@ -36,7 +36,7 @@
 
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   {
     static_assert(std::is_enum<std::align_val_t>::value, "");
     typedef std::underlying_type<std::align_val_t>::type UT;
@@ -88,4 +88,6 @@ int main() {
     assert(typeid(std::align_val_t).name() == std::string("St11align_val_t"));
   }
 #endif
+
+  return 0;
 }

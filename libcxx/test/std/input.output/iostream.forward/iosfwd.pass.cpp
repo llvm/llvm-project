@@ -17,7 +17,7 @@ template <class Ptr> void test()
     ((void)p); // Prevent unused warning
 }
 
-int main()
+int main(int, char**)
 {
     test<std::char_traits<char>*          >();
     test<std::char_traits<wchar_t>*       >();
@@ -119,4 +119,6 @@ int main()
     test<std::fpos<std::mbstate_t>*>();
     test<std::streampos*           >();
     test<std::wstreampos*          >();
+
+  return 0;
 }

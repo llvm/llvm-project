@@ -30,7 +30,9 @@ test()
     assert(m.position(4) == std::distance(s, m[4].first));
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

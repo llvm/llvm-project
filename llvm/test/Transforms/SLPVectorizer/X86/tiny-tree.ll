@@ -172,13 +172,13 @@ define void @tiny_tree_not_fully_vectorizable2(float* noalias nocapture %dst, fl
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 1
 ; CHECK-NEXT:    store float [[TMP1]], float* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 2
-; CHECK-NEXT:    store float [[TMP2]], float* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[ARRAYIDX4]] to <2 x float>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 3
-; CHECK-NEXT:    store float [[TMP3]], float* [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[ARRAYIDX5]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP3]], <2 x float>* [[TMP4]], align 4
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds float, float* [[SRC_ADDR_021]], i64 [[I_023]]
 ; CHECK-NEXT:    [[ADD_PTR8]] = getelementptr inbounds float, float* [[DST_ADDR_022]], i64 [[I_023]]
 ; CHECK-NEXT:    [[INC]] = add i64 [[I_023]], 1

@@ -79,7 +79,7 @@ void test()
     test0<S>({1,2,3}, False, {1,2,3});
 }
 
-int main()
+int main(int, char**)
 {
     test<std::unordered_multiset<int>>();
     test<std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, min_allocator<int>>> ();
@@ -87,4 +87,6 @@ int main()
 
     test<std::unordered_multiset<long>>();
     test<std::unordered_multiset<double>>();
+
+  return 0;
 }

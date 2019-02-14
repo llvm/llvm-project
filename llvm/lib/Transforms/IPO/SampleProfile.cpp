@@ -1327,9 +1327,9 @@ void SampleProfileLoader::propagateWeights(Function &F) {
                             SortedCallTargets, Sum, IPVK_IndirectCallTarget,
                             SortedCallTargets.size());
         } else if (!dyn_cast<IntrinsicInst>(&I)) {
-          SmallVector<uint32_t, 1> Weights;
-          Weights.push_back(BlockWeights[BB]);
-          I.setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(Weights));
+          I.setMetadata(LLVMContext::MD_prof,
+                        MDB.createBranchWeights(
+                            {static_cast<uint32_t>(BlockWeights[BB])}));
         }
       }
     }

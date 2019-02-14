@@ -32,7 +32,7 @@ struct test_buf
     virtual int_type pbackfail(int_type c = traits_type::eof()) {return base::pbackfail(c);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         test_buf<char> f;
@@ -60,4 +60,6 @@ int main()
             assert(f.sgetc() == '2');
         }
     }
+
+  return 0;
 }

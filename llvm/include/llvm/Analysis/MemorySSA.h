@@ -775,9 +775,6 @@ public:
   /// all uses, uses appear in the right places).  This is used by unit tests.
   void verifyMemorySSA() const;
 
-  /// Check clobber sanity for an access.
-  void checkClobberSanityAccess(const MemoryAccess *MA) const;
-
   /// Used in various insertion functions to specify whether we are talking
   /// about the beginning or end of a block.
   enum InsertionPlace { Beginning, End };
@@ -792,7 +789,6 @@ protected:
   void verifyDomination(Function &F) const;
   void verifyOrdering(Function &F) const;
   void verifyDominationNumbers(const Function &F) const;
-  void verifyClobberSanity(const Function &F) const;
 
   // This is used by the use optimizer and updater.
   AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {

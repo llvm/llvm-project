@@ -22,7 +22,7 @@
 
 namespace ex = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     {
         typedef ex::polymorphic_allocator<void> A;
@@ -41,4 +41,6 @@ int main()
         A const a(&R);
         assert(a.resource() == &R);
     }
+
+  return 0;
 }

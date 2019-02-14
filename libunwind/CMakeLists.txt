@@ -115,7 +115,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 else()
-  set(LLVM_MAIN_SRC_DIR "${CMAKE_SOURCE_DIR}" CACHE PATH "Path to LLVM source tree")
   set(LLVM_LIT "${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
 endif()
 
@@ -225,12 +224,22 @@ macro(add_target_flags_if condition var)
 endmacro()
 
 add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
-add_target_flags_if(LIBUNWIND_TARGET_TRIPLE
-          "--target=${LIBUNWIND_TARGET_TRIPLE}")
-add_target_flags_if(LIBUNWIND_GCC_TOOLCHAIN
-          "--gcc-toolchain=${LIBUNWIND_GCC_TOOLCHAIN}")
-add_target_flags_if(LIBUNWIND_SYSROOT
-          "--sysroot=${LIBUNWIND_SYSROOT}")
+
+if(LIBUNWIND_TARGET_TRIPLE)
+  add_target_flags("--target=${LIBUNWIND_TARGET_TRIPLE}")
+elseif(CMAKE_CXX_COMPILER_TARGET)
+  set(LIBUNWIND_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
+endif()
+if(LIBUNWIND_GCC_TOOLCHAIN)
+  add_target_flags("--gcc-toolchain=${LIBUNWIND_GCC_TOOLCHAIN}")
+elseif(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN)
+  set(LIBUNWIND_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}")
+endif()
+if(LIBUNWIND_SYSROOT)
+  add_target_flags("--sysroot=${LIBUNWIND_SYSROOT}")
+elseif(CMAKE_SYSROOT)
+  set(LIBUNWIND_SYSROOT "${CMAKE_SYSROOT}")
+endif()
 
 if (LIBUNWIND_TARGET_TRIPLE)
   set(TARGET_TRIPLE "${LIBUNWIND_TARGET_TRIPLE}")

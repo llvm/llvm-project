@@ -67,10 +67,12 @@ void test(Container& c)
     }
 }
 
-int main()
+int main(int, char**)
 {
     std::multiset<int> m;
     test(m);
     std::multiset<int, std::less<int>, min_allocator<int>> m2;
     test(m2);
+
+  return 0;
 }

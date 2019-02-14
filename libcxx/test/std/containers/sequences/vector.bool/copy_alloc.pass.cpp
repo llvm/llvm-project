@@ -28,7 +28,7 @@ test(const C& x, const typename C::allocator_type& a)
     assert(c == x);
 }
 
-int main()
+int main(int, char**)
 {
     {
         bool a[] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0};
@@ -60,4 +60,6 @@ int main()
         assert(l2.get_allocator() == min_allocator<bool>());
     }
 #endif
+
+  return 0;
 }

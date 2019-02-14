@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using weekday      = std::chrono::weekday;
     using weekday_last = std::chrono::weekday_last;
@@ -43,4 +43,6 @@ int main()
         weekday_last wdl{weekday{i}};
         assert(wdl.weekday() == weekday{i});
     }
+
+  return 0;
 }

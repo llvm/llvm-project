@@ -20,7 +20,7 @@
 #include <ios>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::ios_base::app);
     assert(std::ios_base::ate);
@@ -38,4 +38,6 @@ int main()
         & std::ios_base::out
         & std::ios_base::trunc) == 0
     );
+
+  return 0;
 }

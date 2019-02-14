@@ -13,20 +13,20 @@ body: |
     ; FAST: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; FAST: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i64 0
+    ; FAST: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
     ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
     ; FAST: [[SADDE:%[0-9]+]]:sgpr(s32), [[SADDE1:%[0-9]+]]:scc(s1) = G_SADDE [[COPY]], [[COPY1]], [[ICMP]]
     ; GREEDY-LABEL: name: sadde_s32_sss
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; GREEDY: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i64 0
+    ; GREEDY: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
     ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
     ; GREEDY: [[SADDE:%[0-9]+]]:sgpr(s32), [[SADDE1:%[0-9]+]]:scc(s1) = G_SADDE [[COPY]], [[COPY1]], [[ICMP]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2
-    %3:_(s32) = G_CONSTANT i64 0
+    %3:_(s32) = G_CONSTANT i32 0
     %4:_(s1) = G_ICMP intpred(eq), %2, %3
     %5:_(s32), %6:_(s1) = G_SADDE %0, %1, %4
 ...
@@ -42,7 +42,7 @@ body: |
     ; FAST: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; FAST: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i64 0
+    ; FAST: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
     ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[ICMP]](s1)
@@ -51,7 +51,7 @@ body: |
     ; GREEDY: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; GREEDY: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i64 0
+    ; GREEDY: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
     ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[ICMP]](s1)
@@ -59,7 +59,7 @@ body: |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = COPY $sgpr1
-    %3:_(s32) = G_CONSTANT i64 0
+    %3:_(s32) = G_CONSTANT i32 0
     %4:_(s1) = G_ICMP intpred(eq), %2, %3
     %5:_(s32), %6:_(s1) = G_SADDE %0, %1, %4
 ...

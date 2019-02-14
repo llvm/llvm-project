@@ -52,7 +52,7 @@ struct PrivateBase : private std::enable_shared_from_this<PrivateBase> {
 };
 
 
-int main()
+int main(int, char**)
 {
     {  // https://bugs.llvm.org/show_bug.cgi?id=18843
     std::shared_ptr<T const> t1(new T);
@@ -167,4 +167,6 @@ int main()
         assert(my_weak.lock().get() == ptr);
     }
 #endif
+
+  return 0;
 }

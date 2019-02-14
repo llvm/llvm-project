@@ -21,7 +21,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -31,4 +31,6 @@ int main()
         T t = std::get<0>(std::move(c));
         assert(*t == 3.5);
     }
+
+  return 0;
 }

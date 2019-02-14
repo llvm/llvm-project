@@ -13,7 +13,7 @@
 
 // constexpr byte operator|(byte l, byte r) noexcept;
 
-int main () {
+int main(int, char**) {
     constexpr std::byte b1{static_cast<std::byte>(1)};
     constexpr std::byte b2{static_cast<std::byte>(2)};
     constexpr std::byte b8{static_cast<std::byte>(8)};
@@ -27,4 +27,6 @@ int main () {
     static_assert(std::to_integer<int>(b2 | b1) ==  3, "");
     static_assert(std::to_integer<int>(b8 | b1) ==  9, "");
     static_assert(std::to_integer<int>(b8 | b2) == 10, "");
+
+  return 0;
 }

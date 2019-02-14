@@ -1,0 +1,21 @@
+# Test handling of breakpad files with some unusual or erroneous constructs. The
+# input contains a LINE record which does not belong to any function as well as
+# a FUNC record without any LINE records.
+
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml > %T/line-table-edgecases.out
+# RUN: %lldb %T/line-table-edgecases.out \
+# RUN:   -o "target symbols add -s line-table-edgecases.out %S/Inputs/line-table-edgecases.syms" \
+# RUN:   -s %s -o exit | FileCheck %s
+
+# Test that line table for func2 was parsed properly:
+image dump line-table a.c
+# CHECK-LABEL: Line table for /tmp/a.c
+# CHECK-NEXT: 0x00000000004000c0: /tmp/a.c:2
+# CHECK-NEXT: 0x00000000004000c2: 
+# CHECK-EMPTY: 
+
+# Looking up an address inside func should still work even if it does not result
+# in a line entry.
+image lookup -a 0x4000b2 -v
+# CHECK-LABEL: image lookup -a 0x4000b2 -v
+# CHECK: Summary: line-table-edgecases.out`func + 2

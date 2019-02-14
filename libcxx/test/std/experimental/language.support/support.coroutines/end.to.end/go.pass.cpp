@@ -164,7 +164,7 @@ goroutine pusher(channel& left, channel& right)
 const int N = 100;
 channel* c = new channel[N + 1];
 
-int main() {
+int main(int, char**) {
   for (int i = 0; i < N; ++i)
     goroutine::go(pusher(c[i], c[i + 1]));
 
@@ -172,4 +172,6 @@ int main() {
   int result = c[N].sync_pull();
 
   assert(result == 100);
+
+  return 0;
 }

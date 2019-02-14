@@ -27,7 +27,7 @@ test(const typename S::value_type* lhs, const S& rhs, bool x, bool y)
     assert((rhs >= lhs) == y);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -68,4 +68,6 @@ int main()
     static_assert (  "abcde0" >= sv2, "" );
     }
 #endif
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         char buf[10];
@@ -62,4 +62,6 @@ int main()
         assert(f.sgetc() == L'l');
     }
     std::remove("seekoff.dat");
+
+  return 0;
 }

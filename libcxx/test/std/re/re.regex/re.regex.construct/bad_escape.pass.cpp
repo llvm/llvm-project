@@ -29,7 +29,7 @@ static bool error_escape_thrown(const char *pat)
     return result;
 }
 
-int main()
+int main(int, char**)
 {
     assert(error_escape_thrown("[\\a]"));
     assert(error_escape_thrown("\\a"));
@@ -44,4 +44,6 @@ int main()
     assert(!error_escape_thrown("[\\cA]"));
     assert(!error_escape_thrown("\\cA"));
 
+
+  return 0;
 }

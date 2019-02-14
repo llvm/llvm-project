@@ -48,7 +48,7 @@ protected:
   lldb_private::SymbolContextList &operator*() const;
 
 private:
-  std::unique_ptr<lldb_private::SymbolContextList> m_opaque_ap;
+  std::unique_ptr<lldb_private::SymbolContextList> m_opaque_up;
 };
 
 } // namespace lldb

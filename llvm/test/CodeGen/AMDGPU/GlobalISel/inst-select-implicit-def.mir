@@ -45,7 +45,7 @@ regBankSelected: true
 body: |
   bb.0:
     %0:vgpr(p0) = G_IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT 4
+    %1:vgpr(s32) = G_CONSTANT i32 4
     G_STORE %1, %0 :: (store 4)
 ...
 
@@ -62,7 +62,7 @@ body: |
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
     ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, 0, implicit $exec, implicit $flat_scr
     %0:vgpr(p1) = G_IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT 4
+    %1:vgpr(s32) = G_CONSTANT i32 4
     G_STORE %1, %0 :: (store 4, addrspace 1)
 ...
 ---
@@ -78,7 +78,7 @@ body: |
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
     ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, 0, implicit $exec, implicit $flat_scr
     %0:vgpr(p3) = G_IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT 4
+    %1:vgpr(s32) = G_CONSTANT i32 4
     G_STORE %1, %0 :: (store 4, addrspace 1)
 ...
 ---
@@ -94,6 +94,6 @@ body: |
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
     ; GCN: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, 0, implicit $exec, implicit $flat_scr
     %0:vgpr(p4) = G_IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT 4
+    %1:vgpr(s32) = G_CONSTANT i32 4
     G_STORE %1, %0 :: (store 4, addrspace 1)
 ...

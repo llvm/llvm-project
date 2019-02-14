@@ -39,7 +39,7 @@ namespace std
 }
 
 
-int main()
+int main(int, char**)
 {
     test<false, void>();
     test<false, int>();
@@ -47,4 +47,6 @@ int main()
     test<false, std::string>();
 
     test<true, A>();
+
+  return 0;
 }

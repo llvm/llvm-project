@@ -34,7 +34,7 @@ struct A
     ~A() {--A_constructed;}
 };
 
-int main()
+int main(int, char**)
 {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     std::set_new_handler(my_new_handler);
@@ -60,4 +60,6 @@ int main()
     delete [] ap;
     DoNotOptimize(ap);
     assert(A_constructed == 0);
+
+  return 0;
 }

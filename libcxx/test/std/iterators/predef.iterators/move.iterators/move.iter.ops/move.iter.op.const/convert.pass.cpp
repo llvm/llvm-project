@@ -34,7 +34,7 @@ test(U u)
 struct Base {};
 struct Derived : Base {};
 
-int main()
+int main(int, char**)
 {
     Derived d;
 
@@ -52,4 +52,6 @@ int main()
     static_assert(it2.base() == p);
     }
 #endif
+
+  return 0;
 }

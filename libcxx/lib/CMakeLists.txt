@@ -328,7 +328,7 @@ if (LIBCXX_ENABLE_FILESYSTEM)
 
   set(filesystem_flags "${LIBCXX_COMPILE_FLAGS}")
   check_flag_supported(-std=c++14)
-  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG)
+  if (NOT MSVC AND LIBCXX_SUPPORTS_STD_EQ_CXX14_FLAG AND LIBCXX_STANDARD_VER STREQUAL "c++11")
     string(REPLACE "-std=c++11" "-std=c++14" filesystem_flags "${LIBCXX_COMPILE_FLAGS}")
   endif()
   set_target_properties(cxx_filesystem

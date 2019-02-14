@@ -181,7 +181,7 @@ test1()
 }
 #endif // TEST_STD_VER >= 11
 
-int main()
+int main(int, char**)
 {
     test<forward_iterator<int*> >();
     test<bidirectional_iterator<int*> >();
@@ -198,4 +198,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

@@ -30,7 +30,7 @@ struct S {
 constexpr std::array<int, 2> getArr () { return { 3, 4 }; }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -55,4 +55,6 @@ int main()
         static_assert(std::get<1>(getArr()) == 4, "");
     }
 #endif
+
+  return 0;
 }

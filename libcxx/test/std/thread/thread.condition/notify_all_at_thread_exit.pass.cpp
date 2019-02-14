@@ -36,7 +36,7 @@ void func()
     std::this_thread::sleep_for(ms(300));
 }
 
-int main()
+int main(int, char**)
 {
     std::unique_lock<std::mutex> lk(mut);
     std::thread t(func);
@@ -45,4 +45,6 @@ int main()
     Clock::time_point t1 = Clock::now();
     assert(t1-t0 > ms(250));
     t.join();
+
+  return 0;
 }

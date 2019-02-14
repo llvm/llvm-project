@@ -77,7 +77,7 @@ void g3(std::ios_base::event ev, std::ios_base&, int index)
     }
 }
 
-int main()
+int main(int, char**)
 {
     testios ios1;
     testbuf sb2;
@@ -136,4 +136,6 @@ int main()
 
     assert(ios2.rdbuf() == &sb2);
     assert(ios2.tie() == 0);
+
+  return 0;
 }

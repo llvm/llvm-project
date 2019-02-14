@@ -20,7 +20,7 @@
 #include <cassert>
 #include <cstdlib>
 
-int main()
+int main(int, char**)
 {
     int a1[] = {1, 2, 3};
     std::list<int> l1(a1, a1+3);
@@ -28,4 +28,6 @@ int main()
     std::list<int>::const_iterator i = l2.begin();
     l1.erase(i);
     assert(false);
+
+  return 0;
 }

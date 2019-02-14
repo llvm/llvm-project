@@ -17,6 +17,7 @@ static_library("InstCombine") {
   sources = [
     "InstCombineAddSub.cpp",
     "InstCombineAndOrXor.cpp",
+    "InstCombineAtomicRMW.cpp",
     "InstCombineCalls.cpp",
     "InstCombineCasts.cpp",
     "InstCombineCompares.cpp",

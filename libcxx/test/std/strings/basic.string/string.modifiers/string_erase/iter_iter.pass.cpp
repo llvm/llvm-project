@@ -29,7 +29,7 @@ test(S s, typename S::difference_type pos, typename S::difference_type n, S expe
     assert(i - s.begin() == pos);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -147,4 +147,6 @@ int main()
     test(S("abcdefghijklmnopqrst"), 20, 0, S("abcdefghijklmnopqrst"));
     }
 #endif
+
+  return 0;
 }

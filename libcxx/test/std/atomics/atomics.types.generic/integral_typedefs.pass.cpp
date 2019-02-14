@@ -40,7 +40,7 @@
 #include <atomic>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::atomic<char>, std::atomic_char>::value), "");
     static_assert((std::is_same<std::atomic<signed char>, std::atomic_schar>::value), "");
@@ -71,4 +71,6 @@ int main()
     static_assert((std::is_same<std::atomic<uint32_t>,  std::atomic_uint32_t>::value), "");
     static_assert((std::is_same<std::atomic<int64_t>,   std::atomic_int64_t>::value), "");
     static_assert((std::is_same<std::atomic<uint64_t>,  std::atomic_uint64_t>::value), "");
+
+  return 0;
 }

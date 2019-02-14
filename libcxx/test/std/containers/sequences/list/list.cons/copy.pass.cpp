@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::list<int> l(3, 2);
@@ -50,4 +50,6 @@ int main()
         assert(l2.get_allocator() == l.get_allocator());
     }
 #endif
+
+  return 0;
 }

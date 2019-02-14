@@ -25,7 +25,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::initializer_list<A>::value_type, A>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::reference, const A&>::value), "");
@@ -33,4 +33,6 @@ int main()
     static_assert((std::is_same<std::initializer_list<A>::size_type, std::size_t>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::iterator, const A*>::value), "");
     static_assert((std::is_same<std::initializer_list<A>::const_iterator, const A*>::value), "");
+
+  return 0;
 }

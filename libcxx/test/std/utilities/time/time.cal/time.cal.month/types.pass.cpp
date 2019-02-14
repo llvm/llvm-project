@@ -16,10 +16,12 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month = std::chrono::month;
 
     static_assert(std::is_trivially_copyable_v<month>, "");
     static_assert(std::is_standard_layout_v<month>, "");
+
+  return 0;
 }

@@ -6,10 +6,12 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) && \
-    !(defined(__sun__) && defined(__svr4__)) && !defined(__NetBSD__)
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&     \
+    !(defined(__sun__) && defined(__svr4__)) && !defined(__NetBSD__) &&        \
+    !defined(_WIN32)
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "InstrProfiling.h"
 

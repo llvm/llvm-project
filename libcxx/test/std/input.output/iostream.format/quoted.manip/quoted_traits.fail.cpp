@@ -36,7 +36,7 @@ void round_trip ( const char *p ) {
 
 
 
-int main()
+int main(int, char**)
 {
     round_trip ( "Hi Mom" );
 }

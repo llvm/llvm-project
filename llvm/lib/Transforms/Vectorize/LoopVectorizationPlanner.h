@@ -171,6 +171,9 @@ struct VectorizationFactor {
   unsigned Width;
   // Cost of the loop with that width
   unsigned Cost;
+
+  // Width 1 means no vectorization, cost 0 means uncomputed cost.
+  static VectorizationFactor Disabled() { return {1, 0}; }
 };
 
 /// Planner drives the vectorization process after having passed
@@ -221,8 +224,9 @@ public:
                            LoopVectorizationCostModel &CM)
       : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM) {}
 
-  /// Plan how to best vectorize, return the best VF and its cost.
-  VectorizationFactor plan(bool OptForSize, unsigned UserVF);
+  /// Plan how to best vectorize, return the best VF and its cost, or None if
+  /// vectorization and interleaving should be avoided up front.
+  Optional<VectorizationFactor> plan(bool OptForSize, unsigned UserVF);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.

@@ -25,7 +25,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef test_hash<std::hash<int> > Hash;
@@ -567,4 +567,6 @@ int main()
         assert(c2.max_load_factor() == 1);
     }
 #endif
+
+  return 0;
 }

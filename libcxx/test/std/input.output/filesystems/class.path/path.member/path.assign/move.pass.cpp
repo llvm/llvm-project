@@ -22,7 +22,7 @@
 #include "count_new.hpp"
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   static_assert(std::is_nothrow_move_assignable<path>::value, "");
   assert(globalMemCounter.checkOutstandingNewEq(0));
@@ -38,4 +38,6 @@ int main() {
     assert(p.native() != s); // Testing moved from state
     assert(&pref == &p2);
   }
+
+  return 0;
 }

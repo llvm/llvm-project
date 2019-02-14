@@ -27,7 +27,7 @@ void func(std::promise<void> p)
     i = 1;
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::promise<void> p;
@@ -36,4 +36,6 @@ int main()
         f.get();
         assert(i == 1);
     }
+
+  return 0;
 }

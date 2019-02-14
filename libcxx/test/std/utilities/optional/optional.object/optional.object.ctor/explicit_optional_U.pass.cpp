@@ -62,7 +62,7 @@ public:
     explicit Z(int) { TEST_THROW(6); }
 };
 
-int main()
+int main(int, char**)
 {
     {
         optional<int> rhs;
@@ -80,4 +80,6 @@ int main()
         optional<int> rhs(3);
         test<Z>(std::move(rhs), true);
     }
+
+  return 0;
 }

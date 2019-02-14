@@ -19,6 +19,8 @@ struct X
     std::forward_list<X> q;
 };
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }

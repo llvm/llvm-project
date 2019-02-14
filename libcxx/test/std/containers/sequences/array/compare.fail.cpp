@@ -41,7 +41,7 @@ void test_compare(const Array& LHS, const Array& RHS) {
 
 template <int Dummy> struct NoCompare {};
 
-int main()
+int main(int, char**)
 {
   {
     typedef NoCompare<0> T;
@@ -67,4 +67,6 @@ int main()
     TEST_IGNORE_NODISCARD (c1 == c1);
     TEST_IGNORE_NODISCARD (c1 < c1);
   }
+
+  return 0;
 }

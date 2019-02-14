@@ -114,7 +114,7 @@ self_reference_test()
     }
 }
 
-int main()
+int main(int, char**)
 {
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
@@ -134,4 +134,6 @@ int main()
     self_reference_test<std::deque<int, min_allocator<int>> >();
     }
 #endif
+
+  return 0;
 }

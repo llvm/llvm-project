@@ -33,7 +33,9 @@ test()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

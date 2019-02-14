@@ -27,7 +27,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::sub_match<char*> SM;
@@ -61,4 +61,6 @@ int main()
         static_assert((std::is_same<std::ssub_match, std::sub_match<std::string::const_iterator> >::value), "");
         static_assert((std::is_same<std::wssub_match, std::sub_match<std::wstring::const_iterator> >::value), "");
     }
+
+  return 0;
 }

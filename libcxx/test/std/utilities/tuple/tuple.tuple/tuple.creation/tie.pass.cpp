@@ -39,7 +39,7 @@ constexpr bool test_tie_constexpr() {
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         int i = 0;
@@ -60,4 +60,6 @@ int main()
         static_assert(test_tie_constexpr(), "");
     }
 #endif
+
+  return 0;
 }

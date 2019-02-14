@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ostringstream ss;
@@ -42,4 +42,6 @@ int main()
         assert(ss.good());
         assert(ss.str() == L"");
     }
+
+  return 0;
 }

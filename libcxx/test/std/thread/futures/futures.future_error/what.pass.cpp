@@ -29,7 +29,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::future_error f(std::make_error_code(std::future_errc::broken_promise));
@@ -50,4 +50,6 @@ int main()
         LIBCPP_ASSERT(std::strcmp(f.what(), "Operation not permitted on an object without "
                       "an associated state.") == 0);
     }
+
+  return 0;
 }

@@ -15,7 +15,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::valarray<int> v(5, 100);
@@ -35,4 +35,6 @@ int main()
         for (int i = 0; i < 100; ++i)
             assert(v[i].size() == 10);
     }
+
+  return 0;
 }

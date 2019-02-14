@@ -38,7 +38,7 @@ struct test_iostream
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -72,4 +72,6 @@ int main()
         assert(is.precision() == 6);
         assert(is.getloc().name() == "C");
     }
+
+  return 0;
 }

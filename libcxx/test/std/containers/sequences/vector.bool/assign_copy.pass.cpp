@@ -15,7 +15,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<bool, test_allocator<bool> > l(3, true, test_allocator<bool>(5));
@@ -40,4 +40,6 @@ int main()
         assert(l2.get_allocator() == min_allocator<bool>());
     }
 #endif
+
+  return 0;
 }

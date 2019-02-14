@@ -13,10 +13,12 @@
 
 #include <optional>
 
-int main()
+int main(int, char**)
 {
     using std::optional;
 
     std::initializer_list<int> list;
     (void)list;
+
+  return 0;
 }

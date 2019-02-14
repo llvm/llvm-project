@@ -26,7 +26,7 @@ struct mutex
 
 mutex m;
 
-int main()
+int main(int, char**)
 {
     std::shared_lock<mutex> lk1(m);
     std::shared_lock<mutex> lk2;
@@ -36,4 +36,6 @@ int main()
     assert(lk2.mutex() == &m);
     assert(lk2.owns_lock() == true);
     static_assert(noexcept(lk1.swap(lk2)), "member swap must be noexcept");
+
+  return 0;
 }

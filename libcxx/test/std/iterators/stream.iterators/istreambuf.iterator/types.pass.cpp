@@ -34,7 +34,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::istreambuf_iterator<char> I1;
     static_assert((std::is_same<I1::iterator_category, std::input_iterator_tag>::value), "");
@@ -65,4 +65,6 @@ int main()
     static_assert((std::is_nothrow_default_constructible<I2>::value), "" );
     static_assert((std::is_trivially_copy_constructible<I2>::value), "" );
     static_assert((std::is_trivially_destructible<I2>::value), "" );
+
+  return 0;
 }

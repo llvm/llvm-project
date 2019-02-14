@@ -61,7 +61,7 @@ template <class T>
 void sink (std::weak_ptr<T> &&) {}
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         const std::shared_ptr<A> ps(new A);
@@ -112,4 +112,6 @@ int main()
     assert(B::count == 0);
     assert(A::count == 0);
 #endif
+
+  return 0;
 }

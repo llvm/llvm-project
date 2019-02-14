@@ -17,10 +17,12 @@
 
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::priority_queue<MoveOnly> C;
         static_assert(std::is_nothrow_destructible<C>::value, "");
     }
+
+  return 0;
 }

@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::fisher_f_distribution<> D;
@@ -27,4 +27,6 @@ int main()
         assert(p.m() == 10);
         assert(p.n() == .125);
     }
+
+  return 0;
 }

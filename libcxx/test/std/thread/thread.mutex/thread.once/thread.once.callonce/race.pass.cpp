@@ -37,11 +37,13 @@ void f0()
     assert(global == 1);
 }
 
-int main()
+int main(int, char**)
 {
     std::thread t0(f0);
     std::thread t1(f0);
     t0.join();
     t1.join();
     assert(global == 1);
+
+  return 0;
 }

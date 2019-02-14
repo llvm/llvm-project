@@ -5869,7 +5869,7 @@ void test55()
     test_npos(S("abcdefghij"), 9, 2, SV("12345"), 6, S("can't happen"));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -6025,4 +6025,6 @@ int main()
     s.replace(0, 4, arr, 0, std::string::npos);    // calls replace(pos1, n1, string("IJKL"), pos, npos)
     assert(s == "IJKL");
     }
+
+  return 0;
 }

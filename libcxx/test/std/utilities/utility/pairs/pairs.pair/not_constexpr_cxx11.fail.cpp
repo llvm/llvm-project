@@ -27,7 +27,7 @@ struct ImplicitT {
   int value;
 };
 
-int main()
+int main(int, char**)
 {
     {
         using P = std::pair<int, int>;
@@ -53,4 +53,6 @@ int main()
         constexpr P U_V = {42, 101}; // expected-error {{must be initialized by a constant expression}}
         constexpr P pair_U_V = other; // expected-error {{must be initialized by a constant expression}}
     }
+
+  return 0;
 }

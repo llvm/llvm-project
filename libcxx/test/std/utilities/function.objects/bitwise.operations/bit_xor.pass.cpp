@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::bit_xor<int> F;
@@ -61,4 +61,6 @@ int main()
     static_assert ( bar == 0xB246, "" );
     }
 #endif
+
+  return 0;
 }

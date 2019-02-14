@@ -18,7 +18,7 @@
 #include <cstdlib>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock Clock;
     typedef Clock::time_point time_point;
@@ -30,4 +30,6 @@ int main()
     std::chrono::nanoseconds err = 5 * ms / 100;
     // The time slept is within 5% of 500ms
     assert(std::abs(ns.count()) < err.count());
+
+  return 0;
 }

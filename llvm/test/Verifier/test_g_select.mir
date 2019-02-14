@@ -1,0 +1,31 @@
+#RUN: not llc -march=aarch64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_select
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(s32) = G_CONSTANT i32 0
+    %1:_(s32) = G_CONSTANT i32 1
+    %2:_(s1) = G_CONSTANT i32 0
+    %3:_(<2 x s32>) = G_IMPLICIT_DEF
+    %4:_(<4 x s32>) = G_IMPLICIT_DEF
+    %5:_(<2 x s1>) = G_IMPLICIT_DEF
+    %6:_(<4 x s1>) = G_IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: operand types must be all-vector or all-scalar
+    %7:_(s32) = G_SELECT %5, %0, %1
+
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
+    %8:_(<2 x s32>) = G_SELECT %6, %3, %3
+
+    ; CHECK: Bad machine code: operand types must preserve number of vector elements
+    %9:_(<4 x s32>) = G_SELECT %5, %4, %4
+
+...

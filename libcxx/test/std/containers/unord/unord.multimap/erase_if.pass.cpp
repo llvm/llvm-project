@@ -78,7 +78,7 @@ void test()
     test0<S>({1,2,3}, False, {1,2,3});
 }
 
-int main()
+int main(int, char**)
 {
     test<std::unordered_multimap<int, int>>();
     test<std::unordered_multimap<int, int, std::hash<int>, std::equal_to<int>, min_allocator<std::pair<const int, int>>>> ();
@@ -86,4 +86,6 @@ int main()
 
     test<std::unordered_multimap<long, short>>();
     test<std::unordered_multimap<short, double>>();
+
+  return 0;
 }

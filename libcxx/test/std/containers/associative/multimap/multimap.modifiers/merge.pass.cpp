@@ -49,7 +49,7 @@ struct throw_comparator
 };
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         std::multimap<int, int> src{{1, 0}, {3, 0}, {5, 0}};
@@ -146,4 +146,5 @@ int main()
             first.merge(std::move(second));
         }
     }
+    return 0;
 }

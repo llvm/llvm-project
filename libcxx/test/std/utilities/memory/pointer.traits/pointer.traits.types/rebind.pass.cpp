@@ -81,7 +81,7 @@ struct G
 #endif
 
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::pointer_traits<A<int*> >::rebind<double*>, A<double*> >::value), "");
@@ -101,4 +101,6 @@ int main()
     static_assert((std::is_same<std::pointer_traits<D<char, int> >::rebind<double>::other, D1<double, int> >::value), "");
     static_assert((std::is_same<std::pointer_traits<E<char, int> >::rebind<double>::other, E<double, int> >::value), "");
 #endif
+
+  return 0;
 }

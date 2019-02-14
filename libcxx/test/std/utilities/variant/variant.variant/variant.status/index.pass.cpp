@@ -25,7 +25,7 @@
 #include "variant_test_helpers.hpp"
 
 
-int main() {
+int main(int, char**) {
   {
     using V = std::variant<int, long>;
     constexpr V v;
@@ -57,4 +57,6 @@ int main() {
     assert(v.index() == std::variant_npos);
   }
 #endif
+
+  return 0;
 }

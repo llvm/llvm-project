@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     std::thread::id id1;
     std::thread::id id2 = std::this_thread::get_id();
@@ -34,4 +34,6 @@ int main()
     ASSERT_NOEXCEPT(H()(id2));
     H h;
     assert(h(id1) != h(id2));
+
+  return 0;
 }

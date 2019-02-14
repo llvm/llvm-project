@@ -64,7 +64,7 @@ public:
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         optional<int> opt1;
@@ -302,4 +302,6 @@ int main()
         assert(*opt2 == 2);
     }
 #endif
+
+  return 0;
 }

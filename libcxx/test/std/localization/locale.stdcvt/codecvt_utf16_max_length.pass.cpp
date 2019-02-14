@@ -21,7 +21,7 @@
 #include <codecvt>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::codecvt_utf16<wchar_t> C;
@@ -59,4 +59,6 @@ int main()
         int r = c.max_length();
         assert(r == 6);
     }
+
+  return 0;
 }

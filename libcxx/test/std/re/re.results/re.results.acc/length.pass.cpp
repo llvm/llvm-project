@@ -30,7 +30,9 @@ test()
     assert(m.length(4) == m[4].length());
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

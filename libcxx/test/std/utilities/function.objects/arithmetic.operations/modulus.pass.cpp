@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::modulus<int> F;
     const F f = F();
@@ -37,4 +37,6 @@ int main()
     constexpr int bar = std::modulus<> () (3L, 2);
     static_assert ( bar == 1, "" );
 #endif
+
+  return 0;
 }

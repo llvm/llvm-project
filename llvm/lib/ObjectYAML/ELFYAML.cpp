@@ -572,6 +572,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_STT>::enumeration(
   ECase(STT_TLS);
   ECase(STT_GNU_IFUNC);
 #undef ECase
+  IO.enumFallback<Hex8>(Value);
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_STV>::enumeration(
@@ -658,6 +659,32 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   }
 #undef ELF_RELOC
   IO.enumFallback<Hex32>(Value);
+}
+
+void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
+    IO &IO, ELFYAML::ELF_DYNTAG &Value) {
+  assert(IO.getContext() && "The IO context is not initialized");
+
+// TODO: For simplicity we do not handle target specific flags. They are
+// still supported and will be shown as a raw numeric values in the output.
+#define MIPS_DYNAMIC_TAG(name, value)
+#define HEXAGON_DYNAMIC_TAG(name, value)
+#define PPC64_DYNAMIC_TAG(name, value)
+// Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
+#define DYNAMIC_TAG_MARKER(name, value)
+
+#define STRINGIFY(X) (#X)
+#define DYNAMIC_TAG(X, Y) IO.enumCase(Value, STRINGIFY(DT_##X), ELF::DT_##X);
+#include "llvm/BinaryFormat/DynamicTags.def"
+
+#undef MIPS_DYNAMIC_TAG
+#undef HEXAGON_DYNAMIC_TAG
+#undef PPC64_DYNAMIC_TAG
+#undef DYNAMIC_TAG_MARKER
+#undef STRINGIFY
+#undef DYNAMIC_TAG
+
+  IO.enumFallback<Hex64>(Value);
 }
 
 void ScalarEnumerationTraits<ELFYAML::MIPS_AFL_REG>::enumeration(
@@ -827,7 +854,11 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   IO.mapOptional("Link", Section.Link, StringRef());
   IO.mapOptional("AddressAlign", Section.AddressAlign, Hex64(0));
   IO.mapOptional("EntSize", Section.EntSize);
-  IO.mapOptional("Info", Section.Info, StringRef());
+}
+
+static void sectionMapping(IO &IO, ELFYAML::DynamicSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Entries", Section.Entries);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
@@ -843,12 +874,14 @@ static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
 
 static void sectionMapping(IO &IO, ELFYAML::RelocationSection &Section) {
   commonSectionMapping(IO, Section);
+  IO.mapOptional("Info", Section.RelocatableSec, StringRef());
   IO.mapOptional("Relocations", Section.Relocations);
 }
 
-static void groupSectionMapping(IO &IO, ELFYAML::Group &group) {
-  commonSectionMapping(IO, group);
-  IO.mapRequired("Members", group.Members);
+static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
+  commonSectionMapping(IO, Group);
+  IO.mapOptional("Info", Group.Signature, StringRef());
+  IO.mapRequired("Members", Group.Members);
 }
 
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
@@ -890,6 +923,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
     IO.mapRequired("Type", sectionType);
 
   switch (sectionType) {
+  case ELF::SHT_DYNAMIC:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::DynamicSection());
+    sectionMapping(IO, *cast<ELFYAML::DynamicSection>(Section.get()));
+    break;
   case ELF::SHT_REL:
   case ELF::SHT_RELA:
     if (!IO.outputting())
@@ -950,6 +988,14 @@ struct NormalizedMips64RelType {
 };
 
 } // end anonymous namespace
+
+void MappingTraits<ELFYAML::DynamicEntry>::mapping(IO &IO,
+                                                   ELFYAML::DynamicEntry &Rel) {
+  assert(IO.getContext() && "The IO context is not initialized");
+
+  IO.mapRequired("Tag", Rel.Tag);
+  IO.mapRequired("Value", Rel.Val);
+}
 
 void MappingTraits<ELFYAML::Relocation>::mapping(IO &IO,
                                                  ELFYAML::Relocation &Rel) {

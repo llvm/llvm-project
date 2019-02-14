@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month_weekday   = std::chrono::month_weekday;
     using month           = std::chrono::month;
@@ -39,4 +39,6 @@ int main()
         assert( static_cast<unsigned>(md.weekday_indexed().weekday() == Sunday));
         assert( static_cast<unsigned>(md.weekday_indexed().index() == i));
     }
+
+  return 0;
 }

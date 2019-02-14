@@ -25,7 +25,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::chrono::seconds s1(3);
@@ -113,4 +113,6 @@ int main()
     static_assert(!(s1 != s2), "");
     }
 #endif
+
+  return 0;
 }

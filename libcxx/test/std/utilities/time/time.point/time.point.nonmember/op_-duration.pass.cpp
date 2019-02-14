@@ -30,7 +30,7 @@ void test2739()  // LWG2739
     assert(t1 < t0);
 }
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock Clock;
     typedef std::chrono::milliseconds Duration1;
@@ -49,4 +49,6 @@ int main()
 #endif
     test2739<int32_t>();
     test2739<uint32_t>();
+
+  return 0;
 }

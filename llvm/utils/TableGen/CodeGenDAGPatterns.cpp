@@ -1407,7 +1407,8 @@ SDTypeConstraint::SDTypeConstraint(Record *R, const CodeGenHwModes &CGH) {
     x.SDTCisSameSizeAs_Info.OtherOperandNum =
       R->getValueAsInt("OtherOperandNum");
   } else {
-    PrintFatalError("Unrecognized SDTypeConstraint '" + R->getName() + "'!\n");
+    PrintFatalError(R->getLoc(),
+                    "Unrecognized SDTypeConstraint '" + R->getName() + "'!\n");
   }
 }
 

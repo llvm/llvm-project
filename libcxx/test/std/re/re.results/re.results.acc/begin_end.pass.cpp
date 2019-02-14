@@ -33,7 +33,9 @@ test()
         assert(*i == m[j]);
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

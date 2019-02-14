@@ -33,7 +33,7 @@ MultiStringType longString = MKSTR("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQR
 // generic_string<C, T, A> forwards to string<C, T, A>. Tests for
 // string<C, T, A>() are in "path.native.op/string_alloc.pass.cpp".
 // generic_string is minimally tested here.
-int main()
+int main(int, char**)
 {
   using namespace fs;
   using CharT = wchar_t;
@@ -51,4 +51,6 @@ int main()
     assert(Alloc::alloc_count > 0);
     assert(Alloc::outstanding_alloc() == 1);
   }
+
+  return 0;
 }

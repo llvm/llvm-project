@@ -5840,7 +5840,7 @@ void test55()
     test_npos(S("abcde"), 0, 0, SV("abcdefghij"), 5, -5);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -5989,4 +5989,6 @@ int main()
 //  calls compare(size, size, string(arr), 0, npos)
     assert(s.compare(0, 4, arr, 0, std::string::npos) == 0);
     }
+
+  return 0;
 }

@@ -61,7 +61,7 @@ void test(int expected_num_allocs = 1) {
   }
 }
 
-int main() {
+int main(int, char**) {
   { // test sequence containers
     test<std::vector<int, test_allocator<int> > >();
     test<std::vector<bool, test_allocator<bool> > >();
@@ -102,4 +102,6 @@ int main() {
     test<std::unordered_multimap<int, int, std::hash<int>, std::equal_to<int>,
                                  test_allocator<KV> > >(stored_allocators);
   }
+
+  return 0;
 }

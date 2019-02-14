@@ -45,7 +45,7 @@ void test(Container& c, KeyTypeIter first, KeyTypeIter last)
     }
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::unordered_multimap<int, int> m =
@@ -73,4 +73,6 @@ int main()
         int keys[] = {1, 2, 3, 4, 5, 6};
         test(m, std::begin(keys), std::end(keys));
     }
+
+  return 0;
 }

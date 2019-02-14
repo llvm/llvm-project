@@ -33,9 +33,11 @@ void test()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test<double, 0>();
     test<double, 3>();
     test<double, 5>();
+
+  return 0;
 }

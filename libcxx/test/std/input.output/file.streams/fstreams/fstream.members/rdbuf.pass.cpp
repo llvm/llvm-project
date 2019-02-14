@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::fstream fs;
@@ -26,4 +26,6 @@ int main()
         std::wfstream fs;
         assert(fs.rdbuf());
     }
+
+  return 0;
 }

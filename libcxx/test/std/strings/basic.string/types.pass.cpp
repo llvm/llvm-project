@@ -70,7 +70,7 @@ test()
     static_assert(S::npos == -1, "");
 }
 
-int main()
+int main(int, char**)
 {
     test<test_traits<char>, test_allocator<char> >();
     test<std::char_traits<wchar_t>, std::allocator<wchar_t> >();
@@ -81,4 +81,6 @@ int main()
 #if TEST_STD_VER >= 11
     test<std::char_traits<char>, min_allocator<char> >();
 #endif
+
+  return 0;
 }

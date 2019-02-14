@@ -32,10 +32,12 @@ void test()
                                    std::tuple_size<const volatile T> >::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<std::tuple<>, 0>();
     test<std::tuple<int>, 1>();
     test<std::tuple<char, int>, 2>();
     test<std::tuple<char, char*, int>, 3>();
+
+  return 0;
 }

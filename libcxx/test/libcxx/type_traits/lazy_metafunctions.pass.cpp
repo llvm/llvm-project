@@ -128,9 +128,11 @@ void LazyOrTest() {
 }
 
 
-int main() {
+int main(int, char**) {
     LazyEnableIfTest();
     LazyNotTest();
     LazyAndTest();
     LazyOrTest();
+
+  return 0;
 }

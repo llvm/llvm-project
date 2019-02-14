@@ -104,6 +104,18 @@ fd_t ReserveStandardFds(fd_t fd);
 
 bool ShouldMockFailureToOpen(const char *path);
 
+// Create a non-file mapping with a given /proc/self/maps name.
+uptr MmapNamed(void *addr, uptr length, int prot, int flags, const char *name);
+
+// Platforms should implement at most one of these.
+// 1. Provide a pre-decorated file descriptor to use instead of an anonymous
+// mapping.
+int GetNamedMappingFd(const char *name, uptr size, int *flags);
+// 2. Add name to an existing anonymous mapping. The caller must keep *name
+// alive at least as long as the mapping exists.
+void DecorateMapping(uptr addr, uptr size, const char *name);
+
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_POSIX_H

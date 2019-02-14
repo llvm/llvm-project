@@ -18,8 +18,10 @@
 #include <chrono>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::chrono::system_clock::duration,
                    std::chrono::time_point<std::chrono::system_clock>::duration>::value), "");
+
+  return 0;
 }

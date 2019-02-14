@@ -30,7 +30,7 @@ test(Iterator first, Iterator last)
         assert(*i == *first);
 }
 
-int main()
+int main(int, char**)
 {
     bool a[] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0};
     bool* an = a + sizeof(a)/sizeof(a[0]);
@@ -46,4 +46,6 @@ int main()
     test<std::vector<bool, min_allocator<bool>> >(random_access_iterator<const bool*>(a), random_access_iterator<const bool*>(an));
     test<std::vector<bool, min_allocator<bool>> >(a, an);
 #endif
+
+  return 0;
 }

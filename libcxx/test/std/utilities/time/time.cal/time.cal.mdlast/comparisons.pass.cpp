@@ -24,7 +24,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using month          = std::chrono::month;
     using month_day_last = std::chrono::month_day_last;
@@ -39,4 +39,6 @@ int main()
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons6Values<month_day_last>(month{i}, month{j})));
+
+  return 0;
 }

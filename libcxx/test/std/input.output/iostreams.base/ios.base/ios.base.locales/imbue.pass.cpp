@@ -74,7 +74,7 @@ void f3(std::ios_base::event ev, std::ios_base& stream, int index)
     }
 }
 
-int main()
+int main(int, char**)
 {
     test t;
     std::ios_base& b = t;
@@ -87,4 +87,6 @@ int main()
     assert(f1_called);
     assert(f2_called);
     assert(f3_called);
+
+  return 0;
 }

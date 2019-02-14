@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 #include "private_constructor.hpp"
 
-int main()
+int main(int, char**)
 {
     {
     typedef int V;
@@ -333,4 +333,6 @@ int main()
     assert(r == next(m.begin(), 8));
     }
 #endif
+
+  return 0;
 }

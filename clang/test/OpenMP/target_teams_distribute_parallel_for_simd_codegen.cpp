@@ -104,7 +104,7 @@ int target_teams_fun(int *g){
   // CK1: ret void
 
   // CK1: define internal void @[[OUTL1]]({{.+}})
-  // CK1: [[ARRDECAY:%.+]] = getelementptr inbounds [1000 x i32], [1000 x i32]* %{{.+}}, i32 0, i32 0
+  // CK1: [[ARRDECAY:%.+]] = getelementptr inbounds [1000 x i32], [1000 x i32]* %{{.+}}, i{{32|64}} 0, i{{32|64}} 0
   // CK1: [[ARR_CAST:%.+]] = ptrtoint i32* [[ARRDECAY]] to i{{32|64}}
   // CK1: [[MASKED_PTR:%.+]] = and i{{32|64}} [[ARR_CAST]], 7
   // CK1: [[COND:%.+]] = icmp eq i{{32|64}} [[MASKED_PTR]], 0

@@ -360,7 +360,7 @@ void test_ext_int_2()
     }
 }
 
-int main()
+int main(int, char**)
 {
     {
         test_ext_int_0<
@@ -422,4 +422,6 @@ int main()
           , std::tuple<A_base_2, int, int>, std::tuple<A_base_2 const, int, int>
           >();
     }
+
+  return 0;
 }

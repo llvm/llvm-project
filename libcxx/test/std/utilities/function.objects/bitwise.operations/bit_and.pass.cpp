@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::bit_and<int> F;
     const F f = F();
@@ -57,4 +57,6 @@ int main()
     constexpr int bar = std::bit_and<> () (0x58D3L, 0xEA95);
     static_assert ( bar == 0x4891, "" );
 #endif
+
+  return 0;
 }

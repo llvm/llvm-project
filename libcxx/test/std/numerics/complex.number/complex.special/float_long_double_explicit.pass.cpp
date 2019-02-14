@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     const std::complex<long double> cd(2.5, 3.5);
@@ -35,4 +35,6 @@ int main()
     static_assert(cf.imag() == cd.imag(), "");
     }
 #endif
+
+  return 0;
 }

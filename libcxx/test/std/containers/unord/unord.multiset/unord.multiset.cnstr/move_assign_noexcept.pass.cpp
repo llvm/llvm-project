@@ -43,7 +43,7 @@ struct some_hash
     std::size_t operator()(T const&) const;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multiset<MoveOnly> C;
@@ -70,4 +70,6 @@ int main()
                                                          some_comp<MoveOnly>> C;
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");
     }
+
+  return 0;
 }

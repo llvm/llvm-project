@@ -127,122 +127,84 @@ template <typename T>
 class RPCTypeName<Expected<T>> {
 public:
   static const char* getName() {
-    std::lock_guard<std::mutex> Lock(NameMutex);
-    if (Name.empty())
+    static std::string Name = [] {
+      std::string Name;
       raw_string_ostream(Name) << "Expected<"
                                << RPCTypeNameSequence<T>()
                                << ">";
+      return Name;
+    }();
     return Name.data();
   }
-
-private:
-  static std::mutex NameMutex;
-  static std::string Name;
 };
-
-template <typename T>
-std::mutex RPCTypeName<Expected<T>>::NameMutex;
-
-template <typename T>
-std::string RPCTypeName<Expected<T>>::Name;
 
 template <typename T1, typename T2>
 class RPCTypeName<std::pair<T1, T2>> {
 public:
   static const char* getName() {
-    std::lock_guard<std::mutex> Lock(NameMutex);
-    if (Name.empty())
+    static std::string Name = [] {
+      std::string Name;
       raw_string_ostream(Name) << "std::pair<" << RPCTypeNameSequence<T1, T2>()
                                << ">";
+      return Name;
+    }();
     return Name.data();
   }
-private:
-  static std::mutex NameMutex;
-  static std::string Name;
 };
-
-template <typename T1, typename T2>
-std::mutex RPCTypeName<std::pair<T1, T2>>::NameMutex;
-template <typename T1, typename T2>
-std::string RPCTypeName<std::pair<T1, T2>>::Name;
 
 template <typename... ArgTs>
 class RPCTypeName<std::tuple<ArgTs...>> {
 public:
   static const char* getName() {
-    std::lock_guard<std::mutex> Lock(NameMutex);
-    if (Name.empty())
+    static std::string Name = [] {
+      std::string Name;
       raw_string_ostream(Name) << "std::tuple<"
                                << RPCTypeNameSequence<ArgTs...>() << ">";
+      return Name;
+    }();
     return Name.data();
   }
-private:
-  static std::mutex NameMutex;
-  static std::string Name;
 };
-
-template <typename... ArgTs>
-std::mutex RPCTypeName<std::tuple<ArgTs...>>::NameMutex;
-template <typename... ArgTs>
-std::string RPCTypeName<std::tuple<ArgTs...>>::Name;
 
 template <typename T>
 class RPCTypeName<std::vector<T>> {
 public:
   static const char*getName() {
-    std::lock_guard<std::mutex> Lock(NameMutex);
-    if (Name.empty())
+    static std::string Name = [] {
+      std::string Name;
       raw_string_ostream(Name) << "std::vector<" << RPCTypeName<T>::getName()
                                << ">";
+      return Name;
+    }();
     return Name.data();
   }
-
-private:
-  static std::mutex NameMutex;
-  static std::string Name;
 };
-
-template <typename T>
-std::mutex RPCTypeName<std::vector<T>>::NameMutex;
-template <typename T>
-std::string RPCTypeName<std::vector<T>>::Name;
 
 template <typename T> class RPCTypeName<std::set<T>> {
 public:
   static const char *getName() {
-    std::lock_guard<std::mutex> Lock(NameMutex);
-    if (Name.empty())
+    static std::string Name = [] {
+      std::string Name;
       raw_string_ostream(Name)
           << "std::set<" << RPCTypeName<T>::getName() << ">";
+      return Name;
+    }();
     return Name.data();
   }
-
-private:
-  static std::mutex NameMutex;
-  static std::string Name;
 };
-
-template <typename T> std::mutex RPCTypeName<std::set<T>>::NameMutex;
-template <typename T> std::string RPCTypeName<std::set<T>>::Name;
 
 template <typename K, typename V> class RPCTypeName<std::map<K, V>> {
 public:
   static const char *getName() {
-    std::lock_guard<std::mutex> Lock(NameMutex);
-    if (Name.empty())
+    static std::string Name = [] {
+      std::string Name;
       raw_string_ostream(Name)
           << "std::map<" << RPCTypeNameSequence<K, V>() << ">";
+      return Name;
+    }();
     return Name.data();
   }
-
-private:
-  static std::mutex NameMutex;
-  static std::string Name;
 };
-
-template <typename K, typename V>
-std::mutex RPCTypeName<std::map<K, V>>::NameMutex;
-template <typename K, typename V> std::string RPCTypeName<std::map<K, V>>::Name;
 
 /// The SerializationTraits<ChannelT, T> class describes how to serialize and
 /// deserialize an instance of type T to/from an abstract channel of type

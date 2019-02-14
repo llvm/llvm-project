@@ -65,7 +65,7 @@ struct A
     A(int, double);
 };
 
-int main()
+int main(int, char**)
 {
     test_is_trivially_constructible<int> ();
     test_is_trivially_constructible<int, const int&> ();
@@ -73,4 +73,6 @@ int main()
     test_is_not_trivially_constructible<A, int> ();
     test_is_not_trivially_constructible<A, int, double> ();
     test_is_not_trivially_constructible<A> ();
+
+  return 0;
 }

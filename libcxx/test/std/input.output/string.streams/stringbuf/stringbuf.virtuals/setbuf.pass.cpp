@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::stringbuf sb("0123456789");
@@ -28,4 +28,6 @@ int main()
         assert(sb.pubsetbuf(0, 0) == &sb);
         assert(sb.str() == L"0123456789");
     }
+
+  return 0;
 }

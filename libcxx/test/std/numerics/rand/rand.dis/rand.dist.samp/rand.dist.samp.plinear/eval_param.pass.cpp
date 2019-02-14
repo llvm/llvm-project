@@ -37,7 +37,7 @@ f(double x, double a, double m, double b, double c)
     return a + m*(sqr(x) - sqr(b))/2 + c*(x-b);
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::piecewise_linear_distribution<> D;
@@ -90,4 +90,6 @@ int main()
             assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
         }
     }
+
+  return 0;
 }

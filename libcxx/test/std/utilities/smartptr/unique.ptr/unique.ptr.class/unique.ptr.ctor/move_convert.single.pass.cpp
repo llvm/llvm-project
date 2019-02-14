@@ -157,7 +157,7 @@ void test_noexcept() {
   }
 }
 
-int main() {
+int main(int, char**) {
   {
     test_sfinae();
     test_noexcept();
@@ -244,4 +244,6 @@ int main() {
     }
     checkNoneAlive();
   }
+
+  return 0;
 }

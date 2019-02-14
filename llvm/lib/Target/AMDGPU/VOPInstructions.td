@@ -99,7 +99,6 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let SubtargetPredicate = isGCN;
 
   // Because SGPRs may be allowed if there are multiple operands, we
   // need a post-isel hook to insert copies in order to avoid

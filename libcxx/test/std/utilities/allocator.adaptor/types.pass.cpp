@@ -29,7 +29,7 @@
 
 #include "allocators.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<
         A1<int>,
@@ -96,4 +96,6 @@ int main()
     static_assert((std::is_same<
         std::scoped_allocator_adaptor<A2<int>, A1<int>>::const_void_pointer,
         const void*>::value), "");
+
+  return 0;
 }

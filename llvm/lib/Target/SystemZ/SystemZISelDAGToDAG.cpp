@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZTargetMachine.h"
+#include "SystemZISelLowering.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/Debug.h"
@@ -1524,6 +1525,44 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
         return;
     }
     break;
+  }
+
+  case ISD::BUILD_VECTOR: {
+    auto *BVN = cast<BuildVectorSDNode>(Node);
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    uint64_t Mask = 0;
+    if (SystemZTargetLowering::tryBuildVectorByteMask(BVN, Mask)) {
+      SDNode *Res = CurDAG->getMachineNode(SystemZ::VGBM, DL, VT,
+                                CurDAG->getTargetConstant(Mask, DL, MVT::i32));
+      ReplaceNode(Node, Res);
+      return;
+    }
+    break;
+  }
+
+  case ISD::ConstantFP: {
+    APFloat Imm = cast<ConstantFPSDNode>(Node)->getValueAPF();
+    if (Imm.isZero() || Imm.isNegZero())
+      break;
+    const SystemZInstrInfo *TII = getInstrInfo();
+    EVT VT = Node->getValueType(0);
+    unsigned Start, End;
+    unsigned BitWidth = VT.getSizeInBits();
+    bool Success = SystemZTargetLowering::analyzeFPImm(Imm, BitWidth, Start,
+              End, static_cast<const SystemZInstrInfo *>(TII)); (void)Success;
+    assert(Success && "Expected legal FP immediate");
+    SDLoc DL(Node);
+    unsigned Opcode = (BitWidth == 32 ? SystemZ::VGMF : SystemZ::VGMG);
+    SDNode *Res = CurDAG->getMachineNode(Opcode, DL, VT,
+                            CurDAG->getTargetConstant(Start, DL, MVT::i32),
+                            CurDAG->getTargetConstant(End, DL, MVT::i32));
+    unsigned SubRegIdx = (BitWidth == 32 ? SystemZ::subreg_h32
+                                         : SystemZ::subreg_h64);
+    Res = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, SDValue(Res, 0))
+            .getNode();
+    ReplaceNode(Node, Res);
+    return;
   }
 
   case ISD::STORE: {

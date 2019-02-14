@@ -59,17 +59,22 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
 
     const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
-    // Match non-equal FrameIndexes - If both frame indices are fixed
-    // we know their relative offsets and can compare them. Otherwise
-    // we must be conservative.
+    // Match FrameIndexes.
     if (auto *A = dyn_cast<FrameIndexSDNode>(Base))
-      if (auto *B = dyn_cast<FrameIndexSDNode>(Other.Base))
+      if (auto *B = dyn_cast<FrameIndexSDNode>(Other.Base)) {
+        // Equal FrameIndexes - offsets are directly comparable.
+        if (A->getIndex() == B->getIndex())
+          return true;
+        // Non-equal FrameIndexes - If both frame indices are fixed
+        // we know their relative offsets and can compare them. Otherwise
+        // we must be conservative.
         if (MFI.isFixedObjectIndex(A->getIndex()) &&
             MFI.isFixedObjectIndex(B->getIndex())) {
           Off += MFI.getObjectOffset(B->getIndex()) -
                  MFI.getObjectOffset(A->getIndex());
           return true;
         }
+      }
   }
   return false;
 }
@@ -195,4 +200,3 @@ void BaseIndexOffset::print(raw_ostream& OS) const {
 }
 
 #endif
-

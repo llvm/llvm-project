@@ -258,7 +258,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
   OS << "\n};";
   OS << "\nreturn StringRef(PATTERN_MATCH_TABLE[Index]);";
-  OS << "\n}";
+  OS << "\n}\n";
   EndEmitFunction(OS);
 
   BeginEmitFunction(OS, "StringRef", "getIncludePathForIndex(unsigned Index)",
@@ -272,7 +272,7 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 
   OS << "\n};";
   OS << "\nreturn StringRef(INCLUDE_PATH_TABLE[Index]);";
-  OS << "\n}";
+  OS << "\n}\n";
   EndEmitFunction(OS);
 }
 

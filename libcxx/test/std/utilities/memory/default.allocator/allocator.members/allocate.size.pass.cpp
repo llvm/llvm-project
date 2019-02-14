@@ -39,8 +39,10 @@ void test()
     test_max<T> ((size_t) -1);                     // way too large
 }
 
-int main()
+int main(int, char**)
 {
     test<double>();
     LIBCPP_ONLY(test<const double>());
+
+  return 0;
 }

@@ -17,7 +17,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::string l = "Long string so that allocation definitely, for sure, absolutely happens. Probably.";
     std::string s = "short";
@@ -40,8 +40,10 @@ int main()
 
 #else
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }
 
 #endif

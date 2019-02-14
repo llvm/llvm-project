@@ -25,8 +25,10 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     const test t;
     assert(t.flags() == (test::skipws | test::dec));
+
+  return 0;
 }

@@ -29,8 +29,10 @@ static bool error_ctype_thrown(const char *pat)
     return result;
 }
 
-int main()
+int main(int, char**)
 {
     assert(error_ctype_thrown("[[::]]"));
     assert(error_ctype_thrown("[[:error:]]"));
+
+  return 0;
 }

@@ -151,7 +151,7 @@ public:
                                      const char *name, bool for_expression) = 0;
 
   protected:
-    std::unique_ptr<ClangASTContext> m_scratch_ast_ctx_ap;
+    std::unique_ptr<ClangASTContext> m_scratch_ast_ctx_up;
   };
 
   class ObjCExceptionPrecondition : public Breakpoint::BreakpointPrecondition {

@@ -159,6 +159,9 @@ class ELFState {
   bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::MipsABIFlags &Section,
                            ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::DynamicSection &Section,
+                           ContiguousBlobAccumulator &CBA);
   bool hasDynamicSymbols() const;
   SmallVector<const char *, 5> implicitSectionNames() const;
 
@@ -267,15 +270,16 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
         SHeader.sh_link = getDotSymTabSecNo();
 
       unsigned Index;
-      if (!convertSectionIndex(SN2I, S->Name, S->Info, Index))
+      if (!convertSectionIndex(SN2I, S->Name, S->RelocatableSec, Index))
         return false;
       SHeader.sh_info = Index;
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
     } else if (auto S = dyn_cast<ELFYAML::Group>(Sec.get())) {
       unsigned SymIdx;
-      if (SymN2I.lookup(S->Info, SymIdx) && !to_integer(S->Info, SymIdx)) {
-        WithColor::error() << "Unknown symbol referenced: '" << S->Info
+      if (SymN2I.lookup(S->Signature, SymIdx) &&
+          !to_integer(S->Signature, SymIdx)) {
+        WithColor::error() << "Unknown symbol referenced: '" << S->Signature
                            << "' at YAML section '" << S->Name << "'.\n";
         return false;
       }
@@ -291,6 +295,8 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       // SHT_NOBITS section does not have content
       // so just to setup the section offset.
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+    } else if (auto S = dyn_cast<ELFYAML::DynamicSection>(Sec.get())) {
+      writeSectionContent(SHeader, *S, CBA);
     } else
       llvm_unreachable("Unknown section type");
 
@@ -465,8 +471,6 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     SHeader.sh_entsize = *Section.EntSize;
   else if (Section.Type == llvm::ELF::SHT_RELR)
     SHeader.sh_entsize = sizeof(Elf_Relr);
-  else if (Section.Type == llvm::ELF::SHT_DYNAMIC)
-    SHeader.sh_entsize = sizeof(Elf_Dyn);
   else
     SHeader.sh_entsize = 0;
   SHeader.sh_size = Section.Size;
@@ -573,6 +577,29 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   OS.write((const char *)&Flags, sizeof(Flags));
 
   return true;
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::DynamicSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  typedef typename ELFT::Addr Elf_Addr;
+  assert(Section.Type == llvm::ELF::SHT_DYNAMIC &&
+         "Section type is not SHT_DYNAMIC");
+
+  SHeader.sh_size = 2 * sizeof(Elf_Addr) * Section.Entries.size();
+  if (Section.EntSize)
+    SHeader.sh_entsize = *Section.EntSize;
+  else
+    SHeader.sh_entsize = sizeof(Elf_Dyn);
+
+  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  for (const ELFYAML::DynamicEntry &DE : Section.Entries) {
+    Elf_Addr Tag = (Elf_Addr)DE.Tag;
+    OS.write((const char *)&Tag, sizeof(Elf_Addr));
+    Elf_Addr Val = (Elf_Addr)DE.Val;
+    OS.write((const char *)&Val, sizeof(Elf_Addr));
+  }
 }
 
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {

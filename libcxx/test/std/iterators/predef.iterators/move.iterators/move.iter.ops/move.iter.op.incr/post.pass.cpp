@@ -30,7 +30,7 @@ test(It i, It x)
     assert(rr.base() == i);
 }
 
-int main()
+int main(int, char**)
 {
     char s[] = "123";
     test(input_iterator<char*>(s), input_iterator<char*>(s+1));
@@ -51,4 +51,6 @@ int main()
     static_assert(it2 != it3, "");
     }
 #endif
+
+  return 0;
 }

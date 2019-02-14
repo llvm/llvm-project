@@ -556,7 +556,7 @@ public:
   /// \param Dtor - a function taking a single pointer argument
   /// \param Addr - a pointer to pass to the destructor function.
   virtual void registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
-                                  llvm::Constant *Dtor,
+                                  llvm::FunctionCallee Dtor,
                                   llvm::Constant *Addr) = 0;
 
   /*************************** thread_local initialization ********************/

@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using namespace std::literals;
 
@@ -46,4 +46,6 @@ int main()
     assert ( ns == std::chrono::nanoseconds(645));
     auto ns2 = 645.ns;
     assert ( ns == ns2 );
+
+  return 0;
 }

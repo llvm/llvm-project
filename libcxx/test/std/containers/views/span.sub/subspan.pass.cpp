@@ -106,7 +106,7 @@ void testRuntimeSpan(Span sp)
 constexpr int carr1[] = {1,2,3,4};
           int  arr1[] = {5,6,7};
 
-int main ()
+int main(int, char**)
 {
     {
     using Sp = std::span<const int>;
@@ -206,4 +206,6 @@ int main ()
     testRuntimeSpan<Sp, 2>(Sp{arr1});
     testRuntimeSpan<Sp, 3>(Sp{arr1});
     }
+
+  return 0;
 }

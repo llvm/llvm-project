@@ -16,7 +16,7 @@
 #include "test_allocator.h"
 #include "../../../NotConstructible.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef test_allocator<NotConstructible> A;
@@ -26,4 +26,6 @@ int main()
         assert(c.get_allocator() == A(12));
         assert(c.empty());
     }
+
+  return 0;
 }

@@ -24,7 +24,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
     A* ptr = new A;
@@ -42,4 +42,6 @@ int main()
     assert(p.get() == ptr);
     }
     assert(A::count == 0);
+
+  return 0;
 }

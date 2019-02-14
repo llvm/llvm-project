@@ -21,10 +21,12 @@ using std::experimental::propagate_const;
 typedef propagate_const<MoveConstructibleFromX> PY;
 typedef propagate_const<X> PX;
 
-int main() {
+int main(int, char**) {
   PX px(1);
   PY py(std::move(px));
 
   assert(*py==1);
+
+  return 0;
 }
 

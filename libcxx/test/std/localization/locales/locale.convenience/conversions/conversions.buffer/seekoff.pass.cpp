@@ -31,7 +31,7 @@ public:
     ~test_codecvt() {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         wchar_t buf[10];
@@ -54,4 +54,6 @@ int main()
         assert(f.sgetc() == L'l');
     }
     std::remove("seekoff.dat");
+
+  return 0;
 }

@@ -28,7 +28,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int P;
@@ -202,4 +202,6 @@ int main()
 
         assert(c0.empty());
     }
+
+  return 0;
 }

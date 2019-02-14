@@ -30,7 +30,7 @@ func testAttribute(t *testing.T, name string) {
 	fn.AddFunctionAttr(attr)
 	newattr := fn.GetEnumFunctionAttribute(kind)
 	if attr != newattr {
-		t.Errorf("got attribute mask %d, want %d", newattr, attr)
+		t.Errorf("got attribute %p, want %p", newattr.C, attr.C)
 	}
 
 	text := mod.String()
@@ -41,7 +41,7 @@ func testAttribute(t *testing.T, name string) {
 	fn.RemoveEnumFunctionAttribute(kind)
 	newattr = fn.GetEnumFunctionAttribute(kind)
 	if !newattr.IsNil() {
-		t.Errorf("got attribute mask %d, want 0", newattr)
+		t.Errorf("got attribute %p, want 0", newattr.C)
 	}
 }
 

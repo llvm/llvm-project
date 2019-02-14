@@ -35,9 +35,11 @@ bool check() {
     return true;
 }
 
-int main() {
+int main(int, char**) {
     check();
 #if TEST_STD_VER > 17
     static_assert(check(), "");
 #endif
+
+  return 0;
 }

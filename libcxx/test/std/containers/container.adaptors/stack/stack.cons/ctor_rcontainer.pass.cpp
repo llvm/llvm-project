@@ -29,8 +29,10 @@ make(int n)
 }
 
 
-int main()
+int main(int, char**)
 {
     std::stack<MoveOnly> q(make<std::deque<MoveOnly> >(5));
     assert(q.size() == 5);
+
+  return 0;
 }

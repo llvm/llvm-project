@@ -32,7 +32,9 @@ test()
     delete p1;
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

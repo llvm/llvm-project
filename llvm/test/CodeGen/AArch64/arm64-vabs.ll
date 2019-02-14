@@ -885,6 +885,20 @@ declare double @llvm.fabs.f64(double) nounwind readnone
 define <2 x i64> @uabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-LABEL: uabdl_from_extract_dup:
 ; CHECK-NOT: ext.16b
+; CHECK: uabdl.2d
+  %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
+  %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
+
+  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+
+  %res = tail call <2 x i32> @llvm.aarch64.neon.uabd.v2i32(<2 x i32> %lhs.high, <2 x i32> %rhsvec) nounwind
+  %res1 = zext <2 x i32> %res to <2 x i64>
+  ret <2 x i64> %res1
+}
+
+define <2 x i64> @uabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
+; CHECK-LABEL: uabdl2_from_extract_dup:
+; CHECK-NOT: ext.16b
 ; CHECK: uabdl2.2d
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
   %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
@@ -898,6 +912,20 @@ define <2 x i64> @uabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 
 define <2 x i64> @sabdl_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
 ; CHECK-LABEL: sabdl_from_extract_dup:
+; CHECK-NOT: ext.16b
+; CHECK: sabdl.2d
+  %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0
+  %rhsvec = insertelement <2 x i32> %rhsvec.tmp, i32 %rhs, i32 1
+
+  %lhs.high = shufflevector <4 x i32> %lhs, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+
+  %res = tail call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %lhs.high, <2 x i32> %rhsvec) nounwind
+  %res1 = zext <2 x i32> %res to <2 x i64>
+  ret <2 x i64> %res1
+}
+
+define <2 x i64> @sabdl2_from_extract_dup(<4 x i32> %lhs, i32 %rhs) {
+; CHECK-LABEL: sabdl2_from_extract_dup:
 ; CHECK-NOT: ext.16b
 ; CHECK: sabdl2.2d
   %rhsvec.tmp = insertelement <2 x i32> undef, i32 %rhs, i32 0

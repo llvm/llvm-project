@@ -184,7 +184,9 @@ void test_compare_elements() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test_compare_basic();
   test_compare_elements();
+
+  return 0;
 }

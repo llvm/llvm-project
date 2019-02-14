@@ -32,9 +32,11 @@ test()
     test(lhs, rhs, x);
 }
 
-int main()
+int main(int, char**)
 {
     test<float>();
     test<double>();
     test<long double>();
+
+  return 0;
 }

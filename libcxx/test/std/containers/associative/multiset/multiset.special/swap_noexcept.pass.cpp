@@ -91,7 +91,7 @@ struct some_alloc3
     typedef std::false_type is_always_equal;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::multiset<MoveOnly> C;
@@ -136,4 +136,6 @@ int main()
     }
 #endif // _LIBCPP_VERSION
 #endif
+
+  return 0;
 }

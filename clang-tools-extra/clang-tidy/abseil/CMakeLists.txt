@@ -10,6 +10,7 @@ add_clang_library(clangTidyAbseilModule
   DurationFactoryScaleCheck.cpp
   DurationRewriter.cpp
   DurationSubtractionCheck.cpp
+  DurationUnnecessaryConversionCheck.cpp
   FasterStrsplitDelimiterCheck.cpp
   NoInternalDependenciesCheck.cpp
   NoNamespaceCheck.cpp

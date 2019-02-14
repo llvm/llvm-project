@@ -17,7 +17,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::ostringstream os;
     std::ostream_iterator<int> i(os);
@@ -25,4 +25,6 @@ int main()
     assert(&iref1 == &i);
     std::ostream_iterator<int>& iref2 = i++;
     assert(&iref2 == &i);
+
+  return 0;
 }

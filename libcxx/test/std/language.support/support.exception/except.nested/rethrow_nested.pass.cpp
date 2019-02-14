@@ -31,7 +31,7 @@ void go_quietly()
     std::exit(0);
 }
 
-int main()
+int main(int, char**)
 {
     {
         try
@@ -67,4 +67,6 @@ int main()
             assert(false);
         }
     }
+
+  return 0;
 }

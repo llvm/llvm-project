@@ -13,7 +13,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l;
     assert(!std::iscntrl(' ', l));
@@ -27,4 +27,6 @@ int main()
     assert(!std::iscntrl('f', l));
     assert(!std::iscntrl('9', l));
     assert(!std::iscntrl('+', l));
+
+  return 0;
 }

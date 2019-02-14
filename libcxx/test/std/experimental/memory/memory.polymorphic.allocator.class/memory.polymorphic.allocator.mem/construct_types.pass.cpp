@@ -187,7 +187,7 @@ void test_non_pmr_uses_alloc(AllocObj const& A, Args&&... args)
     }
 }
 
-int main()
+int main(int, char**)
 {
     using ET = std::experimental::erased_type;
     using PMR = ex::memory_resource*;
@@ -223,4 +223,6 @@ int main()
         test_non_pmr_uses_alloc<STDA>(std_alloc, cvalue, std::move(value));
         test_non_pmr_uses_alloc<TESTA>(test_alloc, cvalue, std::move(value));
     }
+
+  return 0;
 }

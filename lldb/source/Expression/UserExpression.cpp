@@ -140,9 +140,21 @@ lldb::ExpressionResults UserExpression::Evaluate(
     ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
     llvm::StringRef expr, llvm::StringRef prefix,
     lldb::ValueObjectSP &result_valobj_sp, Status &error, uint32_t line_offset,
-    std::string *fixed_expression, lldb::ModuleSP *jit_module_sp_ptr) {
+    std::string *fixed_expression, lldb::ModuleSP *jit_module_sp_ptr,
+    ValueObject *ctx_obj) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
                                                   LIBLLDB_LOG_STEP));
+
+  if (ctx_obj) {
+    static unsigned const ctx_type_mask =
+        lldb::TypeFlags::eTypeIsClass | lldb::TypeFlags::eTypeIsStructUnion;
+    if (!(ctx_obj->GetTypeInfo() & ctx_type_mask)) {
+      LLDB_LOG(log, "== [UserExpression::Evaluate] Passed a context object of "
+                    "an invalid type, can't run expressions.");
+      error.SetErrorString("a context object of an invalid type passed");
+      return lldb::eExpressionSetupError;
+    }
+  }
 
   lldb_private::ExecutionPolicy execution_policy = options.GetExecutionPolicy();
   lldb::LanguageType language = options.GetLanguage();
@@ -208,7 +220,8 @@ lldb::ExpressionResults UserExpression::Evaluate(
 
   lldb::UserExpressionSP user_expression_sp(
       target->GetUserExpressionForLanguage(expr, full_prefix, language,
-                                           desired_type, options, error));
+                                           desired_type, options, ctx_obj,
+                                           error));
   if (error.Fail()) {
     if (log)
       log->Printf("== [UserExpression::Evaluate] Getting expression: %s ==",
@@ -253,7 +266,8 @@ lldb::ExpressionResults UserExpression::Evaluate(
       lldb::UserExpressionSP fixed_expression_sp(
           target->GetUserExpressionForLanguage(fixed_expression->c_str(),
                                                full_prefix, language,
-                                               desired_type, options, error));
+                                               desired_type, options, ctx_obj,
+                                               error));
       DiagnosticManager fixed_diagnostic_manager;
       parse_success = fixed_expression_sp->Parse(
           fixed_diagnostic_manager, exe_ctx, execution_policy,

@@ -26,7 +26,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using year                = std::chrono::year;
     using month               = std::chrono::month;
@@ -83,4 +83,6 @@ int main()
             year_month_day_last{year{i}, month_day_last{January}},
             year_month_day_last{year{j}, month_day_last{January}},
             i == j, i < j )));
+
+  return 0;
 }

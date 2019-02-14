@@ -22,7 +22,7 @@ using std::optional;
 using std::nullopt_t;
 using std::nullopt;
 
-int main()
+int main(int, char**)
 {
     {
         optional<int> opt;
@@ -63,4 +63,6 @@ int main()
     assert(TT::alive == 0);
     assert(TT::destroyed == 1);
     TT::reset();
+
+  return 0;
 }

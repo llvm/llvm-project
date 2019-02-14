@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::string s;
@@ -30,4 +30,6 @@ int main()
         s = {'a', 'b', 'c'};
         assert(s == "abc");
     }
+
+  return 0;
 }

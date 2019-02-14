@@ -47,7 +47,7 @@ struct B
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         A<int> a;
@@ -73,4 +73,6 @@ int main()
         assert(std::allocator_traits<B<int> >::select_on_container_copy_construction(b).id == 100);
     }
 #endif
+
+  return 0;
 }

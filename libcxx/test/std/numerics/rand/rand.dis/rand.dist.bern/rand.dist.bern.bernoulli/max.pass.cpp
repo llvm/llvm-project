@@ -15,11 +15,13 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::bernoulli_distribution D;
         D d(.25);
         assert(d.max() == true);
     }
+
+  return 0;
 }

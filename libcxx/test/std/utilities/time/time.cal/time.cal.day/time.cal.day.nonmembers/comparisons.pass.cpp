@@ -23,7 +23,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using day = std::chrono::day;
 
@@ -40,4 +40,6 @@ int main()
     for (unsigned i = 1; i < 10; ++i)
         for (unsigned j = 1; j < 10; ++j)
             assert(testComparisons6Values<day>(i, j));
+
+  return 0;
 }

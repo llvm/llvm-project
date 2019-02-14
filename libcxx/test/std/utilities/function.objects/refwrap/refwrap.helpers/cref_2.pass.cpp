@@ -15,10 +15,12 @@
 #include <functional>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     const int i = 0;
     std::reference_wrapper<const int> r1 = std::cref(i);
     std::reference_wrapper<const int> r2 = std::cref(r1);
     assert(&r2.get() == &i);
+
+  return 0;
 }

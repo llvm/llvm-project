@@ -1,0 +1,40 @@
+import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+
+executable("clang-tidy") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang-tools-extra/clang-tidy",
+    "//clang-tools-extra/clang-tidy/abseil",
+    "//clang-tools-extra/clang-tidy/android",
+    "//clang-tools-extra/clang-tidy/boost",
+    "//clang-tools-extra/clang-tidy/bugprone",
+    "//clang-tools-extra/clang-tidy/cert",
+    "//clang-tools-extra/clang-tidy/cppcoreguidelines",
+    "//clang-tools-extra/clang-tidy/fuchsia",
+    "//clang-tools-extra/clang-tidy/google",
+    "//clang-tools-extra/clang-tidy/hicpp",
+    "//clang-tools-extra/clang-tidy/llvm",
+    "//clang-tools-extra/clang-tidy/misc",
+    "//clang-tools-extra/clang-tidy/modernize",
+    "//clang-tools-extra/clang-tidy/objc",
+    "//clang-tools-extra/clang-tidy/performance",
+    "//clang-tools-extra/clang-tidy/portability",
+    "//clang-tools-extra/clang-tidy/readability",
+    "//clang-tools-extra/clang-tidy/zircon",
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
+    "//clang/lib/Tooling",
+    "//clang/lib/Tooling/Core",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsAsmParsers",
+    "//llvm/lib/Target:AllTargetsDescs",
+    "//llvm/lib/Target:AllTargetsInfos",
+  ]
+  if (clang_enable_static_analyzer) {
+    deps += [ "//clang-tools-extra/clang-tidy/mpi" ]
+  }
+  sources = [
+    "ClangTidyMain.cpp",
+  ]
+}

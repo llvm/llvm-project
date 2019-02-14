@@ -38,7 +38,7 @@ testAlloc(S s, SV sv, const typename S::allocator_type& a)
     assert(s.get_allocator() == a);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -101,4 +101,6 @@ int main()
     testAlloc(S(), SV("12345678901234567890"), min_allocator<char>());
     }
 #endif
+
+  return 0;
 }

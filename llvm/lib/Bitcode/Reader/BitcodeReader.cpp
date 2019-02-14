@@ -4231,6 +4231,74 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       InstructionList.push_back(I);
       break;
     }
+    case bitc::FUNC_CODE_INST_CALLBR: {
+      // CALLBR: [attr, cc, norm, transfs, fty, fnid, args]
+      unsigned OpNum = 0;
+      AttributeList PAL = getAttributes(Record[OpNum++]);
+      unsigned CCInfo = Record[OpNum++];
+
+      BasicBlock *DefaultDest = getBasicBlock(Record[OpNum++]);
+      unsigned NumIndirectDests = Record[OpNum++];
+      SmallVector<BasicBlock *, 16> IndirectDests;
+      for (unsigned i = 0, e = NumIndirectDests; i != e; ++i)
+        IndirectDests.push_back(getBasicBlock(Record[OpNum++]));
+
+      FunctionType *FTy = nullptr;
+      if (CCInfo >> bitc::CALL_EXPLICIT_TYPE & 1 &&
+          !(FTy = dyn_cast<FunctionType>(getTypeByID(Record[OpNum++]))))
+        return error("Explicit call type is not a function type");
+
+      Value *Callee;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Callee))
+        return error("Invalid record");
+
+      PointerType *OpTy = dyn_cast<PointerType>(Callee->getType());
+      if (!OpTy)
+        return error("Callee is not a pointer type");
+      if (!FTy) {
+        FTy = dyn_cast<FunctionType>(OpTy->getElementType());
+        if (!FTy)
+          return error("Callee is not of pointer to function type");
+      } else if (OpTy->getElementType() != FTy)
+        return error("Explicit call type does not match pointee type of "
+                     "callee operand");
+      if (Record.size() < FTy->getNumParams() + OpNum)
+        return error("Insufficient operands to call");
+
+      SmallVector<Value*, 16> Args;
+      // Read the fixed params.
+      for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i, ++OpNum) {
+        if (FTy->getParamType(i)->isLabelTy())
+          Args.push_back(getBasicBlock(Record[OpNum]));
+        else
+          Args.push_back(getValue(Record, OpNum, NextValueNo,
+                                  FTy->getParamType(i)));
+        if (!Args.back())
+          return error("Invalid record");
+      }
+
+      // Read type/value pairs for varargs params.
+      if (!FTy->isVarArg()) {
+        if (OpNum != Record.size())
+          return error("Invalid record");
+      } else {
+        while (OpNum != Record.size()) {
+          Value *Op;
+          if (getValueTypePair(Record, OpNum, NextValueNo, Op))
+            return error("Invalid record");
+          Args.push_back(Op);
+        }
+      }
+
+      I = CallBrInst::Create(FTy, Callee, DefaultDest, IndirectDests, Args,
+                             OperandBundles);
+      OperandBundles.clear();
+      InstructionList.push_back(I);
+      cast<CallBrInst>(I)->setCallingConv(
+          static_cast<CallingConv::ID>((0x7ff & CCInfo) >> bitc::CALL_CCONV));
+      cast<CallBrInst>(I)->setAttributes(PAL);
+      break;
+    }
     case bitc::FUNC_CODE_INST_UNREACHABLE: // UNREACHABLE
       I = new UnreachableInst(Context);
       InstructionList.push_back(I);

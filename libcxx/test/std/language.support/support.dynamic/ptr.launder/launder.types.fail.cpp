@@ -21,7 +21,7 @@
 
 void foo() {}
 
-int main ()
+int main(int, char**)
 {
     void *p = nullptr;
     (void) std::launder((               void *) nullptr);
@@ -32,4 +32,6 @@ int main ()
 
     (void) std::launder(foo);                              // expected-error-re@new:* 1 {{static_assert failed{{.*}} "can't launder functions"}}
     // expected-error@new:* 0-1 {{function pointer argument to '__builtin_launder' is not allowed}}
+
+  return 0;
 }

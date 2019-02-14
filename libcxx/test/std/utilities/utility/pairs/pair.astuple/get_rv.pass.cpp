@@ -20,7 +20,7 @@
 #include <memory>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<std::unique_ptr<int>, short> P;
@@ -28,4 +28,6 @@ int main()
         std::unique_ptr<int> ptr = std::get<0>(std::move(p));
         assert(*ptr == 3);
     }
+
+  return 0;
 }

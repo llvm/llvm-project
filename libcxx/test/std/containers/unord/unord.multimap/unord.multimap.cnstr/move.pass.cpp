@@ -29,7 +29,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string,
@@ -221,4 +221,6 @@ int main()
         assert(s2.size() == 2);
     }
 #endif
+
+  return 0;
 }

@@ -75,9 +75,11 @@ void do_test(coro::coroutine_handle<Promise>&& H) {
   }
 }
 
-int main()
+int main(int, char**)
 {
   do_test(coro::coroutine_handle<int>{});
   do_test(coro::coroutine_handle<const int>{});
   do_runtime_test();
+
+  return 0;
 }

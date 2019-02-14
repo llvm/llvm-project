@@ -20,7 +20,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex phone_numbers("\\d{3}-\\d{4}");
@@ -70,4 +70,6 @@ int main()
                                            std::regex_constants::format_no_copy);
         assert(r == "123-555-1234");
     }
+
+  return 0;
 }

@@ -32,7 +32,7 @@ test(T expected)
     assert(std::numeric_limits<const volatile T>::is_bounded);
 }
 
-int main()
+int main(int, char**)
 {
     test<bool>(true);
     test<char>(CHAR_MAX);
@@ -61,4 +61,6 @@ int main()
     test<float>(FLT_MAX);
     test<double>(DBL_MAX);
     test<long double>(LDBL_MAX);
+
+  return 0;
 }

@@ -748,10 +748,9 @@ multiclass TerRMWPattern<PatFrag rmw_32, PatFrag rmw_64, NI inst_32,
   def : TerRMWPatExternSymOffOnly<i64, rmw_64, inst_64>;
 }
 
-let Predicates = [HasAtomics] in {
+let Predicates = [HasAtomics] in
 defm : TerRMWPattern<atomic_cmp_swap_32, atomic_cmp_swap_64,
                      ATOMIC_RMW_CMPXCHG_I32, ATOMIC_RMW_CMPXCHG_I64>;
-} // Predicates = [HasAtomics]
 
 // Truncating & zero-extending ternary RMW patterns.
 // DAG legalization & optimization before instruction selection may introduce
@@ -885,13 +884,12 @@ multiclass TerRMWTruncExtPattern<
   def : TerRMWPatExternSymOffOnly<i64, sext_ter_rmw_16_64<rmw_16>, inst16_64>;
 }
 
-let Predicates = [HasAtomics] in {
+let Predicates = [HasAtomics] in
 defm : TerRMWTruncExtPattern<
   atomic_cmp_swap_8, atomic_cmp_swap_16, atomic_cmp_swap_32, atomic_cmp_swap_64,
   ATOMIC_RMW8_U_CMPXCHG_I32, ATOMIC_RMW16_U_CMPXCHG_I32,
   ATOMIC_RMW8_U_CMPXCHG_I64, ATOMIC_RMW16_U_CMPXCHG_I64,
   ATOMIC_RMW32_U_CMPXCHG_I64>;
-}
 
 //===----------------------------------------------------------------------===//
 // Atomic wait / notify

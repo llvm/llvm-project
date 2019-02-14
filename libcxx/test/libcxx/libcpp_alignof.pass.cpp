@@ -28,9 +28,10 @@ void test() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test<int>();
   test<long long>();
   test<double>();
   test<long double>();
+  return 0;
 }

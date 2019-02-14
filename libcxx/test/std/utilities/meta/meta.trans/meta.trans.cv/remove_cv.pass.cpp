@@ -32,7 +32,7 @@ void test_remove_cv()
     test_remove_cv_imp<const volatile T, T>();
 }
 
-int main()
+int main(int, char**)
 {
     test_remove_cv<void>();
     test_remove_cv<int>();
@@ -41,4 +41,6 @@ int main()
     test_remove_cv<const int&>();
     test_remove_cv<int*>();
     test_remove_cv<const int*>();
+
+  return 0;
 }

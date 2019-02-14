@@ -18,7 +18,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int V;
@@ -105,4 +105,6 @@ int main()
         assert(*next(mo.begin()) == 2);
         assert(*next(mo.begin(), 2) == 3);
     }
+
+  return 0;
 }

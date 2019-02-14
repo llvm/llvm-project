@@ -37,7 +37,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb(" 1234567890");
@@ -81,4 +81,6 @@ int main()
         assert(std::wstring(s, 1) == L"0");
         assert(is.readsome(s, 5) == 0);
     }
+
+  return 0;
 }

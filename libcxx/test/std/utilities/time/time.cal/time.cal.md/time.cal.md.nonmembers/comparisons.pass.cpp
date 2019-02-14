@@ -26,7 +26,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using day       = std::chrono::day;
     using month     = std::chrono::month;
@@ -66,4 +66,6 @@ int main()
                 month_day{month{2}, day{j}},
                 i == j, i < j )));
 
+
+  return 0;
 }

@@ -28,7 +28,7 @@ test(S s, typename S::difference_type pos, typename S::size_type n,
     assert(s == expected);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -166,4 +166,6 @@ int main()
     test(S("abcdefghijklmnopqrst"), 20, 20, '1', S("abcdefghijklmnopqrst11111111111111111111"));
     }
 #endif
+
+  return 0;
 }

@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using day       = std::chrono::day;
     using month_day = std::chrono::month_day;
@@ -34,4 +34,6 @@ int main()
         month_day md(std::chrono::March, day{i});
         assert( static_cast<unsigned>(md.day()) == i);
     }
+
+  return 0;
 }

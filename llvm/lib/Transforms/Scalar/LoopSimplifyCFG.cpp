@@ -20,6 +20,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -28,7 +29,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -41,7 +41,7 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-simplifycfg"
 
 static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
-                                       cl::init(false));
+                                       cl::init(true));
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
@@ -89,6 +89,8 @@ private:
   DominatorTree &DT;
   ScalarEvolution &SE;
   MemorySSAUpdater *MSSAU;
+  DomTreeUpdater DTU;
+  SmallVector<DominatorTree::UpdateType, 16> DTUpdates;
 
   // Whether or not the current loop has irreducible CFG.
   bool HasIrreducibleCFG = false;
@@ -229,8 +231,10 @@ private:
     // Now, all exit blocks that are not marked as live are dead.
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L.getExitBlocks(ExitBlocks);
+    SmallPtrSet<BasicBlock *, 8> UniqueDeadExits;
     for (auto *ExitBlock : ExitBlocks)
-      if (!LiveExitBlocks.count(ExitBlock))
+      if (!LiveExitBlocks.count(ExitBlock) &&
+          UniqueDeadExits.insert(ExitBlock).second)
         DeadExitBlocks.push_back(ExitBlock);
 
     // Whether or not the edge From->To will still be present in graph after the
@@ -317,14 +321,13 @@ private:
 
     // Construct split preheader and the dummy switch to thread edges from it to
     // dead exits.
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
     BasicBlock *Preheader = L.getLoopPreheader();
     BasicBlock *NewPreheader = Preheader->splitBasicBlock(
         Preheader->getTerminator(),
         Twine(Preheader->getName()).concat("-split"));
-    DTU.deleteEdge(Preheader, L.getHeader());
-    DTU.insertEdge(NewPreheader, L.getHeader());
-    DTU.insertEdge(Preheader, NewPreheader);
+    DTUpdates.push_back({DominatorTree::Delete, Preheader, L.getHeader()});
+    DTUpdates.push_back({DominatorTree::Insert, NewPreheader, L.getHeader()});
+    DTUpdates.push_back({DominatorTree::Insert, Preheader, NewPreheader});
     IRBuilder<> Builder(Preheader->getTerminator());
     SwitchInst *DummySwitch =
         Builder.CreateSwitch(Builder.getInt32(0), NewPreheader);
@@ -343,7 +346,7 @@ private:
       }
       assert(DummyIdx != 0 && "Too many dead exits!");
       DummySwitch->addCase(Builder.getInt32(DummyIdx++), BB);
-      DTU.insertEdge(Preheader, BB);
+      DTUpdates.push_back({DominatorTree::Insert, Preheader, BB});
       ++NumLoopExitsDeleted;
     }
 
@@ -387,6 +390,9 @@ private:
         while (FixLCSSALoop->getParentLoop() != StillReachable)
           FixLCSSALoop = FixLCSSALoop->getParentLoop();
         assert(FixLCSSALoop && "Should be a loop!");
+        // We need all DT updates to be done before forming LCSSA.
+        DTU.applyUpdates(DTUpdates);
+        DTUpdates.clear();
         formLCSSARecursively(*FixLCSSALoop, DT, &LI, &SE);
       }
     }
@@ -395,33 +401,52 @@ private:
   /// Delete loop blocks that have become unreachable after folding. Make all
   /// relevant updates to DT and LI.
   void deleteDeadLoopBlocks() {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
     if (MSSAU) {
       SmallPtrSet<BasicBlock *, 8> DeadLoopBlocksSet(DeadLoopBlocks.begin(),
                                                      DeadLoopBlocks.end());
       MSSAU->removeBlocks(DeadLoopBlocksSet);
     }
+
+    // The function LI.erase has some invariants that need to be preserved when
+    // it tries to remove a loop which is not the top-level loop. In particular,
+    // it requires loop's preheader to be strictly in loop's parent. We cannot
+    // just remove blocks one by one, because after removal of preheader we may
+    // break this invariant for the dead loop. So we detatch and erase all dead
+    // loops beforehand.
+    for (auto *BB : DeadLoopBlocks)
+      if (LI.isLoopHeader(BB)) {
+        assert(LI.getLoopFor(BB) != &L && "Attempt to remove current loop!");
+        Loop *DL = LI.getLoopFor(BB);
+        if (DL->getParentLoop()) {
+          for (auto *PL = DL->getParentLoop(); PL; PL = PL->getParentLoop())
+            for (auto *BB : DL->getBlocks())
+              PL->removeBlockFromLoop(BB);
+          DL->getParentLoop()->removeChildLoop(DL);
+          LI.addTopLevelLoop(DL);
+        }
+        LI.erase(DL);
+      }
+
     for (auto *BB : DeadLoopBlocks) {
       assert(BB != L.getHeader() &&
              "Header of the current loop cannot be dead!");
       LLVM_DEBUG(dbgs() << "Deleting dead loop block " << BB->getName()
                         << "\n");
-      if (LI.isLoopHeader(BB)) {
-        assert(LI.getLoopFor(BB) != &L && "Attempt to remove current loop!");
-        LI.erase(LI.getLoopFor(BB));
-      }
       LI.removeBlock(BB);
     }
 
-    DeleteDeadBlocks(DeadLoopBlocks, &DTU);
+    DetatchDeadBlocks(DeadLoopBlocks, &DTUpdates, /*KeepOneInputPHIs*/true);
+    DTU.applyUpdates(DTUpdates);
+    DTUpdates.clear();
+    for (auto *BB : DeadLoopBlocks)
+      DTU.deleteBB(BB);
+
     NumLoopBlocksDeleted += DeadLoopBlocks.size();
   }
 
   /// Constant-fold terminators of blocks acculumated in FoldCandidates into the
   /// unconditional branches.
   void foldTerminators() {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-
     for (BasicBlock *BB : FoldCandidates) {
       assert(LI.getLoopFor(BB) == &L && "Should be a loop block!");
       BasicBlock *TheOnlySucc = getOnlyLiveSuccessor(BB);
@@ -463,7 +488,7 @@ private:
       Term->eraseFromParent();
 
       for (auto *DeadSucc : DeadSuccessors)
-        DTU.deleteEdge(BB, DeadSucc);
+        DTUpdates.push_back({DominatorTree::Delete, BB, DeadSucc});
 
       ++NumTerminatorsFolded;
     }
@@ -473,7 +498,8 @@ public:
   ConstantTerminatorFoldingImpl(Loop &L, LoopInfo &LI, DominatorTree &DT,
                                 ScalarEvolution &SE,
                                 MemorySSAUpdater *MSSAU)
-      : L(L), LI(LI), DT(DT), SE(SE), MSSAU(MSSAU) {}
+      : L(L), LI(LI), DT(DT), SE(SE), MSSAU(MSSAU),
+        DTU(DT, DomTreeUpdater::UpdateStrategy::Eager) {}
   bool run() {
     assert(L.getLoopLatch() && "Should be single latch!");
 
@@ -537,6 +563,10 @@ public:
                     << " dead blocks in loop " << L.getHeader()->getName()
                     << "\n");
       deleteDeadLoopBlocks();
+    } else {
+      // If we didn't do updates inside deleteDeadLoopBlocks, do them here.
+      DTU.applyUpdates(DTUpdates);
+      DTUpdates.clear();
     }
 
 #ifndef NDEBUG

@@ -30,7 +30,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string,
@@ -262,4 +262,6 @@ int main()
     }
 #endif
 #endif
+
+  return 0;
 }

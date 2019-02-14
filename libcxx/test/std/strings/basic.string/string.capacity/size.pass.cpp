@@ -22,7 +22,7 @@ test(const S& s, typename S::size_type c)
     assert(s.size() == c);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -38,4 +38,6 @@ int main()
     test(S("12345678901234567890123456789012345678901234567890"), 50);
     }
 #endif
+
+  return 0;
 }

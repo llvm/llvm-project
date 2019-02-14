@@ -27,7 +27,7 @@ test(S s1, const S& s2)
     assert(s1.capacity() >= s1.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -76,4 +76,6 @@ int main()
     assert(s == "a");
     }
 #endif
+
+  return 0;
 }

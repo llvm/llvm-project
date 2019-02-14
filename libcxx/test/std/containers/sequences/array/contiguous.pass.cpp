@@ -20,11 +20,13 @@ void test_contiguous ( const C &c )
         assert ( *(c.begin() + i) == *(std::addressof(*c.begin()) + i));
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
         typedef std::array<T, 3> C;
         test_contiguous (C());
     }
+
+  return 0;
 }

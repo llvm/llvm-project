@@ -1,0 +1,36 @@
+import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+
+static_library("clang-tidy") {
+  output_name = "clangTidy"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/include/clang/StaticAnalyzer/Checkers",
+    "//clang/lib/AST",
+    "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
+    "//clang/lib/Format",
+    "//clang/lib/Frontend",
+    "//clang/lib/Lex",
+    "//clang/lib/Rewrite",
+    "//clang/lib/Sema",
+    "//clang/lib/Serialization",
+    "//clang/lib/Tooling",
+    "//clang/lib/Tooling/Core",
+    "//llvm/lib/Support",
+  ]
+
+  if (clang_enable_static_analyzer) {
+    deps += [
+      "//clang/lib/StaticAnalyzer/Core",
+      "//clang/lib/StaticAnalyzer/Frontend",
+    ]
+  }
+
+  sources = [
+    "ClangTidy.cpp",
+    "ClangTidyDiagnosticConsumer.cpp",
+    "ClangTidyModule.cpp",
+    "ClangTidyOptions.cpp",
+    "ClangTidyProfiling.cpp",
+  ]
+}

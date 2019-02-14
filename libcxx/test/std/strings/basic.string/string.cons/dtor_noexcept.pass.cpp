@@ -32,7 +32,7 @@ struct throwing_alloc
 std::string s;
 std::wstring ws;
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::string C;
@@ -48,4 +48,6 @@ int main()
         static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
 #endif // _LIBCPP_VERSION
+
+  return 0;
 }

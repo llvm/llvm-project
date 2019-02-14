@@ -30,7 +30,7 @@ test(T& t)
 
 void f() {}
 
-int main()
+int main(int, char**)
 {
     void (*fp)() = f;
     test(fp);
@@ -41,4 +41,6 @@ int main()
     test(i);
     const int j = 0;
     test(j);
+
+  return 0;
 }

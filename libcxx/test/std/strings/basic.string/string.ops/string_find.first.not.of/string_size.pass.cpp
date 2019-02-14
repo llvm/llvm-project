@@ -140,7 +140,7 @@ void test1()
     test(S("pniotcfrhqsmgdkjbael"), S("htaobedqikfplcgjsmrn"), S::npos);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -161,4 +161,6 @@ int main()
     assert(s.find_first_not_of({"abc", 1}) == 0);
     }
 #endif
+
+  return 0;
 }

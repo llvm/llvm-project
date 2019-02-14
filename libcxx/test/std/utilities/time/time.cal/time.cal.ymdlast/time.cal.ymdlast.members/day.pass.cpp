@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year                = std::chrono::year;
     using month               = std::chrono::month;
@@ -47,4 +47,6 @@ int main()
     assert((year_month_day_last{year{2019}, month_day_last{month{ 2}}}.day() == day{28}));
     assert((year_month_day_last{year{2020}, month_day_last{month{ 2}}}.day() == day{29}));
     assert((year_month_day_last{year{2021}, month_day_last{month{ 2}}}.day() == day{28}));
+
+  return 0;
 }

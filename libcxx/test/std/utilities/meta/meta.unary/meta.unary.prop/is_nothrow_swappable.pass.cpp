@@ -46,7 +46,7 @@ struct ThrowingMove {
 
 } // namespace MyNS
 
-int main()
+int main(int, char**)
 {
     using namespace MyNS;
     {
@@ -79,4 +79,6 @@ int main()
         static_assert(std::is_nothrow_swappable_v<int>, "");
         static_assert(!std::is_nothrow_swappable_v<void>, "");
     }
+
+  return 0;
 }

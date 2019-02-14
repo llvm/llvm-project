@@ -23,7 +23,7 @@ Sections:
         SigIndex:        1
   - Type:            CODE
     Relocations:
-      - Type:            R_WEBASSEMBLY_EVENT_INDEX_LEB
+      - Type:            R_WASM_EVENT_INDEX_LEB
         Index:           1
         Offset:          0x00000006
     Functions:
@@ -69,7 +69,7 @@ Sections:
 # CHECK-NEXT:         SigIndex:        1
 # CHECK-NEXT:   - Type:            CODE
 # CHECK-NEXT:     Relocations:
-# CHECK-NEXT:       - Type:            R_WEBASSEMBLY_EVENT_INDEX_LEB
+# CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
 # CHECK-NEXT:         Index:           1
 # CHECK-NEXT:         Offset:          0x00000006
 # CHECK-NEXT:     Functions:

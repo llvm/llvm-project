@@ -99,6 +99,41 @@ define <4 x i32> @combine_vec_add_sub1(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %2
 }
 
+; fold ((A-B)+(C-A)) -> (C-B)
+define <4 x i32> @combine_vec_add_sub_sub0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; SSE-LABEL: combine_vec_add_sub_sub0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_sub_sub0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubd %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    retq
+  %1 = sub <4 x i32> %a, %b
+  %2 = sub <4 x i32> %c, %a
+  %3 = add <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
+; fold ((A-B)+(B-C)) -> (A-C)
+define <4 x i32> @combine_vec_add_sub_sub1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; SSE-LABEL: combine_vec_add_sub_sub1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_sub_sub1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = sub <4 x i32> %a, %b
+  %2 = sub <4 x i32> %b, %c
+  %3 = add <4 x i32> %1, %2
+  ret <4 x i32> %3
+}
+
 ; fold (A+(B-(A+C))) to (B-C)
 define <4 x i32> @combine_vec_add_sub_add0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; SSE-LABEL: combine_vec_add_sub_add0:

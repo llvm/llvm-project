@@ -70,7 +70,7 @@
 #error toupper defined
 #endif
 
-int main()
+int main(int, char**)
 {
 
     ASSERT_SAME_TYPE(int, decltype(std::isalnum(0)));
@@ -102,4 +102,6 @@ int main()
     assert( std::isxdigit('a'));
     assert( std::tolower('A') == 'a');
     assert( std::toupper('a') == 'A');
+
+  return 0;
 }

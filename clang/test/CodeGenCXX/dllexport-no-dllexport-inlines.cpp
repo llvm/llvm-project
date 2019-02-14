@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 %s -fms-extensions -triple x86_64-windows-msvc       \
-// RUN:     -disable-llvm-passes                                        \
+// RUN:     -disable-llvm-passes -std=c++14                             \
 // RUN:     -fno-dllexport-inlines -emit-llvm -O1 -o - |                \
 // RUN:     FileCheck --check-prefix=CHECK --check-prefix=NOEXPORTINLINE %s
 
 // RUN: %clang_cc1 %s -fms-extensions -triple x86_64-windows-msvc       \
-// RUN:     -disable-llvm-passes                                        \
+// RUN:     -disable-llvm-passes -std=c++14                             \
 // RUN:     -emit-llvm -O1 -o - |                                       \
 // RUN:     FileCheck --check-prefix=CHECK  --check-prefix=EXPORTINLINE %s
 

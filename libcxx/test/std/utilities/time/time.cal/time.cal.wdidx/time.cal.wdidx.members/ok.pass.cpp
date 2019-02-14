@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using weekday         = std::chrono::weekday;
     using weekday_indexed = std::chrono::weekday_indexed;
@@ -45,4 +45,6 @@ int main()
 
 //  Not a valid weekday
     assert(!(weekday_indexed(weekday{9U}, 1).ok()));
+
+  return 0;
 }

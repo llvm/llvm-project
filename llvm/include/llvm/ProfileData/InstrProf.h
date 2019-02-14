@@ -1040,6 +1040,9 @@ struct Header {
 void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
                                  int64_t &RangeLast);
 
+// Create the variable for the profile file name.
+void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);
+
 } // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_INSTRPROF_H

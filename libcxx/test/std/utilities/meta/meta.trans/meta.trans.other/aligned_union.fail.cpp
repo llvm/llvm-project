@@ -16,7 +16,9 @@
 
 class A; // Incomplete
 
-int main()
+int main(int, char**)
 {
     typedef std::aligned_union<10, A>::type T1;
+
+  return 0;
 }

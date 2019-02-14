@@ -13,6 +13,7 @@
 #include "Headers.h"
 #include "SourceCode.h"
 #include "Trace.h"
+#include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
 #include "index/Merge.h"
 #include "refactor/Tweak.h"
@@ -69,9 +70,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       : FIndex(FIndex), DiagConsumer(DiagConsumer) {}
 
   void onPreambleAST(PathRef Path, ASTContext &Ctx,
-                     std::shared_ptr<clang::Preprocessor> PP) override {
+                     std::shared_ptr<clang::Preprocessor> PP,
+                     const CanonicalIncludes &CanonIncludes) override {
     if (FIndex)
-      FIndex->updatePreamble(Path, Ctx, std::move(PP));
+      FIndex->updatePreamble(Path, Ctx, std::move(PP), CanonIncludes);
   }
 
   void onMainAST(PathRef Path, ParsedAST &AST) override {
@@ -360,8 +362,9 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<tooling::Replacements> CB) {
-  auto Action = [Sel](decltype(CB) CB, std::string File, std::string TweakID,
-                      Expected<InputsAndAST> InpAST) {
+  auto Action = [Sel](decltype(CB) CB, std::string File,
+                            std::string TweakID,
+                            Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     auto Selection = tweakSelection(Sel, *InpAST);
@@ -370,8 +373,15 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
     auto A = prepareTweak(TweakID, *Selection);
     if (!A)
       return CB(A.takeError());
-    // FIXME: run formatter on top of resulting replacements.
-    return CB((*A)->apply(*Selection));
+    auto RawReplacements = (*A)->apply(*Selection);
+    if (!RawReplacements)
+      return CB(RawReplacements.takeError());
+    // FIXME: this function has I/O operations (find .clang-format file), figure
+    // out a way to cache the format style.
+    auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                                       InpAST->Inputs.FS.get());
+    return CB(
+        cleanupAndFormat(InpAST->Inputs.Contents, *RawReplacements, Style));
   };
   WorkScheduler.runWithAST(
       "ApplyTweak", File,

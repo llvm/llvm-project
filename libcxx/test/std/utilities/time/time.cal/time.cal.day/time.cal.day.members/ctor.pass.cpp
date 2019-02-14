@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using day = std::chrono::day;
 
@@ -42,4 +42,6 @@ int main()
         day day(i);
         assert(static_cast<unsigned>(day) == i);
     }
+
+  return 0;
 }

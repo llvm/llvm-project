@@ -50,11 +50,13 @@ struct pair
     T2 second;
 };
 
-int main()
+int main(int, char**)
 {
     test_is_standard_layout<int> ();
     test_is_standard_layout<int[3]> ();
     test_is_standard_layout<pair<int, double> > ();
 
     test_is_not_standard_layout<int&> ();
+
+  return 0;
 }

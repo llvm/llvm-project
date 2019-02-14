@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year                = std::chrono::year;
     using month_day_last      = std::chrono::month_day_last;
@@ -57,4 +57,6 @@ int main()
 
     assert(sd.time_since_epoch() == days{-(10957+33)});
     }
+
+    return 0;
 }

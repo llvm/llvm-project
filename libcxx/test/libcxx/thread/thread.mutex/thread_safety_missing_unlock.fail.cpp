@@ -22,6 +22,8 @@
 
 std::mutex m;
 
-int main() {
+int main(int, char**) {
   m.lock();
+
+  return 0;
 } // expected-error {{mutex 'm' is still held at the end of function}}

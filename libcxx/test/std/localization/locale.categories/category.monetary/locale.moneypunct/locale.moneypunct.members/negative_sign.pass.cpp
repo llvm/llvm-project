@@ -54,7 +54,7 @@ public:
         : std::moneypunct<wchar_t, true>(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         Fnf f(1);
@@ -72,4 +72,6 @@ int main()
         Fwt f(1);
         assert(f.negative_sign() == L"-");
     }
+
+  return 0;
 }

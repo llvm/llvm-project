@@ -1528,7 +1528,7 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
     if (TC.isThreadModelSupported(A->getValue()))
       OS << "Thread model: " << A->getValue();
   } else
-    OS << "Thread model: " << TC.getThreadModel();
+    OS << "Thread model: " << TC.getThreadModel(C.getArgs());
   OS << '\n';
 
   // Print out the install directory.
@@ -1575,8 +1575,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
 
   // We want to show cc1-only options only when clang is invoked with -cc1 or
   // -Xclang.
-  if (std::find(Flags.begin(), Flags.end(), "-Xclang") != Flags.end() ||
-      std::find(Flags.begin(), Flags.end(), "-cc1") != Flags.end())
+  if (llvm::is_contained(Flags, "-Xclang") || llvm::is_contained(Flags, "-cc1"))
     DisableFlags &= ~options::NoDriverOption;
 
   StringRef Cur;

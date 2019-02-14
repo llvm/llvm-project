@@ -57,7 +57,7 @@ FunctionPass *llvm::createWebAssemblyPeephole() {
 }
 
 /// If desirable, rewrite NewReg to a drop register.
-static bool MaybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
+static bool maybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
                                MachineOperand &MO, WebAssemblyFunctionInfo &MFI,
                                MachineRegisterInfo &MRI) {
   bool Changed = false;
@@ -71,7 +71,7 @@ static bool MaybeRewriteToDrop(unsigned OldReg, unsigned NewReg,
   return Changed;
 }
 
-static bool MaybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
+static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
                                       const MachineFunction &MF,
                                       WebAssemblyFunctionInfo &MFI,
                                       MachineRegisterInfo &MRI,
@@ -149,7 +149,7 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
               if (MRI.getRegClass(NewReg) != MRI.getRegClass(OldReg))
                 report_fatal_error("Peephole: call to builtin function with "
                                    "wrong signature, from/to mismatch");
-              Changed |= MaybeRewriteToDrop(OldReg, NewReg, MO, MFI, MRI);
+              Changed |= maybeRewriteToDrop(OldReg, NewReg, MO, MFI, MRI);
             }
           }
         }
@@ -157,57 +157,57 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
       }
       // Optimize away an explicit void return at the end of the function.
       case WebAssembly::RETURN_I32:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_I32,
             WebAssembly::COPY_I32);
         break;
       case WebAssembly::RETURN_I64:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_I64,
             WebAssembly::COPY_I64);
         break;
       case WebAssembly::RETURN_F32:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_F32,
             WebAssembly::COPY_F32);
         break;
       case WebAssembly::RETURN_F64:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_F64,
             WebAssembly::COPY_F64);
         break;
       case WebAssembly::RETURN_v16i8:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v16i8,
             WebAssembly::COPY_V128);
         break;
       case WebAssembly::RETURN_v8i16:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v8i16,
             WebAssembly::COPY_V128);
         break;
       case WebAssembly::RETURN_v4i32:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v4i32,
             WebAssembly::COPY_V128);
         break;
       case WebAssembly::RETURN_v2i64:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v2i64,
             WebAssembly::COPY_V128);
         break;
       case WebAssembly::RETURN_v4f32:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v4f32,
             WebAssembly::COPY_V128);
         break;
       case WebAssembly::RETURN_v2f64:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_v2f64,
             WebAssembly::COPY_V128);
         break;
       case WebAssembly::RETURN_VOID:
-        Changed |= MaybeRewriteToFallthrough(
+        Changed |= maybeRewriteToFallthrough(
             MI, MBB, MF, MFI, MRI, TII, WebAssembly::FALLTHROUGH_RETURN_VOID,
             WebAssembly::INSTRUCTION_LIST_END);
         break;

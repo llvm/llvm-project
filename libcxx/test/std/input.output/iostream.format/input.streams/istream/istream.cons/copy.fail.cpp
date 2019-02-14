@@ -48,7 +48,9 @@ struct test_istream
 };
 
 
-int main()
+int main(int, char**)
 {
 
+
+  return 0;
 }

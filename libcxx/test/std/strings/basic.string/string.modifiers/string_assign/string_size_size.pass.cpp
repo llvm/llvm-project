@@ -71,7 +71,7 @@ test_npos(S s, S str, typename S::size_type pos, S expected)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -133,4 +133,6 @@ int main()
     test_npos(S(), S("12345"), 5, S(""));
     test_npos(S(), S("12345"), 6, S("not happening"));
     }
+
+  return 0;
 }

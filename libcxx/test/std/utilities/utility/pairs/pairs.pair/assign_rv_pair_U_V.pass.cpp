@@ -29,7 +29,7 @@ struct Derived
 {
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<std::unique_ptr<Derived>, short> P1;
@@ -55,4 +55,6 @@ int main()
        assert(p.first == 42);
        assert(p.second.value == -42);
     }
+
+  return 0;
 }

@@ -43,7 +43,7 @@ void g()
         cv->wait(lk);
 }
 
-int main()
+int main(int, char**)
 {
     cv = new std::condition_variable;
     std::thread th2(g);
@@ -54,4 +54,6 @@ int main()
     std::thread th1(f);
     th1.join();
     th2.join();
+
+  return 0;
 }

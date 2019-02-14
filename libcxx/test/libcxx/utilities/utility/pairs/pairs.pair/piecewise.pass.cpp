@@ -23,7 +23,7 @@
 #include "archetypes.hpp"
 
 
-int main() {
+int main(int, char**) {
     using NonThrowingConvert = NonThrowingTypes::ConvertingType;
     using ThrowingConvert = NonTrivialTypes::ConvertingType;
     static_assert(!std::is_nothrow_constructible<std::pair<ThrowingConvert, ThrowingConvert>,
@@ -34,4 +34,6 @@ int main() {
                                                  std::piecewise_construct_t, std::tuple<int, int>, std::tuple<long, long>>::value, "");
     static_assert( std::is_nothrow_constructible<std::pair<NonThrowingConvert, NonThrowingConvert>,
                                                  std::piecewise_construct_t, std::tuple<int, int>, std::tuple<long, long>>::value, "");
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::string target = "foo";
@@ -47,4 +47,6 @@ int main()
     assert( std::regex_search(target, re));
     assert( std::regex_search(target, re, std::regex_constants::match_not_eol));
     }
+
+  return 0;
 }

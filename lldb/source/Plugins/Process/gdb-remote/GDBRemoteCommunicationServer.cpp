@@ -106,7 +106,7 @@ GDBRemoteCommunicationServer::SendErrorResponse(const Status &error) {
   if (m_send_error_strings) {
     lldb_private::StreamString packet;
     packet.Printf("E%2.2x;", static_cast<uint8_t>(error.GetError()));
-    packet.PutCStringAsRawHex8(error.AsCString());
+    packet.PutStringAsRawHex8(error.AsCString());
     return SendPacketNoLock(packet.GetString());
   } else
     return SendErrorResponse(error.GetError());

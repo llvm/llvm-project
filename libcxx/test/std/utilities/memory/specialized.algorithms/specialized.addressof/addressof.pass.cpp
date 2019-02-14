@@ -26,7 +26,7 @@ struct nothing {
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
     int i;
@@ -47,4 +47,6 @@ int main()
     };
     assert(std::addressof(n) == (void*)std::addressof(i));
     }
+
+  return 0;
 }

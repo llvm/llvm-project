@@ -38,3 +38,16 @@
 
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-wasi-musl --sysroot=/foo %s 2>&1 | FileCheck -check-prefix=COMPILE %s
 // COMPILE: clang{{.*}}" "-cc1" {{.*}} "-internal-isystem" "/foo/include/wasm32-wasi-musl" "-internal-isystem" "/foo/include"
+
+// Thread-related command line tests.
+// - '-mthread-model' sets '-target-feature +matomics'
+// - '-phread' sets both '-target-featuer +atomics' and '-mthread-model posix'
+
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -mthread-model posix 2>&1 | FileCheck -check-prefix=POSIX %s
+// POSIX: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+atomics"
+
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 | FileCheck -check-prefix=PTHREAD %s
+// PTHREAD: clang{{.*}}" "-cc1" {{.*}} "-mthread-model" "posix" {{.*}} "-target-feature" "+atomics"
+
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread -mthread-model single 2>&1 | FileCheck -check-prefix=THREAD_OPT_ERROR %s
+// THREAD_OPT_ERROR: invalid argument '-pthread' not allowed with '-mthread-model single'

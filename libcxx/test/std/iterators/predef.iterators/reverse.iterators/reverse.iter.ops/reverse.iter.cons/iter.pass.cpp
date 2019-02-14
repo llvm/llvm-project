@@ -28,7 +28,7 @@ test(It i)
     assert(r.base() == i);
 }
 
-int main()
+int main(int, char**)
 {
     const char s[] = "123";
     test(bidirectional_iterator<const char*>(s));
@@ -42,4 +42,6 @@ int main()
         static_assert(it.base() == p);
     }
 #endif
+
+  return 0;
 }

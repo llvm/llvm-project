@@ -59,7 +59,7 @@ struct test
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         test<char> t;
@@ -98,4 +98,6 @@ int main()
         test<wchar_t> t2;
         t2.swap(t);
     }
+
+  return 0;
 }

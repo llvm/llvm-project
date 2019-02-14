@@ -71,7 +71,7 @@ struct incomplete_type;
 typedef void (*FunctionPtr)();
 
 
-int main()
+int main(int, char**)
 {
     test_is_integral<short>();
     test_is_integral<unsigned short>();
@@ -105,4 +105,6 @@ int main()
     test_is_not_integral<NotEmpty>();
     test_is_not_integral<Abstract>();
     test_is_not_integral<incomplete_type>();
+
+  return 0;
 }

@@ -62,7 +62,7 @@ void check_random_device_invalid(const std::string &token) {
 }
 
 
-int main() {
+int main(int, char**) {
   {
     std::random_device r;
   }
@@ -99,4 +99,6 @@ int main() {
     std::random_device r;
   }
 #endif // !defined(_WIN32)
+
+  return 0;
 }

@@ -21,7 +21,7 @@
 #include <cassert>
 #include <cstddef>
 
-int main()
+int main(int, char**)
 {
     std::vector<std::istringstream> vecis;
     vecis.push_back(std::istringstream());
@@ -34,4 +34,6 @@ int main()
         vecis[n].seekg(0, std::ios_base::beg);
         assert(vecis[n].str().size() == 31);
     }
+
+  return 0;
 }

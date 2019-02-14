@@ -761,7 +761,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
         continue;
       }
       CommonSuccBB->removePredecessor(BB,
-                                      /*DontDeleteUselessPHIs*/ true);
+                                      /*KeepOneInputPHIs*/ true);
     }
     // Now nuke the switch and replace it with a direct branch.
     SI.eraseFromParent();
@@ -1069,7 +1069,7 @@ static BasicBlock *buildClonedLoopBlocks(
       continue;
 
     ClonedSuccBB->removePredecessor(ClonedParentBB,
-                                    /*DontDeleteUselessPHIs*/ true);
+                                    /*KeepOneInputPHIs*/ true);
   }
 
   // Replace the cloned branch with an unconditional branch to the cloned
@@ -2078,7 +2078,7 @@ static void unswitchNontrivialInvariants(
              "Only one possible unswitched block for a branch!");
       BasicBlock *UnswitchedSuccBB = *UnswitchedSuccBBs.begin();
       UnswitchedSuccBB->removePredecessor(ParentBB,
-                                          /*DontDeleteUselessPHIs*/ true);
+                                          /*KeepOneInputPHIs*/ true);
       DTUpdates.push_back({DominatorTree::Delete, ParentBB, UnswitchedSuccBB});
     } else {
       // Note that we actually want to remove the parent block as a predecessor
@@ -2093,7 +2093,7 @@ static void unswitchNontrivialInvariants(
       for (auto &Case : NewSI->cases())
         Case.getCaseSuccessor()->removePredecessor(
             ParentBB,
-            /*DontDeleteUselessPHIs*/ true);
+            /*KeepOneInputPHIs*/ true);
 
       // We need to use the set to populate domtree updates as even when there
       // are multiple cases pointing at the same successor we only want to

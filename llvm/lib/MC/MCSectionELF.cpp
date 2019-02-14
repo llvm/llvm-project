@@ -17,8 +17,6 @@
 
 using namespace llvm;
 
-MCSectionELF::~MCSectionELF() = default; // anchor.
-
 // Decides whether a '.section' directive
 // should be printed before the section name.
 bool MCSectionELF::ShouldOmitSectionDirective(StringRef Name,

@@ -32,7 +32,7 @@ public:
 
 bool X::dtor_called = false;
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -64,4 +64,6 @@ int main()
         }
         assert(X::dtor_called == true);
     }
+
+  return 0;
 }

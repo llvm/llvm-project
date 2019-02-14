@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   typedef fs::path::format E;
   static_assert(std::is_enum<E>::value, "");
 
@@ -34,4 +34,6 @@ int main() {
           E::auto_format   != E::generic_format &&
           E::native_format != E::generic_format,
         "Expected enumeration values are not unique");
+
+  return 0;
 }

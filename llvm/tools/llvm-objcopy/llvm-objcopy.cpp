@@ -70,9 +70,7 @@ LLVM_ATTRIBUTE_NORETURN void error(Error E) {
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
   assert(EC);
-  WithColor::error(errs(), ToolName)
-      << "'" << File << "': " << EC.message() << ".\n";
-  exit(1);
+  error(createFileError(File, EC));
 }
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
@@ -156,9 +154,6 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
-    // FIXME: Archive::child_iterator requires that Err be checked *during* loop
-    // iteration, and hence does not allow early returns.
-    cantFail(std::move(Err));
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr)
       return createFileError(Ar.getFileName(), ChildOrErr.takeError());

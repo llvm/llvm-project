@@ -29,7 +29,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using local_days = std::chrono::local_days;
     using days       = std::chrono::days;
@@ -69,4 +69,6 @@ int main()
     assert( wd.ok());
     assert(static_cast<unsigned>(wd) == 3);
     }
+
+    return 0;
 }

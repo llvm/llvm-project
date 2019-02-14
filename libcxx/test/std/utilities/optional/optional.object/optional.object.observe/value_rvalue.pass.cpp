@@ -9,13 +9,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_optional_access && !libcpp-no-exceptions
 
 // constexpr T& optional<T>::value() &&;
 
@@ -50,7 +44,7 @@ test()
     return std::move(opt).value().test();
 }
 
-int main()
+int main(int, char**)
 {
     {
         optional<X> opt; ((void)opt);
@@ -76,4 +70,6 @@ int main()
     }
 #endif
     static_assert(test() == 7, "");
+
+  return 0;
 }

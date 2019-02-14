@@ -16,7 +16,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     int a[] = {1, 2, 3};
@@ -40,4 +40,6 @@ int main()
     assert(c.empty());
     }
 #endif
+
+  return 0;
 }

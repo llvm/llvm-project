@@ -25,8 +25,10 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     const test t;
     assert(t.width() == 0);
+
+  return 0;
 }

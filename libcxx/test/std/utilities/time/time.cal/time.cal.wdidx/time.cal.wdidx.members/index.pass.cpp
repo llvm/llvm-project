@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using weekday         = std::chrono::weekday;
     using weekday_indexed = std::chrono::weekday_indexed;
@@ -34,4 +34,6 @@ int main()
         weekday_indexed wdi(weekday{2}, i);
         assert( static_cast<unsigned>(wdi.index()) == i);
     }
+
+  return 0;
 }

@@ -23,7 +23,7 @@ void test_decay()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_decay<void, void>();
     test_decay<int, int>();
@@ -38,4 +38,6 @@ int main()
     test_decay<int(int)  &, int(int)  &>();
     test_decay<int(int) &&, int(int) &&>();
 #endif
+
+  return 0;
 }

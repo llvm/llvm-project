@@ -1,4 +1,6 @@
-// RUN: %clangxx_hwasan %s -lstdc++ -o %t
+// This test requires operator new to be intercepted by the hwasan runtime,
+// so we need to avoid linking against libc++.
+// RUN: %clangxx_hwasan %s -nostdlib++ -lstdc++ -o %t
 // RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t malloc 2>&1          | FileCheck %s --check-prefix=CHECK-max
 // RUN: %env_hwasan_opts=allocator_may_return_null=1     %run %t malloc 2>&1
 // RUN: %env_hwasan_opts=allocator_may_return_null=0 not %run %t malloc max 2>&1      | FileCheck %s --check-prefix=CHECK-max

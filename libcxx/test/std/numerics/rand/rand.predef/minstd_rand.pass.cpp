@@ -14,9 +14,11 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::minstd_rand e;
     e.discard(9999);
     assert(e() == 399268537u);
+
+  return 0;
 }

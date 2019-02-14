@@ -31,10 +31,12 @@ template<class T = int>
 auto test(int) -> decltype(PushFront(std::declval<T>()), std::true_type{});
 auto test(long) -> std::false_type;
 
-int main() {
+int main(int, char**) {
 #if defined(TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK)
     static_assert(!decltype(test(0))::value, "");
 #else
     static_assert(decltype(test(0))::value, "");
 #endif
+
+  return 0;
 }

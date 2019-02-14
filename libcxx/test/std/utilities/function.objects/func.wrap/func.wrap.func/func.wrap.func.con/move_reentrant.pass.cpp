@@ -33,7 +33,7 @@ struct A
 std::function<void()> A::global;
 bool A::cancel = false;
 
-int main()
+int main(int, char**)
 {
   A::global = A();
   assert(A::global.target<A>());
@@ -42,4 +42,6 @@ int main()
   A::cancel = true;
   A::global = std::function<void()>(nullptr);
   assert(!A::global.target<A>());
+
+  return 0;
 }

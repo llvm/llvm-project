@@ -20,6 +20,8 @@
 
 #include "DynamicLoaderHexagonDYLD.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -454,7 +456,8 @@ DynamicLoaderHexagonDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
     llvm::sort(start, end);
     addrs.erase(std::unique(start, end), end);
-    thread_plan_sp.reset(new ThreadPlanRunToAddress(thread, addrs, stop));
+    thread_plan_sp =
+        std::make_shared<ThreadPlanRunToAddress>(thread, addrs, stop);
   }
 
   return thread_plan_sp;

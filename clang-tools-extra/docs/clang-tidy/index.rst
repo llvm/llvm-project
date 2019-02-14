@@ -262,25 +262,46 @@ Suppressing Undesired Diagnostics
 
 :program:`clang-tidy` diagnostics are intended to call out code that does not
 adhere to a coding standard, or is otherwise problematic in some way.  However,
-if it is known that the code is correct, the check-specific ways to silence the
-diagnostics could be used, if they are available (e.g.  bugprone-use-after-move
-can be silenced by re-initializing the variable after it has been moved out,
-bugprone-string-integer-assignment can be suppressed by explicitly casting the
-integer to ``char``, readability-implicit-bool-conversion can also be suppressed
-by using explicit casts, etc.). If they are not available or if changing the
-semantics of the code is not desired, the ``NOLINT`` or ``NOLINTNEXTLINE``
-comments can be used instead. For example:
+if the code is known to be correct, it may be useful to silence the warning.
+Some clang-tidy checks provide a check-specific way to silence the diagnostics,
+e.g.  `bugprone-use-after-move <checks/bugprone-use-after-move>`_ can be
+silenced by re-initializing the variable after it has been moved out,
+`bugprone-string-integer-assignment
+<checks/bugprone-string-integer-assignment>`_ can be suppressed by explicitly
+casting the integer to ``char``, `readability-implicit-bool-conversion
+<checks/readability-implicit-bool-conversion>`_ can also be suppressed by using
+explicit casts, etc.
+
+If a specific suppression mechanism is not available for a certain warning, or
+its use is not desired for some reason, :program:`clang-tidy` has a generic
+mechanism to suppress diagnostics using ``NOLINT`` or ``NOLINTNEXTLINE``
+comments.
+
+The ``NOLINT`` comment instructs :program:`clang-tidy` to ignore warnings on the
+*same line* (it doesn't apply to a function, a block of code or any other
+language construct, it applies to the line of code it is on). If introducing the
+comment in the same line would change the formatting in undesired way, the
+``NOLINTNEXTLINE`` comment allows to suppress clang-tidy warnings on the *next
+line*.
+
+Both comments can be followed by an optional list of check names in parentheses
+(see below for the formal syntax).
+
+For example:
 
 .. code-block:: c++
 
   class Foo {
-    // Silent all the diagnostics for the line
+    // Suppress all the diagnostics for the line
     Foo(int param); // NOLINT
 
-    // Silent only the specified checks for the line
+    // Consider explaining the motivation to suppress the warning.
+    Foo(char param); // NOLINT: Allow implicit conversion from `char`, because <some valid reason>.
+
+    // Silence only the specified checks for the line
     Foo(double param); // NOLINT(google-explicit-constructor, google-runtime-int)
 
-    // Silent only the specified diagnostics for the next line
+    // Silence only the specified diagnostics for the next line
     // NOLINTNEXTLINE(google-explicit-constructor, google-runtime-int)
     Foo(bool param);
   };

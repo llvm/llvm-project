@@ -33,7 +33,7 @@ test(S s)
     assert(static_cast<std::size_t>(ce - cs.begin()) == cs.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -47,4 +47,6 @@ int main()
     test(S("123"));
     }
 #endif
+
+  return 0;
 }

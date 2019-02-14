@@ -28,7 +28,7 @@ void test(const void* key, int len) {
   }
 }
 
-int main() {
+int main(int, char**) {
   const std::string TestCases[] = {
       "abcdaoeuaoeclaoeoaeuaoeuaousaotehu]+}sthoasuthaoesutahoesutaohesutaoeusaoetuhasoetuhaoseutaoseuthaoesutaohes"
       "00000000000000000000000000000000000000000000000000000000000000000000000",
@@ -37,4 +37,6 @@ int main() {
   const size_t NumCases = sizeof(TestCases)/sizeof(TestCases[0]);
   for (size_t i=0; i < NumCases; ++i)
     test(TestCases[i].data(), TestCases[i].length());
+
+  return 0;
 }

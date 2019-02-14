@@ -28,7 +28,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year                    = std::chrono::year;
     using month                   = std::chrono::month;
@@ -48,4 +48,6 @@ int main()
     static_assert( ym1.weekday_last() == weekday_last{Tuesday}, "");
     static_assert( ym1.ok(),                                    "");
 
+
+  return 0;
 }

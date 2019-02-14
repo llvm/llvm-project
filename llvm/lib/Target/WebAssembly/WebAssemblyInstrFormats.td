@@ -22,6 +22,9 @@ class WebAssemblyInst<bits<32> inst, string asmstr, string stack> : StackRel,
   let Namespace   = "WebAssembly";
   let Pattern     = [];
   let AsmString   = asmstr;
+  // When there are multiple instructions that map to the same encoding (in
+  // e.g. the disassembler use case) prefer the one where IsCanonical == 1.
+  bit IsCanonical = 0;
 }
 
 // Normal instructions. Default instantiation of a WebAssemblyInst.

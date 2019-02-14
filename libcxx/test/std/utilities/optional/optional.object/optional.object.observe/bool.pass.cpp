@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     {
@@ -33,4 +33,6 @@ int main()
         constexpr optional<int> opt(0);
         static_assert(opt, "");
     }
+
+  return 0;
 }

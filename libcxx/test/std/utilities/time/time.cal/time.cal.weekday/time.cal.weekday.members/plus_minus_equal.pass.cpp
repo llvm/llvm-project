@@ -33,7 +33,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using weekday = std::chrono::weekday;
     using days    = std::chrono::days;
@@ -59,4 +59,6 @@ int main()
         assert((static_cast<unsigned>(wd -= days{4}) == euclidian_subtraction<unsigned, 0, 6>(i, 4)));
         assert((static_cast<unsigned>(wd)            == euclidian_subtraction<unsigned, 0, 6>(i, 4)));
     }
+
+  return 0;
 }

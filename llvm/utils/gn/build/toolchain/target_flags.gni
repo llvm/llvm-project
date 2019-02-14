@@ -2,33 +2,13 @@ import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 target_flags = []
-target_cflags = []
 target_ldflags = []
 
 if (current_os == "android") {
-  assert(current_cpu == "arm64", "current_cpu not supported")
-
-  libcxx_path = "$android_ndk_path/sources/cxx-stl/llvm-libc++"
-  platform_lib_path =
-      "$android_ndk_path/platforms/android-21/arch-arm64/usr/lib"
-  libgcc_path = "$android_ndk_path/toolchains/aarch64-linux-android-4.9/prebuilt/linux-x86_64/lib/gcc/aarch64-linux-android/4.9.x"
-
   target_flags += [
     "--target=$llvm_current_triple",
-    "--sysroot=$android_ndk_path/sysroot",
+    "--sysroot=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+    "-B$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64",
   ]
-  target_cflags += [
-    "-isystem",
-    "$libcxx_path/include",
-  ]
-  target_ldflags += [
-    "-B$platform_lib_path",
-    "-L$platform_lib_path",
-    "-L$libgcc_path",
-  ]
-  target_ldflags += [
-    "-nostdlib++",
-    "-L$libcxx_path/libs/arm64-v8a",
-    "-l:libc++.a.21",
-  ]
+  target_ldflags += [ "-static-libstdc++" ]
 }

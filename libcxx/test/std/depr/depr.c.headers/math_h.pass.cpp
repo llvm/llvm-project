@@ -1463,7 +1463,7 @@ void test_trunc()
     assert(trunc(1) == 1);
 }
 
-int main()
+int main(int, char**)
 {
     test_abs();
     test_acos();
@@ -1535,4 +1535,6 @@ int main()
     test_scalbn();
     test_tgamma();
     test_trunc();
+
+  return 0;
 }

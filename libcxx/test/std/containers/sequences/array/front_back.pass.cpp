@@ -36,7 +36,7 @@ constexpr bool check_back( double val )
 }
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -115,4 +115,6 @@ int main()
         static_assert (check_back (3.5), "");
     }
 #endif
+
+  return 0;
 }

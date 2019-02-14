@@ -760,3 +760,29 @@ entry:
   %shuf2 = shufflevector <8 x float> %inp1, <8 x float> %shuf1, <8 x i32> <i32 15, i32 10, i32 7, i32 2, i32 12, i32 undef, i32 3, i32 2>
   ret <8 x float> %shuf2
 }
+
+define void @packss_zext_v8i1() {
+; X86-LABEL: packss_zext_v8i1:
+; X86:       # %bb.0:
+; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovups %ymm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: packss_zext_v8i1:
+; X64:       # %bb.0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovups %ymm0, (%rax)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %tmp0 = icmp sgt <8 x i32> undef, undef
+  %tmp1 = zext <8 x i1> %tmp0 to <8 x i32>
+  %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %tmp3 = trunc <16 x i32> %tmp2 to <16 x i16>
+  %tmp4 = add <16 x i16> zeroinitializer, %tmp3
+  %tmp6 = sext <16 x i16> %tmp4 to <16 x i32>
+  %tmp10 = shufflevector <16 x i32> %tmp6, <16 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
+  %tmp11 = tail call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> undef, <8 x i32> %tmp10)
+  store <16 x i16> %tmp11, <16 x i16>* undef, align 2
+  ret void
+}

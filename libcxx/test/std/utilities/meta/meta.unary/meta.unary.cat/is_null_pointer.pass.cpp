@@ -72,7 +72,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_null_pointer<std::nullptr_t>();
 
@@ -93,4 +93,6 @@ int main()
     test_is_not_null_pointer<NotEmpty>();
     test_is_not_null_pointer<Abstract>();
     test_is_not_null_pointer<incomplete_type>();
+
+  return 0;
 }

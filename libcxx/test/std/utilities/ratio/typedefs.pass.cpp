@@ -10,7 +10,7 @@
 
 #include <ratio>
 
-int main()
+int main(int, char**)
 {
     static_assert(std::atto::num == 1 && std::atto::den == 1000000000000000000ULL, "");
     static_assert(std::femto::num == 1 && std::femto::den == 1000000000000000ULL, "");
@@ -28,4 +28,6 @@ int main()
     static_assert(std::tera::num == 1000000000000ULL && std::tera::den == 1, "");
     static_assert(std::peta::num == 1000000000000000ULL && std::peta::den == 1, "");
     static_assert(std::exa::num == 1000000000000000000ULL && std::exa::den == 1, "");
+
+  return 0;
 }

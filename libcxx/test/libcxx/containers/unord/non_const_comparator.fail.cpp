@@ -29,7 +29,7 @@ struct BadEqual {
   }
 };
 
-int main() {
+int main(int, char**) {
   static_assert(!std::__invokable<BadEqual const&, int const&, int const&>::value, "");
   static_assert(std::__invokable<BadEqual&, int const&, int const&>::value, "");
 
@@ -54,4 +54,6 @@ int main() {
     using C = std::unordered_multimap<long, int, BadHash, BadEqual>;
     C s;
   }
+
+  return 0;
 }

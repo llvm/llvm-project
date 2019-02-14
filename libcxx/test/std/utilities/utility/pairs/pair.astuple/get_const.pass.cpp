@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P;
@@ -36,4 +36,6 @@ int main()
         static_assert(std::get<1>(p1) == 4, "");
     }
 #endif
+
+  return 0;
 }

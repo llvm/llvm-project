@@ -31,7 +31,7 @@ public:
 
 } // namespace
 
-static WasmYAML::Table make_table(const wasm::WasmTable &Table) {
+static WasmYAML::Table makeTable(const wasm::WasmTable &Table) {
   WasmYAML::Table T;
   T.ElemType = Table.ElemType;
   T.TableLimits.Flags = Table.Limits.Flags;
@@ -40,7 +40,7 @@ static WasmYAML::Table make_table(const wasm::WasmTable &Table) {
   return T;
 }
 
-static WasmYAML::Limits make_limits(const wasm::WasmLimits &Limits) {
+static WasmYAML::Limits makeLimits(const wasm::WasmLimits &Limits) {
   WasmYAML::Limits L;
   L.Flags = Limits.Flags;
   L.Initial = Limits.Initial;
@@ -194,7 +194,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         if (FunctionSig.Returns.size())
           Sig.ReturnType = static_cast<uint32_t>(FunctionSig.Returns[0]);
         for (const auto &ParamType : FunctionSig.Params)
-          Sig.ParamTypes.push_back(static_cast<uint32_t>(ParamType));
+          Sig.ParamTypes.emplace_back(static_cast<uint32_t>(ParamType));
         TypeSec->Signatures.push_back(Sig);
       }
       S = std::move(TypeSec);
@@ -220,10 +220,10 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
           Im.EventImport.SigIndex = Import.Event.SigIndex;
           break;
         case wasm::WASM_EXTERNAL_TABLE:
-          Im.TableImport = make_table(Import.Table);
+          Im.TableImport = makeTable(Import.Table);
           break;
         case wasm::WASM_EXTERNAL_MEMORY:
-          Im.Memory = make_limits(Import.Memory);
+          Im.Memory = makeLimits(Import.Memory);
           break;
         }
         ImportSec->Imports.push_back(Im);
@@ -242,7 +242,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     case wasm::WASM_SEC_TABLE: {
       auto TableSec = make_unique<WasmYAML::TableSection>();
       for (const wasm::WasmTable &Table : Obj.tables()) {
-        TableSec->Tables.push_back(make_table(Table));
+        TableSec->Tables.push_back(makeTable(Table));
       }
       S = std::move(TableSec);
       break;
@@ -250,7 +250,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
     case wasm::WASM_SEC_MEMORY: {
       auto MemorySec = make_unique<WasmYAML::MemorySection>();
       for (const wasm::WasmLimits &Memory : Obj.memories()) {
-        MemorySec->Memories.push_back(make_limits(Memory));
+        MemorySec->Memories.push_back(makeLimits(Memory));
       }
       S = std::move(MemorySec);
       break;

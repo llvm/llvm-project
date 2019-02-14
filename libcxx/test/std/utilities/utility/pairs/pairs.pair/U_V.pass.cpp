@@ -46,7 +46,7 @@ struct ImplicitT {
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<std::unique_ptr<int>, short*> P;
@@ -96,4 +96,6 @@ int main()
         static_assert(p.second.value == 43, "");
     }
 #endif
+
+  return 0;
 }

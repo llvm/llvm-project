@@ -51,7 +51,7 @@ protected:
 
   const lldb_private::TypeMemberImpl &ref() const;
 
-  std::unique_ptr<lldb_private::TypeMemberImpl> m_opaque_ap;
+  std::unique_ptr<lldb_private::TypeMemberImpl> m_opaque_up;
 };
 
 class SBTypeMemberFunction {
@@ -244,7 +244,7 @@ public:
   uint32_t GetSize();
 
 private:
-  std::unique_ptr<lldb_private::TypeListImpl> m_opaque_ap;
+  std::unique_ptr<lldb_private::TypeListImpl> m_opaque_up;
   friend class SBModule;
   friend class SBCompileUnit;
 };

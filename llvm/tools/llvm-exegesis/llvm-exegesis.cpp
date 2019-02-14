@@ -191,8 +191,7 @@ public:
   // Implementation of the llvm::MCStreamer interface. We only care about
   // instructions.
   void EmitInstruction(const llvm::MCInst &Instruction,
-                       const llvm::MCSubtargetInfo &STI,
-                       bool PrintSchedInfo) override {
+                       const llvm::MCSubtargetInfo &STI) override {
     Result->Instructions.push_back(Instruction);
   }
 

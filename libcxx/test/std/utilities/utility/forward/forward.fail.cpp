@@ -19,7 +19,7 @@ struct A
 A source() {return A();}
 const A csource() {return A();}
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
     {
@@ -49,4 +49,6 @@ int main()
         A a;
         std::forward(a); // expected-error {{no matching function for call to 'forward'}}
     }
+
+  return 0;
 }

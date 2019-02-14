@@ -149,7 +149,9 @@ void test_emplacable_concept() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   basic_test();
   test_emplacable_concept();
+
+  return 0;
 }

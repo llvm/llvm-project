@@ -31,7 +31,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_set<short> C;
@@ -65,4 +65,6 @@ int main()
         static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
     }
 #endif
+
+  return 0;
 }

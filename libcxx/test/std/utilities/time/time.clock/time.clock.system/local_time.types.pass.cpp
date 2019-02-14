@@ -26,7 +26,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using local_t = std::chrono::local_t;
     using year    = std::chrono::year;
@@ -61,4 +61,6 @@ int main()
     ASSERT_SAME_TYPE(decltype(s0.time_since_epoch()), seconds);
     assert( s0.time_since_epoch().count() == 0);
     assert( s1.time_since_epoch().count() == 946684800L);
+
+    return 0;
 }

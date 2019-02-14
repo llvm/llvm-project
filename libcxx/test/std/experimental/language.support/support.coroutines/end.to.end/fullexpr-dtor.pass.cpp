@@ -108,9 +108,11 @@ coro2 d() {
   assert(dtor_called == 1);
 }
 
-int main() {
+int main(int, char**) {
   a();
   b();
   c();
   d();
+
+  return 0;
 }

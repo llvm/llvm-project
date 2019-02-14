@@ -48,7 +48,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -57,4 +57,6 @@ int main()
         os << std::uppercase;
         assert( (os.flags() & std::ios_base::uppercase));
     }
+
+  return 0;
 }

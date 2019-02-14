@@ -47,7 +47,7 @@ struct Nasty
 
 int Nasty::counter_ = 0;
 
-int main()
+int main(int, char**)
 {
     {
     const int N = 5;
@@ -81,4 +81,6 @@ int main()
     for (int i = 0; i < N; ++i)
         assert(bp[i].i_ == 23);
     }
+
+  return 0;
 }

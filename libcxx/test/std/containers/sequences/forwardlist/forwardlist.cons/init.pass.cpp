@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -37,4 +37,6 @@ int main()
             assert(*i == n);
         assert(n == 10);
     }
+
+  return 0;
 }

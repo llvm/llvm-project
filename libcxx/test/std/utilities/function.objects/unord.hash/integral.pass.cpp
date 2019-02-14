@@ -46,7 +46,7 @@ test()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test<bool>();
     test<char>();
@@ -108,4 +108,6 @@ int main()
     test<__int128_t>();
     test<__uint128_t>();
 #endif
+
+  return 0;
 }

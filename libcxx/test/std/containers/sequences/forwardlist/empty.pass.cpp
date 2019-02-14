@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::forward_list<int> C;
@@ -42,4 +42,6 @@ int main()
     assert(c.empty());
     }
 #endif
+
+  return 0;
 }

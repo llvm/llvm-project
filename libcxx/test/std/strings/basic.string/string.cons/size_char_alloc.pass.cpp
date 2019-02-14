@@ -80,7 +80,7 @@ test(Tp n, Tp c, const A& a)
     assert(s2.capacity() >= s2.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -120,4 +120,6 @@ int main()
     test(static_cast<char>(100), static_cast<char>(65), A());
     }
 #endif
+
+  return 0;
 }

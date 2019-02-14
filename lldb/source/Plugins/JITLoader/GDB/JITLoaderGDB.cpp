@@ -29,6 +29,8 @@
 
 #include "JITLoaderGDB.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -70,7 +72,7 @@ public:
   }
 
   PluginProperties() {
-    m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_properties);
   }
 
@@ -402,7 +404,7 @@ JITLoaderSP JITLoaderGDB::CreateInstance(Process *process, bool force) {
   JITLoaderSP jit_loader_sp;
   ArchSpec arch(process->GetTarget().GetArchitecture());
   if (arch.GetTriple().getVendor() != llvm::Triple::Apple)
-    jit_loader_sp.reset(new JITLoaderGDB(process));
+    jit_loader_sp = std::make_shared<JITLoaderGDB>(process);
   return jit_loader_sp;
 }
 

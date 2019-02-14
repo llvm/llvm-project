@@ -40,11 +40,13 @@ public:
 int G::n_alive = 0;
 bool G::op_run = false;
 
-int main()
+int main(int, char**)
 {
     {
         std::thread t0(G());
         std::thread t1;
         t1 = t0;
     }
+
+  return 0;
 }

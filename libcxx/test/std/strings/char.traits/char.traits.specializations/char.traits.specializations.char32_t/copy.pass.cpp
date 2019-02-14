@@ -15,7 +15,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     char32_t s1[] = {1, 2, 3};
@@ -27,4 +27,6 @@ int main()
     assert(std::char_traits<char32_t>::copy(NULL, s1, 0) == NULL);
     assert(std::char_traits<char32_t>::copy(s1, NULL, 0) == s1);
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+
+  return 0;
 }

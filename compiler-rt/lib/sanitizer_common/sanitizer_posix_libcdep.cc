@@ -307,37 +307,11 @@ void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
   MemoryMappingLayout::CacheMemoryMappings();
 }
 
-#if SANITIZER_ANDROID || SANITIZER_GO
-int GetNamedMappingFd(const char *name, uptr size) {
-  return -1;
-}
-#else
-int GetNamedMappingFd(const char *name, uptr size) {
-  if (!common_flags()->decorate_proc_maps)
-    return -1;
-  char shmname[200];
-  CHECK(internal_strlen(name) < sizeof(shmname) - 10);
-  internal_snprintf(shmname, sizeof(shmname), "%zu [%s]", internal_getpid(),
-                    name);
-  int fd = shm_open(shmname, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
-  CHECK_GE(fd, 0);
-  int res = internal_ftruncate(fd, size);
-  CHECK_EQ(0, res);
-  res = shm_unlink(shmname);
-  CHECK_EQ(0, res);
-  return fd;
-}
-#endif
-
 bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
-  int fd = name ? GetNamedMappingFd(name, size) : -1;
-  unsigned flags = MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE;
-  if (fd == -1) flags |= MAP_ANON;
-
-  uptr PageSize = GetPageSizeCached();
-  uptr p = internal_mmap((void *)(fixed_addr & ~(PageSize - 1)),
-                         RoundUpTo(size, PageSize), PROT_READ | PROT_WRITE,
-                         flags, fd, 0);
+  size = RoundUpTo(size, GetPageSizeCached());
+  fixed_addr = RoundDownTo(fixed_addr, GetPageSizeCached());
+  uptr p = MmapNamed((void *)fixed_addr, size, PROT_READ | PROT_WRITE,
+                     MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE | MAP_ANON, name);
   int reserrno;
   if (internal_iserror(p, &reserrno)) {
     Report("ERROR: %s failed to "
@@ -350,12 +324,8 @@ bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
-  // We don't pass `name` along because, when you enable `decorate_proc_maps`
-  // AND actually use a named mapping AND are using a sanitizer intercepting
-  // `open` (e.g. TSAN, ESAN), then you'll get a failure during initialization.
-  // TODO(flowerhack): Fix the implementation of GetNamedMappingFd to solve
-  // this problem.
-  base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size) : MmapNoAccess(size);
+  base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size, name)
+                     : MmapNoAccess(size);
   size_ = size;
   name_ = name;
   (void)os_handle_;  // unsupported
@@ -364,12 +334,14 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
 
 // Uses fixed_addr for now.
 // Will use offset instead once we've implemented this function for real.
-uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size) {
-  return reinterpret_cast<uptr>(MmapFixedOrDieOnFatalError(fixed_addr, size));
+uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size, const char *name) {
+  return reinterpret_cast<uptr>(
+      MmapFixedOrDieOnFatalError(fixed_addr, size, name));
 }
 
-uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size) {
-  return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size));
+uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size,
+                                    const char *name) {
+  return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size, name));
 }
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {
@@ -384,12 +356,9 @@ void ReservedAddressRange::Unmap(uptr addr, uptr size) {
 }
 
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
-  int fd = name ? GetNamedMappingFd(name, size) : -1;
-  unsigned flags = MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE;
-  if (fd == -1) flags |= MAP_ANON;
-
-  return (void *)internal_mmap((void *)fixed_addr, size, PROT_NONE, flags, fd,
-                               0);
+  return (void *)MmapNamed((void *)fixed_addr, size, PROT_NONE,
+                           MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE | MAP_ANON,
+                           name);
 }
 
 void *MmapNoAccess(uptr size) {

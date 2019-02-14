@@ -22,7 +22,7 @@
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::multimap<int, DefaultOnly> M;
@@ -144,4 +144,6 @@ int main()
         assert(m.begin()->first == 2);
         assert(m.begin()->second == 3.5);
     }
+
+  return 0;
 }

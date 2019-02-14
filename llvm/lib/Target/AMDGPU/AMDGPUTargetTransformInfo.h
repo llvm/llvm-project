@@ -84,6 +84,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     AMDGPU::FeatureSGPRInitBug,
     AMDGPU::FeatureXNACK,
     AMDGPU::FeatureTrapHandler,
+    AMDGPU::FeatureCodeObjectV3,
 
     // Perf-tuning features
     AMDGPU::FeatureFastFMAF32,

@@ -20,7 +20,9 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     std::function<int(int)> f(std::allocator_arg, std::allocator<int>(), nullptr);
+
+  return 0;
 }

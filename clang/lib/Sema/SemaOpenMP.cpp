@@ -134,7 +134,7 @@ private:
     /// get the data (loop counters etc.) about enclosing loop-based construct.
     /// This data is required during codegen.
     DoacrossDependMapTy DoacrossDepends;
-    /// first argument (Expr *) contains optional argument of the
+    /// First argument (Expr *) contains optional argument of the
     /// 'ordered' clause, the second one is true if the regions has 'ordered'
     /// clause, false otherwise.
     llvm::Optional<std::pair<const Expr *, OMPOrderedClause *>> OrderedRegion;
@@ -1391,6 +1391,56 @@ void Sema::pushOpenMPFunctionRegion() {
 
 void Sema::popOpenMPFunctionRegion(const FunctionScopeInfo *OldFSI) {
   DSAStack->popFunction(OldFSI);
+}
+
+static bool isOpenMPDeviceDelayedContext(Sema &S) {
+  assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  return !S.isInOpenMPTargetExecutionDirective() &&
+         !S.isInOpenMPDeclareTargetContext();
+}
+
+/// Do we know that we will eventually codegen the given function?
+static bool isKnownEmitted(Sema &S, FunctionDecl *FD) {
+  assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  // Templates are emitted when they're instantiated.
+  if (FD->isDependentContext())
+    return false;
+
+  if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
+          FD->getCanonicalDecl()))
+    return true;
+
+  // Otherwise, the function is known-emitted if it's in our set of
+  // known-emitted functions.
+  return S.DeviceKnownEmittedFns.count(FD) > 0;
+}
+
+Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
+                                                     unsigned DiagID) {
+  assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  return DeviceDiagBuilder((isOpenMPDeviceDelayedContext(*this) &&
+                            !isKnownEmitted(*this, getCurFunctionDecl()))
+                               ? DeviceDiagBuilder::K_Deferred
+                               : DeviceDiagBuilder::K_Immediate,
+                           Loc, DiagID, getCurFunctionDecl(), *this);
+}
+
+void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
+  assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
+         "Expected OpenMP device compilation.");
+  assert(Callee && "Callee may not be null.");
+  FunctionDecl *Caller = getCurFunctionDecl();
+
+  // If the caller is known-emitted, mark the callee as known-emitted.
+  // Otherwise, mark the call in our call graph so we can traverse it later.
+  if (!isOpenMPDeviceDelayedContext(*this) ||
+      (Caller && isKnownEmitted(*this, Caller)))
+    markKnownEmitted(*this, Caller, Callee, Loc, isKnownEmitted);
+  else if (Caller)
+    DeviceCallGraph[Caller].insert({Callee, Loc});
 }
 
 bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
@@ -7067,7 +7117,9 @@ StmtResult Sema::ActOnOpenMPTargetDirective(ArrayRef<OMPClause *> Clauses,
       auto I = CS->body_begin();
       while (I != CS->body_end()) {
         const auto *OED = dyn_cast<OMPExecutableDirective>(*I);
-        if (!OED || !isOpenMPTeamsDirective(OED->getDirectiveKind())) {
+        if (!OED || !isOpenMPTeamsDirective(OED->getDirectiveKind()) ||
+            OMPTeamsFound) {
+
           OMPTeamsFound = false;
           break;
         }
@@ -10747,7 +10799,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
               return D;
             return nullptr;
           }))
-    return SemaRef.BuildDeclRefExpr(VD, Ty, VK_LValue, Loc);
+    return SemaRef.BuildDeclRefExpr(VD, VD->getType().getNonReferenceType(),
+                                    VK_LValue, Loc);
   if (auto *VD = filterLookupForUDR<ValueDecl *>(
           Lookups, [&SemaRef, Ty, Loc](ValueDecl *D) -> ValueDecl * {
             if (!D->isInvalidDecl() &&
@@ -10765,7 +10818,8 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
                                          /*DiagID=*/0) !=
             Sema::AR_inaccessible) {
           SemaRef.BuildBasePathArray(Paths, BasePath);
-          return SemaRef.BuildDeclRefExpr(VD, Ty, VK_LValue, Loc);
+          return SemaRef.BuildDeclRefExpr(
+              VD, VD->getType().getNonReferenceType(), VK_LValue, Loc);
         }
       }
     }

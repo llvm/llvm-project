@@ -17,7 +17,7 @@
 #error NULL not defined
 #endif
 
-int main()
+int main(int, char**)
 {
     std::size_t s = 0;
     void* vp = 0;
@@ -60,4 +60,6 @@ int main()
     ASSERT_SAME_TYPE(const char*, decltype(std::strrchr(cpc, 0)));
     ASSERT_SAME_TYPE(const char*, decltype(std::strstr(cpc, cpc)));
 #endif
+
+  return 0;
 }

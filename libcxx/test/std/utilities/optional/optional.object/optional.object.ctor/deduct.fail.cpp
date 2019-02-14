@@ -23,7 +23,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 //  Test the explicit deduction guides
 
@@ -42,4 +42,6 @@ int main()
 //  optional(nullopt_t)
     std::optional opt(std::nullopt);   // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with nullopt_t is ill-formed"}}
     }
+
+  return 0;
 }

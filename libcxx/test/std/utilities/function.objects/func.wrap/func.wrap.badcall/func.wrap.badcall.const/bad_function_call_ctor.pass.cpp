@@ -13,7 +13,9 @@
 #include <functional>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     std::bad_function_call ex;
+
+  return 0;
 }

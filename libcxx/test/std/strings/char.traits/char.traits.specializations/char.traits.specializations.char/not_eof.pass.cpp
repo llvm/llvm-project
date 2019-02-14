@@ -15,11 +15,13 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::char_traits<char>::not_eof('a') == 'a');
     assert(std::char_traits<char>::not_eof('A') == 'A');
     assert(std::char_traits<char>::not_eof(0) == 0);
     assert(std::char_traits<char>::not_eof(std::char_traits<char>::eof()) !=
            std::char_traits<char>::eof());
+
+  return 0;
 }

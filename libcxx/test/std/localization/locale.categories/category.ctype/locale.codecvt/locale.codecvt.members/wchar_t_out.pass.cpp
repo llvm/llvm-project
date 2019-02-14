@@ -23,7 +23,7 @@
 
 typedef std::codecvt<wchar_t, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     const F& f = std::use_facet<F>(l);
@@ -67,4 +67,6 @@ int main()
         assert(static_cast<std::size_t>(to_next - to.data()) == to.size()-1);
         assert(to.data() == std::string("some te"));
     }
+
+  return 0;
 }

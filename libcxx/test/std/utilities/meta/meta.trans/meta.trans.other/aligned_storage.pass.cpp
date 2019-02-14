@@ -17,7 +17,7 @@
 #include <cstddef>       // for std::max_align_t
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::aligned_storage<10, 1 >::type T1;
@@ -285,4 +285,6 @@ int main()
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
     }
+
+  return 0;
 }

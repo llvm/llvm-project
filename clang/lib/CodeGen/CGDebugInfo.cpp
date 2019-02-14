@@ -450,8 +450,8 @@ CGDebugInfo::createFile(StringRef FileName,
     for (; CurDirIt != CurDirE && *CurDirIt == *FileIt; ++CurDirIt, ++FileIt)
       llvm::sys::path::append(DirBuf, *CurDirIt);
     if (std::distance(llvm::sys::path::begin(CurDir), CurDirIt) == 1) {
-      // The common prefix only the root; stripping it would cause
-      // LLVM diagnostic locations to be more confusing.
+      // Don't strip the common prefix if it is only the root "/"
+      // since that would make LLVM diagnostic locations confusing.
       Dir = {};
       File = RemappedFile;
     } else {
@@ -2296,7 +2296,14 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
   }
 
   bool IsRootModule = M ? !M->Parent : true;
-  if (CreateSkeletonCU && IsRootModule) {
+  // When a module name is specified as -fmodule-name, that module gets a
+  // clang::Module object, but it won't actually be built or imported; it will
+  // be textual.
+  if (CreateSkeletonCU && IsRootModule && Mod.getASTFile().empty())
+    assert((!M || (M->Name == CGM.getLangOpts().ModuleName)) &&
+           "clang module without ASTFile must be specified by -fmodule-name");
+
+  if (CreateSkeletonCU && IsRootModule && !Mod.getASTFile().empty()) {
     // PCH files don't have a signature field in the control block,
     // but LLVM detects skeleton CUs by looking for a non-zero DWO id.
     // We use the lower 64 bits for debug info.
@@ -2313,6 +2320,7 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
                           Signature);
     DIB.finalize();
   }
+
   llvm::DIModule *Parent =
       IsRootModule ? nullptr
                    : getOrCreateModuleRef(
@@ -4232,6 +4240,14 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
     SmallVector<int64_t, 4> Expr;
     unsigned AddressSpace =
         CGM.getContext().getTargetAddressSpace(D->getType());
+    if (CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) {
+      if (D->hasAttr<CUDASharedAttr>())
+        AddressSpace =
+            CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared);
+      else if (D->hasAttr<CUDAConstantAttr>())
+        AddressSpace =
+            CGM.getContext().getTargetAddressSpace(LangAS::cuda_constant);
+    }
     AppendAddressSpaceXDeref(AddressSpace, Expr);
 
     GVE = DBuilder.createGlobalVariableExpression(

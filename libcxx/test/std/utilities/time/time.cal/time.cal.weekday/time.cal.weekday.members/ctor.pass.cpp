@@ -26,7 +26,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using weekday = std::chrono::weekday;
 
@@ -47,4 +47,6 @@ int main()
     }
 
 // TODO - sys_days and local_days ctor tests
+
+  return 0;
 }

@@ -18,7 +18,9 @@
 
 #include "test_macros.h"
 
-int main ()
+int main(int, char**)
 {
     ::operator new(4, std::nothrow);  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  return 0;
 }

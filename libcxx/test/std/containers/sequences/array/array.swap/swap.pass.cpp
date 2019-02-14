@@ -27,7 +27,7 @@ private:
   NonSwappable& operator=(NonSwappable const&);
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -89,4 +89,6 @@ int main()
 #endif
     }
 
+
+  return 0;
 }

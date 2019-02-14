@@ -20,7 +20,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l(std::string(LOCALE_fr_CA_ISO8859_1));
@@ -52,4 +52,6 @@ int main()
             assert(f.narrow(L'\xDA', '*') == '*');
         }
     }
+
+  return 0;
 }

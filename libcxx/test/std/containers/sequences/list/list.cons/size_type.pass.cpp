@@ -37,7 +37,7 @@ test3(unsigned n, Allocator const &alloc = Allocator())
 }
 
 
-int main()
+int main(int, char**)
 {
     {
         std::list<int> l(3);
@@ -100,4 +100,6 @@ int main()
         assert(std::distance(l.begin(), l.end()) == 3);
     }
 #endif
+
+  return 0;
 }

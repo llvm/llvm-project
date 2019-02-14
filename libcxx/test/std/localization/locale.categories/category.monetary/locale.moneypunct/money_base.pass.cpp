@@ -18,7 +18,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::money_base mb; ((void)mb);
     static_assert(std::money_base::none == 0, "");
@@ -29,4 +29,6 @@ int main()
     static_assert(sizeof(std::money_base::pattern) == 4, "");
     std::money_base::pattern p;
     p.field[0] = std::money_base::none;
+
+  return 0;
 }

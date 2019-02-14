@@ -17,7 +17,7 @@
 
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::complex<float> cf;
     {
@@ -90,4 +90,6 @@ int main()
     static_assert(std::get<int>(std::move(t)) == 1, "");
     static_assert(std::get<const int>(std::move(t)) == 2, "");
     }
+
+  return 0;
 }

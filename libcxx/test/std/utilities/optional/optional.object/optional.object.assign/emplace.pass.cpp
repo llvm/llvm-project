@@ -208,7 +208,7 @@ void test_on_test_type() {
 
 
 
-int main()
+int main(int, char**)
 {
     {
         test_on_test_type<TestTypes::TestType>();
@@ -265,4 +265,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

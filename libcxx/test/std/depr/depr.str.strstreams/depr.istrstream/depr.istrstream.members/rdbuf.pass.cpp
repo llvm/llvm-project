@@ -15,7 +15,7 @@
 #include <strstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         const char buf[] = "123 4.5 dog";
@@ -23,4 +23,6 @@ int main()
         std::strstreambuf* sb = in.rdbuf();
         assert(sb->sgetc() == '1');
     }
+
+  return 0;
 }

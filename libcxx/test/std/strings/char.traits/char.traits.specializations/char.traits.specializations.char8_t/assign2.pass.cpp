@@ -25,7 +25,7 @@ constexpr bool test_constexpr()
     return c == u'a';
 }
 
-int main()
+int main(int, char**)
 {
     char8_t c = u8'\0';
     std::char_traits<char8_t>::assign(c, u8'a');
@@ -34,5 +34,7 @@ int main()
     static_assert(test_constexpr(), "");
 }
 #else
-int main () {}
+int main(int, char**) {
+  return 0;
+}
 #endif

@@ -6,7 +6,7 @@
 # flattened members appearing together.
 
 RUN: touch %t-a.txt %t-b.txt %t-c.txt %t-d.txt %t-e.txt
-RUN: rm -f %t-a-plus-b.a %t.a
+RUN: rm -f %t-a-plus-b.a %t-d-plus-e.a %t.a
 RUN: llvm-ar rcsT %t-a-plus-b.a %t-a.txt %t-b.txt
 RUN: llvm-ar rcs %t-d-plus-e.a %t-d.txt %t-e.txt
 RUN: llvm-ar rcsT %t.a %t-a-plus-b.a %t-c.txt %t-d-plus-e.a

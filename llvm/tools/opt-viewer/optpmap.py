@@ -14,7 +14,7 @@ def _init(current, total):
 
 
 def _wrapped_func(func_and_args):
-    func, argument, should_print_progress = func_and_args
+    func, argument, should_print_progress, filter_ = func_and_args
 
     if should_print_progress:
         with _current.get_lock():
@@ -22,10 +22,10 @@ def _wrapped_func(func_and_args):
         sys.stdout.write('\r\t{} of {}'.format(_current.value, _total.value))
         sys.stdout.flush()
 
-    return func(argument)
+    return func(argument, filter_)
 
 
-def pmap(func, iterable, processes, should_print_progress, *args, **kwargs):
+def pmap(func, iterable, processes, should_print_progress, filter_=None, *args, **kwargs):
     """
     A parallel map function that reports on its progress.
 
@@ -40,7 +40,7 @@ def pmap(func, iterable, processes, should_print_progress, *args, **kwargs):
     _current = multiprocessing.Value('i', 0)
     _total = multiprocessing.Value('i', len(iterable))
 
-    func_and_args = [(func, arg, should_print_progress,) for arg in iterable]
+    func_and_args = [(func, arg, should_print_progress, filter_) for arg in iterable]
     if processes == 1:
         result = list(map(_wrapped_func, func_and_args, *args, **kwargs))
     else:

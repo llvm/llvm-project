@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         int i = 0;
@@ -50,4 +50,6 @@ int main()
         static_assert (d1 == 3.14, "" );
     }
 #endif
+
+  return 0;
 }

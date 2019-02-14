@@ -18,7 +18,7 @@
 
 struct testbuf : public std::streambuf {};
 
-int main()
+int main(int, char**)
 {
     {
         std::ios ios(0);
@@ -31,4 +31,6 @@ int main()
         ios.setstate(std::ios::eofbit);
         assert(!ios.good());
     }
+
+  return 0;
 }

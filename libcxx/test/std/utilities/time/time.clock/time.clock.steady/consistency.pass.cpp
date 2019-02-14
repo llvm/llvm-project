@@ -29,7 +29,7 @@
 template <class T>
 void test(const T &) {}
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::steady_clock C;
     static_assert((std::is_same<C::rep, C::duration::rep>::value), "");
@@ -37,4 +37,6 @@ int main()
     static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
     static_assert(C::is_steady, "");
     test(std::chrono::steady_clock::is_steady);
+
+  return 0;
 }

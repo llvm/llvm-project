@@ -18,7 +18,7 @@
 
 struct testbuf : public std::streambuf {};
 
-int main()
+int main(int, char**)
 {
     {
         const std::ios ios(0);
@@ -29,4 +29,6 @@ int main()
         const std::ios ios(&sb);
         assert(ios.exceptions() == std::ios::goodbit);
     }
+
+  return 0;
 }

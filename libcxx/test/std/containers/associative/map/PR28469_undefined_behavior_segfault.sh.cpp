@@ -24,7 +24,9 @@ struct F {
     F() { m[42] = &dummy; }
 };
 
-int main() {
+int main(int, char**) {
     F f;
     f = F();
+
+  return 0;
 }

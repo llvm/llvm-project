@@ -19,7 +19,7 @@ typedef int T;
 
 T f(T t) {return t + 5;}
 
-int main()
+int main(int, char**)
 {
     {
         T a1[] = {1, 2, 3, 4,  5,  6,  7,  8,  9, 10};
@@ -47,4 +47,6 @@ int main()
         for (unsigned i = 0; i < N1; ++i)
             assert(v2[i] == a2[i]);
     }
+
+  return 0;
 }

@@ -39,7 +39,7 @@ public:
     ~Class();
 };
 
-int main()
+int main(int, char**)
 {
     test_alignment_of<int&, 4>();
     test_alignment_of<Class, 1>();
@@ -57,4 +57,6 @@ int main()
     test_alignment_of<bool, 1>();
 #endif
     test_alignment_of<unsigned, 4>();
+
+  return 0;
 }

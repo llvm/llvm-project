@@ -13,7 +13,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l;
     assert(!std::isupper(' ', l));
@@ -27,4 +27,6 @@ int main()
     assert(!std::isupper('f', l));
     assert(!std::isupper('9', l));
     assert(!std::isupper('+', l));
+
+  return 0;
 }

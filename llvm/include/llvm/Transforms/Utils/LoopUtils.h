@@ -40,6 +40,7 @@ class BasicBlock;
 class DataLayout;
 class Loop;
 class LoopInfo;
+class MemoryAccess;
 class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
 class PredicatedScalarEvolution;
@@ -111,7 +112,7 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, TargetTransformInfo *, Loop *,
                 AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                OptimizationRemarkEmitter *ORE);
+                bool, int &, OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -123,8 +124,8 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                 OptimizationRemarkEmitter *ORE);
+                 MemorySSAUpdater *, ICFLoopSafetyInfo *, bool, int &,
+                 OptimizationRemarkEmitter *);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -148,14 +149,12 @@ void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 /// LoopInfo, DominatorTree, Loop, AliasSet information for all instructions
 /// of the loop and loop safety information as arguments.
 /// Diagnostics is emitted via \p ORE. It returns changed status.
-bool promoteLoopAccessesToScalars(const SmallSetVector<Value *, 8> &,
-                                  SmallVectorImpl<BasicBlock *> &,
-                                  SmallVectorImpl<Instruction *> &,
-                                  PredIteratorCache &, LoopInfo *,
-                                  DominatorTree *, const TargetLibraryInfo *,
-                                  Loop *, AliasSetTracker *,
-                                  ICFLoopSafetyInfo *,
-                                  OptimizationRemarkEmitter *);
+bool promoteLoopAccessesToScalars(
+    const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
+    SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
+    PredIteratorCache &, LoopInfo *, DominatorTree *, const TargetLibraryInfo *,
+    Loop *, AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
+    OptimizationRemarkEmitter *);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of nodes includes the starting point.
@@ -277,6 +276,8 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
                         MemorySSAUpdater *MSSAU, bool TargetExecutesOncePerLoop,
+                        bool NoOfMemAccessesTooLarge,
+                        int *LicmMssaOptCap = nullptr,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.

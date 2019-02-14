@@ -98,19 +98,16 @@ unsigned elf::getPPC64GlobalEntryToLocalEntryOffset(uint8_t StOther) {
   return 0;
 }
 
-bool elf::isPPC64SmallCodeModelReloc(RelType Type) {
-  // List is not yet complete, at the very least the got based tls related
-  // relocations need to be added, and we need to determine how the section
-  // sorting interacts with the thread pointer and dynamic thread pointer
-  // relative tls relocations.
-  return Type == R_PPC64_GOT16 || Type == R_PPC64_TOC16 ||
-         Type == R_PPC64_TOC16_DS;
+bool elf::isPPC64SmallCodeModelTocReloc(RelType Type) {
+  // The only small code model relocations that access the .toc section.
+  return Type == R_PPC64_TOC16 || Type == R_PPC64_TOC16_DS;
 }
 
 namespace {
 class PPC64 final : public TargetInfo {
 public:
   PPC64();
+  int getTlsGdRelaxSkip(RelType Type) const override;
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
@@ -239,6 +236,20 @@ PPC64::PPC64() {
   DefaultImageBase = 0x10000000;
 
   write32(TrapInstr.data(), 0x7fe00008);
+}
+
+int PPC64::getTlsGdRelaxSkip(RelType Type) const {
+  // A __tls_get_addr call instruction is marked with 2 relocations:
+  //
+  //   R_PPC64_TLSGD / R_PPC64_TLSLD: marker relocation
+  //   R_PPC64_REL24: __tls_get_addr
+  //
+  // After the relaxation we no longer call __tls_get_addr and should skip both
+  // relocations to not create a false dependence on __tls_get_addr being
+  // defined.
+  if (Type == R_PPC64_TLSGD || Type == R_PPC64_TLSLD)
+    return 2;
+  return 1;
 }
 
 static uint32_t getEFlags(InputFile *File) {

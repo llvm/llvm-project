@@ -20,6 +20,8 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/un.h>
+
+#include <memory>
 #include <vector>
 
 #if defined(__APPLE__)
@@ -492,6 +494,7 @@ RNBRunLoopMode HandleProcessStateChange(RNBRemote *remote, bool initialize) {
 
   case eStateExited:
     remote->HandlePacket_last_signal(NULL);
+    return eRNBRunLoopModeExit;
   case eStateDetached:
     return eRNBRunLoopModeExit;
   }
@@ -936,7 +939,7 @@ int main(int argc, char *argv[]) {
   sigaddset(&sigset, SIGCHLD);
   sigprocmask(SIG_BLOCK, &sigset, NULL);
 
-  g_remoteSP.reset(new RNBRemote());
+  g_remoteSP = std::make_shared<RNBRemote>();
 
   RNBRemote *remote = g_remoteSP.get();
   if (remote == NULL) {
@@ -1000,7 +1003,8 @@ int main(int argc, char *argv[]) {
 
       case optional_argument:
         short_options[short_options_idx++] = ':';
-      // Fall through to required_argument case below...
+        short_options[short_options_idx++] = ':';
+        break;
       case required_argument:
         short_options[short_options_idx++] = ':';
         break;
@@ -1670,6 +1674,7 @@ int main(int argc, char *argv[]) {
 
     default:
       mode = eRNBRunLoopModeExit;
+      break;
     case eRNBRunLoopModeExit:
       break;
     }

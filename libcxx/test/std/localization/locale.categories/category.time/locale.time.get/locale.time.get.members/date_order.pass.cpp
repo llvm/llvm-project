@@ -26,8 +26,10 @@ public:
         : F(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     assert(f.date_order() == std::time_base::mdy);
+
+  return 0;
 }

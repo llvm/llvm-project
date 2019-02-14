@@ -19,11 +19,13 @@
 #include <string>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::char_traits<wchar_t>::char_type, wchar_t>::value), "");
     static_assert((std::is_same<std::char_traits<wchar_t>::int_type, std::wint_t>::value), "");
     static_assert((std::is_same<std::char_traits<wchar_t>::off_type, std::streamoff>::value), "");
     static_assert((std::is_same<std::char_traits<wchar_t>::pos_type, std::wstreampos>::value), "");
     static_assert((std::is_same<std::char_traits<wchar_t>::state_type, std::mbstate_t>::value), "");
+
+  return 0;
 }

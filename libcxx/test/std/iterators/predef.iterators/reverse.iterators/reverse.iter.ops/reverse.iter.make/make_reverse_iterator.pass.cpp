@@ -31,7 +31,7 @@ test(It i)
     assert(r.base() == i);
 }
 
-int main()
+int main(int, char**)
 {
     const char* s = "1234567890";
     random_access_iterator<const char*>b(s);
@@ -46,5 +46,7 @@ int main()
         static_assert(it1.base() == p, "");
     }
 #endif
+
+  return 0;
 }
 

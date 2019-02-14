@@ -102,7 +102,7 @@ void test_reset_no_arg() {
   assert(A::count == 0);
 }
 
-int main() {
+int main(int, char**) {
   {
     test_reset_pointer</*IsArray*/ false>();
     test_reset_nullptr<false>();
@@ -113,4 +113,6 @@ int main() {
     test_reset_nullptr<true>();
     test_reset_no_arg<true>();
   }
+
+  return 0;
 }

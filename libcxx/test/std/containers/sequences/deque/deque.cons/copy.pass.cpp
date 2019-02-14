@@ -25,7 +25,7 @@ test(const C& x)
     assert(c == x);
 }
 
-int main()
+int main(int, char**)
 {
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
@@ -57,4 +57,6 @@ int main()
         assert(v2.get_allocator() == v.get_allocator());
     }
 #endif
+
+  return 0;
 }

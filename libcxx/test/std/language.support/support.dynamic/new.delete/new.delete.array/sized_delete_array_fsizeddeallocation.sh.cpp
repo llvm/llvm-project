@@ -73,7 +73,7 @@ void operator delete[](void* p, std::size_t) TEST_NOEXCEPT
 //   selected.
 struct A { ~A() {} };
 
-int main()
+int main(int, char**)
 {
     A* x = new A[3];
     assert(0 == unsized_delete_called);
@@ -84,4 +84,6 @@ int main()
     assert(0 == unsized_delete_called);
     assert(0 == unsized_delete_nothrow_called);
     assert(1 == sized_delete_called);
+
+  return 0;
 }

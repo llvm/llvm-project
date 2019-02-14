@@ -15,7 +15,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -69,4 +69,6 @@ int main()
         assert(*next(c.begin(), 4) == 3);
     }
 #endif
+
+  return 0;
 }

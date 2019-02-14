@@ -32,6 +32,7 @@ public:
   virtual void writeGotPlt(uint8_t *Buf, const Symbol &S) const {};
   virtual void writeIgotPlt(uint8_t *Buf, const Symbol &S) const;
   virtual int64_t getImplicitAddend(const uint8_t *Buf, RelType Type) const;
+  virtual int getTlsGdRelaxSkip(RelType Type) const { return 1; }
 
   // If lazy binding is supported, the first entry of the PLT has code
   // to call the dynamic linker to resolve PLT entries the first time
@@ -80,7 +81,6 @@ public:
 
   virtual ~TargetInfo();
 
-  unsigned TlsGdRelaxSkip = 1;
   unsigned PageSize = 4096;
   unsigned DefaultMaxPageSize = 4096;
 
@@ -176,7 +176,9 @@ static inline std::string getErrorLocation(const uint8_t *Loc) {
 // to the local entry-point.
 unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t StOther);
 
-bool isPPC64SmallCodeModelReloc(RelType Type);
+// Returns true if a relocation is a small code model relocation that accesses
+// the .toc section.
+bool isPPC64SmallCodeModelTocReloc(RelType Type);
 
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t Expr);

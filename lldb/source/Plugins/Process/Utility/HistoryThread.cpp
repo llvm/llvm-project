@@ -9,12 +9,15 @@
 #include "lldb/lldb-private.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
+
 #include "Plugins/Process/Utility/HistoryUnwind.h"
 #include "Plugins/Process/Utility/RegisterContextHistory.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Utility/Log.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -29,7 +32,7 @@ HistoryThread::HistoryThread(lldb_private::Process &process, lldb::tid_t tid,
       m_extended_unwind_token(LLDB_INVALID_ADDRESS), m_queue_name(),
       m_thread_name(), m_originating_unique_thread_id(tid),
       m_queue_id(LLDB_INVALID_QUEUE_ID) {
-  m_unwinder_ap.reset(new HistoryUnwind(*this, pcs, stop_id_is_valid));
+  m_unwinder_up.reset(new HistoryUnwind(*this, pcs, stop_id_is_valid));
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
     log->Printf("%p HistoryThread::HistoryThread", static_cast<void *>(this));
@@ -48,15 +51,15 @@ HistoryThread::~HistoryThread() {
 lldb::RegisterContextSP HistoryThread::GetRegisterContext() {
   RegisterContextSP rctx;
   if (m_pcs.size() > 0) {
-    rctx.reset(new RegisterContextHistory(
-        *this, 0, GetProcess()->GetAddressByteSize(), m_pcs[0]));
+    rctx = std::make_shared<RegisterContextHistory>(
+        *this, 0, GetProcess()->GetAddressByteSize(), m_pcs[0]);
   }
   return rctx;
 }
 
 lldb::RegisterContextSP
 HistoryThread::CreateRegisterContextForFrame(StackFrame *frame) {
-  return m_unwinder_ap->CreateRegisterContextForFrame(frame);
+  return m_unwinder_up->CreateRegisterContextForFrame(frame);
 }
 
 lldb::StackFrameListSP HistoryThread::GetStackFrameList() {
@@ -64,7 +67,8 @@ lldb::StackFrameListSP HistoryThread::GetStackFrameList() {
   std::unique_lock<std::mutex> lock(m_framelist_mutex);
   lock.unlock();
   if (m_framelist.get() == NULL) {
-    m_framelist.reset(new StackFrameList(*this, StackFrameListSP(), true));
+    m_framelist =
+        std::make_shared<StackFrameList>(*this, StackFrameListSP(), true);
   }
 
   return m_framelist;

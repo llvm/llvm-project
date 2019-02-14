@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     int i = std::max({2, 3, 1}, std::greater<int>());
     assert(i == 1);
@@ -41,4 +41,6 @@ int main()
     static_assert(std::max({3, 2, 1}, std::greater<int>()) == 1, "");
     }
 #endif
+
+  return 0;
 }

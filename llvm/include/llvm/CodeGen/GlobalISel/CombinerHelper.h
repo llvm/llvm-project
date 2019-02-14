@@ -17,6 +17,8 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_COMBINER_HELPER_H
 #define LLVM_CODEGEN_GLOBALISEL_COMBINER_HELPER_H
 
+#include "llvm/CodeGen/LowLevelType.h"
+
 namespace llvm {
 
 class GISelChangeObserver;
@@ -24,6 +26,12 @@ class MachineIRBuilder;
 class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
+
+struct PreferredTuple {
+  LLT Ty;                // The result type of the extend.
+  unsigned ExtendOpcode; // G_ANYEXT/G_SEXT/G_ZEXT
+  MachineInstr *MI;
+};
 
 class CombinerHelper {
   MachineIRBuilder &Builder;
@@ -44,10 +52,14 @@ public:
   /// If \p MI is COPY, try to combine it.
   /// Returns true if MI changed.
   bool tryCombineCopy(MachineInstr &MI);
+  bool matchCombineCopy(MachineInstr &MI);
+  void applyCombineCopy(MachineInstr &MI);
 
   /// If \p MI is extend that consumes the result of a load, try to combine it.
   /// Returns true if MI changed.
   bool tryCombineExtendingLoads(MachineInstr &MI);
+  bool matchCombineExtendingLoads(MachineInstr &MI, PreferredTuple &MatchInfo);
+  void applyCombineExtendingLoads(MachineInstr &MI, PreferredTuple &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

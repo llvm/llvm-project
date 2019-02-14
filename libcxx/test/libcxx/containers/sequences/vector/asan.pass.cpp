@@ -28,7 +28,7 @@ void do_exit() {
   exit(0);
 }
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
     {
@@ -68,5 +68,5 @@ int main()
     }
 }
 #else
-int main () { return 0; }
+int main(int, char**) { return 0; }
 #endif

@@ -19,7 +19,7 @@
 #include <cassert>
 #include "nasty_containers.hpp"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::shared_timed_mutex M;
@@ -37,4 +37,6 @@ int main()
     assert(lk.mutex() == std::addressof(m));
     assert(lk.owns_lock() == true);
     }
+
+  return 0;
 }

@@ -401,7 +401,7 @@ void RegisterFile::collectWrites(const ReadState &RS,
 }
 
 void RegisterFile::addRegisterRead(ReadState &RS,
-                                   SmallVectorImpl<WriteRef> &Defs) const {
+                                   const MCSubtargetInfo &STI) const {
   unsigned RegID = RS.getRegisterID();
   const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
   RS.setPRF(RRI.IndexPlusCost.first);
@@ -410,8 +410,23 @@ void RegisterFile::addRegisterRead(ReadState &RS,
 
   if (ZeroRegisters[RS.getRegisterID()])
     RS.setReadZero();
-  collectWrites(RS, Defs);
-  RS.setDependentWrites(Defs.size());
+
+  SmallVector<WriteRef, 4> DependentWrites;
+  collectWrites(RS, DependentWrites);
+  RS.setDependentWrites(DependentWrites.size());
+
+  // We know that this read depends on all the writes in DependentWrites.
+  // For each write, check if we have ReadAdvance information, and use it
+  // to figure out in how many cycles this read becomes available.
+  const ReadDescriptor &RD = RS.getDescriptor();
+  const MCSchedModel &SM = STI.getSchedModel();
+  const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
+  for (WriteRef &WR : DependentWrites) {
+    WriteState &WS = *WR.getWriteState();
+    unsigned WriteResID = WS.getWriteResourceID();
+    int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
+    WS.addUser(&RS, ReadAdvance);
+  }
 }
 
 unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {

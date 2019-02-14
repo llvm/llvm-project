@@ -96,7 +96,7 @@ test()
     test<Iter>(1000);
 }
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
@@ -107,4 +107,6 @@ int main()
     test<random_access_iterator<S*> >();
     test<S*>();
 #endif  // TEST_STD_VER >= 11
+
+  return 0;
 }

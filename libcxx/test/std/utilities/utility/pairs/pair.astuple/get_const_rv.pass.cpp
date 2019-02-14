@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::pair<std::unique_ptr<int>, short> P;
@@ -62,4 +62,6 @@ int main()
     static_assert(std::get<1>(std::move(p1)) == 4, "");
     }
 #endif
+
+  return 0;
 }

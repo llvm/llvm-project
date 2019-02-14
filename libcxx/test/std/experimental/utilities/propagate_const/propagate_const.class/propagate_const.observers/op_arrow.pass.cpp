@@ -18,11 +18,13 @@
 
 using std::experimental::propagate_const;
 
-int main() {
+int main(int, char**) {
 
   typedef propagate_const<X> P;
 
   constexpr P p(1);
 
   static_assert(*(p.operator->())==1,"");
+
+  return 0;
 }

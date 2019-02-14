@@ -12,12 +12,14 @@
 
 #include "MachThreadList.h"
 
-#include <inttypes.h>
-#include <sys/sysctl.h>
-
 #include "DNBLog.h"
 #include "DNBThreadResumeActions.h"
 #include "MachProcess.h"
+
+#include <inttypes.h>
+#include <sys/sysctl.h>
+
+#include <memory>
 
 MachThreadList::MachThreadList()
     : m_threads(), m_threads_mutex(PTHREAD_MUTEX_RECURSIVE),
@@ -310,8 +312,8 @@ MachThreadList::UpdateThreadList(MachProcess *process, bool update,
           currThreads.push_back(thread_sp);
         } else {
           // We don't have this thread, lets add it.
-          thread_sp.reset(new MachThread(process, m_is_64_bit, unique_thread_id,
-                                         mach_port_num));
+          thread_sp = std::make_shared<MachThread>(
+              process, m_is_64_bit, unique_thread_id, mach_port_num);
 
           // Add the new thread regardless of its is user ready state...
           // Make sure the thread is ready to be displayed and shown to users

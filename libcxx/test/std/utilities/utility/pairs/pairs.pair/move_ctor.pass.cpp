@@ -25,7 +25,7 @@ struct Dummy {
   Dummy(Dummy &&) = default;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<int, short> P1;
@@ -40,4 +40,6 @@ int main()
         static_assert(!std::is_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
     }
+
+  return 0;
 }

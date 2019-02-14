@@ -43,6 +43,15 @@ static inline void initLLVM() {
   initializeCodeGen(*Registry);
 }
 
+// Define a printers to help debugging when things go wrong.
+namespace llvm {
+std::ostream &
+operator<<(std::ostream &OS, const LLT Ty);
+
+std::ostream &
+operator<<(std::ostream &OS, const MachineFunction &MF);
+}
+
 /// Create a TargetMachine. As we lack a dedicated always available target for
 /// unittests, we go for "AArch64".
 static std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
@@ -186,7 +195,9 @@ static inline bool CheckMachineFunction(const MachineFunction &MF,
                         SMLoc());
   Regex PrefixRE = FC.buildCheckPrefixRegex();
   std::vector<FileCheckString> CheckStrings;
-  FC.ReadCheckFile(SM, CheckFileText, PrefixRE, CheckStrings);
+  if (FC.ReadCheckFile(SM, CheckFileText, PrefixRE, CheckStrings))
+    return false;
+
   auto OutBuffer = OutputBuf->getBuffer();
   SM.AddNewSourceBuffer(std::move(OutputBuf), SMLoc());
   return FC.CheckInput(SM, OutBuffer, CheckStrings);

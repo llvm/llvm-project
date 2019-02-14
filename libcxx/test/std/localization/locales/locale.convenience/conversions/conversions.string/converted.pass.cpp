@@ -61,4 +61,6 @@ void TestHelper<CharT, 4>::test() {
   }
 }
 
-int main() { TestHelper<wchar_t>::test(); }
+int main(int, char**) { TestHelper<wchar_t>::test(); 
+  return 0;
+}

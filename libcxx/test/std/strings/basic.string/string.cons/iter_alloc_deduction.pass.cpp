@@ -36,7 +36,7 @@
 #include "../input_iterator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     const char* s = "12345678901234";
@@ -89,4 +89,6 @@ int main()
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
     }
+
+  return 0;
 }

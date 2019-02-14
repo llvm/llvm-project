@@ -31,7 +31,7 @@ test(const FromDuration& f, const ToDuration& d)
     }
 }
 
-int main()
+int main(int, char**)
 {
 //  7290000ms is 2 hours, 1 minute, and 30 seconds
     test(std::chrono::milliseconds( 7290000), std::chrono::hours( 2));
@@ -46,4 +46,6 @@ int main()
     constexpr std::chrono::hours h2 = std::chrono::round<std::chrono::hours>(std::chrono::milliseconds(-9000000));
     static_assert(h2.count() == -2, "");
     }
+
+  return 0;
 }

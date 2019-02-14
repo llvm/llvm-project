@@ -28,7 +28,7 @@ struct eight {one _[8];};
 one test(A&);
 two test(const A&);
 
-int main()
+int main(int, char**)
 {
     A a;
     const A ca = A();
@@ -54,4 +54,6 @@ int main()
     static_assert(sizeof(test(std::forward<const A>(ca))) == 2, "");
     static_assert(sizeof(test(std::forward<const A>(csource()))) == 2, "");
 #endif
+
+  return 0;
 }

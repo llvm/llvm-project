@@ -16,10 +16,12 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::ostringstream os;
     std::ostream_iterator<int> i(os);
     std::ostream_iterator<int>& iref = *i;
     assert(&iref == &i);
+
+  return 0;
 }

@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::discrete_distribution<> D;
@@ -27,4 +27,6 @@ int main()
         d.param(p);
         assert(d.param() == p);
     }
+
+  return 0;
 }

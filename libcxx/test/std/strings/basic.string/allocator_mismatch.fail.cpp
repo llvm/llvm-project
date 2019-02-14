@@ -11,7 +11,9 @@
 
 #include <string>
 
-int main()
+int main(int, char**)
 {
     std::basic_string<char, std::char_traits<char>, std::allocator<int> > s;
+
+  return 0;
 }

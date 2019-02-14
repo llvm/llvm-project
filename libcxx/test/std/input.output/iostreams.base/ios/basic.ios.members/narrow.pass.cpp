@@ -15,9 +15,11 @@
 #include <ios>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     const std::wios ios(0);
     assert(ios.narrow(L'c', '*') == 'c');
     assert(ios.narrow(L'\u203C', '*') == '*');
+
+  return 0;
 }

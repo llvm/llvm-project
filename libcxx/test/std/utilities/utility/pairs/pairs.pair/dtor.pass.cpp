@@ -26,10 +26,12 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
   static_assert((std::is_trivially_destructible<
       std::pair<int, float> >::value), "");
   static_assert((!std::is_trivially_destructible<
       std::pair<int, std::string> >::value), "");
+
+  return 0;
 }
