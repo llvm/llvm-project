@@ -8180,12 +8180,13 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
   }
 }
 
-bool SwiftASTContext::LoadOneModule(
-    const ConstString &module_name, SwiftASTContext &swift_ast_context,
-    lldb::StackFrameWP &stack_frame_wp,
-    llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
-        &additional_imports,
-    Status &error) {
+static bool
+LoadOneModule(const ConstString &module_name,
+              SwiftASTContext &swift_ast_context,
+              lldb::StackFrameWP &stack_frame_wp,
+              llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
+                  &additional_imports,
+              Status &error) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   error.Clear();
   if (log)
