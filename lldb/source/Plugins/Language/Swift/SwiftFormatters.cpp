@@ -1042,6 +1042,11 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     return false;
   Process &process = *process_sp.get();
 
+  // SIMD vector contains an inner member `_storage` which is an opaque
+  // container. Given SIMD is always in the form SIMDX<Type> where X is a
+  // positive integer, we can calculate the number of elements and the
+  // dynamic archetype (and hence its size). Everything follows naturally
+  // as the elements are laid out in a contigous buffer without padding.
   CompilerType simd_type = valobj.GetCompilerType();
   void *type_buffer = reinterpret_cast<void *>(simd_type.GetOpaqueQualType());
   llvm::Optional<uint64_t> opt_type_size = simd_type.GetByteSize(nullptr);
@@ -1055,6 +1060,8 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     return false;
   auto generic_args = bound_type->getGenericArgs();
   lldbassert(generic_args.size() == 1 && "broken SIMD type");
+  if (generic_args.size() != 1)
+    return false;
   auto swift_arg_type = generic_args[0];
   CompilerType arg_type(swift_arg_type);
 
@@ -1064,10 +1071,11 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   uint64_t arg_size = *opt_arg_size;
 
   lldb::addr_t object_address = valobj.GetAddressOf();
-  auto ptr_size = process.GetAddressByteSize();
+  if (object_address == LLDB_INVALID_ADDRESS)
+    return false;
 
   uint64_t num_elements = type_size / arg_size;
-  stream.Printf("(");
+  std::vector<std::string> elem_string;
   for (uint64_t i = 0; i < num_elements; ++i) {
     DataBufferSP buffer_sp(new DataBufferHeap(arg_size, 0));
     uint8_t *data_ptr = buffer_sp->GetBytes();
@@ -1088,13 +1096,10 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
       value_string = synthetic->GetSummaryAsCString();
     if (!value_string)
       return false;
+    elem_string.push_back(std::string(value_string));
     object_address += arg_size;
-    stream.Printf("%s", value_string);
-    if (i < num_elements - 1)
-      stream.Printf(", ");
   }
-  stream.Printf(")");
-  return true;
+  return PrintRow(stream, elem_string);
 }
 
 bool lldb_private::formatters::swift::LegacySIMD_SummaryProvider(
