@@ -600,8 +600,6 @@ static int64_t getTlsTpOffset() {
 static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
-  case R_INVALID:
-    return 0;
   case R_ABS:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
