@@ -88,8 +88,9 @@ if(LLDB_BUILD_FRAMEWORK)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
   endif()
   # CMake 3.6 did not correctly emit POST_BUILD commands for Apple Framework targets
-  if(CMAKE_VERSION VERSION_LESS 3.7)
-    message(FATAL_ERROR "LLDB_BUILD_FRAMEWORK is not supported on CMake < 3.7")
+  # CMake < 3.8 did not have the BUILD_RPATH target property
+  if(CMAKE_VERSION VERSION_LESS 3.8)
+    message(FATAL_ERROR "LLDB_BUILD_FRAMEWORK is not supported on CMake < 3.8")
   endif()
 
   set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
