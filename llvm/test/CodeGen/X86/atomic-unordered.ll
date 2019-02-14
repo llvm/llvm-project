@@ -117,9 +117,11 @@ define void @store_i64(i64* %ptr, i64 %v) {
   ret void
 }
 
-;; The next batch of tests are intended to show transforms which we
+;; The tests in the rest of this file are intended to show transforms which we
 ;; either *can't* do for legality, or don't currently implement.  The later
 ;; are noted carefully where relevant.
+
+;; Start w/some clearly illegal ones.
 
 ; Must use a full width op, not a byte op
 define void @narrow_writeback_or(i64* %ptr) {
@@ -181,6 +183,17 @@ define void @narrow_writeback_xor(i64* %ptr) {
   ret void
 }
 
+;; Next batch of tests are exercising cases where store widening would
+;; improve codegeneration.  Note that widening is only legal if the
+;; resulting type would be atomic.  Each tests has a well aligned, and
+;; unaligned variant to ensure we get correct codegen here.
+;;
+;; Note: It's not a legality issue, but there's a gotcha here to be aware
+;; of.  Once we widen a pair of atomic stores, we loose the information
+;; that the original atomicity requirement was half the width.  Given that,
+;; we can't then split the load again.  This challenges our usual iterative
+;; approach to incremental improvement.
+
 ; Legal if wider type is also atomic (TODO)
 define void @widen_store(i32* %p0, i32 %v1, i32 %v2) {
 ; CHECK-O0-LABEL: widen_store:
@@ -200,6 +213,27 @@ define void @widen_store(i32* %p0, i32 %v1, i32 %v2) {
   ret void
 }
 
+; This one is *NOT* legal to widen.  With weaker alignment,
+; the wider type might cross a cache line and violate the
+; atomicity requirement.
+define void @widen_store_unaligned(i32* %p0, i32 %v1, i32 %v2) {
+; CHECK-O0-LABEL: widen_store_unaligned:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movl %esi, (%rdi)
+; CHECK-O0-NEXT:    movl %edx, 4(%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: widen_store_unaligned:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movl %esi, (%rdi)
+; CHECK-O3-NEXT:    movl %edx, 4(%rdi)
+; CHECK-O3-NEXT:    retq
+  %p1 = getelementptr i32, i32* %p0, i64 1
+  store atomic i32 %v1, i32* %p0 unordered, align 4
+  store atomic i32 %v2, i32* %p1 unordered, align 4
+  ret void
+}
+
 ; Legal if wider type is also atomic (TODO)
 define void @widen_broadcast(i32* %p0, i32 %v) {
 ; CHECK-O0-LABEL: widen_broadcast:
@@ -215,6 +249,25 @@ define void @widen_broadcast(i32* %p0, i32 %v) {
 ; CHECK-O3-NEXT:    retq
   %p1 = getelementptr i32, i32* %p0, i64 1
   store atomic i32 %v, i32* %p0 unordered, align 8
+  store atomic i32 %v, i32* %p1 unordered, align 4
+  ret void
+}
+
+; Not legal to widen due to alignment restriction
+define void @widen_broadcast_unaligned(i32* %p0, i32 %v) {
+; CHECK-O0-LABEL: widen_broadcast_unaligned:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movl %esi, (%rdi)
+; CHECK-O0-NEXT:    movl %esi, 4(%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: widen_broadcast_unaligned:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movl %esi, (%rdi)
+; CHECK-O3-NEXT:    movl %esi, 4(%rdi)
+; CHECK-O3-NEXT:    retq
+  %p1 = getelementptr i32, i32* %p0, i64 1
+  store atomic i32 %v, i32* %p0 unordered, align 4
   store atomic i32 %v, i32* %p1 unordered, align 4
   ret void
 }
@@ -246,6 +299,34 @@ define void @vec_store(i32* %p0, <2 x i32> %vec) {
   ret void
 }
 
+; Not legal to widen due to alignment restriction
+define void @vec_store_unaligned(i32* %p0, <2 x i32> %vec) {
+; CHECK-O0-LABEL: vec_store_unaligned:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movd %xmm0, %eax
+; CHECK-O0-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-O0-NEXT:    movd %xmm0, %ecx
+; CHECK-O0-NEXT:    movl %eax, (%rdi)
+; CHECK-O0-NEXT:    movl %ecx, 4(%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: vec_store_unaligned:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movd %xmm0, %eax
+; CHECK-O3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-O3-NEXT:    movd %xmm0, %ecx
+; CHECK-O3-NEXT:    movl %eax, (%rdi)
+; CHECK-O3-NEXT:    movl %ecx, 4(%rdi)
+; CHECK-O3-NEXT:    retq
+  %v1 = extractelement <2 x i32> %vec, i32 0
+  %v2 = extractelement <2 x i32> %vec, i32 1
+  %p1 = getelementptr i32, i32* %p0, i64 1
+  store atomic i32 %v1, i32* %p0 unordered, align 4
+  store atomic i32 %v2, i32* %p1 unordered, align 4
+  ret void
+}
+
+
 
 ; Legal if wider type is also atomic (TODO)
 ; Also, can avoid register move from xmm to eax (TODO)
@@ -270,6 +351,27 @@ define void @widen_broadcast2(i32* %p0, <2 x i32> %vec) {
   ret void
 }
 
+; Not legal to widen due to alignment restriction
+define void @widen_broadcast2_unaligned(i32* %p0, <2 x i32> %vec) {
+; CHECK-O0-LABEL: widen_broadcast2_unaligned:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movd %xmm0, %eax
+; CHECK-O0-NEXT:    movl %eax, (%rdi)
+; CHECK-O0-NEXT:    movl %eax, 4(%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: widen_broadcast2_unaligned:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movd %xmm0, %eax
+; CHECK-O3-NEXT:    movl %eax, (%rdi)
+; CHECK-O3-NEXT:    movl %eax, 4(%rdi)
+; CHECK-O3-NEXT:    retq
+  %v1 = extractelement <2 x i32> %vec, i32 0
+  %p1 = getelementptr i32, i32* %p0, i64 1
+  store atomic i32 %v1, i32* %p0 unordered, align 4
+  store atomic i32 %v1, i32* %p1 unordered, align 4
+  ret void
+}
 
 ; Legal if wider type is also atomic (TODO)
 define void @widen_zero_init(i32* %p0, i32 %v1, i32 %v2) {
@@ -291,6 +393,30 @@ define void @widen_zero_init(i32* %p0, i32 %v1, i32 %v2) {
   store atomic i32 0, i32* %p1 unordered, align 4
   ret void
 }
+
+; Not legal to widen due to alignment restriction
+define void @widen_zero_init_unaligned(i32* %p0, i32 %v1, i32 %v2) {
+; CHECK-O0-LABEL: widen_zero_init_unaligned:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movl $0, (%rdi)
+; CHECK-O0-NEXT:    movl $0, 4(%rdi)
+; CHECK-O0-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-O0-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: widen_zero_init_unaligned:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movl $0, (%rdi)
+; CHECK-O3-NEXT:    movl $0, 4(%rdi)
+; CHECK-O3-NEXT:    retq
+  %p1 = getelementptr i32, i32* %p0, i64 1
+  store atomic i32 0, i32* %p0 unordered, align 4
+  store atomic i32 0, i32* %p1 unordered, align 4
+  ret void
+}
+
+;; The next batch of tests are stressing load folding. Folding is legal
+;; on x86, so these are simply checking optimization quality.
 
 ; Legal, as expected
 define i64 @load_fold_add1(i64* %p) {
@@ -1196,6 +1322,12 @@ define i1 @load_fold_icmp3(i64* %p1, i64* %p2) {
   ret i1 %ret
 }
 
+
+;; The next batch of tests check for read-modify-write patterns
+;; Legally, it's okay to use a memory operand here as long as the operand
+;; is well aligned (i.e. doesn't cross a cache line boundary).  We are
+;; required not to narrow the store though!
+
 ; Legal, as expected
 define void @rmw_fold_add1(i64* %p, i64 %v) {
 ; CHECK-O0-LABEL: rmw_fold_add1:
@@ -1808,6 +1940,197 @@ define void @rmw_fold_xor2(i64* %p, i64 %v) {
   %prev = load atomic i64, i64* %p unordered, align 8
   %val = xor i64 %prev, %v
   store atomic i64 %val, i64* %p unordered, align 8
+  ret void
+}
+
+;; The next batch test truncations, in combination w/operations which could
+;; be folded against the memory operation.
+
+; Legal to reduce the load width (TODO)
+define i32 @fold_trunc(i64* %p) {
+; CHECK-O0-LABEL: fold_trunc:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movl %edi, %eax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_trunc:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  %ret = trunc i64 %v to i32
+  ret i32 %ret
+}
+
+; Legal to reduce the load width and fold the load (TODO)
+define i32 @fold_trunc_add(i64* %p, i32 %v2) {
+; CHECK-O0-LABEL: fold_trunc_add:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movl %edi, %eax
+; CHECK-O0-NEXT:    addl %esi, %eax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_trunc_add:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    addl %esi, %eax
+; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  %trunc = trunc i64 %v to i32
+  %ret = add i32 %trunc, %v2
+  ret i32 %ret
+}
+
+; Legal to reduce the load width and fold the load (TODO)
+define i32 @fold_trunc_and(i64* %p, i32 %v2) {
+; CHECK-O0-LABEL: fold_trunc_and:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movl %edi, %eax
+; CHECK-O0-NEXT:    andl %esi, %eax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_trunc_and:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    andl %esi, %eax
+; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  %trunc = trunc i64 %v to i32
+  %ret = and i32 %trunc, %v2
+  ret i32 %ret
+}
+
+; Legal to reduce the load width and fold the load (TODO)
+define i32 @fold_trunc_or(i64* %p, i32 %v2) {
+; CHECK-O0-LABEL: fold_trunc_or:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movl %edi, %eax
+; CHECK-O0-NEXT:    orl %esi, %eax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: fold_trunc_or:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    orl %esi, %eax
+; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  %trunc = trunc i64 %v to i32
+  %ret = or i32 %trunc, %v2
+  ret i32 %ret
+}
+
+; It's tempting to split the wide load into two smaller byte loads
+; to reduce memory traffic, but this would be illegal for a atomic load
+define i32 @split_load(i64* %p) {
+; CHECK-O0-LABEL: split_load:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rdi
+; CHECK-O0-NEXT:    movb %dil, %al
+; CHECK-O0-NEXT:    shrq $32, %rdi
+; CHECK-O0-NEXT:    movb %dil, %cl
+; CHECK-O0-NEXT:    orb %cl, %al
+; CHECK-O0-NEXT:    movzbl %al, %eax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: split_load:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    movq %rax, %rcx
+; CHECK-O3-NEXT:    shrq $32, %rcx
+; CHECK-O3-NEXT:    orl %eax, %ecx
+; CHECK-O3-NEXT:    movzbl %cl, %eax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  %b1 = trunc i64 %v to i8
+  %v.shift = lshr i64 %v, 32
+  %b2 = trunc i64 %v.shift to i8
+  %or = or i8 %b1, %b2
+  %ret = zext i8 %or to i32
+  ret i32 %ret
+}
+
+;; A collection of simple memory forwarding tests.  Nothing particular
+;; interesting semantic wise, just demonstrating obvious missed transforms.
+
+; Legal to forward and fold (TODO)
+define i64 @load_forwarding(i64* %p) {
+; CHECK-O0-LABEL: load_forwarding:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    orq (%rdi), %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: load_forwarding:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rcx
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    orq %rcx, %rax
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  %v2 = load atomic i64, i64* %p unordered, align 8
+  %ret = or i64 %v, %v2
+  ret i64 %ret
+}
+
+; Legal to forward (TODO)
+define i64 @store_forward(i64* %p, i64 %v) {
+; CHECK-O0-LABEL: store_forward:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq %rsi, (%rdi)
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: store_forward:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq %rsi, (%rdi)
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    retq
+  store atomic i64 %v, i64* %p unordered, align 8
+  %ret = load atomic i64, i64* %p unordered, align 8
+  ret i64 %ret
+}
+
+; Legal to kill (TODO)
+define void @dead_writeback(i64* %p) {
+; CHECK-O0-LABEL: dead_writeback:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq (%rdi), %rax
+; CHECK-O0-NEXT:    movq %rax, (%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: dead_writeback:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq (%rdi), %rax
+; CHECK-O3-NEXT:    movq %rax, (%rdi)
+; CHECK-O3-NEXT:    retq
+  %v = load atomic i64, i64* %p unordered, align 8
+  store atomic i64 %v, i64* %p unordered, align 8
+  ret void
+}
+
+; Legal to kill (TODO)
+define void @dead_store(i64* %p, i64 %v) {
+; CHECK-O0-LABEL: dead_store:
+; CHECK-O0:       # %bb.0:
+; CHECK-O0-NEXT:    movq $0, (%rdi)
+; CHECK-O0-NEXT:    movq %rsi, (%rdi)
+; CHECK-O0-NEXT:    retq
+;
+; CHECK-O3-LABEL: dead_store:
+; CHECK-O3:       # %bb.0:
+; CHECK-O3-NEXT:    movq $0, (%rdi)
+; CHECK-O3-NEXT:    movq %rsi, (%rdi)
+; CHECK-O3-NEXT:    retq
+  store atomic i64 0, i64* %p unordered, align 8
+  store atomic i64 %v, i64* %p unordered, align 8
   ret void
 }
 

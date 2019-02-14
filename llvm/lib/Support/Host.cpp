@@ -1323,6 +1323,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["bmi2"]       = HasLeaf7 && ((EBX >>  8) & 1);
   Features["invpcid"]    = HasLeaf7 && ((EBX >> 10) & 1);
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
+  Features["mpx"]        = HasLeaf7 && ((EBX >> 14) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;

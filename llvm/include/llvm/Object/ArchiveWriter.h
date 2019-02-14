@@ -26,7 +26,6 @@ struct NewArchiveMember {
   sys::TimePoint<std::chrono::seconds> ModTime;
   unsigned UID = 0, GID = 0, Perms = 0644;
 
-  bool IsNew = false;
   NewArchiveMember() = default;
   NewArchiveMember(MemoryBufferRef BufRef);
 
@@ -36,6 +35,8 @@ struct NewArchiveMember {
   static Expected<NewArchiveMember> getFile(StringRef FileName,
                                             bool Deterministic);
 };
+
+std::string computeArchiveRelativePath(StringRef From, StringRef To);
 
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    bool WriteSymtab, object::Archive::Kind Kind,

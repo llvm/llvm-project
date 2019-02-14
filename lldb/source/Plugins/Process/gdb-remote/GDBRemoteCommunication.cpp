@@ -979,8 +979,11 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
         g_debugserver_file_spec = debugserver_file_spec;
       } else {
-        debugserver_file_spec =
-            platform->LocateExecutable(DEBUGSERVER_BASENAME);
+        if (platform)
+          debugserver_file_spec =
+              platform->LocateExecutable(DEBUGSERVER_BASENAME);
+        else
+          debugserver_file_spec.Clear();
         if (debugserver_file_spec) {
           // Platform::LocateExecutable() wouldn't return a path if it doesn't
           // exist
