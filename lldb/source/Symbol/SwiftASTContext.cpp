@@ -41,17 +41,17 @@
 #include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/ClangImporter/ClangImporterOptions.h"
+#include "swift/DWARFImporter/DWARFImporter.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Driver/Util.h"
-#include "swift/DWARFImporter/DWARFImporter.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/Utils.h"
 #include "swift/IRGen/Linking.h"
+#include "swift/SIL/SILModule.h"
 #include "swift/Serialization/ModuleFile.h"
 #include "swift/Serialization/Validation.h"
-#include "swift/SIL/SILModule.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/TargetInfo.h"
@@ -68,6 +68,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -99,6 +100,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Platform.h"
@@ -3136,48 +3138,51 @@ const std::vector<std::string> &SwiftASTContext::GetClangArguments() {
 }
 
 swift::ModuleDecl *
-SwiftASTContext::GetCachedModule(const ConstString &module_name) {
+SwiftASTContext::GetCachedModule(const SourceModule &module) {
   VALID_OR_RETURN(nullptr);
+  if (!module.path.size())
+    return nullptr;
 
   SwiftModuleMap::const_iterator iter =
-      m_swift_module_cache.find(module_name.GetCString());
+    m_swift_module_cache.find(module.path.front().GetStringRef());
 
   if (iter != m_swift_module_cache.end())
     return iter->second;
-  return NULL;
+  return nullptr;
 }
 
-swift::ModuleDecl *
-SwiftASTContext::CreateModule(const ConstString &module_basename,
-                              Status &error) {
+swift::ModuleDecl *SwiftASTContext::CreateModule(const SourceModule &module,
+                                                 Status &error) {
   VALID_OR_RETURN(nullptr);
-
-  if (module_basename) {
-    swift::ModuleDecl *module = GetCachedModule(module_basename);
-    if (module) {
-      error.SetErrorStringWithFormat("module already exists for '%s'",
-                                     module_basename.GetCString());
-      return NULL;
-    }
-
-    swift::ASTContext *ast = GetASTContext();
-    if (ast) {
-      swift::Identifier module_id(
-          ast->getIdentifier(module_basename.GetCString()));
-      module = swift::ModuleDecl::create(module_id, *ast);
-      if (module) {
-        m_swift_module_cache[module_basename.GetCString()] = module;
-        return module;
-      } else {
-        error.SetErrorStringWithFormat("invalid swift AST (NULL)");
-      }
-    } else {
-      error.SetErrorStringWithFormat("invalid swift AST (NULL)");
-    }
-  } else {
+  if (!module.path.size()) {
     error.SetErrorStringWithFormat("invalid module name (empty)");
+    return nullptr;
   }
-  return NULL;
+
+  if (swift::ModuleDecl *module_decl = GetCachedModule(module)) {
+    error.SetErrorStringWithFormat("module already exists for '%s'",
+                                   module.path.front().GetCString());
+    return nullptr;
+  }
+
+  swift::ASTContext *ast = GetASTContext();
+  if (!ast) {
+    error.SetErrorStringWithFormat("invalid swift AST (nullptr)");
+    return nullptr;
+  }
+
+  swift::Identifier module_id(
+      ast->getIdentifier(module.path.front().GetCString()));
+  auto *module_decl = swift::ModuleDecl::create(module_id, *ast);
+  if (!module_decl){
+    error.SetErrorStringWithFormat("failed to create module for '%s'",
+                                   module.path.front().GetCString());
+    return nullptr;
+  }
+
+  m_swift_module_cache.insert(
+      {module.path.front().GetStringRef(), module_decl});
+  return module_decl;
 }
 
 void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
@@ -3186,7 +3191,7 @@ void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
   if (!module)
     return;
   auto ID = module->getName().get();
-  if (nullptr == ID || 0 == ID[0])
+  if (!ID || !ID[0])
     return;
   if (m_swift_module_cache.find(ID) != m_swift_module_cache.end())
     return;
@@ -3194,90 +3199,92 @@ void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
 }
 
 swift::ModuleDecl *
-SwiftASTContext::GetModule(const ConstString &module_basename, Status &error) {
+SwiftASTContext::GetModule(const SourceModule &module, Status &error) {
   VALID_OR_RETURN(nullptr);
+  if (!module.path.size())
+    return nullptr;
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   if (log)
     log->Printf("((SwiftASTContext*)%p)->GetModule('%s')", this,
-                module_basename.AsCString("<no name>"));
+                module.path.front().AsCString("<no name>"));
 
-  if (module_basename) {
-    swift::ModuleDecl *module = GetCachedModule(module_basename);
-    if (module)
-      return module;
-    if (swift::ASTContext *ast = GetASTContext()) {
-      typedef std::pair<swift::Identifier, swift::SourceLoc> ModuleNameSpec;
-      llvm::StringRef module_basename_sref(module_basename.GetCString());
-      ModuleNameSpec name_pair(ast->getIdentifier(module_basename_sref),
-                               swift::SourceLoc());
+  if (module.path.front().IsEmpty()) {
+    if (log)
+      log->Printf("((SwiftASTContext*)%p)->GetModule('') -- empty module name",
+                  this);
+    error.SetErrorString("invalid module name (empty)");
+    return nullptr;
+  }
 
-      if (HasFatalErrors()) {
-        error.SetErrorStringWithFormat("failed to get module '%s' from AST "
-                                       "context:\nAST context is in a fatal "
-                                       "error state",
-                                       module_basename.GetCString());
-        printf("error in SwiftASTContext::GetModule(%s): AST context is in a "
-               "fatal error stat",
-               module_basename.GetCString());
-        return nullptr;
-      }
+  if (swift::ModuleDecl *module_decl = GetCachedModule(module))
+    return module_decl;
 
-      ClearDiagnostics();
-
-      module = ast->getModuleByName(module_basename_sref);
-
-      if (HasErrors()) {
-        DiagnosticManager diagnostic_manager;
-        PrintDiagnostics(diagnostic_manager);
-        error.SetErrorStringWithFormat(
-            "failed to get module '%s' from AST context:\n%s",
-            module_basename.GetCString(),
-            diagnostic_manager.GetString().data());
-#ifdef LLDB_CONFIGURATION_DEBUG
-        printf("error in SwiftASTContext::GetModule(%s): '%s'",
-               module_basename.GetCString(),
-               diagnostic_manager.GetString().data());
-#endif
-        if (log)
-          log->Printf("((SwiftASTContext*)%p)->GetModule('%s') -- error: %s",
-                      this, module_basename.GetCString(),
-                      diagnostic_manager.GetString().data());
-      } else if (module) {
-        if (log)
-          log->Printf("((SwiftASTContext*)%p)->GetModule('%s') -- found %s",
-                      this, module_basename.GetCString(),
-                      module->getName().str().str().c_str());
-
-        m_swift_module_cache[module_basename.GetCString()] = module;
-        return module;
-      } else {
-        if (log)
-          log->Printf(
-              "((SwiftASTContext*)%p)->GetModule('%s') -- failed with no error",
-              this, module_basename.GetCString());
-
-        error.SetErrorStringWithFormat(
-            "failed to get module '%s' from AST context",
-            module_basename.GetCString());
-      }
-    } else {
-      if (log)
-        log->Printf(
-            "((SwiftASTContext*)%p)->GetModule('%s') -- invalid ASTContext",
-            this, module_basename.GetCString());
-
-      error.SetErrorString("invalid swift::ASTContext");
-    }
-  } else {
+  swift::ASTContext *ast = GetASTContext();
+  if (!ast) {
     if (log)
       log->Printf(
-          "((SwiftASTContext*)%p)->GetModule('%s') -- empty module name", this,
-          module_basename.GetCString());
+          "((SwiftASTContext*)%p)->GetModule('%s') -- invalid ASTContext", this,
+          module.path.front().GetCString());
 
-    error.SetErrorString("invalid module name (empty)");
+    error.SetErrorString("invalid swift::ASTContext");
+    return nullptr;
   }
-  return NULL;
+
+  typedef std::pair<swift::Identifier, swift::SourceLoc> ModuleNameSpec;
+  llvm::StringRef module_basename_sref = module.path.front().GetStringRef();
+  ModuleNameSpec name_pair(ast->getIdentifier(module_basename_sref),
+                           swift::SourceLoc());
+
+  if (HasFatalErrors()) {
+    error.SetErrorStringWithFormat("failed to get module '%s' from AST "
+                                   "context:\nAST context is in a fatal "
+                                   "error state",
+                                   module.path.front().GetCString());
+    printf("error in SwiftASTContext::GetModule(%s): AST context is in a "
+           "fatal error stat",
+           module.path.front().GetCString());
+    return nullptr;
+  }
+
+  ClearDiagnostics();
+  swift::ModuleDecl *module_decl = ast->getModuleByName(module_basename_sref);
+  if (HasErrors()) {
+    DiagnosticManager diagnostic_manager;
+    PrintDiagnostics(diagnostic_manager);
+    error.SetErrorStringWithFormat(
+        "failed to get module '%s' from AST context:\n%s",
+        module.path.front().GetCString(),
+        diagnostic_manager.GetString().data());
+#ifdef LLDB_CONFIGURATION_DEBUG
+    printf("error in SwiftASTContext::GetModule(%s): '%s'",
+           module.path.front().GetCString(),
+           diagnostic_manager.GetString().data());
+#endif
+    if (log)
+      log->Printf("((SwiftASTContext*)%p)->GetModule('%s') -- error: %s", this,
+                  module.path.front().GetCString(),
+                  diagnostic_manager.GetString().data());
+    return nullptr;
+  }
+
+  if (!module_decl) {
+    if (log)
+      log->Printf(
+          "((SwiftASTContext*)%p)->GetModule('%s') -- failed with no error",
+          this, module.path.front().GetCString());
+
+    error.SetErrorStringWithFormat("failed to get module '%s' from AST context",
+                                   module.path.front().GetCString());
+    return nullptr;
+  }
+  if (log)
+    log->Printf("((SwiftASTContext*)%p)->GetModule('%s') -- found %s", this,
+                module.path.front().GetCString(),
+                module_decl->getName().str().str().c_str());
+
+  m_swift_module_cache[module.path.front().GetStringRef()] = module_decl;
+  return module_decl;
 }
 
 swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
@@ -3369,11 +3376,11 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
 }
 
 swift::ModuleDecl *
-SwiftASTContext::FindAndLoadModule(const ConstString &module_basename,
-                                   Process &process, Status &error) {
+SwiftASTContext::FindAndLoadModule(const SourceModule &module, Process &process,
+                                   Status &error) {
   VALID_OR_RETURN(nullptr);
 
-  swift::ModuleDecl *swift_module = GetModule(module_basename, error);
+  swift::ModuleDecl *swift_module = GetModule(module, error);
   if (!swift_module)
     return nullptr;
   LoadModule(swift_module, process, error);
@@ -3837,10 +3844,13 @@ void SwiftASTContext::ValidateSectionModules(
 
   Status error;
 
-  for (const std::string &module_name : module_names)
-    if (!GetModule(ConstString(module_name.c_str()), error))
+  for (const std::string &module_name : module_names) {
+    SourceModule module_info;
+    module_info.path.push_back(ConstString(module_name));
+    if (!GetModule(module_info, error))
       module.ReportWarning("unable to load swift module '%s' (%s)",
                            module_name.c_str(), error.AsCString());
+  }
 }
 
 swift::Identifier SwiftASTContext::GetIdentifier(const char *name) {
@@ -4052,7 +4062,9 @@ CompilerType SwiftASTContext::FindQualifiedType(const char *qualified_name) {
     const char *dot_pos = strchr(qualified_name, '.');
     if (dot_pos) {
       ConstString module_name(qualified_name, dot_pos - qualified_name);
-      swift::ModuleDecl *swift_module = GetCachedModule(module_name);
+      SourceModule module_info;
+      module_info.path.push_back(module_name);
+      swift::ModuleDecl *swift_module = GetCachedModule(module_info);
       if (swift_module) {
         swift::ModuleDecl::AccessPathTy access_path;
         llvm::SmallVector<swift::ValueDecl *, 4> decls;
@@ -4307,23 +4319,6 @@ size_t SwiftASTContext::FindType(const char *name,
     lookup_func(m_scratch_module);
 
   return count;
-}
-
-CompilerType SwiftASTContext::FindFirstType(const char *name,
-                                            const ConstString &module_name) {
-  VALID_OR_RETURN(CompilerType());
-
-  if (name && name[0]) {
-    if (module_name) {
-      return FindType(name, GetCachedModule(module_name));
-    } else {
-      std::set<CompilerType> types;
-      FindType(name, types);
-      if (!types.empty())
-        return *types.begin();
-    }
-  }
-  return {};
 }
 
 CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
@@ -8105,36 +8100,40 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
 }
 
 bool SwiftASTContext::LoadOneModule(
-    const ConstString &module_name, SwiftASTContext &swift_ast_context,
+    const SourceModule &module, SwiftASTContext &swift_ast_context,
     lldb::StackFrameWP &stack_frame_wp,
     llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
         &additional_imports,
     Status &error) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  if (!module.path.size())
+    return false;
+  
   error.Clear();
+  ConstString toplevel = module.path.front();
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   if (log)
-    log->Printf("[LoadOneModule] Importing module %s", module_name.AsCString());
+    log->Printf("[LoadOneModule] Importing module %s", toplevel.AsCString());
   swift::ModuleDecl *swift_module = nullptr;
   lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
 
-  if (module_name == ConstString(swift_ast_context.GetClangImporter()
-                                     ->getImportedHeaderModule()
-                                     ->getName()
-                                     .str()))
-    swift_module =
-        swift_ast_context.GetClangImporter()->getImportedHeaderModule();
+  swift::ModuleDecl *imported_header_module =
+      swift_ast_context.GetClangImporter()->getImportedHeaderModule();
+  if (toplevel.GetStringRef() == imported_header_module->getName().str())
+    swift_module = imported_header_module;
   else if (this_frame_sp) {
     lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
     if (process_sp)
-      swift_module = swift_ast_context.FindAndLoadModule(
-          module_name, *process_sp.get(), error);
+      swift_module =
+          swift_ast_context.FindAndLoadModule(module, *process_sp.get(), error);
+    else
+      swift_module = swift_ast_context.GetModule(module, error);
   } else
-    swift_module = swift_ast_context.GetModule(module_name, error);
+    swift_module = swift_ast_context.GetModule(module, error);
 
   if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
     if (log)
       log->Printf("[LoadOneModule] Couldn't import module %s: %s",
-                  module_name.AsCString(), error.AsCString());
+                  toplevel.AsCString(), error.AsCString());
 
     if (!swift_module || swift_ast_context.HasFatalErrors()) {
       return false;
@@ -8142,7 +8141,8 @@ bool SwiftASTContext::LoadOneModule(
   }
 
   if (log) {
-    log->Printf("Importing %s with source files:", module_name.AsCString());
+    log->Printf("[LoadOneModule] Importing %s with source files:",
+                module.path.front().AsCString());
 
     for (swift::FileUnit *file_unit : swift_module->getFiles()) {
       StreamString ss;
@@ -8182,12 +8182,14 @@ bool SwiftASTContext::PerformUserImport(SwiftASTContext &swift_ast_context,
       std::string module_name;
       GetNameFromModule(module, module_name);
       if (!module_name.empty()) {
+        SourceModule module_info;
         ConstString module_const_str(module_name);
+        module_info.path.push_back(module_const_str);
         if (log)
           log->Printf("[PerformUserImport] Performing auto import on found "
                       "module: %s.\n",
                       module_name.c_str());
-        if (!LoadOneModule(module_const_str, swift_ast_context, stack_frame_wp,
+        if (!LoadOneModule(module_info, swift_ast_context, stack_frame_wp,
                            additional_imports, error))
           return false;
 
@@ -8198,10 +8200,13 @@ bool SwiftASTContext::PerformUserImport(SwiftASTContext &swift_ast_context,
   }
   // Finally get the hand-loaded modules from the
   // SwiftPersistentExpressionState and load them into this context:
-  for (ConstString name : persistent_expression_state->GetHandLoadedModules())
-    if (!LoadOneModule(name, swift_ast_context, stack_frame_wp,
+  for (ConstString name : persistent_expression_state->GetHandLoadedModules()) {
+    SourceModule module_info;
+    module_info.path.push_back(name);
+    if (!LoadOneModule(module_info, swift_ast_context, stack_frame_wp,
                        additional_imports, error))
       return false;
+  }
 
   source_file.addImports(additional_imports);
   return true;
@@ -8216,22 +8221,25 @@ bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
       additional_imports;
 
   // Import the Swift standard library and its dependecies.
-  if (!LoadOneModule(ConstString("Swift"), swift_ast_context, stack_frame_wp,
+  SourceModule swift_module;
+  swift_module.path.push_back(ConstString("Swift"));
+  if (!LoadOneModule(swift_module, swift_ast_context, stack_frame_wp,
                      additional_imports, error))
     return false;
 
   CompileUnit *compile_unit = sc.comp_unit;
   if (compile_unit && compile_unit->GetLanguage() == lldb::eLanguageTypeSwift)
-    for (const auto &module_name : compile_unit->GetImportedModules()) {
+    for (const SourceModule &module : compile_unit->GetImportedModules()) {
       // When building the Swift stdlib with debug info these will
       // show up in "Swift.o", but we already imported them and
       // manually importing them will fail.
-      if (llvm::StringSwitch<bool>(module_name.GetStringRef())
+      if (module.path.size() &&
+          llvm::StringSwitch<bool>(module.path.front().GetStringRef())
           .Cases("Swift", "SwiftShims", "Builtin", true)
               .Default(false))
         continue;
 
-      if (!LoadOneModule(module_name, swift_ast_context, stack_frame_wp,
+      if (!LoadOneModule(module, swift_ast_context, stack_frame_wp,
                          additional_imports, error))
         return false;
     }

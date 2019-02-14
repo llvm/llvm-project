@@ -71,7 +71,7 @@ public:
   ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc) override;
   bool ParseImportedModules(
       const lldb_private::SymbolContext &sc,
-      std::vector<lldb_private::ConstString> &imported_modules) override;
+      std::vector<lldb_private::SourceModule> &imported_modules) override;
   size_t ParseFunctionBlocks(const lldb_private::SymbolContext &sc) override;
   size_t ParseTypes(const lldb_private::SymbolContext &sc) override;
   size_t
