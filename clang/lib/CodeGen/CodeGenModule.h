@@ -125,6 +125,9 @@ struct ObjCEntrypoints {
   /// void objc_allocWithZone(id);
   llvm::Constant *objc_allocWithZone;
 
+  /// void objc_alloc_init(id);
+  llvm::Constant *objc_alloc_init;
+
   /// void objc_autoreleasePoolPop(void*);
   llvm::Constant *objc_autoreleasePoolPop;
 
