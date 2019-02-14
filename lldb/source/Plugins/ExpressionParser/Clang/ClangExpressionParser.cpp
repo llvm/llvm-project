@@ -11,7 +11,6 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
@@ -549,14 +548,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   m_compiler->getDiagnostics().setClient(new ClangDiagnosticManagerAdapter);
 
   // 7. Set up the source management objects inside the compiler
-
-  clang::FileSystemOptions file_system_options;
-  m_file_manager.reset(new clang::FileManager(file_system_options));
-
-  if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(*m_file_manager);
-
   m_compiler->createFileManager();
+  if (!m_compiler->hasSourceManager())
+    m_compiler->createSourceManager(m_compiler->getFileManager());
   m_compiler->createPreprocessor(TU_Complete);
 
   if (ClangModulesDeclVendor *decl_vendor =
@@ -899,7 +893,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     std::string temp_source_path;
     if (ExpressionSourceCode::SaveExpressionTextToTempFile(
             expr_text, *m_expr.GetOptions(), temp_source_path)) {
-      auto file = m_file_manager->getFile(temp_source_path);
+      auto file = m_compiler->getFileManager().getFile(temp_source_path);
       if (file) {
         source_mgr.setMainFileID(
             source_mgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
@@ -937,9 +931,9 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
       if (file.Write(expr_text, bytes_written).Success()) {
         if (bytes_written == expr_text_len) {
           file.Close();
-          source_mgr.setMainFileID(
-              source_mgr.createFileID(m_file_manager->getFile(result_path),
-                                      SourceLocation(), SrcMgr::C_User));
+          source_mgr.setMainFileID(source_mgr.createFileID(
+              m_compiler->getFileManager().getFile(result_path),
+              SourceLocation(), SrcMgr::C_User));
           created_main_file = true;
         }
       }
