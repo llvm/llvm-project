@@ -1502,9 +1502,9 @@ void RenderScriptRuntime::CaptureAllocationDestroy(RuntimeHook *hook,
                 uint64_t(args[eRsContext]), uint64_t(args[eRsAlloc]));
 
   for (auto iter = m_allocations.begin(); iter != m_allocations.end(); ++iter) {
-    auto &allocation_ap = *iter; // get the unique pointer
-    if (allocation_ap->address.isValid() &&
-        *allocation_ap->address.get() == addr_t(args[eRsAlloc])) {
+    auto &allocation_up = *iter; // get the unique pointer
+    if (allocation_up->address.isValid() &&
+        *allocation_up->address.get() == addr_t(args[eRsAlloc])) {
       m_allocations.erase(iter);
       if (log)
         log->Printf("%s - deleted allocation entry.", __FUNCTION__);

@@ -91,6 +91,7 @@ struct CopyConfig {
   std::vector<NameOrRegex> SymbolsToKeep;
   std::vector<NameOrRegex> SymbolsToLocalize;
   std::vector<NameOrRegex> SymbolsToRemove;
+  std::vector<NameOrRegex> UnneededSymbolsToRemove;
   std::vector<NameOrRegex> SymbolsToWeaken;
   std::vector<NameOrRegex> ToRemove;
   std::vector<NameOrRegex> SymbolsToKeepGlobal;

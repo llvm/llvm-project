@@ -18,7 +18,7 @@
 namespace fuzzer {
 void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
                   const Vector<std::string> &Args,
-                  const Vector<std::string> &CorpusDirs);
+                  const Vector<std::string> &CorpusDirs, int NumJobs);
 } // namespace fuzzer
 
 #endif // LLVM_FUZZER_FORK_H

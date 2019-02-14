@@ -1700,12 +1700,12 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
     // "UIFoundation" and "UIFoundation.framework" -- most likely the latter
     // will be the one we find there.
 
-    FileSpec platform_pull_apart(platform_file);
+    FileSpec platform_pull_upart(platform_file);
     std::vector<std::string> path_parts;
     path_parts.push_back(
-        platform_pull_apart.GetLastPathComponent().AsCString());
-    while (platform_pull_apart.RemoveLastPathComponent()) {
-      ConstString part = platform_pull_apart.GetLastPathComponent();
+        platform_pull_upart.GetLastPathComponent().AsCString());
+    while (platform_pull_upart.RemoveLastPathComponent()) {
+      ConstString part = platform_pull_upart.GetLastPathComponent();
       path_parts.push_back(part.AsCString());
     }
     const size_t path_parts_size = path_parts.size();

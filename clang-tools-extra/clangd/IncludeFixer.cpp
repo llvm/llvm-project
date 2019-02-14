@@ -79,6 +79,12 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_typename_nested_not_found:
   case diag::err_no_template:
   case diag::err_no_template_suggest:
+  case diag::err_undeclared_use:
+  case diag::err_undeclared_use_suggest:
+  case diag::err_undeclared_var_use:
+  case diag::err_undeclared_var_use_suggest:
+  case diag::err_no_member: // Could be no member in namespace.
+  case diag::err_no_member_suggest:
     if (LastUnresolvedName) {
       // Try to fix unresolved name caused by missing declaraion.
       // E.g.

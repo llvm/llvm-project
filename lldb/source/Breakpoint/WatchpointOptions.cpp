@@ -30,7 +30,7 @@ bool WatchpointOptions::NullCallback(void *baton,
 //----------------------------------------------------------------------
 WatchpointOptions::WatchpointOptions()
     : m_callback(WatchpointOptions::NullCallback), m_callback_baton_sp(),
-      m_callback_is_synchronous(false), m_thread_spec_ap() {}
+      m_callback_is_synchronous(false), m_thread_spec_up() {}
 
 //----------------------------------------------------------------------
 // WatchpointOptions copy constructor
@@ -38,9 +38,9 @@ WatchpointOptions::WatchpointOptions()
 WatchpointOptions::WatchpointOptions(const WatchpointOptions &rhs)
     : m_callback(rhs.m_callback), m_callback_baton_sp(rhs.m_callback_baton_sp),
       m_callback_is_synchronous(rhs.m_callback_is_synchronous),
-      m_thread_spec_ap() {
-  if (rhs.m_thread_spec_ap != nullptr)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap));
+      m_thread_spec_up() {
+  if (rhs.m_thread_spec_up != nullptr)
+    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
 }
 
 //----------------------------------------------------------------------
@@ -51,8 +51,8 @@ operator=(const WatchpointOptions &rhs) {
   m_callback = rhs.m_callback;
   m_callback_baton_sp = rhs.m_callback_baton_sp;
   m_callback_is_synchronous = rhs.m_callback_is_synchronous;
-  if (rhs.m_thread_spec_ap != nullptr)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap));
+  if (rhs.m_thread_spec_up != nullptr)
+    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
   return *this;
 }
 
@@ -113,14 +113,14 @@ bool WatchpointOptions::HasCallback() {
 }
 
 const ThreadSpec *WatchpointOptions::GetThreadSpecNoCreate() const {
-  return m_thread_spec_ap.get();
+  return m_thread_spec_up.get();
 }
 
 ThreadSpec *WatchpointOptions::GetThreadSpec() {
-  if (m_thread_spec_ap == nullptr)
-    m_thread_spec_ap.reset(new ThreadSpec());
+  if (m_thread_spec_up == nullptr)
+    m_thread_spec_up.reset(new ThreadSpec());
 
-  return m_thread_spec_ap.get();
+  return m_thread_spec_up.get();
 }
 
 void WatchpointOptions::SetThreadID(lldb::tid_t thread_id) {
@@ -152,8 +152,8 @@ void WatchpointOptions::GetDescription(Stream *s,
     } else
       s->PutCString(" Options: ");
 
-    if (m_thread_spec_ap)
-      m_thread_spec_ap->GetDescription(s, level);
+    if (m_thread_spec_up)
+      m_thread_spec_up->GetDescription(s, level);
     else if (level == eDescriptionLevelBrief)
       s->PutCString("thread spec: no ");
     if (level == lldb::eDescriptionLevelFull) {

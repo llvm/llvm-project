@@ -1118,8 +1118,12 @@ void MSanAtExitWrapper() {
 void MSanCxaAtExitWrapper(void *arg) {
   UnpoisonParam(1);
   MSanAtExitRecord *r = (MSanAtExitRecord *)arg;
+  // libc before 2.27 had race which caused occasional double handler execution
+  // https://sourceware.org/ml/libc-alpha/2017-08/msg01204.html
+  if (!r->func)
+    return;
   r->func(r->arg);
-  InternalFree(r);
+  r->func = nullptr;
 }
 
 static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso);

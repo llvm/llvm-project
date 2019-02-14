@@ -151,30 +151,49 @@ void Instruction::forceExecuted() {
   Stage = IS_EXECUTED;
 }
 
-void Instruction::update() {
-  assert(isDispatched() && "Unexpected instruction stage found!");
+bool Instruction::updatePending() {
+  assert(isPending() && "Unexpected instruction stage found!");
 
   if (!all_of(getUses(), [](const ReadState &Use) { return Use.isReady(); }))
-    return;
+    return false;
 
   // A partial register write cannot complete before a dependent write.
-  auto IsDefReady = [&](const WriteState &Def) {
-    if (!Def.getDependentWrite()) {
-      unsigned CyclesLeft = Def.getDependentWriteCyclesLeft();
-      return !CyclesLeft || CyclesLeft < getLatency();
-    }
+  if (!all_of(getDefs(), [](const WriteState &Def) { return Def.isReady(); }))
     return false;
-  };
 
-  if (all_of(getDefs(), IsDefReady))
-    Stage = IS_READY;
+  Stage = IS_READY;
+  return true;
+}
+
+bool Instruction::updateDispatched() {
+  assert(isDispatched() && "Unexpected instruction stage found!");
+
+  if (!all_of(getUses(), [](const ReadState &Use) {
+        return Use.isPending() || Use.isReady();
+      }))
+    return false;
+
+  // A partial register write cannot complete before a dependent write.
+  if (!all_of(getDefs(),
+              [](const WriteState &Def) { return !Def.getDependentWrite(); }))
+    return false;
+
+  Stage = IS_PENDING;
+  return true;
+}
+
+void Instruction::update() {
+  if (isDispatched())
+    updateDispatched();
+  if (isPending())
+    updatePending();
 }
 
 void Instruction::cycleEvent() {
   if (isReady())
     return;
 
-  if (isDispatched()) {
+  if (isDispatched() || isPending()) {
     for (ReadState &Use : getUses())
       Use.cycleEvent();
 

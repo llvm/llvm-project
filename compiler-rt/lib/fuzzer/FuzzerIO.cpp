@@ -135,11 +135,11 @@ void VPrintf(bool Verbose, const char *Fmt, ...) {
   fflush(OutputFile);
 }
 
-void RmFilesInDir(const std::string &Path) {
-  Vector<std::string> Files;
-  ListFilesInDirRecursive(Path, 0, &Files, /*TopDir*/true);
-  for (auto &F : Files)
-    RemoveFile(F);
+void RmDirRecursive(const std::string &Dir) {
+  IterateDirRecurisve(
+      Dir, [](const std::string &Path) {},
+      [](const std::string &Path) { RmDir(Path); },
+      [](const std::string &Path) { RemoveFile(Path); });
 }
 
 std::string TempPath(const char *Extension) {

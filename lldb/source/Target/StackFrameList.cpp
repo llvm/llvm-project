@@ -819,11 +819,11 @@ void StackFrameList::Clear() {
   m_concrete_frames_fetched = 0;
 }
 
-void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
+void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_up,
                            lldb::StackFrameListSP &prev_sp) {
   std::unique_lock<std::recursive_mutex> current_lock, previous_lock;
-  if (curr_ap)
-    current_lock = std::unique_lock<std::recursive_mutex>(curr_ap->m_mutex);
+  if (curr_up)
+    current_lock = std::unique_lock<std::recursive_mutex>(curr_up->m_mutex);
   if (prev_sp)
     previous_lock = std::unique_lock<std::recursive_mutex>(prev_sp->m_mutex);
 
@@ -835,18 +835,18 @@ void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
   else
     s.PutCString("NULL");
   s.PutCString("\nCurr:\n");
-  if (curr_ap)
-    curr_ap->Dump(&s);
+  if (curr_up)
+    curr_up->Dump(&s);
   else
     s.PutCString("NULL");
   s.EOL();
 #endif
 
-  if (!curr_ap || curr_ap->GetNumFrames(false) == 0) {
+  if (!curr_up || curr_up->GetNumFrames(false) == 0) {
 #if defined(DEBUG_STACK_FRAMES)
     s.PutCString("No current frames, leave previous frames alone...\n");
 #endif
-    curr_ap.release();
+    curr_up.release();
     return;
   }
 
@@ -857,11 +857,11 @@ void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
     // We either don't have any previous frames, or since we have more than one
     // current frames it means we have all the frames and can safely replace
     // our previous frames.
-    prev_sp.reset(curr_ap.release());
+    prev_sp.reset(curr_up.release());
     return;
   }
 
-  const uint32_t num_curr_frames = curr_ap->GetNumFrames(false);
+  const uint32_t num_curr_frames = curr_up->GetNumFrames(false);
 
   if (num_curr_frames > 1) {
 #if defined(DEBUG_STACK_FRAMES)
@@ -870,7 +870,7 @@ void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
 #endif
     // We have more than one current frames it means we have all the frames and
     // can safely replace our previous frames.
-    prev_sp.reset(curr_ap.release());
+    prev_sp.reset(curr_up.release());
 
 #if defined(DEBUG_STACK_FRAMES)
     s.PutCString("\nMerged:\n");
@@ -880,7 +880,7 @@ void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
   }
 
   StackFrameSP prev_frame_zero_sp(prev_sp->GetFrameAtIndex(0));
-  StackFrameSP curr_frame_zero_sp(curr_ap->GetFrameAtIndex(0));
+  StackFrameSP curr_frame_zero_sp(curr_up->GetFrameAtIndex(0));
   StackID curr_stack_id(curr_frame_zero_sp->GetStackID());
   StackID prev_stack_id(prev_frame_zero_sp->GetStackID());
 
@@ -910,7 +910,7 @@ void StackFrameList::Merge(std::unique_ptr<StackFrameList> &curr_ap,
     prev_sp->m_frames.insert(prev_sp->m_frames.begin(), curr_frame_zero_sp);
   }
 
-  curr_ap.release();
+  curr_up.release();
 
 #if defined(DEBUG_STACK_FRAMES)
   s.PutCString("\nMerged:\n");

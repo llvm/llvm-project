@@ -368,11 +368,14 @@ TEST(IncludeFixerTest, Typo) {
   Annotations Test(R"cpp(
 $insert[[]]namespace ns {
 void foo() {
-  $unqualified[[X]] x;
+  $unqualified1[[X]] x;
+  $unqualified2[[X]]::Nested n;
 }
 }
 void bar() {
-  ns::$qualified[[X]] x; // ns:: is valid.
+  ns::$qualified1[[X]] x; // ns:: is valid.
+  ns::$qualified2[[X]](); // Error: no member in namespace
+
   ::$global[[Global]] glob;
 }
   )cpp");
@@ -385,11 +388,19 @@ void bar() {
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
-          AllOf(Diag(Test.range("unqualified"), "unknown type name 'X'"),
+          AllOf(Diag(Test.range("unqualified1"), "unknown type name 'X'"),
                 WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
                             "Add include \"x.h\" for symbol ns::X"))),
-          AllOf(Diag(Test.range("qualified"),
+          AllOf(Diag(Test.range("unqualified2"),
+                     "use of undeclared identifier 'X'"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("qualified1"),
                      "no type named 'X' in namespace 'ns'"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
+          AllOf(Diag(Test.range("qualified2"),
+                     "no member named 'X' in namespace 'ns'"),
                 WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
                             "Add include \"x.h\" for symbol ns::X"))),
           AllOf(Diag(Test.range("global"),

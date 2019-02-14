@@ -242,11 +242,13 @@ const RegisterBank &AArch64RegisterBankInfo::getRegBankFromRegClass(
   case AArch64::GPR32RegClassID:
   case AArch64::GPR32spRegClassID:
   case AArch64::GPR32sponlyRegClassID:
+  case AArch64::GPR32argRegClassID:
   case AArch64::GPR32allRegClassID:
   case AArch64::GPR64commonRegClassID:
   case AArch64::GPR64RegClassID:
   case AArch64::GPR64spRegClassID:
   case AArch64::GPR64sponlyRegClassID:
+  case AArch64::GPR64argRegClassID:
   case AArch64::GPR64allRegClassID:
   case AArch64::GPR64noipRegClassID:
   case AArch64::GPR64common_and_GPR64noipRegClassID:

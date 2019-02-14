@@ -808,18 +808,20 @@ define <4 x i64> @loadext_4i32_to_4i64(i32* %p0) {
 ; SSE2-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, i32* [[P0:%.*]], i64 1
 ; SSE2-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 2
 ; SSE2-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 3
-; SSE2-NEXT:    [[I0:%.*]] = load i32, i32* [[P0]], align 1
-; SSE2-NEXT:    [[I1:%.*]] = load i32, i32* [[P1]], align 1
-; SSE2-NEXT:    [[I2:%.*]] = load i32, i32* [[P2]], align 1
-; SSE2-NEXT:    [[I3:%.*]] = load i32, i32* [[P3]], align 1
-; SSE2-NEXT:    [[X0:%.*]] = sext i32 [[I0]] to i64
-; SSE2-NEXT:    [[X1:%.*]] = sext i32 [[I1]] to i64
-; SSE2-NEXT:    [[X2:%.*]] = sext i32 [[I2]] to i64
-; SSE2-NEXT:    [[X3:%.*]] = sext i32 [[I3]] to i64
-; SSE2-NEXT:    [[V0:%.*]] = insertelement <4 x i64> undef, i64 [[X0]], i32 0
-; SSE2-NEXT:    [[V1:%.*]] = insertelement <4 x i64> [[V0]], i64 [[X1]], i32 1
-; SSE2-NEXT:    [[V2:%.*]] = insertelement <4 x i64> [[V1]], i64 [[X2]], i32 2
-; SSE2-NEXT:    [[V3:%.*]] = insertelement <4 x i64> [[V2]], i64 [[X3]], i32 3
+; SSE2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0]] to <2 x i32>*
+; SSE2-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 1
+; SSE2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[P2]] to <2 x i32>*
+; SSE2-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 1
+; SSE2-NEXT:    [[TMP5:%.*]] = sext <2 x i32> [[TMP2]] to <2 x i64>
+; SSE2-NEXT:    [[TMP6:%.*]] = sext <2 x i32> [[TMP4]] to <2 x i64>
+; SSE2-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP5]], i32 0
+; SSE2-NEXT:    [[V0:%.*]] = insertelement <4 x i64> undef, i64 [[TMP7]], i32 0
+; SSE2-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
+; SSE2-NEXT:    [[V1:%.*]] = insertelement <4 x i64> [[V0]], i64 [[TMP8]], i32 1
+; SSE2-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
+; SSE2-NEXT:    [[V2:%.*]] = insertelement <4 x i64> [[V1]], i64 [[TMP9]], i32 2
+; SSE2-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; SSE2-NEXT:    [[V3:%.*]] = insertelement <4 x i64> [[V2]], i64 [[TMP10]], i32 3
 ; SSE2-NEXT:    ret <4 x i64> [[V3]]
 ;
 ; SLM-LABEL: @loadext_4i32_to_4i64(
@@ -845,17 +847,18 @@ define <4 x i64> @loadext_4i32_to_4i64(i32* %p0) {
 ; AVX1-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 3
 ; AVX1-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0]] to <2 x i32>*
 ; AVX1-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 1
-; AVX1-NEXT:    [[I2:%.*]] = load i32, i32* [[P2]], align 1
-; AVX1-NEXT:    [[I3:%.*]] = load i32, i32* [[P3]], align 1
-; AVX1-NEXT:    [[TMP3:%.*]] = sext <2 x i32> [[TMP2]] to <2 x i64>
-; AVX1-NEXT:    [[X2:%.*]] = sext i32 [[I2]] to i64
-; AVX1-NEXT:    [[X3:%.*]] = sext i32 [[I3]] to i64
-; AVX1-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
-; AVX1-NEXT:    [[V0:%.*]] = insertelement <4 x i64> undef, i64 [[TMP4]], i32 0
-; AVX1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i32 1
-; AVX1-NEXT:    [[V1:%.*]] = insertelement <4 x i64> [[V0]], i64 [[TMP5]], i32 1
-; AVX1-NEXT:    [[V2:%.*]] = insertelement <4 x i64> [[V1]], i64 [[X2]], i32 2
-; AVX1-NEXT:    [[V3:%.*]] = insertelement <4 x i64> [[V2]], i64 [[X3]], i32 3
+; AVX1-NEXT:    [[TMP3:%.*]] = bitcast i32* [[P2]] to <2 x i32>*
+; AVX1-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 1
+; AVX1-NEXT:    [[TMP5:%.*]] = sext <2 x i32> [[TMP2]] to <2 x i64>
+; AVX1-NEXT:    [[TMP6:%.*]] = sext <2 x i32> [[TMP4]] to <2 x i64>
+; AVX1-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP5]], i32 0
+; AVX1-NEXT:    [[V0:%.*]] = insertelement <4 x i64> undef, i64 [[TMP7]], i32 0
+; AVX1-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
+; AVX1-NEXT:    [[V1:%.*]] = insertelement <4 x i64> [[V0]], i64 [[TMP8]], i32 1
+; AVX1-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
+; AVX1-NEXT:    [[V2:%.*]] = insertelement <4 x i64> [[V1]], i64 [[TMP9]], i32 2
+; AVX1-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; AVX1-NEXT:    [[V3:%.*]] = insertelement <4 x i64> [[V2]], i64 [[TMP10]], i32 3
 ; AVX1-NEXT:    ret <4 x i64> [[V3]]
 ;
 ; AVX2-LABEL: @loadext_4i32_to_4i64(

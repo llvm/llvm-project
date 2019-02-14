@@ -128,7 +128,8 @@ entry:
   ret void
 }
 
-; A variant of test7 where values are not directly foldable from stack slots.
+; A variant of test6 where values are not directly foldable from stack slots.
+; This stresses our rematerialization handling.
 define void @test7(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n, i32 %o, i32 %p, i32 %q, i32 %r, i32 %s, i32 %t, i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z) gc "statepoint-example" {
 ; The code for this is terrible, check simply for correctness for the moment
 ; CHECK-LABEL: test7:
@@ -582,6 +583,56 @@ entry:
   ret i64 %addz
 }
 
+; Demonstrate address of a function (w/o spilling)
+define void @addr_func() gc "statepoint-example" {
+; CHECK-LABEL: addr_func:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq _bar@{{.*}}(%rip), %rax
+; CHECK-NEXT:    callq _bar
+; CHECK-NEXT:  Ltmp14:
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i64 0, i64 3, void ()* @bar, void ()* @bar, void ()* @bar)
+  ret void
+}
+
+; Demonstrate address of a global (w/o spilling)
+@G = external global i32
+define void @addr_global() gc "statepoint-example" {
+; CHECK-LABEL: addr_global:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq _G@{{.*}}(%rip), %rax
+; CHECK-NEXT:    callq _bar
+; CHECK-NEXT:  Ltmp15:
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i64 0, i64 3, i32* @G, i32* @G, i32* @G)
+  ret void
+}
+
+define void @addr_alloca(i32 %v) gc "statepoint-example" {
+; CHECK-LABEL: addr_alloca:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    callq _bar
+; CHECK-NEXT:  Ltmp16:
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+entry:
+  %a = alloca i32
+  store i32 %v, i32* %a
+  %statepoint_token1 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @bar, i32 0, i32 2, i64 0, i64 3, i32* %a, i32* %a, i32* %a)
+  ret void
+}
+
 
 ; CHECK: Ltmp0-_test1
 ; CHECK:      .byte	1
@@ -620,7 +671,6 @@ entry:
 
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
-
 
 attributes #0 = { "deopt-lowering"="live-in" }
 attributes #1 = { "deopt-lowering"="live-through" }

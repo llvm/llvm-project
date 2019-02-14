@@ -115,6 +115,9 @@ add_python_test_target(check-lldb-single
 # output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.
 add_custom_target(check-lldb)
 
+# Make check-lldb depend on all test dependencies.
+add_dependencies(check-lldb lldb-test-deps)
+
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.
 if (TARGET clang)

@@ -2610,6 +2610,11 @@ public:
     NumArgs = NewNumArgs;
   }
 
+  /// Bluntly set a new number of arguments without doing any checks whatsoever.
+  /// Only used during construction of a CallExpr in a few places in Sema.
+  /// FIXME: Find a way to remove it.
+  void setNumArgsUnsafe(unsigned NewNumArgs) { NumArgs = NewNumArgs; }
+
   typedef ExprIterator arg_iterator;
   typedef ConstExprIterator const_arg_iterator;
   typedef llvm::iterator_range<arg_iterator> arg_range;

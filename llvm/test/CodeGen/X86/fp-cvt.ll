@@ -31,18 +31,16 @@ define i16 @fptosi_i16_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fistpl -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-X87-NEXT:    retq
 ;
 ; X64-SSSE3-LABEL: fptosi_i16_fp80:
 ; X64-SSSE3:       # %bb.0:
 ; X64-SSSE3-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    fisttpl -{{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; X64-SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-SSSE3-NEXT:    fisttps -{{[0-9]+}}(%rsp)
+; X64-SSSE3-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-SSSE3-NEXT:    retq
   %1 = fptosi x86_fp80 %a0 to i16
   ret i16  %1
@@ -73,18 +71,16 @@ define i16 @fptosi_i16_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    fistpl -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-X87-NEXT:    retq
 ;
 ; X64-SSSE3-LABEL: fptosi_i16_fp80_ld:
 ; X64-SSSE3:       # %bb.0:
 ; X64-SSSE3-NEXT:    fldt (%rdi)
-; X64-SSSE3-NEXT:    fisttpl -{{[0-9]+}}(%rsp)
-; X64-SSSE3-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; X64-SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-SSSE3-NEXT:    fisttps -{{[0-9]+}}(%rsp)
+; X64-SSSE3-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-SSSE3-NEXT:    retq
   %1 = load x86_fp80, x86_fp80 *%a0
   %2 = fptosi x86_fp80 %1 to i16

@@ -268,6 +268,12 @@ static void replaceDebugSections(
   };
 }
 
+static bool isUnneededSymbol(const Symbol &Sym) {
+  return !Sym.Referenced &&
+         (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
+         Sym.Type != STT_FILE && Sym.Type != STT_SECTION;
+}
+
 // This function handles the high level operations of GNU objcopy including
 // handling command line options. It's important to outline certain properties
 // we expect to hold of the command line operations. Any operation that "keeps"
@@ -336,7 +342,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
     // The purpose of this loop is to mark symbols referenced by sections
     // (like GroupSection or RelocationSection). This way, we know which
     // symbols are still 'needed' and which are not.
-    if (Config.StripUnneeded) {
+    if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty()) {
       for (auto &Section : Obj.sections())
         Section.markSymbols();
     }
@@ -359,9 +365,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       if (is_contained(Config.SymbolsToRemove, Sym.Name))
         return true;
 
-      if (Config.StripUnneeded && !Sym.Referenced &&
-          (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
-          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+      if ((Config.StripUnneeded ||
+           is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
+          isUnneededSymbol(Sym))
         return true;
 
       return false;

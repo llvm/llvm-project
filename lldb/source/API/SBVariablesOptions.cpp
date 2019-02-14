@@ -80,98 +80,98 @@ private:
 };
 
 SBVariablesOptions::SBVariablesOptions()
-    : m_opaque_ap(new VariablesOptionsImpl()) {}
+    : m_opaque_up(new VariablesOptionsImpl()) {}
 
 SBVariablesOptions::SBVariablesOptions(const SBVariablesOptions &options)
-    : m_opaque_ap(new VariablesOptionsImpl(options.ref())) {}
+    : m_opaque_up(new VariablesOptionsImpl(options.ref())) {}
 
 SBVariablesOptions &SBVariablesOptions::
 operator=(const SBVariablesOptions &options) {
-  m_opaque_ap.reset(new VariablesOptionsImpl(options.ref()));
+  m_opaque_up.reset(new VariablesOptionsImpl(options.ref()));
   return *this;
 }
 
 SBVariablesOptions::~SBVariablesOptions() = default;
 
-bool SBVariablesOptions::IsValid() const { return m_opaque_ap != nullptr; }
+bool SBVariablesOptions::IsValid() const { return m_opaque_up != nullptr; }
 
 bool SBVariablesOptions::GetIncludeArguments() const {
-  return m_opaque_ap->GetIncludeArguments();
+  return m_opaque_up->GetIncludeArguments();
 }
 
 void SBVariablesOptions::SetIncludeArguments(bool arguments) {
-  m_opaque_ap->SetIncludeArguments(arguments);
+  m_opaque_up->SetIncludeArguments(arguments);
 }
 
 bool SBVariablesOptions::GetIncludeRecognizedArguments(
     const lldb::SBTarget &target) const {
-  return m_opaque_ap->GetIncludeRecognizedArguments(target.GetSP());
+  return m_opaque_up->GetIncludeRecognizedArguments(target.GetSP());
 }
 
 void SBVariablesOptions::SetIncludeRecognizedArguments(bool arguments) {
-  m_opaque_ap->SetIncludeRecognizedArguments(arguments);
+  m_opaque_up->SetIncludeRecognizedArguments(arguments);
 }
 
 bool SBVariablesOptions::GetIncludeLocals() const {
-  return m_opaque_ap->GetIncludeLocals();
+  return m_opaque_up->GetIncludeLocals();
 }
 
 void SBVariablesOptions::SetIncludeLocals(bool locals) {
-  m_opaque_ap->SetIncludeLocals(locals);
+  m_opaque_up->SetIncludeLocals(locals);
 }
 
 bool SBVariablesOptions::GetIncludeStatics() const {
-  return m_opaque_ap->GetIncludeStatics();
+  return m_opaque_up->GetIncludeStatics();
 }
 
 void SBVariablesOptions::SetIncludeStatics(bool statics) {
-  m_opaque_ap->SetIncludeStatics(statics);
+  m_opaque_up->SetIncludeStatics(statics);
 }
 
 bool SBVariablesOptions::GetInScopeOnly() const {
-  return m_opaque_ap->GetInScopeOnly();
+  return m_opaque_up->GetInScopeOnly();
 }
 
 void SBVariablesOptions::SetInScopeOnly(bool in_scope_only) {
-  m_opaque_ap->SetInScopeOnly(in_scope_only);
+  m_opaque_up->SetInScopeOnly(in_scope_only);
 }
 
 bool SBVariablesOptions::GetIncludeRuntimeSupportValues() const {
-  return m_opaque_ap->GetIncludeRuntimeSupportValues();
+  return m_opaque_up->GetIncludeRuntimeSupportValues();
 }
 
 void SBVariablesOptions::SetIncludeRuntimeSupportValues(
     bool runtime_support_values) {
-  m_opaque_ap->SetIncludeRuntimeSupportValues(runtime_support_values);
+  m_opaque_up->SetIncludeRuntimeSupportValues(runtime_support_values);
 }
 
 lldb::DynamicValueType SBVariablesOptions::GetUseDynamic() const {
-  return m_opaque_ap->GetUseDynamic();
+  return m_opaque_up->GetUseDynamic();
 }
 
 void SBVariablesOptions::SetUseDynamic(lldb::DynamicValueType dynamic) {
-  m_opaque_ap->SetUseDynamic(dynamic);
+  m_opaque_up->SetUseDynamic(dynamic);
 }
 
 VariablesOptionsImpl *SBVariablesOptions::operator->() {
-  return m_opaque_ap.operator->();
+  return m_opaque_up.operator->();
 }
 
 const VariablesOptionsImpl *SBVariablesOptions::operator->() const {
-  return m_opaque_ap.operator->();
+  return m_opaque_up.operator->();
 }
 
-VariablesOptionsImpl *SBVariablesOptions::get() { return m_opaque_ap.get(); }
+VariablesOptionsImpl *SBVariablesOptions::get() { return m_opaque_up.get(); }
 
-VariablesOptionsImpl &SBVariablesOptions::ref() { return *m_opaque_ap; }
+VariablesOptionsImpl &SBVariablesOptions::ref() { return *m_opaque_up; }
 
 const VariablesOptionsImpl &SBVariablesOptions::ref() const {
-  return *m_opaque_ap;
+  return *m_opaque_up;
 }
 
 SBVariablesOptions::SBVariablesOptions(VariablesOptionsImpl *lldb_object_ptr)
-    : m_opaque_ap(std::move(lldb_object_ptr)) {}
+    : m_opaque_up(std::move(lldb_object_ptr)) {}
 
 void SBVariablesOptions::SetOptions(VariablesOptionsImpl *lldb_object_ptr) {
-  m_opaque_ap.reset(std::move(lldb_object_ptr));
+  m_opaque_up.reset(std::move(lldb_object_ptr));
 }

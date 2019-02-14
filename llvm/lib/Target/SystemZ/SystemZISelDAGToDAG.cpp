@@ -1549,8 +1549,8 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     EVT VT = Node->getValueType(0);
     unsigned Start, End;
     unsigned BitWidth = VT.getSizeInBits();
-    bool Success = SystemZTargetLowering::analyzeFPImm(Imm, BitWidth,
-                       Start, End, static_cast<const SystemZInstrInfo *>(TII));
+    bool Success = SystemZTargetLowering::analyzeFPImm(Imm, BitWidth, Start,
+              End, static_cast<const SystemZInstrInfo *>(TII)); (void)Success;
     assert(Success && "Expected legal FP immediate");
     SDLoc DL(Node);
     unsigned Opcode = (BitWidth == 32 ? SystemZ::VGMF : SystemZ::VGMG);

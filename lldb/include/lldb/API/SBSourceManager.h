@@ -39,7 +39,7 @@ protected:
   friend class SBDebugger;
 
 private:
-  std::unique_ptr<lldb_private::SourceManagerImpl> m_opaque_ap;
+  std::unique_ptr<lldb_private::SourceManagerImpl> m_opaque_up;
 };
 
 } // namespace lldb

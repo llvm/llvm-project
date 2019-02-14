@@ -41,7 +41,7 @@ void test_float_condition() {
 }
 
 // Obsolete function bcmp
-int bcmp(void *, void *, size_t);
+int bcmp(const void *, const void *, size_t);
 
 int test_bcmp(void *a, void *b, size_t n) {
   return bcmp(a, b, n); // expected-warning{{The bcmp() function is obsoleted by memcmp()}}

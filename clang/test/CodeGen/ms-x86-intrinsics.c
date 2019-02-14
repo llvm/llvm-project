@@ -143,33 +143,29 @@ unsigned __int64 test__shiftleft128(unsigned __int64 l, unsigned __int64 h,
                                     unsigned char d) {
   return __shiftleft128(l, h, d);
 }
-// FIXME: Add ':' after all the CHECK-X64 lines here once it's understood
-// why the order of the output is different when using clang or gcc as host cc.
 // CHECK-X64-LABEL: define dso_local i64 @test__shiftleft128(i64 %l, i64 %h, i8 %d)
 // CHECK-X64:  = zext i64 %{{.*}} to i128
-// CHECK-X64  = shl nuw i128 %{{.*}}, 64
-// CHECK-X64  = zext i64 %{{.*}} to i128
-// CHECK-X64  = or i128 %
-// CHECK-X64  = and i8 %{{.*}}, 63
-// CHECK-X64  = shl i128 %
-// CHECK-X64  = lshr i128 %
-// CHECK-X64  = trunc i128 %
+// CHECK-X64: = shl nuw i128 %{{.*}}, 64
+// CHECK-X64: = zext i64 %{{.*}} to i128
+// CHECK-X64: = or i128 %
+// CHECK-X64: = and i8 %{{.*}}, 63
+// CHECK-X64: = shl i128 %
+// CHECK-X64: = lshr i128 %
+// CHECK-X64: = trunc i128 %
 // CHECK-X64:  ret i64 %
 
 unsigned __int64 test__shiftright128(unsigned __int64 l, unsigned __int64 h,
                                      unsigned char d) {
   return __shiftright128(l, h, d);
 }
-// FIXME: Add ':' after all the CHECK-X64 lines here once it's understood
-// why the order of the output is different when using clang or gcc as host cc.
 // CHECK-X64-LABEL: define dso_local i64 @test__shiftright128(i64 %l, i64 %h, i8 %d)
 // CHECK-X64:  = zext i64 %{{.*}} to i128
-// CHECK-X64  = shl nuw i128 %{{.*}}, 64
-// CHECK-X64  = zext i64 %{{.*}} to i128
-// CHECK-X64  = or i128 %
-// CHECK-X64  = and i8 %{{.*}}, 63
-// CHECK-X64  = lshr i128 %
-// CHECK-X64  = trunc i128 %
+// CHECK-X64: = shl nuw i128 %{{.*}}, 64
+// CHECK-X64: = zext i64 %{{.*}} to i128
+// CHECK-X64: = or i128 %
+// CHECK-X64: = and i8 %{{.*}}, 63
+// CHECK-X64: = lshr i128 %
+// CHECK-X64: = trunc i128 %
 // CHECK-X64:  ret i64 %
 
 #endif // defined(__x86_64__)

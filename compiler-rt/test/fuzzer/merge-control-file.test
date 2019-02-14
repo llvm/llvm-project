@@ -12,10 +12,11 @@ RUN: echo ..Z... > %t/T0/3
 
 # Test what happens if the control file is junk.
 
+RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
 RUN: echo JUNK > %t/MCF
-RUN: not %run %t/T.exe -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=JUNK
+RUN: %run %t/T.exe -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=JUNK
 RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF
-RUN: not %run %t/T.exe -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=JUNK
+RUN: %run %t/T.exe -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=JUNK
 JUNK: MERGE-OUTER: non-empty control file provided: {{.*}}MCF
 JUNK: MERGE-OUTER: bad control file, will overwrite it
 

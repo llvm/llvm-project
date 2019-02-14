@@ -102,6 +102,7 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
   DisableMacroExpansion = false;
   MacroExpansionInDirectivesOverride = false;
   InMacroArgs = false;
+  ArgMacro = nullptr;
   InMacroArgPreExpansion = false;
   NumCachedTokenLexers = 0;
   PragmasEnabled = true;

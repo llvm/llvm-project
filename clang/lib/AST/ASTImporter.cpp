@@ -439,6 +439,9 @@ namespace clang {
 
     Error ImportFunctionDeclBody(FunctionDecl *FromFD, FunctionDecl *ToFD);
 
+    template <typename T>
+    bool hasSameVisibilityContext(T *Found, T *From);
+
     bool IsStructuralMatch(Decl *From, Decl *To, bool Complain);
     bool IsStructuralMatch(RecordDecl *FromRecord, RecordDecl *ToRecord,
                            bool Complain = true);
@@ -2957,6 +2960,19 @@ Error ASTNodeImporter::ImportFunctionDeclBody(FunctionDecl *FromFD,
   return Error::success();
 }
 
+template <typename T>
+bool ASTNodeImporter::hasSameVisibilityContext(T *Found, T *From) {
+  if (From->hasExternalFormalLinkage())
+    return Found->hasExternalFormalLinkage();
+  if (Importer.GetFromTU(Found) != From->getTranslationUnitDecl())
+    return false;
+  if (From->isInAnonymousNamespace())
+    return Found->isInAnonymousNamespace();
+  else
+    return !Found->isInAnonymousNamespace() &&
+           !Found->hasExternalFormalLinkage();
+}
+
 ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   SmallVector<Decl *, 2> Redecls = getCanonicalForwardRedeclChain(D);
@@ -3010,33 +3026,30 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         continue;
 
       if (auto *FoundFunction = dyn_cast<FunctionDecl>(FoundDecl)) {
-        if (FoundFunction->hasExternalFormalLinkage() &&
-            D->hasExternalFormalLinkage()) {
-          if (IsStructuralMatch(D, FoundFunction)) {
-            const FunctionDecl *Definition = nullptr;
-            if (D->doesThisDeclarationHaveABody() &&
-                FoundFunction->hasBody(Definition)) {
-              return Importer.MapImported(
-                  D, const_cast<FunctionDecl *>(Definition));
-            }
-            FoundByLookup = FoundFunction;
-            break;
-          }
+        if (!hasSameVisibilityContext(FoundFunction, D))
+          continue;
 
-          // FIXME: Check for overloading more carefully, e.g., by boosting
-          // Sema::IsOverload out to the AST library.
-
-          // Function overloading is okay in C++.
-          if (Importer.getToContext().getLangOpts().CPlusPlus)
-            continue;
-
-          // Complain about inconsistent function types.
-          Importer.ToDiag(Loc, diag::err_odr_function_type_inconsistent)
-            << Name << D->getType() << FoundFunction->getType();
-          Importer.ToDiag(FoundFunction->getLocation(),
-                          diag::note_odr_value_here)
-            << FoundFunction->getType();
+        if (IsStructuralMatch(D, FoundFunction)) {
+          const FunctionDecl *Definition = nullptr;
+          if (D->doesThisDeclarationHaveABody() &&
+              FoundFunction->hasBody(Definition))
+            return Importer.MapImported(D,
+                                        const_cast<FunctionDecl *>(Definition));
+          FoundByLookup = FoundFunction;
+          break;
         }
+        // FIXME: Check for overloading more carefully, e.g., by boosting
+        // Sema::IsOverload out to the AST library.
+
+        // Function overloading is okay in C++.
+        if (Importer.getToContext().getLangOpts().CPlusPlus)
+          continue;
+
+        // Complain about inconsistent function types.
+        Importer.ToDiag(Loc, diag::err_odr_function_type_inconsistent)
+            << Name << D->getType() << FoundFunction->getType();
+        Importer.ToDiag(FoundFunction->getLocation(), diag::note_odr_value_here)
+            << FoundFunction->getType();
       }
 
       ConflictingDecls.push_back(FoundDecl);
@@ -3609,58 +3622,56 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
         continue;
 
       if (auto *FoundVar = dyn_cast<VarDecl>(FoundDecl)) {
-        // We have found a variable that we may need to merge with. Check it.
-        if (FoundVar->hasExternalFormalLinkage() &&
-            D->hasExternalFormalLinkage()) {
-          if (Importer.IsStructurallyEquivalent(D->getType(),
-                                                FoundVar->getType())) {
+        if (!hasSameVisibilityContext(FoundVar, D))
+          continue;
+        if (Importer.IsStructurallyEquivalent(D->getType(),
+                                              FoundVar->getType())) {
 
-            // The VarDecl in the "From" context has a definition, but in the
-            // "To" context we already have a definition.
-            VarDecl *FoundDef = FoundVar->getDefinition();
-            if (D->isThisDeclarationADefinition() && FoundDef)
-              // FIXME Check for ODR error if the two definitions have
-              // different initializers?
-              return Importer.MapImported(D, FoundDef);
+          // The VarDecl in the "From" context has a definition, but in the
+          // "To" context we already have a definition.
+          VarDecl *FoundDef = FoundVar->getDefinition();
+          if (D->isThisDeclarationADefinition() && FoundDef)
+            // FIXME Check for ODR error if the two definitions have
+            // different initializers?
+            return Importer.MapImported(D, FoundDef);
 
-            // The VarDecl in the "From" context has an initializer, but in the
-            // "To" context we already have an initializer.
-            const VarDecl *FoundDInit = nullptr;
-            if (D->getInit() && FoundVar->getAnyInitializer(FoundDInit))
-              // FIXME Diagnose ODR error if the two initializers are different?
-              return Importer.MapImported(D, const_cast<VarDecl*>(FoundDInit));
+          // The VarDecl in the "From" context has an initializer, but in the
+          // "To" context we already have an initializer.
+          const VarDecl *FoundDInit = nullptr;
+          if (D->getInit() && FoundVar->getAnyInitializer(FoundDInit))
+            // FIXME Diagnose ODR error if the two initializers are different?
+            return Importer.MapImported(D, const_cast<VarDecl*>(FoundDInit));
+
+          FoundByLookup = FoundVar;
+          break;
+        }
+
+        const ArrayType *FoundArray
+          = Importer.getToContext().getAsArrayType(FoundVar->getType());
+        const ArrayType *TArray
+          = Importer.getToContext().getAsArrayType(D->getType());
+        if (FoundArray && TArray) {
+          if (isa<IncompleteArrayType>(FoundArray) &&
+              isa<ConstantArrayType>(TArray)) {
+            // Import the type.
+            if (auto TyOrErr = import(D->getType()))
+              FoundVar->setType(*TyOrErr);
+            else
+              return TyOrErr.takeError();
 
             FoundByLookup = FoundVar;
             break;
+          } else if (isa<IncompleteArrayType>(TArray) &&
+                     isa<ConstantArrayType>(FoundArray)) {
+            FoundByLookup = FoundVar;
+            break;
           }
-
-          const ArrayType *FoundArray
-            = Importer.getToContext().getAsArrayType(FoundVar->getType());
-          const ArrayType *TArray
-            = Importer.getToContext().getAsArrayType(D->getType());
-          if (FoundArray && TArray) {
-            if (isa<IncompleteArrayType>(FoundArray) &&
-                isa<ConstantArrayType>(TArray)) {
-              // Import the type.
-              if (auto TyOrErr = import(D->getType()))
-                FoundVar->setType(*TyOrErr);
-              else
-                return TyOrErr.takeError();
-
-              FoundByLookup = FoundVar;
-              break;
-            } else if (isa<IncompleteArrayType>(TArray) &&
-                       isa<ConstantArrayType>(FoundArray)) {
-              FoundByLookup = FoundVar;
-              break;
-            }
-          }
-
-          Importer.ToDiag(Loc, diag::err_odr_variable_type_inconsistent)
-            << Name << D->getType() << FoundVar->getType();
-          Importer.ToDiag(FoundVar->getLocation(), diag::note_odr_value_here)
-            << FoundVar->getType();
         }
+
+        Importer.ToDiag(Loc, diag::err_odr_variable_type_inconsistent)
+          << Name << D->getType() << FoundVar->getType();
+        Importer.ToDiag(FoundVar->getLocation(), diag::note_odr_value_here)
+          << FoundVar->getType();
       }
 
       ConflictingDecls.push_back(FoundDecl);
@@ -7791,6 +7802,13 @@ Decl *ASTImporter::GetAlreadyImportedOrNull(const Decl *FromD) const {
     return nullptr;
 }
 
+TranslationUnitDecl *ASTImporter::GetFromTU(Decl *ToD) {
+  auto FromDPos = ImportedFromDecls.find(ToD);
+  if (FromDPos == ImportedFromDecls.end())
+    return nullptr;
+  return FromDPos->second->getTranslationUnitDecl();
+}
+
 Expected<Decl *> ASTImporter::Import_New(Decl *FromD) {
   Decl *ToD = Import(FromD);
   if (!ToD && FromD)
@@ -8541,6 +8559,9 @@ Decl *ASTImporter::MapImported(Decl *From, Decl *To) {
   if (Pos != ImportedDecls.end())
     return Pos->second;
   ImportedDecls[From] = To;
+  // This mapping should be maintained only in this function. Therefore do not
+  // check for additional consistency.
+  ImportedFromDecls[To] = From;
   return To;
 }
 

@@ -725,7 +725,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   }
 
   if (Flags.fork)
-    FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs);
+    FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs, Flags.fork);
 
   if (Flags.merge)
     Merge(F, Options, Args, *Inputs, Flags.merge_control_file);

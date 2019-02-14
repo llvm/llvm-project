@@ -384,14 +384,13 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
       m_get_class_info_args(LLDB_INVALID_ADDRESS),
       m_get_class_info_args_mutex(), m_get_shared_cache_class_info_code(),
       m_get_shared_cache_class_info_args(LLDB_INVALID_ADDRESS),
-      m_get_shared_cache_class_info_args_mutex(), m_decl_vendor_ap(),
+      m_get_shared_cache_class_info_args_mutex(), m_decl_vendor_up(),
       m_tagged_pointer_obfuscator(LLDB_INVALID_ADDRESS),
-      m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS),
-      m_hash_signature(),
+      m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS), m_hash_signature(),
       m_has_object_getClass(false), m_loaded_objc_opt(false),
-      m_non_pointer_isa_cache_ap(
+      m_non_pointer_isa_cache_up(
           NonPointerISACache::CreateInstance(*this, objc_module_sp)),
-      m_tagged_pointer_vendor_ap(
+      m_tagged_pointer_vendor_up(
           TaggedPointerVendorV2::CreateInstance(*this, objc_module_sp)),
       m_encoding_to_type_sp(), m_noclasses_warning_emitted(false),
       m_CFBoolean_values() {
@@ -921,9 +920,9 @@ size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
 // computational effort as possible whether something could possibly be a
 // tagged pointer - false positives are possible but false negatives shouldn't
 bool AppleObjCRuntimeV2::IsTaggedPointer(addr_t ptr) {
-  if (!m_tagged_pointer_vendor_ap)
+  if (!m_tagged_pointer_vendor_up)
     return false;
-  return m_tagged_pointer_vendor_ap->IsPossibleTaggedPointer(ptr);
+  return m_tagged_pointer_vendor_up->IsPossibleTaggedPointer(ptr);
 }
 
 class RemoteNXMapTable {
@@ -1148,8 +1147,8 @@ bool AppleObjCRuntimeV2::HashTableSignature::NeedsUpdate(
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::GetClassDescriptorFromISA(ObjCISA isa) {
   ObjCLanguageRuntime::ClassDescriptorSP class_descriptor_sp;
-  if (m_non_pointer_isa_cache_ap)
-    class_descriptor_sp = m_non_pointer_isa_cache_ap->GetClassDescriptor(isa);
+  if (m_non_pointer_isa_cache_up)
+    class_descriptor_sp = m_non_pointer_isa_cache_up->GetClassDescriptor(isa);
   if (!class_descriptor_sp)
     class_descriptor_sp = ObjCLanguageRuntime::GetClassDescriptorFromISA(isa);
   return class_descriptor_sp;
@@ -1176,7 +1175,7 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
 
     // tagged pointer
     if (IsTaggedPointer(isa_pointer)) {
-      return m_tagged_pointer_vendor_ap->GetClassDescriptor(isa_pointer);
+      return m_tagged_pointer_vendor_up->GetClassDescriptor(isa_pointer);
     } else {
       ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
 
@@ -1946,10 +1945,10 @@ AppleObjCRuntimeV2::GetActualTypeName(ObjCLanguageRuntime::ObjCISA isa) {
 }
 
 DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
-  if (!m_decl_vendor_ap)
-    m_decl_vendor_ap.reset(new AppleObjCDeclVendor(*this));
+  if (!m_decl_vendor_up)
+    m_decl_vendor_up.reset(new AppleObjCDeclVendor(*this));
 
-  return m_decl_vendor_ap.get();
+  return m_decl_vendor_up.get();
 }
 
 lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(const ConstString &name) {
@@ -2559,8 +2558,8 @@ lldb_private::AppleObjCRuntime::ObjCISA
 AppleObjCRuntimeV2::GetPointerISA(ObjCISA isa) {
   ObjCISA ret = isa;
 
-  if (m_non_pointer_isa_cache_ap)
-    m_non_pointer_isa_cache_ap->EvaluateNonPointerISA(isa, ret);
+  if (m_non_pointer_isa_cache_up)
+    m_non_pointer_isa_cache_up->EvaluateNonPointerISA(isa, ret);
 
   return ret;
 }

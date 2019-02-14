@@ -1,0 +1,79 @@
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_select_s32() { ret void }
+  define void @test_select_ptr() { ret void }
+...
+---
+name:            test_select_s32
+# CHECK-LABEL: name: test_select_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s1) = G_TRUNC %1(s32)
+    ; CHECK: [[VREGC:%[0-9]+]]:gprnopc = COPY [[VREGY]]
+
+    %3(s32) = G_SELECT %2(s1),  %0, %1
+    ; CHECK: t2CMPri [[VREGC]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: [[RES:%[0-9]+]]:rgpr = t2MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
+
+    $r0 = COPY %3(s32)
+    ; CHECK: $r0 = COPY [[RES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_select_ptr
+# CHECK-LABEL: name: test_select_ptr
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2
+
+    %0(p0) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(p0) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = COPY $r2
+    ; CHECK: [[VREGC32:%[0-9]+]]:gpr = COPY $r2
+
+    %3(s1) = G_TRUNC %2(s32)
+    ; CHECK: [[VREGC:%[0-9]+]]:gprnopc = COPY [[VREGC32]]
+
+    %4(p0) = G_SELECT %3(s1),  %0, %1
+    ; CHECK: t2CMPri [[VREGC]], 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK: [[RES:%[0-9]+]]:rgpr = t2MOVCCr [[VREGX]], [[VREGY]], 0, $cpsr
+
+    $r0 = COPY %4(p0)
+    ; CHECK: $r0 = COPY [[RES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
