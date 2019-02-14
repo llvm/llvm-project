@@ -181,7 +181,7 @@ protected:
          uint8_t StOther, uint8_t Type)
       : File(File), NameData(Name.Data), NameSize(Name.Size), Binding(Binding),
         Type(Type), StOther(StOther), SymbolKind(K), NeedsPltAddr(false),
-        IsInIplt(false), IsInIgot(false), IsPreemptible(false),
+        IsInIplt(false), GotInIgot(false), IsPreemptible(false),
         Used(!Config->GcSections), NeedsTocRestore(false),
         ScriptDefined(false) {}
 
@@ -190,11 +190,13 @@ public:
   // For SharedSymbol only.
   unsigned NeedsPltAddr : 1;
 
-  // True if this symbol is in the Iplt sub-section of the Plt.
+  // True if this symbol is in the Iplt sub-section of the Plt and the Igot
+  // sub-section of the .got.plt or .got.
   unsigned IsInIplt : 1;
 
-  // True if this symbol is in the Igot sub-section of the .got.plt or .got.
-  unsigned IsInIgot : 1;
+  // True if this symbol needs a GOT entry and its GOT entry is actually in
+  // Igot. This will be true only for certain non-preemptible ifuncs.
+  unsigned GotInIgot : 1;
 
   // True if this symbol is preemptible at load time.
   unsigned IsPreemptible : 1;
