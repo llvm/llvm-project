@@ -31,10 +31,6 @@ typedef uint32_t RelType;
 enum RelExpr {
   R_ABS,
   R_ADDEND,
-  R_AARCH64_GOT_PAGE_PC,
-  R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
-  R_AARCH64_PAGE_PC,
-  R_AARCH64_TLSDESC_PAGE,
   R_ARM_SBREL,
   R_GOT,
   R_GOTONLY_PC,
@@ -46,22 +42,11 @@ enum RelExpr {
   R_GOT_PC,
   R_HEXAGON_GOT,
   R_HINT,
-  R_MIPS_GOTREL,
-  R_MIPS_GOT_GP,
-  R_MIPS_GOT_GP_PC,
-  R_MIPS_GOT_LOCAL_PAGE,
-  R_MIPS_GOT_OFF,
-  R_MIPS_GOT_OFF32,
-  R_MIPS_TLSGD,
-  R_MIPS_TLSLD,
   R_NEG_TLS,
   R_NONE,
   R_PC,
   R_PLT,
   R_PLT_PC,
-  R_PPC_CALL,
-  R_PPC_CALL_PLT,
-  R_PPC_TOC,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
   R_RELAX_TLS_GD_TO_IE,
@@ -73,7 +58,6 @@ enum RelExpr {
   R_RELAX_TLS_IE_TO_LE,
   R_RELAX_TLS_LD_TO_LE,
   R_RELAX_TLS_LD_TO_LE_ABS,
-  R_RISCV_PC_INDIRECT,
   R_SIZE,
   R_TLS,
   R_TLSDESC,
@@ -87,6 +71,28 @@ enum RelExpr {
   R_TLSLD_GOT_OFF,
   R_TLSLD_HINT,
   R_TLSLD_PC,
+
+  // The following is abstract relocation types used for only one target.
+  //
+  // Even though RelExpr is intended to be a target-neutral representation
+  // of a relocation type, there are some relocations whose semantics are
+  // unique to a target. Such relocation are marked with R_<TARGET_NAME>.
+  R_AARCH64_GOT_PAGE_PC,
+  R_AARCH64_PAGE_PC,
+  R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
+  R_AARCH64_TLSDESC_PAGE,
+  R_MIPS_GOTREL,
+  R_MIPS_GOT_GP,
+  R_MIPS_GOT_GP_PC,
+  R_MIPS_GOT_LOCAL_PAGE,
+  R_MIPS_GOT_OFF,
+  R_MIPS_GOT_OFF32,
+  R_MIPS_TLSGD,
+  R_MIPS_TLSLD,
+  R_PPC_CALL,
+  R_PPC_CALL_PLT,
+  R_PPC_TOC,
+  R_RISCV_PC_INDIRECT,
 };
 
 // Build a bitmask with one bit set for each RelExpr.

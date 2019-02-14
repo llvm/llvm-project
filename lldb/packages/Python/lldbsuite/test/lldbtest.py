@@ -37,6 +37,7 @@ from __future__ import print_function
 # System modules
 import abc
 import collections
+from distutils.version import LooseVersion
 from functools import wraps
 import gc
 import glob
@@ -1352,13 +1353,13 @@ class Base(unittest2.TestCase):
         if (version is None):
             return True
         if (operator == '>'):
-            return self.getCompilerVersion() > version
+            return LooseVersion(self.getCompilerVersion()) > LooseVersion(version)
         if (operator == '>=' or operator == '=>'):
-            return self.getCompilerVersion() >= version
+            return LooseVersion(self.getCompilerVersion()) >= LooseVersion(version)
         if (operator == '<'):
-            return self.getCompilerVersion() < version
+            return LooseVersion(self.getCompilerVersion()) < LooseVersion(version)
         if (operator == '<=' or operator == '=<'):
-            return self.getCompilerVersion() <= version
+            return LooseVersion(self.getCompilerVersion()) <= LooseVersion(version)
         if (operator == '!=' or operator == '!' or operator == 'not'):
             return str(version) not in str(self.getCompilerVersion())
         return str(version) in str(self.getCompilerVersion())
