@@ -28,6 +28,7 @@
 #include <mutex>
 
 #include "swift/AST/Type.h"
+#include "swift/AST/Types.h"
 
 using namespace lldb;
 using namespace lldb_private;
