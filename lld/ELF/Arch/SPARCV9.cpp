@@ -68,7 +68,9 @@ RelExpr SPARCV9::getRelExpr(RelType Type, const Symbol &S,
   case R_SPARC_NONE:
     return R_NONE;
   default:
-    return R_INVALID;
+    error(getErrorLocation(Loc) + "unknown relocation (" + Twine(Type) +
+          ") against symbol " + toString(S));
+    return R_NONE;
   }
 }
 
@@ -118,7 +120,7 @@ void SPARCV9::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write64be(Loc, Val);
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    llvm_unreachable("unknown relocation");
   }
 }
 

@@ -284,7 +284,7 @@ IOHandlerEditline::IOHandlerEditline(
     IOHandlerDelegate &delegate)
     : IOHandler(debugger, type, input_sp, output_sp, error_sp, flags),
 #ifndef LLDB_DISABLE_LIBEDIT
-      m_editline_ap(),
+      m_editline_up(),
 #endif
       m_delegate(delegate), m_prompt(), m_continuation_prompt(),
       m_current_lines_ptr(nullptr), m_base_line_number(line_number_start),
@@ -299,17 +299,17 @@ IOHandlerEditline::IOHandlerEditline(
   use_editline = m_input_sp->GetFile().GetIsRealTerminal();
 
   if (use_editline) {
-    m_editline_ap.reset(new Editline(editline_name, GetInputFILE(),
+    m_editline_up.reset(new Editline(editline_name, GetInputFILE(),
                                      GetOutputFILE(), GetErrorFILE(),
                                      m_color_prompts));
-    m_editline_ap->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
-    m_editline_ap->SetAutoCompleteCallback(AutoCompleteCallback, this);
+    m_editline_up->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
+    m_editline_up->SetAutoCompleteCallback(AutoCompleteCallback, this);
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
     if (indent_chars) {
       // The delegate does support indentation, hook it up so when any
       // indentation character is typed, the delegate gets a chance to fix it
-      m_editline_ap->SetFixIndentationCallback(FixIndentationCallback, this,
+      m_editline_up->SetFixIndentationCallback(FixIndentationCallback, this,
                                                indent_chars);
     }
   }
@@ -321,7 +321,7 @@ IOHandlerEditline::IOHandlerEditline(
 
 IOHandlerEditline::~IOHandlerEditline() {
 #ifndef LLDB_DISABLE_LIBEDIT
-  m_editline_ap.reset();
+  m_editline_up.reset();
 #endif
 }
 
@@ -337,8 +337,8 @@ void IOHandlerEditline::Deactivate() {
 
 bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap) {
-    return m_editline_ap->GetLine(line, interrupted);
+  if (m_editline_up) {
+    return m_editline_up->GetLine(line, interrupted);
   } else {
 #endif
     line.clear();
@@ -440,8 +440,8 @@ int IOHandlerEditline::AutoCompleteCallback(
 
 const char *IOHandlerEditline::GetPrompt() {
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap) {
-    return m_editline_ap->GetPrompt();
+  if (m_editline_up) {
+    return m_editline_up->GetPrompt();
   } else {
 #endif
     if (m_prompt.empty())
@@ -456,8 +456,8 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
   m_prompt = prompt;
 
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap)
-    m_editline_ap->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
+  if (m_editline_up)
+    m_editline_up->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
 #endif
   return true;
 }
@@ -471,8 +471,8 @@ void IOHandlerEditline::SetContinuationPrompt(llvm::StringRef prompt) {
   m_continuation_prompt = prompt;
 
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap)
-    m_editline_ap->SetContinuationPrompt(m_continuation_prompt.empty()
+  if (m_editline_up)
+    m_editline_up->SetContinuationPrompt(m_continuation_prompt.empty()
                                              ? nullptr
                                              : m_continuation_prompt.c_str());
 #endif
@@ -484,8 +484,8 @@ void IOHandlerEditline::SetBaseLineNumber(uint32_t line) {
 
 uint32_t IOHandlerEditline::GetCurrentLineIndex() const {
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap)
-    return m_editline_ap->GetCurrentLine();
+  if (m_editline_up)
+    return m_editline_up->GetCurrentLine();
 #endif
   return m_curr_line_idx;
 }
@@ -495,8 +495,8 @@ bool IOHandlerEditline::GetLines(StringList &lines, bool &interrupted) {
 
   bool success = false;
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap) {
-    return m_editline_ap->GetLines(m_base_line_number, lines, interrupted);
+  if (m_editline_up) {
+    return m_editline_up->GetLines(m_base_line_number, lines, interrupted);
   } else {
 #endif
     bool done = false;
@@ -564,8 +564,8 @@ void IOHandlerEditline::Run() {
 
 void IOHandlerEditline::Cancel() {
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap)
-    m_editline_ap->Cancel();
+  if (m_editline_up)
+    m_editline_up->Cancel();
 #endif
 }
 
@@ -575,23 +575,23 @@ bool IOHandlerEditline::Interrupt() {
     return true;
 
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap)
-    return m_editline_ap->Interrupt();
+  if (m_editline_up)
+    return m_editline_up->Interrupt();
 #endif
   return false;
 }
 
 void IOHandlerEditline::GotEOF() {
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap)
-    m_editline_ap->Interrupt();
+  if (m_editline_up)
+    m_editline_up->Interrupt();
 #endif
 }
 
 void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
 #ifndef LLDB_DISABLE_LIBEDIT
-  if (m_editline_ap)
-    m_editline_ap->PrintAsync(stream, s, len);
+  if (m_editline_up)
+    m_editline_up->PrintAsync(stream, s, len);
   else
 #endif
   {
@@ -1122,10 +1122,10 @@ public:
       const char *text = m_delegate_sp->WindowDelegateGetHelpText();
       KeyHelp *key_help = m_delegate_sp->WindowDelegateGetKeyHelp();
       if ((text && text[0]) || key_help) {
-        std::unique_ptr<HelpDialogDelegate> help_delegate_ap(
+        std::unique_ptr<HelpDialogDelegate> help_delegate_up(
             new HelpDialogDelegate(text, key_help));
-        const size_t num_lines = help_delegate_ap->GetNumLines();
-        const size_t max_length = help_delegate_ap->GetMaxLineLength();
+        const size_t num_lines = help_delegate_up->GetNumLines();
+        const size_t max_length = help_delegate_up->GetMaxLineLength();
         Rect bounds = GetBounds();
         bounds.Inset(1, 1);
         if (max_length + 4 < static_cast<size_t>(bounds.size.width)) {
@@ -1156,7 +1156,7 @@ public:
         else
           help_window_sp = CreateSubWindow("Help", bounds, true);
         help_window_sp->SetDelegate(
-            WindowDelegateSP(help_delegate_ap.release()));
+            WindowDelegateSP(help_delegate_up.release()));
         return true;
       }
     }

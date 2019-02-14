@@ -492,10 +492,13 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
     // Preprocessor directives used inside macro arguments are not portable, and
     // this enables the warning.
     InMacroArgs = true;
+    ArgMacro = &Identifier;
+
     Args = ReadMacroCallArgumentList(Identifier, MI, ExpansionEnd);
 
     // Finished parsing args.
     InMacroArgs = false;
+    ArgMacro = nullptr;
 
     // If there was an error parsing the arguments, bail out.
     if (!Args) return true;

@@ -12,6 +12,8 @@
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 
+#include <array>
+
 using namespace llvm;
 
 namespace {

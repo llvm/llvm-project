@@ -468,6 +468,11 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbols))
     addSymbolsFromFile(Config.SymbolsToRemove, DC.Alloc, Arg->getValue(),
                        UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbol))
+    Config.UnneededSymbolsToRemove.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbols))
+    addSymbolsFromFile(Config.UnneededSymbolsToRemove, DC.Alloc,
+                       Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegex);
 

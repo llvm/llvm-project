@@ -21,6 +21,41 @@ public:
 
   bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
                      ModuleSpec &module_spec) override;
+
+  lldb::user_id_t OpenFile(const FileSpec &file_spec, uint32_t flags,
+                           uint32_t mode, Status &error) override;
+
+  bool CloseFile(lldb::user_id_t fd, Status &error) override;
+
+  uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
+                    uint64_t dst_len, Status &error) override;
+
+  uint64_t WriteFile(lldb::user_id_t fd, uint64_t offset, const void *src,
+                     uint64_t src_len, Status &error) override;
+
+  lldb::user_id_t GetFileSize(const FileSpec &file_spec) override;
+
+  Status CreateSymlink(const FileSpec &src, const FileSpec &dst) override;
+
+  bool GetFileExists(const FileSpec &file_spec) override;
+
+  Status Unlink(const FileSpec &file_spec) override;
+
+  FileSpec GetRemoteWorkingDirectory() override;
+
+  bool SetRemoteWorkingDirectory(const FileSpec &working_dir) override;
+
+  Status MakeDirectory(const FileSpec &file_spec, uint32_t mode) override;
+
+  Status GetFilePermissions(const FileSpec &file_spec,
+                            uint32_t &file_permissions) override;
+
+  Status SetFilePermissions(const FileSpec &file_spec,
+                            uint32_t file_permissions) override;
+
+  bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
+                    uint64_t &high) override;
+
   Status GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
                          FileSpec &local_file) override;
 
@@ -28,6 +63,11 @@ public:
   bool GetRemoteOSBuildString(std::string &s) override;
   bool GetRemoteOSKernelDescription(std::string &s) override;
   ArchSpec GetRemoteSystemArchitecture() override;
+
+  Status RunShellCommand(const char *command, const FileSpec &working_dir,
+                         int *status_ptr, int *signo_ptr,
+                         std::string *command_output,
+                         const Timeout<std::micro> &timeout) override;
 
   const char *GetHostname() override;
   const char *GetUserName(uint32_t uid) override;
@@ -39,7 +79,15 @@ public:
   bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
   uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                          ProcessInstanceInfoList &process_infos) override;
+
+  lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
+                                 llvm::StringRef plugin_name,
+                                 Debugger &debugger, Target *target,
+                                 Status &error) override;
+
   Status LaunchProcess(ProcessLaunchInfo &launch_info) override;
+
+  Status KillProcess(const lldb::pid_t pid) override;
 
 protected:
   lldb::PlatformSP m_remote_platform_sp;

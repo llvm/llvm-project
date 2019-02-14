@@ -277,8 +277,8 @@ Module::~Module() {
   // function calls back into this module object. The ordering is important
   // here because symbol files can require the module object file. So we tear
   // down the symbol file first, then the object file.
-  m_sections_ap.reset();
-  m_symfile_ap.reset();
+  m_sections_up.reset();
+  m_symfile_up.reset();
   m_objfile_sp.reset();
 }
 
@@ -291,13 +291,13 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (process_sp) {
       m_did_load_objfile = true;
-      auto data_ap = llvm::make_unique<DataBufferHeap>(size_to_read, 0);
+      auto data_up = llvm::make_unique<DataBufferHeap>(size_to_read, 0);
       Status readmem_error;
       const size_t bytes_read =
-          process_sp->ReadMemory(header_addr, data_ap->GetBytes(),
-                                 data_ap->GetByteSize(), readmem_error);
+          process_sp->ReadMemory(header_addr, data_up->GetBytes(),
+                                 data_up->GetByteSize(), readmem_error);
       if (bytes_read == size_to_read) {
-        DataBufferSP data_sp(data_ap.release());
+        DataBufferSP data_sp(data_up.release());
         m_objfile_sp = ObjectFile::FindPlugin(shared_from_this(), process_sp,
                                               header_addr, data_sp);
         if (m_objfile_sp) {
@@ -1049,13 +1049,13 @@ SymbolVendor *Module::GetSymbolVendor(bool can_create,
       if (obj_file != nullptr) {
         static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
         Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
-        m_symfile_ap.reset(
+        m_symfile_up.reset(
             SymbolVendor::FindPlugin(shared_from_this(), feedback_strm));
         m_did_load_symbol_vendor = true;
       }
     }
   }
-  return m_symfile_ap.get();
+  return m_symfile_up.get();
 }
 
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
@@ -1278,13 +1278,13 @@ ObjectFile *Module::GetObjectFile() {
 }
 
 SectionList *Module::GetSectionList() {
-  // Populate m_sections_ap with sections from objfile.
-  if (!m_sections_ap) {
+  // Populate m_sections_up with sections from objfile.
+  if (!m_sections_up) {
     ObjectFile *obj_file = GetObjectFile();
     if (obj_file != nullptr)
       obj_file->CreateSections(*GetUnifiedSectionList());
   }
-  return m_sections_ap.get();
+  return m_sections_up.get();
 }
 
 void Module::SectionFileAddressesChanged() {
@@ -1297,9 +1297,9 @@ void Module::SectionFileAddressesChanged() {
 }
 
 SectionList *Module::GetUnifiedSectionList() {
-  if (!m_sections_ap)
-    m_sections_ap = llvm::make_unique<SectionList>();
-  return m_sections_ap.get();
+  if (!m_sections_up)
+    m_sections_up = llvm::make_unique<SectionList>();
+  return m_sections_up.get();
 }
 
 const Symbol *Module::FindFirstSymbolWithNameAndType(const ConstString &name,
@@ -1419,11 +1419,11 @@ void Module::PreloadSymbols() {
 void Module::SetSymbolFileFileSpec(const FileSpec &file) {
   if (!FileSystem::Instance().Exists(file))
     return;
-  if (m_symfile_ap) {
+  if (m_symfile_up) {
     // Remove any sections in the unified section list that come from the
     // current symbol vendor.
     SectionList *section_list = GetSectionList();
-    SymbolFile *symbol_file = m_symfile_ap->GetSymbolFile();
+    SymbolFile *symbol_file = m_symfile_up->GetSymbolFile();
     if (section_list && symbol_file) {
       ObjectFile *obj_file = symbol_file->GetObjectFile();
       // Make sure we have an object file and that the symbol vendor's objfile
@@ -1471,10 +1471,10 @@ void Module::SetSymbolFileFileSpec(const FileSpec &file) {
     }
     // Keep all old symbol files around in case there are any lingering type
     // references in any SBValue objects that might have been handed out.
-    m_old_symfiles.push_back(std::move(m_symfile_ap));
+    m_old_symfiles.push_back(std::move(m_symfile_up));
   }
   m_symfile_spec = file;
-  m_symfile_ap.reset();
+  m_symfile_up.reset();
   m_did_load_symbol_vendor = false;
 }
 

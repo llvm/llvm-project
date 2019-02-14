@@ -54,10 +54,10 @@ OperatingSystem *OperatingSystemPython::CreateInstance(Process *process,
   FileSpec python_os_plugin_spec(process->GetPythonOSPluginPath());
   if (python_os_plugin_spec &&
       FileSystem::Instance().Exists(python_os_plugin_spec)) {
-    std::unique_ptr<OperatingSystemPython> os_ap(
+    std::unique_ptr<OperatingSystemPython> os_up(
         new OperatingSystemPython(process, python_os_plugin_spec));
-    if (os_ap.get() && os_ap->IsValid())
-      return os_ap.release();
+    if (os_up.get() && os_up->IsValid())
+      return os_up.release();
   }
   return NULL;
 }
@@ -74,7 +74,7 @@ const char *OperatingSystemPython::GetPluginDescriptionStatic() {
 
 OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
                                              const FileSpec &python_module_path)
-    : OperatingSystem(process), m_thread_list_valobj_sp(), m_register_info_ap(),
+    : OperatingSystem(process), m_thread_list_valobj_sp(), m_register_info_up(),
       m_interpreter(NULL), m_python_object_sp() {
   if (!process)
     return;
@@ -116,7 +116,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
 OperatingSystemPython::~OperatingSystemPython() {}
 
 DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
-  if (m_register_info_ap == NULL) {
+  if (m_register_info_up == NULL) {
     if (!m_interpreter || !m_python_object_sp)
       return NULL;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OS));
@@ -131,12 +131,12 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
     if (!dictionary)
       return NULL;
 
-    m_register_info_ap.reset(new DynamicRegisterInfo(
+    m_register_info_up.reset(new DynamicRegisterInfo(
         *dictionary, m_process->GetTarget().GetArchitecture()));
-    assert(m_register_info_ap->GetNumRegisters() > 0);
-    assert(m_register_info_ap->GetNumRegisterSets() > 0);
+    assert(m_register_info_up->GetNumRegisters() > 0);
+    assert(m_register_info_up->GetNumRegisterSets() > 0);
   }
-  return m_register_info_ap.get();
+  return m_register_info_up.get();
 }
 
 //------------------------------------------------------------------

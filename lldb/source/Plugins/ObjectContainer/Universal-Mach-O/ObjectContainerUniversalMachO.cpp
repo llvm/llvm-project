@@ -49,11 +49,11 @@ ObjectContainer *ObjectContainerUniversalMachO::CreateInstance(
     DataExtractor data;
     data.SetData(data_sp, data_offset, length);
     if (ObjectContainerUniversalMachO::MagicBytesMatch(data)) {
-      std::unique_ptr<ObjectContainerUniversalMachO> container_ap(
+      std::unique_ptr<ObjectContainerUniversalMachO> container_up(
           new ObjectContainerUniversalMachO(module_sp, data_sp, data_offset,
                                             file, file_offset, length));
-      if (container_ap->ParseHeader()) {
-        return container_ap.release();
+      if (container_up->ParseHeader()) {
+        return container_up.release();
       }
     }
   }

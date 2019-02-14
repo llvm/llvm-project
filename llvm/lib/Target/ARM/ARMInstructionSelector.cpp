@@ -97,9 +97,14 @@ private:
     unsigned STORE8;
     unsigned LOAD8;
 
+    // Used for G_ICMP
     unsigned CMPrr;
     unsigned MOVi;
     unsigned MOVCCi;
+
+    // Used for G_SELECT
+    unsigned CMPri;
+    unsigned MOVCCr;
 
     OpcodeCache(const ARMSubtarget &STI);
   } const Opcodes;
@@ -292,6 +297,9 @@ ARMInstructionSelector::OpcodeCache::OpcodeCache(const ARMSubtarget &STI) {
   STORE_OPCODE(CMPrr, CMPrr);
   STORE_OPCODE(MOVi, MOVi);
   STORE_OPCODE(MOVCCi, MOVCCi);
+
+  STORE_OPCODE(CMPri, CMPri);
+  STORE_OPCODE(MOVCCr, MOVCCr);
 #undef MAP_OPCODE
 }
 
@@ -696,7 +704,7 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
   auto CondReg = MIB->getOperand(1).getReg();
   assert(validReg(MRI, CondReg, 1, ARM::GPRRegBankID) &&
          "Unsupported types for select operation");
-  auto CmpI = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(ARM::CMPri))
+  auto CmpI = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(Opcodes.CMPri))
                   .addUse(CondReg)
                   .addImm(0)
                   .add(predOps(ARMCC::AL));
@@ -711,7 +719,7 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
   assert(validOpRegPair(MRI, ResReg, TrueReg, 32, ARM::GPRRegBankID) &&
          validOpRegPair(MRI, TrueReg, FalseReg, 32, ARM::GPRRegBankID) &&
          "Unsupported types for select operation");
-  auto Mov1I = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(ARM::MOVCCr))
+  auto Mov1I = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(Opcodes.MOVCCr))
                    .addDef(ResReg)
                    .addUse(TrueReg)
                    .addUse(FalseReg)

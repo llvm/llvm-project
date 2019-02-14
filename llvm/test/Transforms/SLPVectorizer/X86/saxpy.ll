@@ -63,15 +63,11 @@ define void @SAXPY_crash(i32* noalias nocapture %x, i32* noalias nocapture %y, i
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[I:%.*]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[X:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[Y:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 undef, [[TMP4]]
-; CHECK-NEXT:    store i32 [[TMP5]], i32* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[I]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[Y]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 undef, [[TMP9]]
-; CHECK-NEXT:    store i32 [[TMP10]], i32* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP3]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, <2 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <2 x i32> undef, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP2]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], <2 x i32>* [[TMP7]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = add i64 %i, 1

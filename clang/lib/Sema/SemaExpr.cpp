@@ -5793,18 +5793,36 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   }
 
   if (!getLangOpts().CPlusPlus) {
+    // Forget about the nulled arguments since typo correction
+    // do not handle them well.
+    TheCall->shrinkNumArgs(Args.size());
     // C cannot always handle TypoExpr nodes in builtin calls and direct
     // function calls as their argument checking don't necessarily handle
     // dependent types properly, so make sure any TypoExprs have been
     // dealt with.
     ExprResult Result = CorrectDelayedTyposInExpr(TheCall);
     if (!Result.isUsable()) return ExprError();
+    CallExpr *TheOldCall = TheCall;
     TheCall = dyn_cast<CallExpr>(Result.get());
+    bool CorrectedTypos = TheCall != TheOldCall;
     if (!TheCall) return Result;
-    // TheCall at this point has max(Args.size(), NumParams) arguments,
-    // with extra arguments nulled. We don't want to introduce nulled
-    // arguments in Args and so we only take the first Args.size() arguments.
-    Args = llvm::makeArrayRef(TheCall->getArgs(), Args.size());
+    Args = llvm::makeArrayRef(TheCall->getArgs(), TheCall->getNumArgs());
+
+    // A new call expression node was created if some typos were corrected.
+    // However it may not have been constructed with enough storage. In this
+    // case, rebuild the node with enough storage. The waste of space is
+    // immaterial since this only happens when some typos were corrected.
+    if (CorrectedTypos && Args.size() < NumParams) {
+      if (Config)
+        TheCall = CUDAKernelCallExpr::Create(
+            Context, Fn, cast<CallExpr>(Config), Args, ResultTy, VK_RValue,
+            RParenLoc, NumParams);
+      else
+        TheCall = CallExpr::Create(Context, Fn, Args, ResultTy, VK_RValue,
+                                   RParenLoc, NumParams, UsesADL);
+    }
+    // We can now handle the nulled arguments for the default arguments.
+    TheCall->setNumArgsUnsafe(std::max<unsigned>(Args.size(), NumParams));
   }
 
   // Bail out early if calling a builtin with custom type checking.

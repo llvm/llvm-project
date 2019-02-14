@@ -264,6 +264,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString("--no-whole-archive"));
       }
 
+      TC.addProfileRTLibs(Args, CmdArgs);
+
       if (!HasWindowsApp) {
         // Add system libraries. If linking to libwindowsapp.a, that import
         // library replaces all these and we shouldn't accidentally try to

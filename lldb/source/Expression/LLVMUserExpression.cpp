@@ -45,15 +45,12 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
                                        const EvaluateExpressionOptions &options)
     : UserExpression(exe_scope, expr, prefix, language, desired_type, options),
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
-      m_stack_frame_top(LLDB_INVALID_ADDRESS),
-      m_allow_cxx(false),
-      m_allow_objc(false),
-      m_transformed_text(),
-      m_execution_unit_sp(), m_materializer_ap(), m_jit_module_wp(),
-      m_enforce_valid_object(true), m_in_cplusplus_method(false),
-      m_in_objectivec_method(false), m_in_static_method(false),
-      m_needs_object_ptr(false), m_target(NULL), m_can_interpret(false),
-      m_materialized_address(LLDB_INVALID_ADDRESS) {}
+      m_stack_frame_top(LLDB_INVALID_ADDRESS), m_allow_cxx(false),
+      m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(),
+      m_materializer_up(), m_jit_module_wp(), m_enforce_valid_object(true),
+      m_in_cplusplus_method(false), m_in_objectivec_method(false),
+      m_in_static_method(false), m_needs_object_ptr(false), m_target(NULL),
+      m_can_interpret(false), m_materialized_address(LLDB_INVALID_ADDRESS) {}
 
 LLVMUserExpression::~LLVMUserExpression() {
   if (m_target) {
@@ -312,8 +309,8 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
       const bool zero_memory = false;
 
       m_materialized_address = m_execution_unit_sp->Malloc(
-          m_materializer_ap->GetStructByteSize(),
-          m_materializer_ap->GetStructAlignment(),
+          m_materializer_up->GetStructByteSize(),
+          m_materializer_up->GetStructAlignment(),
           lldb::ePermissionsReadable | lldb::ePermissionsWritable, policy,
           zero_memory, alloc_error);
 
@@ -353,7 +350,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
 
     Status materialize_error;
 
-    m_dematerializer_sp = m_materializer_ap->Materialize(
+    m_dematerializer_sp = m_materializer_up->Materialize(
         frame, *m_execution_unit_sp, struct_address, materialize_error);
 
     if (!materialize_error.Success()) {

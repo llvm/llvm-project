@@ -10,14 +10,14 @@ entry:
   ret double %sub
 }
 
-; ASM:         .cv_def_range    Lfunc_begin0 Lfunc_end0, "A\021\200\000\000\000"
+; ASM:         .cv_def_range    Ltmp1 Lfunc_end0, "A\021\200\000\000\000"
 ; OBJ:    DefRangeRegisterSym {
 ; OBJ:      Register: ST0 (0x80)
 ; OBJ:      MayHaveNoName: 0
 ; OBJ:      LocalVariableAddrRange {
-; OBJ:        OffsetStart: .text+0x0
+; OBJ:        OffsetStart: .text+0x6
 ; OBJ:        ISectStart: 0x0
-; OBJ:        Range: 0x7
+; OBJ:        Range: 0x1
 ; OBJ:      }
 ; OBJ:    }
 

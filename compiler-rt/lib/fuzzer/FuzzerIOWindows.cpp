@@ -140,6 +140,15 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
     *Epoch = E;
 }
 
+
+void IterateDirRecurisve(const std::string &Dir,
+                         void (*DirPreCallback)(const std::string &Dir),
+                         void (*DirPostCallback)(const std::string &Dir),
+                         void (*FileCallback)(const std::string &Dir)) {
+  // Unimplemented.
+  // TODO: implement, and then implement ListFilesInDirRecursive via this one.
+}
+
 char GetSeparator() {
   return '\\';
 }

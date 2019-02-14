@@ -23,6 +23,7 @@ class GlobalVariable;
 namespace clang {
 
 class CUDAKernelCallExpr;
+class VarDecl;
 
 namespace CodeGen {
 
@@ -52,7 +53,8 @@ public:
 
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;
-  virtual void registerDeviceVar(llvm::GlobalVariable &Var, unsigned Flags) = 0;
+  virtual void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
+                                 unsigned Flags) = 0;
 
   /// Constructs and returns a module initialization function or nullptr if it's
   /// not needed. Must be called after all kernels have been emitted.

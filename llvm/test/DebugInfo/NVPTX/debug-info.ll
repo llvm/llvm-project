@@ -4781,8 +4781,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 6                                // DW_AT_call_line
 ; CHECK-NEXT: .b8 43                               // Abbrev [43] 0x270e:0x22 DW_TAG_inlined_subroutine
 ; CHECK-NEXT: .b32 9791                            // DW_AT_abstract_origin
-; CHECK-NEXT: .b64 Ltmp9                           // DW_AT_low_pc
-; CHECK-NEXT: .b64 Ltmp10                          // DW_AT_high_pc
+; CHECK-NEXT: .b64 Ltmp10                          // DW_AT_low_pc
+; CHECK-NEXT: .b64 Ltmp11                          // DW_AT_high_pc
 ; CHECK-NEXT: .b8 12                               // DW_AT_call_file
 ; CHECK-NEXT: .b8 8                                // DW_AT_call_line
 ; CHECK-NEXT: .b8 44                               // Abbrev [44] 0x2725:0x5 DW_TAG_formal_parameter

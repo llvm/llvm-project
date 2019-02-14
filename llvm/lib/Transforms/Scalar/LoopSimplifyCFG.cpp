@@ -41,7 +41,7 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-simplifycfg"
 
 static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
-                                       cl::init(false));
+                                       cl::init(true));
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");

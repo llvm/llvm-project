@@ -9174,23 +9174,23 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
             getContainedDynamicClass(PointeeTy, IsContained)) {
 
       unsigned OperationType = 0;
+      const bool IsCmp = BId == Builtin::BImemcmp || BId == Builtin::BIbcmp;
       // "overwritten" if we're warning about the destination for any call
       // but memcmp; otherwise a verb appropriate to the call.
-      if (ArgIdx != 0 || BId == Builtin::BImemcmp) {
+      if (ArgIdx != 0 || IsCmp) {
         if (BId == Builtin::BImemcpy)
           OperationType = 1;
         else if(BId == Builtin::BImemmove)
           OperationType = 2;
-        else if (BId == Builtin::BImemcmp)
+        else if (IsCmp)
           OperationType = 3;
       }
 
-      DiagRuntimeBehavior(
-        Dest->getExprLoc(), Dest,
-        PDiag(diag::warn_dyn_class_memaccess)
-          << (BId == Builtin::BImemcmp ? ArgIdx + 2 : ArgIdx)
-          << FnName << IsContained << ContainedRD << OperationType
-          << Call->getCallee()->getSourceRange());
+      DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                          PDiag(diag::warn_dyn_class_memaccess)
+                              << (IsCmp ? ArgIdx + 2 : ArgIdx) << FnName
+                              << IsContained << ContainedRD << OperationType
+                              << Call->getCallee()->getSourceRange());
     } else if (PointeeTy.hasNonTrivialObjCLifetime() &&
              BId != Builtin::BImemset)
       DiagRuntimeBehavior(

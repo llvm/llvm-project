@@ -54,15 +54,15 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
-#include "ClangDiagnostic.h"
-#include "ClangExpressionParser.h"
-
 #include "ClangASTSource.h"
+#include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
+#include "ClangExpressionParser.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
 #include "IRForTarget.h"
+#include "ModuleDependencyCollector.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
@@ -84,6 +84,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
@@ -112,24 +113,19 @@ public:
 
   void moduleImport(SourceLocation import_location, clang::ModuleIdPath path,
                     const clang::Module * /*null*/) override {
-    std::vector<ConstString> string_path;
+    SourceModule module;
 
-    for (const std::pair<IdentifierInfo *, SourceLocation> &component : path) {
-      string_path.push_back(ConstString(component.first->getName()));
-    }
+    for (const std::pair<IdentifierInfo *, SourceLocation> &component : path)
+      module.path.push_back(ConstString(component.first->getName()));
 
     StreamString error_stream;
 
     ClangModulesDeclVendor::ModuleVector exported_modules;
-
-    if (!m_decl_vendor.AddModule(string_path, &exported_modules,
-                                 m_error_stream)) {
+    if (!m_decl_vendor.AddModule(module, &exported_modules, m_error_stream))
       m_has_errors = true;
-    }
 
-    for (ClangModulesDeclVendor::ModuleID module : exported_modules) {
+    for (ClangModulesDeclVendor::ModuleID module : exported_modules)
       m_persistent_vars.AddHandLoadedClangModule(module);
-    }
   }
 
   bool hasErrors() { return m_has_errors; }
@@ -250,6 +246,19 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   // 1. Create a new compiler instance.
   m_compiler.reset(new CompilerInstance());
+
+  // When capturing a reproducer, hook up the file collector with clang to
+  // collector modules and headers.
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+    m_compiler->setModuleDepCollector(
+        std::make_shared<ModuleDependencyCollectorAdaptor>(
+            fp.GetFileCollector()));
+    DependencyOutputOptions &opts = m_compiler->getDependencyOutputOpts();
+    opts.IncludeSystemHeaders = true;
+    opts.IncludeModuleFiles = true;
+  }
+
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
   bool overridden_target_opts = false;
@@ -1048,10 +1057,10 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
   lldb_private::Status err;
 
-  std::unique_ptr<llvm::Module> llvm_module_ap(
+  std::unique_ptr<llvm::Module> llvm_module_up(
       m_code_generator->ReleaseModule());
 
-  if (!llvm_module_ap) {
+  if (!llvm_module_up) {
     err.SetErrorToGenericError();
     err.SetErrorString("IR doesn't contain a module");
     return err;
@@ -1062,7 +1071,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   if (execution_policy != eExecutionPolicyTopLevel) {
     // Find the actual name of the function (it's often mangled somehow)
 
-    if (!FindFunctionInModule(function_name, llvm_module_ap.get(),
+    if (!FindFunctionInModule(function_name, llvm_module_up.get(),
                               m_expr.FunctionName())) {
       err.SetErrorToGenericError();
       err.SetErrorStringWithFormat("Couldn't find %s() in the module",
@@ -1103,13 +1112,13 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
                   "expression module '%s'",
                   __FUNCTION__, m_expr.FunctionName());
 
-    custom_passes.EarlyPasses->run(*llvm_module_ap);
+    custom_passes.EarlyPasses->run(*llvm_module_up);
   }
 
   execution_unit_sp = std::make_shared<IRExecutionUnit>(
       m_llvm_context, // handed off here
-                          llvm_module_ap, // handed off here
-                          function_name, exe_ctx.GetTargetSP(), sc,
+      llvm_module_up, // handed off here
+      function_name, exe_ctx.GetTargetSP(), sc,
       m_compiler->getTargetOpts().Features);
 
   ClangExpressionHelper *type_system_helper =

@@ -51,7 +51,7 @@ AppleObjCRuntime::~AppleObjCRuntime() {}
 
 AppleObjCRuntime::AppleObjCRuntime(Process *process)
     : ObjCLanguageRuntime(process), m_read_objc_library(false),
-      m_objc_trampoline_handler_ap(), m_Foundation_major() {
+      m_objc_trampoline_handler_up(), m_Foundation_major() {
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
@@ -327,9 +327,9 @@ bool AppleObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
   // Maybe check here and if we have a handler already, and the UUID of this
   // module is the same as the one in the current module, then we don't have to
   // reread it?
-  m_objc_trampoline_handler_ap.reset(
+  m_objc_trampoline_handler_up.reset(
       new AppleObjCTrampolineHandler(m_process->shared_from_this(), module_sp));
-  if (m_objc_trampoline_handler_ap != NULL) {
+  if (m_objc_trampoline_handler_up != NULL) {
     m_read_objc_library = true;
     return true;
   } else
@@ -339,8 +339,8 @@ bool AppleObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
 ThreadPlanSP AppleObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
                                                             bool stop_others) {
   ThreadPlanSP thread_plan_sp;
-  if (m_objc_trampoline_handler_ap)
-    thread_plan_sp = m_objc_trampoline_handler_ap->GetStepThroughDispatchPlan(
+  if (m_objc_trampoline_handler_up)
+    thread_plan_sp = m_objc_trampoline_handler_up->GetStepThroughDispatchPlan(
         thread, stop_others);
   return thread_plan_sp;
 }

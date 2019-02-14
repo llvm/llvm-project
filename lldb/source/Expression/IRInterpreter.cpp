@@ -1600,16 +1600,16 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
                  "unable to locate host data for transfer to device");
           // Create the required buffer
           rawArgs[i].size = dataSize;
-          rawArgs[i].data_ap.reset(new uint8_t[dataSize + 1]);
+          rawArgs[i].data_up.reset(new uint8_t[dataSize + 1]);
 
           // Read string from host memory
-          execution_unit.ReadMemory(rawArgs[i].data_ap.get(), addr, dataSize,
+          execution_unit.ReadMemory(rawArgs[i].data_up.get(), addr, dataSize,
                                     error);
           assert(!error.Fail() &&
                  "we have failed to read the string from memory");
 
           // Add null terminator
-          rawArgs[i].data_ap[dataSize] = '\0';
+          rawArgs[i].data_up[dataSize] = '\0';
           rawArgs[i].type = lldb_private::ABI::CallArgument::HostPointer;
         } else /* if ( arg_ty->isPointerTy() ) */
         {

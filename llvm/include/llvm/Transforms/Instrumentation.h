@@ -142,15 +142,6 @@ struct InstrProfOptions {
 ModulePass *createInstrProfilingLegacyPass(
     const InstrProfOptions &Options = InstrProfOptions());
 
-// Insert AddressSanitizer (address sanity checking) instrumentation
-FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false,
-                                                 bool Recover = false,
-                                                 bool UseAfterScope = false);
-ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
-                                             bool Recover = false,
-                                             bool UseGlobalsGC = true,
-                                             bool UseOdrIndicator = true);
-
 FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
                                            bool Recover = false);
 

@@ -4,6 +4,7 @@
 ; GCN-LABEL: {{^}}test_debug_value:
 ; NOOPT: .loc	1 1 42 prologue_end     ; /tmp/test_debug_value.cl:1:42
 ; NOOPT-NEXT: s_load_dwordx2 s[4:5], s[4:5], 0x0
+; NOOPT-NEXT: .Ltmp
 ; NOOPT-NEXT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- $sgpr4_sgpr5
 
 ; GCN: flat_store_dword

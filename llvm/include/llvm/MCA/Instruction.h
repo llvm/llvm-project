@@ -168,6 +168,14 @@ public:
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
   bool isWriteZero() const { return WritesZero; }
   bool isEliminated() const { return IsEliminated; }
+
+  bool isReady() const {
+    if (getDependentWrite())
+      return false;
+    unsigned CyclesLeft = getDependentWriteCyclesLeft();
+    return !CyclesLeft || CyclesLeft < getLatency();
+  }
+
   bool isExecuted() const {
     return CyclesLeft != UNKNOWN_CYCLES && CyclesLeft <= 0;
   }
@@ -239,6 +247,7 @@ public:
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
 
+  bool isPending() const { return !IndependentFromDef && CyclesLeft > 0; }
   bool isReady() const { return IsReady; }
   bool isImplicitRead() const { return RD->isImplicitRead(); }
 
@@ -329,6 +338,9 @@ struct InstrDesc {
   // A list of buffered resources consumed by this instruction.
   SmallVector<uint64_t, 4> Buffers;
 
+  unsigned UsedProcResUnits;
+  unsigned UsedProcResGroups;
+
   unsigned MaxLatency;
   // Number of MicroOps for this instruction.
   unsigned NumMicroOps;
@@ -411,6 +423,7 @@ class Instruction : public InstructionBase {
   enum InstrStage {
     IS_INVALID,    // Instruction in an invalid state.
     IS_DISPATCHED, // Instruction dispatched but operands are not ready.
+    IS_PENDING,    // Instruction is not ready, but operand latency is known.
     IS_READY,      // Instruction dispatched and operands ready.
     IS_EXECUTING,  // Instruction issued.
     IS_EXECUTED,   // Instruction executed. Values are written back.
@@ -444,15 +457,18 @@ public:
   // all the definitions.
   void execute();
 
-  // Force a transition from the IS_DISPATCHED state to the IS_READY state if
-  // input operands are all ready. State transitions normally occur at the
-  // beginning of a new cycle (see method cycleEvent()). However, the scheduler
-  // may decide to promote instructions from the wait queue to the ready queue
-  // as the result of another issue event.  This method is called every time the
-  // instruction might have changed in state.
+  // Force a transition from the IS_DISPATCHED state to the IS_READY or
+  // IS_PENDING state. State transitions normally occur either at the beginning
+  // of a new cycle (see method cycleEvent()), or as a result of another issue
+  // event. This method is called every time the instruction might have changed
+  // in state. It internally delegates to method updateDispatched() and
+  // updateWaiting().
   void update();
+  bool updateDispatched();
+  bool updatePending();
 
   bool isDispatched() const { return Stage == IS_DISPATCHED; }
+  bool isPending() const { return Stage == IS_PENDING; }
   bool isReady() const { return Stage == IS_READY; }
   bool isExecuting() const { return Stage == IS_EXECUTING; }
   bool isExecuted() const { return Stage == IS_EXECUTED; }

@@ -207,13 +207,7 @@ DWARFExpression lldb_private::npdb::MakeGlobalLocationExpression(
         SectionList *section_list = module->GetSectionList();
         assert(section_list);
 
-        // Section indices in PDB are 1-based, but in DWARF they are 0-based, so
-        // we need to subtract 1.
-        uint32_t section_idx = section - 1;
-        if (section_idx >= section_list->GetSize())
-          return false;
-
-        auto section_ptr = section_list->GetSectionAtIndex(section_idx);
+        auto section_ptr = section_list->FindSectionByID(section);
         if (!section_ptr)
           return false;
 
