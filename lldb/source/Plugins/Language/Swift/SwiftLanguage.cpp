@@ -544,7 +544,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                           "quat(f|d)"
                           ")$";
 
-  const char *newSIMDTypes = "^SIMD[0-9]+<.*>";
+  const char *newSIMDTypes = "^SIMD[0-9]+<.*>$";
 
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::LegacySIMD_SummaryProvider,
