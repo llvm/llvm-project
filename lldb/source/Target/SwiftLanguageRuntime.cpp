@@ -3365,10 +3365,12 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
     std::string module_name = "$__lldb_module_for_";
     module_name.append(&name.GetCString()[1]);
+    SourceModule module_info;
+    module_info.path.push_back(ConstString(module_name));
 
     Status module_creation_error;
-    swift::ModuleDecl *module_decl = ast_context->CreateModule(
-        ConstString(module_name), module_creation_error);
+    swift::ModuleDecl *module_decl =
+        ast_context->CreateModule(module_info, module_creation_error);
 
     if (module_creation_error.Success() && module_decl) {
       const bool is_static = false;
