@@ -693,6 +693,21 @@ public:
   //------------------------------------------------------------------
   virtual void SectionFileAddressesChanged();
 
+  //------------------------------------------------------------------
+  /// Returns a reference to the UnwindTable for this Module
+  ///
+  /// The UnwindTable contains FuncUnwinders objects for any function in this
+  /// Module.  If a FuncUnwinders object hasn't been created yet (i.e. the
+  /// function has yet to be unwound in a stack walk), it will be created when
+  /// requested.  Specifically, we do not create FuncUnwinders objects for
+  /// functions until they are needed.
+  ///
+  /// @return
+  ///     Returns the unwind table for this module. If this object has no
+  ///     associated object file, an empty UnwindTable is returned.
+  //------------------------------------------------------------------
+  UnwindTable &GetUnwindTable() { return m_unwind_table; }
+
   llvm::VersionTuple GetVersion();
 
   //------------------------------------------------------------------
@@ -1113,6 +1128,8 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    ///parser for this module as it may or may
                                    ///not be shared with the SymbolFile
+  UnwindTable m_unwind_table{*this}; ///< Table of FuncUnwinders objects created
+                                     /// for this Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>

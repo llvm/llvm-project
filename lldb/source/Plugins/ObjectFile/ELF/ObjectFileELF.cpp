@@ -2873,8 +2873,8 @@ Symtab *ObjectFileELF::GetSymtab() {
       }
     }
 
-    DWARFCallFrameInfo *eh_frame = GetUnwindTable().GetEHFrameInfo();
-    if (eh_frame) {
+    if (DWARFCallFrameInfo *eh_frame =
+            GetModule()->GetUnwindTable().GetEHFrameInfo()) {
       if (m_symtab_up == nullptr)
         m_symtab_up.reset(new Symtab(this));
       ParseUnwindSymbols(m_symtab_up.get(), eh_frame);

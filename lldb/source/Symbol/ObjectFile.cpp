@@ -264,8 +264,7 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     : ModuleChild(module_sp),
       m_file(), // This file could be different from the original module's file
       m_type(eTypeInvalid), m_strata(eStrataInvalid),
-      m_file_offset(file_offset), m_length(length), m_data(),
-      m_unwind_table(*this), m_process_wp(),
+      m_file_offset(file_offset), m_length(length), m_data(), m_process_wp(),
       m_memory_addr(LLDB_INVALID_ADDRESS), m_sections_up(), m_symtab_up(),
       m_synthetic_symbol_idx(0) {
   if (file_spec_ptr)
@@ -287,9 +286,8 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
                        DataBufferSP &header_data_sp)
     : ModuleChild(module_sp), m_file(), m_type(eTypeInvalid),
       m_strata(eStrataInvalid), m_file_offset(0), m_length(0), m_data(),
-      m_unwind_table(*this), m_process_wp(process_sp),
-      m_memory_addr(header_addr), m_sections_up(), m_symtab_up(),
-      m_synthetic_symbol_idx(0) {
+      m_process_wp(process_sp), m_memory_addr(header_addr), m_sections_up(),
+      m_symtab_up(), m_synthetic_symbol_idx(0) {
   if (header_data_sp)
     m_data.SetData(header_data_sp, 0, header_data_sp->GetByteSize());
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
