@@ -8103,44 +8103,46 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   // exit value from the loop without using SCEVs.
   if (const SCEVUnknown *SU = dyn_cast<SCEVUnknown>(V)) {
     if (Instruction *I = dyn_cast<Instruction>(SU->getValue())) {
-      const Loop *LI = this->LI[I->getParent()];
-      if (LI && LI->getParentLoop() == L)  // Looking for loop exit value.
-        if (PHINode *PN = dyn_cast<PHINode>(I))
-          if (PN->getParent() == LI->getHeader()) {
-            // Okay, there is no closed form solution for the PHI node.  Check
-            // to see if the loop that contains it has a known backedge-taken
-            // count.  If so, we may be able to force computation of the exit
-            // value.
-            const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
-            if (const SCEVConstant *BTCC =
-                  dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
+      if (PHINode *PN = dyn_cast<PHINode>(I)) {
+        const Loop *LI = this->LI[I->getParent()];
+        // Looking for loop exit value.
+        if (LI && LI->getParentLoop() == L &&
+            PN->getParent() == LI->getHeader()) {
+          // Okay, there is no closed form solution for the PHI node.  Check
+          // to see if the loop that contains it has a known backedge-taken
+          // count.  If so, we may be able to force computation of the exit
+          // value.
+          const SCEV *BackedgeTakenCount = getBackedgeTakenCount(LI);
+          if (const SCEVConstant *BTCC =
+                dyn_cast<SCEVConstant>(BackedgeTakenCount)) {
 
-              // This trivial case can show up in some degenerate cases where
-              // the incoming IR has not yet been fully simplified.
-              if (BTCC->getValue()->isZero()) {
-                Value *InitValue = nullptr;
-                bool MultipleInitValues = false;
-                for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
-                  if (!LI->contains(PN->getIncomingBlock(i))) {
-                    if (!InitValue)
-                      InitValue = PN->getIncomingValue(i);
-                    else if (InitValue != PN->getIncomingValue(i)) {
-                      MultipleInitValues = true;
-                      break;
-                    }
+            // This trivial case can show up in some degenerate cases where
+            // the incoming IR has not yet been fully simplified.
+            if (BTCC->getValue()->isZero()) {
+              Value *InitValue = nullptr;
+              bool MultipleInitValues = false;
+              for (unsigned i = 0; i < PN->getNumIncomingValues(); i++) {
+                if (!LI->contains(PN->getIncomingBlock(i))) {
+                  if (!InitValue)
+                    InitValue = PN->getIncomingValue(i);
+                  else if (InitValue != PN->getIncomingValue(i)) {
+                    MultipleInitValues = true;
+                    break;
                   }
-                  if (!MultipleInitValues && InitValue)
-                    return getSCEV(InitValue);
                 }
+                if (!MultipleInitValues && InitValue)
+                  return getSCEV(InitValue);
               }
-              // Okay, we know how many times the containing loop executes.  If
-              // this is a constant evolving PHI node, get the final value at
-              // the specified iteration number.
-              Constant *RV =
-                  getConstantEvolutionLoopExitValue(PN, BTCC->getAPInt(), LI);
-              if (RV) return getSCEV(RV);
             }
+            // Okay, we know how many times the containing loop executes.  If
+            // this is a constant evolving PHI node, get the final value at
+            // the specified iteration number.
+            Constant *RV =
+                getConstantEvolutionLoopExitValue(PN, BTCC->getAPInt(), LI);
+            if (RV) return getSCEV(RV);
           }
+        }
+      }
 
       // Okay, this is an expression that we cannot symbolically evaluate
       // into a SCEV.  Check to see if it's possible to symbolically evaluate

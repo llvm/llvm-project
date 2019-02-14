@@ -532,7 +532,7 @@ Status File::Read(size_t &num_bytes, off_t &offset, bool null_terminate,
           data_heap_ap.reset(new DataBufferHeap());
           data_heap_ap->SetByteSize(num_bytes_plus_nul_char);
 
-          if (data_heap_ap.get()) {
+          if (data_heap_ap) {
             error = Read(data_heap_ap->GetBytes(), num_bytes, offset);
             if (error.Success()) {
               // Make sure we read exactly what we asked for and if we got

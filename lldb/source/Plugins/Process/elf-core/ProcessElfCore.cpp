@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 
+#include <memory>
 #include <mutex>
 
 #include "lldb/Core/Module.h"
@@ -65,8 +66,8 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
       lldb::offset_t data_offset = 0;
       if (elf_header.Parse(data, &data_offset)) {
         if (elf_header.e_type == llvm::ELF::ET_CORE)
-          process_sp.reset(
-              new ProcessElfCore(target_sp, listener_sp, *crash_file));
+          process_sp = std::make_shared<ProcessElfCore>(target_sp, listener_sp,
+                                                        *crash_file);
       }
     }
   }

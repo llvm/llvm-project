@@ -1261,6 +1261,28 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_EXTRACT: {
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    if (!SrcOp.isReg()) {
+      report("extract source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &OffsetOp = MI->getOperand(2);
+    if (!OffsetOp.isImm()) {
+      report("extract offset must be a constant", MI);
+      break;
+    }
+
+    unsigned DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
+    unsigned SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
+    if (SrcSize == DstSize)
+      report("extract source must be larger than result", MI);
+
+    if (DstSize + OffsetOp.getImm() > SrcSize)
+      report("extract reads past end of register", MI);
+    break;
+  }
   default:
     break;
   }

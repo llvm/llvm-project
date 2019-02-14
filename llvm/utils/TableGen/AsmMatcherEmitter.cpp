@@ -1159,8 +1159,9 @@ AsmMatcherInfo::getOperandClass(Record *Rec, int SubOpIdx) {
     // use it, else just fall back to the underlying register class.
     const RecordVal *R = Rec->getValue("ParserMatchClass");
     if (!R || !R->getValue())
-      PrintFatalError("Record `" + Rec->getName() +
-        "' does not have a ParserMatchClass!\n");
+      PrintFatalError(Rec->getLoc(),
+                      "Record `" + Rec->getName() +
+                          "' does not have a ParserMatchClass!\n");
 
     if (DefInit *DI= dyn_cast<DefInit>(R->getValue())) {
       Record *MatchClass = DI->getDef();

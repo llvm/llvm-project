@@ -30,6 +30,7 @@ SuppressionContext::SuppressionContext(const char *suppression_types[],
   internal_memset(has_suppression_type_, 0, suppression_types_num_);
 }
 
+#if !SANITIZER_FUCHSIA
 static bool GetPathAssumingFileIsRelativeToExec(const char *file_path,
                                                 /*out*/char *new_file_path,
                                                 uptr new_file_path_size) {
@@ -46,20 +47,30 @@ static bool GetPathAssumingFileIsRelativeToExec(const char *file_path,
   return false;
 }
 
+static const char *FindFile(const char *file_path,
+                            /*out*/char *new_file_path,
+                            uptr new_file_path_size) {
+  // If we cannot find the file, check if its location is relative to
+  // the location of the executable.
+  if (!FileExists(file_path) && !IsAbsolutePath(file_path) &&
+      GetPathAssumingFileIsRelativeToExec(file_path, new_file_path,
+                                          new_file_path_size)) {
+    return new_file_path;
+  }
+  return file_path;
+}
+#else
+static const char *FindFile(const char *file_path, char *, uptr) {
+  return file_path;
+}
+#endif
+
 void SuppressionContext::ParseFromFile(const char *filename) {
   if (filename[0] == '\0')
     return;
 
-#if !SANITIZER_FUCHSIA
-  // If we cannot find the file, check if its location is relative to
-  // the location of the executable.
   InternalScopedString new_file_path(kMaxPathLength);
-  if (!FileExists(filename) && !IsAbsolutePath(filename) &&
-      GetPathAssumingFileIsRelativeToExec(filename, new_file_path.data(),
-                                          new_file_path.size())) {
-    filename = new_file_path.data();
-  }
-#endif  // !SANITIZER_FUCHSIA
+  filename = FindFile(filename, new_file_path.data(), new_file_path.size());
 
   // Read the file.
   VPrintf(1, "%s: reading suppressions file at %s\n",

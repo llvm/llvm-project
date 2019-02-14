@@ -136,6 +136,24 @@ void __tsan_external_assign_tag(void *addr, void *tag);
 void __tsan_external_read(void *addr, void *caller_pc, void *tag);
 void __tsan_external_write(void *addr, void *caller_pc, void *tag);
 
+// Fiber switching API.
+//   - TSAN context for fiber can be created by __tsan_create_fiber
+//     and freed by __tsan_destroy_fiber.
+//   - TSAN context of current fiber or thread can be obtained
+//     by calling __tsan_get_current_fiber.
+//   - __tsan_switch_to_fiber should be called immediatly before switch
+//     to fiber, such as call of swapcontext.
+//   - Fiber name can be set by __tsan_set_fiber_name.
+void *__tsan_get_current_fiber(void);
+void *__tsan_create_fiber(unsigned flags);
+void __tsan_destroy_fiber(void *fiber);
+void __tsan_switch_to_fiber(void *fiber, unsigned flags);
+void __tsan_set_fiber_name(void *fiber, const char *name);
+
+// Flags for __tsan_switch_to_fiber:
+// Do not establish a happens-before relation between fibers
+const unsigned __tsan_switch_to_fiber_no_sync = 1 << 0;
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

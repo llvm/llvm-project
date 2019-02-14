@@ -50,6 +50,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -121,12 +123,12 @@ public:
 
 ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
-    m_collection_sp.reset(
-        new ThreadOptionValueProperties(ConstString("thread")));
+    m_collection_sp =
+        std::make_shared<ThreadOptionValueProperties>(ConstString("thread"));
     m_collection_sp->Initialize(g_properties);
   } else
-    m_collection_sp.reset(
-        new ThreadOptionValueProperties(Thread::GetGlobalProperties().get()));
+    m_collection_sp = std::make_shared<ThreadOptionValueProperties>(
+        Thread::GetGlobalProperties().get());
 }
 
 ThreadProperties::~ThreadProperties() = default;
@@ -560,7 +562,7 @@ bool Thread::RestoreRegisterStateFromCheckpoint(
         // Clear out all stack frames as our world just changed.
         ClearStackFrames();
         reg_ctx_sp->InvalidateIfNeeded(true);
-        if (m_unwinder_ap.get())
+        if (m_unwinder_ap)
           m_unwinder_ap->Clear();
         return ret;
       }
@@ -1383,9 +1385,9 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
     const SymbolContext &addr_context, lldb::RunMode stop_other_threads,
     Status &status, LazyBool step_out_avoids_code_withoug_debug_info) {
   ThreadPlanSP thread_plan_sp;
-  thread_plan_sp.reset(new ThreadPlanStepOverRange(
+  thread_plan_sp = std::make_shared<ThreadPlanStepOverRange>(
       *this, range, addr_context, stop_other_threads,
-      step_out_avoids_code_withoug_debug_info));
+      step_out_avoids_code_withoug_debug_info);
 
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1598,15 +1600,13 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 }
 
 StackFrameListSP Thread::GetStackFrameList() {
-  StackFrameListSP frame_list_sp;
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
-  if (m_curr_frames_sp) {
-    frame_list_sp = m_curr_frames_sp;
-  } else {
-    frame_list_sp.reset(new StackFrameList(*this, m_prev_frames_sp, true));
-    m_curr_frames_sp = frame_list_sp;
-  }
-  return frame_list_sp;
+
+  if (!m_curr_frames_sp)
+    m_curr_frames_sp =
+        std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
+
+  return m_curr_frames_sp;
 }
 
 void Thread::ClearStackFrames() {

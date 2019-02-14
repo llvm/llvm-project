@@ -13,9 +13,9 @@
 #include <memory>
 
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Target/Platform.h"
+#include "lldb/Target/RemoteAwarePlatform.h"
 
-class PlatformPOSIX : public lldb_private::Platform {
+class PlatformPOSIX : public lldb_private::RemoteAwarePlatform {
 public:
   PlatformPOSIX(bool is_host);
 
@@ -25,18 +25,8 @@ public:
   // lldb_private::Platform functions
   //------------------------------------------------------------
 
-  bool GetModuleSpec(const lldb_private::FileSpec &module_file_spec,
-                     const lldb_private::ArchSpec &arch,
-                     lldb_private::ModuleSpec &module_spec) override;
-
   lldb_private::OptionGroupOptions *
   GetConnectionOptions(lldb_private::CommandInterpreter &interpreter) override;
-
-  const char *GetHostname() override;
-
-  const char *GetUserName(uint32_t uid) override;
-
-  const char *GetGroupName(uint32_t gid) override;
 
   lldb_private::Status PutFile(const lldb_private::FileSpec &source,
                                const lldb_private::FileSpec &destination,
@@ -70,19 +60,7 @@ public:
   bool
   SetRemoteWorkingDirectory(const lldb_private::FileSpec &working_dir) override;
 
-  bool GetRemoteOSVersion() override;
-
-  bool GetRemoteOSBuildString(std::string &s) override;
-
-  bool GetRemoteOSKernelDescription(std::string &s) override;
-
-  lldb_private::ArchSpec GetRemoteSystemArchitecture() override;
-
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
-
-  lldb_private::Environment GetEnvironment() override;
-
-  bool IsConnected() const override;
 
   lldb_private::Status RunShellCommand(
       const char *command,                       // Shouldn't be nullptr
@@ -100,16 +78,6 @@ public:
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr) override;
 
-  lldb_private::Status
-  GetFileWithUUID(const lldb_private::FileSpec &platform_file,
-                  const lldb_private::UUID *uuid,
-                  lldb_private::FileSpec &local_file) override;
-
-  bool GetProcessInfo(lldb::pid_t pid, lldb_private::ProcessInstanceInfo &proc_info) override;
-
-  uint32_t FindProcesses(const lldb_private::ProcessInstanceInfoMatch &match_info,
-                         lldb_private::ProcessInstanceInfoList &process_infos) override;
-
   lldb_private::Status MakeDirectory(const lldb_private::FileSpec &file_spec,
                                      uint32_t mode) override;
 
@@ -124,9 +92,6 @@ public:
   bool GetFileExists(const lldb_private::FileSpec &file_spec) override;
 
   lldb_private::Status Unlink(const lldb_private::FileSpec &file_spec) override;
-
-  lldb_private::Status
-  LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
   lldb_private::Status KillProcess(const lldb::pid_t pid) override;
 
@@ -189,8 +154,6 @@ protected:
   std::map<lldb_private::CommandInterpreter *,
            std::unique_ptr<lldb_private::OptionGroupOptions>>
       m_options;
-  lldb::PlatformSP m_remote_platform_sp; // Allow multiple ways to connect to a
-                                         // remote POSIX-compliant OS
 
   lldb_private::Status
   EvaluateLibdlExpression(lldb_private::Process *process, const char *expr_cstr,

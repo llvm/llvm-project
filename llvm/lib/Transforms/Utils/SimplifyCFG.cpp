@@ -3436,7 +3436,7 @@ static bool SimplifyTerminatorOnSelect(Instruction *OldTerm, Value *Cond,
       KeepEdge2 = nullptr;
     else
       Succ->removePredecessor(OldTerm->getParent(),
-                              /*DontDeleteUselessPHIs=*/true);
+                              /*KeepOneInputPHIs=*/true);
   }
 
   IRBuilder<> Builder(OldTerm);
@@ -5433,7 +5433,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // We cached PHINodes in PHIs. To avoid accessing deleted PHINodes later,
     // do not delete PHINodes here.
     SI->getDefaultDest()->removePredecessor(SI->getParent(),
-                                            /*DontDeleteUselessPHIs=*/true);
+                                            /*KeepOneInputPHIs=*/true);
   }
 
   bool ReturnedEarly = false;

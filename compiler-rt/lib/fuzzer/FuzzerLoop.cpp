@@ -537,15 +537,16 @@ void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
   delete[] DataCopy;
 }
 
-void Fuzzer::WriteToOutputCorpus(const Unit &U) {
+std::string Fuzzer::WriteToOutputCorpus(const Unit &U) {
   if (Options.OnlyASCII)
     assert(IsASCII(U));
   if (Options.OutputCorpus.empty())
-    return;
+    return "";
   std::string Path = DirPlusFile(Options.OutputCorpus, Hash(U));
   WriteToFile(U, Path);
   if (Options.Verbosity >= 2)
     Printf("Written %zd bytes to %s\n", U.size(), Path.c_str());
+  return Path;
 }
 
 void Fuzzer::WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix) {

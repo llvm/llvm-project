@@ -10,9 +10,9 @@
 ; RUN: opt -instcombine -S < %s -mtriple=arm-apple-watchos2.0     | FileCheck %s --check-prefixes=CHECK,ANY,CHECK-EXP10
 ; rdar://7251832
 ; RUN: opt -instcombine -S < %s -mtriple=i386-pc-windows-msvc18   | FileCheck %s --check-prefixes=CHECK,MSVC,VC32,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,MSVC,VC19,VC51,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=x86_64-pc-windows-msvc18 | FileCheck %s --check-prefixes=CHECK,MSVC,VC64,VC83,CHECK-NO-EXP10
-; RUN: opt -instcombine -S < %s -mtriple=x86_64-pc-windows-msvc   | FileCheck %s --check-prefixes=CHECK,MSVC,VC19,VC83,CHECK-NO-EXP10
+; RUN: opt -instcombine -S < %s -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,MSVC,VC51,VC19,CHECK-NO-EXP10
+; RUN: opt -instcombine -S < %s -mtriple=x86_64-pc-windows-msvc18 | FileCheck %s --check-prefixes=CHECK,MSVC,VC64,CHECK-NO-EXP10
+; RUN: opt -instcombine -S < %s -mtriple=x86_64-pc-windows-msvc   | FileCheck %s --check-prefixes=CHECK,MSVC,VC83,VC19,CHECK-NO-EXP10
 
 ; NOTE: The readonly attribute on the pow call should be preserved
 ; in the cases below where pow is transformed into another function call.
@@ -30,9 +30,7 @@ define float @test_simplify1(float %x) {
 ; ANY-NEXT:    ret float 1.000000e+00
 ; VC32-NEXT:   [[POW:%.*]] = call float @powf(float 1.000000e+00, float [[X:%.*]])
 ; VC32-NEXT:   ret float [[POW]]
-; VC51-NEXT:   [[POW:%.*]] = call float @powf(float 1.000000e+00, float [[X:%.*]])
-; VC51-NEXT:   ret float [[POW]]
-; VC83-NEXT:   ret float 1.000000e+00
+; VC64-NEXT:   ret float 1.000000e+00
 ;
   %retval = call float @powf(float 1.0, float %x)
   ret float %retval
@@ -72,8 +70,14 @@ define float @test_simplify3(float %x) {
 ; CHECK-LABEL: @test_simplify3(
 ; ANY-NEXT:    [[EXP2F:%.*]] = call float @exp2f(float [[X:%.*]])
 ; ANY-NEXT:    ret float [[EXP2F]]
-; MSVC-NEXT:   [[POW:%.*]] = call float @powf(float 2.000000e+00, float [[X:%.*]])
-; MSVC-NEXT:   ret float [[POW]]
+; VC32-NEXT:   [[POW:%.*]] = call float @powf(float 2.000000e+00, float [[X:%.*]])
+; VC32-NEXT:   ret float [[POW]]
+; VC51-NEXT:   [[POW:%.*]] = call float @powf(float 2.000000e+00, float [[X:%.*]])
+; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   [[POW:%.*]] = call float @powf(float 2.000000e+00, float [[X:%.*]])
+; VC64-NEXT:   ret float [[POW]]
+; VC83-NEXT:   [[EXP2F:%.*]] = call float @exp2f(float [[X:%.*]])
+; VC83-NEXT:   ret float [[EXP2F]]
 ;
   %retval = call float @powf(float 2.0, float %x)
   ret float %retval
@@ -84,11 +88,13 @@ define double @test_simplify3n(double %x) {
 ; ANY-NEXT:    [[MUL:%.*]] = fmul double [[X:%.*]], -2.000000e+00
 ; ANY-NEXT:    [[EXP2:%.*]] = call double @exp2(double [[MUL]])
 ; ANY-NEXT:    ret double [[EXP2]]
-; VC64-NEXT:   [[POW:%.*]] = call double @pow(double 2.500000e-01, double [[X:%.*]])
-; VC64-NEXT:   ret double [[POW]]
 ; VC19-NEXT:   [[MUL:%.*]] = fmul double [[X:%.*]], -2.000000e+00
 ; VC19-NEXT:   [[EXP2:%.*]] = call double @exp2(double [[MUL]])
 ; VC19-NEXT:   ret double [[EXP2]]
+; VC32-NEXT:   [[POW:%.*]] = call double @pow(double 2.500000e-01, double [[X:%.*]])
+; VC32-NEXT:   ret double [[POW]]
+; VC64-NEXT:   [[POW:%.*]] = call double @pow(double 2.500000e-01, double [[X:%.*]])
+; VC64-NEXT:   ret double [[POW]]
 ;
   %retval = call double @pow(double 0.25, double %x)
   ret double %retval
@@ -121,10 +127,12 @@ define double @test_simplify4(double %x) {
 ; CHECK-LABEL: @test_simplify4(
 ; ANY-NEXT:    [[EXP2:%.*]] = call double @exp2(double [[X:%.*]])
 ; ANY-NEXT:    ret double [[EXP2]]
-; VC64-NEXT:   [[POW:%.*]] = call double @pow(double 2.000000e+00, double [[X:%.*]])
-; VC64-NEXT:   ret double [[POW]]
 ; VC19-NEXT:   [[EXP2:%.*]] = call double @exp2(double [[X:%.*]])
 ; VC19-NEXT:   ret double [[EXP2]]
+; VC32-NEXT:   [[POW:%.*]] = call double @pow(double 2.000000e+00, double [[X:%.*]])
+; VC32-NEXT:   ret double [[POW]]
+; VC64-NEXT:   [[POW:%.*]] = call double @pow(double 2.000000e+00, double [[X:%.*]])
+; VC64-NEXT:   ret double [[POW]]
 ;
   %retval = call double @pow(double 2.0, double %x)
   ret double %retval
@@ -135,8 +143,15 @@ define float @test_simplify4n(float %x) {
 ; ANY-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 3.000000e+00
 ; ANY-NEXT:    [[EXP2F:%.*]] = call float @exp2f(float [[MUL]])
 ; ANY-NEXT:    ret float [[EXP2F]]
-; MSVC-NEXT:   [[POW:%.*]] = call float @powf(float 8.000000e+00, float [[X:%.*]])
-; MSVC-NEXT:   ret float [[POW]]
+; VC32-NEXT:   [[POW:%.*]] = call float @powf(float 8.000000e+00, float [[X:%.*]])
+; VC32-NEXT:   ret float [[POW]]
+; VC51-NEXT:   [[POW:%.*]] = call float @powf(float 8.000000e+00, float [[X:%.*]])
+; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   [[POW:%.*]] = call float @powf(float 8.000000e+00, float [[X:%.*]])
+; VC64-NEXT:   ret float [[POW]]
+; VC83-NEXT:   [[MUL:%.*]] = fmul float [[X:%.*]], 3.000000e+00
+; VC83-NEXT:   [[EXP2F:%.*]] = call float @exp2f(float [[MUL]])
+; VC83-NEXT:   ret float [[EXP2F]]
 ;
   %retval = call float @powf(float 8.0, float %x)
   ret float %retval
@@ -174,6 +189,7 @@ define float @test_simplify5(float %x) {
 ; VC32-NEXT:   ret float [[POW]]
 ; VC51-NEXT:   [[POW:%.*]] = call float @powf(float [[X:%.*]], float 0.000000e+00)
 ; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   ret float 1.000000e+00
 ; VC83-NEXT:   ret float 1.000000e+00
 ;
   %retval = call float @powf(float %x, float 0.0)
@@ -221,6 +237,11 @@ define float @test_simplify7(float %x) {
 ; VC32-NEXT:   ret float [[POW]]
 ; VC51-NEXT:   [[POW:%.*]] = call float @powf(float [[X:%.*]], float 5.000000e-01)
 ; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]])
+; VC64-NEXT:   [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
+; VC64-NEXT:   [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
+; VC64-NEXT:   [[TMP1:%.*]] = select i1 [[ISINF]], float 0x7FF0000000000000, float [[ABS]]
+; VC64-NEXT:   ret float [[TMP1]]
 ; VC83-NEXT:   [[SQRTF:%.*]] = call float @sqrtf(float [[X:%.*]])
 ; VC83-NEXT:   [[ABS:%.*]] = call float @llvm.fabs.f32(float [[SQRTF]])
 ; VC83-NEXT:   [[ISINF:%.*]] = fcmp oeq float [[X]], 0xFFF0000000000000
@@ -252,6 +273,7 @@ define float @test_simplify9(float %x) {
 ; VC32-NEXT:   ret float [[POW]]
 ; VC51-NEXT:   [[POW:%.*]] = call float @powf(float 0xFFF0000000000000, float 5.000000e-01)
 ; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   ret float 0x7FF0000000000000
 ; VC83-NEXT:   ret float 0x7FF0000000000000
 ;
   %retval = call float @powf(float 0xFFF0000000000000, float 0.5)
@@ -275,6 +297,7 @@ define float @test_simplify11(float %x) {
 ; VC32-NEXT:   ret float [[POW]]
 ; VC51-NEXT:   [[POW:%.*]] = call float @powf(float [[X:%.*]], float 1.000000e+00)
 ; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   ret float [[X:%.*]]
 ; VC83-NEXT:   ret float [[X:%.*]]
 ;
   %retval = call float @powf(float %x, float 1.0)
@@ -319,6 +342,8 @@ define float @pow2_strict(float %x) {
 ; VC32-NEXT:   ret float [[POW]]
 ; VC51-NEXT:   [[POW:%.*]] = call float @powf(float [[X:%.*]], float 2.000000e+00)
 ; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   [[SQUARE:%.*]] = fmul float [[X:%.*]], [[X]]
+; VC64-NEXT:   ret float [[SQUARE]]
 ; VC83-NEXT:   [[SQUARE:%.*]] = fmul float [[X:%.*]], [[X]]
 ; VC83-NEXT:   ret float [[SQUARE]]
 ;
@@ -367,6 +392,8 @@ define float @pow2_fast(float %x) {
 ; VC32-NEXT:   ret float [[POW]]
 ; VC51-NEXT:   [[POW:%.*]] = call fast float @powf(float [[X:%.*]], float 2.000000e+00)
 ; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   [[SQUARE:%.*]] = fmul fast float [[X:%.*]], [[X]]
+; VC64-NEXT:   ret float [[SQUARE]]
 ; VC83-NEXT:   [[SQUARE:%.*]] = fmul fast float [[X:%.*]], [[X]]
 ; VC83-NEXT:   ret float [[SQUARE]]
 ;
@@ -384,6 +411,8 @@ define float @pow_neg1_strict(float %x) {
 ; VC32-NEXT:   ret float [[POW]]
 ; VC51-NEXT:   [[POW:%.*]] = call float @powf(float [[X:%.*]], float -1.000000e+00)
 ; VC51-NEXT:   ret float [[POW]]
+; VC64-NEXT:   [[RECIPROCAL:%.*]] = fdiv float 1.000000e+00, [[X:%.*]]
+; VC64-NEXT:   ret float [[RECIPROCAL]]
 ; VC83-NEXT:   [[RECIPROCAL:%.*]] = fdiv float 1.000000e+00, [[X:%.*]]
 ; VC83-NEXT:   ret float [[RECIPROCAL]]
 ;

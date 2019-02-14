@@ -16,6 +16,8 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/Log.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -363,8 +365,8 @@ void Block::AddChild(const BlockSP &child_block_sp) {
 void Block::SetInlinedFunctionInfo(const char *name, const char *mangled,
                                    const Declaration *decl_ptr,
                                    const Declaration *call_decl_ptr) {
-  m_inlineInfoSP.reset(
-      new InlineFunctionInfo(name, mangled, decl_ptr, call_decl_ptr));
+  m_inlineInfoSP = std::make_shared<InlineFunctionInfo>(name, mangled, decl_ptr,
+                                                        call_decl_ptr);
 }
 
 VariableListSP Block::GetBlockVariableList(bool can_create) {

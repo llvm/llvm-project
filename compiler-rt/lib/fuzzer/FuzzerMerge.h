@@ -76,7 +76,8 @@ void CrashResistantMerge(const Vector<std::string> &Args,
                          Vector<std::string> *NewFiles,
                          const Set<uint32_t> &InitialFeatures,
                          Set<uint32_t> *NewFeatures,
-                         const std::string &CFPath);
+                         const std::string &CFPath,
+                         bool Verbose);
 
 }  // namespace fuzzer
 

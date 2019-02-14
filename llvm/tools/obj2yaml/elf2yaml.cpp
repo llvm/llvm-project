@@ -354,7 +354,7 @@ ELFDumper<ELFT>::dumpCommonRelocationSection(const Elf_Shdr *Shdr,
   auto NameOrErr = getUniquedSectionName(*InfoSection);
   if (!NameOrErr)
     return errorToErrorCode(NameOrErr.takeError());
-  S.Info = NameOrErr.get();
+  S.RelocatableSec = NameOrErr.get();
 
   return obj2yaml_error::success;
 }
@@ -468,7 +468,7 @@ ErrorOr<ELFYAML::Group *> ELFDumper<ELFT>::dumpGroup(const Elf_Shdr *Shdr) {
   Expected<StringRef> symbolName = getSymbolName(symbol, StrTab, Symtab);
   if (!symbolName)
     return errorToErrorCode(symbolName.takeError());
-  S->Info = *symbolName;
+  S->Signature = *symbolName;
   const Elf_Word *groupMembers =
       reinterpret_cast<const Elf_Word *>(sectionContents->data());
   const long count = (Shdr->sh_size) / sizeof(Elf_Word);
