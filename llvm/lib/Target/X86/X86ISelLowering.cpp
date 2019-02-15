@@ -30103,27 +30103,37 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::FP80_TO_INT64_IN_MEM: {
     // Change the floating point control register to use "round towards zero"
     // mode when truncating to an integer value.
-    int CWFrameIdx = MF->getFrameInfo().CreateStackObject(2, 2, false);
+    int OrigCWFrameIdx = MF->getFrameInfo().CreateStackObject(2, 2, false);
     addFrameReference(BuildMI(*BB, MI, DL,
-                              TII->get(X86::FNSTCW16m)), CWFrameIdx);
+                              TII->get(X86::FNSTCW16m)), OrigCWFrameIdx);
 
-    // Load the old value of the high byte of the control word...
+    // Load the old value of the control word...
     unsigned OldCW =
-      MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16rm), OldCW),
-                      CWFrameIdx);
+      MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
+    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOVZX32rm16), OldCW),
+                      OrigCWFrameIdx);
 
-    // Set the high part to be round to zero...
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16mi)), CWFrameIdx)
-      .addImm(0xC7F);
+    // OR 0b11 into bit 10 and 11. 0b11 is the encoding for round toward zero.
+    unsigned NewCW =
+      MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(X86::OR32ri), NewCW)
+      .addReg(OldCW, RegState::Kill).addImm(0xC00);
+
+    // Extract to 16 bits.
+    unsigned NewCW16 =
+      MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), NewCW16)
+      .addReg(NewCW, RegState::Kill, X86::sub_16bit);
+
+    // Prepare memory for FLDCW.
+    int NewCWFrameIdx = MF->getFrameInfo().CreateStackObject(2, 2, false);
+    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16mr)),
+                      NewCWFrameIdx)
+      .addReg(NewCW16, RegState::Kill);
 
     // Reload the modified control word now...
     addFrameReference(BuildMI(*BB, MI, DL,
-                              TII->get(X86::FLDCW16m)), CWFrameIdx);
-
-    // Restore the memory image of control word to original value
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16mr)), CWFrameIdx)
-      .addReg(OldCW);
+                              TII->get(X86::FLDCW16m)), NewCWFrameIdx);
 
     // Get the X86 opcode to use.
     unsigned Opc;
@@ -30146,7 +30156,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Reload the original control word now.
     addFrameReference(BuildMI(*BB, MI, DL,
-                              TII->get(X86::FLDCW16m)), CWFrameIdx);
+                              TII->get(X86::FLDCW16m)), OrigCWFrameIdx);
 
     MI.eraseFromParent(); // The pseudo instruction is gone now.
     return BB;
@@ -42733,7 +42743,7 @@ LowerXConstraint(EVT ConstraintVT) const {
 
 // Lower @cc targets via setcc.
 SDValue X86TargetLowering::LowerAsmOutputForConstraint(
-    SDValue &Chain, SDValue *Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
+    SDValue &Chain, SDValue &Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
     SelectionDAG &DAG) const {
   X86::CondCode Cond = parseConstraintCode(OpInfo.ConstraintCode);
   if (Cond == X86::COND_INVALID)
@@ -42744,14 +42754,13 @@ SDValue X86TargetLowering::LowerAsmOutputForConstraint(
     report_fatal_error("Flag output operand is of invalid type");
 
   // Get EFLAGS register. Only update chain when copyfrom is glued.
-  SDValue EFlags;
-  if (Flag) {
-    EFlags = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32, *Flag);
-    Chain = EFlags.getValue(1);
+  if (Flag.getNode()) {
+    Flag = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32, Flag);
+    Chain = Flag.getValue(1);
   } else
-    EFlags = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32);
+    Flag = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32);
   // Extract CC code.
-  SDValue CC = getSETCC(Cond, EFlags, DL, DAG);
+  SDValue CC = getSETCC(Cond, Flag, DL, DAG);
   // Extend to 32-bits
   SDValue Result = DAG.getNode(ISD::ZERO_EXTEND, DL, OpInfo.ConstraintVT, CC);
 

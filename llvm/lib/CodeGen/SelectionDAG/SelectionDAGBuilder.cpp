@@ -8174,7 +8174,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
             DAG, FuncInfo, getCurSDLoc(), Chain, &Flag, CS.getInstruction());
         break;
       case TargetLowering::C_Other:
-        Val = TLI.LowerAsmOutputForConstraint(Chain, &Flag, getCurSDLoc(),
+        Val = TLI.LowerAsmOutputForConstraint(Chain, Flag, getCurSDLoc(),
                                               OpInfo, DAG);
         break;
       case TargetLowering::C_Memory:
@@ -8185,7 +8185,6 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
 
       // Indirect output manifest as stores. Record output chains.
       if (OpInfo.isIndirect) {
-
         const Value *Ptr = OpInfo.CallOperandVal;
         assert(Ptr && "Expected value CallOperandVal for indirect asm operand");
         SDValue Store = DAG.getStore(Chain, getCurSDLoc(), Val, getValue(Ptr),
