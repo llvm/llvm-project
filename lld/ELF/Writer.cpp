@@ -2384,9 +2384,21 @@ static uint16_t getELFType() {
 
 static uint8_t getAbiVersion() {
   // MIPS non-PIC executable gets ABI version 1.
-  if (Config->EMachine == EM_MIPS && getELFType() == ET_EXEC &&
-      (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
-    return 1;
+  if (Config->EMachine == EM_MIPS) {
+    if (getELFType() == ET_EXEC &&
+        (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
+      return 1;
+    return 0;
+  }
+
+  if (Config->EMachine == EM_AMDGPU) {
+    uint8_t Ver = ObjectFiles[0]->ABIVersion;
+    for (InputFile *File : makeArrayRef(ObjectFiles).slice(1))
+      if (File->ABIVersion != Ver)
+        error("incompatible ABI version: " + toString(File));
+    return Ver;
+  }
+
   return 0;
 }
 

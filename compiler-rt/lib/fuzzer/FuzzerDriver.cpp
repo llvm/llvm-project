@@ -483,9 +483,9 @@ void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
 
   std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath(".txt");
   Vector<std::string> NewFiles;
-  Set<uint32_t> NewFeatures;
+  Set<uint32_t> NewFeatures, NewCov;
   CrashResistantMerge(Args, OldCorpus, NewCorpus, &NewFiles, {}, &NewFeatures,
-                      CFPath, true);
+                      {}, &NewCov, CFPath, true);
   for (auto &Path : NewFiles)
     F->WriteToOutputCorpus(FileToVector(Path, Options.MaxLen));
   // We are done, delete the control file if it was a temporary one.
