@@ -66,17 +66,20 @@ static Expr *clang::formAssociatedConstraints(TemplateParameterList *Params,
 
 /// Determine whether the declaration found is acceptable as the name
 /// of a template and, if so, return that template declaration. Otherwise,
-/// returns NULL.
-static NamedDecl *isAcceptableTemplateName(ASTContext &Context,
-                                           NamedDecl *Orig,
-                                           bool AllowFunctionTemplates) {
-  NamedDecl *D = Orig->getUnderlyingDecl();
+/// returns null.
+///
+/// Note that this may return an UnresolvedUsingValueDecl if AllowDependent
+/// is true. In all other cases it will return a TemplateDecl (or null).
+NamedDecl *Sema::getAsTemplateNameDecl(NamedDecl *D,
+                                       bool AllowFunctionTemplates,
+                                       bool AllowDependent) {
+  D = D->getUnderlyingDecl();
 
   if (isa<TemplateDecl>(D)) {
     if (!AllowFunctionTemplates && isa<FunctionTemplateDecl>(D))
       return nullptr;
 
-    return Orig;
+    return D;
   }
 
   if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(D)) {
@@ -107,54 +110,29 @@ static NamedDecl *isAcceptableTemplateName(ASTContext &Context,
   // 'using Dependent::foo;' can resolve to a template name.
   // 'using typename Dependent::foo;' cannot (not even if 'foo' is an
   // injected-class-name).
-  if (isa<UnresolvedUsingValueDecl>(D))
+  if (AllowDependent && isa<UnresolvedUsingValueDecl>(D))
     return D;
 
   return nullptr;
 }
 
 void Sema::FilterAcceptableTemplateNames(LookupResult &R,
-                                         bool AllowFunctionTemplates) {
-  // The set of class templates we've already seen.
-  llvm::SmallPtrSet<ClassTemplateDecl *, 8> ClassTemplates;
+                                         bool AllowFunctionTemplates,
+                                         bool AllowDependent) {
   LookupResult::Filter filter = R.makeFilter();
   while (filter.hasNext()) {
     NamedDecl *Orig = filter.next();
-    NamedDecl *Repl = isAcceptableTemplateName(Context, Orig,
-                                               AllowFunctionTemplates);
-    if (!Repl)
+    if (!getAsTemplateNameDecl(Orig, AllowFunctionTemplates, AllowDependent))
       filter.erase();
-    else if (Repl != Orig) {
-
-      // C++ [temp.local]p3:
-      //   A lookup that finds an injected-class-name (10.2) can result in an
-      //   ambiguity in certain cases (for example, if it is found in more than
-      //   one base class). If all of the injected-class-names that are found
-      //   refer to specializations of the same class template, and if the name
-      //   is used as a template-name, the reference refers to the class
-      //   template itself and not a specialization thereof, and is not
-      //   ambiguous.
-      if (ClassTemplateDecl *ClassTmpl = dyn_cast<ClassTemplateDecl>(Repl))
-        if (!ClassTemplates.insert(ClassTmpl).second) {
-          filter.erase();
-          continue;
-        }
-
-      // FIXME: we promote access to public here as a workaround to
-      // the fact that LookupResult doesn't let us remember that we
-      // found this template through a particular injected class name,
-      // which means we end up doing nasty things to the invariants.
-      // Pretending that access is public is *much* safer.
-      filter.replace(Repl, AS_public);
-    }
   }
   filter.done();
 }
 
 bool Sema::hasAnyAcceptableTemplateNames(LookupResult &R,
-                                         bool AllowFunctionTemplates) {
+                                         bool AllowFunctionTemplates,
+                                         bool AllowDependent) {
   for (LookupResult::iterator I = R.begin(), IEnd = R.end(); I != IEnd; ++I)
-    if (isAcceptableTemplateName(Context, *I, AllowFunctionTemplates))
+    if (getAsTemplateNameDecl(*I, AllowFunctionTemplates, AllowDependent))
       return true;
 
   return false;
@@ -198,20 +176,45 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
                          MemberOfUnknownSpecialization))
     return TNK_Non_template;
   if (R.empty()) return TNK_Non_template;
-  if (R.isAmbiguous()) {
-    // Suppress diagnostics;  we'll redo this lookup later.
-    R.suppressDiagnostics();
 
-    // FIXME: we might have ambiguous templates, in which case we
-    // should at least parse them properly!
-    return TNK_Non_template;
+  NamedDecl *D = nullptr;
+  if (R.isAmbiguous()) {
+    // If we got an ambiguity involving a non-function template, treat this
+    // as a template name, and pick an arbitrary template for error recovery.
+    bool AnyFunctionTemplates = false;
+    for (NamedDecl *FoundD : R) {
+      if (NamedDecl *FoundTemplate = getAsTemplateNameDecl(FoundD)) {
+        if (isa<FunctionTemplateDecl>(FoundTemplate))
+          AnyFunctionTemplates = true;
+        else {
+          D = FoundTemplate;
+          break;
+        }
+      }
+    }
+
+    // If we didn't find any templates at all, this isn't a template name.
+    // Leave the ambiguity for a later lookup to diagnose.
+    if (!D && !AnyFunctionTemplates) {
+      R.suppressDiagnostics();
+      return TNK_Non_template;
+    }
+
+    // If the only templates were function templates, filter out the rest.
+    // We'll diagnose the ambiguity later.
+    if (!D)
+      FilterAcceptableTemplateNames(R);
   }
+
+  // At this point, we have either picked a single template name declaration D
+  // or we have a non-empty set of results R containing either one template name
+  // declaration or a set of function templates.
 
   TemplateName Template;
   TemplateNameKind TemplateKind;
 
   unsigned ResultCount = R.end() - R.begin();
-  if (ResultCount > 1) {
+  if (!D && ResultCount > 1) {
     // We assume that we'll preserve the qualifier from a function
     // template name in other ways.
     Template = Context.getOverloadedTemplateName(R.begin(), R.end());
@@ -219,12 +222,19 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
 
     // We'll do this lookup again later.
     R.suppressDiagnostics();
-  } else if (isa<UnresolvedUsingValueDecl>((*R.begin())->getUnderlyingDecl())) {
-    // We don't yet know whether this is a template-name or not.
-    MemberOfUnknownSpecialization = true;
-    return TNK_Non_template;
   } else {
-    TemplateDecl *TD = cast<TemplateDecl>((*R.begin())->getUnderlyingDecl());
+    if (!D) {
+      D = getAsTemplateNameDecl(*R.begin());
+      assert(D && "unambiguous result is not a template name");
+    }
+
+    if (isa<UnresolvedUsingValueDecl>(D)) {
+      // We don't yet know whether this is a template-name or not.
+      MemberOfUnknownSpecialization = true;
+      return TNK_Non_template;
+    }
+
+    TemplateDecl *TD = cast<TemplateDecl>(D);
 
     if (SS.isSet() && !SS.isInvalid()) {
       NestedNameSpecifier *Qualifier = SS.getScopeRep();
@@ -316,6 +326,8 @@ bool Sema::LookupTemplateName(LookupResult &Found,
                               bool EnteringContext,
                               bool &MemberOfUnknownSpecialization,
                               SourceLocation TemplateKWLoc) {
+  Found.setTemplateNameLookup(true);
+
   // Determine where to perform name lookup
   MemberOfUnknownSpecialization = false;
   DeclContext *LookupCtx = nullptr;
@@ -390,6 +402,9 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
 
+  if (Found.isAmbiguous())
+    return false;
+
   if (Found.empty() && !IsDependent) {
     // If we did not find any names, attempt to correct any typos.
     DeclarationName Name = Found.getLookupName();
@@ -407,7 +422,9 @@ bool Sema::LookupTemplateName(LookupResult &Found,
       if (auto *ND = Corrected.getFoundDecl())
         Found.addDecl(ND);
       FilterAcceptableTemplateNames(Found);
-      if (!Found.empty()) {
+      if (Found.isAmbiguous()) {
+        Found.clear();
+      } else if (!Found.empty()) {
         if (LookupCtx) {
           std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
           bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
@@ -457,14 +474,19 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     // Note: C++11 does not perform this second lookup.
     LookupResult FoundOuter(*this, Found.getLookupName(), Found.getNameLoc(),
                             LookupOrdinaryName);
+    FoundOuter.setTemplateNameLookup(true);
     LookupName(FoundOuter, S);
+    // FIXME: We silently accept an ambiguous lookup here, in violation of
+    // [basic.lookup]/1.
     FilterAcceptableTemplateNames(FoundOuter, /*AllowFunctionTemplates=*/false);
 
+    NamedDecl *OuterTemplate;
     if (FoundOuter.empty()) {
       //   - if the name is not found, the name found in the class of the
       //     object expression is used, otherwise
-    } else if (!FoundOuter.getAsSingle<ClassTemplateDecl>() ||
-               FoundOuter.isAmbiguous()) {
+    } else if (FoundOuter.isAmbiguous() || !FoundOuter.isSingleResult() ||
+               !(OuterTemplate =
+                     getAsTemplateNameDecl(FoundOuter.getFoundDecl()))) {
       //   - if the name is found in the context of the entire
       //     postfix-expression and does not name a class template, the name
       //     found in the class of the object expression is used, otherwise
@@ -474,8 +496,8 @@ bool Sema::LookupTemplateName(LookupResult &Found,
       //     entity as the one found in the class of the object expression,
       //     otherwise the program is ill-formed.
       if (!Found.isSingleResult() ||
-          Found.getFoundDecl()->getCanonicalDecl()
-            != FoundOuter.getFoundDecl()->getCanonicalDecl()) {
+          getAsTemplateNameDecl(Found.getFoundDecl())->getCanonicalDecl() !=
+              OuterTemplate->getCanonicalDecl()) {
         Diag(Found.getNameLoc(),
              diag::ext_nested_name_member_ref_lookup_ambiguous)
           << Found.getLookupName()
@@ -545,7 +567,8 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
 
   // Try to correct the name by looking for templates and C++ named casts.
   struct TemplateCandidateFilter : CorrectionCandidateCallback {
-    TemplateCandidateFilter() {
+    Sema &S;
+    TemplateCandidateFilter(Sema &S) : S(S) {
       WantTypeSpecifiers = false;
       WantExpressionKeywords = false;
       WantRemainingKeywords = false;
@@ -553,7 +576,7 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
     };
     bool ValidateCandidate(const TypoCorrection &Candidate) override {
       if (auto *ND = Candidate.getCorrectionDecl())
-        return isAcceptableTemplateName(ND->getASTContext(), ND, true);
+        return S.getAsTemplateNameDecl(ND);
       return Candidate.isKeyword();
     }
   };
@@ -561,12 +584,11 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
   DeclarationName Name = NameInfo.getName();
   if (TypoCorrection Corrected =
           CorrectTypo(NameInfo, LookupKind, S, &SS,
-                      llvm::make_unique<TemplateCandidateFilter>(),
+                      llvm::make_unique<TemplateCandidateFilter>(*this),
                       CTK_ErrorRecovery, LookupCtx)) {
     auto *ND = Corrected.getFoundDecl();
     if (ND)
-      ND = isAcceptableTemplateName(Context, ND,
-                                    /*AllowFunctionTemplates*/ true);
+      ND = getAsTemplateNameDecl(ND);
     if (ND || Corrected.isKeyword()) {
       if (LookupCtx) {
         std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
@@ -4263,7 +4285,7 @@ TemplateNameKind Sema::ActOnDependentTemplateName(Scope *S,
                      LookupOrdinaryName);
       bool MOUS;
       if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext,
-                              MOUS, TemplateKWLoc))
+                              MOUS, TemplateKWLoc) && !R.isAmbiguous())
         Diag(Name.getBeginLoc(), diag::err_no_member)
             << DNI.getName() << LookupCtx << SS.getRange();
       return TNK_Non_template;

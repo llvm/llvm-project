@@ -543,6 +543,27 @@ if( CLANG_INCLUDE_DOCS )
   add_subdirectory(docs)
 endif()
 
+# Custom target to install all clang libraries.
+add_custom_target(clang-libraries)
+set_target_properties(clang-libraries PROPERTIES FOLDER "Misc")
+
+if(NOT CMAKE_CONFIGURATION_TYPES)
+  add_llvm_install_targets(install-clang-libraries
+                           DEPENDS clang-libraries
+                           COMPONENT clang-libraries)
+endif()
+
+get_property(CLANG_LIBS GLOBAL PROPERTY CLANG_LIBS)
+if(CLANG_LIBS)
+  list(REMOVE_DUPLICATES CLANG_LIBS)
+  foreach(lib ${CLANG_LIBS})
+    add_dependencies(clang-libraries ${lib})
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+      add_dependencies(install-clang-libraries install-${lib})
+    endif()
+  endforeach()
+endif()
+
 add_subdirectory(cmake/modules)
 
 if(CLANG_STAGE)

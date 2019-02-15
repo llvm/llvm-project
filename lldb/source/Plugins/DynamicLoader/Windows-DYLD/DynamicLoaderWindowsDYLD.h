@@ -29,7 +29,8 @@ public:
 
   static DynamicLoader *CreateInstance(Process *process, bool force);
 
-  void OnLoadModule(const ModuleSpec &module_spec, lldb::addr_t module_addr);
+  void OnLoadModule(lldb::ModuleSP module_sp, const ModuleSpec module_spec,
+                    lldb::addr_t module_addr);
   void OnUnloadModule(lldb::addr_t module_addr);
 
   void DidAttach() override;

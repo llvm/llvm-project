@@ -1017,7 +1017,8 @@ Corrected:
 
   case LookupResult::Ambiguous:
     if (getLangOpts().CPlusPlus && NextToken.is(tok::less) &&
-        hasAnyAcceptableTemplateNames(Result)) {
+        hasAnyAcceptableTemplateNames(Result, /*AllowFunctionTemplates=*/true,
+                                      /*AllowDependent=*/false)) {
       // C++ [temp.local]p3:
       //   A lookup that finds an injected-class-name (10.2) can result in an
       //   ambiguity in certain cases (for example, if it is found in more than
@@ -1041,7 +1042,9 @@ Corrected:
   }
 
   if (getLangOpts().CPlusPlus && NextToken.is(tok::less) &&
-      (IsFilteredTemplateName || hasAnyAcceptableTemplateNames(Result))) {
+      (IsFilteredTemplateName ||
+       hasAnyAcceptableTemplateNames(Result, /*AllowFunctionTemplates=*/true,
+                                     /*AllowDependent=*/false))) {
     // C++ [temp.names]p3:
     //   After name lookup (3.4) finds that a name is a template-name or that
     //   an operator-function-id or a literal- operator-id refers to a set of
@@ -1060,15 +1063,16 @@ Corrected:
         Template = Context.getOverloadedTemplateName(Result.begin(),
                                                      Result.end());
       } else {
-        TemplateDecl *TD
-          = cast<TemplateDecl>((*Result.begin())->getUnderlyingDecl());
+        auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
+            *Result.begin(), /*AllowFunctionTemplates=*/true,
+            /*AllowDependent=*/false));
         IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
         IsVarTemplate = isa<VarTemplateDecl>(TD);
 
         if (SS.isSet() && !SS.isInvalid())
-          Template = Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                                    /*TemplateKeyword=*/false,
-                                                      TD);
+          Template =
+              Context.getQualifiedTemplateName(SS.getScopeRep(),
+                                               /*TemplateKeyword=*/false, TD);
         else
           Template = TemplateName(TD);
       }
