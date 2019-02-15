@@ -2781,6 +2781,11 @@ bool ScriptInterpreterPython::LoadScriptingModule(
       basename = pathname; // not a filename, probably a package of some sort,
                            // let it go through
     } else if (is_directory(st) || is_regular_file(st)) {
+      if (target_file.GetDirectory().IsEmpty()) {
+        error.SetErrorString("invalid directory name");
+        return false;
+      }
+
       std::string directory = target_file.GetDirectory().GetCString();
       replace_all(directory, "\\", "\\\\");
       replace_all(directory, "'", "\\'");
