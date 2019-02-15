@@ -588,96 +588,12 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   return true;
 }
 
-bool X86InstrInfo::isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator I) const {
-  MachineBasicBlock::iterator E = MBB.end();
-
-  // For compile time consideration, if we are not able to determine the
-  // safety after visiting 4 instructions in each direction, we will assume
-  // it's not safe.
-  MachineBasicBlock::iterator Iter = I;
-  for (unsigned i = 0; Iter != E && i < 4; ++i) {
-    bool SeenDef = false;
-    for (unsigned j = 0, e = Iter->getNumOperands(); j != e; ++j) {
-      MachineOperand &MO = Iter->getOperand(j);
-      if (MO.isRegMask() && MO.clobbersPhysReg(X86::EFLAGS))
-        SeenDef = true;
-      if (!MO.isReg())
-        continue;
-      if (MO.getReg() == X86::EFLAGS) {
-        if (MO.isUse())
-          return false;
-        SeenDef = true;
-      }
-    }
-
-    if (SeenDef)
-      // This instruction defines EFLAGS, no need to look any further.
-      return true;
-    ++Iter;
-    // Skip over debug instructions.
-    while (Iter != E && Iter->isDebugInstr())
-      ++Iter;
-  }
-
-  // It is safe to clobber EFLAGS at the end of a block of no successor has it
-  // live in.
-  if (Iter == E) {
-    for (MachineBasicBlock *S : MBB.successors())
-      if (S->isLiveIn(X86::EFLAGS))
-        return false;
-    return true;
-  }
-
-  MachineBasicBlock::iterator B = MBB.begin();
-  Iter = I;
-  for (unsigned i = 0; i < 4; ++i) {
-    // If we make it to the beginning of the block, it's safe to clobber
-    // EFLAGS iff EFLAGS is not live-in.
-    if (Iter == B)
-      return !MBB.isLiveIn(X86::EFLAGS);
-
-    --Iter;
-    // Skip over debug instructions.
-    while (Iter != B && Iter->isDebugInstr())
-      --Iter;
-
-    bool SawKill = false;
-    for (unsigned j = 0, e = Iter->getNumOperands(); j != e; ++j) {
-      MachineOperand &MO = Iter->getOperand(j);
-      // A register mask may clobber EFLAGS, but we should still look for a
-      // live EFLAGS def.
-      if (MO.isRegMask() && MO.clobbersPhysReg(X86::EFLAGS))
-        SawKill = true;
-      if (MO.isReg() && MO.getReg() == X86::EFLAGS) {
-        if (MO.isDef()) return MO.isDead();
-        if (MO.isKill()) SawKill = true;
-      }
-    }
-
-    if (SawKill)
-      // This instruction kills EFLAGS and doesn't redefine it, so
-      // there's no need to look further.
-      return true;
-  }
-
-  // Conservative answer.
-  return false;
-}
-
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  unsigned DestReg, unsigned SubIdx,
                                  const MachineInstr &Orig,
                                  const TargetRegisterInfo &TRI) const {
-  bool ClobbersEFLAGS = false;
-  for (const MachineOperand &MO : Orig.operands()) {
-    if (MO.isReg() && MO.isDef() && MO.getReg() == X86::EFLAGS) {
-      ClobbersEFLAGS = true;
-      break;
-    }
-  }
-
+  bool ClobbersEFLAGS = Orig.modifiesRegister(X86::EFLAGS, &TRI);
   if (ClobbersEFLAGS && !isSafeToClobberEFLAGS(MBB, I)) {
     // The instruction clobbers EFLAGS. Re-materialize as MOV32ri to avoid side
     // effects.

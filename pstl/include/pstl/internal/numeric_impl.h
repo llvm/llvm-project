@@ -243,7 +243,7 @@ pattern_transform_scan(_ExecutionPolicy&& __exec, _RandomAccessIterator __first,
             std::forward<_ExecutionPolicy>(__exec), __last - __first,
             [__first, __unary_op](_DifferenceType __i) mutable { return __unary_op(__first[__i]); }, __init,
             __binary_op,
-            [__first, __unary_op, __binary_op, __is_vector](_DifferenceType __i, _DifferenceType __j, _Tp __init) {
+            [__first, __unary_op, __binary_op](_DifferenceType __i, _DifferenceType __j, _Tp __init) {
                 // Execute serial brick_transform_reduce, due to the explicit SIMD vectorization (reduction) requires a commutative operation for the guarantee of correct scan.
                 return internal::brick_transform_reduce(__first + __i, __first + __j, __init, __binary_op, __unary_op,
                                                         /*__is_vector*/ std::false_type());

@@ -44,7 +44,7 @@ RUN: cp %t/T0/* %t/T1/
 RUN: rm -f %t/MCF
 RUN: %run %t-FullCoverageSetTest -merge=1 -merge_control_file=%t/MCF %t/T1 %t/T2 2>&1 | FileCheck %s --check-prefix=MCF
 RUN: grep STARTED %t/MCF
-RUN: grep DONE %t/MCF
+RUN: grep FT %t/MCF
 MCF: MERGE-INNER: using the control file {{.*}}MCF
 MCF: MERGE-OUTER: 3 new files
 

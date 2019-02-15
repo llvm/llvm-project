@@ -1,4 +1,5 @@
 # RUN: not llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass=none 2>&1 | FileCheck %s
+# REQUIRES: x86-registered-target
 
 # CHECK: Bad machine code: Generic extend/truncate can not operate on pointers
 # CHECK-NEXT: - function:    bad_generic_extends_and_truncates

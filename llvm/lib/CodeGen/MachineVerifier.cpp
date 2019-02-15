@@ -1198,18 +1198,23 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     // must match the dest vector size.
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcEltTy = MRI->getType(MI->getOperand(1).getReg());
-    if (!DstTy.isVector() || SrcEltTy.isVector())
+    if (!DstTy.isVector() || SrcEltTy.isVector()) {
       report("G_BUILD_VECTOR must produce a vector from scalar operands", MI);
+      break;
+    }
+
+    if (DstTy.getElementType() != SrcEltTy)
+      report("G_BUILD_VECTOR result element type must match source type", MI);
+
+    if (DstTy.getNumElements() != MI->getNumOperands() - 1)
+      report("G_BUILD_VECTOR must have an operand for each elemement", MI);
+
     for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
       if (MRI->getType(MI->getOperand(1).getReg()) !=
           MRI->getType(MI->getOperand(i).getReg()))
         report("G_BUILD_VECTOR source operand types are not homogeneous", MI);
     }
-    if (DstTy.getSizeInBits() !=
-        SrcEltTy.getSizeInBits() * (MI->getNumOperands() - 1))
-      report("G_BUILD_VECTOR src operands total size don't match dest "
-             "size.",
-             MI);
+
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR_TRUNC: {

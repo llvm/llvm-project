@@ -469,6 +469,100 @@ TEST(Matcher, isInstanceMessage) {
 
 }
 
+TEST(MatcherCXXMemberCallExpr, On) {
+  auto Snippet1 = R"cc(
+        struct Y {
+          void m();
+        };
+        void z(Y y) { y.m(); }
+      )cc";
+  auto Snippet2 = R"cc(
+        struct Y {
+          void m();
+        };
+        struct X : public Y {};
+        void z(X x) { x.m(); }
+      )cc";
+  auto MatchesY = cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("Y")))));
+  EXPECT_TRUE(matches(Snippet1, MatchesY));
+  EXPECT_TRUE(notMatches(Snippet2, MatchesY));
+
+  auto MatchesX = cxxMemberCallExpr(on(hasType(cxxRecordDecl(hasName("X")))));
+  EXPECT_TRUE(matches(Snippet2, MatchesX));
+
+  // Parens are ignored.
+  auto MatchesCall = cxxMemberCallExpr(on(callExpr()));
+  EXPECT_TRUE(matches(
+      R"cc(
+        struct Y {
+          void m();
+        };
+        Y g();
+        void z(Y y) { (g()).m(); }
+      )cc",
+      MatchesCall));
+}
+
+TEST(MatcherCXXMemberCallExpr, OnImplicitObjectArgument) {
+  auto Snippet1 = R"cc(
+    struct Y {
+      void m();
+    };
+    void z(Y y) { y.m(); }
+  )cc";
+  auto Snippet2 = R"cc(
+    struct Y {
+      void m();
+    };
+    struct X : public Y {};
+    void z(X x) { x.m(); }
+  )cc";
+  auto MatchesY = cxxMemberCallExpr(
+      onImplicitObjectArgument(hasType(cxxRecordDecl(hasName("Y")))));
+  EXPECT_TRUE(matches(Snippet1, MatchesY));
+  EXPECT_TRUE(matches(Snippet2, MatchesY));
+
+  auto MatchesX = cxxMemberCallExpr(
+      onImplicitObjectArgument(hasType(cxxRecordDecl(hasName("X")))));
+  EXPECT_TRUE(notMatches(Snippet2, MatchesX));
+
+  // Parens are not ignored.
+  auto MatchesCall = cxxMemberCallExpr(onImplicitObjectArgument(callExpr()));
+  EXPECT_TRUE(notMatches(
+      R"cc(
+        struct Y {
+          void m();
+        };
+        Y g();
+        void z(Y y) { (g()).m(); }
+      )cc",
+      MatchesCall));
+}
+
+TEST(Matcher, HasObjectExpr) {
+  auto Snippet1 = R"cc(
+        struct X {
+          int m;
+          int f(X x) { return x.m; }
+        };
+      )cc";
+  auto Snippet2 = R"cc(
+        struct X {
+          int m;
+          int f(X x) { return m; }
+        };
+      )cc";
+  auto MatchesX =
+      memberExpr(hasObjectExpression(hasType(cxxRecordDecl(hasName("X")))));
+  EXPECT_TRUE(matches(Snippet1, MatchesX));
+  EXPECT_TRUE(notMatches(Snippet2, MatchesX));
+
+  auto MatchesXPointer = memberExpr(
+      hasObjectExpression(hasType(pointsTo(cxxRecordDecl(hasName("X"))))));
+  EXPECT_TRUE(notMatches(Snippet1, MatchesXPointer));
+  EXPECT_TRUE(matches(Snippet2, MatchesXPointer));
+}
+
 TEST(ForEachArgumentWithParam, ReportsNoFalsePositives) {
   StatementMatcher ArgumentY =
     declRefExpr(to(varDecl(hasName("y")))).bind("arg");

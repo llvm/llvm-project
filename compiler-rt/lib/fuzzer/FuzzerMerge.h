@@ -51,7 +51,7 @@ namespace fuzzer {
 struct MergeFileInfo {
   std::string Name;
   size_t Size = 0;
-  Vector<uint32_t> Features;
+  Vector<uint32_t> Features, Cov;
 };
 
 struct Merger {
@@ -63,8 +63,8 @@ struct Merger {
   bool Parse(std::istream &IS, bool ParseCoverage);
   bool Parse(const std::string &Str, bool ParseCoverage);
   void ParseOrExit(std::istream &IS, bool ParseCoverage);
-  size_t Merge(const Set<uint32_t> &InitialFeatures,
-               Set<uint32_t> *NewFeatures,
+  size_t Merge(const Set<uint32_t> &InitialFeatures, Set<uint32_t> *NewFeatures,
+               const Set<uint32_t> &InitialCov, Set<uint32_t> *NewCov,
                Vector<std::string> *NewFiles);
   size_t ApproximateMemoryConsumption() const;
   Set<uint32_t> AllFeatures() const;
@@ -76,6 +76,8 @@ void CrashResistantMerge(const Vector<std::string> &Args,
                          Vector<std::string> *NewFiles,
                          const Set<uint32_t> &InitialFeatures,
                          Set<uint32_t> *NewFeatures,
+                         const Set<uint32_t> &InitialCov,
+                         Set<uint32_t> *NewCov,
                          const std::string &CFPath,
                          bool Verbose);
 
