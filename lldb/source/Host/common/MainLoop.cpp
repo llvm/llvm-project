@@ -382,9 +382,6 @@ Status MainLoop::Run() {
       return error;
 
     impl.ProcessEvents();
-
-    if (m_terminate_request)
-      return Status();
   }
   return Status();
 }

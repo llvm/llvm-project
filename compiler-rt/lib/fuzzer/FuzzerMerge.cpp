@@ -42,10 +42,12 @@ void Merger::ParseOrExit(std::istream &IS, bool ParseCoverage) {
 // file1
 // file2  # One file name per line.
 // STARTED 0 123  # FileID, file size
-// DONE 0 1 4 6 8  # FileID COV1 COV2 ...
-// STARTED 1 456  # If DONE is missing, the input crashed while processing.
+// FT 0 1 4 6 8  # FileID COV1 COV2 ...
+// COV 0 7 8 9 # FileID COV1 COV1
+// STARTED 1 456  # If FT is missing, the input crashed while processing.
 // STARTED 2 567
-// DONE 2 8 9
+// FT 2 8 9
+// COV 2 11 12
 bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
   LastFailure.clear();
   std::string Line;
@@ -70,11 +72,12 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
     if (!std::getline(IS, Files[i].Name, '\n'))
       return false;
 
-  // Parse STARTED and DONE lines.
+  // Parse STARTED, FT, and COV lines.
   size_t ExpectedStartMarker = 0;
   const size_t kInvalidStartMarker = -1;
   size_t LastSeenStartMarker = kInvalidStartMarker;
   Vector<uint32_t> TmpFeatures;
+  Set<uintptr_t> PCs;
   while (std::getline(IS, Line, '\n')) {
     std::istringstream ISS1(Line);
     std::string Marker;
@@ -89,8 +92,8 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
       LastSeenStartMarker = ExpectedStartMarker;
       assert(ExpectedStartMarker < Files.size());
       ExpectedStartMarker++;
-    } else if (Marker == "DONE") {
-      // DONE FILE_ID COV1 COV2 COV3 ...
+    } else if (Marker == "FT") {
+      // FT FILE_ID COV1 COV2 COV3 ...
       size_t CurrentFileIdx = N;
       if (CurrentFileIdx != LastSeenStartMarker)
         return false;
@@ -102,6 +105,11 @@ bool Merger::Parse(std::istream &IS, bool ParseCoverage) {
         std::sort(TmpFeatures.begin(), TmpFeatures.end());
         Files[CurrentFileIdx].Features = TmpFeatures;
       }
+    } else if (Marker == "COV") {
+      if (ParseCoverage)
+        while (ISS1 >> std::hex >> N)
+          if (PCs.insert(N).second)
+            NumCoveredPCs++;
     } else {
       return false;
     }
@@ -199,6 +207,7 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
 
   std::ofstream OF(CFPath, std::ofstream::out | std::ofstream::app);
   Set<size_t> AllFeatures;
+  Set<const TracePC::PCTableEntry *> AllPCs;
   for (size_t i = M.FirstNotProcessedFile; i < M.Files.size(); i++) {
     Fuzzer::MaybeExitGracefully();
     auto U = FileToVector(M.Files[i].Name);
@@ -223,16 +232,24 @@ void Fuzzer::CrashResistantMergeInternalStep(const std::string &CFPath) {
       if (AllFeatures.insert(Feature).second)
         UniqFeatures.insert(Feature);
     });
+    TPC.UpdateObservedPCs();
     // Show stats.
     if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)))
       PrintStats("pulse ");
     // Write the post-run marker and the coverage.
-    OF << "DONE " << i;
+    OF << "FT " << i;
     for (size_t F : UniqFeatures)
       OF << " " << std::hex << F;
     OF << "\n";
+    OF << "COV " << i;
+    TPC.ForEachObservedPC([&](const TracePC::PCTableEntry *TE) {
+      if (AllPCs.insert(TE).second)
+        OF << " " << TPC.PCTableEntryIdx(TE);
+    });
+    OF << "\n";
     OF.flush();
   }
+  PrintStats("DONE ");
 }
 
 static void WriteNewControlFile(const std::string &CFPath,

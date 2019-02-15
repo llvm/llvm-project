@@ -8478,6 +8478,45 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
   return 0;
 }
 
+// For a reassociatable opcode perform:
+// op x, (op y, z) -> op (op x, z), y, if x and z are uniform
+SDValue SITargetLowering::reassociateScalarOps(SDNode *N,
+                                               SelectionDAG &DAG) const {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  unsigned Opc = N->getOpcode();
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  if (!(Op0->isDivergent() ^ Op1->isDivergent()))
+    return SDValue();
+
+  if (Op0->isDivergent())
+    std::swap(Op0, Op1);
+
+  if (Op1.getOpcode() != Opc || !Op1.hasOneUse())
+    return SDValue();
+
+  SDValue Op2 = Op1.getOperand(1);
+  Op1 = Op1.getOperand(0);
+  if (!(Op1->isDivergent() ^ Op2->isDivergent()))
+    return SDValue();
+
+  if (Op1->isDivergent())
+    std::swap(Op1, Op2);
+
+  // If either operand is constant this will conflict with
+  // DAGCombiner::ReassociateOps().
+  if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))
+    return SDValue();
+
+  SDLoc SL(N);
+  SDValue Add1 = DAG.getNode(Opc, SL, VT, Op0, Op1);
+  return DAG.getNode(Opc, SL, VT, Add1, Op2);
+}
+
 static SDValue getMad64_32(SelectionDAG &DAG, const SDLoc &SL,
                            EVT VT,
                            SDValue N0, SDValue N1, SDValue N2,
@@ -8524,6 +8563,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     }
 
     return SDValue();
+  }
+
+  if (SDValue V = reassociateScalarOps(N, DAG)) {
+    return V;
   }
 
   if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())

@@ -557,10 +557,16 @@ static Relocation *getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
-  auto Range = std::equal_range(IS->Relocations.begin(), IS->Relocations.end(),
-                                D->Value, RelocationOffsetComparator{});
-  for (auto It = std::get<0>(Range); It != std::get<1>(Range); ++It)
-    if (isRelExprOneOf<R_PC>(It->Expr))
+  Relocation R;
+  R.Offset = D->Value;
+  auto Range =
+      std::equal_range(IS->Relocations.begin(), IS->Relocations.end(), R,
+                       [](const Relocation &LHS, const Relocation &RHS) {
+                         return LHS.Offset < RHS.Offset;
+                       });
+
+  for (auto It = Range.first; It != Range.second; ++It)
+    if (It->Expr == R_PC)
       return &*It;
 
   error("R_RISCV_PCREL_LO12 relocation points to " + IS->getObjMsg(D->Value) +

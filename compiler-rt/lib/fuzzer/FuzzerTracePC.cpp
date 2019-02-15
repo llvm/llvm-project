@@ -187,18 +187,19 @@ inline ALWAYS_INLINE uintptr_t GetNextInstructionPc(uintptr_t PC) {
 
 void TracePC::UpdateObservedPCs() {
   Vector<uintptr_t> CoveredFuncs;
-  auto ObservePC = [&](uintptr_t PC) {
-    if (ObservedPCs.insert(PC).second && DoPrintNewPCs) {
-      PrintPC("\tNEW_PC: %p %F %L", "\tNEW_PC: %p", GetNextInstructionPc(PC));
+  auto ObservePC = [&](const PCTableEntry *TE) {
+    if (ObservedPCs.insert(TE).second && DoPrintNewPCs) {
+      PrintPC("\tNEW_PC: %p %F %L", "\tNEW_PC: %p",
+              GetNextInstructionPc(TE->PC));
       Printf("\n");
     }
   };
 
-  auto Observe = [&](const PCTableEntry &TE) {
-    if (TE.PCFlags & 1)
-      if (++ObservedFuncs[TE.PC] == 1 && NumPrintNewFuncs)
-        CoveredFuncs.push_back(TE.PC);
-    ObservePC(TE.PC);
+  auto Observe = [&](const PCTableEntry *TE) {
+    if (TE->PCFlags & 1)
+      if (++ObservedFuncs[TE->PC] == 1 && NumPrintNewFuncs)
+        CoveredFuncs.push_back(TE->PC);
+    ObservePC(TE);
   };
 
   if (NumPCsInPCTables) {
@@ -212,7 +213,7 @@ void TracePC::UpdateObservedPCs() {
           if (!R.Enabled) continue;
           for (uint8_t *P = R.Start; P < R.Stop; P++)
             if (*P)
-              Observe(ModulePCTable[i].Start[M.Idx(P)]);
+              Observe(&ModulePCTable[i].Start[M.Idx(P)]);
         }
       }
     }
@@ -226,6 +227,17 @@ void TracePC::UpdateObservedPCs() {
   }
 }
 
+uintptr_t TracePC::PCTableEntryIdx(const PCTableEntry *TE) {
+  size_t TotalTEs = 0;
+  for (size_t i = 0; i < NumPCTables; i++) {
+    auto &M = ModulePCTable[i];
+    if (TE >= M.Start && TE < M.Stop)
+      return TotalTEs + TE - M.Start;
+    TotalTEs += M.Stop - M.Start;
+  }
+  assert(0);
+  return 0;
+}
 
 static std::string GetModuleName(uintptr_t PC) {
   char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
@@ -303,7 +315,7 @@ void TracePC::PrintCoverage() {
     size_t NumEdges = Last - First;
     Vector<uintptr_t> UncoveredPCs;
     for (auto TE = First; TE < Last; TE++)
-      if (!ObservedPCs.count(TE->PC))
+      if (!ObservedPCs.count(TE))
         UncoveredPCs.push_back(TE->PC);
     Printf("%sCOVERED_FUNC: hits: %zd", Counter ? "" : "UN", Counter);
     Printf(" edges: %zd/%zd", NumEdges - UncoveredPCs.size(), NumEdges);

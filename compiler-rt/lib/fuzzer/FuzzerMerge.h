@@ -56,6 +56,7 @@ struct MergeFileInfo {
 
 struct Merger {
   Vector<MergeFileInfo> Files;
+  size_t NumCoveredPCs = 0;
   size_t NumFilesInFirstCorpus = 0;
   size_t FirstNotProcessedFile = 0;
   std::string LastFailure;

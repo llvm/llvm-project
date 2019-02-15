@@ -122,6 +122,12 @@ class TracePC {
   void ProtectLazyCounters();
   bool UnprotectLazyCounters(void *CounterPtr);
 
+  struct PCTableEntry {
+    uintptr_t PC, PCFlags;
+  };
+
+  uintptr_t PCTableEntryIdx(const PCTableEntry *TE);
+
 private:
   bool UseCounters = false;
   uint32_t UseValueProfileMask = false;
@@ -159,16 +165,11 @@ private:
         CB(Modules[m].Regions[r]);
   }
 
-
-  struct PCTableEntry {
-    uintptr_t PC, PCFlags;
-  };
-
   struct { const PCTableEntry *Start, *Stop; } ModulePCTable[4096];
   size_t NumPCTables;
   size_t NumPCsInPCTables;
 
-  Set<uintptr_t> ObservedPCs;
+  Set<const PCTableEntry*> ObservedPCs;
   std::unordered_map<uintptr_t, uintptr_t> ObservedFuncs;  // PC => Counter.
 
   uint8_t *FocusFunctionCounterPtr = nullptr;

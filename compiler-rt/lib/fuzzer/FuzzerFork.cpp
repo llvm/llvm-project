@@ -16,11 +16,45 @@
 #include "FuzzerUtil.h"
 
 #include <atomic>
+#include <fstream>
 #include <mutex>
-#include <thread>
 #include <queue>
+#include <sstream>
+#include <thread>
 
 namespace fuzzer {
+
+struct Stats {
+  size_t number_of_executed_units = 0;
+  size_t peak_rss_mb = 0;
+  size_t average_exec_per_sec = 0;
+};
+
+static Stats ParseFinalStatsFromLog(const std::string &LogPath) {
+  std::ifstream In(LogPath);
+  std::string Line;
+  Stats Res;
+  struct {
+    const char *Name;
+    size_t *Var;
+  } NameVarPairs[] = {
+      {"stat::number_of_executed_units:", &Res.number_of_executed_units},
+      {"stat::peak_rss_mb:", &Res.peak_rss_mb},
+      {"stat::average_exec_per_sec:", &Res.average_exec_per_sec},
+      {nullptr, nullptr},
+  };
+  while (std::getline(In, Line, '\n')) {
+    if (Line.find("stat::") != 0) continue;
+    std::istringstream ISS(Line);
+    std::string Name;
+    size_t Val;
+    ISS >> Name >> Val;
+    for (size_t i = 0; NameVarPairs[i].Name; i++)
+      if (Name == NameVarPairs[i].Name)
+        *NameVarPairs[i].Var = Val;
+  }
+  return Res;
+}
 
 struct FuzzJob {
   // Inputs.
@@ -43,12 +77,15 @@ struct GlobalEnv {
   Random *Rand;
   int Verbosity = 0;
 
+  size_t NumRuns = 0;
+
   FuzzJob *CreateNewJob(size_t JobId) {
     Command Cmd(Args);
     Cmd.removeFlag("fork");
     for (auto &C : CorpusDirs) // Remove all corpora from the args.
       Cmd.removeArgument(C);
     Cmd.addFlag("reload", "0");  // working in an isolated dir, no reload.
+    Cmd.addFlag("print_final_stats", "1");
     Cmd.addFlag("max_total_time", std::to_string(std::min((size_t)300, JobId)));
 
     auto Job = new FuzzJob;
@@ -95,12 +132,14 @@ struct GlobalEnv {
       WriteToFile(U, NewPath);
       Files.push_back(NewPath);
     }
-    Printf("Removing %s\n", Job->CorpusDir.c_str());
     RmDirRecursive(Job->CorpusDir);
     Features.insert(NewFeatures.begin(), NewFeatures.end());
-    Printf("INFO: temp_files: %zd files_added: %zd newft: %zd ft: %zd\n",
-           TempFiles.size(), FilesToAdd.size(), NewFeatures.size(),
-           Features.size());
+    auto Stats = ParseFinalStatsFromLog(Job->LogPath);
+    NumRuns += Stats.number_of_executed_units;
+    if (!FilesToAdd.empty())
+      Printf("#%zd: ft: %zd corp: %zd exec/s %zd\n", NumRuns,
+             Features.size(), Files.size(),
+             Stats.average_exec_per_sec);
   }
 };
 
