@@ -122,8 +122,6 @@ cl_program ProgramManager::createOpenCLProgram(const context &Context) {
 cl_program ProgramManager::getBuiltOpenCLProgram(const context &Context) {
   cl_program &ClProgram = m_CachedSpirvPrograms[Context];
   if (!ClProgram) {
-    vector_class<char> DeviceProg = getSpirvSource();
-
     ClProgram = createOpenCLProgram(Context);
     build(ClProgram);
   }
