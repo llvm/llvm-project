@@ -531,14 +531,21 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       .SetDontShowChildren(true)
       .SetHideItemNames(true)
       .SetShowMembersOneLiner(false);
-  const char *accelSIMDTypes = "^(simd\\.)?(simd_)?("
-                               "(int|uint|float|double)[234]|"
-                               "(float|double)[234]x[234]|"
-                               "quat(f|d)"
-                               ")$";
+  const char *SIMDTypes = "^(simd\\.)?(simd_)?("
+                          "(int|uint|float|double)[234]|"
+                          "(float|double)[234]x[234]|"
+                          "quat(f|d)"
+                          ")$";
+
+  const char *newSIMDTypes = "^SIMD[0-9]+<.*>$";
+
   AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::swift::AccelerateSIMD_SummaryProvider,
-                "Accelerate/SIMD summary provider", ConstString(accelSIMDTypes),
+                lldb_private::formatters::swift::LegacySIMD_SummaryProvider,
+                "SIMD (legacy) summary provider", ConstString(SIMDTypes),
+                simd_summary_flags, true);
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::swift::SIMDVector_SummaryProvider,
+                "Vector SIMD summary provider", ConstString(newSIMDTypes),
                 simd_summary_flags, true);
 
   const char *GLKitTypes = "^(GLKMatrix[234]|GLKVector[234]|GLKQuaternion)$";
