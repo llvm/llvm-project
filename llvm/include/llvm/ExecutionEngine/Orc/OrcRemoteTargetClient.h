@@ -687,7 +687,7 @@ private:
 
   uint32_t getTrampolineSize() const { return RemoteTrampolineSize; }
 
-  Expected<std::vector<char>> readMem(char *Dst, JITTargetAddress Src,
+  Expected<std::vector<uint8_t>> readMem(char *Dst, JITTargetAddress Src,
                                       uint64_t Size) {
     // Check for an 'out-of-band' error, e.g. from an MM destructor.
     if (ExistingError)
