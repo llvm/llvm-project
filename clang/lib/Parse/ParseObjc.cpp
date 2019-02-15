@@ -2705,7 +2705,8 @@ Decl *Parser::ParseObjCMethodDefinition() {
   return MDecl;
 }
 
-StmtResult Parser::ParseObjCAtStatement(SourceLocation AtLoc) {
+StmtResult Parser::ParseObjCAtStatement(SourceLocation AtLoc,
+                                        ParsedStmtContext StmtCtx) {
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteObjCAtStatement(getCurScope());
     cutOffParsing();
@@ -2742,7 +2743,7 @@ StmtResult Parser::ParseObjCAtStatement(SourceLocation AtLoc) {
 
   // Otherwise, eat the semicolon.
   ExpectAndConsumeSemi(diag::err_expected_semi_after_expr);
-  return Actions.ActOnExprStmt(Res, isExprValueDiscarded());
+  return handleExprStmt(Res, StmtCtx);
 }
 
 ExprResult Parser::ParseObjCAtExpression(SourceLocation AtLoc) {

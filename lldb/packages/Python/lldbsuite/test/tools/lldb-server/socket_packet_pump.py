@@ -9,6 +9,7 @@ import traceback
 import codecs
 
 from six.moves import queue
+from lldbsuite.support import seven
 
 
 def _handle_output_packet_string(packet_contents):
@@ -19,7 +20,7 @@ def _handle_output_packet_string(packet_contents):
     elif packet_contents == "OK":
         return None
     else:
-        return packet_contents[1:].decode("hex")
+        return seven.unhexlify(packet_contents[1:])
 
 
 def _dump_queue(the_queue):
@@ -174,7 +175,7 @@ class SocketPacketPump(object):
             can_read, _, _ = select.select([self._socket], [], [], 0)
             if can_read and self._socket in can_read:
                 try:
-                    new_bytes = self._socket.recv(4096)
+                    new_bytes = seven.bitcast_to_string(self._socket.recv(4096))
                     if self._logger and new_bytes and len(new_bytes) > 0:
                         self._logger.debug(
                             "pump received bytes: {}".format(new_bytes))

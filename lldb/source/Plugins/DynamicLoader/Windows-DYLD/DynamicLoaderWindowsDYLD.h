@@ -12,6 +12,8 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/lldb-forward.h"
 
+#include <map>
+
 namespace lldb_private {
 
 class DynamicLoaderWindowsDYLD : public DynamicLoader {
@@ -27,6 +29,9 @@ public:
 
   static DynamicLoader *CreateInstance(Process *process, bool force);
 
+  void OnLoadModule(const ModuleSpec &module_spec, lldb::addr_t module_addr);
+  void OnUnloadModule(lldb::addr_t module_addr);
+
   void DidAttach() override;
   void DidLaunch() override;
   Status CanLoadImage() override;
@@ -35,6 +40,12 @@ public:
 
   ConstString GetPluginName() override;
   uint32_t GetPluginVersion() override;
+
+protected:
+  lldb::addr_t GetLoadAddress(lldb::ModuleSP executable);
+
+private:
+  std::map<lldb::ModuleSP, lldb::addr_t> m_loaded_modules;
 };
 
 } // namespace lldb_private

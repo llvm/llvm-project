@@ -348,10 +348,6 @@ sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
   return getCurFunction()->CompoundScopes.back();
 }
 
-bool Sema::isCurCompoundStmtAStmtExpr() const {
-  return getCurCompoundScope().IsStmtExpr;
-}
-
 StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                                    ArrayRef<Stmt *> Elts, bool isStmtExpr) {
   const unsigned NumElts = Elts.size();

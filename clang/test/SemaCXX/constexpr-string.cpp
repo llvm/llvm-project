@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension
+// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=gnu++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -DGNUMODE
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char
 // RUN: %clang_cc1 %s -triple x86_64-linux-gnu -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension
+// RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=gnu++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -DGNUMODE
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T
 
@@ -14,6 +16,10 @@ extern "C" {
   extern int strcmp(const char *s1, const char *s2);
   extern int strncmp(const char *s1, const char *s2, size_t n);
   extern int memcmp(const void *s1, const void *s2, size_t n);
+
+#ifdef GNUMODE
+  extern int bcmp(const void *s1, const void *s2, size_t n);
+#endif
 
   extern char *strchr(const char *s, int c);
   extern void *memchr(const void *s, int c, size_t n);
@@ -101,11 +107,27 @@ namespace StrcmpEtc {
   static_assert(__builtin_memcmp("abab\0banana", "abab\0canada", 6) == -1);
   static_assert(__builtin_memcmp("abab\0banana", "abab\0canada", 5) == 0);
 
+  static_assert(__builtin_bcmp("abaa", "abba", 3) != 0);
+  static_assert(__builtin_bcmp("abaa", "abba", 2) == 0);
+  static_assert(__builtin_bcmp("a\203", "a", 2) != 0);
+  static_assert(__builtin_bcmp("a\203", "a\003", 2) != 0);
+  static_assert(__builtin_bcmp(0, 0, 0) == 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0banana", 100) == 0); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 100) != 0); // FIXME: Should we reject this?
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 7) != 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 6) != 0);
+  static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 5) == 0);
+
   extern struct Incomplete incomplete;
   static_assert(__builtin_memcmp(&incomplete, "", 0u) == 0);
   static_assert(__builtin_memcmp("", &incomplete, 0u) == 0);
   static_assert(__builtin_memcmp(&incomplete, "", 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
   static_assert(__builtin_memcmp("", &incomplete, 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
+
+  static_assert(__builtin_bcmp(&incomplete, "", 0u) == 0);
+  static_assert(__builtin_bcmp("", &incomplete, 0u) == 0);
+  static_assert(__builtin_bcmp(&incomplete, "", 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
+  static_assert(__builtin_bcmp("", &incomplete, 1u) == 42); // expected-error {{not an integral constant}} expected-note {{read of incomplete type 'struct Incomplete'}}
 
   constexpr unsigned char ku00fe00[] = {0x00, 0xfe, 0x00};
   constexpr unsigned char ku00feff[] = {0x00, 0xfe, 0xff};
@@ -121,10 +143,23 @@ namespace StrcmpEtc {
   static_assert(__builtin_memcmp(ks00feff, ks00fe00, 99) == 1);
   static_assert(__builtin_memcmp(ks00fe00, ks00feff, 99) == -1);
 
+  static_assert(__builtin_bcmp(ku00feff, ks00fe00, 2) == 0);
+  static_assert(__builtin_bcmp(ku00feff, ks00fe00, 99) != 0);
+  static_assert(__builtin_bcmp(ku00fe00, ks00feff, 99) != 0);
+  static_assert(__builtin_bcmp(ks00feff, ku00fe00, 2) == 0);
+  static_assert(__builtin_bcmp(ks00feff, ku00fe00, 99) != 0);
+  static_assert(__builtin_bcmp(ks00fe00, ku00feff, 99) != 0);
+  static_assert(__builtin_bcmp(ks00fe00, ks00feff, 2) == 0);
+  static_assert(__builtin_bcmp(ks00feff, ks00fe00, 99) != 0);
+  static_assert(__builtin_bcmp(ks00fe00, ks00feff, 99) != 0);
+
   struct Bool3Tuple { bool bb[3]; };
   constexpr Bool3Tuple kb000100 = {{false, true, false}};
   static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 1) == 0);
   static_assert(sizeof(bool) != 1u || __builtin_memcmp(ks00fe00, kb000100.bb, 2) == 1);
+
+  static_assert(sizeof(bool) != 1u || __builtin_bcmp(ks00fe00, kb000100.bb, 1) == 0);
+  static_assert(sizeof(bool) != 1u || __builtin_bcmp(ks00fe00, kb000100.bb, 2) != 0);
 
   constexpr long ksl[] = {0, -1};
   constexpr unsigned int kui[] = {0, 0u - 1};
@@ -148,9 +183,23 @@ namespace StrcmpEtc {
   static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 0) == 0);
   static_assert(__builtin_memcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 1) == 42); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
 
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) - 1) == 0);
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) + 0) == 0);
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), sizeof(long) + 1) == 0);
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) - 1) == 0);
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 0) == 0);
+  static_assert(__builtin_bcmp(ksl, kuSizeofLong(), 2*sizeof(long) + 1) == 42); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) - 1) == 0);
+  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 0) == 0);
+  static_assert(__builtin_bcmp(ksl + 1, kuSizeofLong() + 1, sizeof(long) + 1) == 42); // expected-error {{not an integral constant}} expected-note {{dereferenced one-past-the-end}}
+
   constexpr int a = strcmp("hello", "world"); // expected-error {{constant expression}} expected-note {{non-constexpr function 'strcmp' cannot be used in a constant expression}}
   constexpr int b = strncmp("hello", "world", 3); // expected-error {{constant expression}} expected-note {{non-constexpr function 'strncmp' cannot be used in a constant expression}}
   constexpr int c = memcmp("hello", "world", 3); // expected-error {{constant expression}} expected-note {{non-constexpr function 'memcmp' cannot be used in a constant expression}}
+
+#ifdef GNUMODE
+  constexpr int d = bcmp("hello", "world", 3); // expected-error {{constant expression}} expected-note {{non-constexpr function 'bcmp' cannot be used in a constant expression}}
+#endif
 }
 
 namespace MultibyteElementTests {

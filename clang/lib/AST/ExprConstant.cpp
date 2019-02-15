@@ -8426,6 +8426,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BIstrncmp:
   case Builtin::BIwcsncmp:
   case Builtin::BImemcmp:
+  case Builtin::BIbcmp:
   case Builtin::BIwmemcmp:
     // A call to strlen is not a constant expression.
     if (Info.getLangOpts().CPlusPlus11)
@@ -8440,6 +8441,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_strncmp:
   case Builtin::BI__builtin_wcsncmp:
   case Builtin::BI__builtin_memcmp:
+  case Builtin::BI__builtin_bcmp:
   case Builtin::BI__builtin_wmemcmp: {
     LValue String1, String2;
     if (!EvaluatePointer(E->getArg(0), String1, Info) ||
@@ -8470,7 +8472,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     QualType CharTy2 = String2.Designator.getType(Info.Ctx);
 
     bool IsRawByte = BuiltinOp == Builtin::BImemcmp ||
-                     BuiltinOp == Builtin::BI__builtin_memcmp;
+                     BuiltinOp == Builtin::BIbcmp ||
+                     BuiltinOp == Builtin::BI__builtin_memcmp ||
+                     BuiltinOp == Builtin::BI__builtin_bcmp;
 
     assert(IsRawByte ||
            (Info.Ctx.hasSameUnqualifiedType(
@@ -8538,10 +8542,12 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return Success(0, E);
     }
 
-    bool StopAtNull = (BuiltinOp != Builtin::BImemcmp &&
-                       BuiltinOp != Builtin::BIwmemcmp &&
-                       BuiltinOp != Builtin::BI__builtin_memcmp &&
-                       BuiltinOp != Builtin::BI__builtin_wmemcmp);
+    bool StopAtNull =
+        (BuiltinOp != Builtin::BImemcmp && BuiltinOp != Builtin::BIbcmp &&
+         BuiltinOp != Builtin::BIwmemcmp &&
+         BuiltinOp != Builtin::BI__builtin_memcmp &&
+         BuiltinOp != Builtin::BI__builtin_bcmp &&
+         BuiltinOp != Builtin::BI__builtin_wmemcmp);
     bool IsWide = BuiltinOp == Builtin::BIwcscmp ||
                   BuiltinOp == Builtin::BIwcsncmp ||
                   BuiltinOp == Builtin::BIwmemcmp ||

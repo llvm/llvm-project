@@ -9174,23 +9174,23 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
             getContainedDynamicClass(PointeeTy, IsContained)) {
 
       unsigned OperationType = 0;
+      const bool IsCmp = BId == Builtin::BImemcmp || BId == Builtin::BIbcmp;
       // "overwritten" if we're warning about the destination for any call
       // but memcmp; otherwise a verb appropriate to the call.
-      if (ArgIdx != 0 || BId == Builtin::BImemcmp) {
+      if (ArgIdx != 0 || IsCmp) {
         if (BId == Builtin::BImemcpy)
           OperationType = 1;
         else if(BId == Builtin::BImemmove)
           OperationType = 2;
-        else if (BId == Builtin::BImemcmp)
+        else if (IsCmp)
           OperationType = 3;
       }
 
-      DiagRuntimeBehavior(
-        Dest->getExprLoc(), Dest,
-        PDiag(diag::warn_dyn_class_memaccess)
-          << (BId == Builtin::BImemcmp ? ArgIdx + 2 : ArgIdx)
-          << FnName << IsContained << ContainedRD << OperationType
-          << Call->getCallee()->getSourceRange());
+      DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                          PDiag(diag::warn_dyn_class_memaccess)
+                              << (IsCmp ? ArgIdx + 2 : ArgIdx) << FnName
+                              << IsContained << ContainedRD << OperationType
+                              << Call->getCallee()->getSourceRange());
     } else if (PointeeTy.hasNonTrivialObjCLifetime() &&
              BId != Builtin::BImemset)
       DiagRuntimeBehavior(
@@ -10624,16 +10624,16 @@ static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
   // The below checks assume source is floating point.
   if (!ResultBT || !RBT || !RBT->isFloatingPoint()) return;
 
-  // If source is floating point but target is not.
-  if (!ResultBT->isFloatingPoint())
-    return DiagnoseFloatingImpCast(S, E, E->getRHS()->getType(),
-                                   E->getExprLoc());
-
-  // If both source and target are floating points.
-  // Builtin FP kinds are ordered by increasing FP rank.
-  if (ResultBT->getKind() < RBT->getKind() &&
-      // We don't want to warn for system macro.
-      !S.SourceMgr.isInSystemMacro(E->getOperatorLoc()))
+  // If source is floating point but target is an integer.
+  if (ResultBT->isInteger())
+    DiagnoseImpCast(S, E, E->getRHS()->getType(), E->getLHS()->getType(),
+                    E->getExprLoc(), diag::warn_impcast_float_integer);
+  // If both source and target are floating points. Builtin FP kinds are ordered
+  // by increasing FP rank. FIXME: except _Float16, we currently emit a bogus
+  // warning.
+  else if (ResultBT->isFloatingPoint() && ResultBT->getKind() < RBT->getKind() &&
+           // We don't want to warn for system macro.
+           !S.SourceMgr.isInSystemMacro(E->getOperatorLoc()))
     // warn about dropping FP rank.
     DiagnoseImpCast(S, E->getRHS(), E->getLHS()->getType(), E->getOperatorLoc(),
                     diag::warn_impcast_float_result_precision);
