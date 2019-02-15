@@ -12,7 +12,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Symbols.h"
-#include "lldb/Target/Target.h"
 
 using namespace lldb_private;
 
@@ -34,9 +33,7 @@ TEST_F(
     SymbolsTest,
     TerminateLocateExecutableSymbolFileForUnknownExecutableAndUnknownSymbolFile) {
   ModuleSpec module_spec;
-  FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-  FileSpec symbol_file_spec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+  FileSpec symbol_file_spec = Symbols::LocateExecutableSymbolFile(module_spec);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
 }
 
@@ -46,8 +43,6 @@ TEST_F(SymbolsTest,
   // using a GUID here because the symbol file shouldn't actually exist on disk
   module_spec.GetSymbolFileSpec().SetFile(
       "4A524676-B24B-4F4E-968A-551D465EBAF1.so", FileSpec::Style::native);
-  FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-  FileSpec symbol_file_spec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+  FileSpec symbol_file_spec = Symbols::LocateExecutableSymbolFile(module_spec);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
 }

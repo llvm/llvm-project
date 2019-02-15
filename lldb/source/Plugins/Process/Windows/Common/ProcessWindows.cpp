@@ -924,9 +924,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   }
 
   if (auto dyld = GetDynamicLoader())
-    dyld->OnLoadModule(
-        ModuleSpec(module->GetFileSpec(), module->GetArchitecture()),
-        image_base);
+    dyld->OnLoadModule(module, ModuleSpec(), image_base);
 
   // Add the main executable module to the list of pending module loads.  We
   // can't call GetTarget().ModulesDidLoad() here because we still haven't
@@ -1033,7 +1031,7 @@ void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
 void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
                                lldb::addr_t module_addr) {
   if (auto dyld = GetDynamicLoader())
-    dyld->OnLoadModule(module_spec, module_addr);
+    dyld->OnLoadModule(nullptr, module_spec, module_addr);
 }
 
 void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {

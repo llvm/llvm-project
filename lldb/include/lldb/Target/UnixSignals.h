@@ -22,7 +22,6 @@ namespace lldb_private {
 class UnixSignals {
 public:
   static lldb::UnixSignalsSP Create(const ArchSpec &arch);
-  static lldb::UnixSignalsSP CreateForHost();
 
   //------------------------------------------------------------------
   // Constructors and Destructors
