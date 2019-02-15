@@ -25,10 +25,10 @@ namespace cl {
 namespace sycl {
 namespace simple_scheduler {
 
-template <typename T, int Dimensions, typename AllocatorT>
+template <typename AllocatorT>
 static BufferReqPtr
 getReqForBuffer(const std::set<BufferReqPtr, classcomp> &BufReqs,
-                const detail::buffer_impl<T, Dimensions, AllocatorT> &Buf) {
+                const detail::buffer_impl<AllocatorT> &Buf) {
   for (const auto &Req : BufReqs) {
     if (Req->getUniqID() == &Buf) {
       return Req;
@@ -38,18 +38,16 @@ getReqForBuffer(const std::set<BufferReqPtr, classcomp> &BufReqs,
 }
 
 // Adds a buffer requirement for this node.
-template <access::mode Mode, access::target Target, typename T, int Dimensions,
-          typename AllocatorT>
-void Node::addBufRequirement(
-    detail::buffer_impl<T, Dimensions, AllocatorT> &Buf) {
+template <access::mode Mode, access::target Target, typename AllocatorT>
+void Node::addBufRequirement(detail::buffer_impl<AllocatorT> &Buf) {
   BufferReqPtr Req = getReqForBuffer(m_Bufs, Buf);
 
   // Check if there is requirement for the same buffer already.
   if (nullptr != Req) {
     Req->addAccessMode(Mode);
   } else {
-    BufferReqPtr BufStor = std::make_shared<
-        BufferStorage<T, Dimensions, AllocatorT, Mode, Target>>(Buf);
+    BufferReqPtr BufStor =
+        std::make_shared<BufferStorage<AllocatorT, Mode, Target>>(Buf);
     m_Bufs.insert(BufStor);
   }
 }
@@ -60,11 +58,11 @@ template <typename dataT, int dimensions, access::mode accessMode,
 void Node::addAccRequirement(
     accessor<dataT, dimensions, accessMode, accessTarget, isPlaceholder> &&Acc,
     int argIndex) {
-  detail::buffer_impl<dataT, dimensions> *buf =
+  detail::buffer_impl<buffer_allocator<char>> *buf =
       Acc.template accessor_base<dataT, dimensions, accessMode, accessTarget,
                                  isPlaceholder>::__impl()
           ->m_Buf;
-  addBufRequirement<accessMode, accessTarget, dataT, dimensions>(*buf);
+  addBufRequirement<accessMode, accessTarget>(*buf);
   addInteropArg(nullptr, buf->get_size(), argIndex,
                 getReqForBuffer(m_Bufs, *buf));
 }
@@ -132,7 +130,7 @@ void Node::addExplicitMemOp(
                                                isPlaceholder>::__impl();
   assert(DestBase != nullptr &&
          "Accessor should have an initialized accessor_base");
-  detail::buffer_impl<T, Dimensions> *Buf = DestBase->m_Buf;
+  detail::buffer_impl<buffer_allocator<char>> *Buf = DestBase->m_Buf;
 
   range<Dimensions> Range = DestBase->Range;
   id<Dimensions> Offset = DestBase->Offset;
@@ -163,10 +161,10 @@ void Node::addExplicitMemOp(
   assert(DestBase != nullptr &&
          "Accessor should have an initialized accessor_base");
 
-  detail::buffer_impl<T_src, dim_src> *SrcBuf = SrcBase->m_Buf;
+  detail::buffer_impl<buffer_allocator<char>> *SrcBuf = SrcBase->m_Buf;
   assert(SrcBuf != nullptr &&
          "Accessor should have an initialized buffer_impl");
-  detail::buffer_impl<T_dest, dim_dest> *DestBuf = DestBase->m_Buf;
+  detail::buffer_impl<buffer_allocator<char>> *DestBuf = DestBase->m_Buf;
   assert(DestBuf != nullptr &&
          "Accessor should have an initialized buffer_impl");
 
@@ -174,7 +172,9 @@ void Node::addExplicitMemOp(
   id<dim_src> SrcOffset = SrcBase->Offset;
   id<dim_dest> DestOffset = DestBase->Offset;
 
-  range<dim_src> BuffSrcRange = SrcBase->m_Buf->get_range();
+  // Use BufRange here
+  range<dim_src> BuffSrcRange = SrcBase->BufRange;
+  range<dim_src> BuffDestRange = DestBase->BufRange;
 
   BufferReqPtr SrcReq = getReqForBuffer(m_Bufs, *SrcBuf);
   BufferReqPtr DestReq = getReqForBuffer(m_Bufs, *DestBuf);
@@ -182,7 +182,7 @@ void Node::addExplicitMemOp(
   assert(!m_Kernel && "This node already contains an execution command");
   m_Kernel = std::make_shared<CopyCommand<dim_src, dim_dest>>(
       SrcReq, DestReq, m_Queue, SrcRange, SrcOffset, DestOffset, sizeof(T_src),
-      SrcBase->get_count(), BuffSrcRange);
+      sizeof(T_dest), SrcBase->get_count(), BuffSrcRange, BuffDestRange);
 }
 
 // Updates host data of the specified accessor
@@ -195,28 +195,25 @@ void Scheduler::updateHost(
                                              isPlaceholder>::__impl();
   assert(AccBase != nullptr &&
          "Accessor should have an initialized accessor_base");
-  detail::buffer_impl<T, Dimensions> *Buf = AccBase->m_Buf;
+  detail::buffer_impl<buffer_allocator<char>> *Buf = AccBase->m_Buf;
 
   updateHost<mode, tgt>(*Buf, Event);
 }
 
-template <access::mode Mode, access::target Target, typename T, int Dimensions,
-          typename AllocatorT>
-void Scheduler::copyBack(detail::buffer_impl<T, Dimensions, AllocatorT> &Buf) {
+template <access::mode Mode, access::target Target, typename AllocatorT>
+void Scheduler::copyBack(detail::buffer_impl<AllocatorT> &Buf) {
   cl::sycl::event Event;
   updateHost<Mode, Target>(Buf, Event);
   detail::getSyclObjImpl(Event)->waitInternal();
 }
 
 // Updates host data of the specified buffer_impl
-template <access::mode Mode, access::target Target, typename T, int Dimensions,
-          typename AllocatorT>
-void Scheduler::updateHost(detail::buffer_impl<T, Dimensions, AllocatorT> &Buf,
+template <access::mode Mode, access::target Target, typename AllocatorT>
+void Scheduler::updateHost(detail::buffer_impl<AllocatorT> &Buf,
                            cl::sycl::event &Event) {
   CommandPtr UpdateHostCmd;
   BufferReqPtr BufStor =
-      std::make_shared<BufferStorage<T, Dimensions, AllocatorT, Mode, Target>>(
-          Buf);
+      std::make_shared<BufferStorage<AllocatorT, Mode, Target>>(Buf);
 
   if (0 == m_BuffersEvolution.count(BufStor)) {
     return;
@@ -236,12 +233,11 @@ void Scheduler::updateHost(detail::buffer_impl<T, Dimensions, AllocatorT> &Buf,
   Event = EnqueueCommand(std::move(UpdateHostCmd));
 }
 
-template <typename T, int Dimensions, typename AllocatorT>
-void Scheduler::removeBuffer(
-    detail::buffer_impl<T, Dimensions, AllocatorT> &Buf) {
-  BufferReqPtr BufStor = std::make_shared<
-      BufferStorage<T, Dimensions, AllocatorT, access::mode::read_write,
-                    access::target::host_buffer>>(Buf);
+template <typename AllocatorT>
+void Scheduler::removeBuffer(detail::buffer_impl<AllocatorT> &Buf) {
+  BufferReqPtr BufStor =
+      std::make_shared<BufferStorage<AllocatorT, access::mode::read_write,
+                                     access::target::host_buffer>>(Buf);
 
   if (0 == m_BuffersEvolution.count(BufStor)) {
     return;

@@ -100,7 +100,7 @@ template <typename dataT, int dimensions, access::mode accessMode,
           typename voidT>
 class accessor_impl;
 
-template <typename T, int dimensions, typename AllocatorT> class buffer_impl;
+template <typename AllocatorT> class buffer_impl;
 // Type inference of first arg from a lambda
 // auto fun = [&](item a) { a; };
 // lambda_arg_type<decltype(fun)> value; # value type is item
@@ -144,8 +144,7 @@ class handler {
             typename voidT>
   friend class detail::accessor_impl;
 
-  template <typename T, int dimensions, typename AllocatorT>
-  friend class detail::buffer_impl;
+  template <typename AllocatorT> friend class detail::buffer_impl;
 
   friend class detail::queue_impl;
 
@@ -172,9 +171,8 @@ protected:
 
   bool is_host() { return isHost; }
 
-  template <access::mode mode, access::target target, typename T,
-            int dimensions, typename AllocatorT>
-  void AddBufDep(detail::buffer_impl<T, dimensions, AllocatorT> &Buf) {
+  template <access::mode mode, access::target target, typename AllocatorT>
+  void AddBufDep(detail::buffer_impl<AllocatorT> &Buf) {
     m_Node.addBufRequirement<mode, target>(Buf);
   }
 
@@ -577,7 +575,7 @@ public:
         getAccessorRangeHelper<T_src, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(src);
     // TODO use buffer_allocator when it is possible
-    buffer<T_src, dim, std::allocator<T_src>> Buffer(
+    buffer<T_src, dim, std::allocator<char>> Buffer(
         (shared_ptr_class<T_src>)dest, Range,
         {property::buffer::use_host_ptr()});
     accessor<T_src, dim, access::mode::write, access::target::global_buffer,
@@ -598,7 +596,7 @@ public:
         getAccessorRangeHelper<T_dest, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(dest);
     // TODO use buffer_allocator when it is possible
-    buffer<T_dest, dim, std::allocator<T_dest>> Buffer(
+    buffer<T_dest, dim, std::allocator<char>> Buffer(
         (shared_ptr_class<T_dest>)src, Range,
         {property::buffer::use_host_ptr()});
     accessor<T_dest, dim, access::mode::read, access::target::global_buffer,
@@ -618,7 +616,7 @@ public:
         getAccessorRangeHelper<T_src, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(src);
     // TODO use buffer_allocator when it is possible
-    buffer<T_src, dim, std::allocator<T_src>> Buffer(
+    buffer<T_src, dim, std::allocator<char>> Buffer(
         (T_src *)dest, Range, {property::buffer::use_host_ptr()});
     accessor<T_src, dim, access::mode::write, access::target::global_buffer,
              access::placeholder::false_t>
@@ -637,7 +635,7 @@ public:
         getAccessorRangeHelper<T_dest, dim, mode, tgt,
                                isPlaceholder>::getAccessorRange(dest);
     // TODO use buffer_allocator when it is possible
-    buffer<T_dest, dim, std::allocator<T_dest>> Buffer(
+    buffer<T_dest, dim, std::allocator<char>> Buffer(
         (T_dest *)src, Range, {property::buffer::use_host_ptr()});
     accessor<T_dest, dim, access::mode::read, access::target::global_buffer,
              access::placeholder::false_t>

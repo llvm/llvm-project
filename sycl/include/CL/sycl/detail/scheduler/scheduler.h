@@ -49,9 +49,8 @@ public:
         m_NextOCLIndex(RHS.m_NextOCLIndex) {}
 
   // Adds a buffer requirement for this node.
-  template <access::mode Mode, access::target Target, typename T,
-            int Dimensions, typename AllocatorT>
-  void addBufRequirement(detail::buffer_impl<T, Dimensions, AllocatorT> &Buf);
+  template <access::mode Mode, access::target Target, typename AllocatorT>
+  void addBufRequirement(detail::buffer_impl<AllocatorT> &Buf);
 
   // Adds an accessor requirement for this node.
   template <typename dataT, int dimensions, access::mode accessMode,
@@ -134,15 +133,12 @@ private:
 class Scheduler {
 public:
   // Adds copying of the specified buffer_impl and waits for completion.
-  template <access::mode Mode, access::target Target, typename T,
-            int Dimensions, typename AllocatorT>
-  void copyBack(detail::buffer_impl<T, Dimensions, AllocatorT> &Buf);
+  template <access::mode Mode, access::target Target, typename AllocatorT>
+  void copyBack(detail::buffer_impl<AllocatorT> &Buf);
 
   // Updates host data of the specified buffer_impl
-  template <access::mode Mode, access::target Target, typename T,
-            int Dimensions, typename AllocatorT>
-  void updateHost(detail::buffer_impl<T, Dimensions, AllocatorT> &Buf,
-                  cl::sycl::event &Event);
+  template <access::mode Mode, access::target Target, typename AllocatorT>
+  void updateHost(detail::buffer_impl<AllocatorT> &Buf, cl::sycl::event &Event);
 
   // Updates host data of the specified accessor
   template <typename T, int Dimensions, access::mode mode, access::target tgt,
@@ -151,8 +147,8 @@ public:
                   cl::sycl::event &Event);
 
   // Frees the specified buffer_impl.
-  template <typename T, int Dimensions, typename AllocatorT>
-  void removeBuffer(detail::buffer_impl<T, Dimensions, AllocatorT> &Buf);
+  template <typename AllocatorT>
+  void removeBuffer(detail::buffer_impl<AllocatorT> &Buf);
 
   // Waits for the event passed.
   void waitForEvent(EventImplPtr Event);

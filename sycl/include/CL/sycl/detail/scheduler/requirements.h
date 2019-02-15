@@ -19,7 +19,7 @@
 namespace cl {
 namespace sycl {
 namespace detail {
-template <typename T, int Dimensions, typename AllocatorT> class buffer_impl;
+template <typename AllocatorT> class buffer_impl;
 } // namespace detail
 
 namespace detail {
@@ -70,9 +70,12 @@ public:
 
   virtual void copy(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
                     EventImplPtr Event, BufferReqPtr SrcReq, const int DimSrc,
-                    const size_t *const SrcRange, const size_t *const SrcOffset,
+                    const int DimDest, const size_t *const SrcRange,
+                    const size_t *const SrcOffset,
                     const size_t *const DestOffset, const size_t SizeTySrc,
-                    const size_t SizeSrc, const size_t *const BuffSrcRange) = 0;
+                    const size_t SizeTyDest, const size_t SizeSrc,
+                    const size_t *const BuffSrcRange,
+                    const size_t *const BuffDestRange) = 0;
 
   access::target getTargetType() const { return m_TargetType; }
 
@@ -93,12 +96,10 @@ protected:
   access::target m_TargetType;
 };
 
-template <typename T, int Dimensions, typename AllocatorT, access::mode Mode,
-          access::target Target>
+template <typename AllocatorT, access::mode Mode, access::target Target>
 class BufferStorage : public BufferRequirement {
 public:
-  BufferStorage(
-      typename cl::sycl::detail::buffer_impl<T, Dimensions, AllocatorT> &Buffer)
+  BufferStorage(typename cl::sycl::detail::buffer_impl<AllocatorT> &Buffer)
       : BufferRequirement(&Buffer, Mode, Target), m_Buffer(&Buffer) {}
 
   void allocate(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
@@ -125,15 +126,18 @@ public:
 
   void copy(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
             EventImplPtr Event, BufferReqPtr SrcReq, const int DimSrc,
-            const size_t *const SrcRange, const size_t *const SrcOffset,
-            const size_t *const DestOffset, const size_t SizeTySrc,
-            const size_t SizeSrc, const size_t *const BuffSrcRange) override {
+            const int DimDest, const size_t *const SrcRange,
+            const size_t *const SrcOffset, const size_t *const DestOffset,
+            const size_t SizeTySrc, const size_t SizeTyDest,
+            const size_t SizeSrc, const size_t *const BuffSrcRange,
+            const size_t *const BuffDestRange) override {
     assert(m_Buffer != nullptr && "BufferStorage::m_Buffer is nullptr");
     assert(SrcReq != nullptr && "BufferStorage::SrcReq is nullptr");
 
     m_Buffer->copy(std::move(Queue), std::move(DepEvents), std::move(Event),
-                   std::move(SrcReq), DimSrc, SrcRange, SrcOffset, DestOffset,
-                   SizeTySrc, SizeSrc, BuffSrcRange);
+                   std::move(SrcReq), DimSrc, DimDest, SrcRange, SrcOffset,
+                   DestOffset, SizeTySrc, SizeTyDest, SizeSrc, BuffSrcRange,
+                   BuffDestRange);
   }
 
   cl_mem getCLMemObject() override {
@@ -142,7 +146,7 @@ public:
   }
 
 private:
-  cl::sycl::detail::buffer_impl<T, Dimensions, AllocatorT> *m_Buffer = nullptr;
+  cl::sycl::detail::buffer_impl<AllocatorT> *m_Buffer = nullptr;
 };
 
 struct classcomp {

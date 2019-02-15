@@ -361,13 +361,14 @@ template <int DimSrc, int DimDest> class CopyCommand : public Command {
 public:
   CopyCommand(BufferReqPtr BufSrc, BufferReqPtr BufDest, QueueImplPtr Queue,
               range<DimSrc> SrcRange, id<DimSrc> SrcOffset,
-              id<DimDest> DestOffset, size_t SizeTySrc, size_t SizeSrc,
-              range<DimSrc> BuffSrcRange)
+              id<DimDest> DestOffset, size_t SizeTySrc, size_t SizeTyDest,
+              size_t SizeSrc, range<DimSrc> BuffSrcRange,
+              range<DimDest> BuffDestRange)
       : Command(Command::COPY, std::move(Queue)), m_BufSrc(std::move(BufSrc)),
         m_BufDest(std::move(BufDest)), m_SrcRange(std::move(SrcRange)),
         m_SrcOffset(std::move(SrcOffset)), m_DestOffset(std::move(DestOffset)),
-        m_SizeTySrc(SizeTySrc), m_SizeSrc(SizeSrc),
-        m_BuffSrcRange(BuffSrcRange) {}
+        m_SizeTySrc(SizeTySrc), m_SizeTyDest(SizeTyDest), m_SizeSrc(SizeSrc),
+        m_BuffSrcRange(BuffSrcRange), m_BuffDestRange(BuffDestRange) {}
 
   access::mode getAccessModeType() const {
     return m_BufDest->getAccessModeType();
@@ -381,8 +382,9 @@ private:
     assert(nullptr != m_BufSrc && "m_BufSrc is nullptr");
     assert(nullptr != m_BufDest && "m_BufDest is nullptr");
     m_BufDest->copy(m_Queue, std::move(DepEvents), std::move(Event), m_BufSrc,
-                    DimSrc, &m_SrcRange[0], &m_SrcOffset[0], &m_DestOffset[0],
-                    m_SizeTySrc, m_SizeSrc, &m_BuffSrcRange[0]);
+                    DimSrc, DimDest, &m_SrcRange[0], &m_SrcOffset[0],
+                    &m_DestOffset[0], m_SizeTySrc, m_SizeTyDest, m_SizeSrc,
+                    &m_BuffSrcRange[0], &m_BuffDestRange[0]);
   }
   BufferReqPtr m_BufSrc = nullptr;
   BufferReqPtr m_BufDest = nullptr;
@@ -390,8 +392,10 @@ private:
   id<DimSrc> m_SrcOffset;
   id<DimDest> m_DestOffset;
   size_t m_SizeTySrc;
+  size_t m_SizeTyDest;
   size_t m_SizeSrc;
   range<DimSrc> m_BuffSrcRange;
+  range<DimDest> m_BuffDestRange;
 };
 
 } // namespace simple_scheduler

@@ -13,7 +13,6 @@
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/helpers.hpp>
 #include <CL/sycl/detail/queue_impl.hpp>
-#include <CL/sycl/detail/scheduler/requirements.h>
 #include <CL/sycl/detail/scheduler/scheduler.h>
 #include <CL/sycl/handler.hpp>
 #include <CL/sycl/property_list.hpp>
@@ -40,77 +39,80 @@ template <int dimentions> class id;
 template <int dimentions> class range;
 template <class T> using buffer_allocator = std::allocator<T>;
 namespace detail {
-template <typename T, int dimensions = 1,
-          typename AllocatorT = cl::sycl::buffer_allocator<T>>
-class buffer_impl {
+template <typename AllocatorT> class buffer_impl {
 public:
-  buffer_impl(const range<dimensions> &bufferRange,
-              const property_list &propList = {})
-      : buffer_impl((T *)nullptr, bufferRange, propList) {}
+  buffer_impl(const size_t sizeInBytes, const property_list &propList)
+      : buffer_impl((void *)nullptr, sizeInBytes, propList) {}
 
-  buffer_impl(T *hostData, const range<dimensions> &bufferRange,
-              const property_list &propList = {})
-      : Range(bufferRange), Props(propList) {
+  buffer_impl(void *hostData, const size_t sizeInBytes,
+              const property_list &propList)
+      : SizeInBytes(sizeInBytes), Props(propList) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
       BufPtr = hostData;
     } else {
       BufData.resize(get_size());
-      BufPtr = reinterpret_cast<T *>(BufData.data());
+      BufPtr = reinterpret_cast<void *>(BufData.data());
       if (hostData != nullptr) {
-        set_final_data(hostData);
-        std::copy(hostData, hostData + get_count(), BufPtr);
+        auto HostPtr = reinterpret_cast<char *>(hostData);
+        set_final_data(HostPtr);
+        std::copy(HostPtr, HostPtr + SizeInBytes, BufData.data());
       }
     }
   }
 
   // TODO temporary solution for allowing initialisation with const data
-  buffer_impl(const T *hostData, const range<dimensions> &bufferRange,
-              const property_list &propList = {})
-      : Range(bufferRange), Props(propList) {
+  buffer_impl(const void *hostData, const size_t sizeInBytes,
+              const property_list &propList)
+      : SizeInBytes(sizeInBytes), Props(propList) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
       // TODO make this buffer read only
-      BufPtr = const_cast<T *>(hostData);
+      BufPtr = const_cast<void *>(hostData);
     } else {
       BufData.resize(get_size());
-      BufPtr = reinterpret_cast<T *>(BufData.data());
+      BufPtr = reinterpret_cast<void *>(BufData.data());
       if (hostData != nullptr) {
-        std::copy(hostData, hostData + get_count(), BufPtr);
+        std::copy((char *)hostData, (char *)hostData + SizeInBytes,
+                  BufData.data());
       }
     }
   }
 
-  buffer_impl(const shared_ptr_class<T> &hostData,
-              const range<dimensions> &bufferRange,
-              const property_list &propList = {})
-      : Range(bufferRange), Props(propList) {
+  template <typename T>
+  buffer_impl(const shared_ptr_class<T> &hostData, const size_t sizeInBytes,
+              const property_list &propList)
+      : SizeInBytes(sizeInBytes), Props(propList) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
       BufPtr = hostData.get();
     } else {
       BufData.resize(get_size());
-      BufPtr = reinterpret_cast<T *>(BufData.data());
+      BufPtr = reinterpret_cast<void *>(BufData.data());
       if (hostData.get() != nullptr) {
         weak_ptr_class<T> hostDataWeak = hostData;
         set_final_data(hostDataWeak);
-        std::copy(hostData.get(), hostData.get() + get_count(), BufPtr);
+        std::copy((char *)hostData.get(), (char *)hostData.get() + SizeInBytes,
+                  BufData.data());
       }
     }
   }
 
-  template <class InputIterator, int N = dimensions,
-            typename = std::enable_if<N == 1>>
-  buffer_impl(InputIterator first, InputIterator last,
-              const property_list &propList = {})
-      : Range(range<1>(std::distance(first, last))), Props(propList) {
+  template <class InputIterator>
+  buffer_impl(InputIterator first, InputIterator last, const size_t sizeInBytes,
+              const property_list &propList)
+      : SizeInBytes(sizeInBytes), Props(propList) {
     if (Props.has_property<property::buffer::use_host_ptr>()) {
+      // TODO next line looks unsafe
       BufPtr = &*first;
     } else {
       BufData.resize(get_size());
-      BufPtr = reinterpret_cast<T *>(BufData.data());
-      std::copy(first, last, BufPtr);
+      BufPtr = reinterpret_cast<void *>(BufData.data());
+      // We need cast BufPtr to pointer to the iteration type to get correct
+      // offset in std::copy when it will increment destination pointer.
+      auto *Ptr = reinterpret_cast<
+          typename std::iterator_traits<InputIterator>::pointer>(BufPtr);
+      std::copy(first, last, Ptr);
     }
   }
 
-  template <int N = dimensions, typename = std::enable_if<N == 1>>
   buffer_impl(cl_mem MemObject, const context &SyclContext,
               event AvailableEvent = {})
       : OpenCLInterop(true), AvailableEvent(AvailableEvent) {
@@ -129,11 +131,7 @@ public:
     CHECK_OCL_CODE(clRetainMemObject(MemObject));
   }
 
-  range<dimensions> get_range() const { return Range; }
-
-  size_t get_count() const { return Range.size(); }
-
-  size_t get_size() const { return get_count() * sizeof(T); }
+  size_t get_size() const { return SizeInBytes; }
 
   ~buffer_impl() {
     if (!OpenCLInterop)
@@ -155,13 +153,14 @@ public:
 
   void set_final_data(std::nullptr_t) { uploadData = nullptr; }
 
-  void set_final_data(weak_ptr_class<T> final_data) {
+  template <typename T> void set_final_data(weak_ptr_class<T> final_data) {
     if (OpenCLInterop)
       throw cl::sycl::runtime_error(
           "set_final_data could not be used with interoperability buffer");
     uploadData = [this, final_data]() {
       if (auto finalData = final_data.lock()) {
-        std::copy(BufPtr, BufPtr + get_count(), finalData.get());
+        T *Ptr = reinterpret_cast<T *>(BufPtr);
+        std::copy(Ptr, Ptr + SizeInBytes / sizeof(T), finalData.get());
       }
     };
   }
@@ -174,11 +173,16 @@ public:
                   "Сan not write in a constant Destination. Destination should "
                   "not be const.");
     uploadData = [this, final_data]() mutable {
-      std::copy(BufPtr, BufPtr + get_count(), final_data);
+      auto *Ptr =
+          reinterpret_cast<typename std::iterator_traits<Destination>::pointer>(
+              BufPtr);
+      size_t ValSize =
+          sizeof(typename std::iterator_traits<Destination>::value_type);
+      std::copy(Ptr, Ptr + SizeInBytes / ValSize, final_data);
     };
   }
 
-  template <access::mode mode,
+  template <typename T, int dimensions, access::mode mode,
             access::target target = access::target::global_buffer>
   accessor<T, dimensions, mode, target, access::placeholder::false_t>
   get_access(buffer<T, dimensions, AllocatorT> &Buffer,
@@ -187,7 +191,7 @@ public:
         Buffer, commandGroupHandler);
   }
 
-  template <access::mode mode>
+  template <typename T, int dimensions, access::mode mode>
   accessor<T, dimensions, mode, access::target::host_buffer,
            access::placeholder::false_t>
   get_access(buffer<T, dimensions, AllocatorT> &Buffer) {
@@ -205,10 +209,11 @@ public:
 
   void copy(QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
             EventImplPtr Event, simple_scheduler::BufferReqPtr SrcReq,
-            const int DimSrc, const size_t *const SrcRange,
+            const int DimSrc, const int DimDest, const size_t *const SrcRange,
             const size_t *const SrcOffset, const size_t *const DestOffset,
-            const size_t SizeTySrc, const size_t SizeSrc,
-            const size_t *const BuffSrcRange);
+            const size_t SizeTySrc, const size_t SizeTyDest,
+            const size_t SizeSrc, const size_t *const BuffSrcRange,
+            const size_t *const BuffDestRange);
 
   size_t convertSycl2OCLMode(cl::sycl::access::mode mode);
 
@@ -242,13 +247,13 @@ private:
   bool OpenCLInterop = false;
   event AvailableEvent;
   cl_context OpenCLContext = nullptr;
-  T *BufPtr = nullptr;
+  void *BufPtr = nullptr;
   vector_class<byte> BufData;
   // TODO: enable support of cl_mem objects from multiple contexts
   // TODO: at the current moment, using a buffer on multiple devices
   // or on a device and a host simultaneously is not supported (the
   // implementation is incorrect).
-  range<dimensions> Range;
+  size_t SizeInBytes = 0;
   property_list Props;
   std::function<void(void)> uploadData = nullptr;
   template <typename DataT, int Dimensions, access::mode AccessMode,
@@ -256,14 +261,14 @@ private:
   friend class cl::sycl::accessor;
 };
 
-template <typename T, int dimensions, typename AllocatorT>
-void buffer_impl<T, dimensions, AllocatorT>::fill(
-    QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
-    EventImplPtr Event, const void *Pattern, size_t PatternSize, int Dim,
-    size_t *OffsetArr, size_t *RangeArr) {
+template <typename AllocatorT>
+void buffer_impl<AllocatorT>::fill(QueueImplPtr Queue,
+                                   std::vector<cl::sycl::event> DepEvents,
+                                   EventImplPtr Event, const void *Pattern,
+                                   size_t PatternSize, int Dim,
+                                   size_t *OffsetArr, size_t *RangeArr) {
 
-  assert(dimensions == 1 &&
-         "OpenCL doesn't support multidimensional fill method.");
+  assert(Dim == 1 && "OpenCL doesn't support multidimensional fill method.");
   assert(!Queue->is_host() && "Host case is handled in other place.");
 
   size_t Offset = OffsetArr[0];
@@ -287,18 +292,15 @@ void buffer_impl<T, dimensions, AllocatorT>::fill(
   CHECK_OCL_CODE(clReleaseCommandQueue(CommandQueue));
 }
 
-template <typename T, int dimensions, typename AllocatorT>
-void buffer_impl<T, dimensions, AllocatorT>::copy(
+template <typename AllocatorT>
+void buffer_impl<AllocatorT>::copy(
     QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
     EventImplPtr Event, simple_scheduler::BufferReqPtr SrcReq, const int DimSrc,
-    const size_t *const SrcRange, const size_t *const SrcOffset,
-    const size_t *const DestOffset, const size_t SizeTySrc,
-    const size_t SizeSrc, const size_t *const BuffSrcRange) {
+    const int DimDest, const size_t *const SrcRange,
+    const size_t *const SrcOffset, const size_t *const DestOffset,
+    const size_t SizeTySrc, const size_t SizeTyDest, const size_t SizeSrc,
+    const size_t *const BuffSrcRange, const size_t *const BuffDestRange) {
   assert(!Queue->is_host() && "Host case is handled in other place.");
-
-  size_t *BuffDestRange = &get_range()[0];
-  size_t SizeTyDest = sizeof(T);
-  const int DimDest = dimensions;
 
   ContextImplPtr Context = detail::getSyclObjImpl(Queue->get_context());
 
@@ -341,8 +343,8 @@ void buffer_impl<T, dimensions, AllocatorT>::copy(
   Event->setIsHostEvent(false);
 }
 
-template <typename T, int dimensions, typename AllocatorT>
-void buffer_impl<T, dimensions, AllocatorT>::moveMemoryTo(
+template <typename AllocatorT>
+void buffer_impl<AllocatorT>::moveMemoryTo(
     QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
     EventImplPtr Event) {
 
@@ -425,9 +427,9 @@ void buffer_impl<T, dimensions, AllocatorT>::moveMemoryTo(
   assert(0 && "Not handled");
 }
 
-template <typename T, int dimensions, typename AllocatorT>
-size_t buffer_impl<T, dimensions, AllocatorT>::convertSycl2OCLMode(
-    cl::sycl::access::mode mode) {
+template <typename AllocatorT>
+size_t
+buffer_impl<AllocatorT>::convertSycl2OCLMode(cl::sycl::access::mode mode) {
   switch (mode) {
   case cl::sycl::access::mode::read:
     return CL_MEM_READ_ONLY;
@@ -442,8 +444,8 @@ size_t buffer_impl<T, dimensions, AllocatorT>::convertSycl2OCLMode(
   }
 }
 
-template <typename T, int dimensions, typename AllocatorT>
-bool buffer_impl<T, dimensions, AllocatorT>::isValidAccessToMem(
+template <typename AllocatorT>
+bool buffer_impl<AllocatorT>::isValidAccessToMem(
     cl::sycl::access::mode AccessMode) {
   cl_mem_flags Flags;
   assert(OCLState.Mem != nullptr &&
@@ -456,10 +458,11 @@ bool buffer_impl<T, dimensions, AllocatorT>::isValidAccessToMem(
   return true;
 }
 
-template <typename T, int dimensions, typename AllocatorT>
-void buffer_impl<T, dimensions, AllocatorT>::allocate(
-    QueueImplPtr Queue, std::vector<cl::sycl::event> DepEvents,
-    EventImplPtr Event, cl::sycl::access::mode mode) {
+template <typename AllocatorT>
+void buffer_impl<AllocatorT>::allocate(QueueImplPtr Queue,
+                                       std::vector<cl::sycl::event> DepEvents,
+                                       EventImplPtr Event,
+                                       cl::sycl::access::mode mode) {
 
   detail::waitEvents(DepEvents);
 
@@ -508,8 +511,8 @@ void buffer_impl<T, dimensions, AllocatorT>::allocate(
   assert(0 && "Unhandled Alloca");
 }
 
-template <typename T, int dimensions, typename AllocatorT>
-cl_mem buffer_impl<T, dimensions, AllocatorT>::getOpenCLMem() const {
+template <typename AllocatorT>
+cl_mem buffer_impl<AllocatorT>::getOpenCLMem() const {
   assert(nullptr != OCLState.Mem);
   return OCLState.Mem;
 }

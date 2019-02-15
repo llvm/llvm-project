@@ -125,11 +125,12 @@ SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions == 0) {
 SYCL_ACCESSOR_IMPL(isTargetHostAccess(accessTarget) && dimensions > 0) {
   dataT *Data;
   range<dimensions> Range;
+  range<dimensions> BufRange;
   id<dimensions> Offset;
 
-  accessor_impl(dataT *Data, range<dimensions> Range,
-                id<dimensions> Offset = {})
-      : Data(Data), Range(Range), Offset(Offset) {}
+  accessor_impl(dataT * Data, range<dimensions> Range,
+                range<dimensions> BufRange, id<dimensions> Offset = {})
+      : Data(Data), Range(Range), BufRange(BufRange), Offset(Offset) {}
 
   // Returns the number of accessed elements.
   size_t get_count() const { return Range.size(); }
@@ -146,10 +147,9 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   // reinterpret casting while setting kernel arguments in order to get cl_mem
   // value from the buffer regardless of the accessor's dimensionality.
 #ifndef __SYCL_DEVICE_ONLY__
-  detail::buffer_impl<dataT, 1> *m_Buf = nullptr;
-
+  detail::buffer_impl<buffer_allocator<char>> *m_Buf = nullptr;
 #else
-  char padding[sizeof(detail::buffer_impl<dataT, dimensions> *)];
+  char padding[sizeof(detail::buffer_impl<buffer_allocator<char>> *)];
 #endif // __SYCL_DEVICE_ONLY__
 
   dataT *Data;
@@ -182,22 +182,23 @@ SYCL_ACCESSOR_IMPL(!isTargetHostAccess(accessTarget) &&
   // reinterpret casting while setting kernel arguments in order to get cl_mem
   // value from the buffer regardless of the accessor's dimensionality.
 #ifndef __SYCL_DEVICE_ONLY__
-  detail::buffer_impl<dataT, dimensions> *m_Buf = nullptr;
+  detail::buffer_impl<buffer_allocator<char>> *m_Buf = nullptr;
 #else
-  char padding[sizeof(detail::buffer_impl<dataT, dimensions> *)];
+  char padding[sizeof(detail::buffer_impl<buffer_allocator<char>> *)];
 #endif // __SYCL_DEVICE_ONLY__
 
   dataT *Data;
   range<dimensions> Range;
+  range<dimensions> BufRange;
   id<dimensions> Offset;
 
   // Device accessors must be associated with a command group handler.
   // The handler though can be nullptr at the creation point if the
   // accessor is a placeholder accessor.
-  accessor_impl(dataT *Data, range<dimensions> Range,
-                handler *Handler = nullptr, id<dimensions> Offset = {})
-      : Data(Data), Range(Range), Offset(Offset)
-  {}
+  accessor_impl(dataT * Data, range<dimensions> Range,
+                range<dimensions> BufRange, handler *Handler = nullptr,
+                id<dimensions> Offset = {})
+      : Data(Data), Range(Range), BufRange(BufRange), Offset(Offset) {}
 
   // Returns the number of accessed elements.
   size_t get_count() const { return Range.size(); }
@@ -633,8 +634,8 @@ public:
 #ifdef __SYCL_DEVICE_ONLY__
       ; // This ctor can't be used in device code, so no need to define it.
 #else // !__SYCL_DEVICE_ONLY__
-      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr,
-               detail::getSyclObjImpl(bufferRef)->Range,
+      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+               bufferRef.get_range(), bufferRef.get_range(),
                &commandGroupHandlerRef) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
@@ -669,8 +670,8 @@ public:
                AccessTarget == access::target::constant_buffer))) &&
             Dimensions > 0),
            buffer<DataT, Dimensions>>::type &bufferRef)
-      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr,
-               detail::getSyclObjImpl(bufferRef)->Range) {
+      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+               bufferRef.get_range(), bufferRef.get_range()) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
       if (BufImpl->OpenCLInterop) {
@@ -701,17 +702,17 @@ public:
             access::target AccessTarget = accessTarget,
             access::placeholder IsPlaceholder = isPlaceholder>
   accessor(typename std::enable_if<
-           (IsPlaceholder == access::placeholder::false_t &&
-            (AccessTarget == access::target::global_buffer ||
-             AccessTarget == access::target::constant_buffer) &&
-            Dimensions > 0),
-           buffer<DataT, Dimensions>>::type &bufferRef,
+               (IsPlaceholder == access::placeholder::false_t &&
+                (AccessTarget == access::target::global_buffer ||
+                 AccessTarget == access::target::constant_buffer) &&
+                Dimensions > 0),
+               buffer<DataT, Dimensions>>::type &bufferRef,
            handler &commandGroupHandlerRef)
 #ifdef __SYCL_DEVICE_ONLY__
       ; // This ctor can't be used in device code, so no need to define it.
 #else
-      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr,
-               detail::getSyclObjImpl(bufferRef)->Range,
+      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr,
+               bufferRef.get_range(), bufferRef.get_range(),
                &commandGroupHandlerRef) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
@@ -739,20 +740,19 @@ public:
             access::target AccessTarget = accessTarget,
             access::placeholder IsPlaceholder = isPlaceholder>
   accessor(typename std::enable_if<
-           ((IsPlaceholder == access::placeholder::false_t &&
-             AccessTarget == access::target::host_buffer) ||
-            (IsPlaceholder == access::placeholder::true_t &&
-             (AccessTarget == access::target::global_buffer ||
-              AccessTarget == access::target::constant_buffer) &&
-             Dimensions > 0)),
-           buffer<DataT, Dimensions>>::type &bufferRef,
-           range<Dimensions> Range,
-           id<Dimensions> Offset = {}
-          )
+               ((IsPlaceholder == access::placeholder::false_t &&
+                 AccessTarget == access::target::host_buffer) ||
+                (IsPlaceholder == access::placeholder::true_t &&
+                 (AccessTarget == access::target::global_buffer ||
+                  AccessTarget == access::target::constant_buffer) &&
+                 Dimensions > 0)),
+               buffer<DataT, Dimensions>>::type &bufferRef,
+           range<Dimensions> Range, id<Dimensions> Offset = {})
 #ifdef __SYCL_DEVICE_ONLY__
       ; // This ctor can't be used in device code, so no need to define it.
-#else // !__SYCL_DEVICE_ONLY__
-      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr, Range, Offset) {
+#else   // !__SYCL_DEVICE_ONLY__
+      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
+               bufferRef.get_range(), Offset) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (AccessTarget == access::target::host_buffer) {
       if (BufImpl->OpenCLInterop) {
@@ -769,7 +769,7 @@ public:
           "interoperability buffer");
     }
   }
-#endif // !__SYCL_DEVICE_ONLY__
+#endif  // !__SYCL_DEVICE_ONLY__
 
   // buffer ctor #6:
   //   accessor(buffer &, handler &, range Range, id Offset);
@@ -784,20 +784,18 @@ public:
             access::target AccessTarget = accessTarget,
             access::placeholder IsPlaceholder = isPlaceholder>
   accessor(typename std::enable_if<
-           (IsPlaceholder == access::placeholder::false_t &&
-            (AccessTarget == access::target::global_buffer ||
-             AccessTarget == access::target::constant_buffer) &&
-            Dimensions > 0),
-           buffer<DataT, Dimensions>>::type &bufferRef,
-           handler &commandGroupHandlerRef,
-           range<Dimensions> Range,
-           id<Dimensions> Offset = {}
-          )
+               (IsPlaceholder == access::placeholder::false_t &&
+                (AccessTarget == access::target::global_buffer ||
+                 AccessTarget == access::target::constant_buffer) &&
+                Dimensions > 0),
+               buffer<DataT, Dimensions>>::type &bufferRef,
+           handler &commandGroupHandlerRef, range<Dimensions> Range,
+           id<Dimensions> Offset = {})
 #ifdef __SYCL_DEVICE_ONLY__
       ; // This ctor can't be used in device code, so no need to define it.
-#else // !__SYCL_DEVICE_ONLY__
-      : __impl(detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
-               &commandGroupHandlerRef, Offset) {
+#else   // !__SYCL_DEVICE_ONLY__
+      : __impl((dataT *)detail::getSyclObjImpl(bufferRef)->BufPtr, Range,
+               bufferRef.get_range(), &commandGroupHandlerRef, Offset) {
     auto BufImpl = detail::getSyclObjImpl(bufferRef);
     if (BufImpl->OpenCLInterop && !BufImpl->isValidAccessToMem(accessMode)) {
       throw cl::sycl::runtime_error(
@@ -807,7 +805,7 @@ public:
     commandGroupHandlerRef.AddBufDep<AccessMode, AccessTarget>(*BufImpl);
     __impl.m_Buf = BufImpl.get();
   }
-#endif // !__SYCL_DEVICE_ONLY__
+#endif  // !__SYCL_DEVICE_ONLY__
 
   // TODO:
   // local accessor ctor #1

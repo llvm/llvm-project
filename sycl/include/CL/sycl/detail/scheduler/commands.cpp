@@ -59,9 +59,9 @@ void ExecuteKernelCommand<
         switch (static_cast<cl::sycl::access::target>(m_KernelArgs[I].info)) {
         case cl::sycl::access::target::global_buffer:
         case cl::sycl::access::target::constant_buffer: {
-          auto *Ptr =
-              *(getParamAddress<cl::sycl::detail::buffer_impl<char, 1> *>(
-                  &m_HostKernel, m_KernelArgs[I].offset));
+          auto *Ptr = *(getParamAddress<
+                        cl::sycl::detail::buffer_impl<std::allocator<char>> *>(
+              &m_HostKernel, m_KernelArgs[I].offset));
           cl_mem CLBuf = Ptr->getOpenCLMem();
           CHECK_OCL_CODE(clSetKernelArg(m_ClKernel, I, sizeof(cl_mem), &CLBuf));
           break;
