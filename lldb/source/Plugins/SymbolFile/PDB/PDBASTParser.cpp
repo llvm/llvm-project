@@ -13,6 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/Declaration.h"

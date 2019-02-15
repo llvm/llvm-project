@@ -32,6 +32,7 @@
 #include "swift/AST/Stmt.h"
 #include "swift/AST/TypeRepr.h"
 #include "swift/AST/Types.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 

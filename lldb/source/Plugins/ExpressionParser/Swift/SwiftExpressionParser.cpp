@@ -63,6 +63,7 @@
 #include "swift/Demangling/Demangle.h"
 #include "swift/Basic/PrimarySpecificPaths.h"
 #include "swift/Basic/SourceManager.h"
+#include "swift/Basic/OptimizationMode.h"
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Parse/LocalContext.h"
