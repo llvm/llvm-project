@@ -865,10 +865,10 @@ lldb::addr_t ProcessWindows::GetImageInfoAddress() {
 }
 
 DynamicLoaderWindowsDYLD *ProcessWindows::GetDynamicLoader() {
-  if (m_dyld_ap.get() == NULL)
-    m_dyld_ap.reset(DynamicLoader::FindPlugin(
+  if (m_dyld_up.get() == NULL)
+    m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderWindowsDYLD::GetPluginNameStatic().GetCString()));
-  return static_cast<DynamicLoaderWindowsDYLD *>(m_dyld_ap.get());
+  return static_cast<DynamicLoaderWindowsDYLD *>(m_dyld_up.get());
 }
 
 void ProcessWindows::OnExitProcess(uint32_t exit_code) {
