@@ -454,7 +454,14 @@ static bool GetObjectDescription_ObjectReference(Process *process, Stream &str,
   }
 }
 
-static bool GetObjectDescription_ObjectCopy(Process *process, Stream &str,
+static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
+  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
+             ? &valobj.GetExecutionContextRef()
+             : nullptr;
+}
+
+static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
+                                            Process *process, Stream &str,
                                             ValueObject &object) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
 
@@ -474,10 +481,10 @@ static bool GetObjectDescription_ObjectCopy(Process *process, Stream &str,
       process->GetThreadList().GetSelectedThread()->GetSelectedFrame();
   auto *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
-  if (swift_ast_ctx)
-    static_type =
-        swift_ast_ctx->MapIntoContext(frame_sp,
-                                      static_type.GetOpaqueQualType());
+  if (swift_ast_ctx) {
+    SwiftASTContextLock lock(GetSwiftExeCtx(object));
+    static_type = runtime->DoArchetypeBindingForType(*frame_sp, static_type);
+  }
 
   lldb::addr_t copy_location = process->AllocateMemory(
       static_type.GetByteStride(), ePermissionsReadable | ePermissionsWritable,
@@ -663,7 +670,7 @@ bool SwiftLanguageRuntime::GetObjectDescription(Stream &str,
 
   // in general, don't try to use the name of the ValueObject as it might end up
   // referring to the wrong thing
-  return GetObjectDescription_ObjectCopy(m_process, str, object);
+  return GetObjectDescription_ObjectCopy(this, m_process, str, object);
 }
 
 bool SwiftLanguageRuntime::GetObjectDescription(
@@ -2073,9 +2080,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     if (!result.isSuccess())
       return false;
     auto type_and_address = result.getValue();
-    CompilerType dynamic_type(type_and_address.first);
+    CompilerType dynamic_type(type_and_address.InstanceType);
     class_type_or_name.SetCompilerType(dynamic_type);
-    address.SetLoadAddress(type_and_address.second.getAddressData(),
+    address.SetLoadAddress(type_and_address.PayloadAddress.getAddressData(),
                            &m_process->GetTarget());
     return true;
   } break;
@@ -2655,6 +2662,9 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
       break;
     case llvm::Triple::ArchType::x86_64:
       addr &= ~SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK;
+      break;
+    case llvm::Triple::ArchType::systemz:
+      addr &= ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
       break;
     default:
       break;
@@ -3355,10 +3365,12 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
     std::string module_name = "$__lldb_module_for_";
     module_name.append(&name.GetCString()[1]);
+    SourceModule module_info;
+    module_info.path.push_back(ConstString(module_name));
 
     Status module_creation_error;
-    swift::ModuleDecl *module_decl = ast_context->CreateModule(
-        ConstString(module_name), module_creation_error);
+    swift::ModuleDecl *module_decl =
+        ast_context->CreateModule(module_info, module_creation_error);
 
     if (module_creation_error.Success() && module_decl) {
       const bool is_static = false;
@@ -3493,6 +3505,7 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
   ArchSpec::Core core_kind = arch_spec.GetCore();
   bool is_arm = false;
   bool is_intel = false;
+  bool is_s390x = false;
   bool is_32 = false;
   bool is_64 = false;
   if (core_kind == ArchSpec::Core::eCore_arm_arm64) {
@@ -3506,6 +3519,8 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
   } else if (core_kind >= ArchSpec::Core::kCore_x86_32_first &&
              core_kind <= ArchSpec::Core::kCore_x86_32_last) {
     is_intel = true;
+  } else if (core_kind == ArchSpec::Core::eCore_s390x_generic) {
+    is_s390x = true;
   } else {
     // this is a really random CPU core to be running on - just get out fast
     return addr;
@@ -3536,6 +3551,9 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer(lldb::addr_t addr,
 
   if (is_intel && is_32)
     mask = SWIFT_ABI_I386_SWIFT_SPARE_BITS_MASK;
+
+  if (is_s390x && is_64)
+    mask = SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
 
   if (masked_bits)
     *masked_bits = addr & mask;
@@ -3859,14 +3877,13 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   return nullptr;
 }
 
-void SwiftLanguageRuntime::WillStartExecutingUserExpression() {
+void SwiftLanguageRuntime::WillStartExecutingUserExpression(
+    bool runs_in_playground_or_repl) {
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  bool in_repl = m_process->GetTarget().GetDebugger().REPLIsActive();
-
   if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
-      !in_repl) {
+      !runs_in_playground_or_repl) {
     // We're executing the first user expression. Toggle the flag.
     Status error;
     TypeSystem *type_system =
@@ -3921,7 +3938,8 @@ void SwiftLanguageRuntime::WillStartExecutingUserExpression() {
                 "Number active: %u", m_active_user_expr_count);
 }
 
-void SwiftLanguageRuntime::DidFinishExecutingUserExpression() {
+void SwiftLanguageRuntime::DidFinishExecutingUserExpression(
+    bool runs_in_playground_or_repl) {
   std::lock_guard<std::mutex> lock(m_active_user_expr_mutex);
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -3930,10 +3948,8 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression() {
     log->Printf("SwiftLanguageRuntime: finished user expression. "
                 "Number active: %u", m_active_user_expr_count);
 
-  bool in_repl = m_process->GetTarget().GetDebugger().REPLIsActive();
-
   if (m_active_user_expr_count == 0 && m_dynamic_exclusivity_flag_addr &&
-      !in_repl) {
+      !runs_in_playground_or_repl) {
     Status error;
     TypeSystem *type_system =
       m_process->GetTarget().GetScratchTypeSystemForLanguage(

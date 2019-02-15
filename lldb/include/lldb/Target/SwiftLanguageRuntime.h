@@ -370,8 +370,8 @@ public:
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
 
-  void WillStartExecutingUserExpression();
-  void DidFinishExecutingUserExpression();
+  void WillStartExecutingUserExpression(bool);
+  void DidFinishExecutingUserExpression(bool);
 
 protected:
   //------------------------------------------------------------------

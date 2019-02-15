@@ -529,7 +529,7 @@ ifneq "$(strip $(SWIFT_SOURCES))" ""
 endif
 
 ifneq "$(strip $(DYLIB_SWIFT_SOURCES))" ""
-	DYLIB_OBJECTS +=$(strip $(DYLIB_OBJC_SOURCES:.swift=.o))
+	DYLIB_OBJECTS +=$(strip $(DYLIB_SWIFT_SOURCES:.swift=.o))
 	USESWIFTDRIVER = 1
 endif
 
@@ -650,12 +650,9 @@ ifeq "$(USESWIFTDRIVER)" "1"
 #----------------------------------------------------------------------
 ifeq "$(DYLIB_NAME)" ""
 MODULENAME=$(shell basename $(EXE) .out)
-SWIFT_OBJECTS=$(patsubst %.swift,%.o,$(SWIFT_SOURCES))
 else
 EXE = $(DYLIB_FILENAME)
 MODULENAME=$(DYLIB_NAME)
-SWIFT_OBJECTS=$(patsubst %.swift,%.o,$(DYLIB_SWIFT_SOURCES))
-DYLIB_OBJECTS=$(SWIFT_OBJECTS)
 endif
 
 VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
@@ -668,7 +665,7 @@ VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
 	  -o $(BUILDDIR)/$@
 
 ifeq "$(OS)" "Darwin"
-$(EXE): $(MODULENAME).swiftmodule $(SWIFT_OBJECTS)
+$(EXE): $(MODULENAME).swiftmodule $(OBJECTS)
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(STATIC_STDLIB) $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
@@ -677,7 +674,7 @@ ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
 else # OS = Linux
-$(EXE): $(MODULENAME).swiftmodule.o $(SWIFT_OBJECTS)
+$(EXE): $(MODULENAME).swiftmodule.o $(OBJECTS)
 	@echo "### Linking" $(EXE)
 	$(SWIFTC) $(LD_EXTRAS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 
@@ -685,10 +682,11 @@ $(MODULENAME).swiftmodule.o: $(MODULENAME).swiftmodule
 	@echo "### Wrapping swift module"
 	$(SWIFT) -modulewrap $^ -o $(BUILDDIR)/$@
 endif
-$(MODULENAME).swiftmodule: $(SWIFT_OBJECTS)
+
+$(MODULENAME).swiftmodule: $(OBJECTS) $(DYLIB_OBJECTS)
 	@echo "### Merging swift modules for $(MODULENAME)"
 	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
-	  -emit-module $(patsubst %.o,%.partial.swiftmodule,$^) \
+	  -emit-module $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
 	  -parse-as-library -sil-merge-partial-modules \
 	  -disable-diagnostic-passes -disable-sil-perf-optzns \
 	  -module-name $(MODULENAME) \

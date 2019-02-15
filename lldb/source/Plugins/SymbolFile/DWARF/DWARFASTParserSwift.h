@@ -56,6 +56,10 @@ public:
   }
 
 protected:
+  /// Use the -gmodules DWARF info to quickly find the correct clang type.
+  void GetClangType(const DWARFDIE &die, llvm::StringRef mangled_name,
+                    lldb_private::TypeMap &clang_types) const;
+
   lldb_private::SwiftASTContext &m_ast;
 };
 
