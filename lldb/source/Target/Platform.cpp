@@ -1740,9 +1740,9 @@ const UnixSignalsSP &Platform::GetRemoteUnixSignals() {
   return s_default_unix_signals_sp;
 }
 
-const UnixSignalsSP &Platform::GetUnixSignals() {
+UnixSignalsSP Platform::GetUnixSignals() {
   if (IsHost())
-    return Host::GetUnixSignals();
+    return UnixSignals::CreateForHost();
   return GetRemoteUnixSignals();
 }
 
