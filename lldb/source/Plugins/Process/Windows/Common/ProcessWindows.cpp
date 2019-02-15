@@ -864,6 +864,13 @@ lldb::addr_t ProcessWindows::GetImageInfoAddress() {
     return LLDB_INVALID_ADDRESS;
 }
 
+DynamicLoaderWindowsDYLD *ProcessWindows::GetDynamicLoader() {
+  if (m_dyld_ap.get() == NULL)
+    m_dyld_ap.reset(DynamicLoader::FindPlugin(
+        this, DynamicLoaderWindowsDYLD::GetPluginNameStatic().GetCString()));
+  return static_cast<DynamicLoaderWindowsDYLD *>(m_dyld_ap.get());
+}
+
 void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   // No need to acquire the lock since m_session_data isn't accessed.
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
@@ -916,12 +923,10 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
     GetTarget().SetExecutableModule(module, eLoadDependentsNo);
   }
 
-  bool load_addr_changed;
-  module->SetLoadAddress(GetTarget(), image_base, false, load_addr_changed);
-
-  ModuleList loaded_modules;
-  loaded_modules.Append(module);
-  GetTarget().ModulesDidLoad(loaded_modules);
+  if (auto dyld = GetDynamicLoader())
+    dyld->OnLoadModule(
+        ModuleSpec(module->GetFileSpec(), module->GetArchitecture()),
+        image_base);
 
   // Add the main executable module to the list of pending module loads.  We
   // can't call GetTarget().ModulesDidLoad() here because we still haven't
@@ -1027,29 +1032,13 @@ void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
 
 void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
                                lldb::addr_t module_addr) {
-  // Confusingly, there is no Target::AddSharedModule.  Instead, calling
-  // GetSharedModule() with a new module will add it to the module list and
-  // return a corresponding ModuleSP.
-  Status error;
-  ModuleSP module = GetTarget().GetSharedModule(module_spec, &error);
-  bool load_addr_changed = false;
-  module->SetLoadAddress(GetTarget(), module_addr, false, load_addr_changed);
-
-  ModuleList loaded_modules;
-  loaded_modules.Append(module);
-  GetTarget().ModulesDidLoad(loaded_modules);
+  if (auto dyld = GetDynamicLoader())
+    dyld->OnLoadModule(module_spec, module_addr);
 }
 
 void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
-  Address resolved_addr;
-  if (GetTarget().ResolveLoadAddress(module_addr, resolved_addr)) {
-    ModuleSP module = resolved_addr.GetModule();
-    if (module) {
-      ModuleList unloaded_modules;
-      unloaded_modules.Append(module);
-      GetTarget().ModulesDidUnload(unloaded_modules, false);
-    }
-  }
+  if (auto dyld = GetDynamicLoader())
+    dyld->OnUnloadModule(module_addr);
 }
 
 void ProcessWindows::OnDebugString(const std::string &string) {}

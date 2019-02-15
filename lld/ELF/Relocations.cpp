@@ -93,6 +93,38 @@ static std::string getLocation(InputSectionBase &S, const Symbol &Sym,
   return Msg + S.getObjMsg(Off);
 }
 
+namespace {
+// Build a bitmask with one bit set for each RelExpr.
+//
+// Constexpr function arguments can't be used in static asserts, so we
+// use template arguments to build the mask.
+// But function template partial specializations don't exist (needed
+// for base case of the recursion), so we need a dummy struct.
+template <RelExpr... Exprs> struct RelExprMaskBuilder {
+  static inline uint64_t build() { return 0; }
+};
+
+// Specialization for recursive case.
+template <RelExpr Head, RelExpr... Tail>
+struct RelExprMaskBuilder<Head, Tail...> {
+  static inline uint64_t build() {
+    static_assert(0 <= Head && Head < 64,
+                  "RelExpr is too large for 64-bit mask!");
+    return (uint64_t(1) << Head) | RelExprMaskBuilder<Tail...>::build();
+  }
+};
+} // namespace
+
+// Return true if `Expr` is one of `Exprs`.
+// There are fewer than 64 RelExpr's, so we can represent any set of
+// RelExpr's as a constant bit mask and test for membership with a
+// couple cheap bitwise operations.
+template <RelExpr... Exprs> bool oneof(RelExpr Expr) {
+  assert(0 <= Expr && (int)Expr < 64 &&
+         "RelExpr is too large for 64-bit mask!");
+  return (uint64_t(1) << Expr) & RelExprMaskBuilder<Exprs...>::build();
+}
+
 // This function is similar to the `handleTlsRelocation`. MIPS does not
 // support any relaxations for TLS relocations so by factoring out MIPS
 // handling in to the separate function we can simplify the code and do not
@@ -186,7 +218,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   if (Config->EMachine == EM_MIPS)
     return handleMipsTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
 
-  if (isRelExprOneOf<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
+  if (oneof<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
       Config->Shared) {
     if (In.Got->addDynTlsEntry(Sym)) {
       uint64_t Off = In.Got->getGlobalDynOffset(Sym);
@@ -198,8 +230,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (isRelExprOneOf<R_TLSLD_GOT, R_TLSLD_GOT_FROM_END, R_TLSLD_PC,
-                     R_TLSLD_HINT>(Expr)) {
+  if (oneof<R_TLSLD_GOT, R_TLSLD_GOT_FROM_END, R_TLSLD_PC, R_TLSLD_HINT>(
+          Expr)) {
     // Local-Dynamic relocs can be relaxed to Local-Exec.
     if (!Config->Shared) {
       C.Relocations.push_back(
@@ -242,8 +274,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (isRelExprOneOf<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL,
-                     R_TLSGD_GOT, R_TLSGD_GOT_FROM_END, R_TLSGD_PC>(Expr)) {
+  if (oneof<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL, R_TLSGD_GOT,
+            R_TLSGD_GOT_FROM_END, R_TLSGD_PC>(Expr)) {
     if (Config->Shared) {
       if (In.Got->addDynTlsEntry(Sym)) {
         uint64_t Off = In.Got->getGlobalDynOffset(Sym);
@@ -283,8 +315,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
 
   // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
   // defined.
-  if (isRelExprOneOf<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_AARCH64_GOT_PAGE_PC,
-                     R_GOT_OFF, R_TLSIE_HINT>(Expr) &&
+  if (oneof<R_GOT, R_GOT_FROM_END, R_GOT_PC, R_AARCH64_GOT_PAGE_PC, R_GOT_OFF,
+            R_TLSIE_HINT>(Expr) &&
       !Config->Shared && !Sym.IsPreemptible) {
     C.Relocations.push_back({R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Sym});
     return 1;
@@ -336,24 +368,23 @@ static bool isAbsoluteValue(const Symbol &Sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
-  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT>(Expr);
+  return oneof<R_PLT_PC, R_PPC_CALL_PLT, R_PLT>(Expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
 // returns false for TLS variables even though they need GOT, because
 // TLS variables uses GOT differently than the regular variables.
 static bool needsGot(RelExpr Expr) {
-  return isRelExprOneOf<R_GOT, R_GOT_OFF, R_HEXAGON_GOT, R_MIPS_GOT_LOCAL_PAGE,
-                        R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC,
-                        R_GOT_PC, R_GOT_FROM_END>(Expr);
+  return oneof<R_GOT, R_GOT_OFF, R_HEXAGON_GOT, R_MIPS_GOT_LOCAL_PAGE,
+               R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC,
+               R_GOT_PC, R_GOT_FROM_END>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
-  return isRelExprOneOf<R_PC, R_GOTREL, R_GOTREL_FROM_END, R_MIPS_GOTREL,
-                        R_PPC_CALL, R_PPC_CALL_PLT, R_AARCH64_PAGE_PC,
-                        R_RELAX_GOT_PC>(Expr);
+  return oneof<R_PC, R_GOTREL, R_GOTREL_FROM_END, R_MIPS_GOTREL, R_PPC_CALL,
+               R_PPC_CALL_PLT, R_AARCH64_PAGE_PC, R_RELAX_GOT_PC>(Expr);
 }
 
 // Returns true if a given relocation can be computed at link-time.
@@ -368,14 +399,13 @@ static bool isRelExpr(RelExpr Expr) {
 static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
-  if (isRelExprOneOf<R_GOT_FROM_END, R_GOT_OFF, R_HEXAGON_GOT, R_TLSLD_GOT_OFF,
-                     R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
-                     R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
-                     R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
-                     R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT,
-                     R_TLSGD_GOT_FROM_END, R_TLSGD_PC, R_PPC_CALL_PLT,
-                     R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE, R_HINT,
-                     R_TLSLD_HINT, R_TLSIE_HINT>(E))
+  if (oneof<R_GOT_FROM_END, R_GOT_OFF, R_HEXAGON_GOT, R_TLSLD_GOT_OFF,
+            R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
+            R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
+            R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
+            R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOT_FROM_END,
+            R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE,
+            R_HINT, R_TLSLD_HINT, R_TLSIE_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -991,7 +1021,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   RelExpr Expr = Target->getRelExpr(Type, Sym, RelocatedAddr);
 
   // Ignore "hint" relocations because they are only markers for relaxation.
-  if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
+  if (oneof<R_HINT, R_NONE>(Expr))
     return;
 
   // We can separate the small code model relocations into 2 categories:
@@ -1032,8 +1062,8 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
 
   // This relocation does not require got entry, but it is relative to got and
   // needs it to be created. Here we request for that.
-  if (isRelExprOneOf<R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_GOTREL,
-                     R_GOTREL_FROM_END, R_PPC_TOC>(Expr))
+  if (oneof<R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_GOTREL, R_GOTREL_FROM_END,
+            R_PPC_TOC>(Expr))
     In.Got->HasGotOffRel = true;
 
   // Read an addend.
@@ -1196,7 +1226,9 @@ static void scanRelocs(InputSectionBase &Sec, ArrayRef<RelTy> Rels) {
   // Sort relocations by offset to binary search for R_RISCV_PCREL_HI20
   if (Config->EMachine == EM_RISCV)
     std::stable_sort(Sec.Relocations.begin(), Sec.Relocations.end(),
-                     RelocationOffsetComparator{});
+                     [](const Relocation &LHS, const Relocation &RHS) {
+                       return LHS.Offset < RHS.Offset;
+                     });
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {

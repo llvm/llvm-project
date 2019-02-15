@@ -58,9 +58,26 @@ void elf::unlinkAsync(StringRef Path) {
   std::error_code EC = sys::fs::openFileForRead(Path, FD);
   sys::fs::remove(Path);
 
+  if (EC)
+    return;
+
   // close and therefore remove TempPath in background.
-  if (!EC)
-    std::thread([=] { ::close(FD); }).detach();
+  std::mutex M;
+  std::condition_variable CV;
+  bool Started = false;
+  std::thread([&, FD] {
+    {
+      std::lock_guard<std::mutex> L(M);
+      Started = true;
+      CV.notify_all();
+    }
+    ::close(FD);
+  }).detach();
+
+  // GLIBC 2.26 and earlier have race condition that crashes an entire process
+  // if the main thread calls exit(2) while other thread is starting up.
+  std::unique_lock<std::mutex> L(M);
+  CV.wait(L, [&] { return Started; });
 #endif
 }
 
