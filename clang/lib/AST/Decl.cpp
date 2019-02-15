@@ -4148,14 +4148,6 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
   return field_iterator(decl_iterator(FirstDecl));
 }
 
-void RecordDecl::reorderFields(ArrayRef<Decl *> Decls) const {
-  Decl *NewFirst, *NewLast;
-  std::tie(NewFirst, NewLast) =
-      BuildDeclChain(Decls, false);
-  FirstDecl = NewFirst;
-  LastDecl = NewLast;
-}
-
 /// completeDefinition - Notes that the definition of this type is now
 /// complete.
 void RecordDecl::completeDefinition() {
