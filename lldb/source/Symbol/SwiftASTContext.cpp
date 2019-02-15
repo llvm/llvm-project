@@ -18,7 +18,6 @@
 #include <set>
 #include <sstream>
 
-#include "swift/ABI/MetadataValues.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
