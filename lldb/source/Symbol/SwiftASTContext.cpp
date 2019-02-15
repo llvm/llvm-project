@@ -18,7 +18,6 @@
 #include <set>
 #include <sstream>
 
-#include "swift/ABI/MetadataValues.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
@@ -8148,12 +8147,12 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
   }
 }
 
-bool SwiftASTContext::LoadOneModule(
-    const SourceModule &module, SwiftASTContext &swift_ast_context,
-    lldb::StackFrameWP &stack_frame_wp,
-    llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
-        &additional_imports,
-    Status &error) {
+static bool
+LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
+              lldb::StackFrameWP &stack_frame_wp,
+              llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
+                  &additional_imports,
+              Status &error) {
   if (!module.path.size())
     return false;
   

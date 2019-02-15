@@ -28,8 +28,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Threading.h"
 
-#include "swift/AST/Module.h"
-
 #include <map>
 #include <set>
 
@@ -41,6 +39,7 @@ class IRGenOptions;
 class NominalTypeDecl;
 class SILModule;
 class VarDecl;
+class ModuleDecl;
 struct PrintOptions;
 namespace irgen {
 class FixedTypeInfo;
@@ -767,13 +766,6 @@ public:
   lldb::TypeSP GetCachedType(const ConstString &mangled);
 
   void SetCachedType(const ConstString &mangled, const lldb::TypeSP &type_sp);
-
-  static bool
-  LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
-                lldb::StackFrameWP &stack_frame_wp,
-                llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
-                    &additional_imports,
-                Status &error);
 
   static bool PerformUserImport(SwiftASTContext &swift_ast_context,
                                 SymbolContext &sc,

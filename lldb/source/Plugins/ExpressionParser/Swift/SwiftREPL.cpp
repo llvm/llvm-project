@@ -548,12 +548,14 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
   if (swift_ast) {
     swift::ASTContext *ast = swift_ast->GetASTContext();
     swift::REPLCompletions completions;
-    SourceModule repl_module_info;
-    repl_module_info.path.push_back(ConstString("repl"));
-    swift::ModuleDecl *repl_module =
-        swift_ast->GetModule(repl_module_info, error);
-    if (!repl_module) {
-      repl_module = swift_ast->CreateModule(repl_module_info, error);
+    SourceModule completion_module_info;
+    completion_module_info.path.push_back(ConstString("repl"));
+    swift::ModuleDecl *repl_module = nullptr;
+    if (m_completion_module_initialized)
+      repl_module =
+        swift_ast->GetModule(completion_module_info, error);
+    if (repl_module == nullptr) {
+      repl_module = swift_ast->CreateModule(completion_module_info, error);
       const swift::SourceFile::ImplicitModuleImportKind implicit_import_kind =
           swift::SourceFile::ImplicitModuleImportKind::Stdlib;
       llvm::Optional<unsigned> bufferID;
@@ -561,6 +563,7 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
           swift::SourceFile(*repl_module, swift::SourceFileKind::REPL, bufferID,
                             implicit_import_kind, /*Keep tokens*/false);
       repl_module->addFile(*repl_source_file);
+      m_completion_module_initialized = true;
     }
     if (repl_module) {
       swift::SourceFile &repl_source_file =
