@@ -262,7 +262,6 @@ def load_test_suite(inputs):
                                     useValgrind = False,
                                     valgrindLeakCheck = False,
                                     valgrindArgs = [],
-                                    singleProcess=False,
                                     noExecute = False,
                                     debug = False,
                                     isWindows = (platform.system()=='Windows'),

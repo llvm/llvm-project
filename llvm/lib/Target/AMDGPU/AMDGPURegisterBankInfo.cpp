@@ -96,10 +96,6 @@ unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &Dst,
 unsigned AMDGPURegisterBankInfo::getBreakDownCost(
   const ValueMapping &ValMapping,
   const RegisterBank *CurBank) const {
-  // Currently we should only see rewrites of defs since copies from VGPR to
-  // SGPR are illegal.
-  assert(CurBank == nullptr && "shouldn't see already assigned bank");
-
   assert(ValMapping.NumBreakDowns == 2 &&
          ValMapping.BreakDown[0].Length == 32 &&
          ValMapping.BreakDown[0].StartIdx == 0 &&
@@ -253,10 +249,10 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     AltMappings.push_back(&SSMapping);
 
     const InstructionMapping &VVMapping = getInstructionMapping(2, 1,
-      getOperandsMapping({AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
+      getOperandsMapping({AMDGPU::getValueMappingSGPR64Only(AMDGPU::VGPRRegBankID, Size),
                           AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1),
-                          AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size),
-                          AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size)}),
+                          AMDGPU::getValueMappingSGPR64Only(AMDGPU::VGPRRegBankID, Size),
+                          AMDGPU::getValueMappingSGPR64Only(AMDGPU::VGPRRegBankID, Size)}),
       4); // Num Operands
     AltMappings.push_back(&VVMapping);
 
@@ -336,6 +332,43 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   unsigned Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   switch (Opc) {
+  case AMDGPU::G_SELECT: {
+    unsigned DstReg = MI.getOperand(0).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    if (DstTy.getSizeInBits() != 64)
+      break;
+
+    SmallVector<unsigned, 2> DefRegs(OpdMapper.getVRegs(0));
+    SmallVector<unsigned, 1> Src0Regs(OpdMapper.getVRegs(1));
+    SmallVector<unsigned, 2> Src1Regs(OpdMapper.getVRegs(2));
+    SmallVector<unsigned, 2> Src2Regs(OpdMapper.getVRegs(3));
+
+    // All inputs are SGPRs, nothing special to do.
+    if (DefRegs.empty()) {
+      assert(Src1Regs.empty() && Src2Regs.empty());
+      break;
+    }
+
+    MachineIRBuilder B(MI);
+    if (Src0Regs.empty())
+      Src0Regs.push_back(MI.getOperand(1).getReg());
+    else {
+      assert(Src0Regs.size() == 1);
+    }
+
+    if (Src1Regs.empty())
+      split64BitValueForMapping(B, Src1Regs, MI.getOperand(2).getReg());
+
+    if (Src2Regs.empty())
+      split64BitValueForMapping(B, Src2Regs, MI.getOperand(3).getReg());
+
+    B.buildSelect(DefRegs[0], Src0Regs[0], Src1Regs[0], Src2Regs[0]);
+    B.buildSelect(DefRegs[1], Src0Regs[0], Src1Regs[1], Src2Regs[1]);
+
+    MRI.setRegBank(DstReg, getRegBank(AMDGPU::VGPRRegBankID));
+    MI.eraseFromParent();
+    return;
+  }
   case AMDGPU::G_AND:
   case AMDGPU::G_OR:
   case AMDGPU::G_XOR: {
@@ -572,6 +605,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLVM_FALLTHROUGH;
   }
 
+  case AMDGPU::G_GEP:
   case AMDGPU::G_ADD:
   case AMDGPU::G_SUB:
   case AMDGPU::G_MUL:
@@ -709,16 +743,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[1] = nullptr; // Predicate Operand.
     OpdsMapping[2] = AMDGPU::getValueMapping(Op2Bank, Size);
     OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
-    break;
-  }
-  case AMDGPU::G_GEP: {
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      if (!MI.getOperand(i).isReg())
-        continue;
-
-      unsigned Size = MRI.getType(MI.getOperand(i).getReg()).getSizeInBits();
-      OpdsMapping[i] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
-    }
     break;
   }
   case AMDGPU::G_STORE: {
@@ -871,10 +895,19 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                     Op3Bank == AMDGPU::SGPRRegBankID;
     unsigned Bank = SGPRSrcs ? AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
     Op1Bank = SGPRSrcs ? AMDGPU::SCCRegBankID : AMDGPU::VCCRegBankID;
-    OpdsMapping[0] = AMDGPU::getValueMapping(Bank, Size);
-    OpdsMapping[1] = AMDGPU::getValueMapping(Op1Bank, 1);
-    OpdsMapping[2] = AMDGPU::getValueMapping(Bank, Size);
-    OpdsMapping[3] = AMDGPU::getValueMapping(Bank, Size);
+
+    if (Size == 64) {
+      OpdsMapping[0] = AMDGPU::getValueMappingSGPR64Only(Bank, Size);
+      OpdsMapping[1] = AMDGPU::getValueMapping(Op1Bank, 1);
+      OpdsMapping[2] = AMDGPU::getValueMappingSGPR64Only(Bank, Size);
+      OpdsMapping[3] = AMDGPU::getValueMappingSGPR64Only(Bank, Size);
+    } else {
+      OpdsMapping[0] = AMDGPU::getValueMapping(Bank, Size);
+      OpdsMapping[1] = AMDGPU::getValueMapping(Op1Bank, 1);
+      OpdsMapping[2] = AMDGPU::getValueMapping(Bank, Size);
+      OpdsMapping[3] = AMDGPU::getValueMapping(Bank, Size);
+    }
+
     break;
   }
 

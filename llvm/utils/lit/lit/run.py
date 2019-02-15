@@ -133,7 +133,7 @@ class Run(object):
         be given an UNRESOLVED result.
         """
         # Don't do anything if we aren't going to run any tests.
-        if not self.tests or jobs == 0:
+        if not self.tests:
             return
 
         # Save the display object on the runner so that we can update it from
@@ -142,12 +142,14 @@ class Run(object):
 
         self.failure_count = 0
         self.hit_max_failures = False
-        if self.lit_config.singleProcess:
+        if jobs == 1:
             global child_lit_config
             child_lit_config = self.lit_config
             for test_index, test in enumerate(self.tests):
                 result = worker_run_one_test(test_index, test)
                 self.consume_test_result(result)
+                if self.hit_max_failures:
+                    break
         else:
             self.execute_tests_in_pool(jobs, max_time)
 

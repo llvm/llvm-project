@@ -155,11 +155,13 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       if (!isPreISelGenericOpcode(MI.getOpcode()))
         continue;
       if (isArtifact(MI))
-        ArtifactList.insert(&MI);
+        ArtifactList.deferred_insert(&MI);
       else
-        InstList.insert(&MI);
+        InstList.deferred_insert(&MI);
     }
   }
+  ArtifactList.finalize();
+  InstList.finalize();
   std::unique_ptr<MachineIRBuilder> MIRBuilder;
   GISelCSEInfo *CSEInfo = nullptr;
   bool EnableCSE = EnableCSEInLegalizer.getNumOccurrences()

@@ -153,6 +153,25 @@ bool MipsInstructionSelector::select(MachineInstr &I,
              .addImm(0);
     break;
   }
+  case G_BRCOND: {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::BNE))
+             .add(I.getOperand(0))
+             .addUse(Mips::ZERO)
+             .add(I.getOperand(1));
+    break;
+  }
+  case G_PHI: {
+    const unsigned DestReg = I.getOperand(0).getReg();
+    const unsigned DestRegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
+    const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
+
+    if (DestRegBank != Mips::GPRBRegBankID || OpSize != 32)
+      return false;
+
+    const TargetRegisterClass *DefRC = &Mips::GPR32RegClass;
+    I.setDesc(TII.get(TargetOpcode::PHI));
+    return RBI.constrainGenericRegister(DestReg, *DefRC, MRI);
+  }
   case G_STORE:
   case G_LOAD:
   case G_ZEXTLOAD:

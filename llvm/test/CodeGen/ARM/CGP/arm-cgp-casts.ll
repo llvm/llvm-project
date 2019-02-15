@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=thumbv8.main -mcpu=cortex-m33 %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
-; RUN: llc -mtriple=thumbv7-linux-android %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-NODSP
-; RUN: llc -mtriple=thumbv7em %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP
-; RUN: llc -mtriple=thumbv8 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP-IMM
+; RUN: llc -mtriple=thumbv8.main -mcpu=cortex-m33 %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NODSP
+; RUN: llc -mtriple=thumbv7-linux-android %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NODSP
+; RUN: llc -mtriple=thumbv7em %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DSP
+; RUN: llc -mtriple=thumbv8 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DSP-IMM
 
 ; Transform will fail because the trunc is not a sink.
-; CHECK-COMMON-LABEL: dsp_trunc
-; CHECK-COMMON:   add   [[ADD:[^ ]+]],
+; CHECK-LABEL: dsp_trunc
+; CHECK:   add   [[ADD:[^ ]+]],
 ; CHECK-DSP-NEXT: ldrh  r1, [r3]
 ; CHECK-DSP-NEXT: ldrh  r2, [r2]
 ; CHECK-DSP-NEXT: subs  r1, r1, [[ADD]]
@@ -14,15 +14,10 @@
 ; CHECK-DSP-NEXT: uxth  r2, r0
 ; CHECK-DSP-NEXT: cmp   r2, r3
 
-; With DSP-IMM, we could have:
-; movs  r1, #0
-; uxth  r0, r0
-; usub16  r1, r1, r0
-; ldrh  r0, [r2]
-; ldrh  r3, [r3]
-; usub16  r0, r0, r1
-; uadd16  r1, r3, r1
-; cmp r0, r1
+; CHECK-DSP-IMM: usub16
+; CHECK-DSP-IMM: usub16
+; CHECK-DSP-IMM: uadd16
+; CHECK-DSP-IMM: cmp
 define i16 @dsp_trunc(i32 %arg0, i32 %arg1, i16* %gep0, i16* %gep1) {
 entry:
   %add0 = add i32 %arg0, %arg1
@@ -37,10 +32,10 @@ entry:
   ret i16 %res
 }
 
-; CHECK-COMMON-LABEL: trunc_i16_i8
-; CHECK-COMMON: ldrh
-; CHECK-COMMON: uxtb
-; CHECK-COMMON: cmp
+; CHECK-LABEL: trunc_i16_i8
+; CHECK: ldrh
+; CHECK: uxtb
+; CHECK: cmp
 define i8 @trunc_i16_i8(i16* %ptr, i16 zeroext %arg0, i8 zeroext %arg1) {
 entry:
   %0 = load i16, i16* %ptr
@@ -53,10 +48,10 @@ entry:
 
 ; The pass perform the transform, but a uxtb will still be inserted to handle
 ; the zext to the icmp.
-; CHECK-COMMON-LABEL: icmp_i32_zext:
-; CHECK-COMMON: sub
-; CHECK-COMMON: uxtb
-; CHECK-COMMON: cmp
+; CHECK-LABEL: icmp_i32_zext:
+; CHECK: sub
+; CHECK: uxtb
+; CHECK: cmp
 define i8 @icmp_i32_zext(i8* %ptr) {
 entry:
   %gep = getelementptr inbounds i8, i8* %ptr, i32 0
@@ -86,9 +81,9 @@ exit:
 }
 
 ; Won't don't handle sext
-; CHECK-COMMON-LABEL: icmp_sext_zext_store_i8_i16
-; CHECK-COMMON: ldrb
-; CHECK-COMMON: ldrsh
+; CHECK-LABEL: icmp_sext_zext_store_i8_i16
+; CHECK: ldrb
+; CHECK: ldrsh
 define i32 @icmp_sext_zext_store_i8_i16() {
 entry:
   %0 = load i8, i8* getelementptr inbounds ([16 x i8], [16 x i8]* @d_uch, i32 0, i32 2), align 1
@@ -102,11 +97,11 @@ entry:
   ret i32 %conv3
 }
 
-; CHECK-COMMON-LABEL: or_icmp_ugt:
-; CHECK-COMMON:     ldrb
-; CHECK-COMMON:     subs.w
-; CHECK-COMMON-NOT: uxt
-; CHECK-COMMON:     cmp
+; CHECK-LABEL: or_icmp_ugt:
+; CHECK:     ldrb
+; CHECK:     subs.w
+; CHECK-NOT: uxt
+; CHECK:     cmp
 define i1 @or_icmp_ugt(i32 %arg, i8* %ptr) {
 entry:
   %0 = load i8, i8* %ptr
@@ -122,10 +117,10 @@ entry:
 
 ; We currently only handle truncs as sinks, so a uxt will still be needed for
 ; the icmp ugt instruction.
-; CHECK-COMMON-LABEL: urem_trunc_icmps
-; CHECK-COMMON: cmp
-; CHECK-COMMON: uxt
-; CHECK-COMMON: cmp
+; CHECK-LABEL: urem_trunc_icmps
+; CHECK: cmp
+; CHECK: uxt
+; CHECK: cmp
 define void @urem_trunc_icmps(i16** %in, i32* %g, i32* %k) {
 entry:
   %ptr = load i16*, i16** %in, align 4
@@ -157,10 +152,10 @@ exit:
 
 ; Check that %exp requires uxth in all cases, and will also be required to
 ; promote %1 for the call - unless we can generate a uadd16.
-; CHECK-COMMON-LABEL: zext_load_sink_call:
-; CHECK-COMMON: uxt
+; CHECK-LABEL: zext_load_sink_call:
+; CHECK: uxt
 ; CHECK-DSP-IMM: uadd16
-; CHECK-COMMON: cmp
+; CHECK: cmp
 ; CHECK-NODSP: uxt
 ; CHECK-DSP-IMM-NOT: uxt
 define i32 @zext_load_sink_call(i16* %ptr, i16 %exp) {
@@ -181,8 +176,8 @@ exit:
   ret i32 %exitval
 }
 
-; CHECK-COMMON-LABEL: bitcast_i16
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: bitcast_i16
+; CHECK-NOT: uxt
 define i16 @bitcast_i16(i16 zeroext %arg0, i16 zeroext %arg1) {
 entry:
   %cast = bitcast i16 12345 to i16
@@ -192,8 +187,8 @@ entry:
   ret i16 %res
 }
 
-; CHECK-COMMON-LABEL: bitcast_i8
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: bitcast_i8
+; CHECK-NOT: uxt
 define i8 @bitcast_i8(i8 zeroext %arg0, i8 zeroext %arg1) {
 entry:
   %cast = bitcast i8 127 to i8
@@ -203,8 +198,8 @@ entry:
   ret i8 %res
 }
 
-; CHECK-COMMON-LABEL: bitcast_i16_minus
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: bitcast_i16_minus
+; CHECK-NOT: uxt
 define i16 @bitcast_i16_minus(i16 zeroext %arg0, i16 zeroext %arg1) {
 entry:
   %cast = bitcast i16 -12345 to i16
@@ -214,8 +209,8 @@ entry:
   ret i16 %res
 }
 
-; CHECK-COMMON-LABEL: bitcast_i8_minus
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: bitcast_i8_minus
+; CHECK-NOT: uxt
 define i8 @bitcast_i8_minus(i8 zeroext %arg0, i8 zeroext %arg1) {
 entry:
   %cast = bitcast i8 -127 to i8
@@ -231,8 +226,8 @@ declare i32 @dummy(i32, i32)
 @sh1 = hidden local_unnamed_addr global i16 0, align 2
 @d_sh = hidden local_unnamed_addr global [16 x i16] zeroinitializer, align 2
 
-; CHECK-COMMON-LABEL: two_stage_zext_trunc_mix
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: two_stage_zext_trunc_mix
+; CHECK-NOT: uxt
 define i8* @two_stage_zext_trunc_mix(i32* %this, i32 %__pos1, i32 %__n1, i32** %__str, i32 %__pos2, i32 %__n2) {
 entry:
   %__size_.i.i.i.i = bitcast i32** %__str to i8*
@@ -255,8 +250,8 @@ entry:
   ret i8* %res
 }
 
-; CHECK-COMMON-LABEL: search_through_zext_1
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: search_through_zext_1
+; CHECK-NOT: uxt
 define i8 @search_through_zext_1(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c) {
 entry:
   %add = add nuw i8 %a, %b
@@ -279,9 +274,9 @@ if.end:
 ; TODO: We should be able to remove the uxtb here. The transform fails because
 ; the icmp ugt uses an i32, which is too large... but this doesn't matter
 ; because it won't be writing a large value to a register as a result.
-; CHECK-COMMON-LABEL: search_through_zext_2
-; CHECK-COMMON: uxtb
-; CHECK-COMMON: uxtb
+; CHECK-LABEL: search_through_zext_2
+; CHECK: uxtb
+; CHECK: uxtb
 define i8 @search_through_zext_2(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c, i32 %d) {
 entry:
   %add = add nuw i8 %a, %b
@@ -304,9 +299,9 @@ if.end:
 ; TODO: We should be able to remove the uxtb here as all the calculations are
 ; performed on i8s. The promotion of i8 to i16 and then the later truncation
 ; results in the uxtb.
-; CHECK-COMMON-LABEL: search_through_zext_3
-; CHECK-COMMON: uxtb
-; CHECK-COMMON: uxtb
+; CHECK-LABEL: search_through_zext_3
+; CHECK: uxtb
+; CHECK: uxtb
 define i8 @search_through_zext_3(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c, i32 %d) {
 entry:
   %add = add nuw i8 %a, %b
@@ -328,8 +323,8 @@ if.end:
 }
 
 ; TODO: We should be able to remove the uxt that gets introduced for %conv2
-; CHECK-COMMON-LABEL: search_through_zext_cmp
-; CHECK-COMMON: uxt
+; CHECK-LABEL: search_through_zext_cmp
+; CHECK: uxt
 define i8 @search_through_zext_cmp(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c) {
 entry:
   %cmp = icmp ne i8 %a, %b
@@ -349,8 +344,8 @@ if.end:
   ret i8 %retval
 }
 
-; CHECK-COMMON-LABEL: search_through_zext_load
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: search_through_zext_load
+; CHECK-NOT: uxt
 define i8 @search_through_zext_load(i8* %a, i8 zeroext %b, i16 zeroext %c) {
 entry:
   %load = load i8, i8* %a
@@ -370,10 +365,10 @@ if.end:
   ret i8 %retval
 }
 
-; CHECK-COMMON-LABEL: trunc_sink_less_than
-; CHECK-COMMON-NOT: uxth
-; CHECK-COMMON: cmp
-; CHECK-COMMON: uxtb
+; CHECK-LABEL: trunc_sink_less_than
+; CHECK-NOT: uxth
+; CHECK: cmp
+; CHECK: uxtb
 define i16 @trunc_sink_less_than_cmp(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d) {
 entry:
   %sub = sub nuw i16 %b, %a
@@ -393,10 +388,10 @@ if.end:
 }
 
 ; TODO: We should be able to remove the uxth introduced to handle %sub
-; CHECK-COMMON-LABEL: trunc_sink_less_than_arith
-; CHECK-COMMON: uxth
-; CHECK-COMMON: cmp
-; CHECK-COMMON: uxtb
+; CHECK-LABEL: trunc_sink_less_than_arith
+; CHECK: uxth
+; CHECK: cmp
+; CHECK: uxtb
 define i16 @trunc_sink_less_than_arith(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8 zeroext %e) {
 entry:
   %sub = sub nuw i16 %b, %a
@@ -415,10 +410,10 @@ if.end:
   ret i16 %retval
 }
 
-; CHECK-COMMON-LABEL: trunc_sink_less_than_store
-; CHECK-COMMON-NOT: uxt
-; CHECK-COMMON: cmp
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: trunc_sink_less_than_store
+; CHECK-NOT: uxt
+; CHECK: cmp
+; CHECK-NOT: uxt
 define i16 @trunc_sink_less_than_store(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8* %e) {
 entry:
   %sub = sub nuw i16 %b, %a
@@ -436,8 +431,8 @@ if.end:
   ret i16 %retval
 }
 
-; CHECK-COMMON-LABEL: trunc_sink_less_than_ret
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: trunc_sink_less_than_ret
+; CHECK: uxt{{.*}}b
 define i8 @trunc_sink_less_than_ret(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8 zeroext %e) {
 entry:
   %sub = sub nuw i16 %b, %a
@@ -454,10 +449,10 @@ if.end:
   ret i8 %retval
 }
 
-; CHECK-COMMON-LABEL: trunc_sink_less_than_zext_ret
-; CHECK-COMMON-NOT: uxth
-; CHECK-COMMON: sub
-; CHECK-COMMON: uxtb
+; CHECK-LABEL: trunc_sink_less_than_zext_ret
+; CHECK-NOT: uxth
+; CHECK: sub
+; CHECK: uxtb
 define zeroext i8 @trunc_sink_less_than_zext_ret(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8 zeroext %e) {
 entry:
   %sub = sub nuw i16 %b, %a
@@ -474,8 +469,8 @@ if.end:
   ret i8 %retval
 }
 
-; CHECK-COMMON-LABEL: bitcast_i1
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: bitcast_i1
+; CHECK-NOT: uxt
 define i32 @bitcast_i1(i16 zeroext %a, i32 %b, i32 %c) {
 entry:
   %0 = bitcast i1 1 to i1
@@ -495,11 +490,11 @@ exit:
   ret i32 %retval
 }
 
-; CHECK-COMMON-LABEL: search_back_through_trunc
-; CHECK-COMMON-NOT: uxt
-; CHECK-COMMON: cmp
-; CHECK-COMMON: strb
-; CHECK-COMMON: strb
+; CHECK-LABEL: search_back_through_trunc
+; CHECK-NOT: uxt
+; CHECK: cmp
+; CHECK: strb
+; CHECK: strb
 define void @search_back_through_trunc(i8* %a, i8* %b, i8* %c, i8* %d, i16* %e) {
 entry:
   %0 = load i8, i8* %a, align 1
@@ -590,9 +585,10 @@ cond.end:
 }
 
 ; CHECK-LABEL: dont_replace_trunc_1
-; CHECK: cmp
+; CHECK: sxth
 ; CHECK: uxtb
-define void @dont_replace_trunc_1(i8* %a, i16* %b, i16* %c, i32* %d, i8* %e, i32* %f) {
+; CHECK: uxth
+define i1 @dont_replace_trunc_1(i8* %a, i16* %b, i16* %c, i32* %d, i8* %e, i32* %f) {
 entry:
   %0 = load i16, i16* %c, align 2
   %1 = load i16, i16* %b, align 2
@@ -608,13 +604,7 @@ entry:
   %4 = zext i8 %narrow to i16
   %conv5 = or i16 %0, %4
   %tobool = icmp eq i16 %conv5, 0
-  br i1 %tobool, label %if.end, label %for.cond
-
-for.cond:                                         ; preds = %entry, %for.cond
-  br label %for.cond
-
-if.end:                                           ; preds = %entry
-  ret void
+  ret i1 %tobool
 }
 
 ; CHECK-LABEL: dont_replace_trunc_2
@@ -631,4 +621,25 @@ entry:
   store i8 %or, i8* %b, align 1
   %conv5 = zext i8 %or to i32
   ret i32 %conv5
+}
+
+; CHECK-LABEL: replace_trunk_with_mask
+; CHECK: div
+; CHECK: uxtb
+define i32 @replace_trunk_with_mask(i16* %a) {
+entry:
+  %0 = load i16, i16* %a
+  %cmp = icmp eq i16 %0, 0
+  br i1 %cmp, label %cond.end, label %cond.false
+
+cond.false:
+  %1 = urem i16 535, %0
+  %.lhs.trunc = trunc i16 %1 to i8
+  %2 = udiv i8 %.lhs.trunc, 3
+  %phitmp = zext i8 %2 to i32
+  br label %cond.end
+
+cond.end:
+  %cond = phi i32 [ %phitmp, %cond.false ], [ 0, %entry ]
+  ret i32 %cond
 }

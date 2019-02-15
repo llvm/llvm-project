@@ -1176,7 +1176,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_BRCOND:
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
+    widenScalarSrc(MI, WideTy, 0, MIRBuilder.getBoolExtOp(false, false));
     Observer.changedInstr(MI);
     return Legalized;
 

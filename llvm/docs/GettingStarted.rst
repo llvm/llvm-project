@@ -64,8 +64,8 @@ Here's the short story for getting up and running quickly with LLVM:
 
      * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
        subprojects you'd like to additionally build. Can include any of: clang,
-       libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld, polly, or
-       debuginfo-tests.
+       clang-tools-extra, libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld,
+       polly, or debuginfo-tests.
 
        For example, to build LLVM, Clang, libcxx, and libcxxabi, use
        ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
