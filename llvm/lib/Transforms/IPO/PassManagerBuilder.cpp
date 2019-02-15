@@ -517,11 +517,6 @@ void PassManagerBuilder::populateModulePassManager(
 
   MPM.add(createDeadArgEliminationPass()); // Dead argument elimination
 
-  // Split out cold code before inlining. See comment in the new PM
-  // (\ref buildModuleSimplificationPipeline).
-  if ((EnableHotColdSplit || SplitColdCode) && DefaultOrPreLinkPipeline)
-    MPM.add(createHotColdSplittingPass());
-
   addInstructionCombiningPass(MPM); // Clean up after IPCP & DAE
   addExtensionsToPM(EP_Peephole, MPM);
   MPM.add(createCFGSimplificationPass()); // Clean up after IPCP & DAE
@@ -729,6 +724,12 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createConstantMergePass());     // Merge dup global constants
   }
 
+  // See comment in the new PM for justification of scheduling splitting at
+  // this stage (\ref buildModuleSimplificationPipeline).
+  if ((EnableHotColdSplit || SplitColdCode) &&
+      !(PrepareForLTO || PrepareForThinLTO))
+    MPM.add(createHotColdSplittingPass());
+
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
 
@@ -915,6 +916,11 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
 void PassManagerBuilder::addLateLTOOptimizationPasses(
     legacy::PassManagerBase &PM) {
+  // See comment in the new PM for justification of scheduling splitting at
+  // this stage (\ref buildModuleSimplificationPipeline).
+  if (EnableHotColdSplit || SplitColdCode)
+    PM.add(createHotColdSplittingPass());
+
   // Delete basic blocks, which optimization passes may have killed.
   PM.add(createCFGSimplificationPass());
 
