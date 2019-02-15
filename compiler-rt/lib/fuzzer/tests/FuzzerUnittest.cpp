@@ -619,7 +619,7 @@ TEST(Merge, Bad) {
     "2\n2\nA\n",
     "2\n2\nA\nB\nC\n",
     "0\n0\n",
-    "1\n1\nA\nDONE 0",
+    "1\n1\nA\nFT 0",
     "1\n1\nA\nSTARTED 1",
   };
   Merger M;
@@ -644,9 +644,9 @@ static void Merge(const std::string &Input,
                   size_t NumNewFeatures) {
   Merger M;
   Vector<std::string> NewFiles;
-  Set<uint32_t> NewFeatures;
+  Set<uint32_t> NewFeatures, NewCov;
   EXPECT_TRUE(M.Parse(Input, true));
-  EXPECT_EQ(NumNewFeatures, M.Merge({}, &NewFeatures, &NewFiles));
+  EXPECT_EQ(NumNewFeatures, M.Merge({}, &NewFeatures, {}, &NewCov, &NewFiles));
   EQ(NewFiles, Result);
 }
 
@@ -670,9 +670,9 @@ TEST(Merge, Good) {
 
   EXPECT_TRUE(M.Parse("3\n1\nAA\nBB\nC\n"
                         "STARTED 0 1000\n"
-                        "DONE 0 1 2 3\n"
+                        "FT 0 1 2 3\n"
                         "STARTED 1 1001\n"
-                        "DONE 1 4 5 6 \n"
+                        "FT 1 4 5 6 \n"
                         "STARTED 2 1002\n"
                         "", true));
   EXPECT_EQ(M.Files.size(), 3U);
@@ -690,12 +690,12 @@ TEST(Merge, Good) {
 
 
   Vector<std::string> NewFiles;
-  Set<uint32_t> NewFeatures;
+  Set<uint32_t> NewFeatures, NewCov;
 
   EXPECT_TRUE(M.Parse("3\n2\nAA\nBB\nC\n"
-                        "STARTED 0 1000\nDONE 0 1 2 3\n"
-                        "STARTED 1 1001\nDONE 1 4 5 6 \n"
-                        "STARTED 2 1002\nDONE 2 6 1 3 \n"
+                        "STARTED 0 1000\nFT 0 1 2 3\n"
+                        "STARTED 1 1001\nFT 1 4 5 6 \n"
+                        "STARTED 2 1002\nFT 2 6 1 3 \n"
                         "", true));
   EXPECT_EQ(M.Files.size(), 3U);
   EXPECT_EQ(M.NumFilesInFirstCorpus, 2U);
@@ -704,24 +704,24 @@ TEST(Merge, Good) {
   EQ(M.Files[0].Features, {1, 2, 3});
   EQ(M.Files[1].Features, {4, 5, 6});
   EQ(M.Files[2].Features, {1, 3, 6});
-  EXPECT_EQ(0U, M.Merge({}, &NewFeatures, &NewFiles));
+  EXPECT_EQ(0U, M.Merge({}, &NewFeatures, {}, &NewCov, &NewFiles));
   EQ(NewFiles, {});
 
   EXPECT_TRUE(M.Parse("3\n1\nA\nB\nC\n"
-                        "STARTED 0 1000\nDONE 0 1 2 3\n"
-                        "STARTED 1 1001\nDONE 1 4 5 6 \n"
-                        "STARTED 2 1002\nDONE 2 6 1 3\n"
+                        "STARTED 0 1000\nFT 0 1 2 3\n"
+                        "STARTED 1 1001\nFT 1 4 5 6 \n"
+                        "STARTED 2 1002\nFT 2 6 1 3\n"
                         "", true));
   EQ(M.Files[0].Features, {1, 2, 3});
   EQ(M.Files[1].Features, {4, 5, 6});
   EQ(M.Files[2].Features, {1, 3, 6});
-  EXPECT_EQ(3U, M.Merge({}, &NewFeatures, &NewFiles));
+  EXPECT_EQ(3U, M.Merge({}, &NewFeatures, {}, &NewCov, &NewFiles));
   EQ(NewFiles, {"B"});
 
   // Same as the above, but with InitialFeatures.
   EXPECT_TRUE(M.Parse("2\n0\nB\nC\n"
-                        "STARTED 0 1001\nDONE 0 4 5 6 \n"
-                        "STARTED 1 1002\nDONE 1 6 1 3\n"
+                        "STARTED 0 1001\nFT 0 4 5 6 \n"
+                        "STARTED 1 1002\nFT 1 6 1 3\n"
                         "", true));
   EQ(M.Files[0].Features, {4, 5, 6});
   EQ(M.Files[1].Features, {1, 3, 6});
@@ -729,36 +729,36 @@ TEST(Merge, Good) {
   InitialFeatures.insert(1);
   InitialFeatures.insert(2);
   InitialFeatures.insert(3);
-  EXPECT_EQ(3U, M.Merge(InitialFeatures, &NewFeatures, &NewFiles));
+  EXPECT_EQ(3U, M.Merge(InitialFeatures, &NewFeatures, {}, &NewCov, &NewFiles));
   EQ(NewFiles, {"B"});
 }
 
 TEST(Merge, Merge) {
 
   Merge("3\n1\nA\nB\nC\n"
-        "STARTED 0 1000\nDONE 0 1 2 3\n"
-        "STARTED 1 1001\nDONE 1 4 5 6 \n"
-        "STARTED 2 1002\nDONE 2 6 1 3 \n",
+        "STARTED 0 1000\nFT 0 1 2 3\n"
+        "STARTED 1 1001\nFT 1 4 5 6 \n"
+        "STARTED 2 1002\nFT 2 6 1 3 \n",
         {"B"}, 3);
 
   Merge("3\n0\nA\nB\nC\n"
-        "STARTED 0 2000\nDONE 0 1 2 3\n"
-        "STARTED 1 1001\nDONE 1 4 5 6 \n"
-        "STARTED 2 1002\nDONE 2 6 1 3 \n",
+        "STARTED 0 2000\nFT 0 1 2 3\n"
+        "STARTED 1 1001\nFT 1 4 5 6 \n"
+        "STARTED 2 1002\nFT 2 6 1 3 \n",
         {"A", "B", "C"}, 6);
 
   Merge("4\n0\nA\nB\nC\nD\n"
-        "STARTED 0 2000\nDONE 0 1 2 3\n"
-        "STARTED 1 1101\nDONE 1 4 5 6 \n"
-        "STARTED 2 1102\nDONE 2 6 1 3 100 \n"
-        "STARTED 3 1000\nDONE 3 1  \n",
+        "STARTED 0 2000\nFT 0 1 2 3\n"
+        "STARTED 1 1101\nFT 1 4 5 6 \n"
+        "STARTED 2 1102\nFT 2 6 1 3 100 \n"
+        "STARTED 3 1000\nFT 3 1  \n",
         {"A", "B", "C", "D"}, 7);
 
   Merge("4\n1\nA\nB\nC\nD\n"
-        "STARTED 0 2000\nDONE 0 4 5 6 7 8\n"
-        "STARTED 1 1100\nDONE 1 1 2 3 \n"
-        "STARTED 2 1100\nDONE 2 2 3 \n"
-        "STARTED 3 1000\nDONE 3 1  \n",
+        "STARTED 0 2000\nFT 0 4 5 6 7 8\n"
+        "STARTED 1 1100\nFT 1 1 2 3 \n"
+        "STARTED 2 1100\nFT 2 2 3 \n"
+        "STARTED 3 1000\nFT 3 1  \n",
         {"B", "D"}, 3);
 }
 

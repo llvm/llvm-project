@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 #pragma omp cancellation point parallel // expected-error {{'#pragma omp cancellation point' cannot be an immediate substatement}} expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
     switch (argc)
     case 1:
-#pragma omp cancellation point sections // expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
+#pragma omp cancellation point sections // expected-error {{'#pragma omp cancellation point' cannot be an immediate substatement}} expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
   switch (argc)
   case 1: {
 #pragma omp cancellation point for // expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 #pragma omp cancellation point taskgroup // expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
     }
 label:
-#pragma omp cancellation point parallel // expected-error {{'#pragma omp cancellation point' cannot be an immediate substatement}} expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
+#pragma omp cancellation point parallel // expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
 label1 : {
 #pragma omp cancellation point sections // expected-error {{orphaned 'omp cancellation point' directives are prohibited; perhaps you forget to enclose the directive into a region?}}
 }

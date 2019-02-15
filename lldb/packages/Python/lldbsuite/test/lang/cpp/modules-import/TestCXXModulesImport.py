@@ -27,5 +27,5 @@ class CXXModulesImportTestCase(TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.cpp'))
 
-        self.expect("expr -- @import Bar")
+        self.expect("expr -l Objective-C++ -- @import Bar")
         self.expect("expr -- Bar()", substrs = ["success"])

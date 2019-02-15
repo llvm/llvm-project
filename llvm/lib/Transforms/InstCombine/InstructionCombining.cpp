@@ -1375,7 +1375,8 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   if (match(LHS, m_ShuffleVector(m_Value(L0), m_Value(L1), m_Constant(Mask))) &&
       match(RHS, m_ShuffleVector(m_Value(R0), m_Value(R1), m_Specific(Mask))) &&
       LHS->hasOneUse() && RHS->hasOneUse() &&
-      cast<ShuffleVectorInst>(LHS)->isConcat()) {
+      cast<ShuffleVectorInst>(LHS)->isConcat() &&
+      cast<ShuffleVectorInst>(RHS)->isConcat()) {
     // This transform does not have the speculative execution constraint as
     // below because the shuffle is a concatenation. The new binops are
     // operating on exactly the same elements as the existing binop.

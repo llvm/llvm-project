@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -61,6 +62,56 @@ DynamicLoader *DynamicLoaderWindowsDYLD::CreateInstance(Process *process,
   return nullptr;
 }
 
+void DynamicLoaderWindowsDYLD::OnLoadModule(const ModuleSpec &module_spec,
+                                            lldb::addr_t module_addr) {
+  // Confusingly, there is no Target::AddSharedModule.  Instead, calling
+  // GetSharedModule() with a new module will add it to the module list and
+  // return a corresponding ModuleSP.
+  Status error;
+  ModuleSP module_sp =
+      m_process->GetTarget().GetSharedModule(module_spec, &error);
+  if (error.Fail())
+    return;
+
+  m_loaded_modules[module_sp] = module_addr;
+  UpdateLoadedSectionsCommon(module_sp, module_addr, false);
+}
+
+void DynamicLoaderWindowsDYLD::OnUnloadModule(lldb::addr_t module_addr) {
+  Address resolved_addr;
+  if (!m_process->GetTarget().ResolveLoadAddress(module_addr, resolved_addr))
+    return;
+
+  ModuleSP module_sp = resolved_addr.GetModule();
+  if (module_sp) {
+    m_loaded_modules.erase(module_sp);
+    UnloadSectionsCommon(module_sp);
+  }
+}
+
+lldb::addr_t DynamicLoaderWindowsDYLD::GetLoadAddress(ModuleSP executable) {
+  // First, see if the load address is already cached.
+  auto it = m_loaded_modules.find(executable);
+  if (it != m_loaded_modules.end() && it->second != LLDB_INVALID_ADDRESS)
+    return it->second;
+
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+
+  // Second, try to get it through the process plugins.  For a remote process,
+  // the remote platform will be responsible for providing it.
+  FileSpec file_spec(executable->GetPlatformFileSpec());
+  bool is_loaded = false;
+  Status status =
+      m_process->GetFileLoadAddress(file_spec, is_loaded, load_addr);
+  // Servers other than lldb server could respond with a bogus address.
+  if (status.Success() && is_loaded && load_addr != LLDB_INVALID_ADDRESS) {
+    m_loaded_modules[executable] = load_addr;
+    return load_addr;
+  }
+
+  return LLDB_INVALID_ADDRESS;
+}
+
 void DynamicLoaderWindowsDYLD::DidAttach() {
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
   if (log)
@@ -73,21 +124,17 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
 
   // Try to fetch the load address of the file from the process, since there
   // could be randomization of the load address.
+  lldb::addr_t load_addr = GetLoadAddress(executable);
+  if (load_addr == LLDB_INVALID_ADDRESS)
+    return;
 
-  // It might happen that the remote has a different dir for the file, so we
-  // only send the basename of the executable in the query. I think this is safe
-  // because I doubt that two executables with the same basenames are loaded in
-  // memory...
-  FileSpec file_spec(
-      executable->GetPlatformFileSpec().GetFilename().GetCString());
-  bool is_loaded;
-  addr_t base_addr = 0;
-  lldb::addr_t load_addr;
-  Status error = m_process->GetFileLoadAddress(file_spec, is_loaded, load_addr);
-  if (error.Success() && is_loaded) {
-    base_addr = load_addr;
-    UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, base_addr, false);
-  }
+  // Request the process base address.
+  lldb::addr_t image_base = m_process->GetImageInfoAddress();
+  if (image_base == load_addr)
+    return;
+
+  // Rebase the process's modules if there is a mismatch.
+  UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);
 
   ModuleList module_list;
   module_list.Append(executable);
@@ -95,7 +142,26 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
   m_process->LoadModules();
 }
 
-void DynamicLoaderWindowsDYLD::DidLaunch() {}
+void DynamicLoaderWindowsDYLD::DidLaunch() {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  if (log)
+    log->Printf("DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
+
+  ModuleSP executable = GetTargetExecutable();
+  if (!executable.get())
+    return;
+
+  lldb::addr_t load_addr = GetLoadAddress(executable);
+  if (load_addr != LLDB_INVALID_ADDRESS) {
+    // Update the loaded sections so that the breakpoints can be resolved.
+    UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);
+
+    ModuleList module_list;
+    module_list.Append(executable);
+    m_process->GetTarget().ModulesDidLoad(module_list);
+    m_process->LoadModules();
+  }
+}
 
 Status DynamicLoaderWindowsDYLD::CanLoadImage() { return Status(); }
 

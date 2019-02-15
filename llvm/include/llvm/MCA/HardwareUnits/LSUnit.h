@@ -187,7 +187,11 @@ public:
   // 4. A store may not pass a previous load (regardless of flag 'NoAlias').
   // 5. A load has to wait until an older load barrier is fully executed.
   // 6. A store has to wait until an older store barrier is fully executed.
-  virtual bool isReady(const InstRef &IR) const;
+  //
+  // Returns an instruction identifier. If IR is ready, then this method returns
+  // `IR.getSourceIndex()`. Otherwise it returns the instruction ID of the
+  // dependent (i.e. conflicting) memory instruction.
+  virtual unsigned isReady(const InstRef &IR) const;
 
   // Load and store instructions are tracked by their corresponding queues from
   // dispatch until the "instruction executed" event.

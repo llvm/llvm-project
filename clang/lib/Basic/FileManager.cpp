@@ -267,6 +267,9 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
   if (UFE.File) {
     if (auto PathName = UFE.File->getName())
       fillRealPathName(&UFE, *PathName);
+  } else if (!openFile) {
+    // We should still fill the path even if we aren't opening the file.
+    fillRealPathName(&UFE, InterndFileName);
   }
   return &UFE;
 }

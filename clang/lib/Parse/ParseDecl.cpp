@@ -3809,19 +3809,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                  getLangOpts());
       break;
 
-    // OpenCL access qualifiers:
-    case tok::kw___read_only:
-    case tok::kw___write_only:
-    case tok::kw___read_write:
-      // OpenCL C++ 1.0 s2.2: access qualifiers are reserved keywords.
-      if (Actions.getLangOpts().OpenCLCPlusPlus) {
-        DiagID = diag::err_openclcxx_reserved;
-        PrevSpec = Tok.getIdentifierInfo()->getNameStart();
-        isInvalid = true;
-      }
-      ParseOpenCLQualifiers(DS.getAttributes());
-      break;
-
     // OpenCL address space qualifiers:
     case tok::kw___generic:
       // generic address space is introduced only in OpenCL v2.0
@@ -3838,6 +3825,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw___global:
     case tok::kw___local:
     case tok::kw___constant:
+    // OpenCL access qualifiers:
+    case tok::kw___read_only:
+    case tok::kw___write_only:
+    case tok::kw___read_write:
       ParseOpenCLQualifiers(DS.getAttributes());
       break;
 

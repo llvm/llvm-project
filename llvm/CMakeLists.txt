@@ -104,7 +104,7 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "clang;compiler-rt;debuginfo-tests;libclc;libcxx;libcxxabi;libunwind;lld;lldb;llgo;llvm;openmp;parallel-libs;polly;pstl")
+set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;compiler-rt;debuginfo-tests;libclc;libcxx;libcxxabi;libunwind;lld;lldb;llgo;llvm;openmp;parallel-libs;polly;pstl")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 	"Semicolon-separated list of projects to build (${LLVM_ALL_PROJECTS}), or \"all\".")
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
@@ -130,7 +130,7 @@ mark_as_advanced(LLVM_ENABLE_PROJECTS_USED)
 
 if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
   set(LLVM_ENABLE_PROJECTS_USED ON CACHE BOOL "" FORCE)
-  foreach(proj ${LLVM_ALL_PROJECTS})
+  foreach(proj ${LLVM_ALL_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
     string(TOUPPER "${proj}" upper_proj)
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -141,12 +141,6 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
         message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
       endif()
       set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
-      # There is a widely spread opinion that clang-tools-extra should be merged
-      # into clang. The following simulates it by always enabling clang-tools-extra
-      # when enabling clang.
-      if (proj STREQUAL "clang")
-        set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../clang-tools-extra")
-      endif()
     else()
       message(STATUS "${proj} project is disabled")
       set(SHOULD_ENABLE_PROJECT FALSE)

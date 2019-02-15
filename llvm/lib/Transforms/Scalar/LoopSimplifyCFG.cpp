@@ -79,6 +79,17 @@ static BasicBlock *getOnlyLiveSuccessor(BasicBlock *BB) {
   return nullptr;
 }
 
+/// Removes \p BB from all loops from [FirstLoop, LastLoop) in parent chain.
+static void removeBlockFromLoops(BasicBlock *BB, Loop *FirstLoop,
+                                 Loop *LastLoop = nullptr) {
+  assert((!LastLoop || LastLoop->contains(FirstLoop->getHeader())) &&
+         "First loop is supposed to be inside of last loop!");
+  assert(FirstLoop->contains(BB) && "Must be a loop block!");
+  for (Loop *Current = FirstLoop; Current != LastLoop;
+       Current = Current->getParentLoop())
+    Current->removeBlockFromLoop(BB);
+}
+
 namespace {
 /// Helper class that can turn branches and switches with constant conditions
 /// into unconditional branches.
@@ -89,6 +100,7 @@ private:
   DominatorTree &DT;
   ScalarEvolution &SE;
   MemorySSAUpdater *MSSAU;
+  LoopBlocksDFS DFS;
   DomTreeUpdater DTU;
   SmallVector<DominatorTree::UpdateType, 16> DTUpdates;
 
@@ -176,7 +188,6 @@ private:
   /// Fill all information about status of blocks and exits of the current loop
   /// if constant folding of all branches will be done.
   void analyze() {
-    LoopBlocksDFS DFS(&L);
     DFS.perform(&LI);
     assert(DFS.isComplete() && "DFS is expected to be finished");
 
@@ -371,12 +382,9 @@ private:
       // its parents as well). Make the fixup.
       if (StillReachable != OuterLoop) {
         LI.changeLoopFor(NewPreheader, StillReachable);
-        for (Loop *NotContaining = OuterLoop; NotContaining != StillReachable;
-             NotContaining = NotContaining->getParentLoop()) {
-          NotContaining->removeBlockFromLoop(NewPreheader);
-          for (auto *BB : L.blocks())
-            NotContaining->removeBlockFromLoop(BB);
-        }
+        removeBlockFromLoops(NewPreheader, OuterLoop, StillReachable);
+        for (auto *BB : L.blocks())
+          removeBlockFromLoops(BB, OuterLoop, StillReachable);
         OuterLoop->removeChildLoop(&L);
         if (StillReachable)
           StillReachable->addChildLoop(&L);
@@ -498,7 +506,7 @@ public:
   ConstantTerminatorFoldingImpl(Loop &L, LoopInfo &LI, DominatorTree &DT,
                                 ScalarEvolution &SE,
                                 MemorySSAUpdater *MSSAU)
-      : L(L), LI(LI), DT(DT), SE(SE), MSSAU(MSSAU),
+      : L(L), LI(LI), DT(DT), SE(SE), MSSAU(MSSAU), DFS(&L),
         DTU(DT, DomTreeUpdater::UpdateStrategy::Eager) {}
   bool run() {
     assert(L.getLoopLatch() && "Should be single latch!");

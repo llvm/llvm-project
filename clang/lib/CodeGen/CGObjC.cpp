@@ -422,6 +422,40 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
   return None;
 }
 
+/// Instead of '[[MyClass alloc] init]', try to generate
+/// 'objc_alloc_init(MyClass)'. This provides a code size improvement on the
+/// caller side, as well as the optimized objc_alloc.
+static Optional<llvm::Value *>
+tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
+  auto &Runtime = CGF.getLangOpts().ObjCRuntime;
+  if (!Runtime.shouldUseRuntimeFunctionForCombinedAllocInit())
+    return None;
+
+  // Match the exact pattern '[[MyClass alloc] init]'.
+  Selector Sel = OME->getSelector();
+  if (!OME->isInstanceMessage() || !OME->getType()->isObjCObjectPointerType() ||
+      !Sel.isUnarySelector() || Sel.getNameForSlot(0) != "init")
+    return None;
+
+  // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]'.
+  auto *SubOME =
+      dyn_cast<ObjCMessageExpr>(OME->getInstanceReceiver()->IgnoreParens());
+  if (!SubOME)
+    return None;
+  Selector SubSel = SubOME->getSelector();
+  if (SubOME->getReceiverKind() != ObjCMessageExpr::Class ||
+      !SubOME->getType()->isObjCObjectPointerType() ||
+      !SubSel.isUnarySelector() || SubSel.getNameForSlot(0) != "alloc")
+    return None;
+
+  QualType ReceiverType = SubOME->getClassReceiver();
+  const ObjCObjectType *ObjTy = ReceiverType->getAs<ObjCObjectType>();
+  const ObjCInterfaceDecl *ID = ObjTy->getInterface();
+  assert(ID && "null interface should be impossible here");
+  llvm::Value *Receiver = CGF.CGM.getObjCRuntime().GetClass(CGF, ID);
+  return CGF.EmitObjCAllocInit(Receiver, CGF.ConvertType(OME->getType()));
+}
+
 RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
                                             ReturnValueSlot Return) {
   // Only the lookup mechanism and first two arguments of the method
@@ -442,6 +476,9 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
       return AdjustObjCObjectType(*this, E->getType(), RValue::get(result));
     }
   }
+
+  if (Optional<llvm::Value *> Val = tryEmitSpecializedAllocInit(*this, E))
+    return AdjustObjCObjectType(*this, E->getType(), RValue::get(*Val));
 
   // We don't retain the receiver in delegate init calls, and this is
   // safe because the receiver value is always loaded from 'self',
@@ -2501,6 +2538,13 @@ llvm::Value *CodeGenFunction::EmitObjCAllocWithZone(llvm::Value *value,
   return emitObjCValueOperation(*this, value, resultType,
                                 CGM.getObjCEntrypoints().objc_allocWithZone,
                                 "objc_allocWithZone", /*MayThrow=*/true);
+}
+
+llvm::Value *CodeGenFunction::EmitObjCAllocInit(llvm::Value *value,
+                                                llvm::Type *resultType) {
+  return emitObjCValueOperation(*this, value, resultType,
+                                CGM.getObjCEntrypoints().objc_alloc_init,
+                                "objc_alloc_init", /*MayThrow=*/true);
 }
 
 /// Produce the code to do a primitive release.

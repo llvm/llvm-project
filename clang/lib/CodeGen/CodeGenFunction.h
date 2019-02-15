@@ -3831,6 +3831,8 @@ public:
                              llvm::Type *returnType);
   llvm::Value *EmitObjCAllocWithZone(llvm::Value *value,
                                      llvm::Type *returnType);
+  llvm::Value *EmitObjCAllocInit(llvm::Value *value, llvm::Type *resultType);
+
   llvm::Value *EmitObjCThrowOperand(const Expr *expr);
   llvm::Value *EmitObjCConsumeObject(QualType T, llvm::Value *Ptr);
   llvm::Value *EmitObjCExtendObjectLifetime(QualType T, llvm::Value *Ptr);

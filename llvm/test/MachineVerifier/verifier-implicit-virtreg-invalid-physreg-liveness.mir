@@ -1,4 +1,5 @@
 # RUN: not llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERROR %s
+# REQUIRES: amdgpu-registered-target
 
 # When the verifier was detecting the invalid liveness for vcc, it would assert when trying to iterate the subregisters of the implicit virtual register use.
 

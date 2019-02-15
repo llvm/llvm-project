@@ -2709,6 +2709,26 @@ TEST_P(ImportFunctions, ImportFunctionFromUnnamedNamespace) {
             2u);
 }
 
+TEST_P(ImportFunctions, ImportImplicitFunctionsInLambda) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      void foo() {
+        (void)[]() { ; };
+      }
+      )",
+      Lang_CXX11);
+  auto *FromD = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("foo")));
+  auto *ToD = Import(FromD, Lang_CXX);
+  EXPECT_TRUE(ToD);
+  CXXRecordDecl *LambdaRec =
+      cast<LambdaExpr>(cast<CStyleCastExpr>(
+                           *cast<CompoundStmt>(ToD->getBody())->body_begin())
+                           ->getSubExpr())
+          ->getLambdaClass();
+  EXPECT_TRUE(LambdaRec->getDestructor());
+}
+
 struct ImportFriendFunctions : ImportFunctions {};
 
 TEST_P(ImportFriendFunctions, ImportFriendFunctionRedeclChainProto) {

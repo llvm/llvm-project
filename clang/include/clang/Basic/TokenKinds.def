@@ -550,9 +550,9 @@ ALIAS("read_only", __read_only      , KEYOPENCLC | KEYOPENCLCXX)
 ALIAS("write_only", __write_only    , KEYOPENCLC | KEYOPENCLCXX)
 ALIAS("read_write", __read_write    , KEYOPENCLC | KEYOPENCLCXX)
 // OpenCL builtins
-KEYWORD(__builtin_astype            , KEYOPENCLC)
+KEYWORD(__builtin_astype            , KEYOPENCLC | KEYOPENCLCXX)
 KEYWORD(vec_step                    , KEYOPENCLC | KEYALTIVEC | KEYZVECTOR)
-#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC)
+#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC | KEYOPENCLCXX)
 #include "clang/Basic/OpenCLImageTypes.def"
 
 // OpenMP Type Traits

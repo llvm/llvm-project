@@ -639,11 +639,12 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
-    if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    if (SimplifyDemandedBits(Op0, ~Known.Zero & DemandedBits, DemandedElts, Known2, TLO,
-                             Depth + 1))
+    if (SimplifyDemandedBits(Op0, ~Known.Zero & DemandedBits, DemandedElts,
+                             Known2, TLO, Depth + 1))
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
@@ -673,11 +674,12 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
-    if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    if (SimplifyDemandedBits(Op0, ~Known.One & DemandedBits, DemandedElts, Known2, TLO,
-                             Depth + 1))
+    if (SimplifyDemandedBits(Op0, ~Known.One & DemandedBits, DemandedElts,
+                             Known2, TLO, Depth + 1))
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
@@ -704,10 +706,12 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
-    if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op1, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
-    if (SimplifyDemandedBits(Op0, DemandedBits, DemandedElts, Known2, TLO, Depth + 1))
+    if (SimplifyDemandedBits(Op0, DemandedBits, DemandedElts, Known2, TLO,
+                             Depth + 1))
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
@@ -861,8 +865,8 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
-      if (SimplifyDemandedBits(Op0, DemandedBits.lshr(ShAmt), DemandedElts, Known, TLO,
-                               Depth + 1))
+      if (SimplifyDemandedBits(Op0, DemandedBits.lshr(ShAmt), DemandedElts,
+                               Known, TLO, Depth + 1))
         return true;
 
       // Convert (shl (anyext x, c)) to (anyext (shl x, c)) if the high bits
@@ -956,7 +960,8 @@ bool TargetLowering::SimplifyDemandedBits(
       }
 
       // Compute the new bits that are at the top now.
-      if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO, Depth + 1))
+      if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
+                               Depth + 1))
         return true;
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero.lshrInPlace(ShAmt);
@@ -995,7 +1000,8 @@ bool TargetLowering::SimplifyDemandedBits(
       if (DemandedBits.countLeadingZeros() < ShAmt)
         InDemandedMask.setSignBit();
 
-      if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO, Depth + 1))
+      if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
+                               Depth + 1))
         return true;
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       Known.Zero.lshrInPlace(ShAmt);
@@ -1137,10 +1143,10 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
 
     Known.Zero = KnownLo.Zero.zext(BitWidth) |
-                KnownHi.Zero.zext(BitWidth).shl(HalfBitWidth);
+                 KnownHi.Zero.zext(BitWidth).shl(HalfBitWidth);
 
     Known.One = KnownLo.One.zext(BitWidth) |
-               KnownHi.One.zext(BitWidth).shl(HalfBitWidth);
+                KnownHi.One.zext(BitWidth).shl(HalfBitWidth);
     break;
   }
   case ISD::ZERO_EXTEND: {
@@ -1152,7 +1158,7 @@ bool TargetLowering::SimplifyDemandedBits(
       return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, Src));
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
-    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth+1))
+    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known = Known.zext(BitWidth);
@@ -1206,7 +1212,7 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Src = Op.getOperand(0);
     unsigned InBits = Src.getScalarValueSizeInBits();
     APInt InDemandedBits = DemandedBits.trunc(InBits);
-    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth+1))
+    if (SimplifyDemandedBits(Src, InDemandedBits, Known, TLO, Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known = Known.zext(BitWidth);
@@ -1272,8 +1278,8 @@ bool TargetLowering::SimplifyDemandedBits(
     // demanded by its users.
     EVT ZVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
     APInt InMask = APInt::getLowBitsSet(BitWidth, ZVT.getSizeInBits());
-    if (SimplifyDemandedBits(Op.getOperand(0), ~InMask | DemandedBits,
-                             Known, TLO, Depth+1))
+    if (SimplifyDemandedBits(Op.getOperand(0), ~InMask | DemandedBits, Known,
+                             TLO, Depth + 1))
       return true;
     assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
@@ -1381,8 +1387,10 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0), Op1 = Op.getOperand(1);
     unsigned DemandedBitsLZ = DemandedBits.countLeadingZeros();
     APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
-    if (SimplifyDemandedBits(Op0, LoMask, DemandedElts, Known2, TLO, Depth + 1) ||
-        SimplifyDemandedBits(Op1, LoMask, DemandedElts, Known2, TLO, Depth + 1) ||
+    if (SimplifyDemandedBits(Op0, LoMask, DemandedElts, Known2, TLO,
+                             Depth + 1) ||
+        SimplifyDemandedBits(Op1, LoMask, DemandedElts, Known2, TLO,
+                             Depth + 1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO)) {
       SDNodeFlags Flags = Op.getNode()->getFlags();
@@ -1391,8 +1399,8 @@ bool TargetLowering::SimplifyDemandedBits(
         // won't wrap after simplification.
         Flags.setNoSignedWrap(false);
         Flags.setNoUnsignedWrap(false);
-        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1,
-                                        Flags);
+        SDValue NewOp =
+            TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1, Flags);
         return TLO.CombineTo(Op, NewOp);
       }
       return true;
@@ -1702,7 +1710,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Sub = Op.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
-    const APInt& Idx = cast<ConstantSDNode>(Op.getOperand(2))->getAPIntValue();
+    const APInt &Idx = cast<ConstantSDNode>(Op.getOperand(2))->getAPIntValue();
     if (Idx.ugt(NumElts - NumSubElts))
       break;
     unsigned SubIdx = Idx.getZExtValue();
@@ -1877,8 +1885,8 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Src = Op.getOperand(0);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
     APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts);
-    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, SrcUndef,
-                                   SrcZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
       return true;
     KnownZero = SrcZero.zextOrTrunc(NumElts);
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
@@ -2614,7 +2622,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         break;
       }
       default:
-        break;   // todo, be more careful with signed comparisons
+        break; // todo, be more careful with signed comparisons
       }
     } else if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG &&
                (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
@@ -2635,7 +2643,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       } else {
         APInt Imm = APInt::getLowBitsSet(ExtDstTyBits, ExtSrcTyBits);
         ZextOp = DAG.getNode(ISD::AND, dl, Op0Ty, N0.getOperand(0),
-                              DAG.getConstant(Imm, dl, Op0Ty));
+                             DAG.getConstant(Imm, dl, Op0Ty));
       }
       if (!DCI.isCalledByLegalizer())
         DCI.AddToWorklist(ZextOp.getNode());
@@ -3025,7 +3033,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       return DAG.getBoolConstant(EqTrue, dl, VT, OpVT);
 
     unsigned UOF = ISD::getUnorderedFlavor(Cond);
-    if (UOF == 2)   // FP operators that are undefined on NaNs.
+    if (UOF == 2) // FP operators that are undefined on NaNs.
       return DAG.getBoolConstant(EqTrue, dl, VT, OpVT);
     if (UOF == unsigned(EqTrue))
       return DAG.getBoolConstant(EqTrue, dl, VT, OpVT);
@@ -3034,7 +3042,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     ISD::CondCode NewCond = UOF == 0 ? ISD::SETO : ISD::SETUO;
     if (NewCond != Cond &&
         (DCI.isBeforeLegalizeOps() ||
-         isCondCodeLegal(NewCond, N0.getSimpleValueType())))
+                            isCondCodeLegal(NewCond, N0.getSimpleValueType())))
       return DAG.getSetCC(dl, VT, N0, N1, NewCond);
   }
 
@@ -3227,18 +3235,18 @@ TargetLowering::getConstraintType(StringRef Constraint) const {
     switch (Constraint[0]) {
     default: break;
     case 'r': return C_RegisterClass;
-    case 'm':    // memory
-    case 'o':    // offsetable
-    case 'V':    // not offsetable
+    case 'm': // memory
+    case 'o': // offsetable
+    case 'V': // not offsetable
       return C_Memory;
-    case 'i':    // Simple Integer or Relocatable Constant
-    case 'n':    // Simple Integer
-    case 'E':    // Floating Point Constant
-    case 'F':    // Floating Point Constant
-    case 's':    // Relocatable Constant
-    case 'p':    // Address.
-    case 'X':    // Allow ANY value.
-    case 'I':    // Target registers.
+    case 'i': // Simple Integer or Relocatable Constant
+    case 'n': // Simple Integer
+    case 'E': // Floating Point Constant
+    case 'F': // Floating Point Constant
+    case 's': // Relocatable Constant
+    case 'p': // Address.
+    case 'X': // Allow ANY value.
+    case 'I': // Target registers.
     case 'J':
     case 'K':
     case 'L':
@@ -3252,7 +3260,7 @@ TargetLowering::getConstraintType(StringRef Constraint) const {
     }
   }
 
-  if (S > 1 && Constraint[0] == '{' && Constraint[S-1] == '}') {
+  if (S > 1 && Constraint[0] == '{' && Constraint[S - 1] == '}') {
     if (S == 8 && Constraint.substr(1, 6) == "memory") // "{memory}"
       return C_Memory;
     return C_Register;
@@ -3263,11 +3271,11 @@ TargetLowering::getConstraintType(StringRef Constraint) const {
 /// Try to replace an X constraint, which matches anything, with another that
 /// has more specific requirements based on the type of the corresponding
 /// operand.
-const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const{
+const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
   if (ConstraintVT.isInteger())
     return "r";
   if (ConstraintVT.isFloatingPoint())
-    return "f";      // works for many targets
+    return "f"; // works for many targets
   return nullptr;
 }
 
@@ -3352,14 +3360,14 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
                                              StringRef Constraint,
                                              MVT VT) const {
   if (Constraint.empty() || Constraint[0] != '{')
-    return std::make_pair(0u, static_cast<TargetRegisterClass*>(nullptr));
-  assert(*(Constraint.end()-1) == '}' && "Not a brace enclosed constraint?");
+    return std::make_pair(0u, static_cast<TargetRegisterClass *>(nullptr));
+  assert(*(Constraint.end() - 1) == '}' && "Not a brace enclosed constraint?");
 
   // Remove the braces from around the name.
-  StringRef RegName(Constraint.data()+1, Constraint.size()-2);
+  StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
 
-  std::pair<unsigned, const TargetRegisterClass*> R =
-    std::make_pair(0u, static_cast<const TargetRegisterClass*>(nullptr));
+  std::pair<unsigned, const TargetRegisterClass *> R =
+      std::make_pair(0u, static_cast<const TargetRegisterClass *>(nullptr));
 
   // Figure out which register class contains this reg.
   for (const TargetRegisterClass *RC : RI->regclasses()) {
@@ -3371,8 +3379,8 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
     for (TargetRegisterClass::iterator I = RC->begin(), E = RC->end();
          I != E; ++I) {
       if (RegName.equals_lower(RI->getRegAsmName(*I))) {
-        std::pair<unsigned, const TargetRegisterClass*> S =
-          std::make_pair(*I, RC);
+        std::pair<unsigned, const TargetRegisterClass *> S =
+            std::make_pair(*I, RC);
 
         // If this register class has the requested value type, return it,
         // otherwise keep searching and return the first class found
@@ -3421,8 +3429,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 
   // Do a prepass over the constraints, canonicalizing them, and building up the
   // ConstraintOperands list.
-  unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
-  unsigned ResNo = 0;   // ResNo - The result number of the next output.
+  unsigned ArgNo = 0; // ArgNo - The argument of the CallInst.
+  unsigned ResNo = 0; // ResNo - The result number of the next output.
 
   for (InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     ConstraintOperands.emplace_back(std::move(CI));
@@ -3491,7 +3499,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
         case 64:
         case 128:
           OpInfo.ConstraintVT =
-            MVT::getVT(IntegerType::get(OpTy->getContext(), BitSize), true);
+              MVT::getVT(IntegerType::get(OpTy->getContext(), BitSize), true);
           break;
         }
       } else if (PointerType *PT = dyn_cast<PointerType>(OpTy)) {
@@ -3516,8 +3524,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       for (maIndex = 0; maIndex < maCount; ++maIndex) {
         int weightSum = 0;
         for (unsigned cIndex = 0, eIndex = ConstraintOperands.size();
-            cIndex != eIndex; ++cIndex) {
-          AsmOperandInfo& OpInfo = ConstraintOperands[cIndex];
+             cIndex != eIndex; ++cIndex) {
+          AsmOperandInfo &OpInfo = ConstraintOperands[cIndex];
           if (OpInfo.Type == InlineAsm::isClobber)
             continue;
 
@@ -3532,7 +3540,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
                    Input.ConstraintVT.isInteger()) ||
                   (OpInfo.ConstraintVT.getSizeInBits() !=
                    Input.ConstraintVT.getSizeInBits())) {
-                weightSum = -1;  // Can't match.
+                weightSum = -1; // Can't match.
                 break;
               }
             }
@@ -3553,8 +3561,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 
       // Now select chosen alternative in each constraint.
       for (unsigned cIndex = 0, eIndex = ConstraintOperands.size();
-          cIndex != eIndex; ++cIndex) {
-        AsmOperandInfo& cInfo = ConstraintOperands[cIndex];
+           cIndex != eIndex; ++cIndex) {
+        AsmOperandInfo &cInfo = ConstraintOperands[cIndex];
         if (cInfo.Type == InlineAsm::isClobber)
           continue;
         cInfo.selectAlternative(bestMAIndex);
@@ -3564,8 +3572,8 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 
   // Check and hook up tied operands, choose constraint code to use.
   for (unsigned cIndex = 0, eIndex = ConstraintOperands.size();
-      cIndex != eIndex; ++cIndex) {
-    AsmOperandInfo& OpInfo = ConstraintOperands[cIndex];
+       cIndex != eIndex; ++cIndex) {
+    AsmOperandInfo &OpInfo = ConstraintOperands[cIndex];
 
     // If this is an output operand with a matching input operand, look up the
     // matching input. If their types mismatch, e.g. one is an integer, the
@@ -3677,9 +3685,9 @@ TargetLowering::ConstraintWeight
         weight = CW_Register;
       break;
     case 'X': // any operand.
-    default:
-      weight = CW_Default;
-      break;
+  default:
+    weight = CW_Default;
+    break;
   }
   return weight;
 }
@@ -3852,12 +3860,12 @@ static SDValue BuildExactSDIV(const TargetLowering &TLI, SDNode *N,
 }
 
 SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
-                                     SelectionDAG &DAG,
-                                     SmallVectorImpl<SDNode *> &Created) const {
+                              SelectionDAG &DAG,
+                              SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isIntDivCheap(N->getValueType(0), Attr))
-    return SDValue(N,0); // Lower SDIV as SDIV
+    return SDValue(N, 0); // Lower SDIV as SDIV
   return SDValue();
 }
 
@@ -4411,7 +4419,7 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
 }
 
 bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
-                               SelectionDAG &DAG) const {
+                                      SelectionDAG &DAG) const {
   SDValue Src = Node->getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
@@ -4874,7 +4882,7 @@ SDValue TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   SDValue NewChain = DAG.getNode(ISD::TokenFactor, SL, MVT::Other, LoadChains);
   SDValue Value = DAG.getBuildVector(LD->getValueType(0), SL, Vals);
 
-  return DAG.getMergeValues({ Value, NewChain }, SL);
+  return DAG.getMergeValues({Value, NewChain}, SL);
 }
 
 SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
@@ -4929,7 +4937,7 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
 
   // Store Stride in bytes
   unsigned Stride = MemSclVT.getSizeInBits() / 8;
-  assert (Stride && "Zero stride!");
+  assert(Stride && "Zero stride!");
   // Extract each of the elements from the original vector and save them into
   // memory individually.
   SmallVector<SDValue, 8> Stores;
@@ -5345,7 +5353,7 @@ SDValue TargetLowering::LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
   // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
   // At last for X86 targets, maybe good for other targets too?
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-  MFI.setAdjustsStack(true);  // Is this only for X86 target?
+  MFI.setAdjustsStack(true); // Is this only for X86 target?
   MFI.setHasCalls(true);
 
   assert((GA->getOffset() == 0) &&

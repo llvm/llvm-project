@@ -11,4 +11,4 @@
 # CHECK: Failing Tests (27)
 # CHECK: Failing Tests (1)
 # CHECK: Failing Tests (2)
-# CHECK: error: Setting --max-failures to 0 does not have any effect.
+# CHECK: error: Option '--max-failures' requires positive integer

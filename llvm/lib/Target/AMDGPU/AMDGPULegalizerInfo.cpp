@@ -115,12 +115,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   const LLT CodePtr = FlatPtr;
 
-  const LLT AddrSpaces[] = {
-    GlobalPtr,
-    ConstantPtr,
-    LocalPtr,
-    FlatPtr,
-    PrivatePtr
+  const std::initializer_list<LLT> AddrSpaces64 = {
+    GlobalPtr, ConstantPtr, FlatPtr
+  };
+
+  const std::initializer_list<LLT> AddrSpaces32 = {
+    LocalPtr, PrivatePtr
   };
 
   setAction({G_BRCOND, S1}, Legal);
@@ -245,19 +245,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({S32, S64})
     .scalarize(0);
 
-  for (LLT PtrTy : AddrSpaces) {
-    LLT IdxTy = LLT::scalar(PtrTy.getSizeInBits());
-    setAction({G_GEP, PtrTy}, Legal);
-    setAction({G_GEP, 1, IdxTy}, Legal);
-  }
 
-  // FIXME: When RegBankSelect inserts copies, it will only create new registers
-  // with scalar types. This means we can end up with G_LOAD/G_STORE/G_GEP
-  // instruction with scalar types for their pointer operands. In assert builds,
-  // the instruction selector will assert if it sees a generic instruction which
-  // isn't legal, so we need to tell it that scalar types are legal for pointer
-  // operands
-  setAction({G_GEP, S64}, Legal);
+  getActionDefinitionsBuilder(G_GEP)
+    .legalForCartesianProduct(AddrSpaces64, {S64})
+    .legalForCartesianProduct(AddrSpaces32, {S32})
+    .scalarize(0);
 
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
@@ -314,8 +306,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   getActionDefinitionsBuilder(G_INTTOPTR)
     // List the common cases
-    .legalForCartesianProduct({GlobalPtr, ConstantPtr, FlatPtr}, {S64})
-    .legalForCartesianProduct({LocalPtr, PrivatePtr}, {S32})
+    .legalForCartesianProduct(AddrSpaces64, {S64})
+    .legalForCartesianProduct(AddrSpaces32, {S32})
     .scalarize(0)
     // Accept any address space as long as the size matches
     .legalIf(sameSize(0, 1))
@@ -330,8 +322,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   getActionDefinitionsBuilder(G_PTRTOINT)
     // List the common cases
-    .legalForCartesianProduct({GlobalPtr, ConstantPtr, FlatPtr}, {S64})
-    .legalForCartesianProduct({LocalPtr, PrivatePtr}, {S32})
+    .legalForCartesianProduct(AddrSpaces64, {S64})
+    .legalForCartesianProduct(AddrSpaces32, {S32})
     .scalarize(0)
     // Accept any address space as long as the size matches
     .legalIf(sameSize(0, 1))
@@ -405,17 +397,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .clampScalar(0, S32, S64);
 
 
+  // FIXME: Handle alignment requirements.
   auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-    .legalForTypesWithMemSize({
-        {S32, GlobalPtr, 8},
-        {S32, GlobalPtr, 16},
-        {S32, LocalPtr, 8},
-        {S32, LocalPtr, 16},
-        {S32, PrivatePtr, 8},
-        {S32, PrivatePtr, 16}});
+    .legalForTypesWithMemDesc({
+        {S32, GlobalPtr, 8, 8},
+        {S32, GlobalPtr, 16, 8},
+        {S32, LocalPtr, 8, 8},
+        {S32, LocalPtr, 16, 8},
+        {S32, PrivatePtr, 8, 8},
+        {S32, PrivatePtr, 16, 8}});
   if (ST.hasFlatAddressSpace()) {
-    ExtLoads.legalForTypesWithMemSize({{S32, FlatPtr, 8},
-                                       {S32, FlatPtr, 16}});
+    ExtLoads.legalForTypesWithMemDesc({{S32, FlatPtr, 8, 8},
+                                       {S32, FlatPtr, 16, 8}});
   }
 
   ExtLoads.clampScalar(0, S32, S32)
