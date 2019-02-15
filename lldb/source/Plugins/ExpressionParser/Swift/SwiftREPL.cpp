@@ -555,7 +555,6 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
       repl_module =
         swift_ast->GetModule(g_repl_module_name, error);
     if (repl_module == nullptr) {
-      swift::ModuleDecl *repl_module = nullptr;
       repl_module = swift_ast->CreateModule(g_repl_module_name, error);
       const swift::SourceFile::ImplicitModuleImportKind implicit_import_kind =
           swift::SourceFile::ImplicitModuleImportKind::Stdlib;
