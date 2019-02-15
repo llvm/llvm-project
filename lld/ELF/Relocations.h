@@ -29,13 +29,8 @@ typedef uint32_t RelType;
 // from files are converted to these types so that the main code
 // doesn't have to know about architecture-specific details.
 enum RelExpr {
-  R_INVALID,
   R_ABS,
   R_ADDEND,
-  R_AARCH64_GOT_PAGE_PC,
-  R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
-  R_AARCH64_PAGE_PC,
-  R_AARCH64_TLSDESC_PAGE,
   R_ARM_SBREL,
   R_GOT,
   R_GOTONLY_PC,
@@ -47,22 +42,11 @@ enum RelExpr {
   R_GOT_PC,
   R_HEXAGON_GOT,
   R_HINT,
-  R_MIPS_GOTREL,
-  R_MIPS_GOT_GP,
-  R_MIPS_GOT_GP_PC,
-  R_MIPS_GOT_LOCAL_PAGE,
-  R_MIPS_GOT_OFF,
-  R_MIPS_GOT_OFF32,
-  R_MIPS_TLSGD,
-  R_MIPS_TLSLD,
   R_NEG_TLS,
   R_NONE,
   R_PC,
   R_PLT,
   R_PLT_PC,
-  R_PPC_CALL,
-  R_PPC_CALL_PLT,
-  R_PPC_TOC,
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
   R_RELAX_TLS_GD_TO_IE,
@@ -74,7 +58,6 @@ enum RelExpr {
   R_RELAX_TLS_IE_TO_LE,
   R_RELAX_TLS_LD_TO_LE,
   R_RELAX_TLS_LD_TO_LE_ABS,
-  R_RISCV_PC_INDIRECT,
   R_SIZE,
   R_TLS,
   R_TLSDESC,
@@ -88,37 +71,29 @@ enum RelExpr {
   R_TLSLD_GOT_OFF,
   R_TLSLD_HINT,
   R_TLSLD_PC,
-};
 
-// Build a bitmask with one bit set for each RelExpr.
-//
-// Constexpr function arguments can't be used in static asserts, so we
-// use template arguments to build the mask.
-// But function template partial specializations don't exist (needed
-// for base case of the recursion), so we need a dummy struct.
-template <RelExpr... Exprs> struct RelExprMaskBuilder {
-  static inline uint64_t build() { return 0; }
+  // The following is abstract relocation types used for only one target.
+  //
+  // Even though RelExpr is intended to be a target-neutral representation
+  // of a relocation type, there are some relocations whose semantics are
+  // unique to a target. Such relocation are marked with R_<TARGET_NAME>.
+  R_AARCH64_GOT_PAGE_PC,
+  R_AARCH64_PAGE_PC,
+  R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
+  R_AARCH64_TLSDESC_PAGE,
+  R_MIPS_GOTREL,
+  R_MIPS_GOT_GP,
+  R_MIPS_GOT_GP_PC,
+  R_MIPS_GOT_LOCAL_PAGE,
+  R_MIPS_GOT_OFF,
+  R_MIPS_GOT_OFF32,
+  R_MIPS_TLSGD,
+  R_MIPS_TLSLD,
+  R_PPC_CALL,
+  R_PPC_CALL_PLT,
+  R_PPC_TOC,
+  R_RISCV_PC_INDIRECT,
 };
-
-// Specialization for recursive case.
-template <RelExpr Head, RelExpr... Tail>
-struct RelExprMaskBuilder<Head, Tail...> {
-  static inline uint64_t build() {
-    static_assert(0 <= Head && Head < 64,
-                  "RelExpr is too large for 64-bit mask!");
-    return (uint64_t(1) << Head) | RelExprMaskBuilder<Tail...>::build();
-  }
-};
-
-// Return true if `Expr` is one of `Exprs`.
-// There are fewer than 64 RelExpr's, so we can represent any set of
-// RelExpr's as a constant bit mask and test for membership with a
-// couple cheap bitwise operations.
-template <RelExpr... Exprs> bool isRelExprOneOf(RelExpr Expr) {
-  assert(0 <= Expr && (int)Expr < 64 &&
-         "RelExpr is too large for 64-bit mask!");
-  return (uint64_t(1) << Expr) & RelExprMaskBuilder<Exprs...>::build();
-}
 
 // Architecture-neutral representation of relocation.
 struct Relocation {
@@ -127,21 +102,6 @@ struct Relocation {
   uint64_t Offset;
   int64_t Addend;
   Symbol *Sym;
-};
-
-struct RelocationOffsetComparator {
-  bool operator()(const Relocation &Lhs, const Relocation &Rhs) {
-    return Lhs.Offset < Rhs.Offset;
-  }
-
-  // For std::lower_bound, std::upper_bound, std::equal_range.
-  bool operator()(const Relocation &Rel, uint64_t Val) {
-    return Rel.Offset < Val;
-  }
-
-  bool operator()(uint64_t Val, const Relocation &Rel) {
-    return Val < Rel.Offset;
-  }
 };
 
 template <class ELFT> void scanRelocations(InputSectionBase &);

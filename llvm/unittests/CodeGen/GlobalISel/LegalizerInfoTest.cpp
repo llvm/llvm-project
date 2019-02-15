@@ -356,3 +356,52 @@ TEST(LegalizerInfoTest, RuleSets) {
     EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_AND, {v2s33}));
   }
 }
+
+TEST(LegalizerInfoTest, MMOAlignment) {
+  using namespace TargetOpcode;
+
+  const LLT s32 = LLT::scalar(32);
+  const LLT p0 = LLT::pointer(0, 64);
+
+  {
+    LegalizerInfo LI;
+    LI.getActionDefinitionsBuilder(G_LOAD)
+      .legalForTypesWithMemDesc({{s32, p0, 32, 32}});
+
+    LI.computeTables();
+
+    EXPECT_ACTION(Legal, 0, LLT(),
+                  LegalityQuery(G_LOAD, {s32, p0},
+                                LegalityQuery::MemDesc{
+                                  32, 32, AtomicOrdering::NotAtomic}));
+    EXPECT_ACTION(Unsupported, 0, LLT(),
+                  LegalityQuery(G_LOAD, {s32, p0},
+                                LegalityQuery::MemDesc{
+                                  32, 16, AtomicOrdering::NotAtomic }));
+    EXPECT_ACTION(Unsupported, 0, LLT(),
+                  LegalityQuery(G_LOAD, {s32, p0},
+                                LegalityQuery::MemDesc{
+                                  32, 8, AtomicOrdering::NotAtomic}));
+  }
+
+  // Test that the maximum supported alignment value isn't truncated
+  {
+    // Maximum IR defined alignment in bytes.
+    const uint64_t MaxAlignment = UINT64_C(1) << 29;
+    const uint64_t MaxAlignInBits = 8 * MaxAlignment;
+    LegalizerInfo LI;
+    LI.getActionDefinitionsBuilder(G_LOAD)
+      .legalForTypesWithMemDesc({{s32, p0, 32, MaxAlignInBits}});
+
+    LI.computeTables();
+
+    EXPECT_ACTION(Legal, 0, LLT(),
+                  LegalityQuery(G_LOAD, {s32, p0},
+                                LegalityQuery::MemDesc{32,
+                                    MaxAlignInBits, AtomicOrdering::NotAtomic}));
+    EXPECT_ACTION(Unsupported, 0, LLT(),
+                  LegalityQuery(G_LOAD, {s32, p0},
+                                LegalityQuery::MemDesc{
+                                  32, 8, AtomicOrdering::NotAtomic }));
+  }
+}

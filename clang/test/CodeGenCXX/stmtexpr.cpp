@@ -190,3 +190,79 @@ extern "C" int cleanup_exit_complex(bool b) {
 // CHECK: %[[v2:[^ ]*]] = load float, float* %[[tmp2]]
 // CHECK: store float %[[v1]], float* %v.realp
 // CHECK: store float %[[v2]], float* %v.imagp
+
+extern "C" void then(int);
+
+// CHECK-LABEL: @{{.*}}volatile_load
+void volatile_load() {
+  volatile int n;
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({n;});
+
+  // CHECK-LABEL: @then(i32 1)
+  then(1);
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({goto lab; lab: n;});
+
+  // CHECK-LABEL: @then(i32 2)
+  then(2);
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({[[gsl::suppress("foo")]] n;});
+
+  // CHECK-LABEL: @then(i32 3)
+  then(3);
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({if (true) n;});
+
+  // CHECK: }
+}
+
+// CHECK-LABEL: @{{.*}}volatile_load_template
+template<typename T>
+void volatile_load_template() {
+  volatile T n;
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({n;});
+
+  // CHECK-LABEL: @then(i32 1)
+  then(1);
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({goto lab; lab: n;});
+
+  // CHECK-LABEL: @then(i32 2)
+  then(2);
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({[[gsl::suppress("foo")]] n;});
+
+  // CHECK-LABEL: @then(i32 3)
+  then(3);
+
+  // CHECK-NOT: load volatile
+  // CHECK: load volatile
+  // CHECK-NOT: load volatile
+  ({if (true) n;});
+
+  // CHECK: }
+}
+template void volatile_load_template<int>();

@@ -864,6 +864,9 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 /// definitions for this particular subtarget.
 void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
+  // Inline assembly supports X86 flag outputs. 
+  Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
+
   std::string CodeModel = getTargetOpts().CodeModel;
   if (CodeModel == "default")
     CodeModel = "small";
@@ -1553,6 +1556,40 @@ bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
       .Default(false);
 }
 
+static unsigned matchAsmCCConstraint(const char *&Name) {
+  auto RV = llvm::StringSwitch<unsigned>(Name)
+                .Case("@cca", 4)
+                .Case("@ccae", 5)
+                .Case("@ccb", 4)
+                .Case("@ccbe", 5)
+                .Case("@ccc", 4)
+                .Case("@cce", 4)
+                .Case("@ccz", 4)
+                .Case("@ccg", 4)
+                .Case("@ccge", 5)
+                .Case("@ccl", 4)
+                .Case("@ccle", 5)
+                .Case("@ccna", 5)
+                .Case("@ccnae", 6)
+                .Case("@ccnb", 5)
+                .Case("@ccnbe", 6)
+                .Case("@ccnc", 5)
+                .Case("@ccne", 5)
+                .Case("@ccnz", 5)
+                .Case("@ccng", 5)
+                .Case("@ccnge", 6)
+                .Case("@ccnl", 5)
+                .Case("@ccnle", 6)
+                .Case("@ccno", 5)
+                .Case("@ccnp", 5)
+                .Case("@ccns", 5)
+                .Case("@cco", 4)
+                .Case("@ccp", 4)
+                .Case("@ccs", 4)
+                .Default(0);
+  return RV;
+}
+
 bool X86TargetInfo::validateAsmConstraint(
     const char *&Name, TargetInfo::ConstraintInfo &Info) const {
   switch (*Name) {
@@ -1635,6 +1672,14 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'C': // SSE floating point constant.
   case 'G': // x87 floating point constant.
     return true;
+  case '@':
+    // CC condition changes.
+    if (auto Len = matchAsmCCConstraint(Name)) {
+      Name += Len - 1;
+      Info.setAllowsRegister();
+      return true;
+    }
+    return false;
   }
 }
 
@@ -1706,6 +1751,13 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
 
 std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
   switch (*Constraint) {
+  case '@':
+    if (auto Len = matchAsmCCConstraint(Constraint)) {
+      std::string Converted = "{" + std::string(Constraint, Len) + "}";
+      Constraint += Len - 1;
+      return Converted;
+    }
+    return std::string(1, *Constraint);
   case 'a':
     return std::string("{ax}");
   case 'b':

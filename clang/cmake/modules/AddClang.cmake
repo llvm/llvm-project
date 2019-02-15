@@ -103,11 +103,13 @@ macro(add_clang_library name)
         ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         RUNTIME DESTINATION bin)
 
-      if (${ARG_SHARED} AND NOT CMAKE_CONFIGURATION_TYPES)
+      if (NOT CMAKE_CONFIGURATION_TYPES)
         add_llvm_install_targets(install-${name}
                                  DEPENDS ${name}
                                  COMPONENT ${name})
       endif()
+
+      set_property(GLOBAL APPEND PROPERTY CLANG_LIBS ${name})
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS ${name})
   else()

@@ -122,6 +122,7 @@ struct LegalityQuery {
 
   struct MemDesc {
     uint64_t SizeInBits;
+    uint64_t AlignInBits;
     AtomicOrdering Ordering;
   };
 
@@ -164,13 +165,23 @@ using LegalizeMutation =
     std::function<std::pair<unsigned, LLT>(const LegalityQuery &)>;
 
 namespace LegalityPredicates {
-struct TypePairAndMemSize {
+struct TypePairAndMemDesc {
   LLT Type0;
   LLT Type1;
   uint64_t MemSize;
+  uint64_t Align;
 
-  bool operator==(const TypePairAndMemSize &Other) const {
+  bool operator==(const TypePairAndMemDesc &Other) const {
     return Type0 == Other.Type0 && Type1 == Other.Type1 &&
+           Align == Other.Align &&
+           MemSize == Other.MemSize;
+  }
+
+  /// \returns true if this memory access is legal with for the acecss described
+  /// by \p Other (The alignment is sufficient for the size and result type).
+  bool isCompatible(const TypePairAndMemDesc &Other) const {
+    return Type0 == Other.Type0 && Type1 == Other.Type1 &&
+           Align >= Other.Align &&
            MemSize == Other.MemSize;
   }
 };
@@ -199,9 +210,9 @@ typePairInSet(unsigned TypeIdx0, unsigned TypeIdx1,
               std::initializer_list<std::pair<LLT, LLT>> TypesInit);
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
-LegalityPredicate typePairAndMemSizeInSet(
+LegalityPredicate typePairAndMemDescInSet(
     unsigned TypeIdx0, unsigned TypeIdx1, unsigned MMOIdx,
-    std::initializer_list<TypePairAndMemSize> TypesAndMemSizeInit);
+    std::initializer_list<TypePairAndMemDesc> TypesAndMemDescInit);
 /// True iff the specified type index is a scalar.
 LegalityPredicate isScalar(unsigned TypeIdx);
 /// True iff the specified type index is a vector.
@@ -455,13 +466,13 @@ public:
     return actionFor(LegalizeAction::Legal, Types);
   }
   /// The instruction is legal when type indexes 0 and 1 along with the memory
-  /// size is any type and size tuple in the given list.
-  LegalizeRuleSet &legalForTypesWithMemSize(
-      std::initializer_list<LegalityPredicates::TypePairAndMemSize>
-          TypesAndMemSize) {
+  /// size and minimum alignment is any type and size tuple in the given list.
+  LegalizeRuleSet &legalForTypesWithMemDesc(
+      std::initializer_list<LegalityPredicates::TypePairAndMemDesc>
+          TypesAndMemDesc) {
     return actionIf(LegalizeAction::Legal,
-                    LegalityPredicates::typePairAndMemSizeInSet(
-                        typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemSize));
+                    LegalityPredicates::typePairAndMemDescInSet(
+                        typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemDesc));
   }
   /// The instruction is legal when type indexes 0 and 1 are both in the given
   /// list. That is, the type pair is in the cartesian product of the list.

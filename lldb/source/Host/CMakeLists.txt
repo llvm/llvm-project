@@ -18,9 +18,9 @@ macro(remove_module_flags)
 endmacro()
 
 add_host_subdirectory(common
-  common/File.cpp
   common/FileAction.cpp
   common/FileCache.cpp
+  common/File.cpp
   common/FileSystem.cpp
   common/GetOptInc.cpp
   common/Host.cpp
@@ -31,26 +31,26 @@ add_host_subdirectory(common
   common/LockFileBase.cpp
   common/MainLoop.cpp
   common/MonitoringProcessLauncher.cpp
-  common/NativeWatchpointList.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
   common/NativeThreadProtocol.cpp
+  common/NativeWatchpointList.cpp
   common/OptionParser.cpp
   common/PipeBase.cpp
   common/ProcessInfo.cpp
   common/ProcessLaunchInfo.cpp
   common/ProcessRunLock.cpp
   common/PseudoTerminal.cpp
-  common/Socket.cpp
   common/SocketAddress.cpp
+  common/Socket.cpp
   common/StringConvert.cpp
   common/Symbols.cpp
   common/TaskPool.cpp
   common/TCPSocket.cpp
   common/Terminal.cpp
   common/ThreadLauncher.cpp
-  common/XML.cpp
   common/UDPSocket.cpp
+  common/XML.cpp
   )
 
 if (NOT LLDB_DISABLE_LIBEDIT)

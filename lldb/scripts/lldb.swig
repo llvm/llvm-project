@@ -66,6 +66,21 @@ import os
 
 import six
 %}
+
+// Include the version of swig that was used to generate this interface.
+%define EMBED_VERSION(VERSION)
+%pythoncode%{
+# SWIG_VERSION is written as a single hex number, but the components of it are
+# meant to be interpreted in decimal. So, 0x030012 is swig 3.0.12, and not
+# 3.0.18.
+def _to_int(hex):
+    return hex // 0x10 % 0x10 * 10 + hex % 0x10
+swig_version = (_to_int(VERSION // 0x10000), _to_int(VERSION // 0x100), _to_int(VERSION))
+del _to_int
+%}
+%enddef
+EMBED_VERSION(SWIG_VERSION)
+
 %include "./Python/python-typemaps.swig"
 
 /* C++ headers to be included. */

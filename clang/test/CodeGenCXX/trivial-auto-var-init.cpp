@@ -45,14 +45,35 @@ void test_block() {
 // PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured, %struct.__block_byref_captured* %captured, i32 0, i32 4
 // PATTERN-NEXT:  store %struct.XYZ* inttoptr (i64 -6148914691236517206 to %struct.XYZ*), %struct.XYZ** %captured1, align 8
 // PATTERN:       %call = call %struct.XYZ* @create(
+using Block = void (^)();
+typedef struct XYZ {
+  Block block;
+} * xyz_t;
 void test_block_self_init() {
-  using Block = void (^)();
-  typedef struct XYZ {
-    Block block;
-  } * xyz_t;
   extern xyz_t create(Block block);
   __block xyz_t captured = create(^() {
-    (void)captured;
+    used(captured);
+  });
+}
+
+// Capturing with escape after initialization is also an edge case.
+//
+// UNINIT-LABEL:  test_block_captures_self_after_init(
+// ZERO-LABEL:    test_block_captures_self_after_init(
+// ZERO:          %block = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, align 8
+// ZERO:          %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, %struct.__block_byref_captured.1* %captured, i32 0, i32 4
+// ZERO-NEXT:     store %struct.XYZ* null, %struct.XYZ** %captured1, align 8
+// ZERO:          %call = call %struct.XYZ* @create(
+// PATTERN-LABEL: test_block_captures_self_after_init(
+// PATTERN:       %block = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, align 8
+// PATTERN:       %captured1 = getelementptr inbounds %struct.__block_byref_captured.1, %struct.__block_byref_captured.1* %captured, i32 0, i32 4
+// PATTERN-NEXT:  store %struct.XYZ* inttoptr (i64 -6148914691236517206 to %struct.XYZ*), %struct.XYZ** %captured1, align 8
+// PATTERN:       %call = call %struct.XYZ* @create(
+void test_block_captures_self_after_init() {
+  extern xyz_t create(Block block);
+  __block xyz_t captured;
+  captured = create(^() {
+    used(captured);
   });
 }
 

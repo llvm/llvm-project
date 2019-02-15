@@ -288,7 +288,8 @@ void Scheduler::dispatch(const InstRef &IR) {
 bool Scheduler::isReady(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-  return IR.getInstruction()->isReady() && (!IsMemOp || LSU.isReady(IR));
+  return IR.getInstruction()->isReady() &&
+         (!IsMemOp || LSU.isReady(IR) == IR.getSourceIndex());
 }
 
 } // namespace mca

@@ -686,6 +686,7 @@ void IRPromoter::TruncateSinks() {
 }
 
 void IRPromoter::Cleanup() {
+  LLVM_DEBUG(dbgs() << "ARM CGP: Cleanup..\n");
   // Some zexts will now have become redundant, along with their trunc
   // operands, so remove them
   for (auto V : *Visited) {
@@ -729,6 +730,7 @@ void IRPromoter::Cleanup() {
 }
 
 void IRPromoter::ConvertTruncs() {
+  LLVM_DEBUG(dbgs() << "ARM CGP: Converting truncs..\n");
   IRBuilder<> Builder{Ctx};
 
   for (auto *V : *Visited) {
@@ -736,12 +738,13 @@ void IRPromoter::ConvertTruncs() {
       continue;
 
     auto *Trunc = cast<TruncInst>(V);
-    assert(LessThanTypeSize(Trunc) && "expected narrow trunc");
-
     Builder.SetInsertPoint(Trunc);
-    unsigned NumBits =
-      cast<IntegerType>(Trunc->getType())->getScalarSizeInBits();
-    ConstantInt *Mask = ConstantInt::get(Ctx, APInt::getMaxValue(NumBits));
+    IntegerType *SrcTy = cast<IntegerType>(Trunc->getOperand(0)->getType());
+    IntegerType *DestTy = cast<IntegerType>(TruncTysMap[Trunc][0]);
+
+    unsigned NumBits = DestTy->getScalarSizeInBits();
+    ConstantInt *Mask =
+      ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
     Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
 
     if (auto *I = dyn_cast<Instruction>(Masked))
@@ -783,6 +786,12 @@ void IRPromoter::Mutate(Type *OrigTy,
         TruncTysMap[I].push_back(I->getOperand(i)->getType());
     }
   }
+  for (auto *V : Visited) {
+    if (!isa<TruncInst>(V) || Sources.count(V))
+      continue;
+    auto *Trunc = cast<TruncInst>(V);
+    TruncTysMap[Trunc].push_back(Trunc->getDestTy());
+  }
 
   // Convert adds and subs using negative immediates to equivalent instructions
   // that use positive constants.
@@ -791,13 +800,13 @@ void IRPromoter::Mutate(Type *OrigTy,
   // Insert zext instructions between sources and their users.
   ExtendSources();
 
-  // Convert any truncs, that aren't sources, into AND masks.
-  ConvertTruncs();
-
   // Promote visited instructions, mutating their types in place. Also insert
   // DSP intrinsics, if enabled, for adds and subs which would be unsafe to
   // promote.
   PromoteTree();
+
+  // Convert any truncs, that aren't sources, into AND masks.
+  ConvertTruncs();
 
   // Insert trunc instructions for use by calls, stores etc...
   TruncateSinks();

@@ -13,14 +13,49 @@
 #include "FuzzerIO.h"
 #include "FuzzerMerge.h"
 #include "FuzzerSHA1.h"
+#include "FuzzerTracePC.h"
 #include "FuzzerUtil.h"
 
 #include <atomic>
+#include <fstream>
 #include <mutex>
-#include <thread>
 #include <queue>
+#include <sstream>
+#include <thread>
 
 namespace fuzzer {
+
+struct Stats {
+  size_t number_of_executed_units = 0;
+  size_t peak_rss_mb = 0;
+  size_t average_exec_per_sec = 0;
+};
+
+static Stats ParseFinalStatsFromLog(const std::string &LogPath) {
+  std::ifstream In(LogPath);
+  std::string Line;
+  Stats Res;
+  struct {
+    const char *Name;
+    size_t *Var;
+  } NameVarPairs[] = {
+      {"stat::number_of_executed_units:", &Res.number_of_executed_units},
+      {"stat::peak_rss_mb:", &Res.peak_rss_mb},
+      {"stat::average_exec_per_sec:", &Res.average_exec_per_sec},
+      {nullptr, nullptr},
+  };
+  while (std::getline(In, Line, '\n')) {
+    if (Line.find("stat::") != 0) continue;
+    std::istringstream ISS(Line);
+    std::string Name;
+    size_t Val;
+    ISS >> Name >> Val;
+    for (size_t i = 0; NameVarPairs[i].Name; i++)
+      if (Name == NameVarPairs[i].Name)
+        *NameVarPairs[i].Var = Val;
+  }
+  return Res;
+}
 
 struct FuzzJob {
   // Inputs.
@@ -38,10 +73,12 @@ struct GlobalEnv {
   Vector<std::string> CorpusDirs;
   std::string MainCorpusDir;
   std::string TempDir;
-  Set<uint32_t> Features;
+  Set<uint32_t> Features, Cov;
   Vector<std::string> Files;
   Random *Rand;
   int Verbosity = 0;
+
+  size_t NumRuns = 0;
 
   FuzzJob *CreateNewJob(size_t JobId) {
     Command Cmd(Args);
@@ -49,11 +86,14 @@ struct GlobalEnv {
     for (auto &C : CorpusDirs) // Remove all corpora from the args.
       Cmd.removeArgument(C);
     Cmd.addFlag("reload", "0");  // working in an isolated dir, no reload.
+    Cmd.addFlag("print_final_stats", "1");
+    Cmd.addFlag("print_funcs", "0");  // no need to spend time symbolizing.
     Cmd.addFlag("max_total_time", std::to_string(std::min((size_t)300, JobId)));
 
     auto Job = new FuzzJob;
     std::string Seeds;
-    if (size_t CorpusSubsetSize = std::min(Files.size(), (size_t)100))
+    if (size_t CorpusSubsetSize =
+            std::min(Files.size(), (size_t)sqrt(Files.size() + 2)))
       for (size_t i = 0; i < CorpusSubsetSize; i++)
         Seeds += (Seeds.empty() ? "" : ",") +
                  Files[Rand->SkewTowardsLast(Files.size())];
@@ -85,9 +125,9 @@ struct GlobalEnv {
     GetSizedFilesFromDir(Job->CorpusDir, &TempFiles);
 
     Vector<std::string> FilesToAdd;
-    Set<uint32_t> NewFeatures;
+    Set<uint32_t> NewFeatures, NewCov;
     CrashResistantMerge(Args, {}, TempFiles, &FilesToAdd, Features,
-                        &NewFeatures, Job->CFPath, false);
+                        &NewFeatures, Cov, &NewCov, Job->CFPath, false);
     RemoveFile(Job->CFPath);
     for (auto &Path : FilesToAdd) {
       auto U = FileToVector(Path);
@@ -95,12 +135,21 @@ struct GlobalEnv {
       WriteToFile(U, NewPath);
       Files.push_back(NewPath);
     }
-    Printf("Removing %s\n", Job->CorpusDir.c_str());
     RmDirRecursive(Job->CorpusDir);
     Features.insert(NewFeatures.begin(), NewFeatures.end());
-    Printf("INFO: temp_files: %zd files_added: %zd newft: %zd ft: %zd\n",
-           TempFiles.size(), FilesToAdd.size(), NewFeatures.size(),
-           Features.size());
+    Cov.insert(NewCov.begin(), NewCov.end());
+    for (auto Idx : NewCov)
+      if (auto *TE = TPC.PCTableEntryByIdx(Idx))
+        if (TPC.PcIsFuncEntry(TE))
+          PrintPC("  NEW_FUNC: %p %F %L\n", "",
+                  TPC.GetNextInstructionPc(TE->PC));
+
+    auto Stats = ParseFinalStatsFromLog(Job->LogPath);
+    NumRuns += Stats.number_of_executed_units;
+    if (!FilesToAdd.empty())
+      Printf("#%zd: cov: %zd ft: %zd corp: %zd exec/s %zd\n", NumRuns,
+             Cov.size(), Features.size(), Files.size(),
+             Stats.average_exec_per_sec);
   }
 };
 
@@ -163,6 +212,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
 
   auto CFPath = DirPlusFile(Env.TempDir, "merge.txt");
   CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, {}, &Env.Features,
+                      {}, &Env.Cov,
                       CFPath, false);
   RemoveFile(CFPath);
   Printf("INFO: -fork=%d: %zd seeds, starting to fuzz; scratch: %s\n",
