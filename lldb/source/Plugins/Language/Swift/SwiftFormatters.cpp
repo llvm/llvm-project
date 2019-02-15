@@ -1070,36 +1070,27 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
     return false;
   uint64_t arg_size = *opt_arg_size;
 
-  lldb::addr_t object_address = valobj.GetAddressOf();
-  if (object_address == LLDB_INVALID_ADDRESS)
+  DataExtractor storage_buf;
+  uint64_t len = valobj.GetData(storage_buf, error);
+  lldbassert(len == type_size && "extracted less bytes than requested");
+  if (len < type_size)
     return false;
 
   uint64_t num_elements = type_size / arg_size;
-  std::vector<std::string> elem_string;
-  for (uint64_t i = 0; i < num_elements; ++i) {
-    DataBufferSP buffer_sp(new DataBufferHeap(arg_size, 0));
-    uint8_t *data_ptr = buffer_sp->GetBytes();
-    process.ReadMemory(object_address, data_ptr, arg_size, error);
-    if (error.Fail())
-      return false;
-    DataExtractor DE(buffer_sp, process_sp->GetByteOrder(),
-                     process_sp->GetAddressByteSize());
-
+  std::vector<std::string> elem_vector;
+  for (int i = 0; i < num_elements; ++i) {
+    DataExtractor elem_extractor(storage_buf, i * arg_size, arg_size);
     auto simd_elem = ValueObject::CreateValueObjectFromData(
-        "simd_elem", DE, valobj.GetExecutionContextRef(), arg_type);
+        "simd_elem", elem_extractor, valobj.GetExecutionContextRef(), arg_type);
     if (!simd_elem || simd_elem->GetError().Fail())
       return false;
 
     auto synthetic = simd_elem->GetSyntheticValue();
     const char *value_string = synthetic->GetValueAsCString();
-    if (!value_string)
-      value_string = synthetic->GetSummaryAsCString();
-    if (!value_string)
-      return false;
-    elem_string.push_back(std::string(value_string));
-    object_address += arg_size;
+    elem_vector.push_back(value_string);
   }
-  return PrintRow(stream, elem_string);
+
+  return PrintRow(stream, elem_vector);
 }
 
 bool lldb_private::formatters::swift::LegacySIMD_SummaryProvider(
