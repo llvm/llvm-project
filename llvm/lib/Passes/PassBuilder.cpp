@@ -651,14 +651,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // globals.
   MPM.addPass(DeadArgumentEliminationPass());
 
-  // Split out cold code. Splitting is done before inlining because 1) the most
-  // common kinds of cold regions can (a) be found before inlining and (b) do
-  // not grow after inlining, and 2) inhibiting inlining of cold code improves
-  // code size & compile time. Split after Mem2Reg to make code model estimates
-  // more accurate, but before InstCombine to allow it to clean things up.
-  if ((EnableHotColdSplit || SplitColdCode) && Phase != ThinLTOPhase::PostLink)
-    MPM.addPass(HotColdSplittingPass());
-
   // Create a small function pass pipeline to cleanup after all the global
   // optimizations.
   FunctionPassManager GlobalCleanupPM(DebugLogging);
@@ -735,6 +727,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   MPM.addPass(
       createModuleToPostOrderCGSCCPassAdaptor(createDevirtSCCRepeatedPass(
           std::move(MainCGPipeline), MaxDevirtIterations)));
+
+  // Split out cold code. Splitting is done late to avoid hiding context from
+  // other optimizations and inadvertently regressing performance. The tradeoff
+  // is that this has a higher code size cost than splitting early.
+  if ((EnableHotColdSplit || SplitColdCode) && Phase != ThinLTOPhase::PreLink)
+    MPM.addPass(HotColdSplittingPass());
 
   return MPM;
 }
