@@ -377,7 +377,7 @@ bool SymbolFilePDB::ParseSupportFiles(
 
 bool SymbolFilePDB::ParseImportedModules(
     const lldb_private::SymbolContext &sc,
-    std::vector<lldb_private::ConstString> &imported_modules) {
+    std::vector<lldb_private::SourceModule> &imported_modules) {
   // PDB does not yet support module debug info
   return false;
 }

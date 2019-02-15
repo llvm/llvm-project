@@ -18,7 +18,6 @@
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
@@ -28,6 +27,8 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Threading.h"
+
+#include "swift/AST/Module.h"
 
 #include <map>
 #include <set>
@@ -56,6 +57,8 @@ class DWARFASTParser;
 class SwiftEnumDescriptor;
 
 namespace lldb_private {
+
+struct SourceModule;
 
 class SwiftASTContext : public TypeSystem {
 public:
@@ -216,14 +219,13 @@ public:
   /// \return the ExtraArgs of the ClangImporterOptions.
   const std::vector<std::string> &GetClangArguments();
 
-  swift::ModuleDecl *CreateModule(const ConstString &module_basename,
-                                  Status &error);
+  swift::ModuleDecl *CreateModule(const SourceModule &module, Status &error);
 
   // This function should only be called when all search paths
   // for all items in a swift::ASTContext have been setup to
   // allow for imports to happen correctly. Use with caution,
   // or use the GetModule() call that takes a FileSpec.
-  swift::ModuleDecl *GetModule(const ConstString &module_name, Status &error);
+  swift::ModuleDecl *GetModule(const SourceModule &module, Status &error);
 
   swift::ModuleDecl *GetModule(const FileSpec &module_spec, Status &error);
 
@@ -233,7 +235,7 @@ public:
   // by module, load the module into the AST context, and also load any
   // "LinkLibraries" that the module requires.
 
-  swift::ModuleDecl *FindAndLoadModule(const ConstString &module_basename,
+  swift::ModuleDecl *FindAndLoadModule(const SourceModule &module,
                                        Process &process, Status &error);
 
   swift::ModuleDecl *FindAndLoadModule(const FileSpec &module_spec,
@@ -282,8 +284,6 @@ public:
 
   size_t FindType(const char *name, std::set<CompilerType> &results,
                   bool append = true);
-
-  CompilerType FindFirstType(const char *name, const ConstString &module_name);
 
   CompilerType GetTypeFromMangledTypename(const char *mangled_typename,
                                           Status &error);
@@ -368,7 +368,7 @@ public:
   // DebuggerClient's that we are sticking into the Swift Modules.
   void AddDebuggerClient(swift::DebuggerClient *debugger_client);
 
-  typedef llvm::DenseMap<const char *, swift::ModuleDecl *> SwiftModuleMap;
+  typedef llvm::StringMap<swift::ModuleDecl *> SwiftModuleMap;
 
   const SwiftModuleMap &GetModuleCache() { return m_swift_module_cache; }
 
@@ -472,8 +472,6 @@ public:
   bool IsVoidType(void *type) override;
 
   static bool IsGenericType(const CompilerType &compiler_type);
-
-  static bool IsSelfArchetypeType(const CompilerType &compiler_type);
 
   bool IsTrivialOptionSetType(const CompilerType &compiler_type);
 
@@ -771,6 +769,13 @@ public:
 
   void SetCachedType(const ConstString &mangled, const lldb::TypeSP &type_sp);
 
+  static bool
+  LoadOneModule(const SourceModule &module, SwiftASTContext &swift_ast_context,
+                lldb::StackFrameWP &stack_frame_wp,
+                llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
+                    &additional_imports,
+                Status &error);
+
   static bool PerformUserImport(SwiftASTContext &swift_ast_context,
                                 SymbolContext &sc,
                                 ExecutionContextScope &exe_scope,
@@ -800,7 +805,7 @@ protected:
 
   swift::SerializedModuleLoader *GetSerializeModuleLoader();
 
-  swift::ModuleDecl *GetCachedModule(const ConstString &module_name);
+  swift::ModuleDecl *GetCachedModule(const SourceModule &module);
 
   void CacheDemangledType(const char *, swift::TypeBase *);
 
@@ -831,8 +836,8 @@ protected:
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
-  Status m_error; // Any errors that were found while creating or using the AST
-                 // context
+  /// Any errors that were found while creating or using the AST context.
+  Status m_error;
   swift::ModuleDecl *m_scratch_module = nullptr;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
   /// Owned by the AST.

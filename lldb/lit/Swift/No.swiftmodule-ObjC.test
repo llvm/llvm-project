@@ -13,5 +13,6 @@
 
 breakpoint set -p "break here"
 run
-fr var
-fr var -O object
+frame variable -d no-dynamic
+frame variable -O object
+target var globalFloat

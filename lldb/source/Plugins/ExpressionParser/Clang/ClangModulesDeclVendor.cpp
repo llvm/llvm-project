@@ -27,6 +27,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -69,7 +70,7 @@ public:
 
   ~ClangModulesDeclVendorImpl() override = default;
 
-  bool AddModule(ModulePath &path, ModuleVector *exported_modules,
+  bool AddModule(const SourceModule &module, ModuleVector *exported_modules,
                  Stream &error_stream) override;
 
   bool AddModulesForCompileUnit(CompileUnit &cu, ModuleVector &exported_modules,
@@ -182,7 +183,7 @@ void ClangModulesDeclVendorImpl::ReportModuleExports(
   }
 }
 
-bool ClangModulesDeclVendorImpl::AddModule(ModulePath &path,
+bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
                                            ModuleVector *exported_modules,
                                            Stream &error_stream) {
   // Fail early.
@@ -197,7 +198,7 @@ bool ClangModulesDeclVendorImpl::AddModule(ModulePath &path,
 
   std::vector<ConstString> imported_module;
 
-  for (ConstString path_component : path) {
+  for (ConstString path_component : module.path) {
     imported_module.push_back(path_component);
   }
 
@@ -212,11 +213,34 @@ bool ClangModulesDeclVendorImpl::AddModule(ModulePath &path,
     }
   }
 
-  if (!m_compiler_instance->getPreprocessor()
-           .getHeaderSearchInfo()
-           .lookupModule(path[0].GetStringRef())) {
+  clang::HeaderSearch &HS =
+    m_compiler_instance->getPreprocessor().getHeaderSearchInfo();
+
+  if (module.search_path) {
+    auto path_begin = llvm::sys::path::begin(module.search_path.GetStringRef());
+    auto path_end = llvm::sys::path::end(module.search_path.GetStringRef());
+    auto sysroot_begin = llvm::sys::path::begin(module.sysroot.GetStringRef());
+    auto sysroot_end = llvm::sys::path::end(module.sysroot.GetStringRef());
+    // FIXME: Use C++14 std::equal(it, it, it, it) variant once it's available.
+    bool is_system_module = (std::distance(path_begin, path_end) >=
+                             std::distance(sysroot_begin, sysroot_end)) &&
+                            std::equal(sysroot_begin, sysroot_end, path_begin);
+    // No need to inject search paths to modules in the sysroot.
+    if (!is_system_module) {
+      bool is_system = true;
+      bool is_framework = false;
+      auto *dir =
+          HS.getFileMgr().getDirectory(module.search_path.GetStringRef());
+      auto *file = HS.lookupModuleMapFile(dir, is_framework);
+      if (!HS.loadModuleMapFile(file, is_system))
+        error_stream.Printf("error: No module map file in %s\n",
+                            module.search_path.AsCString());
+      return false;
+    }
+  }
+  if (!HS.lookupModule(module.path.front().GetStringRef())) {
     error_stream.Printf("error: Header search couldn't locate module %s\n",
-                        path[0].AsCString());
+                        module.path.front().AsCString());
     return false;
   }
 
@@ -228,7 +252,7 @@ bool ClangModulesDeclVendorImpl::AddModule(ModulePath &path,
     clang::SourceManager &source_manager =
         m_compiler_instance->getASTContext().getSourceManager();
 
-    for (ConstString path_component : path) {
+    for (ConstString path_component : module.path) {
       clang_path.push_back(std::make_pair(
           &m_compiler_instance->getASTContext().Idents.get(
               path_component.GetStringRef()),
@@ -248,19 +272,18 @@ bool ClangModulesDeclVendorImpl::AddModule(ModulePath &path,
   if (!top_level_module) {
     diagnostic_consumer->DumpDiagnostics(error_stream);
     error_stream.Printf("error: Couldn't load top-level module %s\n",
-                        path[0].AsCString());
+                        module.path.front().AsCString());
     return false;
   }
 
   clang::Module *submodule = top_level_module;
 
-  for (size_t ci = 1; ci < path.size(); ++ci) {
-    llvm::StringRef component = path[ci].GetStringRef();
-    submodule = submodule->findSubmodule(component.str());
+  for (auto &component : llvm::ArrayRef<ConstString>(module.path).drop_front()) {
+    submodule = submodule->findSubmodule(component.GetStringRef());
     if (!submodule) {
       diagnostic_consumer->DumpDiagnostics(error_stream);
       error_stream.Printf("error: Couldn't load submodule %s\n",
-                          component.str().c_str());
+                          component.GetCString());
       return false;
     }
   }
@@ -287,12 +310,16 @@ bool ClangModulesDeclVendor::LanguageSupportsClangModules(
   switch (language) {
   default:
     return false;
-  // C++ and friends to be added
   case lldb::LanguageType::eLanguageTypeC:
   case lldb::LanguageType::eLanguageTypeC11:
   case lldb::LanguageType::eLanguageTypeC89:
   case lldb::LanguageType::eLanguageTypeC99:
+  case lldb::LanguageType::eLanguageTypeC_plus_plus:
+  case lldb::LanguageType::eLanguageTypeC_plus_plus_03:
+  case lldb::LanguageType::eLanguageTypeC_plus_plus_11:
+  case lldb::LanguageType::eLanguageTypeC_plus_plus_14:
   case lldb::LanguageType::eLanguageTypeObjC:
+  case lldb::LanguageType::eLanguageTypeObjC_plus_plus:
     return true;
   }
 }
@@ -301,21 +328,10 @@ bool ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
     CompileUnit &cu, ClangModulesDeclVendor::ModuleVector &exported_modules,
     Stream &error_stream) {
   if (LanguageSupportsClangModules(cu.GetLanguage())) {
-    std::vector<ConstString> imported_modules = cu.GetImportedModules();
-
-    for (ConstString imported_module : imported_modules) {
-      std::vector<ConstString> path;
-
-      path.push_back(imported_module);
-
-      if (!AddModule(path, &exported_modules, error_stream)) {
+    for (auto &imported_module : cu.GetImportedModules())
+      if (!AddModule(imported_module, &exported_modules, error_stream))
         return false;
-      }
-    }
-
-    return true;
   }
-
   return true;
 }
 

@@ -18,7 +18,6 @@ class TestClassConstrainedProtocol(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @expectedFailureAll(bugnumber="rdar://31822623")
     def test_extension_weak_self (self):
         """Test that we can reconstruct weak self captured in a class constrained protocol."""
         self.build()

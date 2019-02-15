@@ -68,9 +68,9 @@ public:
   }
   size_t ParseTypes(CompileUnit &cu) override { return 0; }
 
-  bool
-  ParseImportedModules(const SymbolContext &sc,
-                       std::vector<ConstString> &imported_modules) override {
+  bool ParseImportedModules(
+      const SymbolContext &sc,
+      std::vector<SourceModule> &imported_modules) override {
     return false;
   }
 
