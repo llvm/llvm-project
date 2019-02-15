@@ -7,9 +7,9 @@
 // RUN: %clang_cc1 -Oz -fsplit-cold-code -mllvm -debug-pass=Structure \
 // RUN:   -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefix=OLDPM-NO-SPLIT %s
 //
-// No splitting by default.
+// Split by default.
 // RUN: %clang_cc1 -O3 -mllvm -debug-pass=Structure \
-// RUN:   -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefix=OLDPM-NO-SPLIT %s
+// RUN:   -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefix=OLDPM-SPLIT %s
 //
 // No splitting when it's explicitly disabled.
 // RUN: %clang_cc1 -O3 -fno-split-cold-code -mllvm -debug-pass=Structure \
@@ -48,9 +48,9 @@
 // RUN: %clang_cc1 -Oz -fsplit-cold-code -fexperimental-new-pass-manager -fdebug-pass-manager \
 // RUN:   -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefix=NEWPM-NO-SPLIT %s
 //
-// No splitting by default.
+// Split by default.
 // RUN: %clang_cc1 -O3 -fexperimental-new-pass-manager -fdebug-pass-manager \
-// RUN:   -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefix=NEWPM-NO-SPLIT %s
+// RUN:   -emit-llvm -o /dev/null %s 2>&1 | FileCheck --check-prefix=NEWPM-SPLIT %s
 //
 // No splitting when it's explicitly disabled.
 // RUN: %clang_cc1 -O3 -fno-split-cold-code -fexperimental-new-pass-manager -fdebug-pass-manager \

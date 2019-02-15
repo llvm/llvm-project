@@ -1325,9 +1325,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   // -f[no-]split-cold-code
   // This may only be enabled when optimizing, and when small code size
   // increases are tolerable.
+  //
+  // swift-clang: Enable hot/cold splitting by default.
   Opts.SplitColdCode =
       (Opts.OptimizationLevel > 0) && (Opts.OptimizeSize != 2) &&
-      Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, false);
+      Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, true);
 
   Opts.PassPlugins = Args.getAllArgValues(OPT_fpass_plugin_EQ);
 
