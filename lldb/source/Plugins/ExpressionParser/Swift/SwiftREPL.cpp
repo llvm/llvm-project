@@ -549,9 +549,13 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
     swift::ASTContext *ast = swift_ast->GetASTContext();
     swift::REPLCompletions completions;
     static ConstString g_repl_module_name("repl");
-    swift::ModuleDecl *repl_module =
+
+    swift::ModuleDecl *repl_module = nullptr;
+    if (m_swift_repl_initialized)
+      repl_module =
         swift_ast->GetModule(g_repl_module_name, error);
-    if (repl_module == NULL) {
+    if (repl_module == nullptr) {
+      swift::ModuleDecl *repl_module = nullptr;
       repl_module = swift_ast->CreateModule(g_repl_module_name, error);
       const swift::SourceFile::ImplicitModuleImportKind implicit_import_kind =
           swift::SourceFile::ImplicitModuleImportKind::Stdlib;
@@ -560,6 +564,7 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
           swift::SourceFile(*repl_module, swift::SourceFileKind::REPL, bufferID,
                             implicit_import_kind, /*Keep tokens*/false);
       repl_module->addFile(*repl_source_file);
+      m_swift_repl_initialized = true;
     }
     if (repl_module) {
       swift::SourceFile &repl_source_file =
