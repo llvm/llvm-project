@@ -2,7 +2,7 @@
 Base class for gdb-remote test cases.
 """
 
-from __future__ import print_function
+from __future__ import division, print_function
 
 
 import errno
@@ -21,6 +21,7 @@ import time
 from lldbsuite.test import configuration
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
+from lldbsuite.support import seven
 from lldbgdbserverutils import *
 import logging
 
@@ -590,7 +591,7 @@ class GdbRemoteTestCaseBase(TestBase):
             if can_read and sock in can_read:
                 recv_bytes = sock.recv(4096)
                 if recv_bytes:
-                    response += recv_bytes.decode("utf-8")
+                    response += seven.bitcast_to_string(recv_bytes)
 
         self.assertTrue(expected_content_regex.match(response))
 
@@ -1236,7 +1237,7 @@ class GdbRemoteTestCaseBase(TestBase):
             reg_index = reg_info["lldb_register_index"]
             self.assertIsNotNone(reg_index)
 
-            reg_byte_size = int(reg_info["bitsize"]) / 8
+            reg_byte_size = int(reg_info["bitsize"]) // 8
             self.assertTrue(reg_byte_size > 0)
 
             # Handle thread suffix.
@@ -1262,7 +1263,7 @@ class GdbRemoteTestCaseBase(TestBase):
                 endian, p_response)
 
             # Flip the value by xoring with all 1s
-            all_one_bits_raw = "ff" * (int(reg_info["bitsize"]) / 8)
+            all_one_bits_raw = "ff" * (int(reg_info["bitsize"]) // 8)
             flipped_bits_int = initial_reg_value ^ int(all_one_bits_raw, 16)
             # print("reg (index={}, name={}): val={}, flipped bits (int={}, hex={:x})".format(reg_index, reg_info["name"], initial_reg_value, flipped_bits_int, flipped_bits_int))
 
@@ -1477,8 +1478,8 @@ class GdbRemoteTestCaseBase(TestBase):
         self.assertIsNotNone(context.get("g_c1_contents"))
         self.assertIsNotNone(context.get("g_c2_contents"))
 
-        return (context.get("g_c1_contents").decode("hex") == expected_g_c1) and (
-            context.get("g_c2_contents").decode("hex") == expected_g_c2)
+        return (seven.unhexlify(context.get("g_c1_contents")) == expected_g_c1) and (
+            seven.unhexlify(context.get("g_c2_contents")) == expected_g_c2)
 
     def single_step_only_steps_one_instruction(
             self, use_Hc_packet=True, step_instruction="s"):
