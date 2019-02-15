@@ -7,8 +7,6 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 
 declare void @cold_use(i8*) cold
 
-declare void @use(i8*)
-
 ; In this CFG, splitting will extract the blocks extract{1,2}. I.e., it will
 ; extract a lifetime.start marker, but not the corresponding lifetime.end
 ; marker. Make sure that a lifetime.start marker is emitted before the call to
@@ -75,8 +73,9 @@ exit:
 }
 
 ; In this CFG, splitting will extract the block extract1. I.e., it will extract
-; a lifetime.end marker, but not the corresponding lifetime.start marker. Do
-; not emit a lifetime.end marker after the call to the split function.
+; a lifetime.end marker, but not the corresponding lifetime.start marker. Make
+; sure that a lifetime.end marker is emitted after the call to the split
+; function, and *only* that marker.
 ;
 ;            entry
 ;         (lt.start)
@@ -92,7 +91,7 @@ exit:
 ;         (lt.start)
 ;        /          \
 ;   no-extract1  codeRepl
-;    (lt.end)
+;    (lt.end)    (lt.end)
 ;        \         /
 ;            exit
 define void @only_lifetime_end_is_cold() {
@@ -106,7 +105,9 @@ define void @only_lifetime_end_is_cold() {
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* [[LOCAL1_CAST]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       codeRepl:
+; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i256* [[LOCAL1]] to i8*
 ; CHECK-NEXT:    call void @only_lifetime_end_is_cold.cold.1(i8* [[LOCAL1_CAST]]) #3
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -126,54 +127,6 @@ no-extract1:
 extract1:
   ; lt.end
   call void @cold_use(i8* %local1_cast)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %local1_cast)
-  br label %exit
-
-exit:
-  ret void
-}
-
-; In this CFG, splitting will extract the blocks extract{1,2,3}. Lifting the
-; lifetime.end marker would be a miscompile.
-define void @do_not_lift_lifetime_end() {
-; CHECK-LABEL: @do_not_lift_lifetime_end(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LOCAL1:%.*]] = alloca i256
-; CHECK-NEXT:    [[LOCAL1_CAST:%.*]] = bitcast i256* [[LOCAL1]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[LOCAL1_CAST]])
-; CHECK-NEXT:    br label [[HEADER:%.*]]
-; CHECK:       header:
-; CHECK-NEXT:    call void @use(i8* [[LOCAL1_CAST]])
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[CODEREPL:%.*]]
-; CHECK:       codeRepl:
-; CHECK-NEXT:    [[TARGETBLOCK:%.*]] = call i1 @do_not_lift_lifetime_end.cold.1(i8* [[LOCAL1_CAST]]) #3
-; CHECK-NEXT:    br i1 [[TARGETBLOCK]], label [[HEADER]], label [[EXIT]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret void
-;
-entry:
-  ; lt.start
-  %local1 = alloca i256
-  %local1_cast = bitcast i256* %local1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %local1_cast)
-  br label %header
-
-header:
-  ; If the lifetime.end marker is lifted, this use becomes dead the second time
-  ; the header block is executed.
-  call void @use(i8* %local1_cast)
-  br i1 undef, label %exit, label %extract1
-
-extract1:
-  call void @cold_use(i8* %local1_cast)
-  br i1 undef, label %extract2, label %extract3
-
-extract2:
-  ; Backedge.
-  br label %header
-
-extract3:
-  ; lt.end
   call void @llvm.lifetime.end.p0i8(i64 1, i8* %local1_cast)
   br label %exit
 
