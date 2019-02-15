@@ -9,6 +9,7 @@
 ; CHECK-LABEL: define{{.*}}@caller(
 ; CHECK: call void @llvm.lifetime.start.p0i8(i64 -1, i8* %tmp.i)
 ; CHECK-NEXT: call void @callee_unknown_use1.{{.*}}(i8* %tmp.i
+; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 -1, i8* %tmp.i)
 
 define i32 @callee_unknown_use1(i32 %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL:define{{.*}}@callee_unknown_use1.{{[0-9]}}
