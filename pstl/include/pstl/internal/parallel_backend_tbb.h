@@ -497,7 +497,7 @@ class stable_sort_task : public tbb::task
   public:
     stable_sort_task(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __zs,
                      int32_t __inplace, _Compare __comp, _LeafSort __leaf_sort, _SizeType __n)
-        : _M_xs(__xs), _M_xe(__xe), _M_zs(__zs), _M_inplace(__inplace), _M_comp(__comp), _M_leaf_sort(__leaf_sort),
+        : _M_xs(__xs), _M_xe(__xe), _M_zs(__zs), _M_comp(__comp), _M_leaf_sort(__leaf_sort), _M_inplace(__inplace),
           _M_nsort(__n)
     {
     }

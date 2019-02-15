@@ -19,7 +19,7 @@ define <8 x i32> @shuffle_v8i32_0dcd3f14(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK:      .LCPI1_0:
 ; CHECK-NEXT: .quad   60129542157
 ; CHECK-NEXT: .quad   60129542157
-; CHECK-NEXT: .zero   8
+; CHECK-NEXT: .quad   68719476736
 ; CHECK-NEXT: .quad   60129542157
 
 define <8 x i32> @shuffle_v8i32_0dcd3f14_constant(<8 x i32> %a0)  {

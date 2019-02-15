@@ -1,4 +1,6 @@
 # RUN: llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass=none | FileCheck %s
+# REQUIRES: x86-registered-target
+
 # This should cleanly pass the machine verifier
 ---
 # CHECK-LABEL: name: func0

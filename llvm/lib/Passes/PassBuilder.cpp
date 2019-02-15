@@ -703,14 +703,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  // Split out cold code. Splitting is done before inlining because 1) the most
-  // common kinds of cold regions can (a) be found before inlining and (b) do
-  // not grow after inlining, and 2) inhibiting inlining of cold code improves
-  // code size & compile time. Split after Mem2Reg to make code model estimates
-  // more accurate, but before InstCombine to allow it to clean things up.
-  if ((EnableHotColdSplit || SplitColdCode) && Phase != ThinLTOPhase::PostLink)
-    MPM.addPass(HotColdSplittingPass());
-
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.
   MPM.addPass(RequireAnalysisPass<GlobalsAA, Module>());
@@ -769,9 +761,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   return MPM;
 }
 
-ModulePassManager
-PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
-                                             bool DebugLogging) {
+ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
+    OptimizationLevel Level, bool DebugLogging, bool LTOPreLink) {
   ModulePassManager MPM(DebugLogging);
 
   // Optimize globals now that the module is fully simplified.
@@ -880,6 +871,12 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // alignment information, try to re-derive it here.
   OptimizePM.addPass(AlignmentFromAssumptionsPass());
 
+  // Split out cold code. Splitting is done late to avoid hiding context from
+  // other optimizations and inadvertently regressing performance. The tradeoff
+  // is that this has a higher code size cost than splitting early.
+  if ((EnableHotColdSplit || SplitColdCode) && !LTOPreLink)
+    MPM.addPass(HotColdSplittingPass());
+
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,
   // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
@@ -923,7 +920,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
 ModulePassManager
 PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
-                                           bool DebugLogging) {
+                                           bool DebugLogging, bool LTOPreLink) {
   assert(Level != O0 && "Must request optimizations for the default pipeline!");
 
   ModulePassManager MPM(DebugLogging);
@@ -943,7 +940,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
                                                 DebugLogging));
 
   // Now add the optimization pipeline.
-  MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging));
+  MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging, LTOPreLink));
 
   return MPM;
 }
@@ -1027,7 +1024,8 @@ PassBuilder::buildLTOPreLinkDefaultPipeline(OptimizationLevel Level,
                                             bool DebugLogging) {
   assert(Level != O0 && "Must request optimizations for the default pipeline!");
   // FIXME: We should use a customized pre-link pipeline!
-  return buildPerModuleDefaultPipeline(Level, DebugLogging);
+  return buildPerModuleDefaultPipeline(Level, DebugLogging,
+                                       /*LTOPreLink=*/true);
 }
 
 ModulePassManager
@@ -1207,6 +1205,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   // to be run at link time if CFI is enabled. This pass does nothing if
   // CFI is disabled.
   MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
+
+  // Enable splitting late in the FullLTO post-link pipeline. This is done in
+  // the same stage in the old pass manager (\ref addLateLTOOptimizationPasses).
+  if (EnableHotColdSplit || SplitColdCode)
+    MPM.addPass(HotColdSplittingPass());
 
   // Add late LTO optimization passes.
   // Delete basic blocks, which optimization passes may have killed.

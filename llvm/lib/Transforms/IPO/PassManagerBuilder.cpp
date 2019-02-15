@@ -530,11 +530,6 @@ void PassManagerBuilder::populateModulePassManager(
   if (DefaultOrPreLinkPipeline && !PrepareForThinLTOUsingPGOSampleProfile)
     addPGOInstrPasses(MPM);
 
-  // Split out cold code before inlining. See comment in the new PM
-  // (\ref buildModuleSimplificationPipeline).
-  if ((EnableHotColdSplit || SplitColdCode) && DefaultOrPreLinkPipeline)
-    MPM.add(createHotColdSplittingPass());
-
   // We add a module alias analysis pass here. In part due to bugs in the
   // analysis infrastructure this "works" in that the analysis stays alive
   // for the entire SCC pass run below.
@@ -731,6 +726,12 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createConstantMergePass());     // Merge dup global constants
   }
 
+  // See comment in the new PM for justification of scheduling splitting at
+  // this stage (\ref buildModuleSimplificationPipeline).
+  if ((EnableHotColdSplit || SplitColdCode) &&
+      !(PrepareForLTO || PrepareForThinLTO))
+    MPM.add(createHotColdSplittingPass());
+
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
 
@@ -919,6 +920,11 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
 void PassManagerBuilder::addLateLTOOptimizationPasses(
     legacy::PassManagerBase &PM) {
+  // See comment in the new PM for justification of scheduling splitting at
+  // this stage (\ref buildLTODefaultPipeline).
+  if (EnableHotColdSplit || SplitColdCode)
+    PM.add(createHotColdSplittingPass());
+
   // Delete basic blocks, which optimization passes may have killed.
   PM.add(createCFGSimplificationPass());
 
