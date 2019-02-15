@@ -11,7 +11,6 @@
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/Utility/MipsLinuxSignals.h"
 #include "Plugins/Process/Utility/NetBSDSignals.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/ArchSpec.h"
 
@@ -49,12 +48,6 @@ lldb::UnixSignalsSP UnixSignals::Create(const ArchSpec &arch) {
   default:
     return std::make_shared<UnixSignals>();
   }
-}
-
-lldb::UnixSignalsSP UnixSignals::CreateForHost() {
-  static lldb::UnixSignalsSP s_unix_signals_sp =
-      Create(HostInfo::GetArchitecture());
-  return s_unix_signals_sp;
 }
 
 //----------------------------------------------------------------------

@@ -24,6 +24,7 @@ set(HWASAN_RTL_HEADERS
   hwasan_flags.h
   hwasan_flags.inc
   hwasan_interface_internal.h
+  hwasan_malloc_bisect.h
   hwasan_mapping.h
   hwasan_poisoning.h
   hwasan_report.h

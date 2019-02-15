@@ -136,7 +136,7 @@ void VPrintf(bool Verbose, const char *Fmt, ...) {
 }
 
 void RmDirRecursive(const std::string &Dir) {
-  IterateDirRecurisve(
+  IterateDirRecursive(
       Dir, [](const std::string &Path) {},
       [](const std::string &Path) { RmDir(Path); },
       [](const std::string &Path) { RemoveFile(Path); });

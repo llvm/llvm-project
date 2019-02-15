@@ -11,7 +11,6 @@
 
 #include <stdint.h>
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {
@@ -36,9 +35,7 @@ public:
   // Locating the file should happen only on the local computer or using the
   // current computers global settings.
   //----------------------------------------------------------------------
-  static FileSpec
-  LocateExecutableSymbolFile(const ModuleSpec &module_spec,
-                             const FileSpecList &default_search_paths);
+  static FileSpec LocateExecutableSymbolFile(const ModuleSpec &module_spec);
 
   static FileSpec FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
                                          const lldb_private::UUID *uuid,

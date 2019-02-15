@@ -17,7 +17,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Symbols.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
@@ -104,9 +103,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
     FileSystem::Instance().Resolve(module_spec.GetFileSpec());
     module_spec.GetSymbolFileSpec() = fspec;
     module_spec.GetUUID() = uuid;
-    FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-    FileSpec dsym_fspec =
-        Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+    FileSpec dsym_fspec = Symbols::LocateExecutableSymbolFile(module_spec);
     if (dsym_fspec) {
       DataBufferSP dsym_file_data_sp;
       lldb::offset_t dsym_file_data_offset = 0;

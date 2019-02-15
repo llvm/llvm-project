@@ -1,5 +1,6 @@
 // Tests use-after-return detection and reporting.
 // RUN: %clang_hwasan -O0 -fno-discard-value-names %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -fno-discard-value-names %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 // REQUIRES: stable-runtime
 
@@ -36,6 +37,10 @@ int main() {
   // CHECK: 8 A
   // CHECK: buggy
   // CHECK: 4096 zzz
+
+  // NOSYM: Previously allocated frames:
+  // NOSYM-NEXT: sp: 0x{{.*}} #0 0x{{.*}} ({{.*}}/stack-uar.c.tmp+0x{{.*}}){{$}}
+  // NOSYM-NEXT: 16 CCC;
 
   // CHECK: SUMMARY: HWAddressSanitizer: tag-mismatch {{.*}} in main
 }
