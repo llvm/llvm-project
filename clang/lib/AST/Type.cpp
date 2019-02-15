@@ -723,25 +723,30 @@ const ObjCObjectPointerType *ObjCObjectPointerType::stripObjCKindOfTypeAndQuals(
   return ctx.getObjCObjectPointerType(obj)->castAs<ObjCObjectPointerType>();
 }
 
-template<typename F>
-static QualType simpleTransform(ASTContext &ctx, QualType type, F &&f);
-
 namespace {
 
-/// Visitor used by simpleTransform() to perform the transformation.
-template<typename F>
-struct SimpleTransformVisitor
-         : public TypeVisitor<SimpleTransformVisitor<F>, QualType> {
+/// Visitor used to perform a simple type transformation that does not change
+/// the semantics of the type.
+template <typename Derived>
+struct SimpleTransformVisitor : public TypeVisitor<Derived, QualType> {
   ASTContext &Ctx;
-  F &&TheFunc;
 
   QualType recurse(QualType type) {
-    return simpleTransform(Ctx, type, std::move(TheFunc));
+    // Split out the qualifiers from the type.
+    SplitQualType splitType = type.split();
+
+    // Visit the type itself.
+    QualType result = static_cast<Derived *>(this)->Visit(splitType.Ty);
+    if (result.isNull())
+      return result;
+
+    // Reconstruct the transformed type by applying the local qualifiers
+    // from the split type.
+    return Ctx.getQualifiedType(result, splitType.Quals);
   }
 
 public:
-  SimpleTransformVisitor(ASTContext &ctx, F &&f)
-      : Ctx(ctx), TheFunc(std::move(f)) {}
+  explicit SimpleTransformVisitor(ASTContext &ctx) : Ctx(ctx) {}
 
   // None of the clients of this transformation can occur where
   // there are dependent types, so skip dependent types.
@@ -1121,210 +1126,199 @@ public:
 #undef SUGARED_TYPE_CLASS
 };
 
+struct SubstObjCTypeArgsVisitor
+    : public SimpleTransformVisitor<SubstObjCTypeArgsVisitor> {
+  using BaseType = SimpleTransformVisitor<SubstObjCTypeArgsVisitor>;
+
+  ArrayRef<QualType> TypeArgs;
+  ObjCSubstitutionContext SubstContext;
+
+  SubstObjCTypeArgsVisitor(ASTContext &ctx, ArrayRef<QualType> typeArgs,
+                           ObjCSubstitutionContext context)
+      : BaseType(ctx), TypeArgs(typeArgs), SubstContext(context) {}
+
+  QualType VisitTypedefType(const TypedefType *typedefTy) {
+    // Replace an Objective-C type parameter reference with the corresponding
+    // type argument.
+    if (auto *typeParam = dyn_cast<ObjCTypeParamDecl>(typedefTy->getDecl())) {
+      // If we have type arguments, use them.
+      if (!TypeArgs.empty()) {
+        // FIXME: Introduce SubstObjCTypeParamType ?
+        QualType argType = TypeArgs[typeParam->getIndex()];
+        return argType;
+      }
+
+      switch (SubstContext) {
+      case ObjCSubstitutionContext::Ordinary:
+      case ObjCSubstitutionContext::Parameter:
+      case ObjCSubstitutionContext::Superclass:
+        // Substitute the bound.
+        return typeParam->getUnderlyingType();
+
+      case ObjCSubstitutionContext::Result:
+      case ObjCSubstitutionContext::Property: {
+        // Substitute the __kindof form of the underlying type.
+        const auto *objPtr = typeParam->getUnderlyingType()
+          ->castAs<ObjCObjectPointerType>();
+
+        // __kindof types, id, and Class don't need an additional
+        // __kindof.
+        if (objPtr->isKindOfType() || objPtr->isObjCIdOrClassType())
+          return typeParam->getUnderlyingType();
+
+        // Add __kindof.
+        const auto *obj = objPtr->getObjectType();
+        QualType resultTy = Ctx.getObjCObjectType(obj->getBaseType(),
+                                                  obj->getTypeArgsAsWritten(),
+                                                  obj->getProtocols(),
+                                                  /*isKindOf=*/true);
+
+        // Rebuild object pointer type.
+        return Ctx.getObjCObjectPointerType(resultTy);
+      }
+      }
+    }
+  }
+
+  QualType VisitFunctionType(const FunctionType *funcType) {
+    // If we have a function type, update the substitution context
+    // appropriately.
+
+    //Substitute result type.
+    QualType returnType = funcType->getReturnType().substObjCTypeArgs(
+        Ctx, TypeArgs, ObjCSubstitutionContext::Result);
+    if (returnType.isNull())
+      return {};
+
+    // Handle non-prototyped functions, which only substitute into the result
+    // type.
+    if (isa<FunctionNoProtoType>(funcType)) {
+      // If the return type was unchanged, do nothing.
+      if (returnType.getAsOpaquePtr() ==
+          funcType->getReturnType().getAsOpaquePtr())
+        return BaseType::VisitFunctionType(funcType);
+
+      // Otherwise, build a new type.
+      return Ctx.getFunctionNoProtoType(returnType, funcType->getExtInfo());
+    }
+
+    const auto *funcProtoType = cast<FunctionProtoType>(funcType);
+
+    // Transform parameter types.
+    SmallVector<QualType, 4> paramTypes;
+    bool paramChanged = false;
+    for (auto paramType : funcProtoType->getParamTypes()) {
+      QualType newParamType = paramType.substObjCTypeArgs(
+          Ctx, TypeArgs, ObjCSubstitutionContext::Parameter);
+      if (newParamType.isNull())
+        return {};
+
+      if (newParamType.getAsOpaquePtr() != paramType.getAsOpaquePtr())
+        paramChanged = true;
+
+      paramTypes.push_back(newParamType);
+    }
+
+    // Transform extended info.
+    FunctionProtoType::ExtProtoInfo info = funcProtoType->getExtProtoInfo();
+    bool exceptionChanged = false;
+    if (info.ExceptionSpec.Type == EST_Dynamic) {
+      SmallVector<QualType, 4> exceptionTypes;
+      for (auto exceptionType : info.ExceptionSpec.Exceptions) {
+        QualType newExceptionType = exceptionType.substObjCTypeArgs(
+            Ctx, TypeArgs, ObjCSubstitutionContext::Ordinary);
+        if (newExceptionType.isNull())
+          return {};
+
+        if (newExceptionType.getAsOpaquePtr() != exceptionType.getAsOpaquePtr())
+          exceptionChanged = true;
+
+        exceptionTypes.push_back(newExceptionType);
+      }
+
+      if (exceptionChanged) {
+        info.ExceptionSpec.Exceptions =
+            llvm::makeArrayRef(exceptionTypes).copy(Ctx);
+      }
+    }
+
+    if (returnType.getAsOpaquePtr() ==
+            funcProtoType->getReturnType().getAsOpaquePtr() &&
+        !paramChanged && !exceptionChanged)
+      return BaseType::VisitFunctionType(funcType);
+
+    return Ctx.getFunctionType(returnType, paramTypes, info);
+  }
+
+  QualType VisitObjCObjectType(const ObjCObjectType *objcObjectType) {
+    // Substitute into the type arguments of a specialized Objective-C object
+    // type.
+    if (objcObjectType->isSpecializedAsWritten()) {
+      SmallVector<QualType, 4> newTypeArgs;
+      bool anyChanged = false;
+      for (auto typeArg : objcObjectType->getTypeArgsAsWritten()) {
+        QualType newTypeArg = typeArg.substObjCTypeArgs(
+            Ctx, TypeArgs, ObjCSubstitutionContext::Ordinary);
+        if (newTypeArg.isNull())
+          return {};
+
+        if (newTypeArg.getAsOpaquePtr() != typeArg.getAsOpaquePtr()) {
+          // If we're substituting based on an unspecialized context type,
+          // produce an unspecialized type.
+          ArrayRef<ObjCProtocolDecl *> protocols(
+              objcObjectType->qual_begin(), objcObjectType->getNumProtocols());
+          if (TypeArgs.empty() &&
+              SubstContext != ObjCSubstitutionContext::Superclass) {
+            return Ctx.getObjCObjectType(
+                objcObjectType->getBaseType(), {}, protocols,
+                objcObjectType->isKindOfTypeAsWritten());
+          }
+
+          anyChanged = true;
+        }
+
+        newTypeArgs.push_back(newTypeArg);
+      }
+
+      if (anyChanged) {
+        ArrayRef<ObjCProtocolDecl *> protocols(
+            objcObjectType->qual_begin(), objcObjectType->getNumProtocols());
+        return Ctx.getObjCObjectType(objcObjectType->getBaseType(), newTypeArgs,
+                                     protocols,
+                                     objcObjectType->isKindOfTypeAsWritten());
+      }
+    }
+
+    return BaseType::VisitObjCObjectType(objcObjectType);
+  }
+};
+
+struct StripObjCKindOfTypeVisitor
+    : public SimpleTransformVisitor<StripObjCKindOfTypeVisitor> {
+  using BaseType = SimpleTransformVisitor<StripObjCKindOfTypeVisitor>;
+
+  explicit StripObjCKindOfTypeVisitor(ASTContext &ctx) : BaseType(ctx) {}
+
+  QualType VisitObjCObjectType(const ObjCObjectType *objType) {
+    if (!objType->isKindOfType())
+      return BaseType::VisitObjCObjectType(objType);
+
+    QualType baseType = objType->getBaseType().stripObjCKindOfType(Ctx);
+    return Ctx.getObjCObjectType(baseType, objType->getTypeArgsAsWritten(),
+                                 objType->getProtocols(),
+                                 /*isKindOf=*/false);
+  }
+};
+
 } // namespace
-
-/// Perform a simple type transformation that does not change the
-/// semantics of the type.
-template<typename F>
-static QualType simpleTransform(ASTContext &ctx, QualType type, F &&f) {
-  // Transform the type. If it changed, return the transformed result.
-  QualType transformed = f(type);
-  if (transformed.getAsOpaquePtr() != type.getAsOpaquePtr())
-    return transformed;
-
-  // Split out the qualifiers from the type.
-  SplitQualType splitType = type.split();
-
-  // Visit the type itself.
-  SimpleTransformVisitor<F> visitor(ctx, std::forward<F>(f));
-  QualType result = visitor.Visit(splitType.Ty);
-  if (result.isNull())
-    return result;
-
-  // Reconstruct the transformed type by applying the local qualifiers
-  // from the split type.
-  return ctx.getQualifiedType(result, splitType.Quals);
-}
 
 /// Substitute the given type arguments for Objective-C type
 /// parameters within the given type, recursively.
-QualType QualType::substObjCTypeArgs(
-           ASTContext &ctx,
-           ArrayRef<QualType> typeArgs,
-           ObjCSubstitutionContext context) const {
-  return simpleTransform(ctx, *this,
-                         [&](QualType type) -> QualType {
-    SplitQualType splitType = type.split();
-
-    // Replace an Objective-C type parameter reference with the corresponding
-    // type argument.
-    if (const auto *typedefTy = dyn_cast<TypedefType>(splitType.Ty)) {
-      if (auto *typeParam = dyn_cast<ObjCTypeParamDecl>(typedefTy->getDecl())) {
-        // If we have type arguments, use them.
-        if (!typeArgs.empty()) {
-          // FIXME: Introduce SubstObjCTypeParamType ?
-          QualType argType = typeArgs[typeParam->getIndex()];
-          return ctx.getQualifiedType(argType, splitType.Quals);
-        }
-
-        switch (context) {
-        case ObjCSubstitutionContext::Ordinary:
-        case ObjCSubstitutionContext::Parameter:
-        case ObjCSubstitutionContext::Superclass:
-          // Substitute the bound.
-          return ctx.getQualifiedType(typeParam->getUnderlyingType(),
-                                      splitType.Quals);
-
-        case ObjCSubstitutionContext::Result:
-        case ObjCSubstitutionContext::Property: {
-          // Substitute the __kindof form of the underlying type.
-          const auto *objPtr = typeParam->getUnderlyingType()
-            ->castAs<ObjCObjectPointerType>();
-
-          // __kindof types, id, and Class don't need an additional
-          // __kindof.
-          if (objPtr->isKindOfType() || objPtr->isObjCIdOrClassType())
-            return ctx.getQualifiedType(typeParam->getUnderlyingType(),
-                                        splitType.Quals);
-
-          // Add __kindof.
-          const auto *obj = objPtr->getObjectType();
-          QualType resultTy = ctx.getObjCObjectType(obj->getBaseType(),
-                                                    obj->getTypeArgsAsWritten(),
-                                                    obj->getProtocols(),
-                                                    /*isKindOf=*/true);
-
-          // Rebuild object pointer type.
-          resultTy = ctx.getObjCObjectPointerType(resultTy);
-          return ctx.getQualifiedType(resultTy, splitType.Quals);
-        }
-        }
-      }
-    }
-
-    // If we have a function type, update the context appropriately.
-    if (const auto *funcType = dyn_cast<FunctionType>(splitType.Ty)) {
-      // Substitute result type.
-      QualType returnType = funcType->getReturnType().substObjCTypeArgs(
-                              ctx,
-                              typeArgs,
-                              ObjCSubstitutionContext::Result);
-      if (returnType.isNull())
-        return {};
-
-      // Handle non-prototyped functions, which only substitute into the result
-      // type.
-      if (isa<FunctionNoProtoType>(funcType)) {
-        // If the return type was unchanged, do nothing.
-        if (returnType.getAsOpaquePtr()
-              == funcType->getReturnType().getAsOpaquePtr())
-          return type;
-
-        // Otherwise, build a new type.
-        return ctx.getFunctionNoProtoType(returnType, funcType->getExtInfo());
-      }
-
-      const auto *funcProtoType = cast<FunctionProtoType>(funcType);
-
-      // Transform parameter types.
-      SmallVector<QualType, 4> paramTypes;
-      bool paramChanged = false;
-      for (auto paramType : funcProtoType->getParamTypes()) {
-        QualType newParamType = paramType.substObjCTypeArgs(
-                                  ctx,
-                                  typeArgs,
-                                  ObjCSubstitutionContext::Parameter);
-        if (newParamType.isNull())
-          return {};
-
-        if (newParamType.getAsOpaquePtr() != paramType.getAsOpaquePtr())
-          paramChanged = true;
-
-        paramTypes.push_back(newParamType);
-      }
-
-      // Transform extended info.
-      FunctionProtoType::ExtProtoInfo info = funcProtoType->getExtProtoInfo();
-      bool exceptionChanged = false;
-      if (info.ExceptionSpec.Type == EST_Dynamic) {
-        SmallVector<QualType, 4> exceptionTypes;
-        for (auto exceptionType : info.ExceptionSpec.Exceptions) {
-          QualType newExceptionType = exceptionType.substObjCTypeArgs(
-                                        ctx,
-                                        typeArgs,
-                                        ObjCSubstitutionContext::Ordinary);
-          if (newExceptionType.isNull())
-            return {};
-
-          if (newExceptionType.getAsOpaquePtr()
-              != exceptionType.getAsOpaquePtr())
-            exceptionChanged = true;
-
-          exceptionTypes.push_back(newExceptionType);
-        }
-
-        if (exceptionChanged) {
-          info.ExceptionSpec.Exceptions =
-              llvm::makeArrayRef(exceptionTypes).copy(ctx);
-        }
-      }
-
-      if (returnType.getAsOpaquePtr()
-            == funcProtoType->getReturnType().getAsOpaquePtr() &&
-          !paramChanged && !exceptionChanged)
-        return type;
-
-      return ctx.getFunctionType(returnType, paramTypes, info);
-    }
-
-    // Substitute into the type arguments of a specialized Objective-C object
-    // type.
-    if (const auto *objcObjectType = dyn_cast<ObjCObjectType>(splitType.Ty)) {
-      if (objcObjectType->isSpecializedAsWritten()) {
-        SmallVector<QualType, 4> newTypeArgs;
-        bool anyChanged = false;
-        for (auto typeArg : objcObjectType->getTypeArgsAsWritten()) {
-          QualType newTypeArg = typeArg.substObjCTypeArgs(
-                                  ctx, typeArgs,
-                                  ObjCSubstitutionContext::Ordinary);
-          if (newTypeArg.isNull())
-            return {};
-
-          if (newTypeArg.getAsOpaquePtr() != typeArg.getAsOpaquePtr()) {
-            // If we're substituting based on an unspecialized context type,
-            // produce an unspecialized type.
-            ArrayRef<ObjCProtocolDecl *> protocols(
-                                           objcObjectType->qual_begin(),
-                                           objcObjectType->getNumProtocols());
-            if (typeArgs.empty() &&
-                context != ObjCSubstitutionContext::Superclass) {
-              return ctx.getObjCObjectType(
-                       objcObjectType->getBaseType(), {},
-                       protocols,
-                       objcObjectType->isKindOfTypeAsWritten());
-            }
-
-            anyChanged = true;
-          }
-
-          newTypeArgs.push_back(newTypeArg);
-        }
-
-        if (anyChanged) {
-          ArrayRef<ObjCProtocolDecl *> protocols(
-                                         objcObjectType->qual_begin(),
-                                         objcObjectType->getNumProtocols());
-          return ctx.getObjCObjectType(objcObjectType->getBaseType(),
-                                       newTypeArgs, protocols,
-                                       objcObjectType->isKindOfTypeAsWritten());
-        }
-      }
-
-      return type;
-    }
-
-    return type;
-  });
+QualType QualType::substObjCTypeArgs(ASTContext &ctx,
+                                     ArrayRef<QualType> typeArgs,
+                                     ObjCSubstitutionContext context) const {
+  SubstObjCTypeArgsVisitor visitor(ctx, typeArgs, context);
+  return visitor.recurse(*this);
 }
 
 QualType QualType::substObjCMemberType(QualType objectType,
@@ -1339,25 +1333,8 @@ QualType QualType::substObjCMemberType(QualType objectType,
 QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
   // FIXME: Because ASTContext::getAttributedType() is non-const.
   auto &ctx = const_cast<ASTContext &>(constCtx);
-  return simpleTransform(ctx, *this,
-           [&](QualType type) -> QualType {
-             SplitQualType splitType = type.split();
-             if (auto *objType = splitType.Ty->getAs<ObjCObjectType>()) {
-               if (!objType->isKindOfType())
-                 return type;
-
-               QualType baseType
-                 = objType->getBaseType().stripObjCKindOfType(ctx);
-               return ctx.getQualifiedType(
-                        ctx.getObjCObjectType(baseType,
-                                              objType->getTypeArgsAsWritten(),
-                                              objType->getProtocols(),
-                                              /*isKindOf=*/false),
-                        splitType.Quals);
-             }
-
-             return type;
-           });
+  StripObjCKindOfTypeVisitor visitor(ctx);
+  return visitor.recurse(*this);
 }
 
 QualType QualType::getAtomicUnqualifiedType() const {
