@@ -17,6 +17,7 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-private.h"
 
@@ -140,7 +141,7 @@ public:
   }
   virtual bool
   ParseImportedModules(const SymbolContext &sc,
-                       std::vector<ConstString> &imported_modules) = 0;
+                       std::vector<SourceModule> &imported_modules) = 0;
   virtual size_t ParseFunctionBlocks(const SymbolContext &sc) = 0;
   virtual size_t ParseTypes(const SymbolContext &sc) = 0;
   virtual size_t ParseVariablesForContext(const SymbolContext &sc) = 0;

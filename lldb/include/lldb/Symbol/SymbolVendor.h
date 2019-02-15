@@ -14,6 +14,7 @@
 
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/lldb-private.h"
@@ -59,8 +60,9 @@ public:
 
   virtual bool ParseCompileUnitIsOptimized(const SymbolContext &sc);
 
-  virtual bool ParseImportedModules(const SymbolContext &sc,
-                                    std::vector<ConstString> &imported_modules);
+  virtual bool
+  ParseImportedModules(const SymbolContext &sc,
+                       std::vector<SourceModule> &imported_modules);
 
   virtual size_t ParseFunctionBlocks(const SymbolContext &sc);
 
