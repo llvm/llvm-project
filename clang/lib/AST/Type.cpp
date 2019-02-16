@@ -1291,6 +1291,42 @@ struct SubstObjCTypeArgsVisitor
 
     return BaseType::VisitObjCObjectType(objcObjectType);
   }
+
+  QualType VisitAttributedType(const AttributedType *attrType) {
+    QualType newType = BaseType::VisitAttributedType(attrType);
+    if (newType.isNull())
+      return {};
+
+    const auto *newAttrType = dyn_cast<AttributedType>(newType.getTypePtr());
+    if (!newAttrType || newAttrType->getAttrKind() != attr::ObjCKindOf)
+      return newType;
+
+    // Find out if it's an Objective-C object or object pointer type;
+    QualType newEquivType = newAttrType->getEquivalentType();
+    const ObjCObjectPointerType *ptrType =
+        newEquivType->getAs<ObjCObjectPointerType>();
+    const ObjCObjectType *objType = ptrType
+                                        ? ptrType->getObjectType()
+                                        : newEquivType->getAs<ObjCObjectType>();
+    if (!objType)
+      return newType;
+
+    // Rebuild the "equivalent" type, which pushes __kindof down into
+    // the object type.
+    newEquivType = Ctx.getObjCObjectType(
+        objType->getBaseType(), objType->getTypeArgsAsWritten(),
+        objType->getProtocols(),
+        // There is no need to apply kindof on an unqualified id type.
+        /*isKindOf=*/objType->isObjCUnqualifiedId() ? false : true);
+
+    // If we started with an object pointer type, rebuild it.
+    if (ptrType)
+      newEquivType = Ctx.getObjCObjectPointerType(newEquivType);
+
+    // Rebuild the attributed type.
+    return Ctx.getAttributedType(newAttrType->getAttrKind(),
+                                 newAttrType->getModifiedType(), newEquivType);
+  }
 };
 
 struct StripObjCKindOfTypeVisitor

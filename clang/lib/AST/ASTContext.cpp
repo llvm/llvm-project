@@ -5604,6 +5604,12 @@ int ASTContext::getFloatingTypeOrder(QualType LHS, QualType RHS) const {
   return -1;
 }
 
+int ASTContext::getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const {
+  if (&getFloatTypeSemantics(LHS) == &getFloatTypeSemantics(RHS))
+    return 0;
+  return getFloatingTypeOrder(LHS, RHS);
+}
+
 /// getIntegerRank - Return an integer conversion rank (C99 6.3.1.1p1). This
 /// routine will assert if passed a built-in type that isn't an integer or enum,
 /// or if it is not canonicalized.

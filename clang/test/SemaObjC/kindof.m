@@ -384,9 +384,17 @@ void testNullability() {
 }
 @end
 
+// ---------------------------------------------------------------------------
+// __kindof on type parameters
+// ---------------------------------------------------------------------------
+
 @interface NSGeneric<ObjectType> : NSObject
 - (void)test:(__kindof ObjectType)T;
 - (void)mapUsingBlock:(id (^)(__kindof ObjectType))block;
+@property (copy) ObjectType object;
+@property (copy) __kindof ObjectType kindof_object;
+
+@property (copy) __kindof ObjectType _Nonnull nonnull_kindof_object;
 @end
 @implementation NSGeneric
 - (void)test:(id)T {
@@ -394,6 +402,58 @@ void testNullability() {
 - (void)mapUsingBlock:(id (^)(id))block {
 }
 @end
+
+@interface NSDefaultGeneric<ObjectType : NSString *> : NSObject
+@property (copy) ObjectType object;
+@property (copy) __kindof ObjectType kindof_object;
+@end
+
+void testGeneric(NSGeneric<NSString*> *generic) {
+  NSObject *NSObject_obj;
+  // Assign from NSObject_obj to __kindof NSString*.
+  [generic test:NSObject_obj]; // expected-warning{{incompatible pointer types sending 'NSObject *' to parameter of type '__kindof NSString *'}}
+  NSString *NSString_str;
+  [generic test:NSString_str];
+}
+
+void testGenericAssignment() {
+  NSMutableString *NSMutableString_str;
+  NSNumber *NSNumber_obj;
+
+  NSGeneric<NSString*> *generic;
+  NSMutableString_str = generic.object; // expected-warning{{incompatible pointer types}}
+  NSNumber_obj = generic.object; // expected-warning{{incompatible pointer types}}
+  NSMutableString_str = generic.kindof_object;
+  NSNumber_obj = generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
+
+  NSGeneric<__kindof NSString*> *kindof_generic;
+  NSMutableString_str = kindof_generic.object;
+  NSNumber_obj = kindof_generic.object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
+  NSMutableString_str = kindof_generic.kindof_object;
+  NSNumber_obj = kindof_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof __kindof NSString *'}}
+
+  NSDefaultGeneric *default_generic;
+  NSMutableString_str = default_generic.object;
+  NSNumber_obj = default_generic.object; // expected-warning{{incompatible pointer types}}
+  NSMutableString_str = default_generic.kindof_object;
+  NSNumber_obj = default_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof __kindof NSString *'}}
+
+  typedef NSString *Typedef_NSString;
+  NSGeneric<Typedef_NSString> *typedef_generic;
+  NSMutableString_str = typedef_generic.object; // expected-warning{{incompatible pointer types}}
+  NSNumber_obj = typedef_generic.object; // expected-warning{{incompatible pointer types}}
+  NSMutableString_str = typedef_generic.kindof_object;
+  NSNumber_obj = typedef_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof Typedef_NSString'}}
+}
+
+void testKindofNonObjectType() {
+  typedef void (^BlockType)(int);
+  NSGeneric<BlockType> *generic;
+}
+
+void testKindofNullability(NSGeneric<NSString*> *generic) {
+  generic.nonnull_kindof_object = 0; // expected-warning{{null passed to a callee that requires a non-null argument}}
+}
 
 // Check that clang doesn't crash when a type parameter is illegal.
 @interface Array1<T> : NSObject
