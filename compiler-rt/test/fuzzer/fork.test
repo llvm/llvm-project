@@ -14,3 +14,7 @@ RUN: not %run %t-OutOfMemoryTest -fork=1 -ignore_ooms=0  -rss_limit_mb=128 2>&1 
 CRASH: SEGV on unknown address 0x000000000000
 RUN: %cpp_compiler %S/ShallowOOMDeepCrash.cpp -o %t-ShallowOOMDeepCrash
 RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 2>&1 | FileCheck %s --check-prefix=CRASH
+
+MAX_TOTAL_TIME: INFO: fuzzed for {{.*}} seconds, wrapping up soon
+MAX_TOTAL_TIME: INFO: exiting: {{.*}} time:
+RUN: not %run %t-ShallowOOMDeepCrash -fork=1 -rss_limit_mb=128 -ignore_crashes=1 -max_total_time=5 2>&1 | FileCheck %s --check-prefix=MAX_TOTAL_TIME

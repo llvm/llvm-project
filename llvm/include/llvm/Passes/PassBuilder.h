@@ -274,7 +274,8 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ModulePassManager buildModuleOptimizationPipeline(OptimizationLevel Level,
-                                                    bool DebugLogging = false);
+                                                    bool DebugLogging = false,
+                                                    bool LTOPreLink = false);
 
   /// Build a per-module default optimization pipeline.
   ///
@@ -288,7 +289,8 @@ public:
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
   ModulePassManager buildPerModuleDefaultPipeline(OptimizationLevel Level,
-                                                  bool DebugLogging = false);
+                                                  bool DebugLogging = false,
+                                                  bool LTOPreLink = false);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.

@@ -8751,6 +8751,9 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                "\t\t    parameter2); \\\n"
                "\t}",
                Tab);
+  verifyFormat("int a;\t      // x\n"
+               "int bbbbbbbb; // x\n",
+               Tab);
 
   Tab.TabWidth = 4;
   Tab.IndentWidth = 8;

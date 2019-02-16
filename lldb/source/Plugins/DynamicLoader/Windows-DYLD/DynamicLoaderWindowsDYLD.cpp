@@ -62,19 +62,26 @@ DynamicLoader *DynamicLoaderWindowsDYLD::CreateInstance(Process *process,
   return nullptr;
 }
 
-void DynamicLoaderWindowsDYLD::OnLoadModule(const ModuleSpec &module_spec,
+void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
+                                            const ModuleSpec module_spec,
                                             lldb::addr_t module_addr) {
-  // Confusingly, there is no Target::AddSharedModule.  Instead, calling
-  // GetSharedModule() with a new module will add it to the module list and
-  // return a corresponding ModuleSP.
-  Status error;
-  ModuleSP module_sp =
-      m_process->GetTarget().GetSharedModule(module_spec, &error);
-  if (error.Fail())
-    return;
+
+  // Resolve the module unless we already have one.
+  if (!module_sp) {
+    // Confusingly, there is no Target::AddSharedModule.  Instead, calling
+    // GetSharedModule() with a new module will add it to the module list and
+    // return a corresponding ModuleSP.
+    Status error;
+    module_sp = m_process->GetTarget().GetSharedModule(module_spec, &error);
+    if (error.Fail())
+      return;
+  }
 
   m_loaded_modules[module_sp] = module_addr;
   UpdateLoadedSectionsCommon(module_sp, module_addr, false);
+  ModuleList module_list;
+  module_list.Append(module_sp);
+  m_process->GetTarget().ModulesDidLoad(module_list);
 }
 
 void DynamicLoaderWindowsDYLD::OnUnloadModule(lldb::addr_t module_addr) {
@@ -86,6 +93,9 @@ void DynamicLoaderWindowsDYLD::OnUnloadModule(lldb::addr_t module_addr) {
   if (module_sp) {
     m_loaded_modules.erase(module_sp);
     UnloadSectionsCommon(module_sp);
+    ModuleList module_list;
+    module_list.Append(module_sp);
+    m_process->GetTarget().ModulesDidUnload(module_list, false);
   }
 }
 

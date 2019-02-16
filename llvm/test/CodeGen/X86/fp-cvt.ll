@@ -10,17 +10,17 @@
 define i16 @fptosi_i16_fp80(x86_fp80 %a0) nounwind {
 ; X86-LABEL: fptosi_i16_fp80:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fnstcw (%esp)
-; X86-NEXT:    movzwl (%esp), %eax
-; X86-NEXT:    movw $3199, (%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw (%esp)
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    fistps {{[0-9]+}}(%esp)
-; X86-NEXT:    fldcw (%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    popl %ecx
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-X87-LABEL: fptosi_i16_fp80:
@@ -28,9 +28,9 @@ define i16 @fptosi_i16_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
@@ -49,18 +49,18 @@ define i16 @fptosi_i16_fp80(x86_fp80 %a0) nounwind {
 define i16 @fptosi_i16_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-LABEL: fptosi_i16_fp80_ld:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fldt (%eax)
-; X86-NEXT:    fnstcw (%esp)
-; X86-NEXT:    movzwl (%esp), %eax
-; X86-NEXT:    movw $3199, (%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw (%esp)
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    fistps {{[0-9]+}}(%esp)
-; X86-NEXT:    fldcw (%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    popl %ecx
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-X87-LABEL: fptosi_i16_fp80_ld:
@@ -68,9 +68,9 @@ define i16 @fptosi_i16_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    fldt (%rdi)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistps -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
@@ -92,13 +92,13 @@ define i32 @fptosi_i32_fp80(x86_fp80 %a0) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw (%esp)
+; X86-NEXT:    movzwl (%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw (%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
@@ -108,9 +108,9 @@ define i32 @fptosi_i32_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpl -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -132,13 +132,13 @@ define i32 @fptosi_i32_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fldt (%eax)
-; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw (%esp)
+; X86-NEXT:    movzwl (%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw (%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
@@ -148,9 +148,9 @@ define i32 @fptosi_i32_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    fldt (%rdi)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpl -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -177,9 +177,9 @@ define i64 @fptosi_i64_fp80(x86_fp80 %a0) nounwind {
 ; X86-NEXT:    fldt 8(%ebp)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -193,9 +193,9 @@ define i64 @fptosi_i64_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -222,9 +222,9 @@ define i64 @fptosi_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    fldt (%eax)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -238,9 +238,9 @@ define i64 @fptosi_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    fldt (%rdi)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -266,13 +266,13 @@ define i16 @fptoui_i16_fp80(x86_fp80 %a0) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw (%esp)
+; X86-NEXT:    movzwl (%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw (%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    addl $8, %esp
@@ -283,9 +283,9 @@ define i16 @fptoui_i16_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpl -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -309,13 +309,13 @@ define i16 @fptoui_i16_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    fldt (%eax)
-; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw (%esp)
+; X86-NEXT:    movzwl (%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw (%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    addl $8, %esp
@@ -326,9 +326,9 @@ define i16 @fptoui_i16_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    fldt (%rdi)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpl -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -357,9 +357,9 @@ define i32 @fptoui_i32_fp80(x86_fp80 %a0) nounwind {
 ; X86-NEXT:    fldt 8(%ebp)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -372,9 +372,9 @@ define i32 @fptoui_i32_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -401,9 +401,9 @@ define i32 @fptoui_i32_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    fldt (%eax)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -416,9 +416,9 @@ define i32 @fptoui_i32_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    fldt (%rdi)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X64-X87-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
@@ -459,13 +459,13 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-NEXT:    setbe %al
-; X86-NEXT:    movzbl %al, %edx
+; X86-NEXT:    setbe %dl
 ; X86-NEXT:    shll $31, %edx
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -479,16 +479,16 @@ define i64 @fptoui_i64_fp80(x86_fp80 %a0) nounwind {
 ; X64-X87-NEXT:    flds {{.*}}(%rip)
 ; X64-X87-NEXT:    fld %st(1)
 ; X64-X87-NEXT:    fsub %st(1), %st
-; X64-X87-NEXT:    xorl %eax, %eax
 ; X64-X87-NEXT:    fxch %st(1)
 ; X64-X87-NEXT:    fucompi %st(2), %st
 ; X64-X87-NEXT:    fcmovnbe %st(1), %st
 ; X64-X87-NEXT:    fstp %st(1)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    xorl %eax, %eax
+; X64-X87-NEXT:    orl $3072, %ecx # imm = 0xC00
 ; X64-X87-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    setbe %al
@@ -541,13 +541,13 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X86-NEXT:    fstp %st(0)
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
 ; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-NEXT:    setbe %al
-; X86-NEXT:    movzbl %al, %edx
+; X86-NEXT:    setbe %dl
 ; X86-NEXT:    shll $31, %edx
 ; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -561,16 +561,16 @@ define i64 @fptoui_i64_fp80_ld(x86_fp80 *%a0) nounwind {
 ; X64-X87-NEXT:    flds {{.*}}(%rip)
 ; X64-X87-NEXT:    fld %st(1)
 ; X64-X87-NEXT:    fsub %st(1), %st
-; X64-X87-NEXT:    xorl %eax, %eax
 ; X64-X87-NEXT:    fxch %st(1)
 ; X64-X87-NEXT:    fucompi %st(2), %st
 ; X64-X87-NEXT:    fcmovnbe %st(1), %st
 ; X64-X87-NEXT:    fstp %st(1)
 ; X64-X87-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
-; X64-X87-NEXT:    movw $3199, -{{[0-9]+}}(%rsp) # imm = 0xC7F
-; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    xorl %eax, %eax
+; X64-X87-NEXT:    orl $3072, %ecx # imm = 0xC00
 ; X64-X87-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-X87-NEXT:    setbe %al

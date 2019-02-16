@@ -357,7 +357,7 @@ define <4 x float> @stack_fold_cvtsd2ss_int(<2 x double> %a0) optsize {
 }
 declare <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float>, <2 x double>) nounwind readnone
 
-define double @stack_fold_cvtsi2sd(i32 %a0) minsize {
+define double @stack_fold_cvtsi2sd(i32 %a0) {
   ;CHECK-LABEL: stack_fold_cvtsi2sd
   ;CHECK:       cvtsi2sdl {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -374,7 +374,7 @@ define <2 x double> @stack_fold_cvtsi2sd_int(i32 %a0, <2 x double> %b0) {
   ret <2 x double> %3
 }
 
-define double @stack_fold_cvtsi642sd(i64 %a0) optsize {
+define double @stack_fold_cvtsi642sd(i64 %a0) {
   ;CHECK-LABEL: stack_fold_cvtsi642sd
   ;CHECK:       cvtsi2sdq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -391,7 +391,7 @@ define <2 x double> @stack_fold_cvtsi642sd_int(i64 %a0, <2 x double> %b0) {
   ret <2 x double> %3
 }
 
-define float @stack_fold_cvtsi2ss(i32 %a0) minsize {
+define float @stack_fold_cvtsi2ss(i32 %a0) {
   ;CHECK-LABEL: stack_fold_cvtsi2ss
   ;CHECK:       cvtsi2ssl {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
@@ -408,7 +408,7 @@ define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0, <4 x float> %b0) {
   ret <4 x float> %3
 }
 
-define float @stack_fold_cvtsi642ss(i64 %a0) optsize {
+define float @stack_fold_cvtsi642ss(i64 %a0) {
   ;CHECK-LABEL: stack_fold_cvtsi642ss
   ;CHECK:       cvtsi2ssq {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}} {{.*#+}} 8-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
