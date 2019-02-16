@@ -730,18 +730,23 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
                                              Instruction *SplitBefore,
                                              bool Unreachable,
                                              MDNode *BranchWeights,
-                                             DominatorTree *DT, LoopInfo *LI) {
+                                             DominatorTree *DT, LoopInfo *LI,
+                                             BasicBlock *ThenBlock) {
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
   Instruction *HeadOldTerm = Head->getTerminator();
   LLVMContext &C = Head->getContext();
-  BasicBlock *ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
   Instruction *CheckTerm;
-  if (Unreachable)
-    CheckTerm = new UnreachableInst(C, ThenBlock);
-  else
-    CheckTerm = BranchInst::Create(Tail, ThenBlock);
-  CheckTerm->setDebugLoc(SplitBefore->getDebugLoc());
+  bool CreateThenBlock = (ThenBlock == nullptr);
+  if (CreateThenBlock) {
+    ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
+    if (Unreachable)
+      CheckTerm = new UnreachableInst(C, ThenBlock);
+    else
+      CheckTerm = BranchInst::Create(Tail, ThenBlock);
+    CheckTerm->setDebugLoc(SplitBefore->getDebugLoc());
+  } else
+    CheckTerm = ThenBlock->getTerminator();
   BranchInst *HeadNewTerm =
     BranchInst::Create(/*ifTrue*/ThenBlock, /*ifFalse*/Tail, Cond);
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
@@ -756,7 +761,10 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
         DT->changeImmediateDominator(Child, NewNode);
 
       // Head dominates ThenBlock.
-      DT->addNewBlock(ThenBlock, Head);
+      if (CreateThenBlock)
+        DT->addNewBlock(ThenBlock, Head);
+      else
+        DT->changeImmediateDominator(ThenBlock, Head);
     }
   }
 

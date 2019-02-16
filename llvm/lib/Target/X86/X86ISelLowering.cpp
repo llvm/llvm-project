@@ -14081,7 +14081,6 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
   int NumEltsPerLane = NumElts / NumLanes;
 
   SmallVector<int, 4> SrcLaneMask(NumLanes, SM_SentinelUndef);
-  SmallVector<int, 16> LaneMask(NumElts, SM_SentinelUndef);
   SmallVector<int, 16> PermMask(NumElts, SM_SentinelUndef);
 
   for (int i = 0; i != NumElts; ++i) {
@@ -14096,8 +14095,18 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
       return SDValue();
     SrcLaneMask[DstLane] = SrcLane;
 
-    LaneMask[i] = (SrcLane * NumEltsPerLane) + (i % NumEltsPerLane);
     PermMask[i] = (DstLane * NumEltsPerLane) + (M % NumEltsPerLane);
+  }
+
+  // Make sure we set all elements of the lane mask, to avoid undef propagation.
+  SmallVector<int, 16> LaneMask(NumElts, SM_SentinelUndef);
+  for (int DstLane = 0; DstLane != NumLanes; ++DstLane) {
+    int SrcLane = SrcLaneMask[DstLane];
+    if (0 <= SrcLane)
+      for (int j = 0; j != NumEltsPerLane; ++j) {
+        LaneMask[(DstLane * NumEltsPerLane) + j] =
+            (SrcLane * NumEltsPerLane) + j;
+      }
   }
 
   // If we're only shuffling a single lowest lane and the rest are identity
@@ -18057,13 +18066,10 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
 // If the given FP_TO_SINT (IsSigned) or FP_TO_UINT (!IsSigned) operation
 // is legal, or has an fp128 or f16 source (which needs to be promoted to f32),
-// just return an <SDValue(), SDValue()> pair.
+// just return an SDValue().
 // Otherwise it is assumed to be a conversion from one of f32, f64 or f80
-// to i16, i32 or i64, and we lower it to a legal sequence.
-// If lowered to the final integer result we return a <result, SDValue()> pair.
-// Otherwise we lower it to a sequence ending with a FIST, return a
-// <FIST, StackSlot> pair, and the caller is responsible for loading
-// the final integer result from StackSlot.
+// to i16, i32 or i64, and we lower it to a legal sequence and return the
+// result.
 SDValue
 X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                    bool IsSigned) const {
@@ -18082,14 +18088,9 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
   // If using FIST to compute an unsigned i64, we'll need some fixup
   // to handle values above the maximum signed i64.  A FIST is always
   // used for the 32-bit subtarget, but also for f80 on a 64-bit target.
-  bool UnsignedFixup = !IsSigned &&
-                       DstTy == MVT::i64 &&
-                       (!Subtarget.is64Bit() ||
-                        !isScalarFPTypeInSSEReg(TheVT));
+  bool UnsignedFixup = !IsSigned && DstTy == MVT::i64;
 
   if (!IsSigned && DstTy != MVT::i64) {
-    assert(!Subtarget.hasAVX512() &&
-           "AVX512 should have already been handled!");
     // Replace the fp-to-uint32 operation with an fp-to-sint64 FIST.
     // The low 32 bits of the fist result will have the correct uint32 result.
     assert(DstTy == MVT::i32 && "Unexpected FP_TO_UINT");
@@ -18099,12 +18100,6 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
   assert(DstTy.getSimpleVT() <= MVT::i64 &&
          DstTy.getSimpleVT() >= MVT::i16 &&
          "Unknown FP_TO_INT to lower!");
-
-  // These are really Legal.
-  if (DstTy == MVT::i32 && isScalarFPTypeInSSEReg(TheVT))
-    return SDValue();
-  if (Subtarget.is64Bit() && DstTy == MVT::i64 && isScalarFPTypeInSSEReg(TheVT))
-    return SDValue();
 
   // We lower FP->int64 into FISTP64 followed by a load from a temporary
   // stack slot.
@@ -18728,9 +18723,11 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 
   assert(!VT.isVector());
 
+  bool UseSSEReg = isScalarFPTypeInSSEReg(SrcVT);
+
   if (!IsSigned && Subtarget.hasAVX512()) {
     // Conversions from f32/f64 should be legal.
-    if (SrcVT != MVT::f80)
+    if (UseSSEReg)
       return Op;
 
     // Use default expansion.
@@ -18739,17 +18736,21 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   }
 
   // Promote i16 to i32 if we can use a SSE operation.
-  if (VT == MVT::i16 && isScalarFPTypeInSSEReg(SrcVT)) {
+  if (VT == MVT::i16 && UseSSEReg) {
     assert(IsSigned && "Expected i16 FP_TO_UINT to have been promoted!");
     SDValue Res = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
   }
 
+  // If this is a SINT_TO_FP using SSEReg we're done.
+  if (UseSSEReg && IsSigned)
+    return Op;
+
+  // Fall back to X87.
   if (SDValue V = FP_TO_INTHelper(Op, DAG, IsSigned))
     return V;
 
-  // If FP_TO_INTHelper failed, the node is actually supposed to be Legal.
-  return Op;
+  llvm_unreachable("Expected FP_TO_INTHelper to handle all remaining cases.");
 }
 
 static SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) {
@@ -30102,27 +30103,37 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::FP80_TO_INT64_IN_MEM: {
     // Change the floating point control register to use "round towards zero"
     // mode when truncating to an integer value.
-    int CWFrameIdx = MF->getFrameInfo().CreateStackObject(2, 2, false);
+    int OrigCWFrameIdx = MF->getFrameInfo().CreateStackObject(2, 2, false);
     addFrameReference(BuildMI(*BB, MI, DL,
-                              TII->get(X86::FNSTCW16m)), CWFrameIdx);
+                              TII->get(X86::FNSTCW16m)), OrigCWFrameIdx);
 
-    // Load the old value of the high byte of the control word...
+    // Load the old value of the control word...
     unsigned OldCW =
-      MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16rm), OldCW),
-                      CWFrameIdx);
+      MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
+    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOVZX32rm16), OldCW),
+                      OrigCWFrameIdx);
 
-    // Set the high part to be round to zero...
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16mi)), CWFrameIdx)
-      .addImm(0xC7F);
+    // OR 0b11 into bit 10 and 11. 0b11 is the encoding for round toward zero.
+    unsigned NewCW =
+      MF->getRegInfo().createVirtualRegister(&X86::GR32RegClass);
+    BuildMI(*BB, MI, DL, TII->get(X86::OR32ri), NewCW)
+      .addReg(OldCW, RegState::Kill).addImm(0xC00);
+
+    // Extract to 16 bits.
+    unsigned NewCW16 =
+      MF->getRegInfo().createVirtualRegister(&X86::GR16RegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), NewCW16)
+      .addReg(NewCW, RegState::Kill, X86::sub_16bit);
+
+    // Prepare memory for FLDCW.
+    int NewCWFrameIdx = MF->getFrameInfo().CreateStackObject(2, 2, false);
+    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16mr)),
+                      NewCWFrameIdx)
+      .addReg(NewCW16, RegState::Kill);
 
     // Reload the modified control word now...
     addFrameReference(BuildMI(*BB, MI, DL,
-                              TII->get(X86::FLDCW16m)), CWFrameIdx);
-
-    // Restore the memory image of control word to original value
-    addFrameReference(BuildMI(*BB, MI, DL, TII->get(X86::MOV16mr)), CWFrameIdx)
-      .addReg(OldCW);
+                              TII->get(X86::FLDCW16m)), NewCWFrameIdx);
 
     // Get the X86 opcode to use.
     unsigned Opc;
@@ -30145,7 +30156,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Reload the original control word now.
     addFrameReference(BuildMI(*BB, MI, DL,
-                              TII->get(X86::FLDCW16m)), CWFrameIdx);
+                              TII->get(X86::FLDCW16m)), OrigCWFrameIdx);
 
     MI.eraseFromParent(); // The pseudo instruction is gone now.
     return BB;
@@ -42732,7 +42743,7 @@ LowerXConstraint(EVT ConstraintVT) const {
 
 // Lower @cc targets via setcc.
 SDValue X86TargetLowering::LowerAsmOutputForConstraint(
-    SDValue &Chain, SDValue *Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
+    SDValue &Chain, SDValue &Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
     SelectionDAG &DAG) const {
   X86::CondCode Cond = parseConstraintCode(OpInfo.ConstraintCode);
   if (Cond == X86::COND_INVALID)
@@ -42743,14 +42754,13 @@ SDValue X86TargetLowering::LowerAsmOutputForConstraint(
     report_fatal_error("Flag output operand is of invalid type");
 
   // Get EFLAGS register. Only update chain when copyfrom is glued.
-  SDValue EFlags;
-  if (Flag) {
-    EFlags = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32, *Flag);
-    Chain = EFlags.getValue(1);
+  if (Flag.getNode()) {
+    Flag = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32, Flag);
+    Chain = Flag.getValue(1);
   } else
-    EFlags = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32);
+    Flag = DAG.getCopyFromReg(Chain, DL, X86::EFLAGS, MVT::i32);
   // Extract CC code.
-  SDValue CC = getSETCC(Cond, EFlags, DL, DAG);
+  SDValue CC = getSETCC(Cond, Flag, DL, DAG);
   // Extend to 32-bits
   SDValue Result = DAG.getNode(ISD::ZERO_EXTEND, DL, OpInfo.ConstraintVT, CC);
 

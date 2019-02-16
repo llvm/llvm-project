@@ -129,9 +129,10 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
           CurMI->eraseFromParentAndMarkDBGValuesForRemoval();
           continue;
         }
-        WorkList.insert(CurMI);
+        WorkList.deferred_insert(CurMI);
       }
     }
+    WorkList.finalize();
     // Main Loop. Process the instructions here.
     while (!WorkList.empty()) {
       MachineInstr *CurrInst = WorkList.pop_back_val();

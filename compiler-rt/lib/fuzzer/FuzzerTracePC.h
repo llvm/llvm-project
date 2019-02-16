@@ -127,6 +127,9 @@ class TracePC {
   };
 
   uintptr_t PCTableEntryIdx(const PCTableEntry *TE);
+  const PCTableEntry *PCTableEntryByIdx(uintptr_t Idx);
+  static uintptr_t GetNextInstructionPc(uintptr_t PC);
+  bool PcIsFuncEntry(const PCTableEntry *TE) { return TE->PCFlags & 1; }
 
 private:
   bool UseCounters = false;

@@ -1048,7 +1048,6 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
       addExportedSymbol(CmdArgs, "___llvm_profile_filename");
       addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
       addExportedSymbol(CmdArgs, "_lprofCurFilename");
-      addExportedSymbol(CmdArgs, "_lprofMergeValueProfData");
     }
     addExportedSymbol(CmdArgs, "_lprofDirMode");
   }

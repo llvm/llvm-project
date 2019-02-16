@@ -75,6 +75,11 @@ STATISTIC(NumDSE,      "Number of trivial dead stores removed");
 DEBUG_COUNTER(CSECounter, "early-cse",
               "Controls which instructions are removed");
 
+static cl::opt<unsigned> EarlyCSEMssaOptCap(
+    "earlycse-mssa-optimization-cap", cl::init(500), cl::Hidden,
+    cl::desc("Enable imprecision in EarlyCSE in pathological cases, in exchange "
+             "for faster compile. Caps the MemorySSA clobbering calls."));
+
 //===----------------------------------------------------------------------===//
 // SimpleValue
 //===----------------------------------------------------------------------===//
@@ -418,6 +423,7 @@ public:
   bool run();
 
 private:
+  unsigned ClobberCounter = 0;
   // Almost a POD, but needs to call the constructors for the scoped hash
   // tables so that a new scope gets pushed on. These are RAII so that the
   // scope gets popped when the NodeScope is destroyed.
@@ -662,8 +668,13 @@ bool EarlyCSE::isSameMemGeneration(unsigned EarlierGeneration,
   // LaterInst, if LaterDef dominates EarlierInst then it can't occur between
   // EarlierInst and LaterInst and neither can any other write that potentially
   // clobbers LaterInst.
-  MemoryAccess *LaterDef =
-      MSSA->getWalker()->getClobberingMemoryAccess(LaterInst);
+  MemoryAccess *LaterDef;
+  if (ClobberCounter < EarlyCSEMssaOptCap) {
+    LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LaterInst);
+    ClobberCounter++;
+  } else
+    LaterDef = LaterMA->getDefiningAccess();
+
   return MSSA->dominates(LaterDef, EarlierMA);
 }
 

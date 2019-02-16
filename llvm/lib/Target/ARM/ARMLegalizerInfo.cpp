@@ -140,6 +140,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_GEP).legalFor({{p0, s32}});
 
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
+
   if (ST.isThumb()) {
     // FIXME: merge with the code for non-Thumb.
     computeTables();
@@ -169,8 +171,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   }
-
-  getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.

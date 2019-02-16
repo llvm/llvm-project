@@ -376,55 +376,23 @@
 // CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+neon"
 // CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+crypto"
 
-// RUN: %clang -target arm-linux-androideabi21 -march=armv7-a %s -### -c 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-MARCH-ARM7-ANDROID-FP %s
-// CHECK-MARCH-ARM7-ANDROID-FP-NOT: "-target-feature" "+soft-float"
-// CHECK-MARCH-ARM7-ANDROID-FP: "-target-feature" "+soft-float-abi"
-// CHECK-MARCH-ARM7-ANDROID-FP: "-target-feature" "+d16"
-// CHECK-MARCH-ARM7-ANDROID-FP: "-target-feature" "+vfp3"
-// CHECK-MARCH-ARM7-ANDROID-FP-NOT: "-target-feature" "+vfp4"
-// CHECK-MARCH-ARM7-ANDROID-FP-NOT: "-target-feature" "+fp-armv8"
-// CHECK-MARCH-ARM7-ANDROID-FP-NOT: "-target-feature" "+neon"
-// CHECK-MARCH-ARM7-ANDROID-FP-NOT: "-target-feature" "+crypto"
-
 // RUN: %clang -target armv7-linux-androideabi21 %s -### -c 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ARM-ANDROID-L-FP-DEFAULT %s
-// CHECK-ARM-ANDROID-L-FP-DEFAULT-NOT: "-target-feature" "+soft-float"
-// CHECK-ARM-ANDROID-L-FP-DEFAULT: "-target-feature" "+soft-float-abi"
-// CHECK-ARM-ANDROID-L-FP-DEFAULT: "-target-feature" "+d16"
-// CHECK-ARM-ANDROID-L-FP-DEFAULT: "-target-feature" "+vfp3"
-// CHECK-ARM-ANDROID-L-FP-DEFAULT-NOT: "-target-feature" "+vfp4"
-// CHECK-ARM-ANDROID-L-FP-DEFAULT-NOT: "-target-feature" "+fp-armv8"
-// CHECK-ARM-ANDROID-L-FP-DEFAULT-NOT: "-target-feature" "+neon"
-// CHECK-ARM-ANDROID-L-FP-DEFAULT-NOT: "-target-feature" "+crypto"
+// RUN:   | FileCheck --check-prefix=CHECK-ARM7-ANDROID-FP-DEFAULT %s
+// CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+soft-float"
+// CHECK-ARM7-ANDROID-FP-DEFAULT: "-target-feature" "+soft-float-abi"
+// CHECK-ARM7-ANDROID-FP-DEFAULT: "-target-feature" "+vfp3"
+// CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+vfp4"
+// CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+fp-armv8"
+// CHECK-ARM7-ANDROID-FP-DEFAULT: "-target-feature" "+neon"
+// CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+crypto"
 
-// RUN: %clang -target armv7-linux-androideabi21 -mfpu=neon %s -### -c 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ARM-ANDROID-L-FP-NEON %s
-// CHECK-ARM-ANDROID-L-FP-NEON-NOT: "-target-feature" "+soft-float"
-// CHECK-ARM-ANDROID-L-FP-NEON: "-target-feature" "+soft-float-abi"
-// CHECK-ARM-ANDROID-L-FP-NEON: "-target-feature" "+vfp3"
-// CHECK-ARM-ANDROID-L-FP-NEON-NOT: "-target-feature" "+vfp4"
-// CHECK-ARM-ANDROID-L-FP-NEON-NOT: "-target-feature" "+fp-armv8"
-// CHECK-ARM-ANDROID-L-FP-NEON: "-target-feature" "+neon"
-// CHECK-ARM-ANDROID-L-FP-NEON-NOT: "-target-feature" "+crypto"
-
-// RUN: %clang -target armv7-linux-androideabi23 %s -### -c 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ARM-ANDROID-M-FP-DEFAULT %s
-// CHECK-ARM-ANDROID-M-FP-DEFAULT-NOT: "-target-feature" "+soft-float"
-// CHECK-ARM-ANDROID-M-FP-DEFAULT: "-target-feature" "+soft-float-abi"
-// CHECK-ARM-ANDROID-M-FP-DEFAULT: "-target-feature" "+vfp3"
-// CHECK-ARM-ANDROID-M-FP-DEFAULT-NOT: "-target-feature" "+vfp4"
-// CHECK-ARM-ANDROID-M-FP-DEFAULT-NOT: "-target-feature" "+fp-armv8"
-// CHECK-ARM-ANDROID-M-FP-DEFAULT: "-target-feature" "+neon"
-// CHECK-ARM-ANDROID-M-FP-DEFAULT-NOT: "-target-feature" "+crypto"
-
-// RUN: %clang -target armv7-linux-androideabi23 %s -mfpu=vfp3-d16 -### -c 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ARM-ANDROID-M-FP-D16 %s
-// CHECK-ARM-ANDROID-M-FP-D16-NOT: "-target-feature" "+soft-float"
-// CHECK-ARM-ANDROID-M-FP-D16: "-target-feature" "+soft-float-abi"
-// CHECK-ARM-ANDROID-M-FP-D16: "-target-feature" "+d16"
-// CHECK-ARM-ANDROID-M-FP-D16: "-target-feature" "+vfp3"
-// CHECK-ARM-ANDROID-M-FP-D16-NOT: "-target-feature" "+vfp4"
-// CHECK-ARM-ANDROID-M-FP-D16-NOT: "-target-feature" "+fp-armv8"
-// CHECK-ARM-ANDROID-M-FP-D16-NOT: "-target-feature" "+neon"
-// CHECK-ARM-ANDROID-M-FP-D16-NOT: "-target-feature" "+crypto"
+// RUN: %clang -target armv7-linux-androideabi21 %s -mfpu=vfp3-d16 -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM7-ANDROID-FP-D16 %s
+// CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+soft-float"
+// CHECK-ARM7-ANDROID-FP-D16: "-target-feature" "+soft-float-abi"
+// CHECK-ARM7-ANDROID-FP-D16: "-target-feature" "+d16"
+// CHECK-ARM7-ANDROID-FP-D16: "-target-feature" "+vfp3"
+// CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+vfp4"
+// CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+fp-armv8"
+// CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+neon"
+// CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+crypto"

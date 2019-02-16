@@ -22,6 +22,6 @@ struct SourceModule {
   ConstString sysroot;
 };
 
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif

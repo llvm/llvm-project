@@ -270,7 +270,8 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 ///   SplitBefore
 ///   Tail
 ///
-/// If Unreachable is true, then ThenBlock ends with
+/// If \p ThenBlock is not specified, a new block will be created for it.
+/// If \p Unreachable is true, the newly created block will end with
 /// UnreachableInst, otherwise it branches to Tail.
 /// Returns the NewBasicBlock's terminator.
 ///
@@ -279,7 +280,8 @@ Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
                                        MDNode *BranchWeights = nullptr,
                                        DominatorTree *DT = nullptr,
-                                       LoopInfo *LI = nullptr);
+                                       LoopInfo *LI = nullptr,
+                                       BasicBlock *ThenBlock = nullptr);
 
 /// SplitBlockAndInsertIfThenElse is similar to SplitBlockAndInsertIfThen,
 /// but also creates the ElseBlock.

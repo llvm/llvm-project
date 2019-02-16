@@ -1125,3 +1125,18 @@ define <2 x float> @frem_splat_constant1(<2 x float> %x) {
   ret <2 x float> %r
 }
 
+; Equivalent shuffle masks, but only one is a narrowing op.
+
+define <2 x i1> @PR40734(<1 x i1> %x, <4 x i1> %y) {
+; CHECK-LABEL: @PR40734(
+; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <1 x i1> zeroinitializer, <1 x i1> [[X:%.*]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[NARROW:%.*]] = shufflevector <4 x i1> [[Y:%.*]], <4 x i1> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[WIDEN]], [[NARROW]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %widen = shufflevector <1 x i1> zeroinitializer, <1 x i1> %x, <2 x i32> <i32 0, i32 1>
+  %narrow = shufflevector <4 x i1> %y, <4 x i1> undef, <2 x i32> <i32 0, i32 1>
+  %r = and <2 x i1> %widen, %narrow
+  ret <2 x i1> %r
+}
+

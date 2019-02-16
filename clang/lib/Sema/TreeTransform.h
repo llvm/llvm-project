@@ -318,6 +318,13 @@ public:
   TypeSourceInfo *TransformTypeWithDeducedTST(TypeSourceInfo *DI);
   /// @}
 
+  /// The reason why the value of a statement is not discarded, if any.
+  enum StmtDiscardKind {
+    SDK_Discarded,
+    SDK_NotDiscarded,
+    SDK_StmtExprResult,
+  };
+
   /// Transform the given statement.
   ///
   /// By default, this routine transforms a statement by delegating to the
@@ -327,7 +334,7 @@ public:
   /// other mechanism.
   ///
   /// \returns the transformed statement.
-  StmtResult TransformStmt(Stmt *S, bool DiscardedValue = false);
+  StmtResult TransformStmt(Stmt *S, StmtDiscardKind SDK = SDK_Discarded);
 
   /// Transform the given statement.
   ///
@@ -672,6 +679,9 @@ public:
 #define STMT(Node, Parent)                        \
   LLVM_ATTRIBUTE_NOINLINE \
   StmtResult Transform##Node(Node *S);
+#define VALUESTMT(Node, Parent)                   \
+  LLVM_ATTRIBUTE_NOINLINE \
+  StmtResult Transform##Node(Node *S, StmtDiscardKind SDK);
 #define EXPR(Node, Parent)                        \
   LLVM_ATTRIBUTE_NOINLINE \
   ExprResult Transform##Node(Node *E);
@@ -3270,7 +3280,7 @@ private:
 };
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S, bool DiscardedValue) {
+StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S, StmtDiscardKind SDK) {
   if (!S)
     return S;
 
@@ -3278,8 +3288,12 @@ StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S, bool DiscardedValue) {
   case Stmt::NoStmtClass: break;
 
   // Transform individual statement nodes
+  // Pass SDK into statements that can produce a value
 #define STMT(Node, Parent)                                              \
   case Stmt::Node##Class: return getDerived().Transform##Node(cast<Node>(S));
+#define VALUESTMT(Node, Parent)                                         \
+  case Stmt::Node##Class:                                               \
+    return getDerived().Transform##Node(cast<Node>(S), SDK);
 #define ABSTRACT_STMT(Node)
 #define EXPR(Node, Parent)
 #include "clang/AST/StmtNodes.inc"
@@ -3291,10 +3305,10 @@ StmtResult TreeTransform<Derived>::TransformStmt(Stmt *S, bool DiscardedValue) {
 #include "clang/AST/StmtNodes.inc"
     {
       ExprResult E = getDerived().TransformExpr(cast<Expr>(S));
-      if (E.isInvalid())
-        return StmtError();
 
-      return getSema().ActOnExprStmt(E, DiscardedValue);
+      if (SDK == SDK_StmtExprResult)
+        E = getSema().ActOnStmtExprResult(E);
+      return getSema().ActOnExprStmt(E, SDK == SDK_Discarded);
     }
   }
 
@@ -6522,8 +6536,9 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
   bool SubStmtChanged = false;
   SmallVector<Stmt*, 8> Statements;
   for (auto *B : S->body()) {
-    StmtResult Result =
-        getDerived().TransformStmt(B, !IsStmtExpr || B != S->body_back());
+    StmtResult Result = getDerived().TransformStmt(
+        B,
+        IsStmtExpr && B == S->body_back() ? SDK_StmtExprResult : SDK_Discarded);
 
     if (Result.isInvalid()) {
       // Immediately fail if this was a DeclStmt, since it's very
@@ -6586,7 +6601,8 @@ TreeTransform<Derived>::TransformCaseStmt(CaseStmt *S) {
     return StmtError();
 
   // Transform the statement following the case
-  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt());
+  StmtResult SubStmt =
+      getDerived().TransformStmt(S->getSubStmt());
   if (SubStmt.isInvalid())
     return StmtError();
 
@@ -6594,11 +6610,11 @@ TreeTransform<Derived>::TransformCaseStmt(CaseStmt *S) {
   return getDerived().RebuildCaseStmtBody(Case.get(), SubStmt.get());
 }
 
-template<typename Derived>
-StmtResult
-TreeTransform<Derived>::TransformDefaultStmt(DefaultStmt *S) {
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformDefaultStmt(DefaultStmt *S) {
   // Transform the statement following the default case
-  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt());
+  StmtResult SubStmt =
+      getDerived().TransformStmt(S->getSubStmt());
   if (SubStmt.isInvalid())
     return StmtError();
 
@@ -6609,8 +6625,8 @@ TreeTransform<Derived>::TransformDefaultStmt(DefaultStmt *S) {
 
 template<typename Derived>
 StmtResult
-TreeTransform<Derived>::TransformLabelStmt(LabelStmt *S) {
-  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt());
+TreeTransform<Derived>::TransformLabelStmt(LabelStmt *S, StmtDiscardKind SDK) {
+  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt(), SDK);
   if (SubStmt.isInvalid())
     return StmtError();
 
@@ -6619,6 +6635,11 @@ TreeTransform<Derived>::TransformLabelStmt(LabelStmt *S) {
   if (!LD)
     return StmtError();
 
+  // If we're transforming "in-place" (we're not creating new local
+  // declarations), assume we're replacing the old label statement
+  // and clear out the reference to it.
+  if (LD == S->getDecl())
+    S->getDecl()->setStmt(nullptr);
 
   // FIXME: Pass the real colon location in.
   return getDerived().RebuildLabelStmt(S->getIdentLoc(),
@@ -6644,7 +6665,9 @@ const Attr *TreeTransform<Derived>::TransformAttr(const Attr *R) {
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S) {
+StmtResult
+TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S,
+                                                StmtDiscardKind SDK) {
   bool AttrsChanged = false;
   SmallVector<const Attr *, 1> Attrs;
 
@@ -6655,7 +6678,7 @@ StmtResult TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S) {
     Attrs.push_back(R);
   }
 
-  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt());
+  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt(), SDK);
   if (SubStmt.isInvalid())
     return StmtError();
 
@@ -7360,7 +7383,8 @@ StmtResult
 TreeTransform<Derived>::TransformObjCForCollectionStmt(
                                                   ObjCForCollectionStmt *S) {
   // Transform the element statement.
-  StmtResult Element = getDerived().TransformStmt(S->getElement());
+  StmtResult Element =
+      getDerived().TransformStmt(S->getElement(), SDK_NotDiscarded);
   if (Element.isInvalid())
     return StmtError();
 

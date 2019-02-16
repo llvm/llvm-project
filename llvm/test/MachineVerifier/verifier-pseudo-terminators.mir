@@ -1,4 +1,6 @@
 # RUN: not llc -march=amdgcn -run-pass=verify %s 2>&1 | FileCheck %s
+# REQUIRES: amdgpu-registered-target
+
 # Make sure that mismatched successors are caught when a _term
 # instruction is used
 

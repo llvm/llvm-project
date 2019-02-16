@@ -25,7 +25,7 @@ enum Style {
   EDG,   ///< EDG compiler
   GNUv3, ///< GNU C++ v3 ABI
   Java,  ///< Java (gcj)
-  GNAT   ///< ADA copiler (gnat)
+  GNAT   ///< ADA compiler (gnat)
 };
 static cl::opt<Style>
     Format("format", cl::desc("decoration style"),

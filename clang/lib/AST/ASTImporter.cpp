@@ -7393,13 +7393,9 @@ ExpectedStmt ASTNodeImporter::VisitLambdaExpr(LambdaExpr *E) {
   // NOTE: lambda classes are created with BeingDefined flag set up.
   // It means that ImportDefinition doesn't work for them and we should fill it
   // manually.
-  if (ToClass->isBeingDefined()) {
-    for (auto FromField : FromClass->fields()) {
-      auto ToFieldOrErr = import(FromField);
-      if (!ToFieldOrErr)
-        return ToFieldOrErr.takeError();
-    }
-  }
+  if (ToClass->isBeingDefined())
+    if (Error Err = ImportDeclContext(FromClass, /*ForceImport = */ true))
+      return std::move(Err);
 
   auto ToCallOpOrErr = import(E->getCallOperator());
   if (!ToCallOpOrErr)

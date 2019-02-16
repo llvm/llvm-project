@@ -17,6 +17,7 @@
 #include "hwasan.h"
 #include "hwasan_allocator.h"
 #include "hwasan_mapping.h"
+#include "hwasan_malloc_bisect.h"
 #include "hwasan_thread.h"
 #include "hwasan_report.h"
 
@@ -176,10 +177,16 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
                     size - orig_size);
 
   void *user_ptr = allocated;
-  if (flags()->tag_in_malloc &&
-      atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
-    user_ptr = (void *)TagMemoryAligned(
-        (uptr)user_ptr, size, t ? t->GenerateRandomTag() : kFallbackAllocTag);
+  // Tagging can only be skipped when both tag_in_malloc and tag_in_free are
+  // false. When tag_in_malloc = false and tag_in_free = true malloc needs to
+  // retag to 0.
+  if ((flags()->tag_in_malloc || flags()->tag_in_free) &&
+      atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
+    tag_t tag = flags()->tag_in_malloc && malloc_bisect(stack, orig_size)
+                    ? (t ? t->GenerateRandomTag() : kFallbackAllocTag)
+                    : 0;
+    user_ptr = (void *)TagMemoryAligned((uptr)user_ptr, size, tag);
+  }
 
   if ((orig_size % kShadowAlignment) && (alignment <= kShadowAlignment) &&
       right_align_mode) {
@@ -241,7 +248,7 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
         Min(TaggedSize(orig_size), (uptr)flags()->max_free_fill_size);
     internal_memset(aligned_ptr, flags()->free_fill_byte, fill_size);
   }
-  if (flags()->tag_in_free &&
+  if (flags()->tag_in_free && malloc_bisect(stack, 0) &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
     TagMemoryAligned(reinterpret_cast<uptr>(aligned_ptr), TaggedSize(orig_size),
                      t ? t->GenerateRandomTag() : kFallbackFreeTag);
