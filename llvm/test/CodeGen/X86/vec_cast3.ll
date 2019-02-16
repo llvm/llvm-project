@@ -192,28 +192,30 @@ define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subl $68, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 72
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vcmpltss %xmm2, %xmm1, %xmm3
-; CHECK-NEXT:    vsubss %xmm2, %xmm1, %xmm4
-; CHECK-NEXT:    vblendvps %xmm3, %xmm1, %xmm4, %xmm3
-; CHECK-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    vcmpltss %xmm2, %xmm0, %xmm3
-; CHECK-NEXT:    vsubss %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vblendvps %xmm3, %xmm0, %xmm4, %xmm3
-; CHECK-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vucomiss %xmm1, %xmm2
+; CHECK-NEXT:    jb LBB11_2
+; CHECK-NEXT:  ## %bb.1:
+; CHECK-NEXT:    vsubss %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:  LBB11_2:
+; CHECK-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fisttpll (%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    vucomiss %xmm2, %xmm1
 ; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    shll $31, %eax
 ; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    vucomiss %xmm2, %xmm0
+; CHECK-NEXT:    vucomiss %xmm1, %xmm0
+; CHECK-NEXT:    jb LBB11_4
+; CHECK-NEXT:  ## %bb.3:
+; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:  LBB11_4:
+; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fisttpll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    setae %cl
+; CHECK-NEXT:    movzbl %cl, %ecx
 ; CHECK-NEXT:    shll $31, %ecx
 ; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
