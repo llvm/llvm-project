@@ -1,0 +1,15 @@
+; RUN: rm -rf %t && mkdir -p %t
+; RUN: grep -v "module asm" %s | llvm-as -o %t/embedded.bc
+; RUN: llc -I=%t -filetype=obj -o %t/obj.o %s
+; RUN: llvm-ar crs %t/lib.a %t/obj.o
+; RUN: llvm-nm -m -no-llvm-bc %t/lib.a | FileCheck %s
+
+target triple = "x86_64-apple-macosx10.11"
+
+@q = global i32 1, align 4
+; CHECK-NOT: {{-+}} (LTO,DATA) external _q
+; CHECK: {{[[:xdigit:]]+}} (__DATA,__data) external _q
+
+module asm ".section __LLVM,__bitcode"
+module asm ".incbin \22embedded.bc\22"
+
