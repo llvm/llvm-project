@@ -85,7 +85,6 @@ public:
   static std::unique_ptr<WorkList> makeBFSBlockDFSContents();
   static std::unique_ptr<WorkList> makeUnexploredFirst();
   static std::unique_ptr<WorkList> makeUnexploredFirstPriorityQueue();
-  static std::unique_ptr<WorkList> makeUnexploredFirstPriorityLocationQueue();
 };
 
 } // end ento namespace

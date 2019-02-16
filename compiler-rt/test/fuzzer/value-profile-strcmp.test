@@ -1,4 +1,3 @@
-UNSUPPORTED: ios
 UNSUPPORTED: freebsd
 CHECK: BINGO
 RUN: %cpp_compiler %S/SingleStrcmpTest.cpp -o %t-SingleStrcmpTest

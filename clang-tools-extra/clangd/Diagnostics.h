@@ -23,12 +23,6 @@
 namespace clang {
 namespace clangd {
 
-struct ClangdDiagnosticOptions {
-  /// If true, Clangd uses an LSP extension to embed the fixes with the
-  /// diagnostics that are sent to the client.
-  bool EmbedFixesInDiagnostics = false;
-};
-
 /// Contains basic information about a diagnostic.
 struct DiagBase {
   std::string Message;

@@ -470,18 +470,3 @@ void* IOBSDNameMatching();
 void rdar33832412() {
   void* x = IOBSDNameMatching(); // no-warning
 }
-
-
-namespace member_CFRetains {
-class Foo {
-public:
-  void CFRetain(const Foo &) {}
-  void CFRetain(int) {}
-};
-
-void bar() {
-  Foo foo;
-  foo.CFRetain(foo); // no-warning
-  foo.CFRetain(0); // no-warning
-}
-}

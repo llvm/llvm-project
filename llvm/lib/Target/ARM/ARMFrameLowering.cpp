@@ -909,7 +909,6 @@ ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
       assert(RegInfo->hasBasePointer(MF) &&
              "VLAs and dynamic stack alignment, but missing base pointer!");
       FrameReg = RegInfo->getBaseRegister();
-      Offset -= SPAdj;
     }
     return Offset;
   }
@@ -1515,7 +1514,6 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
           break;
         case ARMII::AddrMode5:
         case ARMII::AddrModeT2_i8s4:
-        case ARMII::AddrModeT2_ldrex:
           Limit = std::min(Limit, ((1U << 8) - 1) * 4);
           break;
         case ARMII::AddrModeT2_i12:

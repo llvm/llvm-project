@@ -323,16 +323,14 @@ bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   const Value *Ret = RI.getReturnValue();
   if (Ret && DL->getTypeStoreSize(Ret->getType()) == 0)
     Ret = nullptr;
-
-  ArrayRef<unsigned> VRegs;
-  if (Ret)
-    VRegs = getOrCreateVRegs(*Ret);
-
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
 
-  return CLI->lowerReturn(MIRBuilder, Ret, VRegs);
+  // FIXME: this interface should simplify when CallLowering gets adapted to
+  // multiple VRegs per Value.
+  unsigned VReg = Ret ? packRegs(*Ret, MIRBuilder) : 0;
+  return CLI->lowerReturn(MIRBuilder, Ret, VReg);
 }
 
 bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
@@ -718,11 +716,17 @@ void IRTranslator::getStackGuard(unsigned DstReg,
 bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                                               MachineIRBuilder &MIRBuilder) {
   ArrayRef<unsigned> ResRegs = getOrCreateVRegs(CI);
-  MIRBuilder.buildInstr(Op)
-      .addDef(ResRegs[0])
-      .addDef(ResRegs[1])
-      .addUse(getOrCreateVReg(*CI.getOperand(0)))
-      .addUse(getOrCreateVReg(*CI.getOperand(1)));
+  auto MIB = MIRBuilder.buildInstr(Op)
+                 .addDef(ResRegs[0])
+                 .addDef(ResRegs[1])
+                 .addUse(getOrCreateVReg(*CI.getOperand(0)))
+                 .addUse(getOrCreateVReg(*CI.getOperand(1)));
+
+  if (Op == TargetOpcode::G_UADDE || Op == TargetOpcode::G_USUBE) {
+    unsigned Zero = getOrCreateVReg(
+        *Constant::getNullValue(Type::getInt1Ty(CI.getContext())));
+    MIB.addUse(Zero);
+  }
 
   return true;
 }
@@ -803,11 +807,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::uadd_with_overflow:
-    return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDO, MIRBuilder);
+    return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDE, MIRBuilder);
   case Intrinsic::sadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_SADDO, MIRBuilder);
   case Intrinsic::usub_with_overflow:
-    return translateOverflowIntrinsic(CI, TargetOpcode::G_USUBO, MIRBuilder);
+    return translateOverflowIntrinsic(CI, TargetOpcode::G_USUBE, MIRBuilder);
   case Intrinsic::ssub_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_SSUBO, MIRBuilder);
   case Intrinsic::umul_with_overflow:
@@ -842,16 +846,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   case Intrinsic::fabs:
     MIRBuilder.buildInstr(TargetOpcode::G_FABS)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::trunc:
-    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  case Intrinsic::round:
-    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_ROUND)
         .addDef(getOrCreateVReg(CI))
         .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;
@@ -915,26 +909,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                               getOrCreateFrameIndex(*Slot)),
             MachineMemOperand::MOStore | MachineMemOperand::MOVolatile,
             PtrTy.getSizeInBits() / 8, 8));
-    return true;
-  }
-  case Intrinsic::cttz:
-  case Intrinsic::ctlz: {
-    ConstantInt *Cst = cast<ConstantInt>(CI.getArgOperand(1));
-    bool isTrailing = ID == Intrinsic::cttz;
-    unsigned Opcode = isTrailing
-                          ? Cst->isZero() ? TargetOpcode::G_CTTZ
-                                          : TargetOpcode::G_CTTZ_ZERO_UNDEF
-                          : Cst->isZero() ? TargetOpcode::G_CTLZ
-                                          : TargetOpcode::G_CTLZ_ZERO_UNDEF;
-    MIRBuilder.buildInstr(Opcode)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
-    return true;
-  }
-  case Intrinsic::ctpop: {
-    MIRBuilder.buildInstr(TargetOpcode::G_CTPOP)
-        .addDef(getOrCreateVReg(CI))
-        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;
   }
   }
@@ -1461,8 +1435,6 @@ void IRTranslator::finishPendingPhis() {
 bool IRTranslator::valueIsSplit(const Value &V,
                                 SmallVectorImpl<uint64_t> *Offsets) {
   SmallVector<LLT, 4> SplitTys;
-  if (Offsets && !Offsets->empty())
-    Offsets->clear();
   computeValueLLTs(*DL, *V.getType(), SplitTys, Offsets);
   return SplitTys.size() > 1;
 }

@@ -83,13 +83,7 @@ void SymbolCast::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << "conj_$" << getSymbolID() << '{' << T.getAsString() << ", LC"
-     << LCtx->getID();
-  if (S)
-    os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
-  else
-    os << ", no stmt";
-  os << ", #" << Count << '}';
+  os << "conj_$" << getSymbolID() << '{' << T.getAsString() << '}';
 }
 
 void SymbolDerived::dumpToStream(raw_ostream &os) const {
@@ -401,6 +395,7 @@ void SymbolReaper::markDependentsLive(SymbolRef sym) {
 
 void SymbolReaper::markLive(SymbolRef sym) {
   TheLiving[sym] = NotProcessed;
+  TheDead.erase(sym);
   markDependentsLive(sym);
 }
 
@@ -423,6 +418,14 @@ void SymbolReaper::markElementIndicesLive(const MemRegion *region) {
 void SymbolReaper::markInUse(SymbolRef sym) {
   if (isa<SymbolMetadata>(sym))
     MetadataInUse.insert(sym);
+}
+
+bool SymbolReaper::maybeDead(SymbolRef sym) {
+  if (isLive(sym))
+    return false;
+
+  TheDead.insert(sym);
+  return true;
 }
 
 bool SymbolReaper::isLiveRegion(const MemRegion *MR) {

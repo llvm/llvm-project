@@ -1,5 +1,3 @@
-include(CheckIncludeFiles)
-
 set(LLVM_LINK_COMPONENTS
   support
 )
@@ -7,12 +5,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_executable(c-index-test
   c-index-test.c
   core_main.cpp
-  JSONAggregation.cpp
   )
-
-set(INDEXSTORE_LIB)
-set(CINDEXTEST_LIBS)
-set(INDEXSTORE_LIB IndexStore)
 
 if(NOT MSVC)
   set_property(
@@ -27,21 +20,17 @@ if (LLVM_BUILD_STATIC)
     libclang_static
     clangCodeGen
     clangIndex
-    ${CINDEXTEST_LIBS}
   )
 else()
   target_link_libraries(c-index-test
     PRIVATE
     libclang
-    ${INDEXSTORE_LIB}
     clangAST
     clangBasic
     clangCodeGen
-    clangDirectoryWatcher
     clangFrontend
     clangIndex
     clangSerialization
-    ${CINDEXTEST_LIBS}
   )
 endif()
 
@@ -57,13 +46,6 @@ if (CLANG_HAVE_LIBXML)
     include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})
   endif()
   target_link_libraries(c-index-test PRIVATE ${LIBXML2_LIBRARIES})
-endif()
-
-if(APPLE)
-  check_include_files("CoreServices/CoreServices.h" HAVE_CORESERVICES_H)
-  if(HAVE_CORESERVICES_H)
-    target_link_libraries(c-index-test PRIVATE "-framework CoreServices")
-  endif()
 endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)

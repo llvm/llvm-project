@@ -513,6 +513,25 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
   return true;
 }
 
+/// collectDebgValues - Scan instructions following MI and collect any
+/// matching DBG_VALUEs.
+static void collectDebugValues(MachineInstr &MI,
+                               SmallVectorImpl<MachineInstr *> &DbgValues) {
+  DbgValues.clear();
+  if (!MI.getOperand(0).isReg())
+    return;
+
+  MachineBasicBlock::iterator DI = MI; ++DI;
+  for (MachineBasicBlock::iterator DE = MI.getParent()->end();
+       DI != DE; ++DI) {
+    if (!DI->isDebugValue())
+      return;
+    if (DI->getOperand(0).isReg() &&
+        DI->getOperand(0).getReg() == MI.getOperand(0).getReg())
+      DbgValues.push_back(&*DI);
+  }
+}
+
 /// isProfitableToSinkTo - Return true if it is profitable to sink MI.
 bool MachineSinking::isProfitableToSinkTo(unsigned Reg, MachineInstr &MI,
                                           MachineBasicBlock *MBB,
@@ -716,12 +735,9 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
       !PredBB->getTerminator()->getMetadata(LLVMContext::MD_make_implicit))
     return false;
 
-  MachineOperand *BaseOp;
+  unsigned BaseReg;
   int64_t Offset;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
-    return false;
-
-  if (!BaseOp->isReg())
+  if (!TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
     return false;
 
   if (!(MI.mayLoad() && !MI.isPredicable()))
@@ -734,7 +750,7 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
   return MBP.LHS.isReg() && MBP.RHS.isImm() && MBP.RHS.getImm() == 0 &&
          (MBP.Predicate == MachineBranchPredicate::PRED_NE ||
           MBP.Predicate == MachineBranchPredicate::PRED_EQ) &&
-         MBP.LHS.getReg() == BaseOp->getReg();
+         MBP.LHS.getReg() == BaseReg;
 }
 
 /// Sink an instruction and its associated debug instructions.
@@ -742,7 +758,7 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
                         MachineBasicBlock::iterator InsertPos) {
   // Collect matching debug values.
   SmallVector<MachineInstr *, 2> DbgValuesToSink;
-  MI.collectDebugValues(DbgValuesToSink);
+  collectDebugValues(MI, DbgValuesToSink);
 
   // If we cannot find a location to use (merge with), then we erase the debug
   // location to prevent debug-info driven tools from potentially reporting

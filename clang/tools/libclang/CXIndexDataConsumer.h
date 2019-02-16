@@ -467,7 +467,7 @@ private:
                            ArrayRef<index::SymbolRelation> Relations,
                            SourceLocation Loc, ASTNodeInfo ASTNode) override;
 
-  bool handleModuleOccurence(const ImportDecl *ImportD, const Module *Mod,
+  bool handleModuleOccurence(const ImportDecl *ImportD,
                              index::SymbolRoleSet Roles,
                              SourceLocation Loc) override;
 

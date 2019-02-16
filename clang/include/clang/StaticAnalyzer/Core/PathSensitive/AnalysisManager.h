@@ -46,12 +46,14 @@ class AnalysisManager : public BugReporterData {
 public:
   AnalyzerOptions &options;
 
-  AnalysisManager(ASTContext &ctx, DiagnosticsEngine &diags,
+  AnalysisManager(ASTContext &ctx,DiagnosticsEngine &diags,
+                  const LangOptions &lang,
                   const PathDiagnosticConsumers &Consumers,
                   StoreManagerCreator storemgr,
                   ConstraintManagerCreator constraintmgr,
-                  CheckerManager *checkerMgr, AnalyzerOptions &Options,
-                  CodeInjector *injector = nullptr);
+                  CheckerManager *checkerMgr,
+                  AnalyzerOptions &Options,
+                  CodeInjector* injector = nullptr);
 
   ~AnalysisManager() override;
 
@@ -100,7 +102,8 @@ public:
   void FlushDiagnostics();
 
   bool shouldVisualize() const {
-    return options.visualizeExplodedGraphWithGraphViz;
+    return options.visualizeExplodedGraphWithGraphViz ||
+           options.visualizeExplodedGraphWithUbiGraph;
   }
 
   bool shouldInlineCall() const {

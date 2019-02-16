@@ -17,11 +17,11 @@
 #include "clang/StaticAnalyzer/Checkers/ClangCheckers.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/CheckerOptInfo.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistry.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -101,22 +101,43 @@ void ClangCheckerRegistry::warnIncompatible(DiagnosticsEngine *diags,
       << pluginAPIVersion;
 }
 
+static SmallVector<CheckerOptInfo, 8>
+getCheckerOptList(const AnalyzerOptions &opts) {
+  SmallVector<CheckerOptInfo, 8> checkerOpts;
+  for (unsigned i = 0, e = opts.CheckersControlList.size(); i != e; ++i) {
+    const std::pair<std::string, bool> &opt = opts.CheckersControlList[i];
+    checkerOpts.push_back(CheckerOptInfo(opt.first, opt.second));
+  }
+  return checkerOpts;
+}
+
 std::unique_ptr<CheckerManager> ento::createCheckerManager(
-    ASTContext &context,
-    AnalyzerOptions &opts,
+    AnalyzerOptions &opts, const LangOptions &langOpts,
     ArrayRef<std::string> plugins,
     ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
     DiagnosticsEngine &diags) {
-  auto checkerMgr = llvm::make_unique<CheckerManager>(context, opts);
+  std::unique_ptr<CheckerManager> checkerMgr(
+      new CheckerManager(langOpts, opts));
+
+  SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
 
   ClangCheckerRegistry allCheckers(plugins, &diags);
 
   for (const auto &Fn : checkerRegistrationFns)
     Fn(allCheckers);
 
-  allCheckers.initializeManager(*checkerMgr, opts, diags);
+  allCheckers.initializeManager(*checkerMgr, checkerOpts);
   allCheckers.validateCheckerOptions(opts, diags);
   checkerMgr->finishedCheckerRegistration();
+
+  for (unsigned i = 0, e = checkerOpts.size(); i != e; ++i) {
+    if (checkerOpts[i].isUnclaimed()) {
+      diags.Report(diag::err_unknown_analyzer_checker)
+          << checkerOpts[i].getName();
+      diags.Report(diag::note_suggest_disabling_all_checkers);
+    }
+
+  }
 
   return checkerMgr;
 }
@@ -133,78 +154,6 @@ void ento::printEnabledCheckerList(raw_ostream &out,
                                    const AnalyzerOptions &opts) {
   out << "OVERVIEW: Clang Static Analyzer Enabled Checkers List\n\n";
 
-  ClangCheckerRegistry(plugins).printList(out, opts);
-}
-
-void ento::printAnalyzerConfigList(raw_ostream &out) {
-  out << "OVERVIEW: Clang Static Analyzer -analyzer-config Option List\n\n";
-  out << "USAGE: clang -cc1 [CLANG_OPTIONS] -analyzer-config "
-                                        "<OPTION1=VALUE,OPTION2=VALUE,...>\n\n";
-  out << "       clang -cc1 [CLANG_OPTIONS] -analyzer-config OPTION1=VALUE, "
-                                      "-analyzer-config OPTION2=VALUE, ...\n\n";
-  out << "       clang [CLANG_OPTIONS] -Xclang -analyzer-config -Xclang"
-                                        "<OPTION1=VALUE,OPTION2=VALUE,...>\n\n";
-  out << "       clang [CLANG_OPTIONS] -Xclang -analyzer-config -Xclang "
-                              "OPTION1=VALUE, -Xclang -analyzer-config -Xclang "
-                              "OPTION2=VALUE, ...\n\n";
-  out << "OPTIONS:\n\n";
-
-  using OptionAndDescriptionTy = std::pair<StringRef, std::string>;
-  OptionAndDescriptionTy PrintableOptions[] = {
-#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-    {                                                                          \
-      CMDFLAG,                                                                 \
-      llvm::Twine(llvm::Twine() + "(" +                                        \
-                  (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE ) +      \
-                  ") " DESC                                                    \
-                  " (default: " #DEFAULT_VAL ")").str()                        \
-    },
-
-#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
-                                             SHALLOW_VAL, DEEP_VAL)            \
-    {                                                                          \
-      CMDFLAG,                                                                 \
-      llvm::Twine(llvm::Twine() + "(" +                                        \
-                  (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE ) +      \
-                  ") " DESC                                                    \
-                  " (default: " #SHALLOW_VAL " in shallow mode, " #DEEP_VAL    \
-                  " in deep mode)").str()                                      \
-    },
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
-#undef ANALYZER_OPTION
-#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
-  };
-
-  llvm::sort(PrintableOptions, [](const OptionAndDescriptionTy &LHS,
-                                  const OptionAndDescriptionTy &RHS) {
-    return LHS.first < RHS.first;
-  });
-
-  constexpr size_t MinLineWidth = 70;
-  constexpr size_t PadForOpt = 2;
-  constexpr size_t OptionWidth = 30;
-  constexpr size_t PadForDesc = PadForOpt + OptionWidth;
-  static_assert(MinLineWidth > PadForDesc, "MinLineWidth must be greater!");
-
-  llvm::formatted_raw_ostream FOut(out);
-
-  for (const auto &Pair : PrintableOptions) {
-    FOut.PadToColumn(PadForOpt) << Pair.first;
-
-    // If the buffer's length is greater then PadForDesc, print a newline.
-    if (FOut.getColumn() > PadForDesc)
-      FOut << '\n';
-
-    FOut.PadToColumn(PadForDesc);
-
-    for (char C : Pair.second) {
-      if (FOut.getColumn() > MinLineWidth && C == ' ') {
-        FOut << '\n';
-        FOut.PadToColumn(PadForDesc);
-        continue;
-      }
-      FOut << C;
-    }
-    FOut << "\n\n";
-  }
+  SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
+  ClangCheckerRegistry(plugins).printList(out, checkerOpts);
 }

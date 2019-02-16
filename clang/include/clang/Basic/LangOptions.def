@@ -161,7 +161,6 @@ COMPATIBLE_LANGOPT(ModulesStrictDeclUse, 1, 0, "requiring declaration of module 
 BENIGN_LANGOPT(ModulesErrorRecovery, 1, 1, "automatically importing modules as needed when performing error recovery")
 BENIGN_LANGOPT(ImplicitModules, 1, 1, "building modules that are not specified via -fmodule-file")
 COMPATIBLE_LANGOPT(ModulesLocalVisibility, 1, 0, "local submodule visibility")
-COMPATIBLE_LANGOPT(ModulesHashErrorDiags, 1, 0, "hash out diagnostic errors as part of the module hash")
 COMPATIBLE_LANGOPT(Optimize          , 1, 0, "__OPTIMIZE__ predefined macro")
 COMPATIBLE_LANGOPT(OptimizeSize      , 1, 0, "__OPTIMIZE_SIZE__ predefined macro")
 COMPATIBLE_LANGOPT(Static            , 1, 0, "__STATIC__ predefined macro (as opposed to __DYNAMIC__)")
@@ -260,8 +259,6 @@ ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
              "type symbol visibility")
 ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff,
              "stack protector mode")
-ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized,
-             "trivial automatic variable initialization")
 ENUM_LANGOPT(SignedOverflowBehavior, SignedOverflowBehaviorTy, 2, SOB_Undefined,
              "signed integer overflow handling")
 
@@ -283,9 +280,6 @@ VALUE_LANGOPT(VtorDispMode, 2, 1, "How many vtordisps to insert")
 LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
-LANGOPT(APINotes, 1, 0, "use external API notes")
-LANGOPT(APINotesModules, 1, 0, "use external API notes")
-LANGOPT(NeededByPCHOrCompilationUsesPCH, 1, 0, "compilation involves pch")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "field padding (0: none, 1:least "
@@ -313,8 +307,6 @@ COMPATIBLE_VALUE_LANGOPT(FunctionAlignment, 5, 0, "Default alignment for functio
 LANGOPT(FixedPoint, 1, 0, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
         "unsigned fixed point types having one extra padding bit")
-
-LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

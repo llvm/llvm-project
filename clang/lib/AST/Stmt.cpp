@@ -300,10 +300,6 @@ SourceLocation Stmt::getLocEnd() const {
   llvm_unreachable("unknown statement kind");
 }
 
-int64_t Stmt::getID(const ASTContext &Context) const {
-  return Context.getAllocator().identifyKnownAlignedObject<Stmt>(this);
-}
-
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB,
                            SourceLocation RB)
     : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB) {

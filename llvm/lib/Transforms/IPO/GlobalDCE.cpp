@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
@@ -76,17 +75,13 @@ ModulePass *llvm::createGlobalDCEPass() {
   return new GlobalDCELegacyPass();
 }
 
-/// Returns true if F is effectively empty.
+/// Returns true if F contains only a single "ret" instruction.
 static bool isEmptyFunction(Function *F) {
   BasicBlock &Entry = F->getEntryBlock();
-  for (auto &I : Entry) {
-    if (isa<DbgInfoIntrinsic>(I))
-      continue;
-    if (auto *RI = dyn_cast<ReturnInst>(&I))
-      return !RI->getReturnValue();
-    break;
-  }
-  return false;
+  if (Entry.size() != 1 || !isa<ReturnInst>(Entry.front()))
+    return false;
+  ReturnInst &RI = cast<ReturnInst>(Entry.front());
+  return RI.getReturnValue() == nullptr;
 }
 
 /// Compute the set of GlobalValue that depends from V.

@@ -252,38 +252,6 @@ IdentifierLoc *Parser::ParseIdentifierLoc() {
   return IL;
 }
 
-void Parser::ParseSwiftNewtypeAttribute(
-    IdentifierInfo &SwiftNewtype, SourceLocation SwiftNewtypeLoc,
-    ParsedAttributes &attrs, SourceLocation *endLoc, IdentifierInfo *ScopeName,
-    SourceLocation ScopeLoc, ParsedAttr::Syntax Syntax) {
-
-  BalancedDelimiterTracker Parens(*this, tok::l_paren);
-  Parens.consumeOpen();
-
-  if (Tok.is(tok::r_paren)) {
-    Diag(Tok.getLocation(), diag::err_argument_required_after_attribute);
-    Parens.consumeClose();
-    return;
-  }
-  if (Tok.isNot(tok::kw_struct) && Tok.isNot(tok::kw_enum)) {
-    Diag(Tok.getLocation(), diag::warn_attribute_type_not_supported)
-        << &SwiftNewtype << Tok.getIdentifierInfo();
-    if (!isTokenSpecial())
-      ConsumeToken();
-    Parens.consumeClose();
-    return;
-  }
-  auto IL = IdentifierLoc::create(Actions.Context, Tok.getLocation(),
-                                  Tok.getIdentifierInfo());
-  ConsumeToken();
-  auto identLoc = ArgsUnion(IL);
-
-  attrs.addNew(&SwiftNewtype,
-               SourceRange(SwiftNewtypeLoc, Parens.getCloseLocation()),
-               ScopeName, ScopeLoc, &identLoc, 1, Syntax);
-  Parens.consumeClose();
-}
-
 void Parser::ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
                                        SourceLocation AttrNameLoc,
                                        ParsedAttributes &Attrs,
@@ -414,10 +382,6 @@ void Parser::ParseGNUAttributeArgs(IdentifierInfo *AttrName,
   } else if (AttrKind == ParsedAttr::AT_TypeTagForDatatype) {
     ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                      ScopeName, ScopeLoc, Syntax);
-    return;
-  } else if (AttrKind == ParsedAttr::AT_SwiftNewtype) {
-    ParseSwiftNewtypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
-                               ScopeName, ScopeLoc, Syntax);
     return;
   } else if (attributeIsTypeArgAttr(*AttrName)) {
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
@@ -944,7 +908,7 @@ VersionTuple Parser::ParseVersionTuple(SourceRange &Range) {
 ///
 /// version-arg:
 ///   'introduced' '=' version
-///   'deprecated' ['=' version]
+///   'deprecated' '=' version
 ///   'obsoleted' = version
 ///   'unavailable'
 /// opt-replacement:
@@ -1034,21 +998,6 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
           << Keyword << SourceRange(UnavailableLoc);
       }
       UnavailableLoc = KeywordLoc;
-      continue;
-    }
-
-    if (Keyword == Ident_deprecated && Platform->Ident &&
-        Platform->Ident->getName() == "swift") {
-      // For swift, we deprecate for all versions.
-      if (!Changes[Deprecated].KeywordLoc.isInvalid()) {
-        Diag(KeywordLoc, diag::err_availability_redundant)
-          << Keyword
-          << SourceRange(Changes[Deprecated].KeywordLoc);
-      }
-
-      Changes[Deprecated].KeywordLoc = KeywordLoc;
-      // Use a fake version here.
-      Changes[Deprecated].Version = VersionTuple(1);
       continue;
     }
 
@@ -6256,16 +6205,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   SmallVector<NamedDecl *, 0> DeclsInPrototype;
   if (getCurScope()->getFlags() & Scope::FunctionDeclarationScope &&
       !getLangOpts().CPlusPlus) {
-    // The decls in the scope are in arbitrary order. Add them in sorted order
-    // now and allow for the declarator chunk to always contain the decls in
-    // deterministic order. This is necessary because ActOnFunctionDeclarator
-    // copies the declarator chunk as is when populating the decl context,
-    // which could be later serialized for modules or PCHs.
-    SmallVector<Decl *, 8> SortedDecls(getCurScope()->decls());
-    llvm::sort(SortedDecls, [](const Decl *L, const Decl *R) {
-      return L->getID() < R->getID();
-    });
-    for (Decl *D : SortedDecls) {
+    for (Decl *D : getCurScope()->decls()) {
       NamedDecl *ND = dyn_cast<NamedDecl>(D);
       if (!ND || isa<ParmVarDecl>(ND))
         continue;
@@ -6972,69 +6912,4 @@ bool Parser::TryAltiVecTokenOutOfLine(DeclSpec &DS, SourceLocation Loc,
     return true;
   }
   return false;
-}
-
-TypeResult Parser::parseTypeFromString(StringRef typeStr, StringRef context,
-                                       SourceLocation includeLoc) {
-  // Consume (unexpanded) tokens up to the end-of-directive.
-  SmallVector<Token, 4> tokens;
-  {
-    // Create a new buffer from which we will parse the type.
-    auto &sourceMgr = PP.getSourceManager();
-    FileID fileID = sourceMgr.createFileID(
-                      llvm::MemoryBuffer::getMemBufferCopy(typeStr, context),
-                      SrcMgr::C_User, 0, 0, includeLoc);
-
-    // Form a new lexer that references the buffer.
-    Lexer lexer(fileID, sourceMgr.getBuffer(fileID), PP);
-    lexer.setParsingPreprocessorDirective(true);
-    lexer.setIsPragmaLexer(true);
-
-    // Lex the tokens from that buffer.
-    Token tok;
-    do {
-      lexer.Lex(tok);
-      tokens.push_back(tok);
-    } while (tok.isNot(tok::eod));
-  }
-
-  // Replace the "eod" token with an "eof" token identifying the end of
-  // the provided string.
-  Token &endToken = tokens.back();
-  endToken.startToken();
-  endToken.setKind(tok::eof);
-  endToken.setLocation(Tok.getLocation());
-  endToken.setEofData(typeStr.data());
-
-  // Add the current token back.
-  tokens.push_back(Tok);
-
-  // Enter the tokens into the token stream.
-  PP.EnterTokenStream(tokens, /*DisableMacroExpansion=*/false);
-
-  // Consume the current token so that we'll start parsing the tokens we
-  // added to the stream.
-  ConsumeAnyToken();
-
-  // Enter a new scope.
-  ParseScope localScope(this, 0);
-
-  // Parse the type.
-  TypeResult result = ParseTypeName(nullptr);
-
-  // Check if we parsed the whole thing.
-  if (result.isUsable() &&
-      (Tok.isNot(tok::eof) || Tok.getEofData() != typeStr.data())) {
-    Diag(Tok.getLocation(), diag::err_type_unparsed);
-  }
-
-  // There could be leftover tokens (e.g. because of an error).
-  // Skip through until we reach the 'end of directive' token.
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  // Consume the end token.
-  if (Tok.is(tok::eof) && Tok.getEofData() == typeStr.data())
-    ConsumeAnyToken();
-  return result;
 }

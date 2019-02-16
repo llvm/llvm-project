@@ -32,7 +32,8 @@ static bool IsLLVMStringRef(QualType T) {
   if (!RT)
     return false;
 
-  return StringRef(QualType(RT, 0).getAsString()) == "class StringRef";
+  return StringRef(QualType(RT, 0).getAsString()) ==
+          "class StringRef";
 }
 
 /// Check whether the declaration is semantically inside the top-level

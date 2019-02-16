@@ -572,8 +572,6 @@ class VectorType;
     bool isLegalInterleavedAccessType(VectorType *VecTy,
                                       const DataLayout &DL) const;
 
-    bool alignLoopsWithOptSize() const override;
-
     /// Returns the number of interleaved accesses that will be generated when
     /// lowering accesses of the given type.
     unsigned getNumInterleavedAccesses(VectorType *VecTy,
@@ -584,9 +582,6 @@ class VectorType;
     /// Return the correct alignment for the current calling convention.
     unsigned getABIAlignmentForCallingConv(Type *ArgTy,
                                            DataLayout DL) const override;
-
-    bool isDesirableToCommuteWithShift(const SDNode *N,
-                                       CombineLevel Level) const override;
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

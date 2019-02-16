@@ -19,17 +19,10 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-/// \returns true if the given triple can determine the default CPU type even
-/// if -arch is not specified.
-static bool isCPUDeterminedByTriple(const llvm::Triple &Triple) {
-  return Triple.isOSDarwin();
-}
-
 /// getAArch64TargetCPU - Get the (LLVM) name of the AArch64 cpu we are
 /// targeting. Set \p A to the Arg corresponding to the -mcpu argument if it is
 /// provided, or to nullptr otherwise.
-std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
-                                         const llvm::Triple &Triple, Arg *&A) {
+std::string aarch64::getAArch64TargetCPU(const ArgList &Args, Arg *&A) {
   std::string CPU;
   // If we have -mcpu, use that.
   if ((A = Args.getLastArg(options::OPT_mcpu_EQ))) {
@@ -43,9 +36,9 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   else if (CPU.size())
     return CPU;
 
-  // Make sure we pick "cyclone" if -arch is used or when targetting a Darwin
-  // OS.
-  if (Args.getLastArg(options::OPT_arch) || Triple.isOSDarwin())
+  // Make sure we pick "cyclone" if -arch is used.
+  // FIXME: Should this be picked by checking the target triple instead?
+  if (Args.getLastArg(options::OPT_arch))
     return "cyclone";
 
   return "generic";
@@ -159,9 +152,7 @@ getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
   return getAArch64MicroArchFeaturesFromMtune(D, CPU, Args, Features);
 }
 
-void aarch64::getAArch64TargetFeatures(const Driver &D,
-                                       const llvm::Triple &Triple,
-                                       const ArgList &Args,
+void aarch64::getAArch64TargetFeatures(const Driver &D, const ArgList &Args,
                                        std::vector<StringRef> &Features) {
   Arg *A;
   bool success = true;
@@ -171,9 +162,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple))
-    success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
+  else if (Args.hasArg(options::OPT_arch))
+    success = getAArch64ArchFeaturesFromMcpu(D, getAArch64TargetCPU(Args, A),
+                                             Args, Features);
 
   if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
     success =
@@ -181,10 +172,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
-  else if (success &&
-           (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple)))
+  else if (success && Args.hasArg(options::OPT_arch))
     success = getAArch64MicroArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
+        D, getAArch64TargetCPU(Args, A), Args, Features);
 
   if (!success)
     D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);

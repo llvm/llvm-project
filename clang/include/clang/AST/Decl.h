@@ -965,8 +965,6 @@ protected:
     /// Defines kind of the ImplicitParamDecl: 'this', 'self', 'vtt', '_cmd' or
     /// something else.
     unsigned ImplicitParamKind : 3;
-
-    unsigned EscapingByref : 1;
   };
 
   union {
@@ -1409,19 +1407,6 @@ public:
     NonParmVarDeclBits.PreviousDeclInSameBlockScope = Same;
   }
 
-  /// Indicates the capture is a __block variable that is captured by a block
-  /// that can potentially escape (a block for which BlockDecl::doesNotEscape
-  /// returns false).
-  bool isEscapingByref() const;
-
-  /// Indicates the capture is a __block variable that is never captured by an
-  /// escaping block.
-  bool isNonEscapingByref() const;
-
-  void setEscapingByref() {
-    NonParmVarDeclBits.EscapingByref = true;
-  }
-
   /// Retrieve the variable declaration from which this variable could
   /// be instantiated, if it is an instantiation (rather than a non-template).
   VarDecl *getTemplateInstantiationPattern() const;
@@ -1475,9 +1460,6 @@ public:
   // program? This may be true even if the declaration has internal linkage and
   // has no definition within this source file.
   bool isKnownToBeDefined() const;
-
-  /// Do we need to emit an exit-time destructor for this variable?
-  bool isNoDestroy(const ASTContext &) const;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -1894,9 +1876,7 @@ protected:
         InstantiationIsPending(false), UsesSEHTry(false), HasSkippedBody(false),
         WillHaveBody(false), IsMultiVersion(false),
         IsCopyDeductionCandidate(false), HasODRHash(false), ODRHash(0),
-        EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
-    assert(T.isNull() || T->isFunctionType());
-  }
+        EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {}
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -3905,14 +3885,6 @@ public:
     /// variable.
     bool isByRef() const { return VariableAndFlags.getInt() & flag_isByRef; }
 
-    bool isEscapingByref() const {
-      return getVariable()->isEscapingByref();
-    }
-
-    bool isNonEscapingByref() const {
-      return getVariable()->isNonEscapingByref();
-    }
-
     /// Whether this is a nested capture, i.e. the variable captured
     /// is not from outside the immediately enclosing function/block.
     bool isNested() const { return VariableAndFlags.getInt() & flag_isNested; }
@@ -4025,7 +3997,7 @@ public:
   void setIsConversionFromLambda(bool val) { IsConversionFromLambda = val; }
 
   bool doesNotEscape() const { return DoesNotEscape; }
-  void setDoesNotEscape(bool B = true) { DoesNotEscape = B; }
+  void setDoesNotEscape() { DoesNotEscape = true; }
 
   bool capturesVariable(const VarDecl *var) const;
 

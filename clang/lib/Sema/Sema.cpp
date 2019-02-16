@@ -119,13 +119,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     : ExternalSource(nullptr), isMultiplexExternalSource(false),
       FPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()), PP(pp),
       Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
-      SourceMgr(PP.getSourceManager()),
-
-      // Don't you dare clang-format this.
-      // APINotes is a never-ending source of conflicts. Don't make it worse.
-      APINotes(SourceMgr, LangOpts),
-
-      CollectStats(false),
+      SourceMgr(PP.getSourceManager()), CollectStats(false),
       CodeCompleter(CodeCompleter), CurContext(nullptr),
       OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
       MSPointerToMemberRepresentationMethod(
@@ -650,8 +644,7 @@ void Sema::getUndefinedButUsed(
         continue;
       if (FD->isExternallyVisible() &&
           !isExternalWithNoLinkageType(FD) &&
-          !FD->getMostRecentDecl()->isInlined() &&
-          !FD->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+          !FD->getMostRecentDecl()->isInlined())
         continue;
       if (FD->getBuiltinID())
         continue;
@@ -661,8 +654,7 @@ void Sema::getUndefinedButUsed(
         continue;
       if (VD->isExternallyVisible() &&
           !isExternalWithNoLinkageType(VD) &&
-          !VD->getMostRecentDecl()->isInline() &&
-          !VD->hasAttr<ExcludeFromExplicitInstantiationAttr>())
+          !VD->getMostRecentDecl()->isInline())
         continue;
 
       // Skip VarDecls that lack formal definitions but which we know are in
@@ -1407,68 +1399,9 @@ void Sema::RecordParsingTemplateParameterDepth(unsigned Depth) {
       "Remove assertion if intentionally called in a non-lambda context.");
 }
 
-// Check that the type of the VarDecl has an accessible copy constructor and
-// resolve its destructor's exception spefication.
-static void checkEscapingByref(VarDecl *VD, Sema &S) {
-  QualType T = VD->getType();
-  EnterExpressionEvaluationContext scope(
-      S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-  SourceLocation Loc = VD->getLocation();
-  Expr *VarRef = new (S.Context) DeclRefExpr(VD, false, T, VK_LValue, Loc);
-  ExprResult Result = S.PerformMoveOrCopyInitialization(
-      InitializedEntity::InitializeBlock(Loc, T, false), VD, VD->getType(),
-      VarRef, /*AllowNRVO=*/true);
-  if (!Result.isInvalid()) {
-    Result = S.MaybeCreateExprWithCleanups(Result);
-    Expr *Init = Result.getAs<Expr>();
-    S.Context.setBlockVarCopyInit(VD, Init, S.canThrow(Init));
-  }
-
-  // The destructor's exception spefication is needed when IRGen generates
-  // block copy/destroy functions. Resolve it here.
-  if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
-    if (CXXDestructorDecl *DD = RD->getDestructor()) {
-      auto *FPT = DD->getType()->getAs<FunctionProtoType>();
-      S.ResolveExceptionSpec(Loc, FPT);
-    }
-}
-
-static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
-  // Set the EscapingByref flag of __block variables captured by
-  // escaping blocks.
-  for (const BlockDecl *BD : FSI.Blocks) {
-    if (BD->doesNotEscape())
-      continue;
-    for (const BlockDecl::Capture &BC : BD->captures()) {
-      VarDecl *VD = BC.getVariable();
-      if (VD->hasAttr<BlocksAttr>())
-        VD->setEscapingByref();
-    }
-  }
-
-  for (VarDecl *VD : FSI.ByrefBlockVars) {
-    // __block variables might require us to capture a copy-initializer.
-    if (!VD->isEscapingByref())
-      continue;
-    // It's currently invalid to ever have a __block variable with an
-    // array type; should we diagnose that here?
-    // Regardless, we don't want to ignore array nesting when
-    // constructing this copy.
-    if (VD->getType()->isStructureOrClassType())
-      checkEscapingByref(VD, S);
-  }
-}
-
 void Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
                                 const Decl *D, const BlockExpr *blkExpr) {
   assert(!FunctionScopes.empty() && "mismatched push/pop!");
-
-  // This function shouldn't be called after popping the current function scope.
-  // markEscapingByrefs calls PerformMoveOrCopyInitialization, which can call
-  // PushFunctionScope, which can cause clearing out PreallocatedFunctionScope
-  // when FunctionScopes is empty.
-  markEscapingByrefs(*FunctionScopes.back(), *this);
-
   FunctionScopeInfo *Scope = FunctionScopes.pop_back_val();
 
   if (LangOpts.OpenMP)

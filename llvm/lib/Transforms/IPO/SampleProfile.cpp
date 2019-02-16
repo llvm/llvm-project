@@ -1577,7 +1577,7 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
   ACT = &getAnalysis<AssumptionCacheTracker>();
   TTIWP = &getAnalysis<TargetTransformInfoWrapperPass>();
   ProfileSummaryInfo *PSI =
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   return SampleLoader.runOnModule(M, nullptr, PSI);
 }
 

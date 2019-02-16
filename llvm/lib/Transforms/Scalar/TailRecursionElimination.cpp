@@ -566,8 +566,7 @@ static bool eliminateRecursiveTailCall(CallInst *CI, ReturnInst *Ret,
     BasicBlock *NewEntry = BasicBlock::Create(F->getContext(), "", F, OldEntry);
     NewEntry->takeName(OldEntry);
     OldEntry->setName("tailrecurse");
-    BranchInst *BI = BranchInst::Create(OldEntry, NewEntry);
-    BI->setDebugLoc(CI->getDebugLoc());
+    BranchInst::Create(OldEntry, NewEntry);
 
     // If this tail call is marked 'tail' and if there are any allocas in the
     // entry block, move them up to the new entry block.

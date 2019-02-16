@@ -37,8 +37,7 @@ using namespace clang;
 
 Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
                bool IsFramework, bool IsExplicit, unsigned VisibilityID)
-    : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent), Directory(),
-      Umbrella(), ASTFile(nullptr),
+    : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
       VisibilityID(VisibilityID), IsMissingRequirement(false),
       HasIncompatibleModuleFile(false), IsAvailable(true),
       IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
@@ -46,11 +45,6 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-
-      // SWIFT-SPECIFIC FIELDS HERE. Handling them separately helps avoid merge
-      // conflicts.
-      IsSwiftInferImportAsMember(false),
-
       NameVisibility(Hidden) {
   if (Parent) {
     if (!Parent->isAvailable())
@@ -77,37 +71,6 @@ Module::~Module() {
   }
 }
 
-static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
-  StringRef Platform = Target.getPlatformName();
-  StringRef Env = Target.getTriple().getEnvironmentName();
-
-  // Attempt to match platform and environment.
-  if (Platform == Feature || Target.getTriple().getOSName() == Feature ||
-      Env == Feature)
-    return true;
-
-  auto CmpPlatformEnv = [](StringRef LHS, StringRef RHS) {
-    auto Pos = LHS.find("-");
-    if (Pos == StringRef::npos)
-      return false;
-    SmallString<128> NewLHS = LHS.slice(0, Pos);
-    NewLHS += LHS.slice(Pos+1, LHS.size());
-    return NewLHS == RHS;
-  };
-
-  SmallString<128> PlatformEnv = Target.getTriple().getOSAndEnvironmentName();
-  // Darwin has different but equivalent variants for simulators, example:
-  //   1. x86_64-apple-ios-simulator
-  //   2. x86_64-apple-iossimulator
-  // where both are valid examples of the same platform+environment but in the
-  // variant (2) the simulator is hardcoded as part of the platform name. Both
-  // forms above should match for "iossimulator" requirement.
-  if (Target.getTriple().isOSDarwin() && PlatformEnv.endswith("simulator"))
-    return PlatformEnv == Feature || CmpPlatformEnv(PlatformEnv, Feature);
-
-  return PlatformEnv == Feature;
-}
-
 /// Determine whether a translation unit built using the current
 /// language options has the given feature.
 static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
@@ -130,8 +93,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("opencl", LangOpts.OpenCL)
                         .Case("tls", Target.isTLSSupported())
                         .Case("zvector", LangOpts.ZVector)
-                        .Default(Target.hasFeature(Feature) ||
-                                 isPlatformEnvironment(Target, Feature));
+                        .Default(Target.hasFeature(Feature));
   if (!HasFeature)
     HasFeature = std::find(LangOpts.ModuleFeatures.begin(),
                            LangOpts.ModuleFeatures.end(),
@@ -423,8 +385,6 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
       OS << " [system]";
     if (IsExternC)
       OS << " [extern_c]";
-    if (IsSwiftInferImportAsMember)
-      OS << " [swift_infer_import_as_member]";
   }
 
   OS << " {\n";

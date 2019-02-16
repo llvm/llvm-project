@@ -1,5 +1,0 @@
-framework module SimpleKit {
-  umbrella header "SimpleKit.h"
-  export *
-  module * { export * }
-}

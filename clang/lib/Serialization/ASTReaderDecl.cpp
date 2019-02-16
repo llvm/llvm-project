@@ -1244,8 +1244,6 @@ void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
 void ASTDeclReader::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) {
   VisitNamedDecl(CAD);
   CAD->setClassInterface(ReadDeclAs<ObjCInterfaceDecl>());
-  CAD->setClassInterfaceLoc(ReadSourceLocation());
-  CAD->setAtLoc(ReadSourceLocation());
 }
 
 void ASTDeclReader::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
@@ -1366,7 +1364,6 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->NonParmVarDeclBits.IsInitCapture = Record.readInt();
     VD->NonParmVarDeclBits.PreviousDeclInSameBlockScope = Record.readInt();
     VD->NonParmVarDeclBits.ImplicitParamKind = Record.readInt();
-    VD->NonParmVarDeclBits.EscapingByref = Record.readInt();
   }
   auto VarLinkage = Linkage(Record.readInt());
   VD->setCachedLinkage(VarLinkage);
@@ -1383,12 +1380,6 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
       Eval->CheckedICE = true;
       Eval->IsICE = Val == 3;
     }
-  }
-
-  if (VD->hasAttr<BlocksAttr>() && VD->getType()->getAsCXXRecordDecl()) {
-    Expr *CopyExpr = Record.readExpr();
-    if (CopyExpr)
-      Reader.getContext().setBlockVarCopyInit(VD, CopyExpr, Record.readInt());
   }
 
   if (VD->getStorageDuration() == SD_Static && Record.readInt())
@@ -1480,7 +1471,6 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
   BD->setIsVariadic(Record.readInt());
   BD->setBlockMissingReturnType(Record.readInt());
   BD->setIsConversionFromLambda(Record.readInt());
-  BD->setDoesNotEscape(Record.readInt());
 
   bool capturesCXXThis = Record.readInt();
   unsigned numCaptures = Record.readInt();

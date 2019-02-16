@@ -1097,22 +1097,10 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
   }
 }
 
-void ScheduleDAGInstrs::dumpNode(const SUnit &SU) const {
+void ScheduleDAGInstrs::dumpNode(const SUnit *SU) const {
+  // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dumpNodeName(SU);
-  dbgs() << ": ";
-  SU.getInstr()->dump();
-#endif
-}
-
-void ScheduleDAGInstrs::dump() const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  if (EntrySU.getInstr() != nullptr)
-    dumpNodeAll(EntrySU);
-  for (const SUnit &SU : SUnits)
-    dumpNodeAll(SU);
-  if (ExitSU.getInstr() != nullptr)
-    dumpNodeAll(ExitSU);
+  SU->getInstr()->dump();
 #endif
 }
 

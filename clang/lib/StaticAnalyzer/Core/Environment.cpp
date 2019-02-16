@@ -189,6 +189,11 @@ EnvironmentManager::removeDeadBindings(Environment Env,
 
       // Mark all symbols in the block expr's value live.
       RSScaner.scan(X);
+      continue;
+    } else {
+      SymExpr::symbol_iterator SI = X.symbol_begin(), SE = X.symbol_end();
+      for (; SI != SE; ++SI)
+        SymReaper.maybeDead(*SI);
     }
   }
 
@@ -197,9 +202,7 @@ EnvironmentManager::removeDeadBindings(Environment Env,
 }
 
 void Environment::print(raw_ostream &Out, const char *NL,
-                        const char *Sep,
-                        const ASTContext &Context,
-                        const LocationContext *WithLC) const {
+                        const char *Sep, const LocationContext *WithLC) const {
   if (ExprBindings.isEmpty())
     return;
 
@@ -219,9 +222,10 @@ void Environment::print(raw_ostream &Out, const char *NL,
 
   assert(WithLC);
 
-  PrintingPolicy PP = Context.getPrintingPolicy();
+  LangOptions LO; // FIXME.
+  PrintingPolicy PP(LO);
 
-  Out << NL << "Expressions by stack frame:" << NL;
+  Out << NL << NL << "Expressions by stack frame:" << NL;
   WithLC->dumpStack(Out, "", NL, Sep, [&](const LocationContext *LC) {
     for (auto I : ExprBindings) {
       if (I.first.getLocationContext() != LC)
@@ -230,8 +234,8 @@ void Environment::print(raw_ostream &Out, const char *NL,
       const Stmt *S = I.first.getStmt();
       assert(S != nullptr && "Expected non-null Stmt");
 
-      Out << "(LC" << LC->getID() << ", S" << S->getID(Context) << ") ";
-      S->printPretty(Out, /*Helper=*/nullptr, PP);
+      Out << "(" << (const void *)LC << ',' << (const void *)S << ") ";
+      S->printPretty(Out, nullptr, PP);
       Out << " : " << I.second << NL;
     }
   });

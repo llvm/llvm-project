@@ -1291,35 +1291,6 @@ SourceLocation Lexer::findLocationAfterToken(
   return TokenLoc.getLocWithOffset(Tok->getLength() + NumWhitespaceChars);
 }
 
-SourceLocation Lexer::findNextTokenLocationAfterTokenAt(
-    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
-  // TODO: Share the code with the function above when upstreaming.
-  if (Loc.isMacroID()) {
-    if (!Lexer::isAtEndOfMacroExpansion(Loc, SM, LangOpts, &Loc))
-      return SourceLocation();
-  }
-  Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
-
-  // Break down the source location.
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
-
-  // Try to load the file buffer.
-  bool InvalidTemp = false;
-  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
-  if (InvalidTemp)
-    return SourceLocation();
-
-  const char *TokenBegin = File.data() + LocInfo.second;
-
-  // Lex from the start of the given location.
-  Lexer lexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
-              TokenBegin, File.end());
-  // Find the token.
-  Token Tok;
-  lexer.LexFromRawLexer(Tok);
-  return Tok.getLocation();
-}
-
 /// getCharAndSizeSlow - Peek a single 'character' from the specified buffer,
 /// get its size, and return it.  This is tricky in several cases:
 ///   1. If currently at the start of a trigraph, we warn about the trigraph,

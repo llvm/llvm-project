@@ -1,8 +1,12 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,unix.Malloc -std=c++11 -fblocks -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,unix.Malloc -std=c++11 -fblocks -verify %s -analyzer-config c++-allocator-inlining=false
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,unix.Malloc -std=c++11 -analyzer-config c++-allocator-inlining=false -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,unix.Malloc -std=c++11 -analyzer-config c++-allocator-inlining=false -DLEAKS=1 -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,unix.Malloc -std=c++11 -DALLOCATOR_INLINING=1 -fblocks -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,unix.Malloc -std=c++11 -DLEAKS=1 -DALLOCATOR_INLINING=1 -fblocks -verify %s
 #include "Inputs/system-header-simulator-cxx.h"
 
+#if !(LEAKS && !ALLOCATOR_INLINING)
 // expected-no-diagnostics
+#endif
 
 
 void *allocator(std::size_t size);
@@ -20,18 +24,24 @@ public:
 void testNewMethod() {
   void *p1 = C::operator new(0); // no warn
 
-  C *p2 = new C; // no-warning
+  C *p2 = new C; // no warn
 
-  C *c3 = ::new C; // no-warning
+  C *c3 = ::new C;
 }
+#if LEAKS && !ALLOCATOR_INLINING
+// expected-warning@-2{{Potential leak of memory pointed to by 'c3'}}
+#endif
 
 void testOpNewArray() {
   void *p = operator new[](0); // call is inlined, no warn
 }
 
 void testNewExprArray() {
-  int *p = new int[0]; // no-warning
+  int *p = new int[0];
 }
+#if LEAKS && !ALLOCATOR_INLINING
+// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
+#endif
 
 
 //----- Custom non-placement operators
@@ -40,8 +50,12 @@ void testOpNew() {
 }
 
 void testNewExpr() {
-  int *p = new int; // no-warning
+  int *p = new int;
 }
+#if LEAKS && !ALLOCATOR_INLINING
+// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
+#endif
+
 
 //----- Custom NoThrow placement operators
 void testOpNewNoThrow() {
@@ -49,8 +63,11 @@ void testOpNewNoThrow() {
 }
 
 void testNewExprNoThrow() {
-  int *p = new(std::nothrow) int; // no-warning
+  int *p = new(std::nothrow) int;
 }
+#if LEAKS && !ALLOCATOR_INLINING
+// expected-warning@-2{{Potential leak of memory pointed to by 'p'}}
+#endif
 
 //----- Custom placement operators
 void testOpNewPlacement() {

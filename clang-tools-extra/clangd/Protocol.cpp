@@ -14,9 +14,7 @@
 #include "Protocol.h"
 #include "Logger.h"
 #include "URI.h"
-#include "index/Index.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -180,15 +178,6 @@ bool fromJSON(const json::Value &Params, CompletionClientCapabilities &R) {
   return true;
 }
 
-bool fromJSON(const llvm::json::Value &Params,
-              PublishDiagnosticsClientCapabilities &R) {
-  json::ObjectMapper O(Params);
-  if (!O)
-    return false;
-  O.map("clangdFixSupport", R.clangdFixSupport);
-  return true;
-}
-
 bool fromJSON(const json::Value &E, SymbolKind &Out) {
   if (auto T = E.getAsInteger()) {
     if (*T < static_cast<int>(SymbolKind::File) ||
@@ -251,7 +240,6 @@ bool fromJSON(const json::Value &Params, TextDocumentClientCapabilities &R) {
   if (!O)
     return false;
   O.map("completion", R.completion);
-  O.map("publishDiagnostics", R.publishDiagnostics);
   return true;
 }
 
@@ -437,45 +425,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
   return O;
 }
 
-bool operator==(const SymbolDetails &LHS, const SymbolDetails &RHS) {
-  return LHS.name == RHS.name && LHS.containerName == RHS.containerName &&
-         LHS.USR == RHS.USR && LHS.ID == RHS.ID;
-}
-
-llvm::json::Value toJSON(const SymbolDetails &P) {
-  json::Object result{{"name", llvm::json::Value(nullptr)},
-                      {"containerName", llvm::json::Value(nullptr)},
-                      {"usr", llvm::json::Value(nullptr)},
-                      {"id", llvm::json::Value(nullptr)}};
-
-  if (!P.name.empty())
-    result["name"] = P.name;
-
-  if (!P.containerName.empty())
-    result["containerName"] = P.containerName;
-
-  if (!P.USR.empty())
-    result["usr"] = P.USR;
-
-  if (P.ID.hasValue())
-    result["id"] = P.ID.getValue().str();
-
-  // Older clang cannot compile 'return Result', even though it is legal.
-  return json::Value(std::move(result));
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const SymbolDetails &S) {
-  if (!S.containerName.empty()) {
-    O << S.containerName;
-    StringRef ContNameRef;
-    if (!ContNameRef.endswith("::")) {
-      O << " ";
-    }
-  }
-  O << S.name << " - " << toJSON(S);
-  return O;
-}
-
 bool fromJSON(const json::Value &Params, WorkspaceSymbolParams &R) {
   json::ObjectMapper O(Params);
   return O && O.map("query", R.query);
@@ -642,18 +591,10 @@ bool fromJSON(const json::Value &Params, DidChangeConfigurationParams &CCP) {
   return O && O.map("settings", CCP.settings);
 }
 
-bool fromJSON(const llvm::json::Value &Params,
-              ClangdCompileCommand &CDbUpdate) {
-  json::ObjectMapper O(Params);
-  return O && O.map("workingDirectory", CDbUpdate.workingDirectory) &&
-         O.map("compilationCommand", CDbUpdate.compilationCommand);
-}
-
 bool fromJSON(const json::Value &Params,
               ClangdConfigurationParamsChange &CCPC) {
   json::ObjectMapper O(Params);
-  return O && O.map("compilationDatabasePath", CCPC.compilationDatabasePath) &&
-         O.map("compilationDatabaseChanges", CCPC.compilationDatabaseChanges);
+  return O && O.map("compilationDatabasePath", CCPC.compilationDatabasePath);
 }
 
 } // namespace clangd

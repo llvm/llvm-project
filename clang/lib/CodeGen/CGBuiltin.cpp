@@ -923,37 +923,30 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   if (llvm::Function *F = CGM.getModule().getFunction(Name))
     return F;
 
-  llvm::SmallVector<QualType, 4> ArgTys;
   llvm::SmallVector<ImplicitParamDecl, 4> Params;
   Params.emplace_back(Ctx, nullptr, SourceLocation(), &Ctx.Idents.get("buffer"),
                       Ctx.VoidPtrTy, ImplicitParamDecl::Other);
-  ArgTys.emplace_back(Ctx.VoidPtrTy);
 
   for (unsigned int I = 0, E = Layout.Items.size(); I < E; ++I) {
     char Size = Layout.Items[I].getSizeByte();
     if (!Size)
       continue;
 
-    QualType ArgTy = getOSLogArgType(Ctx, Size);
     Params.emplace_back(
         Ctx, nullptr, SourceLocation(),
-        &Ctx.Idents.get(std::string("arg") + llvm::to_string(I)), ArgTy,
-        ImplicitParamDecl::Other);
-    ArgTys.emplace_back(ArgTy);
+        &Ctx.Idents.get(std::string("arg") + llvm::to_string(I)),
+        getOSLogArgType(Ctx, Size), ImplicitParamDecl::Other);
   }
 
   FunctionArgList Args;
   for (auto &P : Params)
     Args.push_back(&P);
 
-  QualType ReturnTy = Ctx.VoidTy;
-  QualType FuncionTy = Ctx.getFunctionType(ReturnTy, ArgTys, {});
-
   // The helper function has linkonce_odr linkage to enable the linker to merge
   // identical functions. To ensure the merging always happens, 'noinline' is
   // attached to the function when compiling with -Oz.
   const CGFunctionInfo &FI =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, Args);
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
   llvm::FunctionType *FuncTy = CGM.getTypes().GetFunctionType(FI);
   llvm::Function *Fn = llvm::Function::Create(
       FuncTy, llvm::GlobalValue::LinkOnceODRLinkage, Name, &CGM.getModule());
@@ -969,9 +962,9 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   IdentifierInfo *II = &Ctx.Idents.get(Name);
   FunctionDecl *FD = FunctionDecl::Create(
       Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FuncionTy, nullptr, SC_PrivateExtern, false, false);
+      Ctx.VoidTy, nullptr, SC_PrivateExtern, false, false);
 
-  StartFunction(FD, ReturnTy, Fn, FI, Args);
+  StartFunction(FD, Ctx.VoidTy, Fn, FI, Args);
 
   // Create a scope with an artificial location for the body of this function.
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
@@ -1031,12 +1024,7 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
 
     llvm::Value *ArgVal;
 
-    if (Item.getKind() == analyze_os_log::OSLogBufferItem::MaskKind) {
-      uint64_t Val = 0;
-      for (unsigned I = 0, E = Item.getMaskType().size(); I < E; ++I)
-        Val |= ((uint64_t)Item.getMaskType()[I]) << I * 8;
-      ArgVal = llvm::Constant::getIntegerValue(Int64Ty, llvm::APInt(64, Val));
-    } else if (const Expr *TheExpr = Item.getExpr()) {
+    if (const Expr *TheExpr = Item.getExpr()) {
       ArgVal = EmitScalarExpr(TheExpr, /*Ignore*/ false);
 
       // Check if this is a retainable type.

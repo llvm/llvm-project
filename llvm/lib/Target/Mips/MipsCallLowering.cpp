@@ -16,7 +16,6 @@
 #include "MipsCallLowering.h"
 #include "MipsCCState.h"
 #include "MipsTargetMachine.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 using namespace llvm;
@@ -193,34 +192,25 @@ static bool isSupportedType(Type *T) {
 }
 
 bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                      const Value *Val,
-                                      ArrayRef<unsigned> VRegs) const {
+                                   const Value *Val, unsigned VReg) const {
 
   MachineInstrBuilder Ret = MIRBuilder.buildInstrNoInsert(Mips::RetRA);
 
-  if (Val != nullptr && !isSupportedType(Val->getType()))
-    return false;
+  if (Val != nullptr) {
+    if (!isSupportedType(Val->getType()))
+      return false;
 
-  if (!VRegs.empty()) {
     MachineFunction &MF = MIRBuilder.getMF();
     const Function &F = MF.getFunction();
     const DataLayout &DL = MF.getDataLayout();
     const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
-    LLVMContext &Ctx = Val->getType()->getContext();
-
-    SmallVector<EVT, 4> SplitEVTs;
-    ComputeValueVTs(TLI, DL, Val->getType(), SplitEVTs);
-    assert(VRegs.size() == SplitEVTs.size() &&
-           "For each split Type there should be exactly one VReg.");
 
     SmallVector<ArgInfo, 8> RetInfos;
     SmallVector<unsigned, 8> OrigArgIndices;
 
-    for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-      ArgInfo CurArgInfo = ArgInfo{VRegs[i], SplitEVTs[i].getTypeForEVT(Ctx)};
-      setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
-      splitToValueTypes(CurArgInfo, 0, RetInfos, OrigArgIndices);
-    }
+    ArgInfo ArgRetInfo(VReg, Val->getType());
+    setArgFlags(ArgRetInfo, AttributeList::ReturnIndex, DL, F);
+    splitToValueTypes(ArgRetInfo, 0, RetInfos, OrigArgIndices);
 
     SmallVector<ISD::OutputArg, 8> Outs;
     subTargetRegTypeForCallingConv(

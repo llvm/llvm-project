@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangStaticAnalyzerCheckers
+  AllocationDiagnostics.cpp
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
@@ -34,7 +35,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   DivZeroChecker.cpp
   DynamicTypePropagation.cpp
   DynamicTypeChecker.cpp
-  EnumCastOutOfRangeChecker.cpp
   ExprInspectionChecker.cpp
   FixedAddressChecker.cpp
   GCDAntipatternChecker.cpp
@@ -52,7 +52,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
   MmapWriteExecChecker.cpp
-  MoveChecker.cpp
+  MisusedMovedObjectChecker.cpp
   MPI-Checker/MPIBugReporter.cpp
   MPI-Checker/MPIChecker.cpp
   MPI-Checker/MPIFunctionClassifier.cpp
@@ -76,8 +76,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   PointerArithChecker.cpp
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
-  RetainCountChecker/RetainCountChecker.cpp
-  RetainCountChecker/RetainCountDiagnostics.cpp
+  RetainCountChecker.cpp
   ReturnPointerRangeChecker.cpp
   ReturnUndefChecker.cpp
   RunLoopAutoreleaseLeakChecker.cpp
@@ -94,14 +93,16 @@ add_clang_library(clangStaticAnalyzerCheckers
   UndefResultChecker.cpp
   UndefinedArraySubscriptChecker.cpp
   UndefinedAssignmentChecker.cpp
-  UninitializedObject/UninitializedObjectChecker.cpp
-  UninitializedObject/UninitializedPointee.cpp
+  UninitializedObjectChecker.cpp
   UnixAPIChecker.cpp
   UnreachableCodeChecker.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
   ValistChecker.cpp
   VirtualCallChecker.cpp
+
+  DEPENDS
+  ClangSACheckers
 
   LINK_LIBS
   clangAST

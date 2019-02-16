@@ -234,9 +234,6 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   if (CGM.getCodeGenOpts().EmitCodeView)
     PP.MSVCFormatting = true;
 
-  // Apply -fdebug-prefix-map.
-  PP.RemapFilePaths = true;
-  PP.remapPath = [this](StringRef Path) { return remapDIPath(Path); };
   return PP;
 }
 
@@ -1899,17 +1896,8 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
   if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
     if (!CXXDecl->isCompleteDefinition())
       return false;
-    // Check wether RD is a template.
     auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
     if (TemplateKind != TSK_Undeclared) {
-      // Unfortunately getOwningModule() isn't accurate enough to find the
-      // owning module of a ClassTemplateSpecializationDecl that is inside a
-      // namespace spanning multiple modules.
-      bool Explicit = false;
-      if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(CXXDecl))
-        Explicit = TD->isExplicitInstantiationOrSpecialization();
-      if (!Explicit && CXXDecl->getEnclosingNamespaceContext())
-        return false;
       // This is a template, check the origin of the first member.
       if (CXXDecl->field_begin() == CXXDecl->field_end())
         return TemplateKind == TSK_ExplicitInstantiationDeclaration;
@@ -2598,9 +2586,12 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   // Create elements for each enumerator.
   SmallVector<llvm::Metadata *, 16> Enumerators;
   ED = ED->getDefinition();
+  bool IsSigned = ED->getIntegerType()->isSignedIntegerType();
   for (const auto *Enum : ED->enumerators()) {
-    Enumerators.push_back(DBuilder.createEnumerator(
-        Enum->getName(), Enum->getInitVal().getSExtValue()));
+    const auto &InitVal = Enum->getInitVal();
+    auto Value = IsSigned ? InitVal.getSExtValue() : InitVal.getZExtValue();
+    Enumerators.push_back(
+        DBuilder.createEnumerator(Enum->getName(), Value, !IsSigned));
   }
 
   // Return a CompositeType for the enum itself.
@@ -2609,11 +2600,10 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
   unsigned Line = getLineNumber(ED->getLocation());
   llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
-  llvm::DIType *ClassTy =
-      ED->isFixed() ? getOrCreateType(ED->getIntegerType(), DefUnit) : nullptr;
+  llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(EnumContext, ED->getName(), DefUnit,
                                         Line, Size, Align, EltArray, ClassTy,
-                                        Identifier);
+                                        Identifier, ED->isFixed());
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
@@ -3111,7 +3101,6 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
   QualType FnType = CGM.getContext().getFunctionType(
       FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
   if (Stub) {
-    Flags |= getCallSiteRelatedAttrs();
     return DBuilder.createFunction(
         DContext, Name, LinkageName, Unit, Line,
         getOrCreateFunctionType(GD.getDecl(), FnType, Unit),
@@ -3349,8 +3338,6 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   if (CurFuncIsThunk)
     Flags |= llvm::DINode::FlagThunk;
 
-  llvm::DINode::DIFlags FlagsForDef = Flags | getCallSiteRelatedAttrs();
-
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = getLineNumber(ScopeLoc);
 
@@ -3362,7 +3349,7 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo,
       getOrCreateFunctionType(D, FnType, Unit), Fn->hasLocalLinkage(),
-      true /*definition*/, ScopeLine, FlagsForDef, CGM.getLangOpts().Optimize,
+      true /*definition*/, ScopeLine, Flags, CGM.getLangOpts().Optimize,
       TParamsArray.get(), getFunctionDeclaration(D));
   Fn->setSubprogram(SP);
   // We might get here with a VarDecl in the case we're generating
@@ -3466,7 +3453,7 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
-  if (CurLoc.isInvalid() || CurLoc.isMacroID() || LexicalBlockStack.empty())
+  if (CurLoc.isInvalid() || CurLoc.isMacroID())
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
@@ -3543,9 +3530,9 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
     DBuilder.finalizeSubprogram(Fn->getSubprogram());
 }
 
-CGDebugInfo::BlockByRefType
-CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
-                                          uint64_t *XOffset) {
+llvm::DIType *CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
+                                                        uint64_t *XOffset) {
+
   SmallVector<llvm::Metadata *, 5> EltTys;
   QualType FType;
   uint64_t FieldSize, FieldOffset;
@@ -3597,21 +3584,23 @@ CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
   }
 
   FType = Type;
-  llvm::DIType *WrappedTy = getOrCreateType(FType, Unit);
+  llvm::DIType *FieldTy = getOrCreateType(FType, Unit);
   FieldSize = CGM.getContext().getTypeSize(FType);
   FieldAlign = CGM.getContext().toBits(Align);
 
   *XOffset = FieldOffset;
-  llvm::DIType *FieldTy = DBuilder.createMemberType(
-      Unit, VD->getName(), Unit, 0, FieldSize, FieldAlign, FieldOffset,
-      llvm::DINode::FlagZero, WrappedTy);
+  FieldTy = DBuilder.createMemberType(Unit, VD->getName(), Unit, 0, FieldSize,
+                                      FieldAlign, FieldOffset,
+                                      llvm::DINode::FlagZero, FieldTy);
   EltTys.push_back(FieldTy);
   FieldOffset += FieldSize;
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
-  return {DBuilder.createStructType(Unit, "", Unit, 0, FieldOffset, 0,
-                                    llvm::DINode::FlagZero, nullptr, Elements),
-          WrappedTy};
+
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagBlockByrefStruct;
+
+  return DBuilder.createStructType(Unit, "", Unit, 0, FieldOffset, 0, Flags,
+                                   nullptr, Elements);
 }
 
 llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
@@ -3632,7 +3621,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   llvm::DIType *Ty;
   uint64_t XOffset = 0;
   if (VD->hasAttr<BlocksAttr>())
-    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
+    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset);
   else
     Ty = getOrCreateType(VD->getType(), Unit);
 
@@ -3770,7 +3759,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
   llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
   llvm::DIType *Ty;
   if (isByRef)
-    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
+    Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset);
   else
     Ty = getOrCreateType(VD->getType(), Unit);
 
@@ -3952,10 +3941,10 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
     if (capture->isByRef()) {
       TypeInfo PtrInfo = C.getTypeInfo(C.VoidPtrTy);
       auto Align = PtrInfo.AlignIsRequired ? PtrInfo.Align : 0;
-      // FIXME: This recomputes the layout of the BlockByRefWrapper.
+
+      // FIXME: this creates a second copy of this type!
       uint64_t xoffset;
-      fieldType =
-          EmitTypeForVarWithBlocksAttr(variable, &xoffset).BlockByRefWrapper;
+      fieldType = EmitTypeForVarWithBlocksAttr(variable, &xoffset);
       fieldType = DBuilder.createPointerType(fieldType, PtrInfo.Width);
       fieldType = DBuilder.createMemberType(tunit, name, tunit, line,
                                             PtrInfo.Width, Align, offsetInBits,
@@ -4342,23 +4331,4 @@ llvm::DebugLoc CGDebugInfo::SourceLocToDebugLoc(SourceLocation Loc) {
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
   return llvm::DebugLoc::get(getLineNumber(Loc), getColumnNumber(Loc), Scope);
-}
-
-llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
-  // Call site-related attributes are only useful in optimized programs, and
-  // when there's a possibility of debugging backtraces.
-  if (!CGM.getLangOpts().Optimize || DebugKind == codegenoptions::NoDebugInfo ||
-      DebugKind == codegenoptions::LocTrackingOnly)
-    return llvm::DINode::FlagZero;
-
-  // Call site-related attributes are available in DWARF v5. Some debuggers,
-  // while not fully DWARF v5-compliant, may accept these attributes as if they
-  // were part of DWARF v4.
-  bool SupportsDWARFv4Ext =
-      CGM.getCodeGenOpts().DwarfVersion == 4 &&
-      CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB;
-  if (!SupportsDWARFv4Ext && CGM.getCodeGenOpts().DwarfVersion < 5)
-    return llvm::DINode::FlagZero;
-
-  return llvm::DINode::FlagAllCallsDescribed;
 }

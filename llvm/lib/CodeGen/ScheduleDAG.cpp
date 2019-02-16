@@ -68,36 +68,39 @@ const MCInstrDesc *ScheduleDAG::getNodeDesc(const SDNode *Node) const {
   return &TII->get(Node->getMachineOpcode());
 }
 
-LLVM_DUMP_METHOD void SDep::dump(const TargetRegisterInfo *TRI) const {
+LLVM_DUMP_METHOD
+raw_ostream &SDep::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
   switch (getKind()) {
-  case Data:   dbgs() << "Data"; break;
-  case Anti:   dbgs() << "Anti"; break;
-  case Output: dbgs() << "Out "; break;
-  case Order:  dbgs() << "Ord "; break;
+  case Data:   OS << "Data"; break;
+  case Anti:   OS << "Anti"; break;
+  case Output: OS << "Out "; break;
+  case Order:  OS << "Ord "; break;
   }
 
   switch (getKind()) {
   case Data:
-    dbgs() << " Latency=" << getLatency();
+    OS << " Latency=" << getLatency();
     if (TRI && isAssignedRegDep())
-      dbgs() << " Reg=" << printReg(getReg(), TRI);
+      OS << " Reg=" << printReg(getReg(), TRI);
     break;
   case Anti:
   case Output:
-    dbgs() << " Latency=" << getLatency();
+    OS << " Latency=" << getLatency();
     break;
   case Order:
-    dbgs() << " Latency=" << getLatency();
+    OS << " Latency=" << getLatency();
     switch(Contents.OrdKind) {
-    case Barrier:      dbgs() << " Barrier"; break;
+    case Barrier:      OS << " Barrier"; break;
     case MayAliasMem:
-    case MustAliasMem: dbgs() << " Memory"; break;
-    case Artificial:   dbgs() << " Artificial"; break;
-    case Weak:         dbgs() << " Weak"; break;
-    case Cluster:      dbgs() << " Cluster"; break;
+    case MustAliasMem: OS << " Memory"; break;
+    case Artificial:   OS << " Artificial"; break;
+    case Weak:         OS << " Weak"; break;
+    case Cluster:      OS << " Cluster"; break;
     }
     break;
   }
+
+  return OS;
 }
 
 bool SUnit::addPred(const SDep &D, bool Required) {
@@ -334,7 +337,33 @@ void SUnit::biasCriticalPath() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {
+LLVM_DUMP_METHOD
+raw_ostream &SUnit::print(raw_ostream &OS,
+                          const SUnit *Entry, const SUnit *Exit) const {
+  if (this == Entry)
+    OS << "EntrySU";
+  else if (this == Exit)
+    OS << "ExitSU";
+  else
+    OS << "SU(" << NodeNum << ")";
+  return OS;
+}
+
+LLVM_DUMP_METHOD
+raw_ostream &SUnit::print(raw_ostream &OS, const ScheduleDAG *G) const {
+  return print(OS, &G->EntrySU, &G->ExitSU);
+}
+
+LLVM_DUMP_METHOD
+void SUnit::dump(const ScheduleDAG *G) const {
+  print(dbgs(), G);
+  dbgs() << ": ";
+  G->dumpNode(this);
+}
+
+LLVM_DUMP_METHOD void SUnit::dumpAll(const ScheduleDAG *G) const {
+  dump(G);
+
   dbgs() << "  # preds left       : " << NumPredsLeft << "\n";
   dbgs() << "  # succs left       : " << NumSuccsLeft << "\n";
   if (WeakPredsLeft)
@@ -345,38 +374,21 @@ LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {
   dbgs() << "  Latency            : " << Latency << "\n";
   dbgs() << "  Depth              : " << getDepth() << "\n";
   dbgs() << "  Height             : " << getHeight() << "\n";
-}
 
-LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeName(const SUnit &SU) const {
-  if (&SU == &EntrySU)
-    dbgs() << "EntrySU";
-  else if (&SU == &ExitSU)
-    dbgs() << "ExitSU";
-  else
-    dbgs() << "SU(" << SU.NodeNum << ")";
-}
-
-LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeAll(const SUnit &SU) const {
-  dumpNode(SU);
-  SU.dumpAttributes();
-  if (SU.Preds.size() > 0) {
+  if (Preds.size() != 0) {
     dbgs() << "  Predecessors:\n";
-    for (const SDep &Dep : SU.Preds) {
+    for (const SDep &Dep : Preds) {
       dbgs() << "    ";
-      dumpNodeName(*Dep.getSUnit());
-      dbgs() << ": ";
-      Dep.dump(TRI);
-      dbgs() << '\n';
+      Dep.getSUnit()->print(dbgs(), G); dbgs() << ": ";
+      Dep.print(dbgs(), G->TRI); dbgs() << '\n';
     }
   }
-  if (SU.Succs.size() > 0) {
+  if (Succs.size() != 0) {
     dbgs() << "  Successors:\n";
-    for (const SDep &Dep : SU.Succs) {
+    for (const SDep &Dep : Succs) {
       dbgs() << "    ";
-      dumpNodeName(*Dep.getSUnit());
-      dbgs() << ": ";
-      Dep.dump(TRI);
-      dbgs() << '\n';
+      Dep.getSUnit()->print(dbgs(), G); dbgs() << ": ";
+      Dep.print(dbgs(), G->TRI); dbgs() << '\n';
     }
   }
 }
@@ -394,7 +406,7 @@ unsigned ScheduleDAG::VerifyScheduledDAG(bool isBottomUp) {
       }
       if (!AnyNotSched)
         dbgs() << "*** Scheduling failed! ***\n";
-      dumpNode(SUnit);
+      SUnit.dump(this);
       dbgs() << "has not been scheduled!\n";
       AnyNotSched = true;
     }
@@ -403,7 +415,7 @@ unsigned ScheduleDAG::VerifyScheduledDAG(bool isBottomUp) {
           unsigned(std::numeric_limits<int>::max())) {
       if (!AnyNotSched)
         dbgs() << "*** Scheduling failed! ***\n";
-      dumpNode(SUnit);
+      SUnit.dump(this);
       dbgs() << "has an unexpected "
            << (isBottomUp ? "Height" : "Depth") << " value!\n";
       AnyNotSched = true;
@@ -412,7 +424,7 @@ unsigned ScheduleDAG::VerifyScheduledDAG(bool isBottomUp) {
       if (SUnit.NumSuccsLeft != 0) {
         if (!AnyNotSched)
           dbgs() << "*** Scheduling failed! ***\n";
-        dumpNode(SUnit);
+        SUnit.dump(this);
         dbgs() << "has successors left!\n";
         AnyNotSched = true;
       }
@@ -420,7 +432,7 @@ unsigned ScheduleDAG::VerifyScheduledDAG(bool isBottomUp) {
       if (SUnit.NumPredsLeft != 0) {
         if (!AnyNotSched)
           dbgs() << "*** Scheduling failed! ***\n";
-        dumpNode(SUnit);
+        SUnit.dump(this);
         dbgs() << "has predecessors left!\n";
         AnyNotSched = true;
       }

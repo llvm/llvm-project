@@ -577,7 +577,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // the #if block.
   CurPPLexer->LexingRawMode = false;
 
-  if (Callbacks)
+  // The last skipped range isn't actually skipped yet if it's truncated
+  // by the end of the preamble; we'll resume parsing after the preamble.
+  if (Callbacks && (Tok.isNot(tok::eof) || !isRecordingPreamble()))
     Callbacks->SourceRangeSkipped(
         SourceRange(HashTokenLoc, CurPPLexer->getSourceLocation()),
         Tok.getLocation());
@@ -1781,7 +1783,6 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // Check that we don't have infinite #include recursion.
   if (IncludeMacroStack.size() == MaxAllowedIncludeStackDepth-1) {
     Diag(FilenameTok, diag::err_pp_include_too_deep);
-    HasReachedMaxIncludeDepth = true;
     return;
   }
 
@@ -1895,11 +1896,10 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   if (PPOpts->SingleFileParseMode)
     ShouldEnter = false;
 
-  // If we've reached the max allowed include depth, it is usually due to an
-  // include cycle. Don't enter already processed files again as it can lead to
-  // reaching the max allowed include depth again.
-  if (ShouldEnter && HasReachedMaxIncludeDepth && File &&
-      HeaderInfo.getFileInfo(File).NumIncludes)
+  // Any diagnostics after the fatal error will not be visible. As the
+  // compilation failed already and errors in subsequently included files won't
+  // be visible, avoid preprocessing those files.
+  if (ShouldEnter && Diags->hasFatalErrorOccurred())
     ShouldEnter = false;
 
   // Determine whether we should try to import the module for this #include, if

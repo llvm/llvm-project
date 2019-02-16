@@ -471,7 +471,7 @@ void SIScheduleBlock::releaseSucc(SUnit *SU, SDep *SuccEdge) {
 #ifndef NDEBUG
   if (SuccSU->NumPredsLeft == 0) {
     dbgs() << "*** Scheduling failed! ***\n";
-    DAG->dumpNode(*SuccSU);
+    SuccSU->dump(DAG);
     dbgs() << " has been released too many times!\n";
     llvm_unreachable(nullptr);
   }
@@ -611,11 +611,13 @@ void SIScheduleBlock::printDebug(bool full) {
 
   dbgs() << "\nInstructions:\n";
   if (!Scheduled) {
-    for (const SUnit* SU : SUnits)
-      DAG->dumpNode(*SU);
+    for (SUnit* SU : SUnits) {
+      SU->dump(DAG);
+    }
   } else {
-    for (const SUnit* SU : SUnits)
-      DAG->dumpNode(*SU);
+    for (SUnit* SU : SUnits) {
+      SU->dump(DAG);
+    }
   }
 
   dbgs() << "///////////////////////\n";
@@ -1931,7 +1933,7 @@ void SIScheduleDAGMI::schedule()
   LLVM_DEBUG(dbgs() << "Preparing Scheduling\n");
 
   buildDAGWithRegPressure();
-  LLVM_DEBUG(dump());
+  LLVM_DEBUG(for (SUnit &SU : SUnits) SU.dumpAll(this));
 
   topologicalSort();
   findRootsAndBiasEdges(TopRoots, BotRoots);
@@ -1955,12 +1957,12 @@ void SIScheduleDAGMI::schedule()
 
   for (unsigned i = 0, e = (unsigned)SUnits.size(); i != e; ++i) {
     SUnit *SU = &SUnits[i];
-    MachineOperand *BaseLatOp;
+    unsigned BaseLatReg;
     int64_t OffLatReg;
     if (SITII->isLowLatencyInstruction(*SU->getInstr())) {
       IsLowLatencySU[i] = 1;
-      if (SITII->getMemOperandWithOffset(*SU->getInstr(), BaseLatOp, OffLatReg,
-                                         TRI))
+      if (SITII->getMemOpBaseRegImmOfs(*SU->getInstr(), BaseLatReg, OffLatReg,
+                                       TRI))
         LowLatencyOffset[i] = OffLatReg;
     } else if (SITII->isHighLatencyInstruction(*SU->getInstr()))
       IsHighLatencySU[i] = 1;

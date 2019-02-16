@@ -130,11 +130,20 @@ void Value::destroyValueName() {
 }
 
 bool Value::hasNUses(unsigned N) const {
-  return hasNItems(use_begin(), use_end(), N);
+  const_use_iterator UI = use_begin(), E = use_end();
+
+  for (; N; --N, ++UI)
+    if (UI == E) return false;  // Too few.
+  return UI == E;
 }
 
 bool Value::hasNUsesOrMore(unsigned N) const {
-  return hasNItemsOrMore(use_begin(), use_end(), N);
+  const_use_iterator UI = use_begin(), E = use_end();
+
+  for (; N; --N, ++UI)
+    if (UI == E) return false;  // Too few.
+
+  return true;
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {

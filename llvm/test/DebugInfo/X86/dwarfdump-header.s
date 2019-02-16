@@ -2,9 +2,8 @@
 # We have a representative set of units: v4 CU, v5 CU, v4 TU, v5 split TU.
 # We have v4 and v5 line-table headers.
 #
-# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
-# RUN: llvm-dwarfdump -v %t.o | FileCheck %s
-# RUN: llvm-dwarfdump -verify %t.o | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
+# RUN: llvm-dwarfdump -v - | FileCheck %s
 
         .section .debug_str,"MS",@progbits,1
 str_producer:
@@ -436,6 +435,3 @@ dwo_LH_5_end:
 # CHECK-NEXT: mod_time: 0x00000035
 # CHECK-NEXT: length: 0x00000045
 # CHECK-NOT: file_names
-
-# VERIFY: Verifying .debug_types
-# VERIFY: No errors.

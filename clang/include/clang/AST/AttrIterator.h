@@ -115,8 +115,6 @@ public:
                          specific_attr_iterator Right) {
     return !(Left == Right);
   }
-
-  Iterator getCurrent() const { return Current; }
 };
 
 template <typename SpecificAttr, typename Container>

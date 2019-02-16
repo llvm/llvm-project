@@ -74,8 +74,6 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
         II->replaceAllUsesWith(ConstantInt::getTrue(Context));
         break;
       case Intrinsic::coro_id:
-      case Intrinsic::coro_id_retcon:
-      case Intrinsic::coro_id_retcon_once:
         II->replaceAllUsesWith(ConstantTokenNone::get(Context));
         break;
       case Intrinsic::coro_subfn_addr:
@@ -114,8 +112,7 @@ struct CoroCleanup : FunctionPass {
   bool doInitialization(Module &M) override {
     if (coro::declaresIntrinsics(M, {"llvm.coro.alloc", "llvm.coro.begin",
                                      "llvm.coro.subfn.addr", "llvm.coro.free",
-                                     "llvm.coro.id", "llvm.coro.id.retcon",
-                                     "llvm.coro.id.retcon.once"}))
+                                     "llvm.coro.id"}))
       L = llvm::make_unique<Lowerer>(M);
     return false;
   }

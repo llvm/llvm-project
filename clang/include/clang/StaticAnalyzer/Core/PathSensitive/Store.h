@@ -130,8 +130,6 @@ public:
   ///  used to query and manipulate MemRegion objects.
   MemRegionManager& getRegionManager() { return MRMgr; }
 
-  SValBuilder& getSValBuilder() { return svalBuilder; }
-
   virtual Loc getLValueVar(const VarDecl *VD, const LocationContext *LC) {
     return svalBuilder.makeLoc(MRMgr.getVarRegion(VD, LC));
   }
@@ -254,18 +252,19 @@ public:
   virtual bool scanReachableSymbols(Store S, const MemRegion *R,
                                     ScanReachableSymbols &Visitor) = 0;
 
-  virtual void print(Store store, raw_ostream &Out, const char* nl) = 0;
+  virtual void print(Store store, raw_ostream &Out,
+                     const char* nl, const char *sep) = 0;
 
   class BindingsHandler {
   public:
     virtual ~BindingsHandler();
 
-    /// \return whether the iteration should continue.
     virtual bool HandleBinding(StoreManager& SMgr, Store store,
                                const MemRegion *region, SVal val) = 0;
   };
 
-  class FindUniqueBinding : public BindingsHandler {
+  class FindUniqueBinding :
+  public BindingsHandler {
     SymbolRef Sym;
     const MemRegion* Binding = nullptr;
     bool First = true;

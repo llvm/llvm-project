@@ -387,16 +387,16 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
       switch (Form) {
       case DW_FORM_exprloc:
       case DW_FORM_block:
-        AddrOS << format("<0x%" PRIx64 "> ", UValue);
+        OS << format("<0x%" PRIx64 "> ", UValue);
         break;
       case DW_FORM_block1:
-        AddrOS << format("<0x%2.2x> ", (uint8_t)UValue);
+        OS << format("<0x%2.2x> ", (uint8_t)UValue);
         break;
       case DW_FORM_block2:
-        AddrOS << format("<0x%4.4x> ", (uint16_t)UValue);
+        OS << format("<0x%4.4x> ", (uint16_t)UValue);
         break;
       case DW_FORM_block4:
-        AddrOS << format("<0x%8.8x> ", (uint32_t)UValue);
+        OS << format("<0x%8.8x> ", (uint32_t)UValue);
         break;
       default:
         break;
@@ -407,7 +407,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
         // UValue contains size of block
         const uint8_t *EndDataPtr = DataPtr + UValue;
         while (DataPtr < EndDataPtr) {
-          AddrOS << format("%2.2x ", *DataPtr);
+          OS << format("%2.2x ", *DataPtr);
           ++DataPtr;
         }
       } else
@@ -501,9 +501,8 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (CURelativeOffset) {
     if (DumpOpts.Verbose)
       OS << " => {";
-    if (DumpOpts.ShowAddresses)
-      WithColor(OS, HighlightColor::Address).get()
-          << format("0x%8.8" PRIx64, UValue + (U ? U->getOffset() : 0));
+    WithColor(OS, HighlightColor::Address).get()
+        << format("0x%8.8" PRIx64, UValue + (U ? U->getOffset() : 0));
     if (DumpOpts.Verbose)
       OS << "}";
   }

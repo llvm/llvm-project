@@ -90,19 +90,6 @@ def NonBitField : SubsetSubject<Field,
                                 [{!S->isBitField()}],
                                 "non-bit-field non-static data members">;
 
-def ObjCClassMethod : SubsetSubject<ObjCMethod,
-                                    [{!S->isInstanceMethod()}],
-                                    "Objective-C class methods">;
-
-def NonStaticCXXMethod : SubsetSubject<CXXMethod,
-                                       [{!S->isStatic()}],
-                                       "non-static member functions">;
-
-def NonStaticNonConstCXXMethod
-    : SubsetSubject<CXXMethod,
-                    [{!S->isStatic() && !S->isConst()}],
-                    "non-static non-const member functions">;
-
 def ObjCInstanceMethod : SubsetSubject<ObjCMethod,
                                        [{S->isInstanceMethod()}],
                                        "Objective-C instance methods">;
@@ -233,9 +220,6 @@ class VariadicEnumArgument<string name, string type, list<string> values,
   list<string> Values = values;
   list<string> Enums = enums;
 }
-
-// Represents an attribute wrapped by another attribute.
-class AttrArgument<string name, bit opt = 0> : Argument<name, opt>;
 
 // This handles one spelling of an attribute.
 class Spelling<string name, string variety> {
@@ -736,7 +720,6 @@ def Availability : InheritableAttr {
              .Case("macos_app_extension", "macOS (App Extension)")
              .Case("tvos_app_extension", "tvOS (App Extension)")
              .Case("watchos_app_extension", "watchOS (App Extension)")
-             .Case("swift", "Swift")
              .Default(llvm::StringRef());
 }
 static llvm::StringRef getPlatformNameSourceSpelling(llvm::StringRef Platform) {
@@ -825,44 +808,19 @@ def CFUnknownTransfer : InheritableAttr {
 def CFReturnsRetained : InheritableAttr {
   let Spellings = [Clang<"cf_returns_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def CFReturnsNotRetained : InheritableAttr {
   let Spellings = [Clang<"cf_returns_not_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def CFConsumed : InheritableParamAttr {
   let Spellings = [Clang<"cf_consumed">];
   let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [RetainBehaviorDocs];
-}
-
-// OSObject-based attributes.
-def OSConsumed : InheritableParamAttr {
-  let Spellings = [Clang<"os_consumed">];
-  let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [RetainBehaviorDocs];
-}
-
-def OSReturnsRetained : InheritableAttr {
-  let Spellings = [Clang<"os_returns_retained">];
-  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
-  let Documentation = [RetainBehaviorDocs];
-}
-
-def OSReturnsNotRetained : InheritableAttr {
-  let Spellings = [Clang<"os_returns_not_retained">];
-  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
-  let Documentation = [RetainBehaviorDocs];
-}
-
-def OSConsumesThis : InheritableAttr {
-  let Spellings = [Clang<"os_consumes_this">];
-  let Subjects = SubjectList<[NonStaticCXXMethod]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def Cleanup : InheritableAttr {
@@ -1630,40 +1588,34 @@ def ObjCBridgeRelated : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def NSErrorDomain : Attr {
-  let Spellings = [GNU<"ns_error_domain">];
-  let Args = [IdentifierArgument<"ErrorDomain">];
-  let Documentation = [NSErrorDomainDocs];
-}
-
 def NSReturnsRetained : InheritableAttr {
   let Spellings = [Clang<"ns_returns_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def NSReturnsNotRetained : InheritableAttr {
   let Spellings = [Clang<"ns_returns_not_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def NSReturnsAutoreleased : InheritableAttr {
   let Spellings = [Clang<"ns_returns_autoreleased">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def NSConsumesSelf : InheritableAttr {
   let Spellings = [Clang<"ns_consumes_self">];
   let Subjects = SubjectList<[ObjCMethod]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def NSConsumed : InheritableParamAttr {
   let Spellings = [Clang<"ns_consumed">];
   let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [RetainBehaviorDocs];
+  let Documentation = [Undocumented];
 }
 
 def ObjCException : InheritableAttr {
@@ -1720,12 +1672,6 @@ def ObjCSubclassingRestricted : InheritableAttr {
   let Spellings = [Clang<"objc_subclassing_restricted">];
   let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
   let Documentation = [ObjCSubclassingRestrictedDocs];
-}
-
-def ObjCCompleteDefinition : InheritableAttr {
-  let Spellings = [GNU<"objc_complete_definition">];
-  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
-  let Documentation = [Undocumented];
 }
 
 def ObjCExplicitProtocolImpl : InheritableAttr {
@@ -1827,101 +1773,6 @@ def Regparm : TypeAttr {
   let Spellings = [GCC<"regparm">];
   let Args = [UnsignedArgument<"NumParams">];
   let Documentation = [RegparmDocs];
-}
-
-def SwiftBridge : Attr {
-  let Spellings = [GNU<"swift_bridge">];
-  let Subjects = SubjectList<[Tag, TypedefName, ObjCInterface, ObjCProtocol],
-                             ErrorDiag, "ExpectedType">;
-  let Args = [StringArgument<"SwiftType">];
-  let Documentation = [SwiftBridgeDocs];
-}
-
-def SwiftBridgedTypedef : Attr {
-  let Spellings = [GNU<"swift_bridged_typedef">];
-  let Subjects = SubjectList<[TypedefName], ErrorDiag, "typedefs">;
-  let Args = [];
-  let Documentation = [SwiftBridgedTypedefDocs];
-}
-
-def SwiftObjCMembers : Attr {
-  let Spellings = [GNU<"swift_objc_members">];
-  let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
-  let Documentation = [SwiftObjCMembersDocs];
-}
-
-def SwiftError : InheritableAttr {
-  let Spellings = [GCC<"swift_error">];
-  let Args = [EnumArgument<"Convention", "ConventionKind",
-               ["none", "nonnull_error", "null_result", "zero_result", "nonzero_result"],
-               ["None", "NonNullError", "NullResult", "ZeroResult", "NonZeroResult"]>];
-  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
-  let Documentation = [SwiftErrorDocs];
-}
-
-def SwiftName : InheritableAttr {
-  let Spellings = [GCC<"swift_name">];
-  let Args = [StringArgument<"Name">];
-  // Proper subject list disabled because of the custom error needed.
-  // Let's avoid merge conflicts for now.
-//  let Subjects = SubjectList<[EnumConstant, ObjCProtocol, ObjCClassMethod],
-//                             ErrorDiag, "ExpectedSwiftNameSubjects">;
-  let Documentation = [Undocumented];
-}
-
-def SwiftNewtype : InheritableAttr {
-  let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
-  let Subjects = SubjectList<[TypedefName], ErrorDiag, "ExpectedType">;
-  let Args = [EnumArgument<"NewtypeKind", "NewtypeKind",
-               ["struct", "enum"],
-               ["NK_Struct", "NK_Enum"]>];
-  let Documentation = [SwiftNewtypeDocs];
-}
-
-def SwiftPrivate : InheritableAttr {
-  let Spellings = [GCC<"swift_private">];
-  let Documentation = [Undocumented];
-}
-
-def SwiftImportAsNonGeneric : InheritableAttr {
-  // This attribute has no spellings as it is only ever created implicitly
-  // from API notes.
-  let Spellings = [];
-  let SemaHandler = 0;
-  let Documentation = [Undocumented];
-}
-
-def SwiftImportPropertyAsAccessors : InheritableAttr {
-  // This attribute has no spellings as it is only ever created implicitly
-  // from API notes.
-  let Spellings = [];
-  let SemaHandler = 0;
-  let Documentation = [Undocumented];
-}
-
-def SwiftVersioned : Attr {
-  // This attribute has no spellings as it is only ever created implicitly
-  // from API notes.
-  let Spellings = [];
-  let Args = [VersionArgument<"Version">, AttrArgument<"AttrToAdd">,
-              BoolArgument<"IsReplacedByActive">];
-  let SemaHandler = 0;
-  let Documentation = [Undocumented];
-}
-
-def SwiftVersionedRemoval : Attr {
-  // This attribute has no spellings as it is only ever created implicitly
-  // from API notes.
-  let Spellings = [];
-  let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
-              BoolArgument<"IsReplacedByActive">];
-  let SemaHandler = 0;
-  let Documentation = [Undocumented];
-  let AdditionalMembers = [{
-    attr::Kind getAttrKindToRemove() const {
-      return static_cast<attr::Kind>(getRawKind());
-    }
-  }];
 }
 
 def ReqdWorkGroupSize : InheritableAttr {
@@ -2897,8 +2748,6 @@ def LoopHint : Attr {
   /// interleave_count: interleaves 'Value' loop iterations.
   /// unroll: fully unroll loop if State == Enable.
   /// unroll_count: unrolls loop 'Value' times.
-  /// unroll_and_jam: attempt to unroll and jam loop if State == Enable.
-  /// unroll_and_jam_count: unroll and jams loop 'Value' times.
   /// distribute: attempt to distribute loop if State == Enable
 
   /// #pragma unroll <argument> directive
@@ -2907,17 +2756,14 @@ def LoopHint : Attr {
   /// expression: unrolls loop 'Value' times.
 
   let Spellings = [Pragma<"clang", "loop">, Pragma<"", "unroll">,
-                   Pragma<"", "nounroll">, Pragma<"", "unroll_and_jam">,
-                   Pragma<"", "nounroll_and_jam">];
+                   Pragma<"", "nounroll">];
 
   /// State of the loop optimization specified by the spelling.
   let Args = [EnumArgument<"Option", "OptionType",
                           ["vectorize", "vectorize_width", "interleave", "interleave_count",
-                           "unroll", "unroll_count", "unroll_and_jam", "unroll_and_jam_count",
-                           "distribute"],
+                           "unroll", "unroll_count", "distribute"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
-                           "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
-                           "Distribute"]>,
+                           "Unroll", "UnrollCount", "Distribute"]>,
               EnumArgument<"State", "LoopHintState",
                            ["enable", "disable", "numeric", "assume_safety", "full"],
                            ["Enable", "Disable", "Numeric", "AssumeSafety", "Full"]>,
@@ -2932,8 +2778,6 @@ def LoopHint : Attr {
     case InterleaveCount: return "interleave_count";
     case Unroll: return "unroll";
     case UnrollCount: return "unroll_count";
-    case UnrollAndJam: return "unroll_and_jam";
-    case UnrollAndJamCount: return "unroll_and_jam_count";
     case Distribute: return "distribute";
     }
     llvm_unreachable("Unhandled LoopHint option.");
@@ -2943,9 +2787,9 @@ def LoopHint : Attr {
     unsigned SpellingIndex = getSpellingListIndex();
     // For "#pragma unroll" and "#pragma nounroll" the string "unroll" or
     // "nounroll" is already emitted as the pragma name.
-    if (SpellingIndex == Pragma_nounroll || SpellingIndex == Pragma_nounroll_and_jam)
+    if (SpellingIndex == Pragma_nounroll)
       return;
-    else if (SpellingIndex == Pragma_unroll || SpellingIndex == Pragma_unroll_and_jam) {
+    else if (SpellingIndex == Pragma_unroll) {
       OS << ' ' << getValueString(Policy);
       return;
     }
@@ -2981,11 +2825,6 @@ def LoopHint : Attr {
       return "#pragma nounroll";
     else if (SpellingIndex == Pragma_unroll)
       return "#pragma unroll" + (option == UnrollCount ? getValueString(Policy) : "");
-    else if (SpellingIndex == Pragma_nounroll_and_jam)
-      return "#pragma nounroll_and_jam";
-    else if (SpellingIndex == Pragma_unroll_and_jam)
-      return "#pragma unroll_and_jam" +
-        (option == UnrollAndJamCount ? getValueString(Policy) : "");
 
     assert(SpellingIndex == Pragma_clang_loop && "Unexpected spelling");
     return getOptionName(option) + getValueString(Policy);
@@ -3121,35 +2960,4 @@ def InternalLinkage : InheritableAttr {
   let Spellings = [Clang<"internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;
   let Documentation = [InternalLinkageDocs];
-}
-
-def ExcludeFromExplicitInstantiation : InheritableAttr {
-  let Spellings = [Clang<"exclude_from_explicit_instantiation">];
-  let Subjects = SubjectList<[Var, Function, CXXRecord]>;
-  let Documentation = [ExcludeFromExplicitInstantiationDocs];
-  let MeaningfulToClassTemplateDefinition = 1;
-}
-
-def NoDestroy : InheritableAttr {
-  let Spellings = [Clang<"no_destroy", 0>];
-  let Subjects = SubjectList<[Var]>;
-  let Documentation = [NoDestroyDocs];
-}
-
-def AlwaysDestroy : InheritableAttr {
-  let Spellings = [Clang<"always_destroy", 0>];
-  let Subjects = SubjectList<[Var]>;
-  let Documentation = [AlwaysDestroyDocs];
-}
-
-def Reinitializes : InheritableAttr {
-  let Spellings = [Clang<"reinitializes", 0>];
-  let Subjects = SubjectList<[NonStaticNonConstCXXMethod], ErrorDiag>;
-  let Documentation = [ReinitializesDocs];
-}
-
-def Uninitialized : InheritableAttr {
-  let Spellings = [Clang<"uninitialized", 0>];
-  let Subjects = SubjectList<[LocalVar]>;
-  let Documentation = [UninitializedDocs];
 }

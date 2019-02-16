@@ -129,7 +129,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();
 
   ExplodedNodeSet dstLocation;
-  evalLocation(dstLocation, S, elem, Pred, state, elementV, false);
+  evalLocation(dstLocation, S, elem, Pred, state, elementV, nullptr, false);
 
   ExplodedNodeSet Tmp;
   StmtNodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
@@ -197,8 +197,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
       // Receiver is definitely nil, so run ObjCMessageNil callbacks and return.
       if (nilState && !notNilState) {
-        ExplodedNodeSet dstNil;
-        StmtNodeBuilder Bldr(Pred, dstNil, *currBldrCtx);
+        StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
         bool HasTag = Pred->getLocation().getTag();
         Pred = Bldr.generateNode(ME, Pred, nilState, nullptr,
                                  ProgramPoint::PreStmtKind);
@@ -206,12 +205,8 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
         (void)HasTag;
         if (!Pred)
           return;
-
-        ExplodedNodeSet dstPostCheckers;
-        getCheckerManager().runCheckersForObjCMessageNil(dstPostCheckers, Pred,
+        getCheckerManager().runCheckersForObjCMessageNil(Dst, Pred,
                                                          *Msg, *this);
-        for (auto I : dstPostCheckers)
-          finishArgumentConstruction(Dst, I, *Msg);
         return;
       }
 
@@ -272,13 +267,8 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
     defaultEvalCall(Bldr, Pred, *UpdatedMsg);
   }
 
-  // If there were constructors called for object-type arguments, clean them up.
-  ExplodedNodeSet dstArgCleanup;
-  for (auto I : dstEval)
-    finishArgumentConstruction(dstArgCleanup, I, *Msg);
-
   ExplodedNodeSet dstPostvisit;
-  getCheckerManager().runCheckersForPostCall(dstPostvisit, dstArgCleanup,
+  getCheckerManager().runCheckersForPostCall(dstPostvisit, dstEval,
                                              *Msg, *this);
 
   // Finally, perform the post-condition check of the ObjCMessageExpr and store

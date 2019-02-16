@@ -3779,12 +3779,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SIGN_EXTEND:
       return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
                          C->isTargetOpcode(), C->isOpaque());
-    case ISD::TRUNCATE:
-      if (C->isOpaque())
-        break;
-      LLVM_FALLTHROUGH;
     case ISD::ANY_EXTEND:
     case ISD::ZERO_EXTEND:
+    case ISD::TRUNCATE:
       return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
                          C->isTargetOpcode(), C->isOpaque());
     case ISD::UINT_TO_FP:
@@ -5051,11 +5048,8 @@ static SDValue getMemsetValue(SDValue Value, EVT VT, SelectionDAG &DAG,
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Value)) {
     assert(C->getAPIntValue().getBitWidth() == 8);
     APInt Val = APInt::getSplat(NumBits, C->getAPIntValue());
-    if (VT.isInteger()) {
-      bool IsOpaque = VT.getSizeInBits() > 64 ||
-          !DAG.getTargetLoweringInfo().isLegalStoreImmediate(C->getSExtValue());
-      return DAG.getConstant(Val, dl, VT, false, IsOpaque);
-    }
+    if (VT.isInteger())
+      return DAG.getConstant(Val, dl, VT);
     return DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(VT), Val), dl,
                              VT);
   }
@@ -7694,7 +7688,7 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
 
   // Preserve Debug Info.
   for (unsigned i = 0, e = From->getNumValues(); i != e; ++i)
-    transferDbgValues(SDValue(From, i), To[i]);
+    transferDbgValues(SDValue(From, i), *To);
 
   // Iterate over just the existing users of From. See the comments in
   // the ReplaceAllUsesWith above.
@@ -8687,11 +8681,8 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) {
 
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   assert(!Node->OperandList && "Node already has operands");
-  assert(std::numeric_limits<decltype(SDNode::NumOperands)>::max() >
-             Vals.size() &&
-         "too many operands to fit into SDNode");
   SDUse *Ops = OperandRecycler.allocate(
-      ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
+    ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
 
   bool IsDivergent = false;
   for (unsigned I = 0; I != Vals.size(); ++I) {

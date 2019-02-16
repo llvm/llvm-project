@@ -122,7 +122,6 @@ protected:
   bool HasArithmeticCbzFusion = false;
   bool HasFuseAddress = false;
   bool HasFuseAES = false;
-  bool HasFuseCryptoEOR = false;
   bool HasFuseCCSelect = false;
   bool HasFuseLiterals = false;
   bool DisableLatencySchedHeuristic = false;
@@ -259,7 +258,6 @@ public:
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
   bool hasFuseAddress() const { return HasFuseAddress; }
   bool hasFuseAES() const { return HasFuseAES; }
-  bool hasFuseCryptoEOR() const { return HasFuseCryptoEOR; }
   bool hasFuseCCSelect() const { return HasFuseCCSelect; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
 

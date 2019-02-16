@@ -392,7 +392,7 @@ LocationContextManager::getLocationContext(AnalysisDeclContext *ctx,
   LOC *L = cast_or_null<LOC>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
 
   if (!L) {
-    L = new LOC(ctx, parent, d, ++NewID);
+    L = new LOC(ctx, parent, d);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;
@@ -409,7 +409,7 @@ LocationContextManager::getStackFrame(AnalysisDeclContext *ctx,
   auto *L =
    cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
-    L = new StackFrameContext(ctx, parent, s, blk, idx, ++NewID);
+    L = new StackFrameContext(ctx, parent, s, blk, idx);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;
@@ -434,7 +434,7 @@ LocationContextManager::getBlockInvocationContext(AnalysisDeclContext *ctx,
     cast_or_null<BlockInvocationContext>(Contexts.FindNodeOrInsertPos(ID,
                                                                     InsertPos));
   if (!L) {
-    L = new BlockInvocationContext(ctx, parent, BD, ContextData, ++NewID);
+    L = new BlockInvocationContext(ctx, parent, BD, ContextData);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;

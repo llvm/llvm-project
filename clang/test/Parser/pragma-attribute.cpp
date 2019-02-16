@@ -100,12 +100,11 @@ void function();
 #pragma clang attribute push(__attribute__((annotate("test"))), apply_to = any( variable(unless(is_parameter)), variable(unless(is_parameter)) )) // expected-error {{duplicate attribute subject matcher 'variable(unless(is_parameter))'}}
 #pragma clang attribute push(__attribute__((annotate("test"))), apply_to = any( variable(unless(is_parameter)), variable(unless(is_parameter)), enum, variable(unless(is_parameter)) )) // expected-error 2 {{duplicate attribute subject matcher 'variable(unless(is_parameter))'}}
 
-#pragma clang attribute // expected-error {{expected 'push', 'pop', or '(' after '#pragma clang attribute'}}
-#pragma clang attribute 42 // expected-error {{expected 'push', 'pop', or '(' after '#pragma clang attribute'}}
+#pragma clang attribute // expected-error {{expected 'push' or 'pop' after '#pragma clang attribute'}}
+#pragma clang attribute 42 // expected-error {{expected 'push' or 'pop' after '#pragma clang attribute'}}
 #pragma clang attribute pushpop // expected-error {{unexpected argument 'pushpop' to '#pragma clang attribute'; expected 'push' or 'pop'}}
 
-#pragma clang attribute push
-#pragma clang attribute pop
+#pragma clang attribute push // expected-error {{expected '('}}
 #pragma clang attribute push ( // expected-error {{expected an attribute after '('}}
 #pragma clang attribute push (__attribute__((annotate)) // expected-error {{expected ')'}}
 #pragma clang attribute push () // expected-error {{expected an attribute after '('}}

@@ -240,9 +240,6 @@ void InitializePlatformEarly() {
 #endif
 }
 
-static const uptr kPthreadSetjmpXorKeySlot = 0x7;
-extern "C" uptr __tsan_darwin_setjmp_xor_key = 0;
-
 void InitializePlatform() {
   DisableCoreDumperIfNecessary();
 #if !SANITIZER_GO
@@ -254,11 +251,6 @@ void InitializePlatform() {
   prev_pthread_introspection_hook =
       pthread_introspection_hook_install(&my_pthread_introspection_hook);
 #endif
-
-  if (GetMacosVersion() >= MACOS_VERSION_MOJAVE) {
-    __tsan_darwin_setjmp_xor_key =
-        (uptr)pthread_getspecific(kPthreadSetjmpXorKeySlot);
-  }
 }
 
 #if !SANITIZER_GO

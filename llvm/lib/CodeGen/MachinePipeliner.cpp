@@ -886,7 +886,10 @@ void SwingSchedulerDAG::schedule() {
   Topo.InitDAGTopologicalSorting();
   postprocessDAG();
   changeDependences();
-  LLVM_DEBUG(dump());
+  LLVM_DEBUG({
+    for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
+      SUnits[su].dumpAll(this);
+  });
 
   NodeSetType NodeSets;
   findCircuits(NodeSets);
@@ -1098,12 +1101,11 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
           // First, perform the cheaper check that compares the base register.
           // If they are the same and the load offset is less than the store
           // offset, then mark the dependence as loop carried potentially.
-          MachineOperand *BaseOp1, *BaseOp2;
+          unsigned BaseReg1, BaseReg2;
           int64_t Offset1, Offset2;
-          if (TII->getMemOperandWithOffset(LdMI, BaseOp1, Offset1, TRI) &&
-              TII->getMemOperandWithOffset(MI, BaseOp2, Offset2, TRI)) {
-            if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-                (int)Offset1 < (int)Offset2) {
+          if (TII->getMemOpBaseRegImmOfs(LdMI, BaseReg1, Offset1, TRI) &&
+              TII->getMemOpBaseRegImmOfs(MI, BaseReg2, Offset2, TRI)) {
+            if (BaseReg1 == BaseReg2 && (int)Offset1 < (int)Offset2) {
               assert(TII->areMemAccessesTriviallyDisjoint(LdMI, MI, AA) &&
                      "What happened to the chain edge?");
               SDep Dep(Load, SDep::Barrier);
@@ -1636,8 +1638,8 @@ void SwingSchedulerDAG::computeNodeFunctions(NodeSetType &NodeSets) {
     for (ScheduleDAGTopologicalSort::const_iterator I = Topo.begin(),
                                                     E = Topo.end();
          I != E; ++I) {
-      const SUnit &SU = SUnits[*I];
-      dumpNode(SU);
+      SUnit *SU = &SUnits[*I];
+      SU->dump(this);
     }
   });
 
@@ -3141,15 +3143,10 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
 /// during each iteration. Set Delta to the amount of the change.
 bool SwingSchedulerDAG::computeDelta(MachineInstr &MI, unsigned &Delta) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  MachineOperand *BaseOp;
+  unsigned BaseReg;
   int64_t Offset;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
+  if (!TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
     return false;
-
-  if (!BaseOp->isReg())
-    return false;
-
-  unsigned BaseReg = BaseOp->getReg();
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   // Check if there is a Phi. If so, get the definition in the loop.
@@ -3555,19 +3552,19 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
   if (!computeDelta(*SI, DeltaS) || !computeDelta(*DI, DeltaD))
     return true;
 
-  MachineOperand *BaseOpS, *BaseOpD;
+  unsigned BaseRegS, BaseRegD;
   int64_t OffsetS, OffsetD;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  if (!TII->getMemOperandWithOffset(*SI, BaseOpS, OffsetS, TRI) ||
-      !TII->getMemOperandWithOffset(*DI, BaseOpD, OffsetD, TRI))
+  if (!TII->getMemOpBaseRegImmOfs(*SI, BaseRegS, OffsetS, TRI) ||
+      !TII->getMemOpBaseRegImmOfs(*DI, BaseRegD, OffsetD, TRI))
     return true;
 
-  if (!BaseOpS->isIdenticalTo(*BaseOpD))
+  if (BaseRegS != BaseRegD)
     return true;
 
   // Check that the base register is incremented by a constant value for each
   // iteration.
-  MachineInstr *Def = MRI.getVRegDef(BaseOpS->getReg());
+  MachineInstr *Def = MRI.getVRegDef(BaseRegS);
   if (!Def || !Def->isPHI())
     return true;
   unsigned InitVal = 0;

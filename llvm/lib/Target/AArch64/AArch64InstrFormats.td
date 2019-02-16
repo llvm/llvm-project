@@ -4639,9 +4639,7 @@ class BaseFPCondComparison<bit signalAllNans, RegisterClass regtype,
 
 multiclass FPCondComparison<bit signalAllNans, string mnemonic,
                             SDPatternOperator OpNode = null_frag> {
-  def Hrr : BaseFPCondComparison<signalAllNans, FPR16, mnemonic,
-      [(set NZCV, (OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm), (i32 imm:$nzcv),
-                          (i32 imm:$cond), NZCV))]> {
+  def Hrr : BaseFPCondComparison<signalAllNans, FPR16, mnemonic, []> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
   }

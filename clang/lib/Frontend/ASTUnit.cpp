@@ -1746,9 +1746,6 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   if (ModuleFormat)
     CI->getHeaderSearchOpts().ModuleFormat = ModuleFormat.getValue();
 
-  if (ForSerialization)
-    CI->getLangOpts()->NeededByPCHOrCompilationUsesPCH = true;
-
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST;
   AST.reset(new ASTUnit(false));

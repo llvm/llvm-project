@@ -90,10 +90,6 @@ class ReadNone<int argNo> : IntrinsicProperty {
 
 def IntrNoReturn : IntrinsicProperty;
 
-// IntrCold - Calls to this intrinsic are cold.
-// Parallels the cold attribute on LLVM IR functions.
-def IntrCold : IntrinsicProperty;
-
 // IntrNoduplicate - Calls to this intrinsic cannot be duplicated.
 // Parallels the noduplicate attribute on LLVM IR functions.
 def IntrNoDuplicate : IntrinsicProperty;
@@ -782,14 +778,6 @@ def int_coro_id : Intrinsic<[llvm_token_ty], [llvm_i32_ty, llvm_ptr_ty,
                              llvm_ptr_ty, llvm_ptr_ty],
                             [IntrArgMemOnly, IntrReadMem,
                              ReadNone<1>, ReadOnly<2>, NoCapture<2>]>;
-def int_coro_id_retcon : Intrinsic<[llvm_token_ty],
-    [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
-     llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
-    []>;
-def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
-    [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
-     llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
-    []>;
 def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                [WriteOnly<1>]>;
@@ -805,13 +793,6 @@ def int_coro_size : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
 
 def int_coro_save : Intrinsic<[llvm_token_ty], [llvm_ptr_ty], []>;
 def int_coro_suspend : Intrinsic<[llvm_i8_ty], [llvm_token_ty, llvm_i1_ty], []>;
-def int_coro_suspend_retcon : Intrinsic<[llvm_any_ty], [llvm_vararg_ty], []>;
-def int_coro_prepare_retcon : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
-                                        [IntrNoMem]>;
-def int_coro_alloca_alloc : Intrinsic<[llvm_token_ty],
-                                      [llvm_anyint_ty, llvm_i32_ty], []>;
-def int_coro_alloca_get : Intrinsic<[llvm_ptr_ty], [llvm_token_ty], []>;
-def int_coro_alloca_free : Intrinsic<[], [llvm_token_ty], []>;
 
 def int_coro_param : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_ptr_ty],
                                [IntrNoMem, ReadNone<0>, ReadNone<1>]>;
@@ -836,7 +817,7 @@ def int_coro_subfn_addr : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty],
 //
 def int_flt_rounds : Intrinsic<[llvm_i32_ty]>,
                      GCCBuiltin<"__builtin_flt_rounds">;
-def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold]>,
+def int_trap : Intrinsic<[], [], [IntrNoReturn]>,
                GCCBuiltin<"__builtin_trap">;
 def int_debugtrap : Intrinsic<[]>,
                     GCCBuiltin<"__builtin_debugtrap">;

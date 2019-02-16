@@ -363,7 +363,6 @@ public:
   /// ParseArgStrings - Parse the given list of strings into an
   /// ArgList.
   llvm::opt::InputArgList ParseArgStrings(ArrayRef<const char *> Args,
-                                          bool IsClCompatMode,
                                           bool &ContainsError);
 
   /// BuildInputs - Construct the list of inputs and their types from
@@ -509,10 +508,6 @@ public:
   /// GCC goes to extra lengths here to be a bit more robust.
   std::string GetTemporaryPath(StringRef Prefix, StringRef Suffix) const;
 
-  /// GetTemporaryDirectory - Return the pathname of a temporary directory to
-  /// use as part of compilation; the directory will have the given prefix.
-  std::string GetTemporaryDirectory(StringRef Prefix) const;
-
   /// Return the pathname of the pch file in clang-cl mode.
   std::string GetClPchPath(Compilation &C, StringRef BaseName) const;
 
@@ -558,7 +553,7 @@ private:
 
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
-  std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const;
+  std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks() const;
 
   /// Helper used in BuildJobsForAction.  Doesn't use the cache when building
   /// jobs specifically for the given action, but will use the cache when

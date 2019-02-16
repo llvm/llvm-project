@@ -1231,7 +1231,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     // headers find in the wild might rely only on #import and do not contain
     // controlling macros, be conservative and only try to enter textual headers
     // if such macro is present.
-    if (FileInfo.isCompilingModuleHeader && !FileInfo.isModuleHeader &&
+    if (!FileInfo.isModuleHeader &&
         FileInfo.getControllingMacro(ExternalLookup))
       TryEnterHdr = true;
     return TryEnterHdr;
@@ -1643,10 +1643,8 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
     return;
 
   std::error_code EC;
-  SmallString<128> Dir = SearchDir.getDir()->getName();
-  FileMgr.makeAbsolutePath(Dir);
   SmallString<128> DirNative;
-  llvm::sys::path::native(Dir, DirNative);
+  llvm::sys::path::native(SearchDir.getDir()->getName(), DirNative);
   vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
   for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {

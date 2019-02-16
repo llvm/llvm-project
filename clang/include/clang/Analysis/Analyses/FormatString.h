@@ -475,16 +475,13 @@ class PrintfSpecifier : public analyze_format_string::FormatSpecifier {
   OptionalFlag HasObjCTechnicalTerm; // '[tt]'
   OptionalFlag IsPrivate;            // '{private}'
   OptionalFlag IsPublic;             // '{public}'
-  OptionalFlag IsSensitive;          // '{sensitive}'
   OptionalAmount Precision;
-  StringRef MaskType;
 public:
   PrintfSpecifier()
       : FormatSpecifier(/* isPrintf = */ true), HasThousandsGrouping("'"),
         IsLeftJustified("-"), HasPlusPrefix("+"), HasSpacePrefix(" "),
         HasAlternativeForm("#"), HasLeadingZeroes("0"),
-        HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public"),
-        IsSensitive("sensitive") {}
+        HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public") {}
 
   static PrintfSpecifier Parse(const char *beg, const char *end);
 
@@ -515,9 +512,6 @@ public:
   }
   void setIsPrivate(const char *position) { IsPrivate.setPosition(position); }
   void setIsPublic(const char *position) { IsPublic.setPosition(position); }
-  void setIsSensitive(const char *position) {
-    IsSensitive.setPosition(position);
-  }
   void setUsesPositionalArg() { UsesPositionalArg = true; }
 
     // Methods for querying the format specifier.
@@ -557,11 +551,7 @@ public:
   const OptionalFlag &hasObjCTechnicalTerm() const { return HasObjCTechnicalTerm; }
   const OptionalFlag &isPrivate() const { return IsPrivate; }
   const OptionalFlag &isPublic() const { return IsPublic; }
-  const OptionalFlag &isSensitive() const { return IsSensitive; }
   bool usesPositionalArg() const { return UsesPositionalArg; }
-
-  StringRef getMaskType() const { return MaskType; }
-  void setMaskType(StringRef S) { MaskType = S; }
 
   /// Changes the specifier and length according to a QualType, retaining any
   /// flags or options. Returns true on success, or false when a conversion
@@ -694,9 +684,6 @@ public:
                                      unsigned specifierLen) {
     return true;
   }
-
-  /// Handle mask types whose sizes are not between one and eight bytes.
-  virtual void handleInvalidMaskType(StringRef MaskType) {}
 
     // Scanf-specific handlers.
 

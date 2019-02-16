@@ -392,21 +392,17 @@ std::string ToolChain::getArchSpecificLibPath() const {
 }
 
 bool ToolChain::needsProfileRT(const ArgList &Args) {
-  if (needsGCovInstrumentation(Args) ||
+  if (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
+                   false) ||
       Args.hasArg(options::OPT_fprofile_generate) ||
       Args.hasArg(options::OPT_fprofile_generate_EQ) ||
       Args.hasArg(options::OPT_fprofile_instr_generate) ||
       Args.hasArg(options::OPT_fprofile_instr_generate_EQ) ||
-      Args.hasArg(options::OPT_fcreate_profile))
+      Args.hasArg(options::OPT_fcreate_profile) ||
+      Args.hasArg(options::OPT_coverage))
     return true;
 
   return false;
-}
-
-bool ToolChain::needsGCovInstrumentation(const llvm::opt::ArgList &Args) {
-  return Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
-                      false) ||
-         Args.hasArg(options::OPT_coverage);
 }
 
 Tool *ToolChain::SelectTool(const JobAction &JA) const {

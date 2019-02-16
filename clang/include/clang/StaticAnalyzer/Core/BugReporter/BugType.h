@@ -65,6 +65,8 @@ public:
   ///  by a sink node.
   bool isSuppressOnSink() const { return SuppressOnSink; }
   void setSuppressOnSink(bool x) { SuppressOnSink = x; }
+
+  virtual void FlushReports(BugReporter& BR);
 };
 
 class BuiltinBug : public BugType {

@@ -93,7 +93,6 @@ public:
   }
 
   void print(raw_ostream &Out, const char *NL, const char *Sep,
-             const ASTContext &Context,
              const LocationContext *WithLC = nullptr) const;
 };
 

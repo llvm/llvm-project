@@ -27,7 +27,6 @@ Patches welcome!
 <li><a href="#clone_alpha_checkers">Clone Alpha Checkers</a></li>
 <li><a href="#core_alpha_checkers">Core Alpha Checkers</a></li>
 <li><a href="#cplusplus_alpha_checkers">C++ Alpha Checkers</a></li>
-<li><a href="#llvm_alpha_checkers">LLVM Checkers</a></li>
 <li><a href="#valist_alpha_checkers">Variable Argument Alpha Checkers</a></li>
 <li><a href="#deadcode_alpha_checkers">Dead Code Alpha Checkers</a></li>
 <li><a href="#osx_alpha_checkers">OS X Alpha Checkers</a></li>
@@ -297,77 +296,6 @@ void test(int x) {
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
-<tbody>
-
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.DeleteWithNonVirtualDtor</span><span class="lang">
-(C++)</span><div class="descr">
-Reports destructions of polymorphic objects with a non-virtual destructor in
-their base class
-</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-NonVirtual *create() {
-  NonVirtual *x = new NVDerived(); // note: conversion from derived to base
-                                   //       happened here
-  return x;
-}
-
-void sink(NonVirtual *x) {
-  delete x; // warn: destruction of a polymorphic object with no virtual
-            //       destructor
-}
-</pre></div></div></td></tr>
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.EnumCastOutOfRange</span><span class="lang">
-(C++)</span><div class="descr">
-  Check for integer to enumeration casts that could result in undefined values.
-</div></div></td>
-  <td><div class="exampleContainer expandable">
-    <div class="example"><pre>
-enum TestEnum {
-  A = 0
-};
-
-void foo() {
-  TestEnum t = static_cast<TestEnum>(-1);
-      // warn: the value provided to the cast expression is not in
-               the valid range of values for the enum
-}
-</pre></div></div></td></tr>
-
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.InvalidatedIterator</span><span class="lang">
-(C++)</span><div class="descr">
-Check for use of invalidated iterators.
-</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void bad_copy_assign_operator_list1(std::list<int> &L1,
-                                    const std::list<int> &L2) {
-  auto i0 = L1.cbegin();
-  L1 = L2;
-  *i0; // warn: invalidated iterator accessed
-}
-</pre></div></div></td></tr>
-
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.IteratorRange</span><span class="lang">
-(C++)</span><div class="descr">
-Check for iterators used outside their valid ranges.
-</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void simple_bad_end(const std::vector<int> &v) {
-  auto i = v.end();
-  *i; // warn: iterator accessed outside of its range
-}
-</pre></div></div></td></tr>
-
 
 <tbody>
 <tr><td><div class="namedescr expandable"><span class="name">
@@ -393,125 +321,6 @@ public:
   }
   virtual void f();
 };
-</pre></div></div></td></tr>
-
-<tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.UninitializedObject</span><span class="lang">
-(C++)</span><div class="descr">
-This checker reports uninitialized fields in objects created
-after a constructor call. It doesn't only find direct uninitialized
-fields, but rather makes a deep inspection of the object,
-analyzing all of it's fields subfields. <br>
-The checker regards inherited fields as direct fields, so one
-will recieve warnings for uninitialized inherited data members
-as well. <br>
-<br>
-It has several options:
-<ul>
-  <li>
-    "<code>Pedantic</code>" (boolean). If its not set or is set to false, the checker
-    won't emit warnings for objects that don't have at least one initialized
-    field. This may be set with <br>
-    <code>-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true</code>.
-  </li>
-  <li>
-    "<code>NotesAsWarnings</code>" (boolean). If set to true, the checker will emit a
-    warning for each uninitalized field, as opposed to emitting one warning
-    per constructor call, and listing the uninitialized fields that belongs
-    to it in notes. Defaults to false. <br>
-    <code>-analyzer-config alpha.cplusplus.UninitializedObject:NotesAsWarnings=true</code>.
-  </li>
-  <li>
-    "<code>CheckPointeeInitialization</code>" (boolean). If set to false, the checker will
-    not analyze the pointee of pointer/reference fields, and will only check
-    whether the object itself is initialized. Defaults to false. <br>
-    <code>-analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true</code>.
-  </li>
-  <li>
-    "<code>IgnoreRecordsWithField</code>" (string). If supplied, the checker will not
-     analyze structures that have a field with a name or type name that
-     matches the given pattern. Defaults to <code>""</code>.
-
-     <code>-analyzer-config alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind"</code>.
-  </li>
-</ul></div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-// With Pedantic and CheckPointeeInitialization set to true
-
-struct A {
-  struct B {
-    int x; // note: uninitialized field 'this->b.x'
-           // note: uninitialized field 'this->bptr->x'
-    int y; // note: uninitialized field 'this->b.y'
-           // note: uninitialized field 'this->bptr->y'
-  };
-  int *iptr; // note: uninitialized pointer 'this->iptr'
-  B b;
-  B *bptr;
-  char *cptr; // note: uninitialized pointee 'this->cptr'
-
-  A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
-};
-
-void f() {
-  A::B b;
-  char c;
-  A a(&b, &c); // warning: 6 uninitialized fields
-               //          after the constructor call
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-// With Pedantic set to false and
-// CheckPointeeInitialization set to true
-// (every field is uninitialized)
-
-struct A {
-  struct B {
-    int x;
-    int y;
-  };
-  int *iptr;
-  B b;
-  B *bptr;
-  char *cptr;
-
-  A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
-};
-
-void f() {
-  A::B b;
-  char c;
-  A a(&b, &c); // no warning
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-// With Pedantic and CheckPointeeInitialization set to false
-// (pointees are regarded as initialized)
-
-struct A {
-  struct B {
-    int x; // note: uninitialized field 'this->b.x'
-    int y; // note: uninitialized field 'this->b.y'
-  };
-  int *iptr; // note: uninitialized pointer 'this->iptr'
-  B b;
-  B *bptr;
-  char *cptr;
-
-  A (B *bptr, char *cptr) : bptr(bptr), cptr(cptr) {}
-};
-
-void f() {
-  A::B b;
-  char c;
-  A a(&b, &c); // warning: 3 uninitialized fields
-               //          after the constructor call
-}
-<div class="example"><pre>
-
-
 </pre></div></div></td></tr>
 
 </tbody></table>
@@ -625,31 +434,6 @@ void test(id x) {
 }
 </pre></div></div></td></tr>
 </tbody></table>
-
-<!-- =========================== llvm alpha =========================== -->
-<h3 id="llvm_alpha_checkers">LLVM Checkers</h3>
-<table class="checkers">
-<colgroup><col class="namedescr"><col class="example"></colgroup>
-<thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
-
-<tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.llvm.Conventions</span><span class="lang">
-(C)</span><div class="descr">
-Check code for LLVM codebase conventions:
-<ul>
-  <li>A <code>StringRef</code> should not be bound to a temporary std::string
-  whose lifetime is shorter than the <code>StringRef</code>'s.</li>
-  <li>Clang AST nodes should not have fields that can allocate memory.</li>
-</ul>
-</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-<!-- TODO: Add examples, as currently it's hard to get this checker working. -->
-</pre></div></div></td></tr>
-
-</tbody></table>
-
 
 <!-- ============================== OS X alpha ============================== -->
 <h3 id="osx_alpha_checkers">OS X Alpha Checkers</h3>

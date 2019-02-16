@@ -65,12 +65,6 @@ bool Sema::CanUseDecl(NamedDecl *D, bool TreatUnavailableAsInvalid) {
     if (getLangOpts().CPlusPlus14 && FD->getReturnType()->isUndeducedType() &&
         DeduceReturnType(FD, SourceLocation(), /*Diagnose*/ false))
       return false;
-
-    // See if this is an aligned allocation/deallocation function that is
-    // unavailable.
-    if (TreatUnavailableAsInvalid &&
-        isUnavailableAlignedAllocationFunction(*FD))
-      return false;
   }
 
   // See if this function is unavailable.
@@ -232,8 +226,6 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
     //   The function 'main' shall not be used within a program.
     if (cast<FunctionDecl>(D)->isMain())
       Diag(Loc, diag::ext_main_used);
-
-    diagnoseUnavailableAlignedAllocation(*cast<FunctionDecl>(D), Loc);
   }
 
   // See if this is an auto-typed variable whose initializer we are parsing.
@@ -13429,7 +13421,6 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   PopExpressionEvaluationContext();
 
   BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
-  BlockDecl *BD = BSI->TheDecl;
 
   if (BSI->HasImplicitReturnType)
     deduceClosureReturnType(*BSI);
@@ -13440,7 +13431,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   if (!BSI->ReturnType.isNull())
     RetTy = BSI->ReturnType;
 
-  bool NoReturn = BD->hasAttr<NoReturnAttr>();
+  bool NoReturn = BSI->TheDecl->hasAttr<NoReturnAttr>();
   QualType BlockTy;
 
   // Set the captured variables on the block.
@@ -13453,7 +13444,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
                               Cap.isNested(), Cap.getInitExpr());
     Captures.push_back(NewCap);
   }
-  BD->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
+  BSI->TheDecl->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
 
   // If the user wrote a function type in some form, try to use that.
   if (!BSI->FunctionType.isNull()) {
@@ -13490,7 +13481,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     BlockTy = Context.getFunctionType(RetTy, None, EPI);
   }
 
-  DiagnoseUnusedParameters(BD->parameters());
+  DiagnoseUnusedParameters(BSI->TheDecl->parameters());
   BlockTy = Context.getBlockPointerType(BlockTy);
 
   // If needed, diagnose invalid gotos and switches in the block.
@@ -13498,19 +13489,19 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
       !PP.isCodeCompletionEnabled())
     DiagnoseInvalidJumps(cast<CompoundStmt>(Body));
 
-  BD->setBody(cast<CompoundStmt>(Body));
+  BSI->TheDecl->setBody(cast<CompoundStmt>(Body));
 
   if (Body && getCurFunction()->HasPotentialAvailabilityViolations)
-    DiagnoseUnguardedAvailabilityViolations(BD);
+    DiagnoseUnguardedAvailabilityViolations(BSI->TheDecl);
 
   // Try to apply the named return value optimization. We have to check again
   // if we can do this, though, because blocks keep return statements around
   // to deduce an implicit return type.
   if (getLangOpts().CPlusPlus && RetTy->isRecordType() &&
-      !BD->isDependentContext())
+      !BSI->TheDecl->isDependentContext())
     computeNRVO(Body, BSI);
 
-  BlockExpr *Result = new (Context) BlockExpr(BD, BlockTy);
+  BlockExpr *Result = new (Context) BlockExpr(BSI->TheDecl, BlockTy);
   AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   PopFunctionScopeInfo(&WP, Result->getBlockDecl(), Result);
 
@@ -13531,9 +13522,6 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
       }
     }
   }
-
-  if (getCurFunction())
-    getCurFunction()->addBlock(BD);
 
   return Result;
 }

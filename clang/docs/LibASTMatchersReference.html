@@ -866,17 +866,6 @@ cxxDeleteExpr()
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxDependentScopeMemberExpr0')"><a name="cxxDependentScopeMemberExpr0Anchor">cxxDependentScopeMemberExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXDependentScopeMemberExpr.html">CXXDependentScopeMemberExpr</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="cxxDependentScopeMemberExpr0"><pre>Matches member expressions where the actual member referenced could not be
-resolved because the base expression or the member name was dependent.
-
-Given
-  template &lt;class T&gt; void f() { T t; t.g(); }
-cxxDependentScopeMemberExpr()
-  matches t.g
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxDynamicCastExpr0')"><a name="cxxDynamicCastExpr0Anchor">cxxDynamicCastExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXDynamicCastExpr.html">CXXDynamicCastExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxDynamicCastExpr0"><pre>Matches a dynamic_cast expression.
 
@@ -1466,20 +1455,6 @@ unresolvedLookupExpr()
   matches foo&lt;T&gt;() </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('unresolvedMemberExpr0')"><a name="unresolvedMemberExpr0Anchor">unresolvedMemberExpr</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UnresolvedMemberExpr.html">UnresolvedMemberExpr</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="unresolvedMemberExpr0"><pre>Matches unresolved member expressions.
-
-Given
-  struct X {
-    template &lt;class T&gt; void f();
-    void g();
-  };
-  template &lt;class T&gt; void h() { X x; x.f&lt;T&gt;(); x.g(); }
-unresolvedMemberExpr()
-  matches x.f&lt;T&gt;
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('userDefinedLiteral0')"><a name="userDefinedLiteral0Anchor">userDefinedLiteral</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1UserDefinedLiteral.html">UserDefinedLiteral</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="userDefinedLiteral0"><pre>Matches user defined literal operator call.
 
@@ -1623,7 +1598,7 @@ Given:
   short i = 1;
   int j = 42;
   decltype(i + j) result = i + j;
-decltypeType()
+decltypeType() 
   matches "decltype(i + j)"
 </pre></td></tr>
 
@@ -4854,25 +4829,6 @@ match Base.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument2')"><a name="hasAnyArgument2Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyArgument2"><pre>Matches any argument of a call expression or a constructor call
-expression, or an ObjC-message-send expression.
-
-Given
-  void x(int, int, int) { int y; x(1, y, 42); }
-callExpr(hasAnyArgument(declRefExpr()))
-  matches x(1, y, 42)
-with hasAnyArgument(...)
-  matching y
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-  void foo(I *i) { [i f:12]; }
-objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
-  matches [i f:12]
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('callee1')"><a name="callee1Anchor">callee</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="callee1"><pre>Matches if the call expression's callee's declaration matches the
 given matcher.
@@ -5957,8 +5913,8 @@ nestedNameSpecifier(specifiesType(
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument3')"><a name="hasAnyArgument3Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyArgument3"><pre>Matches any argument of a call expression or a constructor call
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument2')"><a name="hasAnyArgument2Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyArgument2"><pre>Matches any argument of a call expression or a constructor call
 expression, or an ObjC-message-send expression.
 
 Given

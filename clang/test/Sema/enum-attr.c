@@ -44,7 +44,7 @@ void test() {
   enum Enum t0 = 100; // expected-warning{{integer constant not in range of enumerated type}}
   t0 = 1;
 
-  switch (t0) { // expected-warning{{enumeration value 'A1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t0) { // expected-warning{{enumeration value 'A1' not handled in switch}}
   case A0: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
   }
@@ -58,7 +58,7 @@ void test() {
   enum EnumClosed t1 = 100; // expected-warning{{integer constant not in range of enumerated type}}
   t1 = 1;
 
-  switch (t1) { // expected-warning{{enumeration value 'B1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t1) { // expected-warning{{enumeration value 'B1' not handled in switch}}
   case B0: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
   }
@@ -72,7 +72,7 @@ void test() {
   enum EnumOpen t2 = 100;
   t2 = 1;
 
-  switch (t2) { // expected-warning{{enumeration value 'C1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t2) { // expected-warning{{enumeration value 'C1' not handled in switch}}
   case C0: break;
   case 16: break;
   }
@@ -86,7 +86,7 @@ void test() {
   enum EnumFlag t3 = 5; // expected-warning{{integer constant not in range of enumerated type}}
   t3 = 9;
 
-  switch (t3) { // expected-warning{{enumeration value 'D1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t3) { // expected-warning{{enumeration value 'D1' not handled in switch}}
   case D0: break;
   case 9: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
@@ -101,7 +101,7 @@ void test() {
   enum EnumFlagClosed t4 = 5; // expected-warning{{integer constant not in range of enumerated type}}
   t4 = 9;
 
-  switch (t4) { // expected-warning{{enumeration value 'E1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t4) { // expected-warning{{enumeration value 'E1' not handled in switch}}
   case E0: break;
   case 9: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
@@ -116,7 +116,7 @@ void test() {
   enum EnumFlagOpen t5 = 5;
   t5 = 9;
 
-  switch (t5) { // expected-warning{{enumeration value 'F1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t5) { // expected-warning{{enumeration value 'F1' not handled in switch}}
   case F0: break;
   case 9: break;
   case 16: break;

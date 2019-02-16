@@ -2312,9 +2312,6 @@ public:
   CXXCtorInitializer(ASTContext &Context, TypeSourceInfo *TInfo,
                      SourceLocation L, Expr *Init, SourceLocation R);
 
-  /// \return Unique reproducible object identifier.
-  int64_t getID(const ASTContext &Context) const;
-
   /// Determine whether this initializer is initializing a base class.
   bool isBaseInitializer() const {
     return Initializee.is<TypeSourceInfo*>() && !IsDelegating;

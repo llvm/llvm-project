@@ -1965,9 +1965,6 @@ struct Db {
   // conversion operator's type, and are resolved in the enclosing <encoding>.
   PODSmallVector<ForwardTemplateReference *, 4> ForwardTemplateRefs;
 
-  void (*TypeCallback)(void *, const char *) = nullptr;
-  void *TypeCallbackContext = nullptr;
-
   bool TryToParseTemplateArgs = true;
   bool PermitForwardTemplateReferences = false;
   bool ParsingLambdaParams = false;
@@ -3209,9 +3206,6 @@ Node *Db::parseQualifiedType() {
 // <objc-type> ::= <source-name>  # PU<11+>objcproto 11objc_object<source-name> 11objc_object -> id<source-name>
 Node *Db::parseType() {
   Node *Result = nullptr;
-
-  if (TypeCallback != nullptr)
-    TypeCallback(TypeCallbackContext, First);
 
   switch (look()) {
   //             ::= <qualified-type>
@@ -4990,15 +4984,6 @@ char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
   return InternalStatus == demangle_success ? Buf : nullptr;
 }
 
-bool llvm::itaniumFindTypesInMangledName(const char *MangledName, void *Ctx,
-                                         void (*Callback)(void *,
-                                                          const char *)) {
-  Db Parser(MangledName, MangledName + std::strlen(MangledName));
-  Parser.TypeCallback = Callback;
-  Parser.TypeCallbackContext = Ctx;
-  return Parser.parse() == nullptr;
-}
-
 namespace llvm {
 
 ItaniumPartialDemangler::ItaniumPartialDemangler()
@@ -5219,4 +5204,5 @@ bool ItaniumPartialDemangler::isSpecialName() const {
 bool ItaniumPartialDemangler::isData() const {
   return !isFunction() && !isSpecialName();
 }
+
 }

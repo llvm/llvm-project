@@ -255,14 +255,7 @@ def applyPatch(Dir, PBuildLogFile):
         sys.exit(1)
 
 
-def generateAnalyzerConfig(Args):
-    Out = "serialize-stats=true,stable-report-filename=true"
-    if Args.extra_analyzer_config:
-        Out += "," + Args.extra_analyzer_config
-    return Out
-
-
-def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
+def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     """
     Build the project with scan-build by reading in the commands and
     prefixing them with the scan-build options.
@@ -284,7 +277,13 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
     SBOptions += "-plist-html -o '%s' " % SBOutputDir
     SBOptions += "-enable-checker " + AllCheckers + " "
     SBOptions += "--keep-empty "
-    SBOptions += "-analyzer-config '%s' " % generateAnalyzerConfig(Args)
+    AnalyzerConfig = [
+        ("stable-report-filename", "true"),
+        ("serialize-stats", "true"),
+    ]
+
+    SBOptions += "-analyzer-config '%s' " % (
+        ",".join("%s=%s" % (key, value) for (key, value) in AnalyzerConfig))
 
     # Always use ccc-analyze to ensure that we can locate the failures
     # directory.
@@ -305,7 +304,6 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
                 SBPrefix = ""
                 ExtraEnv['OUTPUT'] = SBOutputDir
                 ExtraEnv['CC'] = Clang
-                ExtraEnv['ANALYZER_CONFIG'] = generateAnalyzerConfig(Args)
                 continue
 
             # If using 'make', auto imply a -jX argument
@@ -330,7 +328,7 @@ def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
         sys.exit(1)
 
 
-def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
+def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
     """
     Run analysis on a set of preprocessed files.
     """
@@ -351,7 +349,6 @@ def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
     CmdPrefix += "-analyze -analyzer-output=plist -w "
     CmdPrefix += "-analyzer-checker=" + Checkers
     CmdPrefix += " -fcxx-exceptions -fblocks "
-    CmdPrefix += " -analyzer-config %s " % generateAnalyzerConfig(Args)
 
     if (Mode == 2):
         CmdPrefix += "-std=c++11 "
@@ -410,7 +407,7 @@ def removeLogFile(SBOutputDir):
         check_call(RmCommand, shell=True)
 
 
-def buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
+def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
     TBegin = time.time()
 
     BuildLogPath = getBuildLogPath(SBOutputDir)
@@ -434,9 +431,9 @@ def buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
         if (ProjectBuildMode == 1):
             downloadAndPatch(Dir, PBuildLogFile)
             runCleanupScript(Dir, PBuildLogFile)
-            runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile)
+            runScanBuild(Dir, SBOutputDir, PBuildLogFile)
         else:
-            runAnalyzePreprocessed(Args, Dir, SBOutputDir, ProjectBuildMode)
+            runAnalyzePreprocessed(Dir, SBOutputDir, ProjectBuildMode)
 
         if IsReferenceBuild:
             runCleanupScript(Dir, PBuildLogFile)
@@ -631,13 +628,12 @@ def cleanupReferenceResults(SBOutputDir):
 
 
 class TestProjectThread(threading.Thread):
-    def __init__(self, Args, TasksQueue, ResultsDiffer, FailureFlag):
+    def __init__(self, TasksQueue, ResultsDiffer, FailureFlag):
         """
         :param ResultsDiffer: Used to signify that results differ from
         the canonical ones.
         :param FailureFlag: Used to signify a failure during the run.
         """
-        self.Args = Args
         self.TasksQueue = TasksQueue
         self.ResultsDiffer = ResultsDiffer
         self.FailureFlag = FailureFlag
@@ -653,7 +649,7 @@ class TestProjectThread(threading.Thread):
                 Logger = logging.getLogger(ProjArgs[0])
                 Local.stdout = StreamToLogger(Logger, logging.INFO)
                 Local.stderr = StreamToLogger(Logger, logging.ERROR)
-                if not testProject(Args, *ProjArgs):
+                if not testProject(*ProjArgs):
                     self.ResultsDiffer.set()
                 self.TasksQueue.task_done()
             except:
@@ -661,7 +657,7 @@ class TestProjectThread(threading.Thread):
                 raise
 
 
-def testProject(Args, ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
+def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
     """
     Test a given project.
     :return TestsPassed: Whether tests have passed according
@@ -679,7 +675,7 @@ def testProject(Args, ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0
     RelOutputDir = getSBOutputDirName(IsReferenceBuild)
     SBOutputDir = os.path.join(Dir, RelOutputDir)
 
-    buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild)
+    buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild)
 
     checkBuild(SBOutputDir)
 
@@ -723,17 +719,17 @@ def validateProjectFile(PMapFile):
                   " (single file), 1 (project), or 2(single file c++11)."
             raise Exception()
 
-def singleThreadedTestAll(Args, ProjectsToTest):
+def singleThreadedTestAll(ProjectsToTest):
     """
     Run all projects.
     :return: whether tests have passed.
     """
     Success = True
     for ProjArgs in ProjectsToTest:
-        Success &= testProject(Args, *ProjArgs)
+        Success &= testProject(*ProjArgs)
     return Success
 
-def multiThreadedTestAll(Args, ProjectsToTest, Jobs):
+def multiThreadedTestAll(ProjectsToTest, Jobs):
     """
     Run each project in a separate thread.
 
@@ -751,7 +747,7 @@ def multiThreadedTestAll(Args, ProjectsToTest, Jobs):
     FailureFlag = threading.Event()
 
     for i in range(Jobs):
-        T = TestProjectThread(Args, TasksQueue, ResultsDiffer, FailureFlag)
+        T = TestProjectThread(TasksQueue, ResultsDiffer, FailureFlag)
         T.start()
 
     # Required to handle Ctrl-C gracefully.
@@ -776,9 +772,9 @@ def testAll(Args):
                                   Args.regenerate,
                                   Args.strictness))
     if Args.jobs <= 1:
-        return singleThreadedTestAll(Args, ProjectsToTest)
+        return singleThreadedTestAll(ProjectsToTest)
     else:
-        return multiThreadedTestAll(Args, ProjectsToTest, Args.jobs)
+        return multiThreadedTestAll(ProjectsToTest, Args.jobs)
 
 
 if __name__ == '__main__':
@@ -795,10 +791,6 @@ if __name__ == '__main__':
     Parser.add_argument('-j', '--jobs', dest='jobs', type=int,
                         default=0,
                         help='Number of projects to test concurrently')
-    Parser.add_argument('--extra-analyzer-config', dest='extra_analyzer_config',
-                        type=str,
-                        default="",
-                        help="Arguments passed to to -analyzer-config")
     Args = Parser.parse_args()
 
     TestsPassed = testAll(Args)

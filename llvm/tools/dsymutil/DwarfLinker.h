@@ -199,9 +199,8 @@ private:
                                RangesTy &Ranges,
                                OffsetsStringPool &OffsetsStringPool,
                                UniquingStringPool &UniquingStringPoolStringPool,
-                               DeclContextTree &ODRContexts,
-                               uint64_t ModulesEndOffset, unsigned &UnitID,
-                               unsigned Indent = 0, bool Quiet = false);
+                               DeclContextTree &ODRContexts, unsigned &UnitID,
+                               unsigned Indent = 0);
 
   /// Recursively add the debug info in this clang module .pcm
   /// file (and all the modules imported by it in a bottom-up fashion)
@@ -211,9 +210,8 @@ private:
                         DebugMap &ModuleMap, const DebugMapObject &DMO,
                         RangesTy &Ranges, OffsetsStringPool &OffsetsStringPool,
                         UniquingStringPool &UniquingStringPool,
-                        DeclContextTree &ODRContexts, uint64_t ModulesEndOffset,
-                        unsigned &UnitID, unsigned Indent = 0,
-                        bool Quiet = false);
+                        DeclContextTree &ODRContexts, unsigned &UnitID,
+                        unsigned Indent = 0);
 
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
   enum TraversalFlags {

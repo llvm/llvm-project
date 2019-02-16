@@ -67,6 +67,9 @@ class IdentifierInfo {
                                    // partially) from an AST file.
   bool ChangedAfterLoad       : 1; // True if identifier has changed from the
                                    // definition loaded from an AST file.
+  bool FEChangedAfterLoad     : 1; // True if identifier's frontend information
+                                   // has changed from the definition loaded
+                                   // from an AST file.
   bool RevertedTokenID        : 1; // True if revertTokenIDToIdentifier was
                                    // called.
   bool OutOfDate              : 1; // True if there may be additional
@@ -74,7 +77,7 @@ class IdentifierInfo {
                                    // stored externally.
   bool IsModulesImport        : 1; // True if this is the 'import' contextual
                                    // keyword.
-  // 30 bit left in 64-bit word.
+  // 29 bit left in 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -310,6 +313,18 @@ public:
   /// an AST file.
   void setChangedSinceDeserialization() {
     ChangedAfterLoad = true;
+  }
+
+  /// Determine whether the frontend token information for this
+  /// identifier has changed since it was loaded from an AST file.
+  bool hasFETokenInfoChangedSinceDeserialization() const {
+    return FEChangedAfterLoad;
+  }
+
+  /// Note that the frontend token information for this identifier has
+  /// changed since it was loaded from an AST file.
+  void setFETokenInfoChangedSinceDeserialization() {
+    FEChangedAfterLoad = true;
   }
 
   /// Determine whether the information for this identifier is out of

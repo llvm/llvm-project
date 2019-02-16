@@ -633,7 +633,7 @@ public:
   }
 
   static std::shared_ptr<PathDiagnosticCallPiece>
-  construct(const CallExitEnd &CE,
+  construct(const ExplodedNode *N, const CallExitEnd &CE,
             const SourceManager &SM);
 
   static PathDiagnosticCallPiece *construct(PathPieces &pieces,
@@ -760,7 +760,7 @@ public:
 };
 
 /// File IDs mapped to sets of line numbers.
-using FilesToLineNumsMap = std::map<FileID, std::set<unsigned>>;
+using FilesToLineNumsMap = std::map<unsigned, std::set<unsigned>>;
 
 /// PathDiagnostic - PathDiagnostic objects represent a single path-sensitive
 ///  diagnostic.  It represents an ordered-collection of PathDiagnosticPieces,
@@ -859,13 +859,13 @@ public:
   meta_iterator meta_end() const { return OtherDesc.end(); }
   void addMeta(StringRef s) { OtherDesc.push_back(s); }
 
-  const FilesToLineNumsMap &getExecutedLines() const {
-    return *ExecutedLines;
+  using filesmap_iterator = FilesToLineNumsMap::const_iterator;
+
+  filesmap_iterator executedLines_begin() const {
+    return ExecutedLines->begin();
   }
 
-  FilesToLineNumsMap &getExecutedLines() {
-    return *ExecutedLines;
-  }
+  filesmap_iterator executedLines_end() const { return ExecutedLines->end(); }
 
   PathDiagnosticLocation getLocation() const {
     return Loc;

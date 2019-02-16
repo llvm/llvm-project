@@ -55,7 +55,6 @@ private:
 void printCheckerHelp(raw_ostream &OS, ArrayRef<std::string> plugins);
 void printEnabledCheckerList(raw_ostream &OS, ArrayRef<std::string> plugins,
                              const AnalyzerOptions &opts);
-void printAnalyzerConfigList(raw_ostream &OS);
 
 } // end GR namespace
 

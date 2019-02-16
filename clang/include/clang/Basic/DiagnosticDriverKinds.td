@@ -193,9 +193,6 @@ def err_drv_mg_requires_m_or_mm : Error<
   "option '-MG' requires '-M' or '-MM'">;
 def err_drv_unknown_objc_runtime : Error<
   "unknown or ill-formed Objective-C runtime '%0'">;
-def err_drv_invalid_cf_runtime_abi
-  : Error<"invalid CoreFoundation Runtime ABI '%0'; must be one of "
-          "'objc', 'standalone', 'swift', 'swift-5.0', 'swift-4.2', 'swift-4.1'">;
 def err_drv_gnustep_objc_runtime_incompatible_binary : Error<
   "GNUstep Objective-C runtime version %0 incompatible with target binary format">;
 def err_drv_emit_llvm_link : Error<
@@ -295,9 +292,6 @@ def err_analyzer_config_no_value : Error<
   "analyzer-config option '%0' has a key but no value">;
 def err_analyzer_config_multiple_values : Error<
   "analyzer-config option '%0' should contain only one '='">;
-def err_analyzer_config_invalid_input : Error<
-  "invalid input for analyzer-config option '%0', that expects %1 value">;
-def err_analyzer_config_unknown : Error<"unknown analyzer-config '%0'">;
 
 def err_drv_invalid_hvx_length : Error<
   "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;
@@ -398,13 +392,4 @@ def warn_drv_experimental_isel_incomplete_opt : Warning<
 def warn_drv_moutline_unsupported_opt : Warning<
   "The '%0' architecture does not support -moutline; flag ignored">,
   InGroup<OptionIgnored>;
-
-def warn_drv_darwin_sdk_invalid_settings : Warning<
-  "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
-  InGroup<DiagGroup<"darwin-sdk-settings">>;
-
-def err_drv_trivial_auto_var_init_zero_disabled : Error<
-  "-ftrivial-auto-var-init=zero hasn't been enabled. Enable it at your own peril for benchmarking purpose only with "
-  "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">;
-
 }

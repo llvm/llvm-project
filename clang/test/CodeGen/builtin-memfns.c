@@ -3,8 +3,6 @@
 typedef __WCHAR_TYPE__ wchar_t;
 typedef __SIZE_TYPE__ size_t;
 
-void *memcpy(void *, void const *, size_t);
-
 // CHECK: @test1
 // CHECK: call void @llvm.memset.p0i8.i32
 // CHECK: call void @llvm.memset.p0i8.i32
@@ -102,11 +100,3 @@ void test10() {
   __builtin_wmemmove(&dest, &src, 4);
 }
 
-// CHECK-LABEL: @test11
-void test11() {
-  typedef struct { int a; } b;
-  int d;
-  b e;
-  // CHECK: call void @llvm.memcpy{{.*}}(
-  memcpy(&d, (char *)&e.a, sizeof(e));
-}

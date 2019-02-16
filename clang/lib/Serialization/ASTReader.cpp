@@ -3234,6 +3234,24 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
     }
 
+    case PPD_SKIPPED_RANGES: {
+      F.PreprocessedSkippedRangeOffsets = (const PPSkippedRange*)Blob.data();
+      assert(Blob.size() % sizeof(PPSkippedRange) == 0);
+      F.NumPreprocessedSkippedRanges = Blob.size() / sizeof(PPSkippedRange);
+
+      if (!PP.getPreprocessingRecord())
+        PP.createPreprocessingRecord();
+      if (!PP.getPreprocessingRecord()->getExternalSource())
+        PP.getPreprocessingRecord()->SetExternalSource(*this);
+      F.BasePreprocessedSkippedRangeID = PP.getPreprocessingRecord()
+          ->allocateSkippedRanges(F.NumPreprocessedSkippedRanges);
+
+      if (F.NumPreprocessedSkippedRanges > 0)
+        GlobalSkippedRangeMap.insert(
+            std::make_pair(F.BasePreprocessedSkippedRangeID, &F));
+      break;
+    }
+
     case DECL_UPDATE_OFFSETS:
       if (Record.size() % 2 != 0) {
         Error("invalid DECL_UPDATE_OFFSETS block in AST file");
@@ -4274,11 +4292,6 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     return Failure;
   }
 
-  // FIXME: Should we check the signature even if DisableValidation?
-  if (PP.getLangOpts().NeededByPCHOrCompilationUsesPCH || DisableValidation ||
-      (AllowConfigurationMismatch && Result == ConfigurationMismatch))
-    return Success;
-
   if (Result == OutOfDate && F.Kind == MK_ImplicitModule) {
     // If this module has already been finalized in the PCMCache, we're stuck
     // with it; we can only load a single version of each module.
@@ -4355,13 +4368,6 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
           !AllowCompatibleConfigurationMismatch &&
           ParseDiagnosticOptions(Record, Complain, *Listener))
         Result = OutOfDate; // Don't return early.  Read the signature.
-      break;
-    }
-    case HEADER_SEARCH_PATHS: {
-      bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
-      if (!AllowCompatibleConfigurationMismatch &&
-          ParseHeaderSearchPaths(Record, Complain, *Listener))
-        Result = ConfigurationMismatch;
       break;
     }
     case DIAG_PRAGMA_MAPPINGS:
@@ -4862,11 +4868,11 @@ bool ASTReader::readASTFileControlBlock(
       unsigned Idx = 0, N = Record.size();
       while (Idx < N) {
         // Read information about the AST file.
-        Idx += 1+1+1+1+5; // Kind, ImportLoc, Size, ModTime, Signature
-        std::string ModuleName = ReadString(Record, Idx);
+        Idx += 5; // ImportLoc, Size, ModTime, Signature
+        SkipString(Record, Idx); // Module name; FIXME: pass to listener?
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
-        Listener.visitImport(ModuleName, Filename);
+        Listener.visitImport(Filename);
       }
       break;
     }
@@ -4994,10 +5000,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case SUBMODULE_DEFINITION: {
-      // Factor this out into a separate constant to make it easier to resolve
-      // merge conflicts.
-      static const unsigned NUM_SWIFT_SPECIFIC_FIELDS = 1;
-      if (Record.size() < 12 + NUM_SWIFT_SPECIFIC_FIELDS) {
+      if (Record.size() < 12) {
         Error("malformed module definition");
         return Failure;
       }
@@ -5007,11 +5010,6 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx++]);
       SubmoduleID Parent = getGlobalSubmoduleID(F, Record[Idx++]);
       Module::ModuleKind Kind = (Module::ModuleKind)Record[Idx++];
-
-      // SWIFT-SPECIFIC FIELDS HERE. Handling them separately helps avoid merge
-      // conflicts. See also NUM_SWIFT_SPECIFIC_FIELDS above.
-      bool IsSwiftInferImportAsMember = Record[Idx++];
-
       bool IsFramework = Record[Idx++];
       bool IsExplicit = Record[Idx++];
       bool IsSystem = Record[Idx++];
@@ -5071,11 +5069,6 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       CurrentModule->InferExportWildcard = InferExportWildcard;
       CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
       CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
-
-      // SWIFT-SPECIFIC FIELDS HERE. Putting them last helps avoid merge
-      // conflicts.
-      CurrentModule->IsSwiftInferImportAsMember = IsSwiftInferImportAsMember;
-
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
@@ -5340,27 +5333,6 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
   HeaderSearchOptions HSOpts;
   unsigned Idx = 0;
   HSOpts.Sysroot = ReadString(Record, Idx);
-  HSOpts.ResourceDir = ReadString(Record, Idx);
-  HSOpts.ModuleCachePath = ReadString(Record, Idx);
-  HSOpts.ModuleUserBuildPath = ReadString(Record, Idx);
-  HSOpts.DisableModuleHash = Record[Idx++];
-  HSOpts.ImplicitModuleMaps = Record[Idx++];
-  HSOpts.ModuleMapFileHomeIsCwd = Record[Idx++];
-  HSOpts.UseBuiltinIncludes = Record[Idx++];
-  HSOpts.UseStandardSystemIncludes = Record[Idx++];
-  HSOpts.UseStandardCXXIncludes = Record[Idx++];
-  HSOpts.UseLibcxx = Record[Idx++];
-  std::string SpecificModuleCachePath = ReadString(Record, Idx);
-
-  return Listener.ReadHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
-                                          Complain);
-}
-
-bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record,
-                                       bool Complain,
-                                       ASTReaderListener &Listener) {
-  HeaderSearchOptions HSOpts;
-  unsigned Idx = 0;
 
   // Include entries.
   for (unsigned N = Record[Idx++]; N; --N) {
@@ -5380,8 +5352,20 @@ bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record,
     HSOpts.SystemHeaderPrefixes.emplace_back(std::move(Prefix), IsSystemHeader);
   }
 
-  // TODO: implement checking and warnings for path mismatches.
-  return false;
+  HSOpts.ResourceDir = ReadString(Record, Idx);
+  HSOpts.ModuleCachePath = ReadString(Record, Idx);
+  HSOpts.ModuleUserBuildPath = ReadString(Record, Idx);
+  HSOpts.DisableModuleHash = Record[Idx++];
+  HSOpts.ImplicitModuleMaps = Record[Idx++];
+  HSOpts.ModuleMapFileHomeIsCwd = Record[Idx++];
+  HSOpts.UseBuiltinIncludes = Record[Idx++];
+  HSOpts.UseStandardSystemIncludes = Record[Idx++];
+  HSOpts.UseStandardCXXIncludes = Record[Idx++];
+  HSOpts.UseLibcxx = Record[Idx++];
+  std::string SpecificModuleCachePath = ReadString(Record, Idx);
+
+  return Listener.ReadHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
+                                          Complain);
 }
 
 bool ASTReader::ParsePreprocessorOptions(const RecordData &Record,
@@ -5446,6 +5430,20 @@ ASTReader::getModuleFileLevelDecls(ModuleFile &Mod) {
       ModuleDeclIterator(this, &Mod, Mod.FileSortedDecls),
       ModuleDeclIterator(this, &Mod,
                          Mod.FileSortedDecls + Mod.NumFileSortedDecls));
+}
+
+SourceRange ASTReader::ReadSkippedRange(unsigned GlobalIndex) {
+  auto I = GlobalSkippedRangeMap.find(GlobalIndex);
+  assert(I != GlobalSkippedRangeMap.end() &&
+    "Corrupted global skipped range map");
+  ModuleFile *M = I->second;
+  unsigned LocalIndex = GlobalIndex - M->BasePreprocessedSkippedRangeID;
+  assert(LocalIndex < M->NumPreprocessedSkippedRanges);
+  PPSkippedRange RawRange = M->PreprocessedSkippedRangeOffsets[LocalIndex];
+  SourceRange Range(TranslateSourceLocation(*M, RawRange.getBegin()),
+                    TranslateSourceLocation(*M, RawRange.getEnd()));
+  assert(Range.isValid());
+  return Range;
 }
 
 PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {

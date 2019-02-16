@@ -6189,12 +6189,12 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                 BuiltinOp == Builtin::BI__builtin_wmemmove;
 
     // The result of mem* is the first argument.
-    if (!Visit(E->getArg(0)) || Result.Designator.Invalid)
+    if (!Visit(E->getArg(0)))
       return false;
     LValue Dest = Result;
 
     LValue Src;
-    if (!EvaluatePointer(E->getArg(1), Src, Info) || Src.Designator.Invalid)
+    if (!EvaluatePointer(E->getArg(1), Src, Info))
       return false;
 
     APSInt N;

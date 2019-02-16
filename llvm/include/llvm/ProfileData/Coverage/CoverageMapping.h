@@ -510,6 +510,7 @@ class CoverageMapping {
   DenseMap<size_t, DenseSet<size_t>> RecordProvenance;
   std::vector<FunctionRecord> Functions;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
+  std::vector<std::pair<std::string, uint64_t>> FuncCounterMismatches;
 
   CoverageMapping() = default;
 
@@ -536,7 +537,9 @@ public:
   ///
   /// This is a count of functions whose profile is out of date or otherwise
   /// can't be associated with any coverage information.
-  unsigned getMismatchedCount() const { return FuncHashMismatches.size(); }
+  unsigned getMismatchedCount() const {
+    return FuncHashMismatches.size() + FuncCounterMismatches.size();
+  }
 
   /// A hash mismatch occurs when a profile record for a symbol does not have
   /// the same hash as a coverage mapping record for the same symbol. This
@@ -544,6 +547,14 @@ public:
   /// symbol name and its coverage mapping hash.
   ArrayRef<std::pair<std::string, uint64_t>> getHashMismatches() const {
     return FuncHashMismatches;
+  }
+
+  /// A counter mismatch occurs when there is an error when evaluating the
+  /// counter expressions in a coverage mapping record. This returns a list of
+  /// counter mismatches, where each mismatch is a pair of the symbol name and
+  /// the number of valid evaluated counter expressions.
+  ArrayRef<std::pair<std::string, uint64_t>> getCounterMismatches() const {
+    return FuncCounterMismatches;
   }
 
   /// Returns a lexicographically sorted, unique list of files that are

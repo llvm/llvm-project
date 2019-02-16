@@ -336,6 +336,12 @@ public:
   const PPEntityOffset *PreprocessedEntityOffsets = nullptr;
   unsigned NumPreprocessedEntities = 0;
 
+  /// Base ID for preprocessed skipped ranges local to this module.
+  unsigned BasePreprocessedSkippedRangeID = 0;
+
+  const PPSkippedRange *PreprocessedSkippedRangeOffsets = nullptr;
+  unsigned NumPreprocessedSkippedRanges = 0;
+
   // === Header search information ===
 
   /// The number of local HeaderFileInfo structures.

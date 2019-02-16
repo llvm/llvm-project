@@ -139,6 +139,7 @@ private:
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -174,8 +175,7 @@ private:
       if (Error == ErrorKind::NilAssignedToNonnull ||
           Error == ErrorKind::NilPassedToNonnull ||
           Error == ErrorKind::NilReturnedToNonnull)
-        if (const auto *Ex = dyn_cast<Expr>(ValueExpr))
-          bugreporter::trackExpressionValue(N, Ex, *R);
+        bugreporter::trackNullOrUndefValue(N, ValueExpr, *R);
     }
     BR.emitReport(std::move(R));
   }
@@ -293,10 +293,11 @@ NullabilityChecker::getTrackRegion(SVal Val, bool CheckSuperRegion) const {
 
 std::shared_ptr<PathDiagnosticPiece>
 NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
+                                                     const ExplodedNode *PrevN,
                                                      BugReporterContext &BRC,
                                                      BugReport &BR) {
   ProgramStateRef State = N->getState();
-  ProgramStateRef StatePrev = N->getFirstPred()->getState();
+  ProgramStateRef StatePrev = PrevN->getState();
 
   const NullabilityState *TrackedNullab = State->get<NullabilityMap>(Region);
   const NullabilityState *TrackedNullabPrev =
@@ -329,8 +330,8 @@ NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
                                                     nullptr);
 }
 
-/// Returns true when the value stored at the given location has been
-/// constrained to null after being passed through an object of nonnnull type.
+/// Returns true when the value stored at the given location is null
+/// and the passed in type is nonnnull.
 static bool checkValueAtLValForInvariantViolation(ProgramStateRef State,
                                                   SVal LV, QualType T) {
   if (getNullabilityAnnotation(T) != Nullability::Nonnull)
@@ -340,14 +341,9 @@ static bool checkValueAtLValForInvariantViolation(ProgramStateRef State,
   if (!RegionVal)
     return false;
 
-  // If the value was constrained to null *after* it was passed through that
-  // location, it could not have been a concrete pointer *when* it was passed.
-  // In that case we would have handled the situation when the value was
-  // bound to that location, by emitting (or not emitting) a report.
-  // Therefore we are only interested in symbolic regions that can be either
-  // null or non-null depending on the value of their respective symbol.
-  auto StoredVal = State->getSVal(*RegionVal).getAs<loc::MemRegionVal>();
-  if (!StoredVal || !isa<SymbolicRegion>(StoredVal->getRegion()))
+  auto StoredVal =
+  State->getSVal(RegionVal->getRegion()).getAs<DefinedOrUnknownSVal>();
+  if (!StoredVal)
     return false;
 
   if (getNullConstraint(*StoredVal, State) == NullConstraint::IsNull)
@@ -451,6 +447,9 @@ void NullabilityChecker::reportBugIfInvariantHolds(StringRef Msg,
 /// Cleaning up the program state.
 void NullabilityChecker::checkDeadSymbols(SymbolReaper &SR,
                                           CheckerContext &C) const {
+  if (!SR.hasDeadSymbols())
+    return;
+
   ProgramStateRef State = C.getState();
   NullabilityMapTy Nullabilities = State->get<NullabilityMap>();
   for (NullabilityMapTy::iterator I = Nullabilities.begin(),
@@ -1175,15 +1174,10 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
   NullabilityMapTy B = State->get<NullabilityMap>();
 
-  if (State->get<InvariantViolated>())
-    Out << Sep << NL
-        << "Nullability invariant was violated, warnings suppressed." << NL;
-
   if (B.isEmpty())
     return;
 
-  if (!State->get<InvariantViolated>())
-    Out << Sep << NL;
+  Out << Sep << NL;
 
   for (NullabilityMapTy::iterator I = B.begin(), E = B.end(); I != E; ++I) {
     Out << I->first << " : ";
@@ -1200,7 +1194,7 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
-        mgr.getAnalyzerOptions().getCheckerBooleanOption(                             \
+        mgr.getAnalyzerOptions().getBooleanOption(                             \
                       "NoDiagnoseCallsToSystemHeaders", false, checker, true); \
   }
 

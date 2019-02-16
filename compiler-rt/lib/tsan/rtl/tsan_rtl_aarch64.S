@@ -120,10 +120,8 @@ ASM_SYMBOL_INTERCEPTOR(setjmp):
   add     x0, x29, 32
   eor     x1, x2, x0
 #else
-  adrp    x2, ___tsan_darwin_setjmp_xor_key@page
-  ldr     x2, [x2, ___tsan_darwin_setjmp_xor_key@pageoff]
   add     x0, x29, 32
-  eor     x1, x2, x0
+  mov     x1, x0
 #endif
 
   // call tsan interceptor
@@ -180,10 +178,8 @@ ASM_SYMBOL_INTERCEPTOR(_setjmp):
   add     x0, x29, 32
   eor     x1, x2, x0
 #else
-  adrp    x2, ___tsan_darwin_setjmp_xor_key@page
-  ldr     x2, [x2, ___tsan_darwin_setjmp_xor_key@pageoff]
   add     x0, x29, 32
-  eor     x1, x2, x0
+  mov     x1, x0
 #endif
 
   // call tsan interceptor
@@ -242,10 +238,8 @@ ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
   add     x0, x29, 32
   eor     x1, x2, x0
 #else
-  adrp    x2, ___tsan_darwin_setjmp_xor_key@page
-  ldr     x2, [x2, ___tsan_darwin_setjmp_xor_key@pageoff]
   add     x0, x29, 32
-  eor     x1, x2, x0
+  mov     x1, x0
 #endif
 
   // call tsan interceptor

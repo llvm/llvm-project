@@ -723,8 +723,6 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
   } else if (Optional<PostInitializer> PIP = P.getAs<PostInitializer>()) {
     return PathDiagnosticLocation(PIP->getInitializer()->getSourceLocation(),
                                   SMng);
-  } else if (Optional<PreImplicitCall> PIC = P.getAs<PreImplicitCall>()) {
-    return PathDiagnosticLocation(PIC->getLocation(), SMng);
   } else if (Optional<PostImplicitCall> PIE = P.getAs<PostImplicitCall>()) {
     return PathDiagnosticLocation(PIE->getLocation(), SMng);
   } else if (Optional<CallEnter> CE = P.getAs<CallEnter>()) {
@@ -776,20 +774,18 @@ const Stmt *PathDiagnosticLocation::getStmt(const ExplodedNode *N) {
   }
   // Otherwise, see if the node's program point directly points to a statement.
   ProgramPoint P = N->getLocation();
-  if (auto SP = P.getAs<StmtPoint>())
+  if (Optional<StmtPoint> SP = P.getAs<StmtPoint>())
     return SP->getStmt();
-  if (auto BE = P.getAs<BlockEdge>())
+  if (Optional<BlockEdge> BE = P.getAs<BlockEdge>())
     return BE->getSrc()->getTerminator();
-  if (auto CE = P.getAs<CallEnter>())
+  if (Optional<CallEnter> CE = P.getAs<CallEnter>())
     return CE->getCallExpr();
-  if (auto CEE = P.getAs<CallExitEnd>())
+  if (Optional<CallExitEnd> CEE = P.getAs<CallExitEnd>())
     return CEE->getCalleeContext()->getCallSite();
-  if (auto PIPP = P.getAs<PostInitializer>())
+  if (Optional<PostInitializer> PIPP = P.getAs<PostInitializer>())
     return PIPP->getInitializer()->getInit();
-  if (auto CEB = P.getAs<CallExitBegin>())
+  if (Optional<CallExitBegin> CEB = P.getAs<CallExitBegin>())
     return CEB->getReturnStmt();
-  if (auto FEP = P.getAs<FunctionExitPoint>())
-    return FEP->getStmt();
 
   return nullptr;
 }
@@ -826,21 +822,17 @@ PathDiagnosticLocation
                                           const SourceManager &SM) {
   assert(N && "Cannot create a location with a null node.");
   const Stmt *S = getStmt(N);
-  const LocationContext *LC = N->getLocationContext();
 
   if (!S) {
     // If this is an implicit call, return the implicit call point location.
     if (Optional<PreImplicitCall> PIE = N->getLocationAs<PreImplicitCall>())
       return PathDiagnosticLocation(PIE->getLocation(), SM);
-    if (auto FE = N->getLocationAs<FunctionExitPoint>()) {
-      if (const ReturnStmt *RS = FE->getStmt())
-        return PathDiagnosticLocation::createBegin(RS, SM, LC);
-    }
     S = getNextStmt(N);
   }
 
   if (S) {
     ProgramPoint P = N->getLocation();
+    const LocationContext *LC = N->getLocationContext();
 
     // For member expressions, return the location of the '.' or '->'.
     if (const auto *ME = dyn_cast<MemberExpr>(S))
@@ -972,7 +964,7 @@ void PathDiagnosticLocation::flatten() {
 //===----------------------------------------------------------------------===//
 
 std::shared_ptr<PathDiagnosticCallPiece>
-PathDiagnosticCallPiece::construct(const CallExitEnd &CE,
+PathDiagnosticCallPiece::construct(const ExplodedNode *N, const CallExitEnd &CE,
                                    const SourceManager &SM) {
   const Decl *caller = CE.getLocationContext()->getDecl();
   PathDiagnosticLocation pos = getLocationForCaller(CE.getCalleeContext(),

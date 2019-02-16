@@ -11,7 +11,10 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConstraintManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTExpr.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSolver.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSort.h"
 
 #include "clang/Config/config.h"
 
@@ -46,15 +49,15 @@ public:
 // Function used to report errors
 void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
   llvm::report_fatal_error("Z3 error: " +
-                           llvm::Twine(Z3_get_error_msg(Context, Error)));
+                           llvm::Twine(Z3_get_error_msg_ex(Context, Error)));
 }
 
 /// Wrapper for Z3 context
-class Z3Context {
+class Z3Context : public SMTContext {
 public:
   Z3_context Context;
 
-  Z3Context() {
+  Z3Context() : SMTContext() {
     Context = Z3_mk_context_rc(Z3Config().Config);
     // The error function is set here because the context is the first object
     // created by the backend
@@ -77,26 +80,31 @@ class Z3Sort : public SMTSort {
 
 public:
   /// Default constructor, mainly used by make_shared
-  Z3Sort(Z3Context &C, Z3_sort ZS) : Context(C), Sort(ZS) {
+  Z3Sort(Z3Context &C, Z3_sort ZS) : SMTSort(), Context(C), Sort(ZS) {
     Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
   /// Override implicit copy constructor for correct reference counting.
-  Z3Sort(const Z3Sort &Other) : Context(Other.Context), Sort(Other.Sort) {
+  Z3Sort(const Z3Sort &Copy)
+      : SMTSort(), Context(Copy.Context), Sort(Copy.Sort) {
     Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
-  /// Override implicit copy assignment constructor for correct reference
-  /// counting.
-  Z3Sort &operator=(const Z3Sort &Other) {
-    Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Other.Sort));
-    Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
-    Sort = Other.Sort;
-    return *this;
+  /// Provide move constructor
+  Z3Sort(Z3Sort &&Move) : SMTSort(), Context(Move.Context), Sort(nullptr) {
+    *this = std::move(Move);
   }
 
-  Z3Sort(Z3Sort &&Other) = delete;
-  Z3Sort &operator=(Z3Sort &&Other) = delete;
+  /// Provide move assignment constructor
+  Z3Sort &operator=(Z3Sort &&Move) {
+    if (this != &Move) {
+      if (Sort)
+        Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
+      Sort = Move.Sort;
+      Move.Sort = nullptr;
+    }
+    return *this;
+  }
 
   ~Z3Sort() {
     if (Sort)
@@ -129,6 +137,13 @@ public:
                          static_cast<const Z3Sort &>(Other).Sort);
   }
 
+  Z3Sort &operator=(const Z3Sort &Move) {
+    Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Move.Sort));
+    Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
+    Sort = Move.Sort;
+    return *this;
+  }
+
   void print(raw_ostream &OS) const override {
     OS << Z3_sort_to_string(Context.Context, Sort);
   }
@@ -155,17 +170,21 @@ public:
     Z3_inc_ref(Context.Context, AST);
   }
 
-  /// Override implicit copy assignment constructor for correct reference
-  /// counting.
-  Z3Expr &operator=(const Z3Expr &Other) {
-    Z3_inc_ref(Context.Context, Other.AST);
-    Z3_dec_ref(Context.Context, AST);
-    AST = Other.AST;
-    return *this;
+  /// Provide move constructor
+  Z3Expr(Z3Expr &&Move) : SMTExpr(), Context(Move.Context), AST(nullptr) {
+    *this = std::move(Move);
   }
 
-  Z3Expr(Z3Expr &&Other) = delete;
-  Z3Expr &operator=(Z3Expr &&Other) = delete;
+  /// Provide move assignment constructor
+  Z3Expr &operator=(Z3Expr &&Move) {
+    if (this != &Move) {
+      if (AST)
+        Z3_dec_ref(Context.Context, AST);
+      AST = Move.AST;
+      Move.AST = nullptr;
+    }
+    return *this;
+  }
 
   ~Z3Expr() {
     if (AST)
@@ -186,6 +205,14 @@ public:
                         static_cast<const Z3Expr &>(Other).AST);
   }
 
+  /// Override implicit move constructor for correct reference counting.
+  Z3Expr &operator=(const Z3Expr &Move) {
+    Z3_inc_ref(Context.Context, Move.AST);
+    Z3_dec_ref(Context.Context, AST);
+    AST = Move.AST;
+    return *this;
+  }
+
   void print(raw_ostream &OS) const override {
     OS << Z3_ast_to_string(Context.Context, AST);
   }
@@ -204,13 +231,30 @@ class Z3Model {
 
 public:
   Z3Model(Z3Context &C, Z3_model ZM) : Context(C), Model(ZM) {
+    assert(C.Context != nullptr);
     Z3_model_inc_ref(Context.Context, Model);
   }
 
-  Z3Model(const Z3Model &Other) = delete;
-  Z3Model(Z3Model &&Other) = delete;
-  Z3Model &operator=(Z3Model &Other) = delete;
-  Z3Model &operator=(Z3Model &&Other) = delete;
+  /// Override implicit copy constructor for correct reference counting.
+  Z3Model(const Z3Model &Copy) : Context(Copy.Context), Model(Copy.Model) {
+    Z3_model_inc_ref(Context.Context, Model);
+  }
+
+  /// Provide move constructor
+  Z3Model(Z3Model &&Move) : Context(Move.Context), Model(nullptr) {
+    *this = std::move(Move);
+  }
+
+  /// Provide move assignment constructor
+  Z3Model &operator=(Z3Model &&Move) {
+    if (this != &Move) {
+      if (Model)
+        Z3_model_dec_ref(Context.Context, Model);
+      Model = Move.Model;
+      Move.Model = nullptr;
+    }
+    return *this;
+  }
 
   ~Z3Model() {
     if (Model)
@@ -269,14 +313,32 @@ class Z3Solver : public SMTSolver {
   Z3_solver Solver;
 
 public:
-  Z3Solver() : Solver(Z3_mk_simple_solver(Context.Context)) {
+  Z3Solver() : SMTSolver(), Solver(Z3_mk_simple_solver(Context.Context)) {
     Z3_solver_inc_ref(Context.Context, Solver);
   }
 
-  Z3Solver(const Z3Solver &Other) = delete;
-  Z3Solver(Z3Solver &&Other) = delete;
-  Z3Solver &operator=(Z3Solver &Other) = delete;
-  Z3Solver &operator=(Z3Solver &&Other) = delete;
+  /// Override implicit copy constructor for correct reference counting.
+  Z3Solver(const Z3Solver &Copy)
+      : SMTSolver(), Context(Copy.Context), Solver(Copy.Solver) {
+    Z3_solver_inc_ref(Context.Context, Solver);
+  }
+
+  /// Provide move constructor
+  Z3Solver(Z3Solver &&Move)
+      : SMTSolver(), Context(Move.Context), Solver(nullptr) {
+    *this = std::move(Move);
+  }
+
+  /// Provide move assignment constructor
+  Z3Solver &operator=(Z3Solver &&Move) {
+    if (this != &Move) {
+      if (Solver)
+        Z3_solver_dec_ref(Context.Context, Solver);
+      Solver = Move.Solver;
+      Move.Solver = nullptr;
+    }
+    return *this;
+  }
 
   ~Z3Solver() {
     if (Solver)
@@ -674,11 +736,9 @@ public:
 
   llvm::APSInt getBitvector(const SMTExprRef &Exp, unsigned BitWidth,
                             bool isUnsigned) override {
-    return llvm::APSInt(
-        llvm::APInt(BitWidth,
-                    Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
-                    10),
-        isUnsigned);
+    return llvm::APSInt(llvm::APInt(
+        BitWidth, Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
+        10));
   }
 
   bool getBoolean(const SMTExprRef &Exp) override {
@@ -688,6 +748,12 @@ public:
   SMTExprRef getFloatRoundingMode() override {
     // TODO: Don't assume nearest ties to even rounding mode
     return newExprRef(Z3Expr(Context, Z3_mk_fpa_rne(Context.Context)));
+  }
+
+  SMTExprRef fromData(const SymbolID ID, const QualType &Ty,
+                      uint64_t BitWidth) override {
+    llvm::Twine Name = "$" + llvm::Twine(ID);
+    return mkSymbol(Name.str().c_str(), mkSort(Ty, BitWidth));
   }
 
   SMTExprRef fromBoolean(const bool Bool) override {
@@ -780,7 +846,7 @@ public:
   }
 
   bool getInterpretation(const SMTExprRef &Exp, llvm::APSInt &Int) override {
-    Z3Model Model(Context, Z3_solver_get_model(Context.Context, Solver));
+    Z3Model Model = getModel();
     Z3_func_decl Func = Z3_get_app_decl(
         Context.Context, Z3_to_app(Context.Context, toZ3Expr(*Exp).AST));
     if (Z3_model_has_interp(Context.Context, Model.Model, Func) != Z3_L_TRUE)
@@ -794,7 +860,7 @@ public:
   }
 
   bool getInterpretation(const SMTExprRef &Exp, llvm::APFloat &Float) override {
-    Z3Model Model(Context, Z3_solver_get_model(Context.Context, Solver));
+    Z3Model Model = getModel();
     Z3_func_decl Func = Z3_get_app_decl(
         Context.Context, Z3_to_app(Context.Context, toZ3Expr(*Exp).AST));
     if (Z3_model_has_interp(Context.Context, Model.Model, Func) != Z3_L_TRUE)
@@ -807,7 +873,7 @@ public:
     return toAPFloat(Sort, Assign, Float, true);
   }
 
-  Optional<bool> check() const override {
+  ConditionTruthVal check() const override {
     Z3_lbool res = Z3_solver_check(Context.Context, Solver);
     if (res == Z3_L_TRUE)
       return true;
@@ -815,7 +881,7 @@ public:
     if (res == Z3_L_FALSE)
       return false;
 
-    return Optional<bool>();
+    return ConditionTruthVal();
   }
 
   void push() override { return Z3_solver_push(Context.Context, Solver); }
@@ -825,34 +891,138 @@ public:
     return Z3_solver_pop(Context.Context, Solver, NumStates);
   }
 
-  bool isFPSupported() override { return true; }
+  /// Get a model from the solver. Caller should check the model is
+  /// satisfiable.
+  Z3Model getModel() {
+    return Z3Model(Context, Z3_solver_get_model(Context.Context, Solver));
+  }
 
   /// Reset the solver and remove all constraints.
-  void reset() override { Z3_solver_reset(Context.Context, Solver); }
+  void reset() const override { Z3_solver_reset(Context.Context, Solver); }
 
   void print(raw_ostream &OS) const override {
     OS << Z3_solver_to_string(Context.Context, Solver);
   }
 }; // end class Z3Solver
 
-class Z3ConstraintManager : public SMTConstraintManager<ConstraintZ3, Z3Expr> {
+class Z3ConstraintManager : public SMTConstraintManager {
   SMTSolverRef Solver = CreateZ3Solver();
 
 public:
   Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
       : SMTConstraintManager(SE, SB, Solver) {}
+
+  void addStateConstraints(ProgramStateRef State) const override {
+    // TODO: Don't add all the constraints, only the relevant ones
+    ConstraintZ3Ty CZ = State->get<ConstraintZ3>();
+    ConstraintZ3Ty::iterator I = CZ.begin(), IE = CZ.end();
+
+    // Construct the logical AND of all the constraints
+    if (I != IE) {
+      std::vector<SMTExprRef> ASTs;
+
+      SMTExprRef Constraint = Solver->newExprRef(I++->second);
+      while (I != IE) {
+        Constraint = Solver->mkAnd(Constraint, Solver->newExprRef(I++->second));
+      }
+
+      Solver->addConstraint(Constraint);
+    }
+  }
+
+  bool canReasonAbout(SVal X) const override {
+    const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
+
+    Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
+    if (!SymVal)
+      return true;
+
+    const SymExpr *Sym = SymVal->getSymbol();
+    QualType Ty = Sym->getType();
+
+    // Complex types are not modeled
+    if (Ty->isComplexType() || Ty->isComplexIntegerType())
+      return false;
+
+    // Non-IEEE 754 floating-point types are not modeled
+    if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+         (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
+          &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
+      return false;
+
+    if (isa<SymbolData>(Sym))
+      return true;
+
+    SValBuilder &SVB = getSValBuilder();
+
+    if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
+      return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
+
+    if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
+      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
+        return canReasonAbout(SVB.makeSymbolVal(SIE->getLHS()));
+
+      if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE))
+        return canReasonAbout(SVB.makeSymbolVal(ISE->getRHS()));
+
+      if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(BSE))
+        return canReasonAbout(SVB.makeSymbolVal(SSE->getLHS())) &&
+               canReasonAbout(SVB.makeSymbolVal(SSE->getRHS()));
+    }
+
+    llvm_unreachable("Unsupported expression to reason about!");
+  }
+
+  ProgramStateRef removeDeadBindings(ProgramStateRef State,
+                                     SymbolReaper &SymReaper) override {
+    ConstraintZ3Ty CZ = State->get<ConstraintZ3>();
+    ConstraintZ3Ty::Factory &CZFactory = State->get_context<ConstraintZ3>();
+
+    for (ConstraintZ3Ty::iterator I = CZ.begin(), E = CZ.end(); I != E; ++I) {
+      if (SymReaper.maybeDead(I->first))
+        CZ = CZFactory.remove(CZ, *I);
+    }
+
+    return State->set<ConstraintZ3>(CZ);
+  }
+
+  ProgramStateRef assumeExpr(ProgramStateRef State, SymbolRef Sym,
+                             const SMTExprRef &Exp) override {
+    // Check the model, avoid simplifying AST to save time
+    if (checkModel(State, Exp).isConstrainedTrue())
+      return State->add<ConstraintZ3>(std::make_pair(Sym, toZ3Expr(*Exp)));
+
+    return nullptr;
+  }
+
+  //==------------------------------------------------------------------------==/
+  // Pretty-printing.
+  //==------------------------------------------------------------------------==/
+
+  void print(ProgramStateRef St, raw_ostream &OS, const char *nl,
+             const char *sep) override {
+
+    ConstraintZ3Ty CZ = St->get<ConstraintZ3>();
+
+    OS << nl << sep << "Constraints:";
+    for (ConstraintZ3Ty::iterator I = CZ.begin(), E = CZ.end(); I != E; ++I) {
+      OS << nl << ' ' << I->first << " : ";
+      I->second.print(OS);
+    }
+    OS << nl;
+  }
 }; // end class Z3ConstraintManager
 
 } // end anonymous namespace
 
 #endif
 
-SMTSolverRef clang::ento::CreateZ3Solver() {
+std::unique_ptr<SMTSolver> clang::ento::CreateZ3Solver() {
 #if CLANG_ANALYZER_WITH_Z3
   return llvm::make_unique<Z3Solver>();
 #else
   llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
+                           "with -DCLANG_ANALYZER_BUILD_Z3=ON",
                            false);
   return nullptr;
 #endif
@@ -864,7 +1034,7 @@ ento::CreateZ3ConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
   return llvm::make_unique<Z3ConstraintManager>(Eng, StMgr.getSValBuilder());
 #else
   llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
+                           "with -DCLANG_ANALYZER_BUILD_Z3=ON",
                            false);
   return nullptr;
 #endif

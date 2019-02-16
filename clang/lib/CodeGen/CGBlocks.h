@@ -132,9 +132,6 @@ public:
   friend bool operator&(BlockFieldFlags l, BlockFieldFlags r) {
     return (l.flags & r.flags);
   }
-  bool operator==(BlockFieldFlags Other) const {
-    return flags == Other.flags;
-  }
 };
 inline BlockFieldFlags operator|(BlockFieldFlag_t l, BlockFieldFlag_t r) {
   return BlockFieldFlags(l) | BlockFieldFlags(r);
@@ -233,11 +230,6 @@ public:
   /// HasCapturedVariableLayout : True if block has captured variables
   /// and their layout meta-data has been generated.
   bool HasCapturedVariableLayout : 1;
-
-  /// Indicates whether an object of a non-external C++ class is captured. This
-  /// bit is used to determine the linkage of the block copy/destroy helper
-  /// functions.
-  bool CapturesNonExternalType : 1;
 
   /// The mapping of allocated indexes within the block.
   llvm::DenseMap<const VarDecl*, Capture> Captures;

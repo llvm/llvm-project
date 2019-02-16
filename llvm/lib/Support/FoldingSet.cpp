@@ -275,7 +275,7 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount) {
 
   // Clear out new buckets.
   Buckets = AllocateBuckets(NewBucketCount);
-  // Set NumBuckets only if allocation of new buckets was successful.
+  // Set NumBuckets only if allocation of new buckets was succesful
   NumBuckets = NewBucketCount;
   NumNodes = 0;
 

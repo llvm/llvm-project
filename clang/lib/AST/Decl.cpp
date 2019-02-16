@@ -2351,14 +2351,6 @@ static DeclT *getDefinitionOrSelf(DeclT *D) {
   return D;
 }
 
-bool VarDecl::isEscapingByref() const {
-  return hasAttr<BlocksAttr>() && NonParmVarDeclBits.EscapingByref;
-}
-
-bool VarDecl::isNonEscapingByref() const {
-  return hasAttr<BlocksAttr>() && !NonParmVarDeclBits.EscapingByref;
-}
-
 VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   // If it's a variable template specialization, find the template or partial
   // specialization from which it was instantiated.
@@ -2455,12 +2447,6 @@ bool VarDecl::isKnownToBeDefined() const {
     return true;
 
   return hasDefinition();
-}
-
-bool VarDecl::isNoDestroy(const ASTContext &Ctx) const {
-  return hasGlobalStorage() && (hasAttr<NoDestroyAttr>() ||
-                                (!Ctx.getLangOpts().RegisterStaticDestructors &&
-                                 !hasAttr<AlwaysDestroyAttr>()));
 }
 
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {

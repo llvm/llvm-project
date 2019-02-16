@@ -138,12 +138,12 @@ public:
   virtual ~CallLowering() = default;
 
   /// This hook must be implemented to lower outgoing return values, described
-  /// by \p Val, into the specified virtual registers \p VRegs.
+  /// by \p Val, into the specified virtual register \p VReg.
   /// This hook is used by GlobalISel.
   ///
   /// \return True if the lowering succeeds, false otherwise.
-  virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                           ArrayRef<unsigned> VRegs) const {
+  virtual bool lowerReturn(MachineIRBuilder &MIRBuilder,
+                           const Value *Val, unsigned VReg) const {
     return false;
   }
 

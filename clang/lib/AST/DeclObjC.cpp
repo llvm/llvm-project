@@ -1344,8 +1344,12 @@ ObjCTypeParamDecl *ObjCTypeParamDecl::Create(ASTContext &ctx, DeclContext *dc,
                                              IdentifierInfo *name,
                                              SourceLocation colonLoc,
                                              TypeSourceInfo *boundInfo) {
-  return new (ctx, dc) ObjCTypeParamDecl(ctx, dc, variance, varianceLoc, index,
-                                         nameLoc, name, colonLoc, boundInfo);
+  auto *TPDecl =
+    new (ctx, dc) ObjCTypeParamDecl(ctx, dc, variance, varianceLoc, index,
+                                    nameLoc, name, colonLoc, boundInfo);
+  QualType TPType = ctx.getObjCTypeParamType(TPDecl, {});
+  TPDecl->setTypeForDecl(TPType.getTypePtr());
+  return TPDecl;
 }
 
 ObjCTypeParamDecl *ObjCTypeParamDecl::CreateDeserialized(ASTContext &ctx,
@@ -2146,19 +2150,18 @@ raw_ostream &clang::operator<<(raw_ostream &OS,
 
 void ObjCCompatibleAliasDecl::anchor() {}
 
-ObjCCompatibleAliasDecl *ObjCCompatibleAliasDecl::Create(
-    ASTContext &C, DeclContext *DC, SourceLocation NameLoc, IdentifierInfo *Id,
-    ObjCInterfaceDecl *AliasedClass, SourceLocation AliasedClassLoc,
-    SourceLocation AtLoc) {
-  return new (C, DC) ObjCCompatibleAliasDecl(DC, NameLoc, Id, AliasedClass,
-                                             AliasedClassLoc, AtLoc);
+ObjCCompatibleAliasDecl *
+ObjCCompatibleAliasDecl::Create(ASTContext &C, DeclContext *DC,
+                                SourceLocation L,
+                                IdentifierInfo *Id,
+                                ObjCInterfaceDecl* AliasedClass) {
+  return new (C, DC) ObjCCompatibleAliasDecl(DC, L, Id, AliasedClass);
 }
 
 ObjCCompatibleAliasDecl *
 ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID)
-      ObjCCompatibleAliasDecl(nullptr, SourceLocation(), nullptr, nullptr,
-                              SourceLocation(), SourceLocation());
+  return new (C, ID) ObjCCompatibleAliasDecl(nullptr, SourceLocation(),
+                                             nullptr, nullptr);
 }
 
 //===----------------------------------------------------------------------===//

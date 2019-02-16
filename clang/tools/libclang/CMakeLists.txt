@@ -9,7 +9,6 @@ set(SOURCES
   CIndexInclusionStack.cpp
   CIndexUSRs.cpp
   CIndexer.cpp
-  CRefactor.cpp
   CXComment.cpp
   CXCursor.cpp
   CXIndexDataConsumer.cpp
@@ -36,14 +35,12 @@ set(SOURCES
 
 set(LIBS
   clangAST
-  clangAPINotes
   clangBasic
   clangFrontend
   clangIndex
   clangLex
   clangSema
   clangTooling
-  clangToolingRefactor
 )
 
 if (CLANG_ENABLE_ARCMT)

@@ -15,11 +15,10 @@
 #ifndef LLVM_CLANG_BASIC_TARGETOPTIONS_H
 #define LLVM_CLANG_BASIC_TARGETOPTIONS_H
 
-#include "clang/Basic/OpenCLOptions.h"
-#include "llvm/Support/VersionTuple.h"
-#include "llvm/Target/TargetOptions.h"
 #include <string>
 #include <vector>
+#include "clang/Basic/OpenCLOptions.h"
+#include "llvm/Target/TargetOptions.h"
 
 namespace clang {
 
@@ -68,9 +67,6 @@ public:
   /// \brief If enabled, use 32-bit pointers for accessing const/local/shared
   /// address space.
   bool NVPTXUseShortPointers = false;
-
-  /// The version of the SDK which was used during the compilation.
-  llvm::VersionTuple SDKVersion;
 };
 
 }  // end namespace clang

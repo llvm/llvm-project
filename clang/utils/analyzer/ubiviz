@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is distributed under the University of Illinois Open Source
+# License. See LICENSE.TXT for details.
+#
+##===--------------------------------------------------------------------===##
+#
+# This script reads visualization data emitted by the static analyzer for
+# display in Ubigraph.
+#
+##===--------------------------------------------------------------------===##
+
+import xmlrpclib
+import sys
+
+
+def Error(message):
+    print >> sys.stderr, 'ubiviz: ' + message
+    sys.exit(1)
+
+
+def StreamData(filename):
+    file = open(filename)
+    for ln in file:
+        yield eval(ln)
+    file.close()
+
+
+def Display(G, data):
+    action = data[0]
+    if action == 'vertex':
+        vertex = data[1]
+        G.new_vertex_w_id(vertex)
+        for attribute in data[2:]:
+            G.set_vertex_attribute(vertex, attribute[0], attribute[1])
+    elif action == 'edge':
+        src = data[1]
+        dst = data[2]
+        edge = G.new_edge(src, dst)
+        for attribute in data[3:]:
+            G.set_edge_attribute(edge, attribute[0], attribute[1])
+    elif action == "vertex_style":
+        style_id = data[1]
+        parent_id = data[2]
+        G.new_vertex_style_w_id(style_id, parent_id)
+        for attribute in data[3:]:
+            G.set_vertex_style_attribute(style_id, attribute[0], attribute[1])
+    elif action == "vertex_style_attribute":
+        style_id = data[1]
+        for attribute in data[2:]:
+            G.set_vertex_style_attribute(style_id, attribute[0], attribute[1])
+    elif action == "change_vertex_style":
+        vertex_id = data[1]
+        style_id = data[2]
+        G.change_vertex_style(vertex_id, style_id)
+
+
+def main(args):
+    if len(args) == 0:
+        Error('no input files')
+
+    server = xmlrpclib.Server('http://127.0.0.1:20738/RPC2')
+    G = server.ubigraph
+
+    for arg in args:
+        G.clear()
+        for x in StreamData(arg):
+            Display(G, x)
+
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

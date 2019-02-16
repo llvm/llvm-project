@@ -96,9 +96,6 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
   if (isFunctionLocalSymbol(D)) {
     Info.Properties |= (SymbolPropertySet)SymbolProperty::Local;
   }
-  if (isa<ObjCProtocolDecl>(D->getDeclContext())) {
-    Info.Properties |= (SymbolPropertySet)SymbolProperty::ProtocolInterface;
-  }
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
@@ -481,7 +478,6 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::ConversionFunction: return "coversion-func";
   case SymbolKind::Parameter: return "param";
   case SymbolKind::Using: return "using";
-  case SymbolKind::CommentTag: return "comment-tag";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -495,22 +491,6 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::UsingTypename: return "using-typename";
   case SymbolSubKind::UsingValue: return "using-value";
-  case SymbolSubKind::SwiftAccessorWillSet: return "acc-willset";
-  case SymbolSubKind::SwiftAccessorDidSet: return "acc-didset";
-  case SymbolSubKind::SwiftAccessorAddressor: return "acc-addr";
-  case SymbolSubKind::SwiftAccessorMutableAddressor: return "acc-mutaddr";
-  case SymbolSubKind::SwiftAccessorRead: return "acc-read";
-  case SymbolSubKind::SwiftAccessorModify: return "acc-modify";
-  case SymbolSubKind::SwiftExtensionOfStruct: return "ext-struct";
-  case SymbolSubKind::SwiftExtensionOfClass: return "ext-class";
-  case SymbolSubKind::SwiftExtensionOfEnum: return "ext-enum";
-  case SymbolSubKind::SwiftExtensionOfProtocol: return "ext-protocol";
-  case SymbolSubKind::SwiftPrefixOperator: return "prefix-operator";
-  case SymbolSubKind::SwiftPostfixOperator: return "postfix-operator";
-  case SymbolSubKind::SwiftInfixOperator: return "infix-operator";
-  case SymbolSubKind::SwiftSubscript: return "subscript";
-  case SymbolSubKind::SwiftAssociatedType: return "associated-type";
-  case SymbolSubKind::SwiftGenericTypeParam: return "generic-type-param";
   }
   llvm_unreachable("invalid symbol subkind");
 }
@@ -539,7 +519,6 @@ void index::applyForEachSymbolProperty(SymbolPropertySet Props,
   APPLY_FOR_PROPERTY(IBOutletCollection);
   APPLY_FOR_PROPERTY(GKInspectable);
   APPLY_FOR_PROPERTY(Local);
-  APPLY_FOR_PROPERTY(ProtocolInterface);
 
 #undef APPLY_FOR_PROPERTY
 }
@@ -560,7 +539,6 @@ void index::printSymbolProperties(SymbolPropertySet Props, raw_ostream &OS) {
     case SymbolProperty::IBOutletCollection: OS << "IBColl"; break;
     case SymbolProperty::GKInspectable: OS << "GKI"; break;
     case SymbolProperty::Local: OS << "local"; break;
-    case SymbolProperty::ProtocolInterface: OS << "protocol"; break;
     }
   });
 }

@@ -72,7 +72,7 @@ public:
 
   /// Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a branch condition.
-  virtual void processBranch(const Stmt *Condition,
+  virtual void processBranch(const Stmt *Condition, const Stmt *Term,
                              NodeBuilderContext& BuilderCtx,
                              ExplodedNode *Pred,
                              ExplodedNodeSet &Dst,
@@ -156,6 +156,7 @@ public:
   notifyCheckersOfPointerEscape(ProgramStateRef State,
                            const InvalidatedSymbols *Invalidated,
                            ArrayRef<const MemRegion *> ExplicitRegions,
+                           ArrayRef<const MemRegion *> Regions,
                            const CallEvent *Call,
                            RegionAndSymbolInvalidationTraits &HTraits) = 0;
 
@@ -166,7 +167,7 @@ public:
 
   /// Called by CoreEngine when the analysis worklist is either empty or the
   //  maximum number of analysis steps have been reached.
-  virtual void processEndWorklist() = 0;
+  virtual void processEndWorklist(bool hasWorkRemaining) = 0;
 };
 
 } // end GR namespace

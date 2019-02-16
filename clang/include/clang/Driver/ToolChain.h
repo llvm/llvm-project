@@ -11,7 +11,6 @@
 #define LLVM_CLANG_DRIVER_TOOLCHAIN_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
@@ -341,12 +340,6 @@ public:
     return 0;
   }
 
-  /// Get the default trivial automatic variable initialization.
-  virtual LangOptions::TrivialAutoVarInitKind
-  GetDefaultTrivialAutoVarInit() const {
-    return LangOptions::TrivialAutoVarInitKind::Uninitialized;
-  }
-
   /// GetDefaultLinker - Get the default linker to use.
   virtual const char *getDefaultLinker() const { return "ld"; }
 
@@ -378,9 +371,6 @@ public:
 
   /// needsProfileRT - returns true if instrumentation profile is on.
   static bool needsProfileRT(const llvm::opt::ArgList &Args);
-
-  /// Returns true if gcov instrumentation (-fprofile-arcs or --coverage) is on.
-  static bool needsGCovInstrumentation(const llvm::opt::ArgList &Args);
 
   /// IsUnwindTablesDefault - Does this tool chain use -funwind-tables
   /// by default.

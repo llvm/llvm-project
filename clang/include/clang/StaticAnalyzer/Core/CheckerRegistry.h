@@ -73,6 +73,8 @@ class DiagnosticsEngine;
 
 namespace ento {
 
+class CheckerOptInfo;
+
 /// Manages a set of available checkers for running a static analysis.
 /// The checkers are organized into packages by full name, where including
 /// a package will recursively include all subpackages and checkers within it.
@@ -121,8 +123,8 @@ public:
   /// all checkers specified by the given CheckerOptInfo list. The order of this
   /// list is significant; later options can be used to reverse earlier ones.
   /// This can be used to exclude certain checkers in an included package.
-  void initializeManager(CheckerManager &mgr, const AnalyzerOptions &Opts,
-                         DiagnosticsEngine &diags) const;
+  void initializeManager(CheckerManager &mgr,
+                         SmallVectorImpl<CheckerOptInfo> &opts) const;
 
   /// Check if every option corresponds to a specific checker or package.
   void validateCheckerOptions(const AnalyzerOptions &opts,
@@ -131,7 +133,8 @@ public:
   /// Prints the name and description of all checkers in this registry.
   /// This output is not intended to be machine-parseable.
   void printHelp(raw_ostream &out, size_t maxNameChars = 30) const;
-  void printList(raw_ostream &out, const AnalyzerOptions &opts) const;
+  void printList(raw_ostream &out,
+                 SmallVectorImpl<CheckerOptInfo> &opts) const;
 
 private:
   mutable CheckerInfoList Checkers;

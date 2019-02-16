@@ -8179,7 +8179,6 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         }
       }
 
-      DiagnoseUseOfDecl(OperatorDelete, Loc);
       MarkFunctionReferenced(Loc, OperatorDelete);
       Destructor->setOperatorDelete(OperatorDelete, ThisArg);
     }
@@ -8807,7 +8806,6 @@ Decl *Sema::ActOnStartNamespaceDef(
 
   ProcessDeclAttributeList(DeclRegionScope, Namespc, AttrList);
   AddPragmaAttributes(DeclRegionScope, Namespc);
-  ProcessAPINotes(Namespc);
 
   // FIXME: Should we be merging attributes?
   if (const VisibilityAttr *Attr = Namespc->getAttr<VisibilityAttr>())
@@ -9325,7 +9323,6 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
 
   if (UDir)
     ProcessDeclAttributeList(S, UDir, AttrList);
-  ProcessAPINotes(UDir);
 
   return UDir;
 }
@@ -10430,7 +10427,6 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
 
   ProcessDeclAttributeList(S, NewTD, AttrList);
   AddPragmaAttributes(S, NewTD);
-  ProcessAPINotes(NewTD);
 
   CheckTypedefForVariablyModifiedType(S, NewTD);
   Invalid |= NewTD->isInvalidDecl();
@@ -12907,9 +12903,6 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
   if (ClassDecl->isInvalidDecl()) return;
   if (ClassDecl->hasIrrelevantDestructor()) return;
   if (ClassDecl->isDependentContext()) return;
-
-  if (VD->isNoDestroy(getASTContext()))
-    return;
 
   CXXDestructorDecl *Destructor = LookupDestructor(ClassDecl);
   MarkFunctionReferenced(VD->getLocation(), Destructor);

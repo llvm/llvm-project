@@ -23,7 +23,6 @@ Lconstpool:
         .end_data_region
 
         .thumb_func _bar
-        .global _bar
 _bar:
         bx lr
 

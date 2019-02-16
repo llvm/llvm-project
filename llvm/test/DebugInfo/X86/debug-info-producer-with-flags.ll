@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix LINUX
-; RUN: llc -mtriple=x86_64-apple-macosx %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s --check-prefix DARWIN
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ;
 ; Test the DW_AT_producer DWARF attribute.
 ; When producer and flags are both given in DIComileUnit, set DW_AT_producer
@@ -18,10 +16,8 @@
 ;     return 0;
 ;   }
 
-; LINUX: DW_AT_producer{{.*}}("clang++ -g -grecord-gcc-switches test.cc -S -emit-llvm -o -")
-; DARWIN: DW_AT_producer{{.*}}("clang++")
-; DARWIN: DW_AT_APPLE_flags{{.*}}("-g -grecord-gcc-switches test.cc -S -emit-llvm -o -")
-
+; CHECK: DW_AT_producer
+; CHECK-SAME: "clang++ -g -grecord-gcc-switches test.cc -S -emit-llvm -o -"
 target triple = "x86_64-unknown-linux-gnu"
 
 define i32 @main() !dbg !6 {

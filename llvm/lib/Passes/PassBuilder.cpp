@@ -75,7 +75,6 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/GlobalSplit.h"
-#include "llvm/Transforms/IPO/HotColdSplitting.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/Internalize.h"
@@ -193,8 +192,6 @@ static cl::opt<bool> EnableSyntheticCounts(
 
 static Regex DefaultAliasRegex(
     "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
-
-extern cl::opt<bool> EnableHotColdSplit;
 
 static bool isOptimizingForSize(PassBuilder::OptimizationLevel Level) {
   switch (Level) {
@@ -695,11 +692,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
-
-  // We only want to do hot cold splitting once for ThinLTO, during the
-  // post-link ThinLTO.
-  if (EnableHotColdSplit && Phase != ThinLTOPhase::PreLink)
-    MPM.addPass(HotColdSplittingPass());
 
   for (auto &C : CGSCCOptimizerLateEPCallbacks)
     C(MainCGPipeline, Level);

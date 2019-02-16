@@ -44,15 +44,14 @@ add_clang_library(clangStaticAnalyzerCore
   RangeConstraintManager.cpp
   RangedConstraintManager.cpp
   RegionStore.cpp
-  RetainSummaryManager.cpp
   SValBuilder.cpp
   SVals.cpp
   SimpleConstraintManager.cpp
   SimpleSValBuilder.cpp
+  SMTConstraintManager.cpp
   Store.cpp
   SubEngine.cpp
   SymbolManager.cpp
-  TaintManager.cpp
   WorkList.cpp
   Z3ConstraintManager.cpp
 

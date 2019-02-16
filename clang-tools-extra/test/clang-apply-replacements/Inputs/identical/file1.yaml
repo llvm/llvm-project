@@ -10,5 +10,9 @@ Diagnostics:
         Offset:          12
         Length:          0
         ReplacementText: '0'
+      - FilePath:        $(path)/identical.cpp
+        Offset:          12
+        Length:          0
+        ReplacementText: '0'
 ...
 

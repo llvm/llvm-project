@@ -464,18 +464,6 @@ void ClangdServer::documentSymbols(
                            Bind(Action, std::move(CB)));
 }
 
-void ClangdServer::symbolInfo(PathRef File, Position Pos,
-                              Callback<std::vector<SymbolDetails>> CB) {
-  auto Action = [Pos](Callback<std::vector<SymbolDetails>> CB,
-                      Expected<InputsAndAST> InpAST) {
-    if (!InpAST)
-      return CB(InpAST.takeError());
-    CB(clangd::getSymbolInfo(InpAST->AST, Pos));
-  };
-
-  WorkScheduler.runWithAST("SymbolInfo", File, Bind(Action, std::move(CB)));
-}
-
 std::vector<std::pair<Path, std::size_t>>
 ClangdServer::getUsedBytesPerFile() const {
   return WorkScheduler.getUsedBytesPerFile();

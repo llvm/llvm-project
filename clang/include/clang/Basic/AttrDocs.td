@@ -843,58 +843,6 @@ Query for this feature with ``__has_attribute(objc_method_family)``.
   }];
 }
 
-def RetainBehaviorDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The behavior of a function with respect to reference counting for Foundation
-(Objective-C), CoreFoundation (C) and OSObject (C++) is determined by a naming
-convention (e.g. functions starting with "get" are assumed to return at
-``+0``).
-
-It can be overriden using a family of the following attributes.  In
-Objective-C, the annotation ``__attribute__((ns_returns_retained))`` applied to
-a function communicates that the object is returned at ``+1``, and the caller
-is responsible for freeing it.
-Similiarly, the annotation ``__attribute__((ns_returns_not_retained))``
-specifies that the object is returned at ``+0`` and the ownership remains with
-the callee.
-The annotation ``__attribute__((ns_consumes_self))`` specifies that
-the Objective-C method call consumes the reference to ``self``, e.g. by
-attaching it to a supplied parameter.
-Additionally, parameters can have an annotation
-``__attribute__((ns_consumed))``, which specifies that passing an owned object
-as that parameter effectively transfers the ownership, and the caller is no
-longer responsible for it.
-These attributes affect code generation when interacting with ARC code, and
-they are used by the Clang Static Analyzer.
-
-In C programs using CoreFoundation, a similar set of attributes:
-``__attribute__((cf_returns_not_retained))``,
-``__attribute__((cf_returns_retained))`` and ``__attribute__((cf_consumed))``
-have the same respective semantics when applied to CoreFoundation objects.
-These attributes affect code generation when interacting with ARC code, and
-they are used by the Clang Static Analyzer.
-
-Finally, in C++ interacting with XNU kernel (objects inheriting from OSObject),
-the same attribute family is present:
-``__attribute__((os_returns_not_retained))``,
-``__attribute__((os_returns_retained))`` and ``__attribute__((os_consumed))``,
-with the same respective semantics.
-Similar to ``__attribute__((ns_consumes_self))``,
-``__attribute__((os_consumes_this))`` specifies that the method call consumes
-the reference to "this" (e.g., when attaching it to a different object supplied
-as a parameter).
-These attributes are only used by the Clang Static Analyzer.
-
-The family of attributes ``X_returns_X_retained`` can be added to functions,
-C++ methods, and Objective-C methods and properties.
-Attributes ``X_consumed`` can be added to parameters of methods, functions,
-and Objective-C methods.
-  }];
-}
-
-
-
 def NoDebugDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -2910,72 +2858,6 @@ where clause is one of the following:
   }];
 }
 
-def SwiftDocs : DocumentationCategory<"Controlling Swift Import"> {
-  let Content = [{
-Clang supports additional attributes for controlling how APIs are imported into Swift.
-  }];
-}
-
-def NSErrorDomainDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``ns_error_domain`` attribute indicates a global constant representing the error domain.
-  }];
-}
-
-def SwiftBridgeDocs : Documentation {
-  let Category = SwiftDocs;
-  let Content = [{
-The ``swift_bridge`` attribute indicates that the type to which the attribute appertains is bridged to the named Swift type. 
-  }];
-}
-
-def SwiftBridgedTypedefDocs : Documentation {
-  let Category = SwiftDocs;
-  let Content = [{
-The ``swift_bridged_typedef`` attribute indicates that, when the typedef to which the attribute appertains is imported into Swift, it should refer to the bridged Swift type (e.g., Swift's ``String``) rather than the Objective-C type as written (e.g., ``NSString``).
-  }];
-}
-
-def SwiftObjCMembersDocs : Documentation {
-  let Category = SwiftDocs;
-  let Content = [{
-The ``swift_objc_members`` attribute maps to the Swift ``@objcMembers`` attribute, which indicates that Swift members of this class, its subclasses, and all of the extensions thereof, will implicitly be exposed back to Objective-C.
-  }];
-}
-
-def SwiftErrorDocs : Documentation {
-  let Category = SwiftDocs;
-  let Heading = "swift_error";
-  let Content = [{
-The ``swift_error`` attribute controls whether a particular function (or Objective-C method) is imported into Swift as a throwing function, and if so, the dynamic convention it uses.
-
-All of these conventions except ``none`` require the function to have an error parameter.  Currently, the error parameter is always the last parameter of type ``NSError**`` or ``CFErrorRef*``.  Swift will remove the error parameter from the imported API, and dynamically will always pass a valid address initialized to a null pointer.
-
-* ``swift_error(none)`` means that the function should not be imported as throwing.  The error parameter and result type will be left alone.
-
-* ``swift_error(null_result)`` means that calls to the function should be considered to have thrown if they return a null value.  The return type must be a pointer type, and it will be imported into Swift with a non-optional type.  This is the default error convention for Objective-C methods that return pointers.
-
-* ``swift_error(zero_result)`` means that calls to the function should be considered to have thrown if they return a zero result.  The return type must be an integral type.  If the return type would have been imported as ``Bool``, it is instead imported as ``Void``.  This is the default error convention for Objective-C methods that return a type that would be imported as ``Bool``.
-
-* ``swift_error(nonzero_result)`` means that calls to the function should be considered to have thrown if they return a non-zero result.  The return type must be an integral type.  If the return type would have been imported as ``Bool``, it is instead imported as ``Void``.
-
-* ``swift_error(nonnull_error)`` means that calls to the function should be considered to have thrown if they leave a non-null error in the error parameter.  The return type is left unmodified.
-
-}];
-}
-
-def SwiftNewtypeDocs : Documentation {
-  let Category = SwiftDocs;
-  let Heading = "swift_newtype";
-  let Content = [{
-The ``swift_newtype`` attribute indicates that the typedef to which the attribute appertains is imported as a new Swift type of the typedef's name.
-* ``swift_newtype(struct)`` means that a Swift struct will be created for this typedef.
-* ``swift_newtype(enum)`` means that a Swift enum will be created for this typedef.
-  }];
-}
-
-
 def OMPDeclareTargetDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare target";
@@ -3088,68 +2970,6 @@ The ``internal_linkage`` attribute changes the linkage type of the declaration t
 This is similar to C-style ``static``, but can be used on classes and class methods. When applied to a class definition,
 this attribute affects all methods and static data members of that class.
 This can be used to contain the ABI of a C++ library by excluding unwanted class methods from the export tables.
-  }];
-}
-
-def ExcludeFromExplicitInstantiationDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``exclude_from_explicit_instantiation`` attribute opts-out a member of a
-class template from being part of explicit template instantiations of that
-class template. This means that an explicit instantiation will not instantiate
-members of the class template marked with the attribute, but also that code
-where an extern template declaration of the enclosing class template is visible
-will not take for granted that an external instantiation of the class template
-would provide those members (which would otherwise be a link error, since the
-explicit instantiation won't provide those members). For example, let's say we
-don't want the ``data()`` method to be part of libc++'s ABI. To make sure it
-is not exported from the dylib, we give it hidden visibility:
-
-  .. code-block:: c++
-
-    // in <string>
-    template <class CharT>
-    class basic_string {
-    public:
-      __attribute__((__visibility__("hidden")))
-      const value_type* data() const noexcept { ... }
-    };
-
-    template class basic_string<char>;
-
-Since an explicit template instantiation declaration for ``basic_string<char>``
-is provided, the compiler is free to assume that ``basic_string<char>::data()``
-will be provided by another translation unit, and it is free to produce an
-external call to this function. However, since ``data()`` has hidden visibility
-and the explicit template instantiation is provided in a shared library (as
-opposed to simply another translation unit), ``basic_string<char>::data()``
-won't be found and a link error will ensue. This happens because the compiler
-assumes that ``basic_string<char>::data()`` is part of the explicit template
-instantiation declaration, when it really isn't. To tell the compiler that
-``data()`` is not part of the explicit template instantiation declaration, the
-``exclude_from_explicit_instantiation`` attribute can be used:
-
-  .. code-block:: c++
-
-    // in <string>
-    template <class CharT>
-    class basic_string {
-    public:
-      __attribute__((__visibility__("hidden")))
-      __attribute__((exclude_from_explicit_instantiation))
-      const value_type* data() const noexcept { ... }
-    };
-
-    template class basic_string<char>;
-
-Now, the compiler won't assume that ``basic_string<char>::data()`` is provided
-externally despite there being an explicit template instantiation declaration:
-the compiler will implicitly instantiate ``basic_string<char>::data()`` in the
-TUs where it is used.
-
-This attribute can be used on static and non-static member functions of class
-templates, static data members of class templates and member classes of class
-templates.
   }];
 }
 
@@ -3636,65 +3456,5 @@ The ``artificial`` attribute can be applied to an inline function. If such a
 function is inlined, the attribute indicates that debuggers should associate
 the resulting instructions with the call site, rather than with the
 corresponding line within the inlined callee.
-  }];
-}
-
-def AlwaysDestroyDocs : Documentation {
-  let Category = DocCatVariable;
-  let Content = [{
-The ``always_destroy`` attribute specifies that a variable with static or thread
-storage duration should have its exit-time destructor run. This attribute is the
-default unless clang was invoked with -fno-c++-static-destructors.
-  }];
-}
-
-def NoDestroyDocs : Documentation {
-  let Category = DocCatVariable;
-  let Content = [{
-The ``no_destroy`` attribute specifies that a variable with static or thread
-storage duration shouldn't have its exit-time destructor run. Annotating every
-static and thread duration variable with this attribute is equivalent to
-invoking clang with -fno-c++-static-destructors.
-  }];
-}
-
-
-def ReinitializesDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``reinitializes`` attribute can be applied to a non-static, non-const C++
-member function to indicate that this member function reinitializes the entire
-object to a known state, independent of the previous state of the object.
-
-This attribute can be interpreted by static analyzers that warn about uses of an
-object that has been left in an indeterminate state by a move operation. If a
-member function marked with the ``reinitializes`` attribute is called on a
-moved-from object, the analyzer can conclude that the object is no longer in an
-indeterminate state.
-
-A typical example where this attribute would be used is on functions that clear
-a container class:
-
-.. code-block:: c++
-
-  template <class T>
-  class Container {
-  public:
-    ...
-    [[clang::reinitializes]] void Clear();
-    ...
-  };
-  }];
-}
-
-def UninitializedDocs : Documentation {
-  let Category = DocCatVariable;
-  let Content = [{
-The command-line parameter ``-ftrivial-auto-var-init=*`` can be used to
-initialize trivial automatic stack variables. By default, trivial automatic
-stack variables are uninitialized. This attribute is used to override the
-command-line parameter, forcing variables to remain uninitialized. It has no
-semantic meaning in that using uninitialized values is undefined behavior,
-it rather documents the programmer's intent.
   }];
 }

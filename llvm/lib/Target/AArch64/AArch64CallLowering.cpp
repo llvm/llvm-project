@@ -227,45 +227,32 @@ void AArch64CallLowering::splitToValueTypes(
 }
 
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                      const Value *Val,
-                                      ArrayRef<unsigned> VRegs) const {
+                                      const Value *Val, unsigned VReg) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+
   auto MIB = MIRBuilder.buildInstrNoInsert(AArch64::RET_ReallyLR);
-  assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
-         "Return value without a vreg");
-
+  assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
   bool Success = true;
-  if (!VRegs.empty()) {
-    MachineFunction &MF = MIRBuilder.getMF();
-    const Function &F = MF.getFunction();
-
+  if (VReg) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
+
+    // We zero-extend i1s to i8.
+    if (MRI.getType(VReg).getSizeInBits() == 1)
+      VReg = MIRBuilder.buildZExt(LLT::scalar(8), VReg)->getOperand(0).getReg();
+
     const AArch64TargetLowering &TLI = *getTLI<AArch64TargetLowering>();
     CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(F.getCallingConv());
     auto &DL = F.getParent()->getDataLayout();
-    LLVMContext &Ctx = Val->getType()->getContext();
 
-    SmallVector<EVT, 4> SplitEVTs;
-    ComputeValueVTs(TLI, DL, Val->getType(), SplitEVTs);
-    assert(VRegs.size() == SplitEVTs.size() &&
-           "For each split Type there should be exactly one VReg.");
+    ArgInfo OrigArg{VReg, Val->getType()};
+    setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 8> SplitArgs;
-    for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-      // We zero-extend i1s to i8.
-      unsigned CurVReg = VRegs[i];
-      if (MRI.getType(VRegs[i]).getSizeInBits() == 1) {
-        CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg)
-                       ->getOperand(0)
-                       .getReg();
-      }
-
-      ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVTs[i].getTypeForEVT(Ctx)};
-      setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
-      splitToValueTypes(CurArgInfo, SplitArgs, DL, MRI, F.getCallingConv(),
-                        [&](unsigned Reg, uint64_t Offset) {
-                          MIRBuilder.buildExtract(Reg, CurVReg, Offset);
-                        });
-    }
+    splitToValueTypes(OrigArg, SplitArgs, DL, MRI, F.getCallingConv(),
+                      [&](unsigned Reg, uint64_t Offset) {
+                        MIRBuilder.buildExtract(Reg, VReg, Offset);
+                      });
 
     OutgoingArgHandler Handler(MIRBuilder, MRI, MIB, AssignFn, AssignFn);
     Success = handleAssignments(MIRBuilder, SplitArgs, Handler);

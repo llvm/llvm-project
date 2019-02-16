@@ -1,6 +1,6 @@
 // Check that SDKROOT does not infer simulator on when it points to a regular
 // SDK.
-// REQUIRES: system-darwin && native
+// REQUIRES: system-darwin
 //
 // RUN: rm -rf %t/SDKs/iPhoneOS8.0.0.sdk
 // RUN: mkdir -p %t/SDKs/iPhoneOS8.0.0.sdk

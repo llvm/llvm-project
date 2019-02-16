@@ -11,8 +11,6 @@
 
 #include <float.h>
 
-#include "test_macros.h"
-
 #ifndef FLT_ROUNDS
 #error FLT_ROUNDS not defined
 #endif
@@ -25,7 +23,7 @@
 #error FLT_RADIX not defined
 #endif
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES) && 0
+#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES)
 #ifndef FLT_HAS_SUBNORM
 #error FLT_HAS_SUBNORM not defined
 #endif
@@ -55,7 +53,7 @@
 #error DECIMAL_DIG not defined
 #endif
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES) && 0
+#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES)
 #ifndef FLT_DECIMAL_DIG
 #error FLT_DECIMAL_DIG not defined
 #endif
@@ -165,7 +163,7 @@
 #error LDBL_MIN not defined
 #endif
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES) && 0
+#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES)
 #ifndef FLT_TRUE_MIN
 #error FLT_TRUE_MIN not defined
 #endif

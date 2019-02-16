@@ -27,8 +27,6 @@ def triple : Separate<["-"], "triple">,
   HelpText<"Specify target triple (e.g. i686-apple-darwin9)">;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">;
-def target_sdk_version_EQ : Joined<["-"], "target-sdk-version=">,
-  HelpText<"The version of target SDK used for compilation">;
 
 }
 
@@ -78,13 +76,14 @@ def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
 def analyze_function : Separate<["-"], "analyze-function">,
   HelpText<"Run analysis on specific function (for C++ include parameters in name)">;
 def analyze_function_EQ : Joined<["-"], "analyze-function=">, Alias<analyze_function>;
+def analyzer_eagerly_assume : Flag<["-"], "analyzer-eagerly-assume">,
+  HelpText<"Eagerly assume the truth/falseness of some symbolic constraints">;
 def trim_egraph : Flag<["-"], "trim-egraph">,
   HelpText<"Only show error-related paths in the analysis graph">;
 def analyzer_viz_egraph_graphviz : Flag<["-"], "analyzer-viz-egraph-graphviz">,
   HelpText<"Display exploded graph using GraphViz">;
-def analyzer_dump_egraph : Separate<["-"], "analyzer-dump-egraph">,
-  HelpText<"Dump exploded graph to the specified file">;
-def analyzer_dump_egraph_EQ : Joined<["-"], "analyzer-dump-egraph=">, Alias<analyzer_dump_egraph>;
+def analyzer_viz_egraph_ubigraph : Flag<["-"], "analyzer-viz-egraph-ubigraph">,
+  HelpText<"Display exploded graph using Ubigraph">;
 
 def analyzer_inline_max_stack_depth : Separate<["-"], "analyzer-inline-max-stack-depth">,
   HelpText<"Bound on stack depth while inlining (4 by default)">;
@@ -108,11 +107,11 @@ def analyzer_checker : Separate<["-"], "analyzer-checker">,
   ValuesCode<[{
     const char *Values =
     #define GET_CHECKERS
-    #define CHECKER(FULLNAME, CLASS, HT)  FULLNAME ","
+    #define CHECKER(FULLNAME, CLASS, DESCFILE, HT, G, H)  FULLNAME ","
     #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
     #undef GET_CHECKERS
     #define GET_PACKAGES
-    #define PACKAGE(FULLNAME)  FULLNAME ","
+    #define PACKAGE(FULLNAME, G, D)  FULLNAME ","
     #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
     #undef GET_PACKAGES
     ;
@@ -131,20 +130,11 @@ def analyzer_disable_all_checks : Flag<["-"], "analyzer-disable-all-checks">,
 def analyzer_checker_help : Flag<["-"], "analyzer-checker-help">,
   HelpText<"Display the list of analyzer checkers that are available">;
 
-def analyzer_config_help : Flag<["-"], "analyzer-config-help">,
-  HelpText<"Display the list of -analyzer-config options">;
-
 def analyzer_list_enabled_checkers : Flag<["-"], "analyzer-list-enabled-checkers">,
   HelpText<"Display the list of enabled analyzer checkers">;
 
 def analyzer_config : Separate<["-"], "analyzer-config">,
   HelpText<"Choose analyzer options to enable">;
-
-def analyzer_config_compatibility_mode : Separate<["-"], "analyzer-config-compatibility-mode">,
-  HelpText<"Don't emit errors on invalid analyzer-config inputs">;
-
-def analyzer_config_compatibility_mode_EQ : Joined<["-"], "analyzer-config-compatibility-mode=">,
-  Alias<analyzer_config_compatibility_mode>;
 
 //===----------------------------------------------------------------------===//
 // Migrator Options
@@ -374,8 +364,6 @@ def fno_debug_pass_manager : Flag<["-"], "fno-debug-pass-manager">,
 
 def sys_header_deps : Flag<["-"], "sys-header-deps">,
   HelpText<"Include system headers in dependency output">;
-def skip_unused_modulemap_file_deps : Flag<["-"], "skip-unused-modulemap-deps">,
-  HelpText<"Include module map files only for imported modules in dependency output">;
 def module_file_deps : Flag<["-"], "module-file-deps">,
   HelpText<"Include module files in dependency output">;
 def header_include_file : Separate<["-"], "header-include-file">,
@@ -513,8 +501,6 @@ def fmodules_debuginfo :
 def fmodule_format_EQ : Joined<["-"], "fmodule-format=">,
   HelpText<"Select the container format for clang modules and PCH. "
            "Supported options are 'raw' and 'obj'.">;
-def fmodules_hash_error_diagnostics : Flag<["-"], "fmodules-hash-error-diagnostics">,
-  HelpText<"Use a separate module cache for modules compiled with conflicting -Werror options">;
 def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "

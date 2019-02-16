@@ -14,9 +14,6 @@
 //		_LIBCPP_HAS_C11_FEATURES - which is defined in <__config>
 //	They should always be the same
 
-#include <__config>
-#include "test_macros.h"
-
 #ifdef TEST_HAS_C11_FEATURES
 # ifndef _LIBCPP_HAS_C11_FEATURES
 #  error "TEST_HAS_C11_FEATURES is defined, but _LIBCPP_HAS_C11_FEATURES is not"

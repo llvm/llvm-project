@@ -520,9 +520,9 @@ attrMatcherRuleListToString(ArrayRef<attr::SubjectMatchRule> Rules) {
 
 } // end anonymous namespace
 
-void Sema::ActOnPragmaAttributeAttribute(
-    ParsedAttr &Attribute, SourceLocation PragmaLoc,
-    attr::ParsedSubjectMatchRuleSet Rules) {
+void Sema::ActOnPragmaAttributePush(ParsedAttr &Attribute,
+                                    SourceLocation PragmaLoc,
+                                    attr::ParsedSubjectMatchRuleSet Rules) {
   SmallVector<attr::SubjectMatchRule, 4> SubjectMatchRules;
   // Gather the subject match rules that are supported by the attribute.
   SmallVector<std::pair<attr::SubjectMatchRule, bool>, 4>
@@ -622,18 +622,8 @@ void Sema::ActOnPragmaAttributeAttribute(
     Diagnostic << attrMatcherRuleListToString(ExtraRules);
   }
 
-  if (PragmaAttributeStack.empty()) {
-    Diag(PragmaLoc, diag::err_pragma_attr_attr_no_push);
-    return;
-  }
-
-  PragmaAttributeStack.back().Entries.push_back(
+  PragmaAttributeStack.push_back(
       {PragmaLoc, &Attribute, std::move(SubjectMatchRules), /*IsUsed=*/false});
-}
-
-void Sema::ActOnPragmaAttributeEmptyPush(SourceLocation PragmaLoc) {
-  PragmaAttributeStack.emplace_back();
-  PragmaAttributeStack.back().Loc = PragmaLoc;
 }
 
 void Sema::ActOnPragmaAttributePop(SourceLocation PragmaLoc) {
@@ -641,45 +631,39 @@ void Sema::ActOnPragmaAttributePop(SourceLocation PragmaLoc) {
     Diag(PragmaLoc, diag::err_pragma_attribute_stack_mismatch);
     return;
   }
-
-  for (const PragmaAttributeEntry &Entry :
-       PragmaAttributeStack.back().Entries) {
-    if (!Entry.IsUsed) {
-      assert(Entry.Attribute && "Expected an attribute");
-      Diag(Entry.Attribute->getLoc(), diag::warn_pragma_attribute_unused)
-          << Entry.Attribute->getName();
-      Diag(PragmaLoc, diag::note_pragma_attribute_region_ends_here);
-    }
+  const PragmaAttributeEntry &Entry = PragmaAttributeStack.back();
+  if (!Entry.IsUsed) {
+    assert(Entry.Attribute && "Expected an attribute");
+    Diag(Entry.Attribute->getLoc(), diag::warn_pragma_attribute_unused)
+        << Entry.Attribute->getName();
+    Diag(PragmaLoc, diag::note_pragma_attribute_region_ends_here);
   }
-
   PragmaAttributeStack.pop_back();
 }
 
 void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   if (PragmaAttributeStack.empty())
     return;
-  for (auto &Group : PragmaAttributeStack) {
-    for (auto &Entry : Group.Entries) {
-      ParsedAttr *Attribute = Entry.Attribute;
-      assert(Attribute && "Expected an attribute");
+  for (auto &Entry : PragmaAttributeStack) {
+    ParsedAttr *Attribute = Entry.Attribute;
+    assert(Attribute && "Expected an attribute");
 
-      // Ensure that the attribute can be applied to the given declaration.
-      bool Applies = false;
-      for (const auto &Rule : Entry.MatchRules) {
-        if (Attribute->appliesToDecl(D, Rule)) {
-          Applies = true;
-          break;
-        }
+    // Ensure that the attribute can be applied to the given declaration.
+    bool Applies = false;
+    for (const auto &Rule : Entry.MatchRules) {
+      if (Attribute->appliesToDecl(D, Rule)) {
+        Applies = true;
+        break;
       }
-      if (!Applies)
-        continue;
-      Entry.IsUsed = true;
-      PragmaAttributeCurrentTargetDecl = D;
-      ParsedAttributesView Attrs;
-      Attrs.addAtStart(Attribute);
-      ProcessDeclAttributeList(S, D, Attrs);
-      PragmaAttributeCurrentTargetDecl = nullptr;
     }
+    if (!Applies)
+      continue;
+    Entry.IsUsed = true;
+    PragmaAttributeCurrentTargetDecl = D;
+    ParsedAttributesView Attrs;
+    Attrs.addAtStart(Attribute);
+    ProcessDeclAttributeList(S, D, Attrs);
+    PragmaAttributeCurrentTargetDecl = nullptr;
   }
 }
 

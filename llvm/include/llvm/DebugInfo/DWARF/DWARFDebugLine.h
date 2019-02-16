@@ -278,8 +278,9 @@ public:
   /// Helper to allow for parsing of an entire .debug_line section in sequence.
   class SectionParser {
   public:
-    using cu_range = DWARFUnitVector::iterator_range;
-    using tu_range = DWARFUnitVector::iterator_range;
+    using cu_range = DWARFUnitSection<DWARFCompileUnit>::iterator_range;
+    using tu_range =
+        iterator_range<std::deque<DWARFUnitSection<DWARFTypeUnit>>::iterator>;
     using LineToUnitMap = std::map<uint64_t, DWARFUnit *>;
 
     SectionParser(DWARFDataExtractor &Data, const DWARFContext &C, cu_range CUs,

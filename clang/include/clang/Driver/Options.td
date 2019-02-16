@@ -328,13 +328,6 @@ def objcmt_whitelist_dir_path: Joined<["-"], "objcmt-whitelist-dir-path=">, Flag
 def : Joined<["-"], "objcmt-white-list-dir-path=">, Flags<[CC1Option]>,
     Alias<objcmt_whitelist_dir_path>;
 
-def index_store_path : Separate<["-"], "index-store-path">, Flags<[CC1Option]>,
-  HelpText<"Enable indexing with the specified data store path">;
-def index_ignore_system_symbols : Flag<["-"], "index-ignore-system-symbols">, Flags<[CC1Option]>,
-  HelpText<"Ignore symbols from system headers">;
-def index_record_codegen_name : Flag<["-"], "index-record-codegen-name">, Flags<[CC1Option]>,
-  HelpText<"Record the codegen name for symbols">;
-
 // Make sure all other -ccc- options are rejected.
 def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
 
@@ -765,21 +758,6 @@ def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
 
-def fapinotes : Flag<["-"], "fapinotes">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable external API notes support">;
-def fapinotes_modules : Flag<["-"], "fapinotes-modules">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable module-based external API notes support">;
-def fno_apinotes : Flag<["-"], "fno-apinotes">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Disable external API notes support">;
-def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Disable module-based external API notes support">;
-def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
-  Group<i_Group>, Flags<[DriverOption]>, MetaVarName<"<directory>">,
-  HelpText<"Does nothing; API notes are no longer cached separately from modules">;
-def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
-  Group<f_clang_Group>, Flags<[CC1Option]>, MetaVarName<"<version>">,
-  HelpText<"Specify the Swift version to use when filtering API notes">;
-
 def faddrsig : Flag<["-"], "faddrsig">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
   HelpText<"Emit an address-significance table">;
 def fno_addrsig : Flag<["-"], "fno-addrsig">, Group<f_Group>, Flags<[CoreOption]>,
@@ -816,8 +794,6 @@ def fcomplete_member_pointers : Flag<["-"], "fcomplete-member-pointers">, Group<
 def fno_complete_member_pointers : Flag<["-"], "fno-complete-member-pointers">, Group<f_clang_Group>,
    Flags<[CoreOption]>,
    HelpText<"Do not require member pointer base types to be complete if they would be significant under the Microsoft ABI">;
-def fcf_runtime_abi_EQ : Joined<["-"], "fcf-runtime-abi=">, Group<f_Group>,
-    Flags<[CC1Option]>;
 def fconstant_cfstrings : Flag<["-"], "fconstant-cfstrings">, Group<f_Group>;
 def fconstant_string_class_EQ : Joined<["-"], "fconstant-string-class=">, Group<f_Group>;
 def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>;
@@ -922,13 +898,6 @@ def ffixed_point : Flag<["-"], "ffixed-point">, Group<f_Group>,
                    Flags<[CC1Option]>, HelpText<"Enable fixed point types">;
 def fno_fixed_point : Flag<["-"], "fno-fixed-point">, Group<f_Group>,
                       HelpText<"Disable fixed point types">;
-def fcxx_static_destructors : Flag<["-"], "fc++-static-destructors">,
-  Group<f_Group>,
-  HelpText<"Enable C++ static destructor registration (the default)">;
-def fno_cxx_static_destructors : Flag<["-"], "fno-c++-static-destructors">,
-  Group<f_Group>,
-  Flags<[CC1Option]>,
-  HelpText<"Disable C++ static destructor registration">;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
@@ -1626,12 +1595,6 @@ def fstack_protector_strong : Flag<["-"], "fstack-protector-strong">, Group<f_Gr
   HelpText<"Use a strong heuristic to apply stack protectors to functions">;
 def fstack_protector : Flag<["-"], "fstack-protector">, Group<f_Group>,
   HelpText<"Enable stack protectors for functions potentially vulnerable to stack smashing">;
-def ftrivial_auto_var_init : Joined<["-"], "ftrivial-auto-var-init=">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Initialize trivial automatic stack variables: uninitialized (default)"
-  " | pattern">, Values<"uninitialized,pattern">;
-def enable_trivial_var_init_zero : Joined<["-"], "enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang">,
-  Flags<[CC1Option]>,
-  HelpText<"Trivial automatic variable initialization to zero is only here for benchmarks, it'll eventually be removed, and I'm OK with that because I'm only using it to benchmark">;
 def fstandalone_debug : Flag<["-"], "fstandalone-debug">, Group<f_Group>, Flags<[CoreOption]>,
   HelpText<"Emit full debug info for all types used by the program">;
 def fno_standalone_debug : Flag<["-"], "fno-standalone-debug">, Group<f_Group>, Flags<[CoreOption]>,
@@ -1862,8 +1825,6 @@ def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption]>,
   HelpText<"Display available options">;
 def index_header_map : Flag<["-"], "index-header-map">, Flags<[CC1Option]>,
   HelpText<"Make the next included directory (-I or -F) an indexer header map">;
-def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>, Flags<[CC1Option]>,
-  HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>, Flags<[CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
 def iframework : JoinedOrSeparate<["-"], "iframework">, Group<clang_i_Group>, Flags<[CC1Option]>,

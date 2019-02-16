@@ -14,10 +14,8 @@
 // of expressions. A warning is reported when:
 // * a negative value is implicitly converted to an unsigned value in an
 //   assignment, comparison or multiplication.
-// * assignment / initialization when the source value is greater than the max
-//   value of the target integer type
-// * assignment / initialization when the source integer is above the range
-//   where the target floating point type can represent all integers
+// * assignment / initialization when source value is greater than the max
+//   value of target
 //
 // Many compilers and tools have similar checks that are based on semantic
 // analysis. Those checks are sound but have poor precision. ConversionChecker
@@ -30,9 +28,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/APFloat.h"
-
-#include <climits>
 
 using namespace clang;
 using namespace ento;
@@ -45,9 +40,11 @@ public:
 private:
   mutable std::unique_ptr<BuiltinBug> BT;
 
+  // Is there loss of precision
   bool isLossOfPrecision(const ImplicitCastExpr *Cast, QualType DestType,
                          CheckerContext &C) const;
 
+  // Is there loss of sign
   bool isLossOfSign(const ImplicitCastExpr *Cast, CheckerContext &C) const;
 
   void reportBug(ExplodedNode *N, CheckerContext &C, const char Msg[]) const;
@@ -135,51 +132,19 @@ bool ConversionChecker::isLossOfPrecision(const ImplicitCastExpr *Cast,
 
   QualType SubType = Cast->IgnoreParenImpCasts()->getType();
 
-  if (!DestType->isRealType() || !SubType->isIntegerType())
+  if (!DestType->isIntegerType() || !SubType->isIntegerType())
     return false;
 
-  const bool isFloat = DestType->isFloatingType();
-
-  const auto &AC = C.getASTContext();
-
-  // We will find the largest RepresentsUntilExp value such that the DestType
-  // can exactly represent all nonnegative integers below 2^RepresentsUntilExp.
-  unsigned RepresentsUntilExp;
-
-  if (isFloat) {
-    const llvm::fltSemantics &Sema = AC.getFloatTypeSemantics(DestType);
-    RepresentsUntilExp = llvm::APFloat::semanticsPrecision(Sema);
-  } else {
-    RepresentsUntilExp = AC.getIntWidth(DestType);
-    if (RepresentsUntilExp == 1) {
-      // This is just casting a number to bool, probably not a bug.
-      return false;
-    }
-    if (DestType->isSignedIntegerType())
-      RepresentsUntilExp--;
-  }
-
-  if (RepresentsUntilExp >= sizeof(unsigned long long) * CHAR_BIT) {
-    // Avoid overflow in our later calculations.
+  if (C.getASTContext().getIntWidth(DestType) >=
+      C.getASTContext().getIntWidth(SubType))
     return false;
-  }
 
-  unsigned CorrectedSrcWidth = AC.getIntWidth(SubType);
-  if (SubType->isSignedIntegerType())
-    CorrectedSrcWidth--;
-
-  if (RepresentsUntilExp >= CorrectedSrcWidth) {
-    // Simple case: the destination can store all values of the source type.
+  unsigned W = C.getASTContext().getIntWidth(DestType);
+  if (W == 1 || W >= 64U)
     return false;
-  }
 
-  unsigned long long MaxVal = 1ULL << RepresentsUntilExp;
-  if (isFloat) {
-    // If this is a floating point type, it can also represent MaxVal exactly.
-    MaxVal++;
-  }
+  unsigned long long MaxVal = 1ULL << W;
   return C.isGreaterOrEqual(Cast->getSubExpr(), MaxVal);
-  // TODO: maybe also check negative values with too large magnitude.
 }
 
 bool ConversionChecker::isLossOfSign(const ImplicitCastExpr *Cast,

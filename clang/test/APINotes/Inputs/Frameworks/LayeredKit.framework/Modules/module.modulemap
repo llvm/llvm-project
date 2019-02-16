@@ -1,5 +1,0 @@
-framework module LayeredKit {
-  umbrella header "LayeredKit.h"
-  export *
-  module * { export * }
-}

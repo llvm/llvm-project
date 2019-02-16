@@ -5609,9 +5609,7 @@ static void print_image_info64(SectionRef S, struct DisassembleInfo *info) {
     else if(swift_version == 5)
       outs() << " Swift 4.0";
     else if(swift_version == 6)
-      outs() << " Swift 4.1/Swift 4.2";
-    else if(swift_version == 7)
-      outs() << " Swift 5 or later";
+      outs() << " Swift 4.1";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
   }
@@ -5662,9 +5660,7 @@ static void print_image_info32(SectionRef S, struct DisassembleInfo *info) {
     else if(swift_version == 5)
       outs() << " Swift 4.0";
     else if(swift_version == 6)
-      outs() << " Swift 4.1/Swift 4.2";
-    else if(swift_version == 7)
-      outs() << " Swift 5 or later";
+      outs() << " Swift 4.1";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
   }
@@ -6939,7 +6935,6 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
   std::unique_ptr<DIContext> diContext;
   ObjectFile *DbgObj = MachOOF;
-  std::unique_ptr<MemoryBuffer> DSYMBuf;
   // Try to find debug info and set up the DIContext for it.
   if (UseDbg) {
     // A separate DSym file path was specified, parse it as a macho file,
@@ -6957,8 +6952,6 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       if (DbgObjCheck.takeError())
         report_error(MachOOF->getFileName(), DbgObjCheck.takeError());
       DbgObj = DbgObjCheck.get().release();
-      // We need to keep the file alive, because we're replacing DbgObj with it.
-      DSYMBuf = std::move(BufOrErr.get());
     }
 
     // Setup the DIContext

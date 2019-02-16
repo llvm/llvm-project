@@ -6191,7 +6191,7 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
       return SDValue();
   }
 
-  if (!TLI.isDesirableToCommuteWithShift(N, Level))
+  if (!TLI.isDesirableToCommuteWithShift(LHS))
     return SDValue();
 
   // Fold the constants, shifting the binop RHS by the shift amount.
@@ -6495,8 +6495,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   if ((N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR) &&
       N0.getNode()->hasOneUse() &&
       isConstantOrConstantVector(N1, /* No Opaques */ true) &&
-      isConstantOrConstantVector(N0.getOperand(1), /* No Opaques */ true) &&
-      TLI.isDesirableToCommuteWithShift(N, Level)) {
+      isConstantOrConstantVector(N0.getOperand(1), /* No Opaques */ true)) {
     SDValue Shl0 = DAG.getNode(ISD::SHL, SDLoc(N0), VT, N0.getOperand(0), N1);
     SDValue Shl1 = DAG.getNode(ISD::SHL, SDLoc(N1), VT, N0.getOperand(1), N1);
     AddToWorklist(Shl0.getNode());
@@ -13726,17 +13725,19 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
         if ((MemVT != Val.getValueType()) &&
             (Val.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
              Val.getOpcode() == ISD::EXTRACT_SUBVECTOR)) {
+          SDValue Vec = Val.getOperand(0);
           EVT MemVTScalarTy = MemVT.getScalarType();
           // We may need to add a bitcast here to get types to line up.
-          if (MemVTScalarTy != Val.getValueType().getScalarType()) {
-            Val = DAG.getBitcast(MemVT, Val);
-          } else {
-            unsigned OpC = MemVT.isVector() ? ISD::EXTRACT_SUBVECTOR
-                                            : ISD::EXTRACT_VECTOR_ELT;
-            SDValue Vec = Val.getOperand(0);
-            SDValue Idx = Val.getOperand(1);
-            Val = DAG.getNode(OpC, SDLoc(Val), MemVT, Vec, Idx);
+          if (MemVTScalarTy != Vec.getValueType()) {
+            unsigned Elts = Vec.getValueType().getSizeInBits() /
+                            MemVTScalarTy.getSizeInBits();
+            EVT NewVecTy =
+                EVT::getVectorVT(*DAG.getContext(), MemVTScalarTy, Elts);
+            Vec = DAG.getBitcast(NewVecTy, Vec);
           }
+          auto OpC = (MemVT.isVector()) ? ISD::EXTRACT_SUBVECTOR
+                                        : ISD::EXTRACT_VECTOR_ELT;
+          Val = DAG.getNode(OpC, SDLoc(Val), MemVT, Vec, Val.getOperand(1));
         }
         Ops.push_back(Val);
       }
@@ -13982,14 +13983,14 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     //                    in candidate selection and can be
     //                    safely ignored
     //   * Value (Op 1) -> Cycles may happen (e.g. through load chains)
-    //   * Address (Op 2) -> Merged addresses may only vary by a fixed constant,
-    //                       but aren't necessarily fromt the same base node, so
-    //                       cycles possible (e.g. via indexed store).
-    //   * (Op 3) -> Represents the pre or post-indexing offset (or undef for
-    //               non-indexed stores). Not constant on all targets (e.g. ARM)
-    //               and so can participate in a cycle.
-    for (unsigned j = 1; j < N->getNumOperands(); ++j)
-      Worklist.push_back(N->getOperand(j).getNode());
+    //   * Address (Op 2) -> Merged addresses may only vary by a fixed constant
+    //                      and so no cycles are possible.
+    //   * (Op 3) -> appears to always be undef. Cannot be source of cycle.
+    //
+    // Thus we need only check predecessors of the value operands.
+    auto *Op = N->getOperand(1).getNode();
+    if (Visited.insert(Op).second)
+      Worklist.push_back(Op);
   }
   // Search through DAG. We can stop early if we find a store node.
   for (unsigned i = 0; i < NumStores; ++i)
@@ -14691,9 +14692,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   // FIXME: is there such a thing as a truncating indexed store?
   if (ST->isTruncatingStore() && ST->isUnindexed() &&
-      Value.getValueType().isInteger() &&
-      (!isa<ConstantSDNode>(Value) ||
-       !cast<ConstantSDNode>(Value)->isOpaque())) {
+      Value.getValueType().isInteger()) {
     // See if we can simplify the input to this truncstore with knowledge that
     // only the low bits are being used.  For example:
     // "truncstore (or (shl x, 8), y), i8"  -> "truncstore y, i8"
@@ -16176,7 +16175,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
           TLI.isTypeLegal(Scalar->getOperand(0).getValueType()))
         Scalar = Scalar->getOperand(0);
 
-      EVT SclTy = Scalar.getValueType();
+      EVT SclTy = Scalar->getValueType(0);
 
       if (!SclTy.isFloatingPoint() && !SclTy.isInteger())
         return SDValue();

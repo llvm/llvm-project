@@ -328,31 +328,6 @@
 #  define _LIBCPP_NO_CFI
 #endif
 
-#if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
-#  if defined(__FreeBSD__)
-#    define _LIBCPP_HAS_QUICK_EXIT
-#    define _LIBCPP_HAS_C11_FEATURES
-#  elif defined(__Fuchsia__)
-#    define _LIBCPP_HAS_QUICK_EXIT
-#    define _LIBCPP_HAS_TIMESPEC_GET
-#    define _LIBCPP_HAS_C11_FEATURES
-#  elif defined(__linux__)
-#    if !defined(_LIBCPP_HAS_MUSL_LIBC)
-#      if _LIBCPP_GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
-#        define _LIBCPP_HAS_QUICK_EXIT
-#      endif
-#      if _LIBCPP_GLIBC_PREREQ(2, 17)
-#        define _LIBCPP_HAS_C11_FEATURES
-#        define _LIBCPP_HAS_TIMESPEC_GET
-#      endif
-#    else // defined(_LIBCPP_HAS_MUSL_LIBC)
-#      define _LIBCPP_HAS_QUICK_EXIT
-#      define _LIBCPP_HAS_TIMESPEC_GET
-#      define _LIBCPP_HAS_C11_FEATURES
-#    endif
-#  endif // __linux__
-#endif
-
 #if defined(_LIBCPP_COMPILER_CLANG)
 
 // _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
@@ -453,6 +428,28 @@ typedef __char32_t char32_t;
 
 #if !(__has_feature(cxx_variable_templates))
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
+#endif
+
+#if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
+#  if defined(__FreeBSD__)
+#    define _LIBCPP_HAS_QUICK_EXIT
+#    define _LIBCPP_HAS_C11_FEATURES
+#  elif defined(__Fuchsia__)
+#    define _LIBCPP_HAS_QUICK_EXIT
+#    define _LIBCPP_HAS_C11_FEATURES
+#  elif defined(__linux__)
+#    if !defined(_LIBCPP_HAS_MUSL_LIBC)
+#      if _LIBCPP_GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
+#        define _LIBCPP_HAS_QUICK_EXIT
+#      endif
+#      if _LIBCPP_GLIBC_PREREQ(2, 17)
+#        define _LIBCPP_HAS_C11_FEATURES
+#      endif
+#    else // defined(_LIBCPP_HAS_MUSL_LIBC)
+#      define _LIBCPP_HAS_QUICK_EXIT
+#      define _LIBCPP_HAS_C11_FEATURES
+#    endif
+#  endif // __linux__
 #endif
 
 #if !(__has_feature(cxx_noexcept))
@@ -804,20 +801,8 @@ namespace std {
 #  define _LIBCPP_INTERNAL_LINKAGE _LIBCPP_ALWAYS_INLINE
 #endif
 
-#ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU
-#  ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT
-#    define _LIBCPP_HIDE_FROM_ABI_PER_TU 0
-#  else
-#    define _LIBCPP_HIDE_FROM_ABI_PER_TU 1
-#  endif
-#endif
-
 #ifndef _LIBCPP_HIDE_FROM_ABI
-#  if _LIBCPP_HIDE_FROM_ABI_PER_TU
-#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
-#  else
-#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_ALWAYS_INLINE
-#  endif
+#  define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
 #endif
 
 // Just so we can migrate to _LIBCPP_HIDE_FROM_ABI gradually.
@@ -1006,11 +991,6 @@ template <unsigned> struct __static_assert_check {};
 #  endif
 #endif // defined(__APPLE__)
 
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) && \
-    !defined(_LIBCPP_BUILDING_LIBRARY) && \
-    (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606)
-#  define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
-#endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #define _LIBCPP_HAS_DEFAULTRUNELOCALE

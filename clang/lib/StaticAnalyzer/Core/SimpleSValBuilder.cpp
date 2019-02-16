@@ -459,7 +459,7 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
   // FIXME: After putting complexity threshold to the symbols we can always
   //        rearrange additive operations but rearrange comparisons only if
   //        option is set.
-  if(!Opts.ShouldAggressivelySimplifyBinaryOperation)
+  if(!Opts.shouldAggressivelySimplifyBinaryOperation())
     return None;
 
   SymbolRef LSym = Lhs.getAsSymbol();
@@ -475,16 +475,15 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
     SingleTy = ResultTy;
     if (LSym->getType() != SingleTy)
       return None;
+    // Substracting unsigned integers is a nightmare.
+    if (!SingleTy->isSignedIntegerOrEnumerationType())
+      return None;
   } else {
     // Don't rearrange other operations.
     return None;
   }
 
   assert(!SingleTy.isNull() && "We should have figured out the type by now!");
-
-  // Rearrange signed symbolic expressions only
-  if (!SingleTy->isSignedIntegerOrEnumerationType())
-    return None;
 
   SymbolRef RSym = Rhs.getAsSymbol();
   if (!RSym || RSym->getType() != SingleTy)
@@ -535,7 +534,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   while (1) {
     switch (lhs.getSubKind()) {
     default:
-      return makeSymExprValNN(op, lhs, rhs, resultTy);
+      return makeSymExprValNN(state, op, lhs, rhs, resultTy);
     case nonloc::PointerToMemberKind: {
       assert(rhs.getSubKind() == nonloc::PointerToMemberKind &&
              "Both SVals should have pointer-to-member-type");
@@ -583,7 +582,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               return makeTruthVal(true, resultTy);
             default:
               // This case also handles pointer arithmetic.
-              return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+              return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
           }
       }
     }
@@ -644,9 +643,9 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         // 0<<a and 0>>a
         if (LHSValue == 0)
           return evalCastFromNonLoc(lhs, resultTy);
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+        return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
       default:
-        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+        return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
       }
     }
     case nonloc::SymbolValKind: {
@@ -758,7 +757,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         return *V;
 
       // Give up -- this is not a symbolic expression we can handle.
-      return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
+      return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
     }
     }
   }
@@ -1202,7 +1201,6 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
 const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
                                                    SVal V) {
-  V = simplifySVal(state, V);
   if (V.isUnknownOrUndef())
     return nullptr;
 

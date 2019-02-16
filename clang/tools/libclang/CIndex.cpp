@@ -3469,9 +3469,9 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       !PrecompilePreamble ? 0 : 2 - CreatePreambleOnFirstParse;
 
   LibclangInvocationReporter InvocationReporter(
-      *CXXIdx, source_filename,
-      LibclangInvocationReporter::OperationKind::ParseOperation, options,
-      llvm::makeArrayRef(*Args), /*InvocationArgs=*/None, unsaved_files);
+      *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
+      options, llvm::makeArrayRef(*Args), /*InvocationArgs=*/None,
+      unsaved_files);
   std::unique_ptr<ASTUnit> Unit(ASTUnit::LoadFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), Diags,
@@ -3682,7 +3682,7 @@ struct ExprEvalResult {
   ~ExprEvalResult() {
     if (EvalType != CXEval_UnExposed && EvalType != CXEval_Float &&
         EvalType != CXEval_Int) {
-      delete[] EvalData.stringVal;
+      delete EvalData.stringVal;
     }
   }
 };
@@ -3890,32 +3890,33 @@ static const ExprEvalResult* evaluateExpr(Expr *expr, CXCursor C) {
   return nullptr;
 }
 
-static const Expr *evaluateDeclExpr(const Decl *D) {
-  if (!D)
-    return nullptr;
-  if (auto *Var = dyn_cast<VarDecl>(D))
-    return Var->getInit();
-  else if (auto *Field = dyn_cast<FieldDecl>(D))
-    return Field->getInClassInitializer();
-  return nullptr;
-}
-
-static const Expr *evaluateCompoundStmtExpr(const CompoundStmt *CS) {
-  assert(CS && "invalid compound statement");
-  for (auto *bodyIterator : CS->body()) {
-    if (const auto *E = dyn_cast<Expr>(bodyIterator))
-      return E;
-  }
-  return nullptr;
-}
-
 CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
-  if (const Expr *E =
-          clang_getCursorKind(C) == CXCursor_CompoundStmt
-              ? evaluateCompoundStmtExpr(cast<CompoundStmt>(getCursorStmt(C)))
-              : evaluateDeclExpr(getCursorDecl(C)))
-    return const_cast<CXEvalResult>(
-        reinterpret_cast<const void *>(evaluateExpr(const_cast<Expr *>(E), C)));
+  const Decl *D = getCursorDecl(C);
+  if (D) {
+    const Expr *expr = nullptr;
+    if (auto *Var = dyn_cast<VarDecl>(D)) {
+      expr = Var->getInit();
+    } else if (auto *Field = dyn_cast<FieldDecl>(D)) {
+      expr = Field->getInClassInitializer();
+    }
+    if (expr)
+      return const_cast<CXEvalResult>(reinterpret_cast<const void *>(
+          evaluateExpr(const_cast<Expr *>(expr), C)));
+    return nullptr;
+  }
+
+  const CompoundStmt *compoundStmt = dyn_cast_or_null<CompoundStmt>(getCursorStmt(C));
+  if (compoundStmt) {
+    Expr *expr = nullptr;
+    for (auto *bodyIterator : compoundStmt->body()) {
+      if ((expr = dyn_cast<Expr>(bodyIterator))) {
+        break;
+      }
+    }
+    if (expr)
+      return const_cast<CXEvalResult>(
+          reinterpret_cast<const void *>(evaluateExpr(expr, C)));
+  }
   return nullptr;
 }
 
@@ -8407,12 +8408,15 @@ CXSourceRangeList *clang_getSkippedRanges(CXTranslationUnit TU, CXFile file) {
   SourceManager &sm = Ctx.getSourceManager();
   FileEntry *fileEntry = static_cast<FileEntry *>(file);
   FileID wantedFileID = sm.translateFile(fileEntry);
+  bool isMainFile = wantedFileID == sm.getMainFileID();
 
   const std::vector<SourceRange> &SkippedRanges = ppRec->getSkippedRanges();
   std::vector<SourceRange> wantedRanges;
   for (std::vector<SourceRange>::const_iterator i = SkippedRanges.begin(), ei = SkippedRanges.end();
        i != ei; ++i) {
     if (sm.getFileID(i->getBegin()) == wantedFileID || sm.getFileID(i->getEnd()) == wantedFileID)
+      wantedRanges.push_back(*i);
+    else if (isMainFile && (astUnit->isInPreambleFileID(i->getBegin()) || astUnit->isInPreambleFileID(i->getEnd())))
       wantedRanges.push_back(*i);
   }
 

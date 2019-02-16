@@ -23,7 +23,6 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/Utils.h"
-#include "clang/Index/IndexingAction.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
@@ -170,11 +169,6 @@ CreateFrontendAction(CompilerInstance &CI) {
   }
 #endif
 
-  if (!FEOpts.IndexStorePath.empty()) {
-    Act = index::createIndexDataRecordingAction(FEOpts, std::move(Act));
-    CI.setGenModuleActionWrapper(&index::createIndexDataRecordingAction);
-  }
-
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
@@ -246,18 +240,10 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins);
     return true;
   }
-
-  // Honor -analyzer-list-enabled-checkers.
   if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
     ento::printEnabledCheckerList(llvm::outs(),
                                   Clang->getFrontendOpts().Plugins,
                                   *Clang->getAnalyzerOpts());
-  }
-
-  // Honor -analyzer-config-help.
-  if (Clang->getAnalyzerOpts()->ShowConfigOptionsList) {
-    ento::printAnalyzerConfigList(llvm::outs());
-    return true;
   }
 #endif
 

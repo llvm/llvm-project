@@ -345,10 +345,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// Construct a DIE for this abstract scope.
   void constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU, LexicalScope *Scope);
 
-  /// Construct DIEs for call site entries describing the calls in \p MF.
-  void constructCallSiteEntryDIEs(const DISubprogram &SP, DwarfCompileUnit &CU,
-                                  DIE &ScopeDIE, const MachineFunction &MF);
-
   template <typename DataT>
   void addAccelNameImpl(AccelTable<DataT> &AppleAccel, StringRef Name,
                         const DIE &Die);

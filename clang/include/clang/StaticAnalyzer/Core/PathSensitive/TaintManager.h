@@ -34,7 +34,10 @@ using TaintMapImpl = llvm::ImmutableMap<SymbolRef, TaintTagType>;
 
 template<> struct ProgramStateTrait<TaintMap>
     :  public ProgramStatePartialTrait<TaintMapImpl> {
-  static void *GDMIndex();
+  static void *GDMIndex() {
+    static int index = 0;
+    return &index;
+  }
 };
 
 /// The GDM component mapping derived symbols' parent symbols to their
@@ -46,7 +49,10 @@ using DerivedSymTaintImpl = llvm::ImmutableMap<SymbolRef, TaintedSubRegions>;
 
 template<> struct ProgramStateTrait<DerivedSymTaint>
     :  public ProgramStatePartialTrait<DerivedSymTaintImpl> {
-  static void *GDMIndex();
+  static void *GDMIndex() {
+    static int index;
+    return &index;
+  }
 };
 
 class TaintManager {

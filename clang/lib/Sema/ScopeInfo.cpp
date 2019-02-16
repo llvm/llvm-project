@@ -54,8 +54,6 @@ void FunctionScopeInfo::Clear() {
   PossiblyUnreachableDiags.clear();
   WeakObjectUses.clear();
   ModifiedNonNullParams.clear();
-  Blocks.clear();
-  ByrefBlockVars.clear();
 }
 
 static const NamedDecl *getBestPropertyDecl(const ObjCPropertyRefExpr *PropE) {

@@ -58,12 +58,13 @@ public:
 
 } // end anonymous namespace
 
-/// \return Whether {@code A} occurs before {@code B} in traversal of
-/// {@code Parent}.
-/// Conceptually a very incomplete/unsound approximation of happens-before
-/// relationship (A is likely to be evaluated before B),
-/// but useful enough in this case.
-static bool seenBefore(const Stmt *Parent, const Stmt *A, const Stmt *B) {
+
+using TriBoolTy = Optional<bool>;
+using MemoizationMapTy = llvm::DenseMap<const Stmt *, Optional<TriBoolTy>>;
+
+static TriBoolTy
+seenBeforeRec(const Stmt *Parent, const Stmt *A, const Stmt *B,
+              MemoizationMapTy &Memoization) {
   for (const Stmt *C : Parent->children()) {
     if (!C) continue;
 
@@ -73,9 +74,26 @@ static bool seenBefore(const Stmt *Parent, const Stmt *A, const Stmt *B) {
     if (C == B)
       return false;
 
-    return seenBefore(C, A, B);
+    Optional<TriBoolTy> &Cached = Memoization[C];
+    if (!Cached)
+      Cached = seenBeforeRec(C, A, B, Memoization);
+
+    if (Cached->hasValue())
+      return Cached->getValue();
   }
-  return false;
+
+  return None;
+}
+
+/// \return Whether {@code A} occurs before {@code B} in traversal of
+/// {@code Parent}.
+/// Conceptually a very incomplete/unsound approximation of happens-before
+/// relationship (A is likely to be evaluated before B),
+/// but useful enough in this case.
+static bool seenBefore(const Stmt *Parent, const Stmt *A, const Stmt *B) {
+  MemoizationMapTy Memoization;
+  TriBoolTy Val = seenBeforeRec(Parent, A, B, Memoization);
+  return Val.getValue();
 }
 
 static void emitDiagnostics(BoundNodes &Match,

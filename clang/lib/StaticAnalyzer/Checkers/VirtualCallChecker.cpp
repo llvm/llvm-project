@@ -72,6 +72,7 @@ private:
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
   };
@@ -83,8 +84,9 @@ REGISTER_MAP_WITH_PROGRAMSTATE(CtorDtorMap, const MemRegion *, ObjectState)
 
 std::shared_ptr<PathDiagnosticPiece>
 VirtualCallChecker::VirtualBugVisitor::VisitNode(const ExplodedNode *N,
+                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
-                                                 BugReport &) {
+                                                 BugReport &BR) {
   // We need the last ctor/dtor which call the virtual function.
   // The visitor walks the ExplodedGraph backwards.
   if (Found)
@@ -280,6 +282,5 @@ void ento::registerVirtualCallChecker(CheckerManager &mgr) {
   VirtualCallChecker *checker = mgr.registerChecker<VirtualCallChecker>();
 
   checker->IsPureOnly =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption("PureOnly", false,
-                                                       checker);
+      mgr.getAnalyzerOptions().getBooleanOption("PureOnly", false, checker);
 }

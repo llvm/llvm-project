@@ -26,7 +26,6 @@ private:
     Optional<const Expr *> Precision;
     Optional<const Expr *> FieldWidth;
     unsigned char Flags = 0;
-    StringRef MaskType;
   };
   SmallVector<ArgData, 4> ArgsData;
   ArrayRef<const Expr *> Args;
@@ -121,26 +120,18 @@ public:
       ArgsData.back().FieldWidth = Args[FS.getFieldWidth().getArgIndex()];
     }
 
-    if (FS.isSensitive())
-      ArgsData.back().Flags |= OSLogBufferItem::IsSensitive;
-    else if (FS.isPrivate())
+    if (FS.isPrivate()) {
       ArgsData.back().Flags |= OSLogBufferItem::IsPrivate;
-    else if (FS.isPublic())
+    }
+    if (FS.isPublic()) {
       ArgsData.back().Flags |= OSLogBufferItem::IsPublic;
-
-    ArgsData.back().MaskType = FS.getMaskType();
+    }
     return true;
   }
 
   void computeLayout(ASTContext &Ctx, OSLogBufferLayout &Layout) const {
     Layout.Items.clear();
     for (auto &Data : ArgsData) {
-      if (!Data.MaskType.empty()) {
-        CharUnits Size = CharUnits::fromQuantity(8);
-        Layout.Items.emplace_back(OSLogBufferItem::MaskKind, nullptr,
-                                  Size, 0, Data.MaskType);
-      }
-
       if (Data.FieldWidth) {
         CharUnits Size = Ctx.getTypeSizeInChars((*Data.FieldWidth)->getType());
         Layout.Items.emplace_back(OSLogBufferItem::ScalarKind, *Data.FieldWidth,

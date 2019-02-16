@@ -259,24 +259,8 @@ public:
 
       if (isDynamic(E)) {
         Roles |= (unsigned)SymbolRole::Dynamic;
-
-        auto addReceivers = [&](const ObjCObjectType *Ty) {
-          if (!Ty)
-            return;
-          if (const auto *clsD = Ty->getInterface()) {
-            Relations.emplace_back((unsigned)SymbolRole::RelationReceivedBy,
-                                   clsD);
-          }
-          for (const auto *protD : Ty->quals()) {
-            Relations.emplace_back((unsigned)SymbolRole::RelationReceivedBy,
-                                   protD);
-          }
-        };
-        QualType recT = E->getReceiverType();
-        if (const auto *Ptr = recT->getAs<ObjCObjectPointerType>())
-          addReceivers(Ptr->getObjectType());
-        else
-          addReceivers(recT->getAs<ObjCObjectType>());
+        if (auto *RecD = E->getReceiverInterface())
+          Relations.emplace_back((unsigned)SymbolRole::RelationReceivedBy, RecD);
       }
 
       return IndexCtx.handleReference(MD, E->getSelectorStartLoc(),

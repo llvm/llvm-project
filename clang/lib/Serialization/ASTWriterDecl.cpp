@@ -801,8 +801,6 @@ void ASTDeclWriter::VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
 void ASTDeclWriter::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *D) {
   VisitNamedDecl(D);
   Record.AddDeclRef(D->getClassInterface());
-  Record.AddSourceLocation(D->getClassInterfaceLoc());
-  Record.AddSourceLocation(D->getAtLoc());
   Code = serialization::DECL_OBJC_COMPATIBLE_ALIAS;
 }
 
@@ -939,7 +937,6 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       Record.push_back(static_cast<unsigned>(IPD->getParameterKind()));
     else
       Record.push_back(0);
-    Record.push_back(D->isEscapingByref());
   }
   Record.push_back(D->getLinkageInternal());
 
@@ -948,13 +945,6 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     Record.AddStmt(D->getInit());
   } else {
     Record.push_back(0);
-  }
-
-  if (D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()) {
-    ASTContext::BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
-    Record.AddStmt(Init.getCopyExpr());
-    if (Init.getCopyExpr())
-      Record.push_back(Init.canThrow());
   }
 
   if (D->getStorageDuration() == SD_Static) {
@@ -1009,8 +999,6 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->isConstexpr() &&
       !D->isInitCapture() &&
       !D->isPreviousDeclInSameBlockScope() &&
-      !(D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()) &&
-      !D->isEscapingByref() &&
       D->getStorageDuration() != SD_Static &&
       !D->getMemberSpecializationInfo())
     AbbrevToUse = Writer.getDeclVarAbbrev();
@@ -1110,7 +1098,6 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Record.push_back(D->isVariadic());
   Record.push_back(D->blockMissingReturnType());
   Record.push_back(D->isConversionFromLambda());
-  Record.push_back(D->doesNotEscape());
   Record.push_back(D->capturesCXXThis());
   Record.push_back(D->getNumCaptures());
   for (const auto &capture : D->captures()) {
@@ -2062,7 +2049,6 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // isInitCapture
   Abv->Add(BitCodeAbbrevOp(0));                         // isPrevDeclInSameScope
   Abv->Add(BitCodeAbbrevOp(0));                         // ImplicitParamKind
-  Abv->Add(BitCodeAbbrevOp(0));                         // EscapingByref
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // IsInitICE (local)
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)

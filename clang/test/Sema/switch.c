@@ -97,7 +97,7 @@ void test7() {
     A = 1,
     B
   } a;
-  switch(a) { //expected-warning{{enumeration value 'B' not handled in switch}} expected-note {{add missing switch cases}}
+  switch(a) { //expected-warning{{enumeration value 'B' not handled in switch}}
     case A:
       break;
   }
@@ -155,7 +155,7 @@ void test8() {
     case C:
       break;
   }
-  switch(a) { //expected-warning{{enumeration value 'B' not handled in switch}} expected-note {{add missing switch cases}}
+  switch(a) { //expected-warning{{enumeration value 'B' not handled in switch}}
     case A:
       break;
   }
@@ -202,13 +202,13 @@ void test11() {
     B,
     C
   } a;
-  switch(a) { //expected-warning{{enumeration value 'A' not handled in switch}} expected-note {{add missing switch cases}}
+  switch(a) { //expected-warning{{enumeration value 'A' not handled in switch}}
     case B:
     case C:
       break;
   }
 
-  switch(a) { //expected-warning{{enumeration value 'A' not explicitly handled in switch}} expected-note {{add missing switch cases}}
+  switch(a) { //expected-warning{{enumeration value 'A' not explicitly handled in switch}}
     case B:
     case C:
       break;
@@ -238,7 +238,7 @@ typedef enum {
 } my_type_t;
 
 int test13(my_type_t t) {
-  switch(t) { // expected-warning{{enumeration value 'val3' not handled in switch}} expected-note {{add missing switch cases}}
+  switch(t) { // expected-warning{{enumeration value 'val3' not handled in switch}}
   case val1:
     return 1;
   case val2:

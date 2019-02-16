@@ -343,7 +343,8 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
 }
 
 void TimerGroup::prepareToPrintList() {
-  // See if any of our timers were started, if so add them to TimersToPrint.
+  // See if any of our timers were started, if so add them to TimersToPrint and
+  // reset them.
   for (Timer *T = FirstTimer; T; T = T->Next) {
     if (!T->hasTriggered()) continue;
     bool WasRunning = T->isRunning();
@@ -367,23 +368,11 @@ void TimerGroup::print(raw_ostream &OS) {
     PrintQueuedTimers(OS);
 }
 
-void TimerGroup::clear() {
-  sys::SmartScopedLock<true> L(*TimerLock);
-  for (Timer *T = FirstTimer; T; T = T->Next)
-    T->clear();
-}
-
 void TimerGroup::printAll(raw_ostream &OS) {
   sys::SmartScopedLock<true> L(*TimerLock);
 
   for (TimerGroup *TG = TimerGroupList; TG; TG = TG->Next)
     TG->print(OS);
-}
-
-void TimerGroup::clearAll() {
-  sys::SmartScopedLock<true> L(*TimerLock);
-  for (TimerGroup *TG = TimerGroupList; TG; TG = TG->Next)
-    TG->clear();
 }
 
 void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,

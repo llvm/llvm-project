@@ -53,27 +53,26 @@ STATISTIC(NumPathsExplored,
 // Core analysis engine.
 //===----------------------------------------------------------------------===//
 
-static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts,
-                                                  SubEngine &subengine) {
+static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
   switch (Opts.getExplorationStrategy()) {
-    case ExplorationStrategyKind::DFS:
+    case AnalyzerOptions::ExplorationStrategyKind::DFS:
       return WorkList::makeDFS();
-    case ExplorationStrategyKind::BFS:
+    case AnalyzerOptions::ExplorationStrategyKind::BFS:
       return WorkList::makeBFS();
-    case ExplorationStrategyKind::BFSBlockDFSContents:
+    case AnalyzerOptions::ExplorationStrategyKind::BFSBlockDFSContents:
       return WorkList::makeBFSBlockDFSContents();
-    case ExplorationStrategyKind::UnexploredFirst:
+    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirst:
       return WorkList::makeUnexploredFirst();
-    case ExplorationStrategyKind::UnexploredFirstQueue:
+    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirstQueue:
       return WorkList::makeUnexploredFirstPriorityQueue();
-    case ExplorationStrategyKind::UnexploredFirstLocationQueue:
-      return WorkList::makeUnexploredFirstPriorityLocationQueue();
+    default:
+      llvm_unreachable("Unexpected case");
   }
 }
 
 CoreEngine::CoreEngine(SubEngine &subengine, FunctionSummariesTy *FS,
                        AnalyzerOptions &Opts)
-    : SubEng(subengine), WList(generateWorkList(Opts, subengine)),
+    : SubEng(subengine), WList(generateWorkList(Opts)),
       BCounterFactory(G.getAllocator()), FunctionSummaries(FS) {}
 
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.
@@ -147,7 +146,7 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
 
     dispatchWorkItem(Node, Node->getLocation(), WU);
   }
-  SubEng.processEndWorklist();
+  SubEng.processEndWorklist(hasWorkRemaining());
   return WList->hasWork();
 }
 
@@ -224,12 +223,8 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
     // Get return statement..
     const ReturnStmt *RS = nullptr;
     if (!L.getSrc()->empty()) {
-      CFGElement LastElement = L.getSrc()->back();
-      if (Optional<CFGStmt> LastStmt = LastElement.getAs<CFGStmt>()) {
+      if (Optional<CFGStmt> LastStmt = L.getSrc()->back().getAs<CFGStmt>()) {
         RS = dyn_cast<ReturnStmt>(LastStmt->getStmt());
-      } else if (Optional<CFGAutomaticObjDtor> AutoDtor =
-                 LastElement.getAs<CFGAutomaticObjDtor>()) {
-        RS = dyn_cast<ReturnStmt>(AutoDtor->getTriggerStmt());
       }
     }
 
@@ -397,8 +392,8 @@ void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
   assert(B->succ_size() == 2);
   NodeBuilderContext Ctx(*this, B, Pred);
   ExplodedNodeSet Dst;
-  SubEng.processBranch(Cond, Ctx, Pred, Dst, *(B->succ_begin()),
-                       *(B->succ_begin() + 1));
+  SubEng.processBranch(Cond, Term, Ctx, Pred, Dst,
+                       *(B->succ_begin()), *(B->succ_begin()+1));
   // Enqueue the new frontier onto the worklist.
   enqueue(Dst);
 }

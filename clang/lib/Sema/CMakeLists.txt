@@ -22,7 +22,6 @@ add_clang_library(clangSema
   Sema.cpp
   SemaAccess.cpp
   SemaAttr.cpp
-  SemaAPINotes.cpp
   SemaCXXScopeSpec.cpp
   SemaCast.cpp
   SemaChecking.cpp
@@ -64,5 +63,4 @@ add_clang_library(clangSema
   clangBasic
   clangEdit
   clangLex
-  clangAPINotes
   )

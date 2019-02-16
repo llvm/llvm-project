@@ -164,7 +164,6 @@ void Driver::setDriverModeFromOption(StringRef Opt) {
 }
 
 InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
-                                     bool IsClCompatMode,
                                      bool &ContainsError) {
   llvm::PrettyStackTraceString CrashInfo("Command line argument parsing");
   ContainsError = false;
@@ -172,7 +171,7 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
   unsigned IncludedFlagsBitmask;
   unsigned ExcludedFlagsBitmask;
   std::tie(IncludedFlagsBitmask, ExcludedFlagsBitmask) =
-      getIncludeExcludeOptionFlagMasks(IsClCompatMode);
+      getIncludeExcludeOptionFlagMasks();
 
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args =
@@ -706,7 +705,7 @@ bool Driver::readConfigFile(StringRef FileName) {
   ConfigFile = CfgFileName.str();
   bool ContainErrors;
   CfgOptions = llvm::make_unique<InputArgList>(
-      ParseArgStrings(NewCfgArgs, IsCLMode(), ContainErrors));
+      ParseArgStrings(NewCfgArgs, ContainErrors));
   if (ContainErrors) {
     CfgOptions.reset();
     return true;
@@ -900,7 +899,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Arguments specified in command line.
   bool ContainsError;
   CLOptions = llvm::make_unique<InputArgList>(
-      ParseArgStrings(ArgList.slice(1), IsCLMode(), ContainsError));
+      ParseArgStrings(ArgList.slice(1), ContainsError));
 
   // Try parsing configuration file.
   if (!ContainsError)
@@ -910,47 +909,21 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // All arguments, from both config file and command line.
   InputArgList Args = std::move(HasConfigFile ? std::move(*CfgOptions)
                                               : std::move(*CLOptions));
-
-  auto appendOneArg = [&Args](const Arg *Opt, const Arg *BaseArg) {
+  if (HasConfigFile)
+    for (auto *Opt : *CLOptions) {
+      if (Opt->getOption().matches(options::OPT_config))
+        continue;
       unsigned Index = Args.MakeIndex(Opt->getSpelling());
+      const Arg *BaseArg = &Opt->getBaseArg();
+      if (BaseArg == Opt)
+        BaseArg = nullptr;
       Arg *Copy = new llvm::opt::Arg(Opt->getOption(), Opt->getSpelling(),
                                      Index, BaseArg);
       Copy->getValues() = Opt->getValues();
       if (Opt->isClaimed())
         Copy->claim();
       Args.append(Copy);
-  };
-
-  if (HasConfigFile)
-    for (auto *Opt : *CLOptions) {
-      if (Opt->getOption().matches(options::OPT_config))
-        continue;
-      const Arg *BaseArg = &Opt->getBaseArg();
-      if (BaseArg == Opt)
-        BaseArg = nullptr;
-      appendOneArg(Opt, BaseArg);
     }
-
-  // In CL mode, look for any pass-through arguments
-  if (IsCLMode() && !ContainsError) {
-    SmallVector<const char *, 16> CLModePassThroughArgList;
-    for (const auto *A : Args.filtered(options::OPT__SLASH_clang)) {
-      A->claim();
-      CLModePassThroughArgList.push_back(A->getValue());
-    }
-
-    if (!CLModePassThroughArgList.empty()) {
-      // Parse any pass through args using default clang processing rather
-      // than clang-cl processing.
-      auto CLModePassThroughOptions = llvm::make_unique<InputArgList>(
-          ParseArgStrings(CLModePassThroughArgList, false, ContainsError));
-
-      if (!ContainsError)
-        for (auto *Opt : *CLModePassThroughOptions) {
-          appendOneArg(Opt, nullptr);
-        }
-    }
-  }
 
   // FIXME: This stuff needs to go into the Compilation, not the driver.
   bool CCCPrintPhases;
@@ -1317,9 +1290,7 @@ void Driver::generateCompilationDiagnostics(
   }
 
   // Assume associated files are based off of the first temporary file.
-  CrashReportInfo CrashInfo(
-      TempFiles[0], VFS,
-      C.getArgs().getLastArgValue(options::OPT_index_store_path));
+  CrashReportInfo CrashInfo(TempFiles[0], VFS);
 
   llvm::SmallString<128> Script(CrashInfo.Filename);
   llvm::sys::path::replace_extension(Script, "sh");
@@ -1446,7 +1417,7 @@ void Driver::PrintHelp(bool ShowHidden) const {
   unsigned IncludedFlagsBitmask;
   unsigned ExcludedFlagsBitmask;
   std::tie(IncludedFlagsBitmask, ExcludedFlagsBitmask) =
-      getIncludeExcludeOptionFlagMasks(IsCLMode());
+      getIncludeExcludeOptionFlagMasks();
 
   ExcludedFlagsBitmask |= options::NoDriverOption;
   if (!ShowHidden)
@@ -4284,17 +4255,6 @@ std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
   return Path.str();
 }
 
-std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
-  SmallString<128> Path;
-  std::error_code EC = llvm::sys::fs::createUniqueDirectory(Prefix, Path);
-  if (EC) {
-    Diag(clang::diag::err_unable_to_make_temp) << EC.message();
-    return "";
-  }
-
-  return Path.str();
-}
-
 std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
   SmallString<128> Output;
   if (Arg *FpArg = C.getArgs().getLastArg(options::OPT__SLASH_Fp)) {
@@ -4548,11 +4508,11 @@ bool Driver::GetReleaseVersion(StringRef Str,
   return false;
 }
 
-std::pair<unsigned, unsigned> Driver::getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const {
+std::pair<unsigned, unsigned> Driver::getIncludeExcludeOptionFlagMasks() const {
   unsigned IncludedFlagsBitmask = 0;
   unsigned ExcludedFlagsBitmask = options::NoDriverOption;
 
-  if (IsClCompatMode) {
+  if (Mode == CLMode) {
     // Include CL and Core options.
     IncludedFlagsBitmask |= options::CLOption;
     IncludedFlagsBitmask |= options::CoreOption;

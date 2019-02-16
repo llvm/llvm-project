@@ -28,7 +28,6 @@ add_llvm_unittest(ADTTests
   IListNodeTest.cpp
   IListSentinelTest.cpp
   IListTest.cpp
-  ImmutableListTest.cpp
   ImmutableMapTest.cpp
   ImmutableSetTest.cpp
   IntEqClassesTest.cpp

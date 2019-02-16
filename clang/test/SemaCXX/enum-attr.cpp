@@ -27,7 +27,7 @@ enum __attribute__((flag_enum,enum_extensibility(open))) EnumFlagOpen {
 void test() {
   enum Enum t0;
 
-  switch (t0) { // expected-warning{{enumeration value 'A1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t0) { // expected-warning{{enumeration value 'A1' not handled in switch}}
   case A0: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
   }
@@ -40,7 +40,7 @@ void test() {
 
   enum EnumClosed t1;
 
-  switch (t1) { // expected-warning{{enumeration value 'B1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t1) { // expected-warning{{enumeration value 'B1' not handled in switch}}
   case B0: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
   }
@@ -53,7 +53,7 @@ void test() {
 
   enum EnumOpen t2;
 
-  switch (t2) { // expected-warning{{enumeration value 'C1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t2) { // expected-warning{{enumeration value 'C1' not handled in switch}}
   case C0: break;
   case 16: break;
   }
@@ -66,7 +66,7 @@ void test() {
 
   enum EnumFlag t3;
 
-  switch (t3) { // expected-warning{{enumeration value 'D1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t3) { // expected-warning{{enumeration value 'D1' not handled in switch}}
   case D0: break;
   case 9: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
@@ -80,7 +80,7 @@ void test() {
 
   enum EnumFlagClosed t4;
 
-  switch (t4) { // expected-warning{{enumeration value 'E1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t4) { // expected-warning{{enumeration value 'E1' not handled in switch}}
   case E0: break;
   case 9: break;
   case 16: break; // expected-warning{{case value not in enumerated type}}
@@ -94,7 +94,7 @@ void test() {
 
   enum EnumFlagOpen t5;
 
-  switch (t5) { // expected-warning{{enumeration value 'F1' not handled in switch}} expected-note {{add missing switch cases}}
+  switch (t5) { // expected-warning{{enumeration value 'F1' not handled in switch}}
   case F0: break;
   case 9: break;
   case 16: break;

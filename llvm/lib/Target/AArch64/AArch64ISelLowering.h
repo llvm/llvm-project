@@ -363,8 +363,7 @@ public:
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
 
   /// Returns false if N is a bit extraction pattern of (X >> C) & Mask.
-  bool isDesirableToCommuteWithShift(const SDNode *N,
-                                     CombineLevel Level) const override;
+  bool isDesirableToCommuteWithShift(const SDNode *N) const override;
 
   /// Returns true if it is beneficial to convert a load of a constant
   /// to just the constant itself.

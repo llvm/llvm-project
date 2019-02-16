@@ -387,49 +387,9 @@ bool Sema::checkStringLiteralArgumentAttr(const ParsedAttr &AL, unsigned ArgNum,
 /// Applies the given attribute to the Decl without performing any
 /// additional semantic checking.
 template <typename AttrType>
-static void handleSimpleAttribute(Sema &S, Decl *D, SourceRange SR,
-                                  unsigned SpellingIndex) {
-  D->addAttr(::new (S.Context) AttrType(SR, S.Context, SpellingIndex));
-}
-
-template <typename AttrType>
 static void handleSimpleAttribute(Sema &S, Decl *D, const ParsedAttr &AL) {
-  handleSimpleAttribute<AttrType>(S, D, AL.getRange(),
-                                  AL.getAttributeSpellingListIndex());
-}
-
-
-template <typename... DiagnosticArgs>
-static const Sema::SemaDiagnosticBuilder&
-appendDiagnostics(const Sema::SemaDiagnosticBuilder &Bldr) {
-  return Bldr;
-}
-
-template <typename T, typename... DiagnosticArgs>
-static const Sema::SemaDiagnosticBuilder&
-appendDiagnostics(const Sema::SemaDiagnosticBuilder &Bldr, T &&ExtraArg,
-                  DiagnosticArgs &&... ExtraArgs) {
-  return appendDiagnostics(Bldr << std::forward<T>(ExtraArg),
-                           std::forward<DiagnosticArgs>(ExtraArgs)...);
-}
-
-/// Add an attribute {@code AttrType} to declaration {@code D},
-/// provided the given {@code Check} function returns {@code true}
-/// on type of {@code D}.
-/// If check does not pass, emit diagnostic {@code DiagID},
-/// passing in all parameters specified in {@code ExtraArgs}.
-template <typename AttrType, typename... DiagnosticArgs>
-static void
-handleSimpleAttributeWithCheck(Sema &S, ValueDecl *D, SourceRange SR,
-                               unsigned SpellingIndex,
-                               llvm::function_ref<bool(QualType)> Check,
-                               unsigned DiagID, DiagnosticArgs... ExtraArgs) {
-  if (!Check(D->getType())) {
-    Sema::SemaDiagnosticBuilder DB = S.Diag(D->getLocStart(), DiagID);
-    appendDiagnostics(DB, std::forward<DiagnosticArgs>(ExtraArgs)...);
-    return;
-  }
-  handleSimpleAttribute<AttrType>(S, D, SR, SpellingIndex);
+  D->addAttr(::new (S.Context) AttrType(AL.getRange(), S.Context,
+                                        AL.getAttributeSpellingListIndex()));
 }
 
 template <typename AttrType>
@@ -2405,15 +2365,6 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *SE = dyn_cast_or_null<StringLiteral>(AL.getReplacementExpr()))
     Replacement = SE->getString();
 
-  if (II->getName() == "swift") {
-    if (Introduced.isValid() || Obsoleted.isValid() ||
-        (!IsUnavailable && !Deprecated.isValid())) {
-      S.Diag(AL.getLoc(),
-             diag::warn_availability_swift_unavailable_deprecated_only);
-      return;
-    }
-  }
-
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(ND, AL.getRange(), II,
                                                       false/*Implicit*/,
                                                       Introduced.Version,
@@ -4087,27 +4038,6 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D, SourceRange Range,
                                           AttrSpellingListIndex);
 }
 
-SwiftNameAttr *Sema::mergeSwiftNameAttr(Decl *D, SourceRange Range,
-                                        StringRef Name, bool Override,
-                                        unsigned AttrSpellingListIndex) {
-  if (SwiftNameAttr *Inline = D->getAttr<SwiftNameAttr>()) {
-    if (Override) {
-      // FIXME: Warn about an incompatible override.
-      return nullptr;
-    }
-
-    if (Inline->getName() != Name && !Inline->isImplicit()) {
-      Diag(Inline->getLocation(), diag::warn_attribute_ignored) << Inline;
-      Diag(Range.getBegin(), diag::note_conflicting_attribute);
-    }
-
-    D->dropAttr<SwiftNameAttr>();
-  }
-
-  return ::new (Context) SwiftNameAttr(Range, Context, Name,
-                                       AttrSpellingListIndex);
-}
-
 static void handleAlwaysInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (checkAttrMutualExclusion<NotTailCalledAttr>(S, D, AL.getRange(),
                                                   AL.getName()))
@@ -4705,69 +4635,58 @@ static void handleXRayLogArgsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 //===----------------------------------------------------------------------===//
 // Checker-specific attribute handlers.
 //===----------------------------------------------------------------------===//
+
 static bool isValidSubjectOfNSReturnsRetainedAttribute(QualType QT) {
   return QT->isDependentType() || QT->isObjCRetainableType();
 }
 
-static bool isValidSubjectOfNSAttribute(QualType QT) {
+static bool isValidSubjectOfNSAttribute(Sema &S, QualType QT) {
   return QT->isDependentType() || QT->isObjCObjectPointerType() ||
-         QT->isObjCNSObjectType();
+         S.Context.isObjCNSObjectType(QT);
 }
 
-static bool isValidSubjectOfCFAttribute(QualType QT) {
+static bool isValidSubjectOfCFAttribute(Sema &S, QualType QT) {
   return QT->isDependentType() || QT->isPointerType() ||
-         isValidSubjectOfNSAttribute(QT);
+         isValidSubjectOfNSAttribute(S, QT);
 }
 
-static bool isValidSubjectOfOSAttribute(QualType QT) {
-  return QT->isDependentType() || QT->isPointerType();
+static void handleNSConsumedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  S.AddNSConsumedAttr(AL.getRange(), D, AL.getAttributeSpellingListIndex(),
+                      AL.getKind() == ParsedAttr::AT_NSConsumed,
+                      /*template instantiation*/ false);
 }
 
-void Sema::AddXConsumedAttr(Decl *D, SourceRange SR, unsigned SpellingIndex,
-                            RetainOwnershipKind K,
-                            bool IsTemplateInstantiation) {
-  ValueDecl *VD = cast<ValueDecl>(D);
-  switch (K) {
-  case RetainOwnershipKind::OS:
-    handleSimpleAttributeWithCheck<OSConsumedAttr>(
-        *this, VD, SR, SpellingIndex, &isValidSubjectOfOSAttribute,
-        diag::warn_ns_attribute_wrong_parameter_type,
-        /*ExtraArgs=*/SR, "os_consumed", /*pointers*/ 1);
-    return;
-  case RetainOwnershipKind::NS:
-    handleSimpleAttributeWithCheck<NSConsumedAttr>(
-        *this, VD, SR, SpellingIndex, &isValidSubjectOfNSAttribute,
-        // These attributes are normally just advisory, but in ARC, ns_consumed
-        // is significant.  Allow non-dependent code to contain inappropriate
-        // attributes even in ARC, but require template instantiations to be
-        // set up correctly.
-        ((IsTemplateInstantiation && getLangOpts().ObjCAutoRefCount)
-             ? diag::err_ns_attribute_wrong_parameter_type
-             : diag::warn_ns_attribute_wrong_parameter_type),
-        /*ExtraArgs=*/SR, "ns_consumed", /*objc pointers*/ 0);
-    return;
-  case RetainOwnershipKind::CF:
-    handleSimpleAttributeWithCheck<CFConsumedAttr>(
-        *this, VD, SR, SpellingIndex,
-        &isValidSubjectOfCFAttribute,
-        diag::warn_ns_attribute_wrong_parameter_type,
-        /*ExtraArgs=*/SR, "cf_consumed", /*pointers*/1);
+void Sema::AddNSConsumedAttr(SourceRange AttrRange, Decl *D,
+                             unsigned SpellingIndex, bool IsNSConsumed,
+                             bool IsTemplateInstantiation) {
+  const auto *Param = cast<ParmVarDecl>(D);
+  bool TypeOK;
+
+  if (IsNSConsumed)
+    TypeOK = isValidSubjectOfNSAttribute(*this, Param->getType());
+  else
+    TypeOK = isValidSubjectOfCFAttribute(*this, Param->getType());
+
+  if (!TypeOK) {
+    // These attributes are normally just advisory, but in ARC, ns_consumed
+    // is significant.  Allow non-dependent code to contain inappropriate
+    // attributes even in ARC, but require template instantiations to be
+    // set up correctly.
+    Diag(D->getLocStart(), (IsTemplateInstantiation && IsNSConsumed &&
+                                    getLangOpts().ObjCAutoRefCount
+                                ? diag::err_ns_attribute_wrong_parameter_type
+                                : diag::warn_ns_attribute_wrong_parameter_type))
+        << AttrRange << (IsNSConsumed ? "ns_consumed" : "cf_consumed")
+        << (IsNSConsumed ? /*objc pointers*/ 0 : /*cf pointers*/ 1);
     return;
   }
-}
 
-static Sema::RetainOwnershipKind
-parsedAttrToRetainOwnershipKind(const ParsedAttr &AL) {
-  switch (AL.getKind()) {
-  case ParsedAttr::AT_CFConsumed:
-    return Sema::RetainOwnershipKind::CF;
-  case ParsedAttr::AT_OSConsumed:
-    return Sema::RetainOwnershipKind::OS;
-  case ParsedAttr::AT_NSConsumed:
-    return Sema::RetainOwnershipKind::NS;
-  default:
-    llvm_unreachable("Wrong argument supplied");
-  }
+  if (IsNSConsumed)
+    D->addAttr(::new (Context)
+                   NSConsumedAttr(AttrRange, Context, SpellingIndex));
+  else
+    D->addAttr(::new (Context)
+                   CFConsumedAttr(AttrRange, Context, SpellingIndex));
 }
 
 bool Sema::checkNSReturnsRetainedReturnType(SourceLocation Loc, QualType QT) {
@@ -4779,22 +4698,20 @@ bool Sema::checkNSReturnsRetainedReturnType(SourceLocation Loc, QualType QT) {
   return true;
 }
 
-static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
+static void handleNSReturnsRetainedAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
   QualType ReturnType;
 
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
     ReturnType = MD->getReturnType();
-  } else if (S.getLangOpts().ObjCAutoRefCount && hasDeclarator(D) &&
-             (AL.getKind() == ParsedAttr::AT_NSReturnsRetained)) {
+  else if (S.getLangOpts().ObjCAutoRefCount && hasDeclarator(D) &&
+           (AL.getKind() == ParsedAttr::AT_NSReturnsRetained))
     return; // ignore: was handled as a type attribute
-  } else if (const auto *PD = dyn_cast<ObjCPropertyDecl>(D)) {
+  else if (const auto *PD = dyn_cast<ObjCPropertyDecl>(D))
     ReturnType = PD->getType();
-  } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+  else if (const auto *FD = dyn_cast<FunctionDecl>(D))
     ReturnType = FD->getReturnType();
-  } else if (const auto *Param = dyn_cast<ParmVarDecl>(D)) {
-    // Attributes on parameters are used for out-parameters,
-    // passed as pointers-to-pointers.
+  else if (const auto *Param = dyn_cast<ParmVarDecl>(D)) {
     ReturnType = Param->getType()->getPointeeType();
     if (ReturnType.isNull()) {
       S.Diag(D->getLocStart(), diag::warn_ns_attribute_wrong_parameter_type)
@@ -4811,8 +4728,6 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
     case ParsedAttr::AT_NSReturnsRetained:
     case ParsedAttr::AT_NSReturnsAutoreleased:
     case ParsedAttr::AT_NSReturnsNotRetained:
-    case ParsedAttr::AT_OSReturnsRetained:
-    case ParsedAttr::AT_OSReturnsNotRetained:
       ExpectedDeclKind = ExpectedFunctionOrMethod;
       break;
 
@@ -4837,19 +4752,13 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
 
   case ParsedAttr::AT_NSReturnsAutoreleased:
   case ParsedAttr::AT_NSReturnsNotRetained:
-    TypeOK = isValidSubjectOfNSAttribute(ReturnType);
+    TypeOK = isValidSubjectOfNSAttribute(S, ReturnType);
     Cf = false;
     break;
 
   case ParsedAttr::AT_CFReturnsRetained:
   case ParsedAttr::AT_CFReturnsNotRetained:
-    TypeOK = isValidSubjectOfCFAttribute(ReturnType);
-    Cf = true;
-    break;
-
-  case ParsedAttr::AT_OSReturnsRetained:
-  case ParsedAttr::AT_OSReturnsNotRetained:
-    TypeOK = isValidSubjectOfOSAttribute(ReturnType);
+    TypeOK = isValidSubjectOfCFAttribute(S, ReturnType);
     Cf = true;
     break;
   }
@@ -4884,25 +4793,24 @@ static void handleXReturnsXRetainedAttr(Sema &S, Decl *D,
     default:
       llvm_unreachable("invalid ownership attribute");
     case ParsedAttr::AT_NSReturnsAutoreleased:
-      handleSimpleAttribute<NSReturnsAutoreleasedAttr>(S, D, AL);
+      D->addAttr(::new (S.Context) NSReturnsAutoreleasedAttr(
+          AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
       return;
     case ParsedAttr::AT_CFReturnsNotRetained:
-      handleSimpleAttribute<CFReturnsNotRetainedAttr>(S, D, AL);
+      D->addAttr(::new (S.Context) CFReturnsNotRetainedAttr(
+          AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
       return;
     case ParsedAttr::AT_NSReturnsNotRetained:
-      handleSimpleAttribute<NSReturnsNotRetainedAttr>(S, D, AL);
+      D->addAttr(::new (S.Context) NSReturnsNotRetainedAttr(
+          AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
       return;
     case ParsedAttr::AT_CFReturnsRetained:
-      handleSimpleAttribute<CFReturnsRetainedAttr>(S, D, AL);
+      D->addAttr(::new (S.Context) CFReturnsRetainedAttr(
+          AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
       return;
     case ParsedAttr::AT_NSReturnsRetained:
-      handleSimpleAttribute<NSReturnsRetainedAttr>(S, D, AL);
-      return;
-    case ParsedAttr::AT_OSReturnsRetained:
-      handleSimpleAttribute<OSReturnsRetainedAttr>(S, D, AL);
-      return;
-    case ParsedAttr::AT_OSReturnsNotRetained:
-      handleSimpleAttribute<OSReturnsNotRetainedAttr>(S, D, AL);
+      D->addAttr(::new (S.Context) NSReturnsRetainedAttr(
+          AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
       return;
   };
 }
@@ -4954,40 +4862,6 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
 
   D->addAttr(::new (S.Context) ObjCRequiresSuperAttr(
       Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
-}
-
-static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
-  if (!isa<TagDecl>(D)) {
-    S.Diag(D->getLocStart(), diag::err_nserrordomain_not_tagdecl)
-        << S.getLangOpts().CPlusPlus;
-    return;
-  }
-  IdentifierLoc *identLoc =
-      Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
-  if (!identLoc || !identLoc->Ident) {
-    // Try to locate the argument directly
-    SourceLocation loc = Attr.getLoc();
-    if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
-      loc = Attr.getArgAsExpr(0)->getLocStart();
-
-    S.Diag(loc, diag::err_nserrordomain_requires_identifier);
-    return;
-  }
-
-  // Verify that the identifier is a valid decl in the C decl namespace
-  LookupResult lookupResult(S, DeclarationName(identLoc->Ident),
-                            SourceLocation(),
-                            Sema::LookupNameKind::LookupOrdinaryName);
-  if (!S.LookupName(lookupResult, S.TUScope) ||
-      !lookupResult.getAsSingle<VarDecl>()) {
-    S.Diag(identLoc->Loc, diag::err_nserrordomain_invalid_decl)
-        << identLoc->Ident;
-    return;
-  }
-
-  D->addAttr(::new (S.Context)
-                 NSErrorDomainAttr(Attr.getRange(), S.Context, identLoc->Ident,
-                                   Attr.getAttributeSpellingListIndex()));
 }
 
 static void handleObjCBridgeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -5151,421 +5025,6 @@ static void handleObjCPreciseLifetimeAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context)
              ObjCPreciseLifetimeAttr(AL.getRange(), S.Context,
                                      AL.getAttributeSpellingListIndex()));
-}
-
-static Optional<unsigned>
-validateSwiftFunctionName(StringRef Name,
-                          unsigned &SwiftParamCount,
-                          bool &IsSingleParamInit) {
-  SwiftParamCount = 0;
-
-  // Check whether this will be mapped to a getter or setter of a
-  // property.
-  bool isGetter = false;
-  bool isSetter = false;
-  if (Name.startswith("getter:")) {
-    isGetter = true;
-    Name = Name.substr(7);
-  } else if (Name.startswith("setter:")) {
-    isSetter = true;
-    Name = Name.substr(7);
-  }
-
-  if (Name.back() != ')')
-    return diag::warn_attr_swift_name_function;
-
-  StringRef BaseName, Parameters;
-  std::tie(BaseName, Parameters) = Name.split('(');
-
-  // Split at the first '.', if it exists, which separates the context
-  // name from the base name.
-  StringRef ContextName;
-  bool IsMember = false;
-  std::tie(ContextName, BaseName) = BaseName.split('.');
-  if (BaseName.empty()) {
-    BaseName = ContextName;
-    ContextName = StringRef();
-  } else if (ContextName.empty() || !isValidIdentifier(ContextName)) {
-    return diag::warn_attr_swift_name_context_name_invalid_identifier;
-  } else {
-    IsMember = true;
-  }
-
-  if (!isValidIdentifier(BaseName) || BaseName == "_")
-    return diag::warn_attr_swift_name_basename_invalid_identifier;
-
-  bool IsSubscript = BaseName == "subscript";
-  // A subscript accessor must be a getter or setter.
-  if (IsSubscript && !isGetter && !isSetter)
-    return diag::warn_attr_swift_name_subscript_not_accessor;
-  
-  if (Parameters.empty())
-    return diag::warn_attr_swift_name_missing_parameters;
-  Parameters = Parameters.drop_back(); // ')'
-
-  if (Parameters.empty()) {
-    // Setters and subscripts must have at least one parameter.
-    if (IsSubscript)
-      return diag::warn_attr_swift_name_subscript_no_parameter;
-    if (isSetter)
-      return diag::warn_attr_swift_name_setter_parameters;
-    
-    return None;
-  }
-
-  if (Parameters.back() != ':')
-    return diag::warn_attr_swift_name_function;
-
-  Optional<unsigned> SelfLocation;
-  Optional<unsigned> NewValueLocation;
-  unsigned NewValueCount = 0;
-  StringRef NextParam;
-  do {
-    std::tie(NextParam, Parameters) = Parameters.split(':');
-
-    if (!isValidIdentifier(NextParam))
-      return diag::warn_attr_swift_name_parameter_invalid_identifier;
-
-    // "self" indicates the "self" argument for a member.
-    if (IsMember && NextParam == "self") {
-      // More than one "self"?
-      if (SelfLocation) return diag::warn_attr_swift_name_multiple_selfs;
-
-      // The "self" location is the current parameter.
-      SelfLocation = SwiftParamCount;
-    }
-    
-    // "newValue" indicates the "newValue" argument for a setter.
-    if (NextParam == "newValue") {
-      // There should only be one 'newValue', but it's only significant for
-      // subscript accessors, so don't error right away.
-      ++NewValueCount;
-      
-      NewValueLocation = SwiftParamCount;
-    }
-    ++SwiftParamCount;
-  } while (!Parameters.empty());
-
-  // Only instance subscripts are currently supported.
-  if (IsSubscript && !SelfLocation)
-    return diag::warn_attr_swift_name_static_subscript;
-
-  IsSingleParamInit =
-      (SwiftParamCount == 1 && BaseName == "init" && NextParam != "_");
-
-  // Check the number of parameters for a getter/setter.
-  if (isGetter || isSetter) {
-    // Setters have one parameter for the new value.
-    unsigned NumExpectedParams;
-    unsigned ParamDiag;
-    
-    if (isSetter) {
-      NumExpectedParams = 1;
-      ParamDiag = diag::warn_attr_swift_name_setter_parameters;
-    } else {
-      NumExpectedParams = 0;
-      ParamDiag = diag::warn_attr_swift_name_getter_parameters;
-    }
-
-    // Instance methods have one parameter for "self".
-    if (SelfLocation) ++NumExpectedParams;
-    
-    // Subscripts may have additional parameters beyond the expected params for
-    // the index.
-    if (IsSubscript) {
-      if (SwiftParamCount < NumExpectedParams)
-        return ParamDiag;
-      // A subscript setter must explicitly label its newValue parameter to
-      // distinguish it from index parameters.
-      if (isSetter) {
-        if (!NewValueLocation)
-          return diag::warn_attr_swift_name_subscript_setter_no_newValue;
-        // There can only be one.
-        if (NewValueCount > 1)
-          return diag::warn_attr_swift_name_subscript_setter_multiple_newValues;
-      } else {
-        // Subscript getters should have no 'newValue:' parameter.
-        if (NewValueLocation)
-          return diag::warn_attr_swift_name_subscript_getter_newValue;
-      }
-    } else {
-      // Property accessors must have exactly the number of expected params.
-      if (SwiftParamCount != NumExpectedParams)
-        return ParamDiag;
-    }
-  }
-  
-  return None;
-}
-
-/// Do a check to make sure \p Name looks like a legal swift_name
-/// attribute for the decl \p D. Raise a diagnostic if the name is invalid
-/// for the given declaration.
-///
-/// For a function, this will validate a compound Swift name,
-/// e.g. <code>init(foo:bar:baz:)</code> or <code>controllerForName(_:)</code>,
-/// and the function will output the number of parameter names, and whether this
-/// is a single-arg initializer.
-///
-/// For a type, enum constant, property, or variable declaration, this will
-/// validate either a simple identifier, or a qualified
-/// <code>context.identifier</code> name.
-///
-/// \returns true if the name is a valid swift name for \p D, false otherwise.
-bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
-                             SourceLocation ArgLoc,
-                             IdentifierInfo *AttrName) {
-  if (isa<ObjCMethodDecl>(D) || isa<FunctionDecl>(D)) {
-    ArrayRef<ParmVarDecl*> Params;
-    unsigned ParamCount;
-
-    if (const auto *Method = dyn_cast<ObjCMethodDecl>(D)) {
-      ParamCount = Method->getSelector().getNumArgs();
-      Params = Method->parameters().slice(0, ParamCount);
-    } else {
-      const auto *Function = cast<FunctionDecl>(D);
-      ParamCount = Function->getNumParams();
-      Params = Function->parameters();
-      
-      if (!Function->hasWrittenPrototype()) {
-        Diag(ArgLoc, diag::warn_attr_swift_name_function_no_prototype)
-          << AttrName;
-        return false;
-      }
-    }
-
-    unsigned SwiftParamCount;
-    bool IsSingleParamInit;
-    if (auto diagID = validateSwiftFunctionName(Name, SwiftParamCount,
-                                                IsSingleParamInit)) {
-      Diag(ArgLoc, *diagID) << AttrName;
-      return false;
-    }
-  
-    bool ParamsOK;
-    if (SwiftParamCount == ParamCount) {
-      ParamsOK = true;
-    } else if (SwiftParamCount > ParamCount) {
-      ParamsOK = IsSingleParamInit && ParamCount == 0;
-    } else {
-      // We have fewer Swift parameters than Objective-C parameters, but that
-      // might be because we've transformed some of them. Check for potential
-      // "out" parameters and err on the side of not warning.
-      unsigned MaybeOutParamCount =
-          std::count_if(Params.begin(), Params.end(),
-                        [](const ParmVarDecl *Param) -> bool {
-        QualType ParamTy = Param->getType();
-        if (ParamTy->isReferenceType() || ParamTy->isPointerType())
-          return !ParamTy->getPointeeType().isConstQualified();
-        return false;
-      });
-      ParamsOK = (SwiftParamCount + MaybeOutParamCount >= ParamCount);
-    }
-
-    if (!ParamsOK) {
-      Diag(ArgLoc, diag::warn_attr_swift_name_num_params)
-          << (SwiftParamCount > ParamCount) << AttrName
-          << ParamCount << SwiftParamCount;
-      return false;
-    }
-
-  } else if (isa<EnumConstantDecl>(D) || isa<ObjCProtocolDecl>(D) ||
-             isa<ObjCInterfaceDecl>(D) || isa<ObjCPropertyDecl>(D) ||
-             isa<VarDecl>(D) || isa<TypedefNameDecl>(D) || isa<TagDecl>(D) ||
-             isa<IndirectFieldDecl>(D) || isa<FieldDecl>(D)) {
-    StringRef ContextName, BaseName;
-    std::tie(ContextName, BaseName) = Name.split('.');
-    if (BaseName.empty()) {
-      BaseName = ContextName;
-      ContextName = StringRef();
-    } else if (!isValidIdentifier(ContextName)) {
-      Diag(ArgLoc, diag::warn_attr_swift_name_context_name_invalid_identifier)
-        << AttrName;
-      return false;
-    }
-
-    if (!isValidIdentifier(BaseName)) {
-      Diag(ArgLoc, diag::warn_attr_swift_name_basename_invalid_identifier)
-        << AttrName;
-      return false;
-    }
-
-  } else {
-    Diag(ArgLoc, diag::warn_attr_swift_name_decl_kind) << AttrName;
-    return false;
-  }
-  return true;
-}
-
-static void handleSwiftName(Sema &S, Decl *D, const ParsedAttr &Attr) {
-  StringRef Name;
-  SourceLocation ArgLoc;
-  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Name, &ArgLoc))
-    return;
-
-  if (!S.DiagnoseSwiftName(D, Name, ArgLoc, Attr.getName()))
-    return;
-
-  D->addAttr(::new (S.Context) SwiftNameAttr(Attr.getRange(), S.Context, Name,
-                                         Attr.getAttributeSpellingListIndex()));
-}
-
-static bool isErrorParameter(Sema &S, QualType paramType) {
-  if (auto ptr = paramType->getAs<PointerType>()) {
-    auto outerPointee = ptr->getPointeeType();
-
-    // NSError**.
-    if (auto objcPtr = outerPointee->getAs<ObjCObjectPointerType>()) {
-      if (auto iface = objcPtr->getInterfaceDecl())
-        if (iface->getIdentifier() == S.getNSErrorIdent())
-          return true;
-    }
-
-    // CFErrorRef*.
-    if (auto cPtr = outerPointee->getAs<PointerType>()) {
-      auto innerPointee = cPtr->getPointeeType();
-      if (auto recordType = innerPointee->getAs<RecordType>()) {
-        if (S.isCFError(recordType->getDecl()))
-          return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-static void handleSwiftError(Sema &S, Decl *D, const ParsedAttr &attr) {
-  SwiftErrorAttr::ConventionKind convention;
-  IdentifierLoc *conventionLoc = attr.getArgAsIdent(0);
-  StringRef conventionStr = conventionLoc->Ident->getName();
-  if (!SwiftErrorAttr::ConvertStrToConventionKind(conventionStr, convention)) {
-    S.Diag(attr.getLoc(), diag::warn_attribute_type_not_supported)
-      << attr.getName() << conventionLoc->Ident;
-    return;
-  }
-
-  auto requireErrorParameter = [&]() -> bool {
-    if (D->isInvalidDecl()) return true;
-
-    for (unsigned i = 0, e = getFunctionOrMethodNumParams(D); i != e; ++i) {
-      if (isErrorParameter(S, getFunctionOrMethodParamType(D, i)))
-        return true;
-    }
-
-    S.Diag(attr.getLoc(), diag::err_attr_swift_error_no_error_parameter)
-      << attr.getName() << isa<ObjCMethodDecl>(D);
-    return false;
-  };
-
-  auto requirePointerResult = [&] {
-    if (D->isInvalidDecl()) return true;
-
-    // C, ObjC, and block pointers are definitely okay.
-    // References are definitely not okay.
-    // nullptr_t is weird but acceptable.
-    QualType returnType = getFunctionOrMethodResultType(D);
-    if (returnType->hasPointerRepresentation() &&
-        !returnType->isReferenceType()) return true;
-
-    S.Diag(attr.getLoc(), diag::err_attr_swift_error_return_type)
-      << attr.getName() << conventionStr
-      << isa<ObjCMethodDecl>(D) << /*pointer*/ 1;
-    return false;
-  };
-
-  auto requireIntegerResult = [&] {
-    if (D->isInvalidDecl()) return true;
-
-    QualType returnType = getFunctionOrMethodResultType(D);
-    if (returnType->isIntegralType(S.Context)) return true;
-
-    S.Diag(attr.getLoc(), diag::err_attr_swift_error_return_type)
-      << attr.getName() << conventionStr
-      << isa<ObjCMethodDecl>(D) << /*integral*/ 0;
-    return false;
-  };
-
-  switch (convention) {
-  case SwiftErrorAttr::None:
-    // No additional validation required.
-    break;
-
-  case SwiftErrorAttr::NonNullError:
-    if (!requireErrorParameter()) return;
-    break;
-
-  case SwiftErrorAttr::NullResult:
-    if (!requireErrorParameter()) return;
-    if (!requirePointerResult()) return;
-    break;
-
-  case SwiftErrorAttr::NonZeroResult:
-  case SwiftErrorAttr::ZeroResult:
-    if (!requireErrorParameter()) return;
-    if (!requireIntegerResult()) return;
-    break;
-  }
-
-  D->addAttr(::new (S.Context)
-             SwiftErrorAttr(attr.getRange(), S.Context, convention,
-                            attr.getAttributeSpellingListIndex()));
-}
-
-static void handleSwiftBridgeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
-  // Make sure that there is a string literal as the annotation's single
-  // argument.
-  StringRef Str;
-  if (!S.checkStringLiteralArgumentAttr(Attr, 0, Str))
-    return;
-
-  // Don't duplicate annotations that are already set.
-  if (D->hasAttr<SwiftBridgeAttr>()) {
-    S.Diag(Attr.getLoc(), diag::warn_duplicate_attribute) << Attr.getName();
-    return;
-  }
-
-  D->addAttr(::new (S.Context)
-             SwiftBridgeAttr(Attr.getRange(), S.Context, Str,
-                             Attr.getAttributeSpellingListIndex()));
-}
-
-static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
-  // Make sure that there is an identifier as the annotation's single
-  // argument.
-  if (Attr.getNumArgs() != 1) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
-      << Attr.getName() << 1;
-    Attr.setInvalid();
-    return;
-  }
-  if (!Attr.isArgIdent(0)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-      << Attr.getName() << AANT_ArgumentIdentifier;
-    Attr.setInvalid();
-    return;
-  }
-
-  IdentifierInfo *II = Attr.getArgAsIdent(0)->Ident;
-  SwiftNewtypeAttr::NewtypeKind Kind;
-  if (II->isStr("struct"))
-    Kind = SwiftNewtypeAttr::NK_Struct;
-  else if (II->isStr("enum"))
-    Kind = SwiftNewtypeAttr::NK_Enum;
-  else {
-    S.Diag(Attr.getLoc(), diag::warn_attribute_type_not_supported)
-      << Attr.getName() << II;
-    Attr.setInvalid();
-    return;
-  }
-
-  if (!isa<TypedefNameDecl>(D)) {
-    S.Diag(Attr.getLoc(), diag::warn_swift_newtype_attribute_non_typedef);
-    return;
-  }
-
-  D->addAttr(::new (S.Context)
-             SwiftNewtypeAttr(Attr.getRange(), S.Context, Kind,
-                              Attr.getAttributeSpellingListIndex()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -6480,28 +5939,6 @@ static void handleOpenCLAccessAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AL.getRange(), S.Context, AL.getAttributeSpellingListIndex()));
 }
 
-static void handleDestroyAttr(Sema &S, Decl *D, const ParsedAttr &A) {
-  if (!isa<VarDecl>(D) || !cast<VarDecl>(D)->hasGlobalStorage()) {
-    S.Diag(D->getLocation(), diag::err_destroy_attr_on_non_static_var)
-        << (A.getKind() == ParsedAttr::AT_AlwaysDestroy);
-    return;
-  }
-
-  if (A.getKind() == ParsedAttr::AT_AlwaysDestroy) {
-    handleSimpleAttributeWithExclusions<AlwaysDestroyAttr, NoDestroyAttr>(S, D, A);
-  } else {
-    handleSimpleAttributeWithExclusions<NoDestroyAttr, AlwaysDestroyAttr>(S, D, A);
-  }
-}
-
-static void handleUninitializedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  assert(cast<VarDecl>(D)->getStorageDuration() == SD_Automatic &&
-         "uninitialized is only valid on automatic duration variables");
-  unsigned Index = AL.getAttributeSpellingListIndex();
-  D->addAttr(::new (S.Context)
-                 UninitializedAttr(AL.getLoc(), S.Context, Index));
-}
-
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -6812,9 +6249,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_ObjCBoxable:
     handleObjCBoxable(S, D, AL);
     break;
-  case ParsedAttr::AT_NSErrorDomain:
-    handleNSErrorDomain(S, D, AL);
-    break;
   case ParsedAttr::AT_CFAuditedTransfer:
     handleSimpleAttributeWithExclusions<CFAuditedTransferAttr,
                                         CFUnknownTransferAttr>(S, D, AL);
@@ -6825,25 +6259,17 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_CFConsumed:
   case ParsedAttr::AT_NSConsumed:
-  case ParsedAttr::AT_OSConsumed:
-    S.AddXConsumedAttr(D, AL.getRange(), AL.getAttributeSpellingListIndex(),
-                     parsedAttrToRetainOwnershipKind(AL),
-                     /*IsTemplateInstantiation=*/false);
+    handleNSConsumedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NSConsumesSelf:
     handleSimpleAttribute<NSConsumesSelfAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_OSConsumesThis:
-    handleSimpleAttribute<OSConsumesThisAttr>(S, D, AL);
-    break;
   case ParsedAttr::AT_NSReturnsAutoreleased:
   case ParsedAttr::AT_NSReturnsNotRetained:
-  case ParsedAttr::AT_NSReturnsRetained:
   case ParsedAttr::AT_CFReturnsNotRetained:
+  case ParsedAttr::AT_NSReturnsRetained:
   case ParsedAttr::AT_CFReturnsRetained:
-  case ParsedAttr::AT_OSReturnsNotRetained:
-  case ParsedAttr::AT_OSReturnsRetained:
-    handleXReturnsXRetainedAttr(S, D, AL);
+    handleNSReturnsRetainedAttr(S, D, AL);
     break;
   case ParsedAttr::AT_WorkGroupSizeHint:
     handleWorkGroupSize<WorkGroupSizeHintAttr>(S, D, AL);
@@ -6889,9 +6315,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_ObjCSubclassingRestricted:
     handleSimpleAttribute<ObjCSubclassingRestrictedAttr>(S, D, AL);
-    break;
-  case ParsedAttr::AT_ObjCCompleteDefinition:
-    handleSimpleAttribute<ObjCCompleteDefinitionAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_ObjCExplicitProtocolImpl:
     handleObjCSuppresProtocolAttr(S, D, AL);
@@ -7025,9 +6448,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_InternalLinkage:
     handleInternalLinkageAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_ExcludeFromExplicitInstantiation:
-    handleSimpleAttribute<ExcludeFromExplicitInstantiationAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_LTOVisibilityPublic:
     handleSimpleAttribute<LTOVisibilityPublicAttr>(S, D, AL);
@@ -7177,48 +6597,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_RenderScriptKernel:
     handleSimpleAttribute<RenderScriptKernelAttr>(S, D, AL);
     break;
-  // Swift attributes.
-  case ParsedAttr::AT_SwiftPrivate:
-    handleSimpleAttribute<SwiftPrivateAttr>(S, D, AL);
-    break;
-  case ParsedAttr::AT_SwiftName:
-    handleSwiftName(S, D, AL);
-    break;
-  case ParsedAttr::AT_SwiftError:
-    handleSwiftError(S, D, AL);
-    break;
-  case ParsedAttr::AT_SwiftBridge:
-    handleSwiftBridgeAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_SwiftBridgedTypedef:
-    handleSimpleAttribute<SwiftBridgedTypedefAttr>(S, D, AL);
-    break;
-  case ParsedAttr::AT_SwiftObjCMembers:
-    handleSimpleAttribute<SwiftObjCMembersAttr>(S, D, AL);
-    break;
-  case ParsedAttr::AT_SwiftNewtype:
-    handleSwiftNewtypeAttr(S, D, AL);
-    break;
   // XRay attributes.
   case ParsedAttr::AT_XRayInstrument:
     handleSimpleAttribute<XRayInstrumentAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_XRayLogArgs:
     handleXRayLogArgsAttr(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_AlwaysDestroy:
-  case ParsedAttr::AT_NoDestroy:
-    handleDestroyAttr(S, D, AL);
-    break;
-
-  // Move semantics attribute.
-  case ParsedAttr::AT_Reinitializes:
-    handleSimpleAttribute<ReinitializesAttr>(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_Uninitialized:
-    handleUninitializedAttr(S, D, AL);
     break;
   }
 }
@@ -7459,9 +6843,6 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
 
   // Apply additional attributes specified by '#pragma clang attribute'.
   AddPragmaAttributes(S, D);
-
-  // Look for API notes that map to attributes.
-  ProcessAPINotes(D);
 }
 
 /// Is the given declaration allowed to use a forbidden type?

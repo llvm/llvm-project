@@ -9,6 +9,7 @@
 
 #include "Index.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/SHA1.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -20,6 +21,27 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolLocation &L) {
     return OS << "(none)";
   return OS << L.FileURI << "[" << L.Start.Line << ":" << L.Start.Column << "-"
             << L.End.Line << ":" << L.End.Column << ")";
+}
+
+SymbolID::SymbolID(StringRef USR)
+    : HashValue(SHA1::hash(arrayRefFromStringRef(USR))) {}
+
+raw_ostream &operator<<(raw_ostream &OS, const SymbolID &ID) {
+  OS << toHex(toStringRef(ID.HashValue));
+  return OS;
+}
+
+std::string SymbolID::str() const {
+  std::string ID;
+  llvm::raw_string_ostream OS(ID);
+  OS << *this;
+  return OS.str();
+}
+
+void operator>>(StringRef Str, SymbolID &ID) {
+  std::string HexString = fromHex(Str);
+  assert(HexString.size() == ID.HashValue.size());
+  std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
 }
 
 raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {

@@ -1,7 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection %s -analyzer-config eagerly-assume=false -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection %s -verify
 
 extern void clang_analyzer_eval(bool);
-extern void clang_analyzer_warnIfReached();
 extern "C" char *strdup(const char *s);
 
 namespace PR14054_reduced {
@@ -91,8 +90,9 @@ namespace PR17596 {
     char str[] = "abc";
     vv.s = str;
 
+    // FIXME: This is a leak of uu.s.
     uu = vv;
-  } // expected-warning{{leak}}
+  }
 
   void testIndirectInvalidation() {
     IntOrString uu;
@@ -122,22 +122,3 @@ void test() {
     y = 1 / y; // no-warning
 }
 } // end namespace assume_union_contents
-
-namespace pr37688_deleted_union_destructor {
-struct S { ~S(); };
-struct A {
-  ~A() noexcept {}
-  union {
-    struct {
-      S s;
-    } ss;
-  };
-};
-void foo() {
-  A a;
-} // no-crash
-void bar() {
-  foo();
-  clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
-}
-} // end namespace pr37688_deleted_union_destructor

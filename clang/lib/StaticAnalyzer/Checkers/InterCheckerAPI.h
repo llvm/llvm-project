@@ -20,8 +20,5 @@ namespace ento {
 /// Register the checker which evaluates CString API calls.
 void registerCStringCheckerBasic(CheckerManager &Mgr);
 
-/// Register the part of MallocChecker connected to InnerPointerChecker.
-void registerInnerPointerCheckerAux(CheckerManager &Mgr);
-
 }}
 #endif /* INTERCHECKERAPI_H_ */

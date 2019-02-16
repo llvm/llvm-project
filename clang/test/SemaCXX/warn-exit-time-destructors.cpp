@@ -43,8 +43,3 @@ namespace test3 {
   };
   E e;
 }
-
-namespace test4 {
-struct A { ~A(); };
-[[clang::no_destroy]] A a; // no warning
-}

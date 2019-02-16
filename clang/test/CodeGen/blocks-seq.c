@@ -11,7 +11,6 @@ int rhs();
 
 void foo() {
   __block int i;
-  ^{ (void)i; };
   i = rhs();
   i += rhs();
 }

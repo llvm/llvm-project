@@ -200,19 +200,11 @@ public:
                               bool *HasNonScopeChildren = nullptr);
 
   /// Construct a DIE for this subprogram scope.
-  DIE &constructSubprogramScopeDIE(const DISubprogram *Sub,
-                                   LexicalScope *Scope);
+  void constructSubprogramScopeDIE(const DISubprogram *Sub, LexicalScope *Scope);
 
   DIE *createAndAddScopeChildren(LexicalScope *Scope, DIE &ScopeDIE);
 
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
-
-  /// Construct a call site entry DIE describing a call within \p Scope to a
-  /// callee described by \p CalleeSP. \p IsTail specifies whether the call is
-  /// a tail call. \p PCOffset must be non-zero for non-tail calls or be the
-  /// function-local offset to PC value after the call instruction.
-  DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram &CalleeSP,
-                                 bool IsTail, const MCExpr *PCOffset);
 
   /// Construct import_module DIE.
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);
@@ -292,9 +284,6 @@ public:
 
   /// Add a Dwarf expression attribute data and value.
   void addExpr(DIELoc &Die, dwarf::Form Form, const MCExpr *Expr);
-
-  /// Add an attribute containing an address expression to \p Die.
-  void addAddressExpr(DIE &Die, dwarf::Attribute Attribute, const MCExpr *Expr);
 
   void applySubprogramAttributesToDefinition(const DISubprogram *SP,
                                              DIE &SPDie);

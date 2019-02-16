@@ -9,7 +9,6 @@
 
 #include "SymbolYAML.h"
 #include "Index.h"
-#include "Logger.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -36,13 +35,9 @@ struct NormalizedSymbolID {
   }
 
   SymbolID denormalize(IO&) {
-    auto ID = SymbolID::fromStr(HexString);
-    if (ID)
-      return *ID;
-    else {
-      clang::clangd::elog("Failed to denormalize '{0}': {1}", HexString, ID.takeError());
-      return SymbolID{};
-    }
+    SymbolID ID;
+    HexString >> ID;
+    return ID;
   }
 
   std::string HexString;

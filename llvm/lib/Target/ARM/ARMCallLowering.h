@@ -33,8 +33,8 @@ class ARMCallLowering : public CallLowering {
 public:
   ARMCallLowering(const ARMTargetLowering &TLI);
 
-  bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                   ArrayRef<unsigned> VRegs) const override;
+  bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
+                   unsigned VReg) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;
@@ -45,8 +45,7 @@ public:
 
 private:
   bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
-                      ArrayRef<unsigned> VRegs,
-                      MachineInstrBuilder &Ret) const;
+                      unsigned VReg, MachineInstrBuilder &Ret) const;
 
   using SplitArgTy = std::function<void(unsigned Reg, uint64_t Offset)>;
 

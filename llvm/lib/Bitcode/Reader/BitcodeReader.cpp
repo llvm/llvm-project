@@ -3511,14 +3511,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
-        Scope = dyn_cast_or_null<MDNode>(
-            MDLoader->getMetadataFwdRefOrLoad(ScopeID - 1));
+        Scope = MDLoader->getMDNodeFwdRefOrNull(ScopeID - 1);
         if (!Scope)
           return error("Invalid record");
       }
       if (IAID) {
-        IA = dyn_cast_or_null<MDNode>(
-            MDLoader->getMetadataFwdRefOrLoad(IAID - 1));
+        IA = MDLoader->getMDNodeFwdRefOrNull(IAID - 1);
         if (!IA)
           return error("Invalid record");
       }

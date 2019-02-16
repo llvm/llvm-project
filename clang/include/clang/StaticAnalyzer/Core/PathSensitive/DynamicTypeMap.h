@@ -36,7 +36,10 @@ using DynamicTypeMapImpl =
 template <>
 struct ProgramStateTrait<DynamicTypeMap>
     : public ProgramStatePartialTrait<DynamicTypeMapImpl> {
-  static void *GDMIndex();
+  static void *GDMIndex() {
+    static int index = 0;
+    return &index;
+  }
 };
 
 /// Get dynamic type information for a region.

@@ -232,7 +232,7 @@ public:
 
   /// If needsImportVisitation returns \c true, this is called for each
   /// AST file imported by this AST file.
-  virtual void visitImport(StringRef ModuleName, StringRef Filename) {}
+  virtual void visitImport(StringRef Filename) {}
 
   /// Indicates that a particular module file extension has been read.
   virtual void readModuleFileExtension(
@@ -748,6 +748,13 @@ private:
   /// which the preprocessed entity resides along with the offset that should be
   /// added to the global preprocessing entity ID to produce a local ID.
   GlobalPreprocessedEntityMapType GlobalPreprocessedEntityMap;
+
+  using GlobalSkippedRangeMapType =
+      ContinuousRangeMap<unsigned, ModuleFile *, 4>;
+
+  /// Mapping from global skipped range base IDs to the module in which
+  /// the skipped ranges reside.
+  GlobalSkippedRangeMapType GlobalSkippedRangeMap;
 
   /// \name CodeGen-relevant special data
   /// Fields containing data that is relevant to CodeGen.
@@ -1306,8 +1313,6 @@ private:
                                      ASTReaderListener &Listener);
   static bool ParseHeaderSearchOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener);
-  static bool ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
-                                     ASTReaderListener &Listener);
   static bool ParsePreprocessorOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener,
                                        std::string &SuggestedPredefines);
@@ -1698,6 +1703,9 @@ public:
   /// entity with index \p Index came from file \p FID.
   Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
                                               FileID FID) override;
+
+  /// Read a preallocated skipped range from the external source.
+  SourceRange ReadSkippedRange(unsigned Index) override;
 
   /// Read the header file information for the given file entry.
   HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) override;

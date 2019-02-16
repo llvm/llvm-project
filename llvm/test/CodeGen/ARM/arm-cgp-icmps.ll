@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=thumbv7em %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP
 ; RUN: llc -mtriple=thumbv8 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-DSP-IMM
 
-; This pass is disabled, but the patch for rdar://39776429 breaks it so XFAILing this.
-; XFAIL: *
-
 ; CHECK-COMMON-LABEL: test_ult_254_inc_imm:
 ; CHECK-DSP:        adds    r0, #1
 ; CHECK-DSP-NEXT:   uxtb    r1, r0

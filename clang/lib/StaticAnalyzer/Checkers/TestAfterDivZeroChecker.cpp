@@ -71,6 +71,7 @@ public:
   }
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
+                                                 const ExplodedNode *Pred,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -94,7 +95,7 @@ public:
 REGISTER_SET_WITH_PROGRAMSTATE(DivZeroMap, ZeroState)
 
 std::shared_ptr<PathDiagnosticPiece>
-DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, 
+DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
                              BugReporterContext &BRC, BugReport &BR) {
   if (Satisfied)
     return nullptr;
@@ -179,7 +180,7 @@ void TestAfterDivZeroChecker::reportBug(SVal Val, CheckerContext &C) const {
   }
 }
 
-void TestAfterDivZeroChecker::checkEndFunction(const ReturnStmt *,
+void TestAfterDivZeroChecker::checkEndFunction(const ReturnStmt *RS,
                                                CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 

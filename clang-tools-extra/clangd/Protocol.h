@@ -25,7 +25,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 
 #include "URI.h"
-#include "index/SymbolID.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <bitset>
@@ -244,18 +243,6 @@ struct CompletionClientCapabilities {
 };
 bool fromJSON(const llvm::json::Value &, CompletionClientCapabilities &);
 
-struct PublishDiagnosticsClientCapabilities {
-  // Whether the client accepts diagnostics with related information.
-  // NOTE: not used by clangd at the moment.
-  // bool relatedInformation;
-
-  /// Whether the client accepts diagnostics with fixes attached using the
-  /// "clangd_fixes" extension.
-  bool clangdFixSupport = false;
-};
-bool fromJSON(const llvm::json::Value &,
-              PublishDiagnosticsClientCapabilities &);
-
 /// A symbol kind.
 enum class SymbolKind {
   File = 1,
@@ -322,9 +309,6 @@ bool fromJSON(const llvm::json::Value &, WorkspaceClientCapabilities &);
 struct TextDocumentClientCapabilities {
   /// Capabilities specific to the `textDocument/completion`
   CompletionClientCapabilities completion;
-
-  /// Capabilities specific to the 'textDocument/publishDiagnostics'
-  PublishDiagnosticsClientCapabilities publishDiagnostics;
 };
 bool fromJSON(const llvm::json::Value &, TextDocumentClientCapabilities &);
 
@@ -338,25 +322,11 @@ struct ClientCapabilities {
 
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &);
 
-/// Clangd extension that's used in the 'compilationDatabaseChanges' in
-/// workspace/didChangeConfiguration to record updates to the in-memory
-/// compilation database.
-struct ClangdCompileCommand {
-  std::string workingDirectory;
-  std::vector<std::string> compilationCommand;
-};
-bool fromJSON(const llvm::json::Value &, ClangdCompileCommand &);
-
 /// Clangd extension to set clangd-specific "initializationOptions" in the
 /// "initialize" request and for the "workspace/didChangeConfiguration"
 /// notification since the data received is described as 'any' type in LSP.
 struct ClangdConfigurationParamsChange {
   llvm::Optional<std::string> compilationDatabasePath;
-
-  // The changes that happened to the compilation database.
-  // The key of the map is a file name.
-  llvm::Optional<std::map<std::string, ClangdCompileCommand>>
-      compilationDatabaseChanges;
 };
 bool fromJSON(const llvm::json::Value &, ClangdConfigurationParamsChange &);
 
@@ -627,26 +597,6 @@ struct SymbolInformation {
 };
 llvm::json::Value toJSON(const SymbolInformation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolInformation &);
-
-/// Represents information about identifier.
-/// This is returned from textDocument/symbolInfo, which is a clangd extension.
-struct SymbolDetails {
-  std::string name;
-
-  std::string containerName;
-
-  /// Unified Symbol Resolution identifier
-  /// This is an opaque string uniquely identifying a symbol.
-  /// Unlike SymbolID, it is variable-length and somewhat human-readable.
-  /// It is a common representation across several clang tools.
-  /// (See USRGeneration.h)
-  std::string USR;
-
-  llvm::Optional<SymbolID> ID;
-};
-llvm::json::Value toJSON(const SymbolDetails &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
-bool operator==(const SymbolDetails &, const SymbolDetails &);
 
 /// The parameters of a Workspace Symbol Request.
 struct WorkspaceSymbolParams {

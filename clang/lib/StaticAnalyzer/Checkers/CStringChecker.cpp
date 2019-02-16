@@ -187,7 +187,7 @@ public:
                                         const Expr *Buf,
                                         const char *message = nullptr,
                                         bool WarnAboutSize = false) const {
-    // This is a convenience overload.
+    // This is a convenience override.
     return CheckBufferAccess(C, state, Size, Buf, nullptr, message, nullptr,
                              WarnAboutSize);
   }
@@ -553,8 +553,7 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
     BuiltinBug *BT = static_cast<BuiltinBug *>(BT_Null.get());
     auto Report = llvm::make_unique<BugReport>(*BT, WarningMsg, N);
     Report->addRange(S->getSourceRange());
-    if (const auto *Ex = dyn_cast<Expr>(S))
-      bugreporter::trackExpressionValue(N, Ex, *Report);
+    bugreporter::trackNullOrUndefValue(N, S, *Report);
     C.emitReport(std::move(Report));
   }
 }
@@ -2208,86 +2207,60 @@ static bool isCPPStdLibraryFunction(const FunctionDecl *FD, StringRef Name) {
 // The driver method, and other Checker callbacks.
 //===----------------------------------------------------------------------===//
 
-static CStringChecker::FnCheck identifyCall(const CallExpr *CE,
-                                            CheckerContext &C) {
+bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   const FunctionDecl *FDecl = C.getCalleeDecl(CE);
-  if (!FDecl)
-    return nullptr;
 
-  // Pro-actively check that argument types are safe to do arithmetic upon.
-  // We do not want to crash if someone accidentally passes a structure
-  // into, say, a C++ overload of any of these functions.
-  if (isCPPStdLibraryFunction(FDecl, "copy")) {
-    if (CE->getNumArgs() < 3 || !CE->getArg(2)->getType()->isPointerType())
-      return nullptr;
-    return &CStringChecker::evalStdCopy;
-  } else if (isCPPStdLibraryFunction(FDecl, "copy_backward")) {
-    if (CE->getNumArgs() < 3 || !CE->getArg(2)->getType()->isPointerType())
-      return nullptr;
-    return &CStringChecker::evalStdCopyBackward;
-  } else {
-    // An umbrella check for all C library functions.
-    for (auto I: CE->arguments()) {
-      QualType T = I->getType();
-      if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
-        return nullptr;
-    }
-  }
+  if (!FDecl)
+    return false;
 
   // FIXME: Poorly-factored string switches are slow.
+  FnCheck evalFunction = nullptr;
   if (C.isCLibraryFunction(FDecl, "memcpy"))
-    return &CStringChecker::evalMemcpy;
+    evalFunction =  &CStringChecker::evalMemcpy;
   else if (C.isCLibraryFunction(FDecl, "mempcpy"))
-    return &CStringChecker::evalMempcpy;
+    evalFunction =  &CStringChecker::evalMempcpy;
   else if (C.isCLibraryFunction(FDecl, "memcmp"))
-    return &CStringChecker::evalMemcmp;
+    evalFunction =  &CStringChecker::evalMemcmp;
   else if (C.isCLibraryFunction(FDecl, "memmove"))
-    return &CStringChecker::evalMemmove;
+    evalFunction =  &CStringChecker::evalMemmove;
   else if (C.isCLibraryFunction(FDecl, "memset"))
-    return &CStringChecker::evalMemset;
+    evalFunction =  &CStringChecker::evalMemset;
   else if (C.isCLibraryFunction(FDecl, "strcpy"))
-    return &CStringChecker::evalStrcpy;
+    evalFunction =  &CStringChecker::evalStrcpy;
   else if (C.isCLibraryFunction(FDecl, "strncpy"))
-    return &CStringChecker::evalStrncpy;
+    evalFunction =  &CStringChecker::evalStrncpy;
   else if (C.isCLibraryFunction(FDecl, "stpcpy"))
-    return &CStringChecker::evalStpcpy;
+    evalFunction =  &CStringChecker::evalStpcpy;
   else if (C.isCLibraryFunction(FDecl, "strlcpy"))
-    return &CStringChecker::evalStrlcpy;
+    evalFunction =  &CStringChecker::evalStrlcpy;
   else if (C.isCLibraryFunction(FDecl, "strcat"))
-    return &CStringChecker::evalStrcat;
+    evalFunction =  &CStringChecker::evalStrcat;
   else if (C.isCLibraryFunction(FDecl, "strncat"))
-    return &CStringChecker::evalStrncat;
+    evalFunction =  &CStringChecker::evalStrncat;
   else if (C.isCLibraryFunction(FDecl, "strlcat"))
-    return &CStringChecker::evalStrlcat;
+    evalFunction =  &CStringChecker::evalStrlcat;
   else if (C.isCLibraryFunction(FDecl, "strlen"))
-    return &CStringChecker::evalstrLength;
+    evalFunction =  &CStringChecker::evalstrLength;
   else if (C.isCLibraryFunction(FDecl, "strnlen"))
-    return &CStringChecker::evalstrnLength;
+    evalFunction =  &CStringChecker::evalstrnLength;
   else if (C.isCLibraryFunction(FDecl, "strcmp"))
-    return &CStringChecker::evalStrcmp;
+    evalFunction =  &CStringChecker::evalStrcmp;
   else if (C.isCLibraryFunction(FDecl, "strncmp"))
-    return &CStringChecker::evalStrncmp;
+    evalFunction =  &CStringChecker::evalStrncmp;
   else if (C.isCLibraryFunction(FDecl, "strcasecmp"))
-    return &CStringChecker::evalStrcasecmp;
+    evalFunction =  &CStringChecker::evalStrcasecmp;
   else if (C.isCLibraryFunction(FDecl, "strncasecmp"))
-    return &CStringChecker::evalStrncasecmp;
+    evalFunction =  &CStringChecker::evalStrncasecmp;
   else if (C.isCLibraryFunction(FDecl, "strsep"))
-    return &CStringChecker::evalStrsep;
+    evalFunction =  &CStringChecker::evalStrsep;
   else if (C.isCLibraryFunction(FDecl, "bcopy"))
-    return &CStringChecker::evalBcopy;
+    evalFunction =  &CStringChecker::evalBcopy;
   else if (C.isCLibraryFunction(FDecl, "bcmp"))
-    return &CStringChecker::evalMemcmp;
+    evalFunction =  &CStringChecker::evalMemcmp;
   else if (isCPPStdLibraryFunction(FDecl, "copy"))
-    return &CStringChecker::evalStdCopy;
+    evalFunction =  &CStringChecker::evalStdCopy;
   else if (isCPPStdLibraryFunction(FDecl, "copy_backward"))
-    return &CStringChecker::evalStdCopyBackward;
-
-  return nullptr;
-}
-
-bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
-
-  FnCheck evalFunction = identifyCall(CE, C);
+    evalFunction =  &CStringChecker::evalStdCopyBackward;
 
   // If the callee isn't a string function, let another checker handle it.
   if (!evalFunction)
@@ -2411,6 +2384,9 @@ void CStringChecker::checkLiveSymbols(ProgramStateRef state,
 
 void CStringChecker::checkDeadSymbols(SymbolReaper &SR,
     CheckerContext &C) const {
+  if (!SR.hasDeadSymbols())
+    return;
+
   ProgramStateRef state = C.getState();
   CStringLengthTy Entries = state->get<CStringLength>();
   if (Entries.isEmpty())

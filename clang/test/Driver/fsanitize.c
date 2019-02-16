@@ -423,15 +423,6 @@
 // RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
 // CHECK-VPTR-DARWIN-OLD: unsupported option '-fsanitize=vptr' for target 'x86_64-apple-darwin10'
 
-// RUN: %clang -target arm-apple-ios4 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-IOS-OLD
-// CHECK-VPTR-IOS-OLD: unsupported option '-fsanitize=vptr' for target 'arm-apple-ios4'
-
-// RUN: %clang -target aarch64-apple-darwin15.0.0 -fsanitize=vptr %s -### 2>&1
-// OK
-
-// RUN: %clang -target x86_64-apple-darwin15.0.0-simulator -fsanitize=vptr %s -### 2>&1
-// OK
-
 // RUN: %clang -target x86_64-apple-darwin10 -mmacosx-version-min=10.9 -fsanitize=alignment,vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-NEW
 // CHECK-VPTR-DARWIN-NEW: -fsanitize=alignment,vptr
 
@@ -458,25 +449,25 @@
 // CHECK-ESAN-OPENBSD: error: unsupported option '-fsanitize=efficiency-{{.*}}' for target 'i386-pc-openbsd'
 
 // RUN: %clang -target x86_64-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-DARWIN
-// CHECK-LSAN-X86-64-DARWIN: unsupported option
+// CHECK-LSAN-X86-64-DARWIN-NOT: unsupported option
 
 // RUN: %clang -target x86_64-apple-iossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-IOSSIMULATOR
-// CHECK-LSAN-X86-64-IOSSIMULATOR: unsupported option
+// CHECK-LSAN-X86-64-IOSSIMULATOR-NOT: unsupported option
 
 // RUN: %clang -target x86_64-apple-tvossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-X86-64-TVOSSIMULATOR
-// CHECK-LSAN-X86-64-TVOSSIMULATOR: unsupported option
+// CHECK-LSAN-X86-64-TVOSSIMULATOR-NOT: unsupported option
 
 // RUN: %clang -target i386-apple-darwin -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-DARWIN
-// CHECK-LSAN-I386-DARWIN: unsupported option
+// CHECK-LSAN-I386-DARWIN-NOT: unsupported option
 
 // RUN: %clang -target arm-apple-ios -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-ARM-IOS
-// CHECK-LSAN-ARM-IOS: unsupported option
+// CHECK-LSAN-ARM-IOS-NOT: unsupported option
 
 // RUN: %clang -target i386-apple-iossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-IOSSIMULATOR
-// CHECK-LSAN-I386-IOSSIMULATOR: unsupported option
+// CHECK-LSAN-I386-IOSSIMULATOR-NOT: unsupported option
 
 // RUN: %clang -target i386-apple-tvossimulator -fsanitize=leak %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-LSAN-I386-TVOSSIMULATOR
-// CHECK-LSAN-I386-TVOSSIMULATOR: unsupported option
+// CHECK-LSAN-I386-TVOSSIMULATOR-NOT: unsupported option
 
 // RUN: %clang -target i686-linux-gnu -fsanitize=efficiency-cache-frag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ESAN-X86
 // RUN: %clang -target i686-linux-gnu -fsanitize=efficiency-working-set %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ESAN-X86

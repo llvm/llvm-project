@@ -180,11 +180,6 @@ static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
   }
 }
 
-// Parse the Static Analyzer configuration. If \p Diags is set to nullptr,
-// it won't verify the input.
-static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
-                                 DiagnosticsEngine *Diags);
-
 static void getAllNoBuiltinFuncValues(ArgList &Args,
                                       std::vector<std::string> &Funcs) {
   SmallVector<const char *, 8> Values;
@@ -283,24 +278,19 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   }
 
   Opts.ShowCheckerHelp = Args.hasArg(OPT_analyzer_checker_help);
-  Opts.ShowConfigOptionsList = Args.hasArg(OPT_analyzer_config_help);
   Opts.ShowEnabledCheckerList = Args.hasArg(OPT_analyzer_list_enabled_checkers);
-  Opts.ShouldEmitErrorsOnInvalidConfigValue =
-      /* negated */!llvm::StringSwitch<bool>(
-                   Args.getLastArgValue(OPT_analyzer_config_compatibility_mode))
-        .Case("true", true)
-        .Case("false", false)
-        .Default(false);
   Opts.DisableAllChecks = Args.hasArg(OPT_analyzer_disable_all_checks);
 
   Opts.visualizeExplodedGraphWithGraphViz =
     Args.hasArg(OPT_analyzer_viz_egraph_graphviz);
-  Opts.DumpExplodedGraphTo = Args.getLastArgValue(OPT_analyzer_dump_egraph);
+  Opts.visualizeExplodedGraphWithUbiGraph =
+    Args.hasArg(OPT_analyzer_viz_egraph_ubigraph);
   Opts.NoRetryExhausted = Args.hasArg(OPT_analyzer_disable_retry_exhausted);
   Opts.AnalyzeAll = Args.hasArg(OPT_analyzer_opt_analyze_headers);
   Opts.AnalyzerDisplayProgress = Args.hasArg(OPT_analyzer_display_progress);
   Opts.AnalyzeNestedBlocks =
     Args.hasArg(OPT_analyzer_opt_analyze_nested_blocks);
+  Opts.eagerlyAssumeBinOpBifurcation = Args.hasArg(OPT_analyzer_eagerly_assume);
   Opts.AnalyzeSpecificFunction = Args.getLastArgValue(OPT_analyze_function);
   Opts.UnoptimizedCFG = Args.hasArg(OPT_analysis_UnoptimizedCFG);
   Opts.TrimGraph = Args.hasArg(OPT_trim_egraph);
@@ -327,7 +317,7 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 
   // Go through the analyzer configuration options.
   for (const auto *A : Args.filtered(OPT_analyzer_config)) {
-
+    A->claim();
     // We can have a list of comma separated config names, e.g:
     // '-analyzer-config key1=val1,key2=val2'
     StringRef configList = A->getValue();
@@ -349,24 +339,9 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
         Success = false;
         break;
       }
-
-      // TODO: Check checker options too, possibly in CheckerRegistry.
-      // Leave unknown non-checker configs unclaimed.
-      if (!key.contains(":") && Opts.isUnknownAnalyzerConfig(key)) {
-        if (Opts.ShouldEmitErrorsOnInvalidConfigValue)
-          Diags.Report(diag::err_analyzer_config_unknown) << key;
-        continue;
-      }
-
-      A->claim();
       Opts.Config[key] = val;
     }
   }
-
-  if (Opts.ShouldEmitErrorsOnInvalidConfigValue)
-    parseAnalyzerConfigs(Opts, &Diags);
-  else
-    parseAnalyzerConfigs(Opts, nullptr);
 
   llvm::raw_string_ostream os(Opts.FullCompilerInvocation);
   for (unsigned i = 0; i < Args.getNumInputArgStrings(); ++i) {
@@ -377,90 +352,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   os.flush();
 
   return Success;
-}
-
-static StringRef getStringOption(AnalyzerOptions::ConfigTable &Config,
-                                 StringRef OptionName, StringRef DefaultVal) {
-  return Config.insert({OptionName, DefaultVal}).first->second;
-}
-
-static void initOption(AnalyzerOptions::ConfigTable &Config,
-                       DiagnosticsEngine *Diags,
-                       StringRef &OptionField, StringRef Name,
-                       StringRef DefaultVal) {
-  // String options may be known to invalid (e.g. if the expected string is a
-  // file name, but the file does not exist), those will have to be checked in
-  // parseConfigs.
-  OptionField = getStringOption(Config, Name, DefaultVal);
-}
-
-static void initOption(AnalyzerOptions::ConfigTable &Config,
-                       DiagnosticsEngine *Diags,
-                       bool &OptionField, StringRef Name, bool DefaultVal) {
-  auto PossiblyInvalidVal = llvm::StringSwitch<Optional<bool>>(
-                 getStringOption(Config, Name, (DefaultVal ? "true" : "false")))
-      .Case("true", true)
-      .Case("false", false)
-      .Default(None);
-
-  if (!PossiblyInvalidVal) {
-    if (Diags)
-      Diags->Report(diag::err_analyzer_config_invalid_input)
-        << Name << "a boolean";
-    else
-      OptionField = DefaultVal;
-  } else
-    OptionField = PossiblyInvalidVal.getValue();
-}
-
-static void initOption(AnalyzerOptions::ConfigTable &Config,
-                       DiagnosticsEngine *Diags,
-                       unsigned &OptionField, StringRef Name,
-                       unsigned DefaultVal) {
-
-  OptionField = DefaultVal;
-  bool HasFailed = getStringOption(Config, Name, std::to_string(DefaultVal))
-                     .getAsInteger(10, OptionField);
-  if (Diags && HasFailed)
-    Diags->Report(diag::err_analyzer_config_invalid_input)
-      << Name << "an unsigned";
-}
-
-static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
-                                 DiagnosticsEngine *Diags) {
-  // TODO: There's no need to store the entire configtable, it'd be plenty
-  // enough tostore checker options.
-
-#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-  initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, DEFAULT_VAL);
-
-#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
-                                           SHALLOW_VAL, DEEP_VAL)              \
-  switch (AnOpts.getUserMode()) {                                              \
-  case UMK_Shallow:                                                            \
-    initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, SHALLOW_VAL);       \
-    break;                                                                     \
-  case UMK_Deep:                                                               \
-    initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, DEEP_VAL);          \
-    break;                                                                     \
-  }                                                                            \
-
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
-#undef ANALYZER_OPTION
-#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
-
-  // At this point, AnalyzerOptions is configured. Let's validate some options.
-
-  if (!Diags)
-    return;
-
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input)
-      << "ctu-dir" << "a filename";
-
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input)
-      << "model-path" << "a filename";
 }
 
 static bool ParseMigratorArgs(MigratorOptions &Opts, ArgList &Args) {
@@ -1243,7 +1134,6 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   Opts.Targets = Args.getAllArgValues(OPT_MT);
   Opts.IncludeSystemHeaders = Args.hasArg(OPT_sys_header_deps);
   Opts.IncludeModuleFiles = Args.hasArg(OPT_module_file_deps);
-  Opts.SkipUnusedModuleMaps = Args.hasArg(OPT_skip_unused_modulemap_file_deps);
   Opts.UsePhonyTargets = Args.hasArg(OPT_MP);
   Opts.ShowHeaderIncludes = Args.hasArg(OPT_H);
   Opts.HeaderIncludeOutputFile = Args.getLastArgValue(OPT_header_include_file);
@@ -1726,10 +1616,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       << "ARC migration" << "ObjC migration";
   }
 
-  Opts.IndexStorePath = Args.getLastArgValue(OPT_index_store_path);
-  Opts.IndexIgnoreSystemSymbols = Args.hasArg(OPT_index_ignore_system_symbols);
-  Opts.IndexRecordCodegenName = Args.hasArg(OPT_index_record_codegen_name);
-
   InputKind DashX(InputKind::Unknown);
   if (const Arg *A = Args.getLastArg(OPT_x)) {
     StringRef XValue = A->getValue();
@@ -1965,18 +1851,6 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   for (const auto *A : Args.filtered(OPT_ivfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
-}
-
-static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
-                              DiagnosticsEngine &diags) {
-  using namespace options;
-  if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
-    if (Opts.SwiftVersion.tryParse(A->getValue()))
-      diags.Report(diag::err_drv_invalid_value)
-        << A->getAsString(Args) << A->getValue();
-  }
-  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
-    Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
@@ -2391,19 +2265,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   if (Args.hasArg(OPT_print_ivar_layout))
     Opts.ObjCGCBitmapPrint = 1;
-
   if (Args.hasArg(OPT_fno_constant_cfstrings))
     Opts.NoConstantCFStrings = 1;
-  if (const auto *A = Args.getLastArg(OPT_fcf_runtime_abi_EQ))
-    Opts.CFRuntime =
-        llvm::StringSwitch<LangOptions::CoreFoundationABI>(A->getValue())
-            .Cases("unspecified", "standalone", "objc",
-                   LangOptions::CoreFoundationABI::ObjectiveC)
-            .Cases("swift", "swift-5.0",
-                   LangOptions::CoreFoundationABI::Swift5_0)
-            .Case("swift-4.2", LangOptions::CoreFoundationABI::Swift4_2)
-            .Case("swift-4.1", LangOptions::CoreFoundationABI::Swift4_1)
-            .Default(LangOptions::CoreFoundationABI::ObjectiveC);
 
   if (Args.hasArg(OPT_fzvector))
     Opts.ZVector = 1;
@@ -2525,7 +2388,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_fmodules_local_submodule_visibility) || Opts.ModulesTS;
   Opts.ModulesCodegen = Args.hasArg(OPT_fmodules_codegen);
   Opts.ModulesDebugInfo = Args.hasArg(OPT_fmodules_debuginfo);
-  Opts.ModulesHashErrorDiags = Args.hasArg(OPT_fmodules_hash_error_diagnostics);
   Opts.ModulesSearchAll = Opts.Modules &&
     !Args.hasArg(OPT_fno_modules_search_all) &&
     Args.hasArg(OPT_fmodules_search_all);
@@ -2623,8 +2485,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // is enabled.
   Opts.HalfArgsAndReturns = Args.hasArg(OPT_fallow_half_arguments_and_returns)
                             | Opts.NativeHalfArgsAndReturns;
-  Opts.APINotes = Args.hasArg(OPT_fapinotes);
-  Opts.APINotesModules = Args.hasArg(OPT_fapinotes_modules);
   Opts.GNUAsm = !Args.hasArg(OPT_fno_gnu_inline_asm);
 
   // __declspec is enabled by default for the PS4 by the driver, and also
@@ -2858,19 +2718,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   case 3: Opts.setStackProtector(LangOptions::SSPReq); break;
   }
 
-  if (Arg *A = Args.getLastArg(OPT_ftrivial_auto_var_init)) {
-    StringRef Val = A->getValue();
-    if (Val == "uninitialized")
-      Opts.setTrivialAutoVarInit(
-          LangOptions::TrivialAutoVarInitKind::Uninitialized);
-    else if (Val == "zero")
-      Opts.setTrivialAutoVarInit(LangOptions::TrivialAutoVarInitKind::Zero);
-    else if (Val == "pattern")
-      Opts.setTrivialAutoVarInit(LangOptions::TrivialAutoVarInitKind::Pattern);
-    else
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
-  }
-
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
@@ -2905,8 +2752,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   // -fallow-editor-placeholders
   Opts.AllowEditorPlaceholders = Args.hasArg(OPT_fallow_editor_placeholders);
-
-  Opts.RegisterStaticDestructors = !Args.hasArg(OPT_fno_cxx_static_destructors);
 
   if (Arg *A = Args.getLastArg(OPT_fclang_abi_compat_EQ)) {
     Opts.setClangABICompat(LangOptions::ClangABI::Latest);
@@ -3126,14 +2971,6 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
   Opts.ForceEnableInt128 = Args.hasArg(OPT_fforce_enable_int128);
   Opts.NVPTXUseShortPointers = Args.hasFlag(
       options::OPT_fcuda_short_ptr, options::OPT_fno_cuda_short_ptr, false);
-  if (Arg *A = Args.getLastArg(options::OPT_target_sdk_version_EQ)) {
-    llvm::VersionTuple Version;
-    if (Version.tryParse(A->getValue()))
-      Diags.Report(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << A->getValue();
-    else
-      Opts.SDKVersion = Version;
-  }
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
@@ -3186,8 +3023,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                               Res.getTargetOpts(), Res.getFrontendOpts());
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args,
                         Res.getFileSystemOpts().WorkingDir);
-  ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
-  llvm::Triple T(Res.getTargetOpts().Triple);
   if (DashX.getFormat() == InputKind::Precompiled ||
       DashX.getLanguage() == InputKind::LLVM_IR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
@@ -3208,12 +3043,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                   Res.getPreprocessorOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
-    if (T.isOSDarwin() && DashX.isPreprocessed()) {
-      // Supress the darwin-specific 'stdlibcxx-not-found' diagnostic for
-      // preprocessed input as we don't expect it to be used with -std=libc++
-      // anyway.
-      Res.getDiagnosticOpts().Warnings.push_back("no-stdlibcxx-not-found");
-    }
   }
 
   LangOpts.FunctionAlignment =
@@ -3242,11 +3071,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
                               Res.getFrontendOpts().ProgramAction);
 
-  if (!Res.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
-      Res.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
-    LangOpts.NeededByPCHOrCompilationUsesPCH = true;
-
   // Turn on -Wspir-compat for SPIR target.
+  llvm::Triple T(Res.getTargetOpts().Triple);
   auto Arch = T.getArch();
   if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64) {
     Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
@@ -3261,16 +3087,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   return Success;
 }
 
-// Some extension diagnostics aren't explicitly mapped and require custom
-// logic in the dianognostic engine to be used, track -pedantic-errors
-static bool isExtHandlingFromDiagsError(DiagnosticsEngine &Diags) {
-  diag::Severity Ext = Diags.getExtensionHandlingBehavior();
-  if (Ext == diag::Severity::Warning && Diags.getWarningsAsErrors())
-    return true;
-  return Ext >= diag::Severity::Error;
-}
-
-std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
+std::string CompilerInvocation::getModuleHash() const {
   // Note: For QoI reasons, the things we use as a hash here should all be
   // dumped via the -module-info flag.
   using llvm::hash_code;
@@ -3336,26 +3153,8 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   // Extend the signature with the module file extensions.
   const FrontendOptions &frontendOpts = getFrontendOpts();
   for (const auto &ext : frontendOpts.ModuleFileExtensions) {
-    code = hash_combine(code, ext->hashExtension(code));
+    code = ext->hashExtension(code);
   }
-
-  // Extend the signature with the SWift version for API notes.
-  const APINotesOptions &apiNotesOpts = getAPINotesOpts();
-  if (apiNotesOpts.SwiftVersion) {
-    code = hash_combine(code, apiNotesOpts.SwiftVersion.getMajor());
-    if (auto minor = apiNotesOpts.SwiftVersion.getMinor())
-      code = hash_combine(code, *minor);
-    if (auto subminor = apiNotesOpts.SwiftVersion.getSubminor())
-      code = hash_combine(code, *subminor);
-    if (auto build = apiNotesOpts.SwiftVersion.getBuild())
-      code = hash_combine(code, *build);
-  }
-
-  // When compiling with -gmodules, also hash -fdebug-prefix-map as it
-  // affects the debug info in the PCM.
-  if (getCodeGenOpts().DebugTypeExtRefs)
-    for (const auto &KeyValue : getCodeGenOpts().DebugPrefixMap)
-      code = hash_combine(code, KeyValue.first, KeyValue.second);
 
   // Extend the signature with the enabled sanitizers, if at least one is
   // enabled. Sanitizers which cannot affect AST generation aren't hashed.
@@ -3363,24 +3162,6 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   SanHash.clear(getPPTransparentSanitizers());
   if (!SanHash.empty())
     code = hash_combine(code, SanHash.Mask);
-
-  // Check for a couple things (see checkDiagnosticMappings in ASTReader.cpp):
-  //  -Werror: consider all warnings into the hash
-  //  -Werror=something: consider only the specified into the hash
-  //  -pedantic-error
-  if (getLangOpts()->ModulesHashErrorDiags) {
-    bool ConsiderAllWarningsAsErrors = Diags.getWarningsAsErrors();
-    code = hash_combine(code, isExtHandlingFromDiagsError(Diags));
-    for (auto DiagIDMappingPair : Diags.getDiagnosticMappings()) {
-      diag::kind DiagID = DiagIDMappingPair.first;
-      auto CurLevel = Diags.getDiagnosticLevel(DiagID, SourceLocation());
-      if (CurLevel < DiagnosticsEngine::Error && !ConsiderAllWarningsAsErrors)
-        continue; // not significant
-      code = hash_combine(
-          code,
-          Diags.getDiagnosticIDs()->getWarningOptionForDiag(DiagID).str());
-    }
-  }
 
   return llvm::APInt(64, code).toString(36, /*Signed=*/false);
 }
@@ -3442,27 +3223,25 @@ createVFSFromCompilerInvocation(const CompilerInvocation &CI,
   if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
     return BaseFS;
 
-  IntrusiveRefCntPtr<vfs::FileSystem> Result = BaseFS;
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> Overlay(
+      new vfs::OverlayFileSystem(BaseFS));
   // earlier vfs files are on the bottom
   for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-        Result->getBufferForFile(File);
+        BaseFS->getBufferForFile(File);
     if (!Buffer) {
       Diags.Report(diag::err_missing_vfs_overlay_file) << File;
       continue;
     }
 
     IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getVFSFromYAML(
-        std::move(Buffer.get()), /*DiagHandler*/ nullptr, File,
-        /*DiagContext*/ nullptr, Result);
-    if (!FS) {
+        std::move(Buffer.get()), /*DiagHandler*/ nullptr, File);
+    if (FS)
+      Overlay->pushOverlay(FS);
+    else
       Diags.Report(diag::err_invalid_vfs_overlay) << File;
-      continue;
-    }
-
-    Result = FS;
   }
-  return Result;
+  return Overlay;
 }
 
 } // namespace clang

@@ -122,7 +122,6 @@ module Clang_StaticAnalyzer_Core {
   umbrella "StaticAnalyzer/Core"
 
   textual header "StaticAnalyzer/Core/Analyses.def"
-  textual header "StaticAnalyzer/Core/AnalyzerOptions.def"
   textual header "StaticAnalyzer/Core/PathSensitive/SVals.def"
   textual header "StaticAnalyzer/Core/PathSensitive/Symbols.def"
   textual header "StaticAnalyzer/Core/PathSensitive/Regions.def"
@@ -149,9 +148,6 @@ module Clang_Tooling {
   // importing the AST matchers library gives a link dependency on the AST
   // matchers (and thus the AST), which clang-format should not have.
   exclude header "Tooling/RefactoringCallbacks.h"
-  exclude header "Tooling/Refactor/USRFinder.h"
-
-  textual header "Tooling/Refactor/RefactoringActions.def"
 }
 
 module Clang_ToolingCore {

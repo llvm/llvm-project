@@ -930,10 +930,6 @@ bool Decl::AccessDeclContextSanity() const {
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
-int64_t Decl::getID() const {
-  return getASTContext().getAllocator().identifyKnownAlignedObject<Decl>(this);
-}
-
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
   if (const auto *D = dyn_cast<ValueDecl>(this))

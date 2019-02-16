@@ -553,14 +553,6 @@ TEST_P(ImportExpr, ImportFloatinglLiteralExpr) {
           floatLiteral(equals(1.0e-5f), hasType(asString("float"))))));
 }
 
-TEST_P(ImportExpr, ImportImaginaryLiteralExpr) {
-  MatchVerifier<Decl> Verifier;
-  testImport(
-      "void declToImport() { (void)1.0i; }",
-      Lang_CXX14, "", Lang_CXX14, Verifier,
-      functionDecl(hasDescendant(imaginaryLiteral())));
-}
-
 TEST_P(ImportExpr, ImportCompoundLiteralExpr) {
   MatchVerifier<Decl> Verifier;
   testImport(
@@ -813,6 +805,9 @@ TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
       Lang_CXX, "", Lang_CXX, Verifier,
       functionTemplateDecl());
 }
+
+const internal::VariadicDynCastAllOfMatcher<Expr, CXXDependentScopeMemberExpr>
+    cxxDependentScopeMemberExpr;
 
 TEST_P(ImportExpr, ImportCXXDependentScopeMemberExpr) {
   MatchVerifier<Decl> Verifier;
@@ -2331,6 +2326,9 @@ TEST_P(ImportExpr, DependentNameType) {
              classTemplateDecl(has(
                  cxxRecordDecl(has(typedefDecl(has(dependentNameType())))))));
 }
+
+const internal::VariadicDynCastAllOfMatcher<Expr, UnresolvedMemberExpr>
+    unresolvedMemberExpr;
 
 TEST_P(ImportExpr, UnresolvedMemberExpr) {
   MatchVerifier<Decl> Verifier;

@@ -147,9 +147,9 @@ public:
   void EmitLinkerOptions(ArrayRef<std::string> Options) override;
   void EmitDataRegion(MCDataRegionType Kind) override;
   void EmitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
-                      unsigned Update, VersionTuple SDKVersion) override;
+                      unsigned Update) override;
   void EmitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
-                        unsigned Update, VersionTuple SDKVersion) override;
+                        unsigned Update) override;
   void EmitThumbFunc(MCSymbol *Func) override;
 
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
@@ -513,26 +513,11 @@ static const char *getVersionMinDirective(MCVersionMinType Type) {
   llvm_unreachable("Invalid MC version min type");
 }
 
-static void EmitSDKVersionSuffix(raw_ostream &OS,
-                                 const VersionTuple &SDKVersion) {
-  if (SDKVersion.empty())
-    return;
-  OS << '\t' << "sdk_version " << SDKVersion.getMajor();
-  if (auto Minor = SDKVersion.getMinor()) {
-    OS << ", " << *Minor;
-    if (auto Subminor = SDKVersion.getSubminor()) {
-      OS << ", " << *Subminor;
-    }
-  }
-}
-
 void MCAsmStreamer::EmitVersionMin(MCVersionMinType Type, unsigned Major,
-                                   unsigned Minor, unsigned Update,
-                                   VersionTuple SDKVersion) {
+                                   unsigned Minor, unsigned Update) {
   OS << '\t' << getVersionMinDirective(Type) << ' ' << Major << ", " << Minor;
   if (Update)
     OS << ", " << Update;
-  EmitSDKVersionSuffix(OS, SDKVersion);
   EmitEOL();
 }
 
@@ -548,13 +533,11 @@ static const char *getPlatformName(MachO::PlatformType Type) {
 }
 
 void MCAsmStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
-                                     unsigned Minor, unsigned Update,
-                                     VersionTuple SDKVersion) {
+                                     unsigned Minor, unsigned Update) {
   const char *PlatformName = getPlatformName((MachO::PlatformType)Platform);
   OS << "\t.build_version " << PlatformName << ", " << Major << ", " << Minor;
   if (Update)
     OS << ", " << Update;
-  EmitSDKVersionSuffix(OS, SDKVersion);
   EmitEOL();
 }
 

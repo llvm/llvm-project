@@ -14,13 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangSACheckers.h"
+#include "SelectorExtras.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
-#include "clang/Analysis/SelectorExtras.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -36,7 +36,6 @@
 
 using namespace clang;
 using namespace ento;
-using namespace llvm;
 
 namespace {
 class APIMisuse : public BugType {
@@ -157,11 +156,6 @@ void NilArgChecker::warnIfNilArg(CheckerContext &C,
   if (!State->isNull(msg.getArgSVal(Arg)).isConstrainedTrue())
       return;
 
-  // NOTE: We cannot throw non-fatal errors from warnIfNilExpr,
-  // because it's called multiple times from some callers, so it'd cause
-  // an unwanted state split if two or more non-fatal errors are thrown
-  // within the same checker callback. For now we don't want to, but
-  // it'll need to be fixed if we ever want to.
   if (ExplodedNode *N = C.generateErrorNode()) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
@@ -214,7 +208,7 @@ void NilArgChecker::generateBugReport(ExplodedNode *N,
 
   auto R = llvm::make_unique<BugReport>(*BT, Msg, N);
   R->addRange(Range);
-  bugreporter::trackExpressionValue(N, E, *R);
+  bugreporter::trackNullOrUndefValue(N, E, *R);
   C.emitReport(std::move(R));
 }
 
@@ -532,59 +526,93 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class CFRetainReleaseChecker : public Checker<check::PreCall> {
-  mutable APIMisuse BT{this, "null passed to CF memory management function"};
-  CallDescription CFRetain{"CFRetain", 1},
-                  CFRelease{"CFRelease", 1},
-                  CFMakeCollectable{"CFMakeCollectable", 1},
-                  CFAutorelease{"CFAutorelease", 1};
+class CFRetainReleaseChecker : public Checker< check::PreStmt<CallExpr> > {
+  mutable std::unique_ptr<APIMisuse> BT;
+  mutable IdentifierInfo *Retain, *Release, *MakeCollectable, *Autorelease;
 
 public:
-  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  CFRetainReleaseChecker()
+      : Retain(nullptr), Release(nullptr), MakeCollectable(nullptr),
+        Autorelease(nullptr) {}
+  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 };
 } // end anonymous namespace
 
-void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
+void CFRetainReleaseChecker::checkPreStmt(const CallExpr *CE,
                                           CheckerContext &C) const {
-  // TODO: Make this check part of CallDescription.
-  if (!Call.isGlobalCFunction())
+  // If the CallExpr doesn't have exactly 1 argument just give up checking.
+  if (CE->getNumArgs() != 1)
     return;
+
+  ProgramStateRef state = C.getState();
+  const FunctionDecl *FD = C.getCalleeDecl(CE);
+  if (!FD)
+    return;
+
+  if (!BT) {
+    ASTContext &Ctx = C.getASTContext();
+    Retain = &Ctx.Idents.get("CFRetain");
+    Release = &Ctx.Idents.get("CFRelease");
+    MakeCollectable = &Ctx.Idents.get("CFMakeCollectable");
+    Autorelease = &Ctx.Idents.get("CFAutorelease");
+    BT.reset(new APIMisuse(
+        this, "null passed to CF memory management function"));
+  }
 
   // Check if we called CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
-  if (!(Call.isCalled(CFRetain) || Call.isCalled(CFRelease) ||
-        Call.isCalled(CFMakeCollectable) || Call.isCalled(CFAutorelease)))
+  const IdentifierInfo *FuncII = FD->getIdentifier();
+  if (!(FuncII == Retain || FuncII == Release || FuncII == MakeCollectable ||
+        FuncII == Autorelease))
     return;
 
+  // FIXME: The rest of this just checks that the argument is non-null.
+  // It should probably be refactored and combined with NonNullParamChecker.
+
   // Get the argument's value.
-  SVal ArgVal = Call.getArgSVal(0);
+  const Expr *Arg = CE->getArg(0);
+  SVal ArgVal = C.getSVal(Arg);
   Optional<DefinedSVal> DefArgVal = ArgVal.getAs<DefinedSVal>();
   if (!DefArgVal)
     return;
 
-  // Is it null?
-  ProgramStateRef state = C.getState();
-  ProgramStateRef stateNonNull, stateNull;
-  std::tie(stateNonNull, stateNull) = state->assume(*DefArgVal);
+  // Get a NULL value.
+  SValBuilder &svalBuilder = C.getSValBuilder();
+  DefinedSVal zero =
+      svalBuilder.makeZeroVal(Arg->getType()).castAs<DefinedSVal>();
 
-  if (!stateNonNull) {
-    ExplodedNode *N = C.generateErrorNode(stateNull);
+  // Make an expression asserting that they're equal.
+  DefinedOrUnknownSVal ArgIsNull = svalBuilder.evalEQ(state, zero, *DefArgVal);
+
+  // Are they equal?
+  ProgramStateRef stateTrue, stateFalse;
+  std::tie(stateTrue, stateFalse) = state->assume(ArgIsNull);
+
+  if (stateTrue && !stateFalse) {
+    ExplodedNode *N = C.generateErrorNode(stateTrue);
     if (!N)
       return;
 
-    SmallString<64> Str;
-    raw_svector_ostream OS(Str);
-    OS << "Null pointer argument in call to "
-       << cast<FunctionDecl>(Call.getDecl())->getName();
+    const char *description;
+    if (FuncII == Retain)
+      description = "Null pointer argument in call to CFRetain";
+    else if (FuncII == Release)
+      description = "Null pointer argument in call to CFRelease";
+    else if (FuncII == MakeCollectable)
+      description = "Null pointer argument in call to CFMakeCollectable";
+    else if (FuncII == Autorelease)
+      description = "Null pointer argument in call to CFAutorelease";
+    else
+      llvm_unreachable("impossible case");
 
-    auto report = llvm::make_unique<BugReport>(BT, OS.str(), N);
-    report->addRange(Call.getArgSourceRange(0));
-    bugreporter::trackExpressionValue(N, Call.getArgExpr(0), *report);
+    auto report = llvm::make_unique<BugReport>(*BT, description, N);
+    report->addRange(Arg->getSourceRange());
+    bugreporter::trackNullOrUndefValue(N, Arg, *report);
     C.emitReport(std::move(report));
     return;
   }
 
   // From here on, we know the argument is non-null.
-  C.addTransition(stateNonNull);
+  C.addTransition(stateFalse);
 }
 
 //===----------------------------------------------------------------------===//

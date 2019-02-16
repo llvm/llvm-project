@@ -1234,32 +1234,6 @@ namespace {
     }
   };
 
-  class AttrArgument : public SimpleArgument {
-  public:
-    AttrArgument(const Record &Arg, StringRef Attr)
-      : SimpleArgument(Arg, Attr, "Attr *")
-    {}
-
-    void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    AttrVec vec;\n"
-            "    ReadAttributes(Record, vec);\n"
-            "    assert(vec.size() == 1);\n"
-            "    Attr *" << getLowerName() << " = vec.front();";
-    }
-
-    void writePCHWrite(raw_ostream &OS) const override {
-      OS << "    AddAttributes(SA->get" << getUpperName() << "());";
-    }
-
-    void writeDump(raw_ostream &OS) const override {}
-  
-    void writeDumpChildren(raw_ostream &OS) const override {
-      OS << "    dumpAttr(SA->get" << getUpperName() << "());\n";
-    }
-
-    void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
-  };
-
 } // end anonymous namespace
 
 static std::unique_ptr<Argument>
@@ -1315,8 +1289,6 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<VariadicIdentifierArgument>(Arg, Attr);
   else if (ArgName == "VersionArgument")
     Ptr = llvm::make_unique<VersionArgument>(Arg, Attr);
-  else if (ArgName == "AttrArgument")
-    Ptr = llvm::make_unique<AttrArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.

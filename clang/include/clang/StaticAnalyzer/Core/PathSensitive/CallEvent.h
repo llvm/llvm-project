@@ -80,9 +80,7 @@ class CallDescription {
 
   mutable IdentifierInfo *II = nullptr;
   mutable bool IsLookupDone = false;
-  // The list of the qualified names used to identify the specified CallEvent,
-  // e.g. "{a, b}" represent the qualified names, like "a::b".
-  std::vector<const char *> QualifiedName;
+  StringRef FuncName;
   unsigned RequiredArgs;
 
 public:
@@ -90,20 +88,16 @@ public:
 
   /// Constructs a CallDescription object.
   ///
-  /// @param QualifiedName The list of the name qualifiers of the function that
-  /// will be matched. The user is allowed to skip any of the qualifiers.
-  /// For example, {"std", "basic_string", "c_str"} would match both
-  /// std::basic_string<...>::c_str() and std::__1::basic_string<...>::c_str().
+  /// @param FuncName The name of the function that will be matched.
   ///
   /// @param RequiredArgs The number of arguments that is expected to match a
   /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
-  CallDescription(ArrayRef<const char *> QualifiedName,
-                  unsigned RequiredArgs = NoArgRequirement)
-      : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs) {}
+  CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
+      : FuncName(FuncName), RequiredArgs(RequiredArgs) {}
 
   /// Get the name of the function that this object matches.
-  StringRef getFunctionName() const { return QualifiedName.back(); }
+  StringRef getFunctionName() const { return FuncName; }
 };
 
 template<typename T = CallEvent>
@@ -434,23 +428,21 @@ public:
   bool isArgumentConstructedDirectly(unsigned Index) const {
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
-        getState(), {getOriginExpr(), Index}, getLocationContext()).hasValue();
+        getState(), {getOriginExpr(), Index}, getCalleeStackFrame()).hasValue();
   }
 
   /// Some calls have parameter numbering mismatched from argument numbering.
   /// This function converts an argument index to the corresponding
   /// parameter index. Returns None is the argument doesn't correspond
   /// to any parameter variable.
-  virtual Optional<unsigned>
-  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const {
-    return ASTArgumentIndex;
-  }
-
-  /// Some call event sub-classes conveniently adjust mismatching AST indices
-  /// to match parameter indices. This function converts an argument index
-  /// as understood by CallEvent to the argument index as understood by the AST.
-  virtual unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const {
-    return CallArgumentIndex;
+  Optional<unsigned> getAdjustedParameterIndex(unsigned ArgumentIndex) const {
+    if (dyn_cast_or_null<CXXOperatorCallExpr>(getOriginExpr()) &&
+        dyn_cast_or_null<CXXMethodDecl>(getDecl())) {
+      // For member operator calls argument 0 on the expression corresponds
+      // to implicit this-parameter on the declaration.
+      return (ArgumentIndex > 0) ? Optional<unsigned>(ArgumentIndex - 1) : None;
+    }
+    return ArgumentIndex;
   }
 
   // Iterator access to formal parameters and their types.
@@ -777,20 +769,6 @@ public:
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXMemberOperator;
   }
-
-  Optional<unsigned>
-  getAdjustedParameterIndex(unsigned ASTArgumentIndex) const override {
-    // For member operator calls argument 0 on the expression corresponds
-    // to implicit this-parameter on the declaration.
-    return (ASTArgumentIndex > 0) ? Optional<unsigned>(ASTArgumentIndex - 1)
-                                  : None;
-  }
-
-  unsigned getASTArgumentIndex(unsigned CallArgumentIndex) const override {
-    // For member operator calls argument 0 on the expression corresponds
-    // to implicit this-parameter on the declaration.
-    return CallArgumentIndex + 1;
-  }
 };
 
 /// Represents an implicit call to a C++ destructor.
@@ -921,30 +899,15 @@ public:
     return getOriginExpr()->getOperatorNew();
   }
 
-  /// Number of non-placement arguments to the call. It is equal to 2 for
-  /// C++17 aligned operator new() calls that have alignment implicitly
-  /// passed as the second argument, and to 1 for other operator new() calls.
-  unsigned getNumImplicitArgs() const {
-    return getOriginExpr()->passAlignment() ? 2 : 1;
-  }
-
   unsigned getNumArgs() const override {
-    return getOriginExpr()->getNumPlacementArgs() + getNumImplicitArgs();
+    return getOriginExpr()->getNumPlacementArgs() + 1;
   }
 
   const Expr *getArgExpr(unsigned Index) const override {
     // The first argument of an allocator call is the size of the allocation.
-    if (Index < getNumImplicitArgs())
+    if (Index == 0)
       return nullptr;
-    return getOriginExpr()->getPlacementArg(Index - getNumImplicitArgs());
-  }
-
-  /// Number of placement arguments to the operator new() call. For example,
-  /// standard std::nothrow operator new and standard placement new both have
-  /// 1 implicit argument (size) and 1 placement argument, while regular
-  /// operator new() has 1 implicit argument and 0 placement arguments.
-  const Expr *getPlacementArgExpr(unsigned Index) const {
-    return getOriginExpr()->getPlacementArg(Index);
+    return getOriginExpr()->getPlacementArg(Index - 1);
   }
 
   Kind getKind() const override { return CE_CXXAllocator; }

@@ -1,6 +1,8 @@
 // RUN: %clang_safestack %s -pthread -o %t
 // RUN: %run %t
 
+// XFAIL: darwin
+
 // Test that pthreads receive their own unsafe stack.
 
 #include <stdlib.h>

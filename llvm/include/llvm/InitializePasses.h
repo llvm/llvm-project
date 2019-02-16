@@ -161,7 +161,6 @@ void initializeGlobalOptLegacyPassPass(PassRegistry&);
 void initializeGlobalSplitPass(PassRegistry&);
 void initializeGlobalsAAWrapperPassPass(PassRegistry&);
 void initializeGuardWideningLegacyPassPass(PassRegistry&);
-void initializeHotColdSplittingLegacyPassPass(PassRegistry&);
 void initializeHWAddressSanitizerPass(PassRegistry&);
 void initializeIPCPPass(PassRegistry&);
 void initializeIPSCCPLegacyPassPass(PassRegistry&);

@@ -289,20 +289,15 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
     return false;
 
   SmallVector<unsigned, 8> UnusedArgs;
-  bool Changed = false;
-
   for (Argument &Arg : Fn.args()) {
-    if (!Arg.hasSwiftErrorAttr() && Arg.use_empty() && !Arg.hasByValOrInAllocaAttr()) {
-      if (Arg.isUsedByMetadata()) {
-        Arg.replaceAllUsesWith(UndefValue::get(Arg.getType()));
-        Changed = true;
-      }
+    if (!Arg.hasSwiftErrorAttr() && Arg.use_empty() && !Arg.hasByValOrInAllocaAttr())
       UnusedArgs.push_back(Arg.getArgNo());
-    }
   }
 
   if (UnusedArgs.empty())
     return false;
+
+  bool Changed = false;
 
   for (Use &U : Fn.uses()) {
     CallSite CS(U.getUser());

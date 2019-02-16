@@ -53,7 +53,6 @@
 #include <cassert>
 #include <cstring>
 #include <string>
-#include <tuple>
 #include <utility>
 
 namespace llvm {
@@ -119,9 +118,6 @@ hash_code hash_value(const std::pair<T, U> &arg);
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
 
-/// \brief Compute a hash_code for a tuple.
-template <typename ...Ts>
-hash_code hash_value(const std::tuple<Ts...> &arg);
 
 /// Override the execution seed with a fixed value.
 ///
@@ -137,7 +133,7 @@ hash_code hash_value(const std::tuple<Ts...> &arg);
 /// undone. This makes it thread-hostile and very hard to use outside of
 /// immediately on start of a simple program designed for reproducible
 /// behavior.
-void set_fixed_execution_hash_seed(uint64_t fixed_value);
+void set_fixed_execution_hash_seed(size_t fixed_value);
 
 
 // All of the implementation details of actually computing the various hash
@@ -320,9 +316,9 @@ struct hash_state {
 /// This variable can be set using the \see llvm::set_fixed_execution_seed
 /// function. See that function for details. Do not, under any circumstances,
 /// set or read this variable.
-extern uint64_t fixed_seed_override;
+extern size_t fixed_seed_override;
 
-inline uint64_t get_execution_seed() {
+inline size_t get_execution_seed() {
   // FIXME: This needs to be a per-execution seed. This is just a placeholder
   // implementation. Switching to a per-execution seed is likely to flush out
   // instability bugs and so will happen as its own commit.
@@ -330,7 +326,8 @@ inline uint64_t get_execution_seed() {
   // However, if there is a fixed seed override set the first time this is
   // called, return that instead of the per-execution seed.
   const uint64_t seed_prime = 0xff51afd7ed558ccdULL;
-  static uint64_t seed = fixed_seed_override ? fixed_seed_override : seed_prime;
+  static size_t seed = fixed_seed_override ? fixed_seed_override
+                                           : (size_t)seed_prime;
   return seed;
 }
 
@@ -405,7 +402,7 @@ bool store_and_advance(char *&buffer_ptr, char *buffer_end, const T& value,
 /// combining them, this (as an optimization) directly combines the integers.
 template <typename InputIteratorT>
 hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
-  const uint64_t seed = get_execution_seed();
+  const size_t seed = get_execution_seed();
   char buffer[64], *buffer_ptr = buffer;
   char *const buffer_end = std::end(buffer);
   while (first != last && store_and_advance(buffer_ptr, buffer_end,
@@ -449,7 +446,7 @@ hash_code hash_combine_range_impl(InputIteratorT first, InputIteratorT last) {
 template <typename ValueT>
 typename std::enable_if<is_hashable_data<ValueT>::value, hash_code>::type
 hash_combine_range_impl(ValueT *first, ValueT *last) {
-  const uint64_t seed = get_execution_seed();
+  const size_t seed = get_execution_seed();
   const char *s_begin = reinterpret_cast<const char *>(first);
   const char *s_end = reinterpret_cast<const char *>(last);
   const size_t length = std::distance(s_begin, s_end);
@@ -499,7 +496,7 @@ namespace detail {
 struct hash_combine_recursive_helper {
   char buffer[64];
   hash_state state;
-  const uint64_t seed;
+  const size_t seed;
 
 public:
   /// Construct a recursive hash combining helper.
@@ -657,33 +654,6 @@ hash_code hash_value(const std::pair<T, U> &arg) {
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
   return hash_combine_range(arg.begin(), arg.end());
-}
-
-template<unsigned ...Indices>
-struct UnsignedConstantIndexSet { };
-
-template<unsigned I, unsigned N, unsigned ...Indices>
-struct MakeUnsignedConstantIndexSet {
-  typedef typename MakeUnsignedConstantIndexSet<I+1, N, Indices..., I>::Type
-    Type;
-};
-
-template<unsigned N, unsigned ...Indices>
-struct MakeUnsignedConstantIndexSet<N, N, Indices...> {
-  typedef UnsignedConstantIndexSet<Indices...> Type;
-};
-
-template <typename ...Ts, unsigned ...Indices>
-hash_code hash_value_tuple_helper(const std::tuple<Ts...> &arg,
-                                  UnsignedConstantIndexSet<Indices...> indices) {
-  return hash_combine(hash_value(std::get<Indices>(arg))...);
-}
-
-template <typename ...Ts>
-hash_code hash_value(const std::tuple<Ts...> &arg) {
-  return hash_value_tuple_helper(
-           arg, 
-           typename MakeUnsignedConstantIndexSet<0, sizeof...(Ts)>::Type());
 }
 
 } // namespace llvm

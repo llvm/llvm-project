@@ -145,13 +145,6 @@ void printDiag(llvm::raw_string_ostream &OS, const DiagBase &D) {
   OS << diagLeveltoString(D.Severity) << ": " << D.Message;
 }
 
-/// Capitalizes the first word in the diagnostic's message.
-std::string capitalize(std::string Message) {
-  if (!Message.empty())
-    Message[0] = llvm::toUpper(Message[0]);
-  return Message;
-}
-
 /// Returns a message sent to LSP for the main diagnostic in \p D.
 /// The message includes all the notes with their corresponding locations.
 /// However, notes with fix-its are excluded as those usually only contain a
@@ -173,7 +166,7 @@ std::string mainMessage(const Diag &D) {
     printDiag(OS, Note);
   }
   OS.flush();
-  return capitalize(std::move(Result));
+  return Result;
 }
 
 /// Returns a message sent to LSP for the note of the main diagnostic.
@@ -186,7 +179,7 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note) {
   OS << "\n\n";
   printDiag(OS, Main);
   OS.flush();
-  return capitalize(std::move(Result));
+  return Result;
 }
 } // namespace
 

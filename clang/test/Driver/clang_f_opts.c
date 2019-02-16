@@ -531,12 +531,3 @@
 // RUN: %clang -### -S -fno-delete-null-pointer-checks -fdelete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NULL-POINTER-CHECKS %s
 // CHECK-NO-NULL-POINTER-CHECKS: "-fno-delete-null-pointer-checks"
 // CHECK-NULL-POINTER-CHECKS-NOT: "-fno-delete-null-pointer-checks"
-
-// RUN: %clang -### -S -ftrivial-auto-var-init=uninitialized %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-UNINIT %s
-// RUN: %clang -### -S -ftrivial-auto-var-init=pattern %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-PATTERN %s
-// RUN: %clang -### -S -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-GOOD %s
-// RUN: %clang -### -S -ftrivial-auto-var-init=zero %s 2>&1 | FileCheck -check-prefix=CHECK-TRIVIAL-ZERO-BAD %s
-// CHECK-TRIVIAL-UNINIT-NOT: hasn't been enabled
-// CHECK-TRIVIAL-PATTERN-NOT: hasn't been enabled
-// CHECK-TRIVIAL-ZERO-GOOD-NOT: hasn't been enabled
-// CHECK-TRIVIAL-ZERO-BAD: hasn't been enabled

@@ -100,6 +100,9 @@ void MPIChecker::checkUnmatchedWaits(const CallEvent &PreCallEvent,
 
 void MPIChecker::checkMissingWaits(SymbolReaper &SymReaper,
                                    CheckerContext &Ctx) const {
+  if (!SymReaper.hasDeadSymbols())
+    return;
+
   ProgramStateRef State = Ctx.getState();
   const auto &Requests = State->get<RequestMap>();
   if (Requests.isEmpty())

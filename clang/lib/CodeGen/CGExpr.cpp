@@ -1458,16 +1458,6 @@ CodeGenFunction::tryEmitAsConstant(const MemberExpr *ME) {
   return ConstantEmission();
 }
 
-llvm::Value *CodeGenFunction::emitScalarConstant(
-    const CodeGenFunction::ConstantEmission &Constant, Expr *E) {
-  assert(Constant && "not a constant");
-  if (Constant.isReference())
-    return EmitLoadOfLValue(Constant.getReferenceLValue(*this, E),
-                            E->getExprLoc())
-        .getScalarVal();
-  return Constant.getValue();
-}
-
 llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                                                SourceLocation Loc) {
   return EmitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
@@ -2418,7 +2408,6 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     // A DeclRefExpr for a reference initialized by a constant expression can
     // appear without being odr-used. Directly emit the constant initializer.
     const Expr *Init = VD->getAnyInitializer(VD);
-    const auto *BD = dyn_cast_or_null<BlockDecl>(CurCodeDecl);
     if (Init && !isa<ParmVarDecl>(VD) && VD->getType()->isReferenceType() &&
         VD->isUsableInConstantExpressions(getContext()) &&
         VD->checkInitIsICE() &&
@@ -2428,7 +2417,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
             (LocalDeclMap.count(VD->getCanonicalDecl()) ||
              CapturedStmtInfo->lookup(VD->getCanonicalDecl()))) ||
            LambdaCaptureFields.lookup(VD->getCanonicalDecl()) ||
-           (BD && BD->capturesVariable(VD))))) {
+           isa<BlockDecl>(CurCodeDecl)))) {
       llvm::Constant *Val =
         ConstantEmitter(*this).emitAbstract(E->getLocation(),
                                             *VD->evaluateValue(),
@@ -2467,7 +2456,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       }
 
       assert(isa<BlockDecl>(CurCodeDecl));
-      Address addr = GetAddrOfBlockDecl(VD);
+      Address addr = GetAddrOfBlockDecl(VD, VD->hasAttr<BlocksAttr>());
       return MakeAddrLValue(addr, T, AlignmentSource::Decl);
     }
   }
@@ -2519,7 +2508,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     }
 
     // Drill into block byref variables.
-    bool isBlockByref = VD->isEscapingByref();
+    bool isBlockByref = VD->hasAttr<BlocksAttr>();
     if (isBlockByref) {
       addr = emitBlockByrefAddress(addr, VD);
     }
@@ -2848,11 +2837,6 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                  CheckRecoverableKind RecoverKind, bool IsFatal,
                                  llvm::BasicBlock *ContBB) {
   assert(IsFatal || RecoverKind != CheckRecoverableKind::Unrecoverable);
-  Optional<ApplyDebugLocation> DL;
-  if (!CGF.Builder.getCurrentDebugLocation()) {
-    // Ensure that the call has at least an artificial debug location.
-    DL.emplace(CGF, SourceLocation());
-  }
   bool NeedsAbortSuffix =
       IsFatal && RecoverKind != CheckRecoverableKind::Unrecoverable;
   bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;

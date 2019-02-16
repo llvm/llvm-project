@@ -2315,13 +2315,11 @@ void CodeGenModule::registerGlobalDtorsWithAtExit() {
         FTy, GlobalInitFnName, getTypes().arrangeNullaryFunction(),
         SourceLocation());
     ASTContext &Ctx = getContext();
-    QualType ReturnTy = Ctx.VoidTy;
-    QualType FunctionTy = Ctx.getFunctionType(ReturnTy, llvm::None, {});
     FunctionDecl *FD = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        &Ctx.Idents.get(GlobalInitFnName), FunctionTy, nullptr, SC_Static,
+        &Ctx.Idents.get(GlobalInitFnName), Ctx.VoidTy, nullptr, SC_Static,
         false, false);
-    CGF.StartFunction(GlobalDecl(FD), ReturnTy, GlobalInitFn,
+    CGF.StartFunction(GlobalDecl(FD), getContext().VoidTy, GlobalInitFn,
                       getTypes().arrangeNullaryFunction(), FunctionArgList(),
                       SourceLocation(), SourceLocation());
 
@@ -2344,9 +2342,6 @@ void ItaniumCXXABI::registerGlobalDtor(CodeGenFunction &CGF,
                                        const VarDecl &D,
                                        llvm::Constant *dtor,
                                        llvm::Constant *addr) {
-  if (D.isNoDestroy(CGM.getContext()))
-    return;
-
   // Use __cxa_atexit if available.
   if (CGM.getCodeGenOpts().CXAAtExit)
     return emitGlobalDtorWithCXAAtExit(CGF, dtor, addr, D.getTLSKind());

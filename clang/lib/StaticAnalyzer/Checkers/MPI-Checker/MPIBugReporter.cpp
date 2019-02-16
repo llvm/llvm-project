@@ -87,6 +87,7 @@ void MPIBugReporter::reportUnmatchedWait(
 
 std::shared_ptr<PathDiagnosticPiece>
 MPIBugReporter::RequestNodeVisitor::VisitNode(const ExplodedNode *N,
+                                              const ExplodedNode *PrevN,
                                               BugReporterContext &BRC,
                                               BugReport &BR) {
 
@@ -95,13 +96,13 @@ MPIBugReporter::RequestNodeVisitor::VisitNode(const ExplodedNode *N,
 
   const Request *const Req = N->getState()->get<RequestMap>(RequestRegion);
   const Request *const PrevReq =
-      N->getFirstPred()->getState()->get<RequestMap>(RequestRegion);
+      PrevN->getState()->get<RequestMap>(RequestRegion);
 
   // Check if request was previously unused or in a different state.
   if ((Req && !PrevReq) || (Req->CurrentState != PrevReq->CurrentState)) {
     IsNodeFound = true;
 
-    ProgramPoint P = N->getFirstPred()->getLocation();
+    ProgramPoint P = PrevN->getLocation();
     PathDiagnosticLocation L =
         PathDiagnosticLocation::create(P, BRC.getSourceManager());
 

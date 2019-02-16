@@ -107,8 +107,6 @@ public:
 
   ~ProgramState();
 
-  int64_t getID() const;
-
   /// Return the ProgramStateManager associated with this state.
   ProgramStateManager &getStateManager() const {
     return *stateMgr;
@@ -348,8 +346,6 @@ public:
   /// a value of such type.
   SVal getSValAsScalarOrLoc(const MemRegion *R) const;
 
-  using region_iterator = const MemRegion **;
-
   /// Visits the symbols reachable from the given SVal using the provided
   /// SymbolVisitor.
   ///
@@ -359,14 +355,24 @@ public:
   /// \sa ScanReachableSymbols
   bool scanReachableSymbols(SVal val, SymbolVisitor& visitor) const;
 
+  /// Visits the symbols reachable from the SVals in the given range
+  /// using the provided SymbolVisitor.
+  bool scanReachableSymbols(const SVal *I, const SVal *E,
+                            SymbolVisitor &visitor) const;
+
   /// Visits the symbols reachable from the regions in the given
   /// MemRegions range using the provided SymbolVisitor.
-  bool scanReachableSymbols(llvm::iterator_range<region_iterator> Reachable,
+  bool scanReachableSymbols(const MemRegion * const *I,
+                            const MemRegion * const *E,
                             SymbolVisitor &visitor) const;
 
   template <typename CB> CB scanReachableSymbols(SVal val) const;
+  template <typename CB> CB scanReachableSymbols(const SVal *beg,
+                                                 const SVal *end) const;
+
   template <typename CB> CB
-  scanReachableSymbols(llvm::iterator_range<region_iterator> Reachable) const;
+  scanReachableSymbols(const MemRegion * const *beg,
+                       const MemRegion * const *end) const;
 
   /// Create a new state in which the statement is marked as tainted.
   LLVM_NODISCARD ProgramStateRef
@@ -463,7 +469,8 @@ public:
              const LocationContext *CurrentLC = nullptr) const;
   void printDOT(raw_ostream &Out,
                 const LocationContext *CurrentLC = nullptr) const;
-  void printTaint(raw_ostream &Out, const char *nl = "\n") const;
+  void printTaint(raw_ostream &Out, const char *nl = "\n",
+                  const char *sep = "") const;
 
   void dump() const;
   void dumpTaint() const;
@@ -875,10 +882,17 @@ CB ProgramState::scanReachableSymbols(SVal val) const {
 }
 
 template <typename CB>
-CB ProgramState::scanReachableSymbols(
-    llvm::iterator_range<region_iterator> Reachable) const {
+CB ProgramState::scanReachableSymbols(const SVal *beg, const SVal *end) const {
   CB cb(this);
-  scanReachableSymbols(Reachable, cb);
+  scanReachableSymbols(beg, end, cb);
+  return cb;
+}
+
+template <typename CB>
+CB ProgramState::scanReachableSymbols(const MemRegion * const *beg,
+                                 const MemRegion * const *end) const {
+  CB cb(this);
+  scanReachableSymbols(beg, end, cb);
   return cb;
 }
 

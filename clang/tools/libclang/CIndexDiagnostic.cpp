@@ -146,20 +146,7 @@ public:
 
   CXDiagnosticSetImpl *CurrentSet;
   CXDiagnosticSetImpl *MainSet;
-};
-
-class CXStoredDiagnosticSet : public CXDiagnosticSetImpl {
-  llvm::SmallVector<StoredDiagnostic, 2> Diags;
-
-public:
-  CXStoredDiagnosticSet(ArrayRef<StoredDiagnostic> Diags,
-                        const LangOptions &LangOpts)
-      : CXDiagnosticSetImpl(/*isManaged=*/true),
-        Diags(Diags.begin(), Diags.end()) {
-    for (const auto &Diag : this->Diags)
-      appendDiagnostic(llvm::make_unique<CXStoredDiagnostic>(Diag, LangOpts));
-  }
-};
+};  
 }
 
 CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
@@ -207,11 +194,6 @@ CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
     }
   }
   return static_cast<CXDiagnosticSetImpl*>(TU->Diagnostics);
-}
-
-CXDiagnosticSetImpl *cxdiag::createStoredDiags(ArrayRef<StoredDiagnostic> Diags,
-                                               const LangOptions &LangOpts) {
-  return new CXStoredDiagnosticSet(Diags, LangOpts);
 }
 
 //-----------------------------------------------------------------------------

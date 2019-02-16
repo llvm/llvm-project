@@ -1923,8 +1923,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
     CallInst *CallTrap = CallInst::Create(TrapFn, "", I);
     CallTrap->setDebugLoc(I->getDebugLoc());
   }
-  auto *UI = new UnreachableInst(I->getContext(), I);
-  UI->setDebugLoc(I->getDebugLoc());
+  new UnreachableInst(I->getContext(), I);
 
   // All instructions after this are dead.
   unsigned NumInstrsRemoved = 0;

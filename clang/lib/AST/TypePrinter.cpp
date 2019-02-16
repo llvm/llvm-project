@@ -104,7 +104,6 @@ namespace {
     unsigned Indentation;
     bool HasEmptyPlaceHolder = false;
     bool InsideCCAttribute = false;
-    bool IgnoreFunctionProtoTypeConstQual = false;
 
   public:
     explicit TypePrinter(const PrintingPolicy &Policy, unsigned Indentation = 0)
@@ -803,12 +802,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   printFunctionAfter(Info, OS);
 
   if (unsigned quals = T->getTypeQuals()) {
-    if (IgnoreFunctionProtoTypeConstQual)
-      quals &= ~unsigned(Qualifiers::Const);
-    if (quals) {
-      OS << ' ';
-      AppendTypeQualList(OS, quals, Policy.Restrict);
-    }
+    OS << ' ';
+    AppendTypeQualList(OS, quals, Policy.Restrict);
   }
 
   switch (T->getRefQualifier()) {
@@ -1137,13 +1132,6 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
     assert(Typedef->getIdentifier() && "Typedef without identifier?");
     OS << Typedef->getIdentifier()->getName();
-  } else if (Policy.UseStdFunctionForLambda && isa<CXXRecordDecl>(D) &&
-             cast<CXXRecordDecl>(D)->isLambda()) {
-    OS << "std::function<";
-    QualType T = cast<CXXRecordDecl>(D)->getLambdaCallOperator()->getType();
-    SaveAndRestore<bool> NoConst(IgnoreFunctionProtoTypeConstQual, true);
-    print(T, OS, "");
-    OS << '>';
   } else {
     // Make an unambiguous representation for anonymous types, e.g.
     //   (anonymous enum at /usr/include/string.h:120:9)
@@ -1166,13 +1154,9 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
       PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
           D->getLocation());
       if (PLoc.isValid()) {
-        OS << " at ";
-        StringRef File = PLoc.getFilename();
-        if (Policy.RemapFilePaths)
-          OS << Policy.remapPath(File);
-        else
-          OS << File;
-        OS << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+        OS << " at " << PLoc.getFilename()
+           << ':' << PLoc.getLine()
+           << ':' << PLoc.getColumn();
       }
     }
 

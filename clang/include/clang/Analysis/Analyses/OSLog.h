@@ -52,10 +52,7 @@ public:
 
     // The item is corresponding to the '%m' format specifier, no value is
     // populated in the buffer and the runtime is loading the errno value.
-    ErrnoKind,
-
-    // The item is a mask type.
-    MaskKind
+    ErrnoKind
   };
 
   enum {
@@ -63,10 +60,7 @@ public:
     IsPrivate = 0x1,
 
     // The item is marked "public" in the format string.
-    IsPublic = 0x2,
-
-    // The item is marked "sensitive" in the format string.
-    IsSensitive = 0x4 | IsPrivate
+    IsPublic = 0x2
   };
 
 private:
@@ -75,24 +69,21 @@ private:
   CharUnits ConstValue;
   CharUnits Size; // size of the data, not including the header bytes
   unsigned Flags = 0;
-  StringRef MaskType;
 
 public:
-  OSLogBufferItem(Kind kind, const Expr *expr, CharUnits size, unsigned flags,
-                  StringRef maskType = StringRef())
-      : TheKind(kind), TheExpr(expr), Size(size), Flags(flags),
-        MaskType(maskType) {
-    assert(((Flags == 0) || (Flags == IsPrivate) || (Flags == IsPublic) ||
-            (Flags == IsSensitive)) &&
-           "unexpected privacy flag");
-  }
+  OSLogBufferItem(Kind kind, const Expr *expr, CharUnits size, unsigned flags)
+      : TheKind(kind), TheExpr(expr), Size(size), Flags(flags) {}
 
   OSLogBufferItem(ASTContext &Ctx, CharUnits value, unsigned flags)
       : TheKind(CountKind), ConstValue(value),
         Size(Ctx.getTypeSizeInChars(Ctx.IntTy)), Flags(flags) {}
 
   unsigned char getDescriptorByte() const {
-    unsigned char result = Flags;
+    unsigned char result = 0;
+    if (getIsPrivate())
+      result |= IsPrivate;
+    if (getIsPublic())
+      result |= IsPublic;
     result |= ((unsigned)getKind()) << 4;
     return result;
   }
@@ -101,12 +92,11 @@ public:
 
   Kind getKind() const { return TheKind; }
   bool getIsPrivate() const { return (Flags & IsPrivate) != 0; }
+  bool getIsPublic() const { return (Flags & IsPublic) != 0; }
 
   const Expr *getExpr() const { return TheExpr; }
   CharUnits getConstValue() const { return ConstValue; }
   CharUnits size() const { return Size; }
-
-  StringRef getMaskType() const { return MaskType; }
 };
 
 class OSLogBufferLayout {
@@ -130,10 +120,14 @@ public:
         Items, [](const OSLogBufferItem &Item) { return Item.getIsPrivate(); });
   }
 
-  bool hasNonScalarOrMask() const {
+  bool hasPublicItems() const {
+    return llvm::any_of(
+        Items, [](const OSLogBufferItem &Item) { return Item.getIsPublic(); });
+  }
+
+  bool hasNonScalar() const {
     return llvm::any_of(Items, [](const OSLogBufferItem &Item) {
-      return Item.getKind() != OSLogBufferItem::ScalarKind ||
-             !Item.getMaskType().empty();
+      return Item.getKind() != OSLogBufferItem::ScalarKind;
     });
   }
 
@@ -141,7 +135,7 @@ public:
     unsigned char result = 0;
     if (hasPrivateItems())
       result |= HasPrivateItems;
-    if (hasNonScalarOrMask())
+    if (hasNonScalar())
       result |= HasNonScalarItems;
     return result;
   }

@@ -23,7 +23,6 @@ Basic Commands
    llvm-ar
    llvm-lib
    llvm-nm
-   llvm-objdump
    llvm-config
    llvm-diff
    llvm-cov

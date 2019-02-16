@@ -98,7 +98,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
 
       // Emit the bug report.
       auto R = llvm::make_unique<BugReport>(*BT, BT->getDescription(), N);
-      bugreporter::trackExpressionValue(N, Ex, *R);
+      bugreporter::trackNullOrUndefValue(N, Ex, *R);
       R->addRange(Ex->getSourceRange());
 
       Ctx.emitReport(std::move(R));

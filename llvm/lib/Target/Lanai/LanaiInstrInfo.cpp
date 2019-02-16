@@ -101,12 +101,12 @@ bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(
   // the width doesn't overlap the offset of a higher memory access,
   // then the memory accesses are different.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
+  unsigned BaseRegA = 0, BaseRegB = 0;
   int64_t OffsetA = 0, OffsetB = 0;
   unsigned int WidthA = 0, WidthB = 0;
-  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
-      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
-    if (BaseOpA->isIdenticalTo(*BaseOpB)) {
+  if (getMemOpBaseRegImmOfsWidth(MIa, BaseRegA, OffsetA, WidthA, TRI) &&
+      getMemOpBaseRegImmOfsWidth(MIb, BaseRegB, OffsetB, WidthB, TRI)) {
+    if (BaseRegA == BaseRegB) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
       int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
@@ -750,9 +750,9 @@ unsigned LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
-    MachineInstr &LdSt, MachineOperand *&BaseOp, int64_t &Offset,
-    unsigned &Width, const TargetRegisterInfo * /*TRI*/) const {
+bool LanaiInstrInfo::getMemOpBaseRegImmOfsWidth(
+    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
+    const TargetRegisterInfo * /*TRI*/) const {
   // Handle only loads/stores with base register followed by immediate offset
   // and with add as ALU op.
   if (LdSt.getNumOperands() != 4)
@@ -782,17 +782,14 @@ bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
     break;
   }
 
-  BaseOp = &LdSt.getOperand(1);
+  BaseReg = LdSt.getOperand(1).getReg();
   Offset = LdSt.getOperand(2).getImm();
-  assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
-                            "operands of type register.");
   return true;
 }
 
-bool LanaiInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
-                                        MachineOperand *&BaseOp,
-                                        int64_t &Offset,
-                                        const TargetRegisterInfo *TRI) const {
+bool LanaiInstrInfo::getMemOpBaseRegImmOfs(
+    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset,
+    const TargetRegisterInfo *TRI) const {
   switch (LdSt.getOpcode()) {
   default:
     return false;
@@ -806,6 +803,6 @@ bool LanaiInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
   case Lanai::LDBs_RI:
   case Lanai::LDBz_RI:
     unsigned Width;
-    return getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI);
+    return getMemOpBaseRegImmOfsWidth(LdSt, BaseReg, Offset, Width, TRI);
   }
 }

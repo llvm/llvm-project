@@ -93,7 +93,6 @@ public:
              LiveVariables::Observer *obs = nullptr);
 
   void dumpBlockLiveness(const SourceManager& M);
-  void dumpStmtLiveness(const SourceManager& M);
 
   LiveVariablesImpl(AnalysisDeclContext &ac, bool KillAtAssign)
     : analysisContext(ac),
@@ -328,35 +327,6 @@ void TransferFunctions::Visit(Stmt *S) {
       // No need to unconditionally visit subexpressions.
       return;
     }
-    case Stmt::IfStmtClass: {
-      // If one of the branches is an expression rather than a compound
-      // statement, it will be bad if we mark it as live at the terminator
-      // of the if-statement (i.e., immediately after the condition expression).
-      AddLiveStmt(val.liveStmts, LV.SSetFact, cast<IfStmt>(S)->getCond());
-      return;
-    }
-    case Stmt::WhileStmtClass: {
-      // If the loop body is an expression rather than a compound statement,
-      // it will be bad if we mark it as live at the terminator of the loop
-      // (i.e., immediately after the condition expression).
-      AddLiveStmt(val.liveStmts, LV.SSetFact, cast<WhileStmt>(S)->getCond());
-      return;
-    }
-    case Stmt::DoStmtClass: {
-      // If the loop body is an expression rather than a compound statement,
-      // it will be bad if we mark it as live at the terminator of the loop
-      // (i.e., immediately after the condition expression).
-      AddLiveStmt(val.liveStmts, LV.SSetFact, cast<DoStmt>(S)->getCond());
-      return;
-    }
-    case Stmt::ForStmtClass: {
-      // If the loop body is an expression rather than a compound statement,
-      // it will be bad if we mark it as live at the terminator of the loop
-      // (i.e., immediately after the condition expression).
-      AddLiveStmt(val.liveStmts, LV.SSetFact, cast<ForStmt>(S)->getCond());
-      return;
-    }
-
   }
 
   for (Stmt *Child : S->children()) {
@@ -656,29 +626,11 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
          de = declVec.end(); di != de; ++di) {
       llvm::errs() << " " << (*di)->getDeclName().getAsString()
                    << " <";
-      (*di)->getLocation().print(llvm::errs(), M);
+      (*di)->getLocation().dump(M);
       llvm::errs() << ">\n";
     }
   }
   llvm::errs() << "\n";
-}
-
-void LiveVariables::dumpStmtLiveness(const SourceManager &M) {
-  getImpl(impl).dumpStmtLiveness(M);
-}
-
-void LiveVariablesImpl::dumpStmtLiveness(const SourceManager &M) {
-  // Don't iterate over blockEndsToLiveness directly because it's not sorted.
-  for (auto I : *analysisContext.getCFG()) {
-
-    llvm::errs() << "\n[ B" << I->getBlockID()
-                 << " (live statements at block exit) ]\n";
-    for (auto S : blocksEndToLiveness[I].liveStmts) {
-      llvm::errs() << "\n";
-      S->dump();
-    }
-    llvm::errs() << "\n";
-  }
 }
 
 const void *LiveVariables::getTag() { static int x; return &x; }

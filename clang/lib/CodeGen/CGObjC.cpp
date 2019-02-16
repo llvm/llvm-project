@@ -2446,33 +2446,24 @@ void CodeGenFunction::EmitObjCAutoreleasePoolCleanup(llvm::Value *Ptr) {
     EHStack.pushCleanup<CallObjCMRRAutoreleasePoolObject>(NormalCleanup, Ptr);
 }
 
-static bool shouldRetainObjCLifetime(Qualifiers::ObjCLifetime lifetime) {
-  switch (lifetime) {
+static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
+                                                  LValue lvalue,
+                                                  QualType type) {
+  switch (type.getObjCLifetime()) {
   case Qualifiers::OCL_None:
   case Qualifiers::OCL_ExplicitNone:
   case Qualifiers::OCL_Strong:
   case Qualifiers::OCL_Autoreleasing:
-    return true;
+    return TryEmitResult(CGF.EmitLoadOfLValue(lvalue,
+                                              SourceLocation()).getScalarVal(),
+                         false);
 
   case Qualifiers::OCL_Weak:
-    return false;
+    return TryEmitResult(CGF.EmitARCLoadWeakRetained(lvalue.getAddress()),
+                         true);
   }
 
   llvm_unreachable("impossible lifetime!");
-}
-
-static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
-                                                  LValue lvalue,
-                                                  QualType type) {
-  llvm::Value *result;
-  bool shouldRetain = shouldRetainObjCLifetime(type.getObjCLifetime());
-  if (shouldRetain) {
-    result = CGF.EmitLoadOfLValue(lvalue, SourceLocation()).getScalarVal();
-  } else {
-    assert(type.getObjCLifetime() == Qualifiers::OCL_Weak);
-    result = CGF.EmitARCLoadWeakRetained(lvalue.getAddress());
-  }
-  return TryEmitResult(result, !shouldRetain);
 }
 
 static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
@@ -2508,16 +2499,6 @@ static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
       isa<BinaryOperator>(e) &&
       cast<BinaryOperator>(e)->getOpcode() == BO_Assign)
     return TryEmitResult(CGF.EmitScalarExpr(e), false);
-
-  // Try to emit code for scalar constant instead of emitting LValue and
-  // loading it because we are not guaranteed to have an l-value. One of such
-  // cases is DeclRefExpr referencing non-odr-used constant-evaluated variable.
-  if (const auto *decl_expr = dyn_cast<DeclRefExpr>(e)) {
-    auto *DRE = const_cast<DeclRefExpr *>(decl_expr);
-    if (CodeGenFunction::ConstantEmission constant = CGF.tryEmitAsConstant(DRE))
-      return TryEmitResult(CGF.emitScalarConstant(constant, DRE),
-                           !shouldRetainObjCLifetime(type.getObjCLifetime()));
-  }
 
   return tryEmitARCRetainLoadOfScalar(CGF, CGF.EmitLValue(e), type);
 }
@@ -3248,32 +3229,29 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   ASTContext &C = getContext();
   IdentifierInfo *II
     = &CGM.getContext().Idents.get("__assign_helper_atomic_property_");
+  FunctionDecl *FD = FunctionDecl::Create(C,
+                                          C.getTranslationUnitDecl(),
+                                          SourceLocation(),
+                                          SourceLocation(), II, C.VoidTy,
+                                          nullptr, SC_Static,
+                                          false,
+                                          false);
 
-  QualType ReturnTy = C.VoidTy;
   QualType DestTy = C.getPointerType(Ty);
   QualType SrcTy = Ty;
   SrcTy.addConst();
   SrcTy = C.getPointerType(SrcTy);
 
-  SmallVector<QualType, 2> ArgTys;
-  ArgTys.push_back(DestTy);
-  ArgTys.push_back(SrcTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, SC_Static, false, false);
-
   FunctionArgList args;
-  ImplicitParamDecl DstDecl(C, FD, SourceLocation(), /*Id=*/nullptr, DestTy,
-                            ImplicitParamDecl::Other);
+  ImplicitParamDecl DstDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            DestTy, ImplicitParamDecl::Other);
   args.push_back(&DstDecl);
-  ImplicitParamDecl SrcDecl(C, FD, SourceLocation(), /*Id=*/nullptr, SrcTy,
-                            ImplicitParamDecl::Other);
+  ImplicitParamDecl SrcDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            SrcTy, ImplicitParamDecl::Other);
   args.push_back(&SrcDecl);
 
   const CGFunctionInfo &FI =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
+    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
 
   llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
 
@@ -3284,7 +3262,7 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
 
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
-  StartFunction(FD, ReturnTy, Fn, FI, args);
+  StartFunction(FD, C.VoidTy, Fn, FI, args);
 
   DeclRefExpr DstExpr(&DstDecl, false, DestTy,
                       VK_RValue, SourceLocation());
@@ -3323,51 +3301,50 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   if ((!(PD->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_atomic)))
     return nullptr;
   llvm::Constant *HelperFn = nullptr;
+
   if (hasTrivialGetExpr(PID))
     return nullptr;
   assert(PID->getGetterCXXConstructor() && "getGetterCXXConstructor - null");
   if ((HelperFn = CGM.getAtomicGetterHelperFnMap(Ty)))
     return HelperFn;
 
-  ASTContext &C = getContext();
-  IdentifierInfo *II =
-      &CGM.getContext().Idents.get("__copy_helper_atomic_property_");
 
-  QualType ReturnTy = C.VoidTy;
+  ASTContext &C = getContext();
+  IdentifierInfo *II
+  = &CGM.getContext().Idents.get("__copy_helper_atomic_property_");
+  FunctionDecl *FD = FunctionDecl::Create(C,
+                                          C.getTranslationUnitDecl(),
+                                          SourceLocation(),
+                                          SourceLocation(), II, C.VoidTy,
+                                          nullptr, SC_Static,
+                                          false,
+                                          false);
+
   QualType DestTy = C.getPointerType(Ty);
   QualType SrcTy = Ty;
   SrcTy.addConst();
   SrcTy = C.getPointerType(SrcTy);
 
-  SmallVector<QualType, 2> ArgTys;
-  ArgTys.push_back(DestTy);
-  ArgTys.push_back(SrcTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, SC_Static, false, false);
-
   FunctionArgList args;
-  ImplicitParamDecl DstDecl(C, FD, SourceLocation(), /*Id=*/nullptr, DestTy,
-                            ImplicitParamDecl::Other);
+  ImplicitParamDecl DstDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            DestTy, ImplicitParamDecl::Other);
   args.push_back(&DstDecl);
-  ImplicitParamDecl SrcDecl(C, FD, SourceLocation(), /*Id=*/nullptr, SrcTy,
-                            ImplicitParamDecl::Other);
+  ImplicitParamDecl SrcDecl(getContext(), FD, SourceLocation(), /*Id=*/nullptr,
+                            SrcTy, ImplicitParamDecl::Other);
   args.push_back(&SrcDecl);
 
   const CGFunctionInfo &FI =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
+    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
 
   llvm::FunctionType *LTy = CGM.getTypes().GetFunctionType(FI);
 
-  llvm::Function *Fn = llvm::Function::Create(
-      LTy, llvm::GlobalValue::InternalLinkage, "__copy_helper_atomic_property_",
-      &CGM.getModule());
+  llvm::Function *Fn =
+  llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
+                         "__copy_helper_atomic_property_", &CGM.getModule());
 
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
-  StartFunction(FD, ReturnTy, Fn, FI, args);
+  StartFunction(FD, C.VoidTy, Fn, FI, args);
 
   DeclRefExpr SrcExpr(&SrcDecl, false, SrcTy,
                       VK_RValue, SourceLocation());

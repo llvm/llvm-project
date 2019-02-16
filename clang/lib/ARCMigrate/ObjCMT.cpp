@@ -27,7 +27,7 @@
 #include "clang/Lex/PPConditionalDirectiveRecord.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/StaticAnalyzer/Core/RetainSummaryManager.h"
+#include "clang/StaticAnalyzer/Checkers/ObjCRetainCount.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Path.h"
@@ -36,7 +36,7 @@
 
 using namespace clang;
 using namespace arcmt;
-using namespace ento;
+using namespace ento::objc_retain;
 
 namespace {
 

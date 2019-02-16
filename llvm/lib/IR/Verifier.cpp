@@ -1117,10 +1117,6 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
       AssertDI(Op && isa<DIType>(Op), "invalid thrown type", &N, ThrownTypes,
                Op);
   }
-
-  if (N.areAllCallsDescribed())
-    AssertDI(N.isDefinition(),
-             "DIFlagAllCallsDescribed must be attached to a definition");
 }
 
 void Verifier::visitDILexicalBlockBase(const DILexicalBlockBase &N) {
@@ -4530,14 +4526,6 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgInfoIntrinsic &DII) {
                                " variable and !dbg attachment",
            &DII, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
            Loc->getScope()->getSubprogram());
-
-  // This check is redundant with one in visitLocalVariable().
-  AssertDI(isType(Var->getRawType()), "invalid type ref", Var,
-           Var->getRawType());
-  if (auto *Type = dyn_cast_or_null<DIType>(Var->getRawType()))
-    if (Type->isBlockByrefStruct())
-      AssertDI(DII.getExpression() && DII.getExpression()->getNumElements(),
-               "BlockByRef variable without complex expression", Var, &DII);
 
   verifyFnArgs(DII);
 }

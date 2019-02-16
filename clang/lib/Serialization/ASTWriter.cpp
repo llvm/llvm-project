@@ -1121,6 +1121,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(UNUSED_FILESCOPED_DECLS);
   RECORD(PPD_ENTITIES_OFFSETS);
   RECORD(VTABLE_USES);
+  RECORD(PPD_SKIPPED_RANGES);
   RECORD(REFERENCED_SELECTOR_POOL);
   RECORD(TU_UPDATE_LEXICAL);
   RECORD(SEMA_DECL_REFS);
@@ -1326,7 +1327,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   BLOCK(UNHASHED_CONTROL_BLOCK);
   RECORD(SIGNATURE);
   RECORD(DIAGNOSTIC_OPTIONS);
-  RECORD(HEADER_SEARCH_PATHS);
   RECORD(DIAG_PRAGMA_MAPPINGS);
 
 #undef RECORD
@@ -1445,29 +1445,6 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   // Note: we don't serialize the log or serialization file names, because they
   // are generally transient files and will almost always be overridden.
   Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
-
-  // Header search paths.
-  Record.clear();
-  const HeaderSearchOptions &HSOpts
-    = PP.getHeaderSearchInfo().getHeaderSearchOpts();
-
-  // Include entries.
-  Record.push_back(HSOpts.UserEntries.size());
-  for (unsigned I = 0, N = HSOpts.UserEntries.size(); I != N; ++I) {
-    const HeaderSearchOptions::Entry &Entry = HSOpts.UserEntries[I];
-    AddString(Entry.Path, Record);
-    Record.push_back(static_cast<unsigned>(Entry.Group));
-    Record.push_back(Entry.IsFramework);
-    Record.push_back(Entry.IgnoreSysRoot);
-  }
-
-  // System header prefixes.
-  Record.push_back(HSOpts.SystemHeaderPrefixes.size());
-  for (unsigned I = 0, N = HSOpts.SystemHeaderPrefixes.size(); I != N; ++I) {
-    AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
-    Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
-  }
-  Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
 
   // Write out the diagnostic/pragma mappings.
   WritePragmaDiagnosticMappings(Diags, /* IsModule = */ WritingModule);
@@ -1672,8 +1649,25 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Record.clear();
   const HeaderSearchOptions &HSOpts
     = PP.getHeaderSearchInfo().getHeaderSearchOpts();
-
   AddString(HSOpts.Sysroot, Record);
+
+  // Include entries.
+  Record.push_back(HSOpts.UserEntries.size());
+  for (unsigned I = 0, N = HSOpts.UserEntries.size(); I != N; ++I) {
+    const HeaderSearchOptions::Entry &Entry = HSOpts.UserEntries[I];
+    AddString(Entry.Path, Record);
+    Record.push_back(static_cast<unsigned>(Entry.Group));
+    Record.push_back(Entry.IsFramework);
+    Record.push_back(Entry.IgnoreSysRoot);
+  }
+
+  // System header prefixes.
+  Record.push_back(HSOpts.SystemHeaderPrefixes.size());
+  for (unsigned I = 0, N = HSOpts.SystemHeaderPrefixes.size(); I != N; ++I) {
+    AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
+    Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
+  }
+
   AddString(HSOpts.ResourceDir, Record);
   AddString(HSOpts.ModuleCachePath, Record);
   AddString(HSOpts.ModuleUserBuildPath, Record);
@@ -2759,6 +2753,26 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec) {
     Stream.EmitRecordWithBlob(PPEOffsetAbbrev, Record,
                               bytes(PreprocessedEntityOffsets));
   }
+
+  // Write the skipped region table for the preprocessing record.
+  ArrayRef<SourceRange> SkippedRanges = PPRec.getSkippedRanges();
+  if (SkippedRanges.size() > 0) {
+    std::vector<PPSkippedRange> SerializedSkippedRanges;
+    SerializedSkippedRanges.reserve(SkippedRanges.size());
+    for (auto const& Range : SkippedRanges)
+      SerializedSkippedRanges.emplace_back(Range);
+
+    using namespace llvm;
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
+    Abbrev->Add(BitCodeAbbrevOp(PPD_SKIPPED_RANGES));
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+    unsigned PPESkippedRangeAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+    Record.clear();
+    Record.push_back(PPD_SKIPPED_RANGES);
+    Stream.EmitRecordWithBlob(PPESkippedRangeAbbrev, Record,
+                              bytes(SerializedSkippedRanges));
+  }
 }
 
 unsigned ASTWriter::getLocalOrImportedSubmoduleID(Module *Mod) {
@@ -2811,11 +2825,6 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ID
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Parent
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // Kind
-
-  // SWIFT-SPECIFIC FIELDS HERE. Handling them separately helps avoid merge
-  // conflicts.
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSwiftInferIAM...
-
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFramework
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsExplicit
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsSystem
@@ -2922,12 +2931,6 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          ID,
                                          ParentID,
                                          (RecordData::value_type)Mod->Kind,
-
-                                         // SWIFT-SPECIFIC FIELDS HERE.
-                                         // Handling them separately helps
-                                         // avoid merge conflicts.
-                                         Mod->IsSwiftInferImportAsMember,
-
                                          Mod->IsFramework,
                                          Mod->IsExplicit,
                                          Mod->IsSystem,
@@ -3606,6 +3609,8 @@ public:
         NeedDecls(!IsModule || !Writer.getLangOpts().CPlusPlus),
         InterestingIdentifierOffsets(InterestingIdentifierOffsets) {}
 
+  bool needDecls() const { return NeedDecls; }
+
   static hash_value_type ComputeHash(const IdentifierInfo* II) {
     return llvm::djbHash(II->getName());
   }
@@ -3758,8 +3763,10 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
       assert(II && "NULL identifier in identifier table");
       // Write out identifiers if either the ID is local or the identifier has
       // changed since it was loaded.
-      if (ID >= FirstIdentID || !Chain || !II->isFromAST() ||
-          II->hasChangedSinceDeserialization())
+      if (ID >= FirstIdentID || !Chain || !II->isFromAST()
+          || II->hasChangedSinceDeserialization() ||
+          (Trait.needDecls() &&
+           II->hasFETokenInfoChangedSinceDeserialization()))
         Generator.insert(II, ID, Trait);
     }
 

@@ -143,6 +143,3 @@ void f() {
   __typeof__(B.foo) Test;
 }
 // CHECK: VarDecl{{.*}}Test 'typeof (B.foo)':'int'
-
-@compatibility_alias TestCompatibilityAlias A;
-// CHECK: ObjCCompatibleAliasDecl{{.*}}col:22 TestCompatibilityAlias col:45

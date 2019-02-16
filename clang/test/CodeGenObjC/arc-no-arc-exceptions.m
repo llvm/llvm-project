@@ -42,7 +42,6 @@ void NSLog(id, ...);
 void test2(void) {
     @autoreleasepool {
         __attribute__((__blocks__(byref))) int x;
-        ^{ (void)x; };
         NSLog(@"Address of x outside of block: %p", &x);
     }
 }

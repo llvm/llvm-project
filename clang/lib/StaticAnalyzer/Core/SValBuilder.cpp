@@ -375,7 +375,8 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   }
 }
 
-SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
+SVal SValBuilder::makeSymExprValNN(ProgramStateRef State,
+                                   BinaryOperator::Opcode Op,
                                    NonLoc LHS, NonLoc RHS,
                                    QualType ResultTy) {
   const SymExpr *symLHS = LHS.getAsSymExpr();
@@ -385,7 +386,7 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
   // instead of generating an Unknown value and propagate the taint info to it.
   const unsigned MaxComp = StateMgr.getOwningEngine()
                                ->getAnalysisManager()
-                               .options.MaxSymbolComplexity;
+                               .options.getMaxSymbolComplexity();
 
   if (symLHS && symRHS &&
       (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)

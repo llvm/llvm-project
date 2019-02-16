@@ -59,14 +59,12 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
                        const DWARFAddressRangesVector &Ranges,
                        unsigned AddressSize, unsigned Indent,
                        const DIDumpOptions &DumpOpts) {
-  if (!DumpOpts.ShowAddresses)
-    return;
-
   ArrayRef<SectionName> SectionNames;
   if (DumpOpts.Verbose)
     SectionNames = Obj.getSectionNames();
 
   for (const DWARFAddressRange &R : Ranges) {
+
     OS << '\n';
     OS.indent(Indent);
     R.dump(OS, AddressSize);
@@ -246,17 +244,15 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   else
     formValue.dump(OS, DumpOpts);
 
-  std::string Space = DumpOpts.ShowAddresses ? " " : "";
-
   // We have dumped the attribute raw value. For some attributes
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin) {
     if (const char *Name = Die.getAttributeValueAsReferencedDie(Attr).getName(
             DINameKind::LinkageName))
-      OS << Space << "\"" << Name << '\"';
+      OS << " \"" << Name << '\"';
   } else if (Attr == DW_AT_type) {
-    OS << Space << "\"";
+    OS << " \"";
     dumpTypeName(OS, Die);
     OS << '"';
   } else if (Attr == DW_AT_APPLE_property_attribute) {
@@ -354,7 +350,7 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
   if (auto SpecRef = toReference(find(Attr))) {
-    if (auto SpecUnit = U->getUnitVector().getUnitForOffset(*SpecRef))
+    if (auto SpecUnit = U->getUnitSection().getUnitForOffset(*SpecRef))
       return SpecUnit->getDIEForOffset(*SpecRef);
   }
   return DWARFDie();

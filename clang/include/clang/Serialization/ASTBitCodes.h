@@ -198,6 +198,25 @@ namespace serialization {
       }
     };
 
+    /// Source range of a skipped preprocessor region
+    struct PPSkippedRange {
+      /// Raw source location of beginning of range.
+      unsigned Begin;
+      /// Raw source location of end of range.
+      unsigned End;
+
+      PPSkippedRange(SourceRange R)
+        : Begin(R.getBegin().getRawEncoding()),
+          End(R.getEnd().getRawEncoding()) { }
+
+      SourceLocation getBegin() const {
+        return SourceLocation::getFromRawEncoding(Begin);
+      }
+      SourceLocation getEnd() const {
+        return SourceLocation::getFromRawEncoding(End);
+      }
+    };
+
     /// Source range/offset of a preprocessed entity.
     struct DeclOffset {
       /// Raw source location.
@@ -346,9 +365,6 @@ namespace serialization {
 
       /// Record code for the diagnostic options table.
       DIAGNOSTIC_OPTIONS,
-
-      /// Record code for the headers search paths.
-      HEADER_SEARCH_PATHS,
 
       /// Record code for \#pragma diagnostic mappings.
       DIAG_PRAGMA_MAPPINGS,
@@ -630,6 +646,9 @@ namespace serialization {
 
       /// The stack of open #ifs/#ifdefs recorded in a preamble.
       PP_CONDITIONAL_STACK = 62,
+
+      /// A table of skipped ranges within the preprocessing record.
+      PPD_SKIPPED_RANGES = 63
     };
 
     /// Record types used within a source manager block.

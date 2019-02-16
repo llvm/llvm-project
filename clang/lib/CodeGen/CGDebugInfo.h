@@ -317,9 +317,6 @@ public:
 
   void finalize();
 
-  /// Remap a given path with the current debug prefix map
-  std::string remapDIPath(StringRef) const;
-
   /// Register VLA size expression debug node with the qualified type.
   void registerVLASizeExpression(QualType Ty, llvm::Metadata *SizeExpr) {
     SizeExprCache[Ty] = SizeExpr;
@@ -478,16 +475,9 @@ private:
                                      llvm::Optional<unsigned> ArgNo,
                                      CGBuilderTy &Builder);
 
-  struct BlockByRefType {
-    /// The wrapper struct used inside the __block_literal struct.
-    llvm::DIType *BlockByRefWrapper;
-    /// The type as it appears in the source code.
-    llvm::DIType *WrappedType;
-  };
-
   /// Build up structure info for the byref.  See \a BuildByRefType.
-  BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
-                                              uint64_t *OffSet);
+  llvm::DIType *EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
+                                             uint64_t *OffSet);
 
   /// Get context info for the DeclContext of \p Decl.
   llvm::DIScope *getDeclContextDescriptor(const Decl *D);
@@ -506,6 +496,9 @@ private:
 
   /// Create new compile unit.
   void CreateCompileUnit();
+
+  /// Remap a given path with the current debug prefix map
+  std::string remapDIPath(StringRef) const;
 
   /// Compute the file checksum debug info for input file ID.
   Optional<llvm::DIFile::ChecksumKind>
@@ -586,11 +579,6 @@ private:
   CollectAnonRecordDecls(const RecordDecl *RD, llvm::DIFile *Unit,
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);
-
-
-  /// Return flags which enable debug info emission for call sites, provided
-  /// that it is supported and enabled.
-  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
 
   /// Get the printing policy for producing names for debug info.
   PrintingPolicy getPrintingPolicy() const;

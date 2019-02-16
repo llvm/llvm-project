@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -Wduplicate-enum
-// RUN: %clang_cc1 %s -x c++ -DCPP -fsyntax-only -verify -Wduplicate-enum
+// RUN: %clang_cc1 %s -x c++ -fsyntax-only -verify -Wduplicate-enum
 enum A {
   A1 = 0,  // expected-note {{element 'A1' also has value 0}}
   A2 = -1,
@@ -99,11 +99,3 @@ enum enum1 {
 enum enum2 {
   VALUE // expected-error{{redefinition of enumerator 'VALUE'}}
 };
-
-// rdar://44774672
-#ifdef CPP
-enum BigEnumerators : long {
-  e1,
-  e2 = 9223372036854775807L,
-};
-#endif

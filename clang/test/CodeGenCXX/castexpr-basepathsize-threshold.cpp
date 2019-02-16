@@ -3,10 +3,6 @@
 // https://bugs.llvm.org/show_bug.cgi?id=38356
 // We only check that we do not crash.
 
-// ASAN increases stack usage, so we are hitting stack overflow before reaching
-// recursive template instantiation limit.
-// XFAIL: darwin && asan
-
 template <typename a, a b(unsigned), int c, unsigned...>
 struct d : d<a, b, c - 1> {};
 template <typename a, a b(unsigned), unsigned... e>

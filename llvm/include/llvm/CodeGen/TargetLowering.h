@@ -1428,12 +1428,6 @@ public:
     return PrefLoopAlignment;
   }
 
-  /// Should loops be aligned even when the function is marked OptSize (but not
-  /// MinSize).
-  virtual bool alignLoopsWithOptSize() const {
-    return false;
-  }
-
   /// If the target has a standard location for the stack protector guard,
   /// returns the address of that location. Otherwise, returns nullptr.
   /// DEPRECATED: please override useLoadStackGuardNode and customize
@@ -2019,14 +2013,6 @@ public:
   /// without having to materialize the immediate into a register.
   virtual bool isLegalAddImmediate(int64_t) const {
     return true;
-  }
-
-  /// Return true if the specified immediate is legal for the value input of a
-  /// store instruction.
-  virtual bool isLegalStoreImmediate(int64_t Value) const {
-    // Default implementation assumes that at least 0 works since it is likely
-    // that a zero register exists or a zero immediate is allowed.
-    return Value == 0;
   }
 
   /// Return true if it's significantly cheaper to shift a vector by a uniform
@@ -2949,16 +2935,12 @@ public:
   ///
   virtual SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
-  /// Return true if it is profitable to move this shift by a constant amount
-  /// though its operand, adjusting any immediate operands as necessary to
-  /// preserve semantics. This transformation may not be desirable if it
-  /// disrupts a particularly auspicious target-specific tree (e.g. bitfield
-  /// extraction in AArch64). By default, it returns true.
-  ///
-  /// @param N the shift node
-  /// @param Level the current DAGCombine legalization level.
-  virtual bool isDesirableToCommuteWithShift(const SDNode *N,
-                                             CombineLevel Level) const {
+  /// Return true if it is profitable to move a following shift through this
+  //  node, adjusting any immediate operands as necessary to preserve semantics.
+  //  This transformation may not be desirable if it disrupts a particularly
+  //  auspicious target-specific tree (e.g. bitfield extraction in AArch64).
+  //  By default, it returns true.
+  virtual bool isDesirableToCommuteWithShift(const SDNode *N) const {
     return true;
   }
 

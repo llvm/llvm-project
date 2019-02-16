@@ -127,13 +127,13 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
 
   LLVM_DEBUG(if (SU) {
     dbgs() << " ** Pick node **\n";
-    DAG->dumpNode(*SU);
+    SU->dump(DAG);
   } else {
     dbgs() << "NO NODE \n";
     for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
       const SUnit &S = DAG->SUnits[i];
       if (!S.isScheduled)
-        DAG->dumpNode(S);
+        S.dump(DAG);
     }
   });
 
@@ -188,11 +188,11 @@ isPhysicalRegCopy(MachineInstr *MI) {
 }
 
 void R600SchedStrategy::releaseTopNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Top Releasing "; DAG->dumpNode(*SU));
+  LLVM_DEBUG(dbgs() << "Top Releasing "; SU->dump(DAG););
 }
 
 void R600SchedStrategy::releaseBottomNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Bottom Releasing "; DAG->dumpNode(*SU));
+  LLVM_DEBUG(dbgs() << "Bottom Releasing "; SU->dump(DAG););
   if (isPhysicalRegCopy(SU->getInstr())) {
     PhysicalRegCopy.push_back(SU);
     return;

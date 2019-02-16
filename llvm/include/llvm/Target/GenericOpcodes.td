@@ -120,36 +120,6 @@ def G_VAARG : GenericInstruction {
   let mayStore = 1;
 }
 
-def G_CTLZ : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_CTLZ_ZERO_UNDEF : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_CTTZ : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_CTTZ_ZERO_UNDEF : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_CTPOP : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 def G_BSWAP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
@@ -311,14 +281,6 @@ def G_PTR_MASK : GenericInstruction {
 // Overflow ops
 //------------------------------------------------------------------------------
 
-// Generic unsigned addition producing a carry flag.
-def G_UADDO : GenericInstruction {
-  let OutOperandList = (outs type0:$dst, type1:$carry_out);
-  let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-  let isCommutable = 1;
-}
-
 // Generic unsigned addition consuming and producing a carry flag.
 def G_UADDE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
@@ -334,19 +296,6 @@ def G_SADDO : GenericInstruction {
   let isCommutable = 1;
 }
 
-// Generic signed addition consuming and producing a carry flag.
-def G_SADDE : GenericInstruction {
-  let OutOperandList = (outs type0:$dst, type1:$carry_out);
-  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
-  let hasSideEffects = 0;
-}
-
-// Generic unsigned subtraction producing a carry flag.
-def G_USUBO : GenericInstruction {
-  let OutOperandList = (outs type0:$dst, type1:$carry_out);
-  let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-}
 // Generic unsigned subtraction consuming and producing a carry flag.
 def G_USUBE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
@@ -354,17 +303,10 @@ def G_USUBE : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// Generic signed subtraction producing a carry flag.
+// Generic unsigned subtraction producing a carry flag.
 def G_SSUBO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
-  let hasSideEffects = 0;
-}
-
-// Generic signed subtraction consuming and producing a carry flag.
-def G_SSUBE : GenericInstruction {
-  let OutOperandList = (outs type0:$dst, type1:$carry_out);
-  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
   let hasSideEffects = 0;
 }
 
@@ -535,21 +477,6 @@ def G_FLOG : GenericInstruction {
 
 // Floating point base-2 logarithm of a value.
 def G_FLOG2 : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
-}
-
-//------------------------------------------------------------------------------
-// Opcodes for LLVM Intrinsics
-//------------------------------------------------------------------------------
-def G_INTRINSIC_TRUNC : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1);
-  let hasSideEffects = 0;
-}
-
-def G_INTRINSIC_ROUND : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
   let hasSideEffects = 0;

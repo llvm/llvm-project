@@ -4005,8 +4005,7 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   }
 
   Result->addMemOperand(*FuncInfo.MF, createMachineMemOperandFor(LI));
-  MachineBasicBlock::iterator I(MI);
-  removeDeadCode(I, std::next(I));
+  MI->eraseFromParent();
   return true;
 }
 

@@ -341,7 +341,7 @@ static void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
     break;
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-    aarch64::getAArch64TargetFeatures(D, Triple, Args, Features);
+    aarch64::getAArch64TargetFeatures(D, Args, Features);
     break;
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
@@ -1013,7 +1013,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back("-dependency-file");
     CmdArgs.push_back(DepFile);
-    CmdArgs.push_back("-skip-unused-modulemap-deps");
 
     // Add a default target if one wasn't specified.
     if (!Args.hasArg(options::OPT_MT) && !Args.hasArg(options::OPT_MQ)) {
@@ -2229,6 +2228,8 @@ static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
   // Treat blocks as analysis entry points.
   CmdArgs.push_back("-analyzer-opt-analyze-nested-blocks");
 
+  CmdArgs.push_back("-analyzer-eagerly-assume");
+
   // Add default argument set.
   if (!Args.hasArg(options::OPT__analyzer_no_default_checks)) {
     CmdArgs.push_back("-analyzer-checker=core");
@@ -2335,50 +2336,6 @@ static void RenderSSPOptions(const ToolChain &TC, const ArgList &Args,
       }
       A->claim();
     }
-  }
-}
-
-static void RenderTrivialAutoVarInitOptions(const Driver &D,
-                                            const ToolChain &TC,
-                                            const ArgList &Args,
-                                            ArgStringList &CmdArgs) {
-  auto DefaultTrivialAutoVarInit = TC.GetDefaultTrivialAutoVarInit();
-  StringRef TrivialAutoVarInit = "";
-
-  for (const Arg *A : Args) {
-    switch (A->getOption().getID()) {
-    default:
-      continue;
-    case options::OPT_ftrivial_auto_var_init: {
-      A->claim();
-      StringRef Val = A->getValue();
-      if (Val == "uninitialized" || Val == "zero" || Val == "pattern")
-        TrivialAutoVarInit = Val;
-      else
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getOption().getName() << Val;
-      break;
-    }
-    }
-  }
-
-  if (TrivialAutoVarInit.empty())
-    switch (DefaultTrivialAutoVarInit) {
-    case LangOptions::TrivialAutoVarInitKind::Uninitialized:
-      break;
-    case LangOptions::TrivialAutoVarInitKind::Pattern:
-      TrivialAutoVarInit = "pattern";
-      break;
-    case LangOptions::TrivialAutoVarInitKind::Zero:
-      TrivialAutoVarInit = "zero";
-      break;
-    }
-
-  if (!TrivialAutoVarInit.empty()) {
-    if (TrivialAutoVarInit == "zero" && !Args.hasArg(options::OPT_enable_trivial_var_init_zero))
-      D.Diag(diag::err_drv_trivial_auto_var_init_zero_disabled);
-    CmdArgs.push_back(
-        Args.MakeArgString("-ftrivial-auto-var-init=" + TrivialAutoVarInit));
   }
 }
 
@@ -2744,6 +2701,7 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
   // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option
   // to do Array/Dictionary subscripting by default.
   if (Arch == llvm::Triple::x86 && T.isMacOSX() &&
+      !T.isMacOSXVersionLT(10, 7) &&
       Runtime.getKind() == ObjCRuntime::FragileMacOSX && Runtime.isNeXTFamily())
     CmdArgs.push_back("-fobjc-subscripting-legacy-runtime");
 
@@ -3391,24 +3349,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (isa<AnalyzeJobAction>(JA))
     RenderAnalyzerOptions(Args, CmdArgs, Triple, Input);
 
-  // Enable compatilibily mode to avoid analyzer-config related errors.
-  // Since we can't access frontend flags through hasArg, let's manually iterate
-  // through them.
-  bool FoundAnalyzerConfig = false;
-  for (auto Arg : Args.filtered(options::OPT_Xclang))
-    if (StringRef(Arg->getValue()) == "-analyzer-config") {
-      FoundAnalyzerConfig = true;
-      break;
-    }
-  if (!FoundAnalyzerConfig)
-    for (auto Arg : Args.filtered(options::OPT_Xanalyzer))
-      if (StringRef(Arg->getValue()) == "-analyzer-config") {
-        FoundAnalyzerConfig = true;
-        break;
-      }
-  if (FoundAnalyzerConfig)
-    CmdArgs.push_back("-analyzer-config-compatibility-mode=true");
-
   CheckCodeGenerationOptions(D, Args);
 
   unsigned FunctionAlignment = ParseFunctionAlignment(getToolChain(), Args);
@@ -3801,26 +3741,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderARCMigrateToolOptions(D, Args, CmdArgs);
 
-  if (Args.hasArg(options::OPT_index_store_path)) {
-    Args.AddLastArg(CmdArgs, options::OPT_index_store_path);
-    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_system_symbols);
-    Args.AddLastArg(CmdArgs, options::OPT_index_record_codegen_name);
-
-    // If '-o' is passed along with '-fsyntax-only' pass it along the cc1
-    // invocation so that the index action knows what the out file is.
-    if (isa<CompileJobAction>(JA) && JA.getType() == types::TY_Nothing) {
-      Args.AddLastArg(CmdArgs, options::OPT_o);
-    }
-  }
-
-  if (const char *IdxStorePath = ::getenv("CLANG_PROJECT_INDEX_PATH")) {
-    CmdArgs.push_back("-index-store-path");
-    CmdArgs.push_back(IdxStorePath);
-    CmdArgs.push_back("-index-ignore-system-symbols");
-    CmdArgs.push_back("-index-record-codegen-name");
-  }
-
-
   // Add preprocessing options like -I, -D, etc. if we are using the
   // preprocessor.
   //
@@ -3995,17 +3915,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_relocatable_pch))
     CmdArgs.push_back("-relocatable-pch");
-
-  if (const Arg *A = Args.getLastArg(options::OPT_fcf_runtime_abi_EQ)) {
-    static const char *kCFABIs[] = {
-      "standalone", "objc", "swift", "swift-5.0", "swift-4.2", "swift-4.1",
-    };
-
-    if (find(kCFABIs, StringRef(A->getValue())) == std::end(kCFABIs))
-      D.Diag(diag::err_drv_invalid_cf_runtime_abi) << A->getValue();
-    else
-      A->render(Args, CmdArgs);
-  }
 
   if (Arg *A = Args.getLastArg(options::OPT_fconstant_string_class_EQ)) {
     CmdArgs.push_back("-fconstant-string-class");
@@ -4191,7 +4100,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_pthread);
 
   RenderSSPOptions(getToolChain(), Args, CmdArgs, KernelOrKext);
-  RenderTrivialAutoVarInitOptions(D, getToolChain(), Args, CmdArgs);
 
   // Translate -mstackrealign
   if (Args.hasFlag(options::OPT_mstackrealign, options::OPT_mno_stackrealign,
@@ -4256,19 +4164,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
                     options::OPT_fno_assume_sane_operator_new))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
-
-  if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false) ||
-      Args.hasFlag(options::OPT_fapinotes_modules,
-                   options::OPT_fno_apinotes_modules, false) ||
-      Args.hasArg(options::OPT_iapinotes_modules)) {
-    if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
-      CmdArgs.push_back("-fapinotes");
-    if (Args.hasFlag(options::OPT_fapinotes_modules,
-                     options::OPT_fno_apinotes_modules, false))
-      CmdArgs.push_back("-fapinotes-modules");
-
-    Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
-  }
 
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,
@@ -4922,10 +4817,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fcomplete_member_pointers,
                    options::OPT_fno_complete_member_pointers, false))
     CmdArgs.push_back("-fcomplete-member-pointers");
-
-  if (!Args.hasFlag(options::OPT_fcxx_static_destructors,
-                    options::OPT_fno_cxx_static_destructors, true))
-    CmdArgs.push_back("-fno-c++-static-destructors");
 
   if (Arg *A = Args.getLastArg(options::OPT_moutline,
                                options::OPT_mno_outline)) {

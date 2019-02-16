@@ -250,7 +250,7 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
 }
 
 void Preprocessor::DumpLocation(SourceLocation Loc) const {
-  Loc.print(llvm::errs(), SourceMgr);
+  Loc.dump(SourceMgr);
 }
 
 void Preprocessor::DumpMacro(const MacroInfo &MI) const {

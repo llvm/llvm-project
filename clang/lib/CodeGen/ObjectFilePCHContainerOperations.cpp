@@ -156,8 +156,6 @@ public:
         LangOpts.CurrentModule.empty() ? MainFileName : LangOpts.CurrentModule;
     CodeGenOpts.setDebugInfo(codegenoptions::FullDebugInfo);
     CodeGenOpts.setDebuggerTuning(CI.getCodeGenOpts().getDebuggerTuning());
-    CodeGenOpts.DebugPrefixMap =
-        CI.getInvocation().getCodeGenOpts().DebugPrefixMap;
   }
 
   ~PCHContainerGenerator() override = default;

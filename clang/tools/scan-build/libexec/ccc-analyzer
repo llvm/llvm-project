@@ -243,6 +243,11 @@ sub Analyze {
       push @Args, "-Xclang", $arg;
     }
 
+    # Display Ubiviz graph?
+    if (defined $ENV{'CCC_UBI'}) {
+      push @Args, "-Xclang", "-analyzer-viz-egraph-ubigraph";
+    }
+
     if (defined $AnalyzerTarget) {
       push @Args, "-target", $AnalyzerTarget;
     }

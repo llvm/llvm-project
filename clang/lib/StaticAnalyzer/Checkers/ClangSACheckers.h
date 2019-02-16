@@ -24,7 +24,7 @@ class CheckerManager;
 class CheckerRegistry;
 
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, HELPTEXT)                                     \
+#define CHECKER(FULLNAME,CLASS,CXXFILE,HELPTEXT,GROUPINDEX,HIDDEN)    \
   void register##CLASS(CheckerManager &mgr);
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
