@@ -249,27 +249,3 @@ def find_tests_for_inputs(lit_config, inputs):
         sys.exit(2)
 
     return tests
-
-def load_test_suite(inputs):
-    import platform
-    import unittest
-    from lit.LitTestCase import LitTestCase
-
-    # Create the global config object.
-    litConfig = LitConfig.LitConfig(progname = 'lit',
-                                    path = [],
-                                    quiet = False,
-                                    useValgrind = False,
-                                    valgrindLeakCheck = False,
-                                    valgrindArgs = [],
-                                    noExecute = False,
-                                    debug = False,
-                                    isWindows = (platform.system()=='Windows'),
-                                    params = {})
-
-    # Perform test discovery.
-    run = lit.run.Run(litConfig, find_tests_for_inputs(litConfig, inputs))
-
-    # Return a unittest test suite which just runs the tests in order.
-    return unittest.TestSuite([LitTestCase(test, run)
-                               for test in run.tests])
