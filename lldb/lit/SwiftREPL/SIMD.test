@@ -1,6 +1,5 @@
-// Test formatters for Accelerate/simd.
+// Test formatters for SIMD.
 // REQUIRES: darwin
-// REQUIRES: rdar46330565
 
 // RUN: %lldb --repl < %s | FileCheck %s
 
@@ -169,3 +168,10 @@ simd_quatf(vector: colf4)
 
 simd_quatd(vector: cold4)
 // CHECK: $R{{.*}}: simd_quatd = (1.500000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00)
+
+// Test the new SIMD types
+let tinky = SIMD2<Int>(1, 2)
+// CHECK: {{tinky}}: SIMD2<Int> = (1, 2)
+
+let patatino = SIMD4<Double>(1.5, 2.5, 3.5, 4.5)
+// CHECK: {{patatino}}: SIMD4<Double> = (1.5, 2.5, 3.5, 4.5)
