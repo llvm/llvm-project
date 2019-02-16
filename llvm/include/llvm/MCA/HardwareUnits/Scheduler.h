@@ -80,24 +80,26 @@ class Scheduler : public HardwareUnit {
   // the instruction stage (see Instruction::InstrStage).
   //
   // An Instruction dispatched to the Scheduler is added to the WaitSet if not
-  // all its register operands are available, and at least one latency is unknown.
-  // By construction, the WaitSet only contains instructions that are in the
-  // IS_DISPATCHED stage.
+  // all its register operands are available, and at least one latency is
+  // unknown.  By construction, the WaitSet only contains instructions that are
+  // in the IS_DISPATCHED stage.
   //
   // An Instruction transitions from the WaitSet to the PendingSet if the
-  // instruction is not ready yet, but the latency of every register read is known.
-  // Instructions in the PendingSet are expected to be in the IS_PENDING stage.
+  // instruction is not ready yet, but the latency of every register read is
+  // known.  Instructions in the PendingSet can only be in the IS_PENDING or
+  // IS_READY stage.  Only IS_READY instructions that are waiting on memory
+  // dependencies can be added to the PendingSet.
   //
   // Instructions in the PendingSet are immediately dominated only by
-  // instructions that have already been issued to the underlying pipelines.
-  // In the presence of bottlenecks caused by data dependencies, the PendingSet
-  // can be inspected to identify problematic data dependencies between
+  // instructions that have already been issued to the underlying pipelines.  In
+  // the presence of bottlenecks caused by data dependencies, the PendingSet can
+  // be inspected to identify problematic data dependencies between
   // instructions.
   //
   // An instruction is moved to the ReadySet when all register operands become
   // available, and all memory dependencies are met.  Instructions that are
-  // moved from the PendingSet to the ReadySet transition in state from
-  // 'IS_PENDING' to 'IS_READY'.
+  // moved from the PendingSet to the ReadySet must transition to the 'IS_READY'
+  // stage.
   //
   // On every cycle, the Scheduler checks if it can promote instructions from the
   // PendingSet to the ReadySet.

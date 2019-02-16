@@ -2463,45 +2463,29 @@ pid_t MachProcess::AttachForDebug(pid_t pid, char *err_str, size_t err_len) {
       const char *err_cstr = err.AsString();
       ::snprintf(err_str, err_len, "%s",
                  err_cstr ? err_cstr : "No such process");
+      DNBLogError ("MachProcess::AttachForDebug pid %d does not exist", pid);
       return INVALID_NUB_PROCESS;
     }
 
     SetState(eStateAttaching);
     m_pid = pid;
-// Let ourselves know we are going to be using SBS or BKS if the correct flag
-// bit is set...
-#if defined(WITH_FBS) || defined(WITH_BKS)
-    bool found_app_flavor = false;
-#endif
-
-#if defined(WITH_FBS)
-    if (!found_app_flavor && IsFBSProcess(pid)) {
-      found_app_flavor = true;
-      m_flags |= eMachProcessFlagsUsingFBS;
-    }
-#elif defined(WITH_BKS)
-    if (!found_app_flavor && IsBKSProcess(pid)) {
-      found_app_flavor = true;
-      m_flags |= eMachProcessFlagsUsingBKS;
-    }
-#elif defined(WITH_SPRINGBOARD)
-    if (IsSBProcess(pid))
-      m_flags |= eMachProcessFlagsUsingSBS;
-#endif
     if (!m_task.StartExceptionThread(err)) {
       const char *err_cstr = err.AsString();
       ::snprintf(err_str, err_len, "%s",
                  err_cstr ? err_cstr : "unable to start the exception thread");
       DNBLogThreadedIf(LOG_PROCESS, "error: failed to attach to pid %d", pid);
+      DNBLogError ("MachProcess::AttachForDebug failed to start exception thread: %s", err_str);
       m_pid = INVALID_NUB_PROCESS;
       return INVALID_NUB_PROCESS;
     }
 
     errno = 0;
-    if (::ptrace(PT_ATTACHEXC, pid, 0, 0))
+    if (::ptrace(PT_ATTACHEXC, pid, 0, 0)) {
       err.SetError(errno);
-    else
+      DNBLogError ("MachProcess::AttachForDebug failed to ptrace(PT_ATTACHEXC): %s", err.AsString());
+    } else {
       err.Clear();
+    }
 
     if (err.Success()) {
       m_flags |= eMachProcessFlagsAttached;
@@ -2513,7 +2497,17 @@ pid_t MachProcess::AttachForDebug(pid_t pid, char *err_str, size_t err_len) {
       return m_pid;
     } else {
       ::snprintf(err_str, err_len, "%s", err.AsString());
-      DNBLogThreadedIf(LOG_PROCESS, "error: failed to attach to pid %d", pid);
+      DNBLogError ("MachProcess::AttachForDebug error: failed to attach to pid %d", pid);
+
+      struct kinfo_proc kinfo;
+      int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+      size_t len = sizeof(struct kinfo_proc);
+      if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) == 0 && len > 0) {
+        if (kinfo.kp_proc.p_flag & P_TRACED) {
+          ::snprintf(err_str, err_len, "%s - process %d is already being debugged", err.AsString(), pid);
+          DNBLogError ("MachProcess::AttachForDebug pid %d is already being debugged", pid);
+        }
+      }
     }
   }
   return INVALID_NUB_PROCESS;
@@ -2945,7 +2939,7 @@ pid_t MachProcess::LaunchForDebug(
     const char *app_ext = strstr(path, ".app");
     if (app_ext && (app_ext[4] == '\0' || app_ext[4] == '/')) {
       std::string app_bundle_path(path, app_ext + strlen(".app"));
-      m_flags |= eMachProcessFlagsUsingFBS;
+      m_flags |= (eMachProcessFlagsUsingFBS | eMachProcessFlagsBoardCalculated);
       if (BoardServiceLaunchForDebug(app_bundle_path.c_str(), argv, envp,
                                      no_stdio, disable_aslr, event_data,
                                      launch_err) != 0)
@@ -2961,7 +2955,7 @@ pid_t MachProcess::LaunchForDebug(
     const char *app_ext = strstr(path, ".app");
     if (app_ext && (app_ext[4] == '\0' || app_ext[4] == '/')) {
       std::string app_bundle_path(path, app_ext + strlen(".app"));
-      m_flags |= eMachProcessFlagsUsingBKS;
+      m_flags |= (eMachProcessFlagsUsingBKS | eMachProcessFlagsBoardCalculated);
       if (BoardServiceLaunchForDebug(app_bundle_path.c_str(), argv, envp,
                                      no_stdio, disable_aslr, event_data,
                                      launch_err) != 0)
@@ -3379,7 +3373,6 @@ pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
   m_pid = MachProcess::SBForkChildForPTraceDebugging(path, argv, envp, no_stdio,
                                                      this, launch_err);
   if (m_pid != 0) {
-    m_flags |= eMachProcessFlagsUsingSBS;
     m_path = path;
     size_t i;
     char const *arg;
@@ -3734,7 +3727,7 @@ pid_t MachProcess::BoardServiceForkChildForPTraceDebugging(
   bool success = false;
 
 #ifdef WITH_BKS
-  if (m_flags & eMachProcessFlagsUsingBKS) {
+  if (ProcessUsingBackBoard()) {
     options =
         BKSCreateOptionsDictionary(app_bundle_path, launch_argv, launch_envp,
                                    stdio_path, disable_aslr, event_data);
@@ -3743,7 +3736,7 @@ pid_t MachProcess::BoardServiceForkChildForPTraceDebugging(
   }
 #endif
 #ifdef WITH_FBS
-  if (m_flags & eMachProcessFlagsUsingFBS) {
+  if (ProcessUsingFrontBoard()) {
     options =
         FBSCreateOptionsDictionary(app_bundle_path, launch_argv, launch_envp,
                                    stdio_path, disable_aslr, event_data);
@@ -3779,12 +3772,12 @@ bool MachProcess::BoardServiceSendEvent(const char *event_data,
 // This is an event I cooked up.  What you actually do is foreground the system
 // app, so:
 #ifdef WITH_BKS
-    if (m_flags & eMachProcessFlagsUsingBKS) {
+    if (ProcessUsingBackBoard()) {
       return_value = BKSCallOpenApplicationFunction(nil, nil, send_err, NULL);
     }
 #endif
 #ifdef WITH_FBS
-    if (m_flags & eMachProcessFlagsUsingFBS) {
+    if (ProcessUsingFrontBoard()) {
       return_value = FBSCallOpenApplicationFunction(nil, nil, send_err, NULL);
     }
 #endif
@@ -3808,7 +3801,7 @@ bool MachProcess::BoardServiceSendEvent(const char *event_data,
     NSMutableDictionary *options = [NSMutableDictionary dictionary];
 
 #ifdef WITH_BKS
-    if (m_flags & eMachProcessFlagsUsingBKS) {
+    if (ProcessUsingBackBoard()) {
       if (!BKSAddEventDataToOptions(options, event_data, send_err)) {
         [pool drain];
         return false;
@@ -3820,7 +3813,7 @@ bool MachProcess::BoardServiceSendEvent(const char *event_data,
     }
 #endif
 #ifdef WITH_FBS
-    if (m_flags & eMachProcessFlagsUsingFBS) {
+    if (ProcessUsingFrontBoard()) {
       if (!FBSAddEventDataToOptions(options, event_data, send_err)) {
         [pool drain];
         return false;
@@ -3916,3 +3909,36 @@ void MachProcess::FBSCleanupAfterAttach(const void *attach_token,
   [pool drain];
 }
 #endif // WITH_FBS
+
+
+void MachProcess::CalculateBoardStatus()
+{
+  if (m_flags & eMachProcessFlagsBoardCalculated)
+    return;
+  if (m_pid == 0)
+    return;
+
+    bool found_app_flavor = false;
+#if defined(WITH_FBS)
+    if (!found_app_flavor && IsFBSProcess(m_pid)) {
+      found_app_flavor = true;
+      m_flags |= eMachProcessFlagsUsingFBS;
+    }
+#elif defined(WITH_BKS)
+    if (!found_app_flavor && IsBKSProcess(m_pid)) {
+      found_app_flavor = true;
+      m_flags |= eMachProcessFlagsUsingBKS;
+    }
+#endif
+    m_flags |= eMachProcessFlagsBoardCalculated;
+}
+
+bool MachProcess::ProcessUsingBackBoard() {
+  CalculateBoardStatus();
+  return (m_flags & eMachProcessFlagsUsingBKS) != 0;
+}
+
+bool MachProcess::ProcessUsingFrontBoard() {
+  CalculateBoardStatus();
+  return (m_flags & eMachProcessFlagsUsingFBS) != 0;
+}

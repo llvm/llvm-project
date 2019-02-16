@@ -79,7 +79,7 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
 }
 
 
-void IterateDirRecurisve(const std::string &Dir,
+void IterateDirRecursive(const std::string &Dir,
                          void (*DirPreCallback)(const std::string &Dir),
                          void (*DirPostCallback)(const std::string &Dir),
                          void (*FileCallback)(const std::string &Dir)) {
@@ -94,7 +94,7 @@ void IterateDirRecurisve(const std::string &Dir,
     else if ((E->d_type == DT_DIR ||
              (E->d_type == DT_UNKNOWN && IsDirectory(Path))) &&
              *E->d_name != '.')
-      IterateDirRecurisve(Path, DirPreCallback, DirPostCallback, FileCallback);
+      IterateDirRecursive(Path, DirPreCallback, DirPostCallback, FileCallback);
   }
   closedir(D);
   DirPostCallback(Dir);

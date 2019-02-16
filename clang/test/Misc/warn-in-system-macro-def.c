@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -isystem %S -Wdouble-promotion -fsyntax-only %s  2>&1 | FileCheck -allow-empty %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -isystem %S -Wdouble-promotion -fsyntax-only %s  2>&1 | FileCheck -allow-empty %s
 // CHECK: warning:
 // CHECK: expanded from macro 'ISNAN'
 // CHECK: expanded from macro 'isnan'

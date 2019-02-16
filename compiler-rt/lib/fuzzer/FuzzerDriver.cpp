@@ -606,6 +606,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.TimeoutExitCode = Flags.timeout_exitcode;
   Options.IgnoreTimeouts = Flags.ignore_timeouts;
   Options.IgnoreOOMs = Flags.ignore_ooms;
+  Options.IgnoreCrashes = Flags.ignore_crashes;
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;
   Options.MutateDepth = Flags.mutate_depth;

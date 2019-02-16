@@ -153,7 +153,7 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   if (!Options.OutputCorpus.empty() && Options.ReloadIntervalSec)
     EpochOfLastReadOfOutputCorpus = GetEpoch(Options.OutputCorpus);
   MaxInputLen = MaxMutationLen = Options.MaxLen;
-  TmpMaxMutationLen = Max(size_t(4), Corpus.MaxInputSize());
+  TmpMaxMutationLen = 0;  // Will be set once we load the corpus.
   AllocateCurrentUnitData();
   CurrentUnitSize = 0;
   memset(BaseSha1, 0, sizeof(BaseSha1));
@@ -258,6 +258,7 @@ void Fuzzer::ExitCallback() {
 void Fuzzer::MaybeExitGracefully() {
   if (!F->GracefulExitRequested) return;
   Printf("==%lu== INFO: libFuzzer: exiting as requested\n", GetPid());
+  RmDirRecursive(TempPath(".dir"));
   F->PrintFinalStats();
   _Exit(0);
 }
@@ -265,6 +266,7 @@ void Fuzzer::MaybeExitGracefully() {
 void Fuzzer::InterruptCallback() {
   Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();
+  RmDirRecursive(TempPath(".dir"));
   // Stop right now, don't perform any at-exit actions.
   _Exit(Options.InterruptExitCode);
 }
@@ -779,6 +781,10 @@ void Fuzzer::Loop(const Vector<std::string> &CorpusDirs,
   TPC.SetPrintNewPCs(Options.PrintNewCovPcs);
   TPC.SetPrintNewFuncs(Options.PrintNewCovFuncs);
   system_clock::time_point LastCorpusReload = system_clock::now();
+
+  TmpMaxMutationLen =
+      Min(MaxMutationLen, Max(size_t(4), Corpus.MaxInputSize()));
+
   while (true) {
     auto Now = system_clock::now();
     if (duration_cast<seconds>(Now - LastCorpusReload).count() >=

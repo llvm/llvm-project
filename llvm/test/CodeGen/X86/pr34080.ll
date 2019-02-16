@@ -17,12 +17,12 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-NEXT:    fldt 16(%rbp)
 ; SSE2-NEXT:    fnstcw -4(%rbp)
 ; SSE2-NEXT:    movzwl -4(%rbp), %eax
-; SSE2-NEXT:    movw $3199, -4(%rbp) ## imm = 0xC7F
+; SSE2-NEXT:    orl $3072, %eax ## imm = 0xC00
+; SSE2-NEXT:    movw %ax, -8(%rbp)
+; SSE2-NEXT:    fldcw -8(%rbp)
+; SSE2-NEXT:    fistl -12(%rbp)
 ; SSE2-NEXT:    fldcw -4(%rbp)
-; SSE2-NEXT:    movw %ax, -4(%rbp)
-; SSE2-NEXT:    fistl -8(%rbp)
-; SSE2-NEXT:    fldcw -4(%rbp)
-; SSE2-NEXT:    cvtsi2sdl -8(%rbp), %xmm0
+; SSE2-NEXT:    cvtsi2sdl -12(%rbp), %xmm0
 ; SSE2-NEXT:    movsd %xmm0, -64(%rbp)
 ; SSE2-NEXT:    movsd %xmm0, -32(%rbp)
 ; SSE2-NEXT:    fsubl -32(%rbp)
@@ -30,14 +30,14 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-NEXT:    fmul %st, %st(1)
 ; SSE2-NEXT:    fnstcw -2(%rbp)
 ; SSE2-NEXT:    movzwl -2(%rbp), %eax
-; SSE2-NEXT:    movw $3199, -2(%rbp) ## imm = 0xC7F
-; SSE2-NEXT:    fldcw -2(%rbp)
-; SSE2-NEXT:    movw %ax, -2(%rbp)
+; SSE2-NEXT:    orl $3072, %eax ## imm = 0xC00
+; SSE2-NEXT:    movw %ax, -6(%rbp)
+; SSE2-NEXT:    fldcw -6(%rbp)
 ; SSE2-NEXT:    fxch %st(1)
-; SSE2-NEXT:    fistl -12(%rbp)
+; SSE2-NEXT:    fistl -16(%rbp)
 ; SSE2-NEXT:    fldcw -2(%rbp)
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
-; SSE2-NEXT:    cvtsi2sdl -12(%rbp), %xmm0
+; SSE2-NEXT:    cvtsi2sdl -16(%rbp), %xmm0
 ; SSE2-NEXT:    movsd %xmm0, -56(%rbp)
 ; SSE2-NEXT:    movsd %xmm0, -24(%rbp)
 ; SSE2-NEXT:    fsubl -24(%rbp)
@@ -53,30 +53,30 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; SSE2-SCHEDULE-NEXT:    .cfi_offset %rbp, -16
 ; SSE2-SCHEDULE-NEXT:    movq %rsp, %rbp
 ; SSE2-SCHEDULE-NEXT:    .cfi_def_cfa_register %rbp
-; SSE2-SCHEDULE-NEXT:    fnstcw -4(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fldt 16(%rbp)
+; SSE2-SCHEDULE-NEXT:    fnstcw -4(%rbp)
 ; SSE2-SCHEDULE-NEXT:    movzwl -4(%rbp), %eax
-; SSE2-SCHEDULE-NEXT:    movw $3199, -4(%rbp) ## imm = 0xC7F
+; SSE2-SCHEDULE-NEXT:    orl $3072, %eax ## imm = 0xC00
+; SSE2-SCHEDULE-NEXT:    movw %ax, -8(%rbp)
+; SSE2-SCHEDULE-NEXT:    fldcw -8(%rbp)
+; SSE2-SCHEDULE-NEXT:    fistl -12(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fldcw -4(%rbp)
-; SSE2-SCHEDULE-NEXT:    movw %ax, -4(%rbp)
-; SSE2-SCHEDULE-NEXT:    fistl -8(%rbp)
-; SSE2-SCHEDULE-NEXT:    fldcw -4(%rbp)
-; SSE2-SCHEDULE-NEXT:    cvtsi2sdl -8(%rbp), %xmm0
+; SSE2-SCHEDULE-NEXT:    cvtsi2sdl -12(%rbp), %xmm0
 ; SSE2-SCHEDULE-NEXT:    movsd %xmm0, -64(%rbp)
 ; SSE2-SCHEDULE-NEXT:    movsd %xmm0, -32(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fsubl -32(%rbp)
 ; SSE2-SCHEDULE-NEXT:    flds {{.*}}(%rip)
-; SSE2-SCHEDULE-NEXT:    fnstcw -2(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fmul %st, %st(1)
+; SSE2-SCHEDULE-NEXT:    fnstcw -2(%rbp)
 ; SSE2-SCHEDULE-NEXT:    movzwl -2(%rbp), %eax
-; SSE2-SCHEDULE-NEXT:    movw $3199, -2(%rbp) ## imm = 0xC7F
-; SSE2-SCHEDULE-NEXT:    fldcw -2(%rbp)
-; SSE2-SCHEDULE-NEXT:    movw %ax, -2(%rbp)
+; SSE2-SCHEDULE-NEXT:    orl $3072, %eax ## imm = 0xC00
+; SSE2-SCHEDULE-NEXT:    movw %ax, -6(%rbp)
+; SSE2-SCHEDULE-NEXT:    fldcw -6(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fxch %st(1)
-; SSE2-SCHEDULE-NEXT:    fistl -12(%rbp)
+; SSE2-SCHEDULE-NEXT:    fistl -16(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fldcw -2(%rbp)
 ; SSE2-SCHEDULE-NEXT:    xorps %xmm0, %xmm0
-; SSE2-SCHEDULE-NEXT:    cvtsi2sdl -12(%rbp), %xmm0
+; SSE2-SCHEDULE-NEXT:    cvtsi2sdl -16(%rbp), %xmm0
 ; SSE2-SCHEDULE-NEXT:    movsd %xmm0, -56(%rbp)
 ; SSE2-SCHEDULE-NEXT:    movsd %xmm0, -24(%rbp)
 ; SSE2-SCHEDULE-NEXT:    fsubl -24(%rbp)

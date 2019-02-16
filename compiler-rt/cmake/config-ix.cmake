@@ -120,8 +120,6 @@ check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 check_library_exists(execinfo backtrace "" COMPILER_RT_HAS_LIBEXECINFO)
 
-find_package(Threads)
-
 # Look for terminfo library, used in unittests that depend on LLVMSupport.
 if(LLVM_ENABLE_TERMINFO)
   foreach(library terminfo tinfo curses ncurses ncursesw)

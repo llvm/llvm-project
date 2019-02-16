@@ -41,7 +41,6 @@
 ; PGOUSE:      Function Integration/Inlining
 ; PGOUSE: PGOInstrumentationUsePass
 ; PGOUSE: PGOIndirectCallPromotion
-; SPLIT: Hot Cold Splitting
 ; PGOUSE: CallGraph Construction
 ; CHECK-O2-NEXT: Globals Alias Analysis
 ; CHECK-O2-NEXT: Call Graph SCC Pass Manager
@@ -100,6 +99,7 @@
 ; the runtime unrolling though.
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Loop Invariant Code Motion
+; SPLIT: Hot Cold Splitting
 ; CHECK-O2: FunctionPass Manager
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Loop Sink

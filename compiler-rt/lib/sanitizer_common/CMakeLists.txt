@@ -142,6 +142,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_freebsd.h
   sanitizer_fuchsia.h
   sanitizer_getauxval.h
+  sanitizer_hash.h
   sanitizer_interceptors_ioctl_netbsd.inc
   sanitizer_interface_internal.h
   sanitizer_internal_defs.h

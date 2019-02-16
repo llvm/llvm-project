@@ -37,7 +37,7 @@ if (FUCHSIA)
   list(APPEND SCUDO_CFLAGS -nostdinc++)
   list(APPEND SCUDO_DYNAMIC_LINK_FLAGS -nostdlib++)
 else()
-  list(APPEND SCUDO_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES})
+  list(APPEND SCUDO_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARY})
   list(APPEND SCUDO_OBJECT_LIBS
     RTSanitizerCommonCoverage
     RTSanitizerCommonSymbolizer

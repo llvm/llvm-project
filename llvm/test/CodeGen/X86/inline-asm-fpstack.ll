@@ -455,13 +455,13 @@ define void @test_live_st(i32 %a1) {
 ; CHECK-NEXT:    fldcw (%eax)
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:  LBB20_2: ## %_Z5tointRKe.exit
-; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movw $3199, {{[0-9]+}}(%esp) ## imm = 0xC7F
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fnstcw (%esp)
+; CHECK-NEXT:    movzwl (%esp), %eax
+; CHECK-NEXT:    orl $3072, %eax ## imm = 0xC00
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fistpl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldcw (%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)

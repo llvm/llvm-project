@@ -1654,6 +1654,7 @@ ClassTemplateDecl *ClangASTContext::CreateClassTemplateDecl(
       decl_ctx, // What decl context do we use here? TU? The actual decl
                 // context?
       SourceLocation(), decl_name, template_param_list, template_cxx_decl);
+  template_cxx_decl->setDescribedClassTemplate(class_template_decl);
 
   if (class_template_decl) {
     if (access_type != eAccessNone)

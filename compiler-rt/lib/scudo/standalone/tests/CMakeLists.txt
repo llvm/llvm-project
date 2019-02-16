@@ -15,10 +15,7 @@ set(SCUDO_UNITTEST_CFLAGS
 set(SCUDO_TEST_ARCH ${SCUDO_SUPPORTED_ARCH})
 
 # gtests requires c++
-set(LINK_FLAGS ${CMAKE_THREAD_LIBS_INIT})
-foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
-  list(APPEND LINK_FLAGS -l${lib})
-endforeach()
+set(LINK_FLAGS -lstdc++ -pthread)
 
 set(TEST_HEADERS)
 foreach (header ${SCUDO_HEADERS})
