@@ -18149,9 +18149,10 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                getSetCCResultType(DAG.getDataLayout(),
                                                   *DAG.getContext(), TheVT),
                                Value, ThreshVal, ISD::SETLT);
-    Adjust = DAG.getSelect(DL, MVT::i32, Cmp,
-                           DAG.getConstant(0, DL, MVT::i32),
-                           DAG.getConstant(0x80000000, DL, MVT::i32));
+    Adjust = DAG.getSelect(DL, MVT::i64, Cmp,
+                           DAG.getConstant(0, DL, MVT::i64),
+                           DAG.getConstant(APInt::getSignMask(64),
+                                           DL, MVT::i64));
     SDValue Sub = DAG.getNode(ISD::FSUB, DL, TheVT, Value, ThreshVal);
     Cmp = DAG.getSetCC(DL, getSetCCResultType(DAG.getDataLayout(),
                                               *DAG.getContext(), TheVT),
@@ -18188,32 +18189,14 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                          DAG.getVTList(MVT::Other),
                                          Ops, DstTy, MMO);
 
-  if (!UnsignedFixup)
-    return DAG.getLoad(Op.getValueType(), SDLoc(Op), FIST, StackSlot,
-                       MachinePointerInfo());
+  SDValue Res = DAG.getLoad(Op.getValueType(), SDLoc(Op), FIST, StackSlot,
+                            MachinePointerInfo());
 
-  // Insert the FIST, load its result as two i32's,
-  // and XOR the high i32 with Adjust.
+  // If we need an unsigned fixup, XOR the result with adjust.
+  if (UnsignedFixup)
+    Res = DAG.getNode(ISD::XOR, DL, MVT::i64, Res, Adjust);
 
-  SDValue Low32 =
-      DAG.getLoad(MVT::i32, DL, FIST, StackSlot, MachinePointerInfo());
-  SDValue HighAddr = DAG.getMemBasePlusOffset(StackSlot, 4, DL);
-
-  SDValue High32 =
-      DAG.getLoad(MVT::i32, DL, FIST, HighAddr, MachinePointerInfo());
-  High32 = DAG.getNode(ISD::XOR, DL, MVT::i32, High32, Adjust);
-
-  if (Subtarget.is64Bit()) {
-    // Join High32 and Low32 into a 64-bit result.
-    // (High32 << 32) | Low32
-    Low32 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Low32);
-    High32 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, High32);
-    High32 = DAG.getNode(ISD::SHL, DL, MVT::i64, High32,
-                         DAG.getConstant(32, DL, MVT::i8));
-    return DAG.getNode(ISD::OR, DL, MVT::i64, High32, Low32);
-  }
-
-  return DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, { Low32, High32 });
+  return Res;
 }
 
 static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
