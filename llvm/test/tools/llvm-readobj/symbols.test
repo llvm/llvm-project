@@ -1,9 +1,18 @@
-RUN: llvm-readobj -t %p/Inputs/trivial.obj.coff-i386 \
+RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF
-RUN: llvm-readobj -t %p/Inputs/trivial.obj.elf-i386 \
+RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -t %p/Inputs/trivial.obj.wasm \
+RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.wasm \
 RUN:   | FileCheck %s -check-prefix WASM
+
+# Check flag aliases produce identical output.
+RUN: llvm-readobj --symbols %p/Inputs/trivial.obj.elf-i386 > %t.symbols
+RUN: llvm-readobj --syms %p/Inputs/trivial.obj.elf-i386 > %t.syms
+RUN: cmp %t.symbols %t.syms
+RUN: llvm-readobj -t %p/Inputs/trivial.obj.elf-i386 > %t.t
+RUN: cmp %t.symbols %t.t
+RUN: llvm-readelf -s -elf-output-style LLVM %p/Inputs/trivial.obj.elf-i386 > %t.lowers
+RUN: cmp %t.symbols %t.lowers
 
 COFF:      Symbols [
 COFF-NEXT:   Symbol {
@@ -86,6 +95,11 @@ WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: puts
 WASM-NEXT:     Type: FUNCTION (0x0)
 WASM-NEXT:     Flags: 0x10
+WASM-NEXT:   }
+WASM-NEXT:   Symbol {
+WASM-NEXT:     Name: .LSomeOtherFunction_bitcast
+WASM-NEXT:     Type: FUNCTION (0x0)
+WASM-NEXT:     Flags: 0x2
 WASM-NEXT:   }
 WASM-NEXT:   Symbol {
 WASM-NEXT:     Name: SomeOtherFunction

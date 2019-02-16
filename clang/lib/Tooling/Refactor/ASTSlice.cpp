@@ -184,10 +184,10 @@ ASTSlice::ASTSlice(SourceLocation Location, SourceRange SelectionRange,
   for (auto *CurrDecl : Context.getTranslationUnitDecl()->decls()) {
     if (EndLoc.isValid() &&
         !Context.getSourceManager().isBeforeInTranslationUnit(
-            CurrDecl->getLocStart(), EndLoc))
+            CurrDecl->getBeginLoc(), EndLoc))
       break;
     const SourceLocation FileLoc =
-        Context.getSourceManager().getSpellingLoc(CurrDecl->getLocStart());
+        Context.getSourceManager().getSpellingLoc(CurrDecl->getBeginLoc());
     if (Context.getSourceManager().getFileID(FileLoc) == SearchFile)
       Visitor.TraverseDecl(CurrDecl);
     // We are only interested in looking at a single top level declaration
@@ -197,7 +197,7 @@ ASTSlice::ASTSlice(SourceLocation Location, SourceRange SelectionRange,
       // that are declared outside of the @implementation, so continue looking
       // through them.
       if (isa<ObjCImplDecl>(CurrDecl)) {
-        EndLoc = CurrDecl->getLocEnd();
+        EndLoc = CurrDecl->getEndLoc();
         continue;
       }
       break;
@@ -404,7 +404,7 @@ computeSelectionRangeOverlapKinds(MutableArrayRef<ASTSlice::Node> NodeTree,
 const Stmt *findFirstStatementAfter(const CompoundStmt *CS, SourceLocation Loc,
                                     const SourceManager &SM) {
   for (const Stmt *S : CS->body()) {
-    if (!SM.isBeforeInTranslationUnit(S->getLocStart(), Loc))
+    if (!SM.isBeforeInTranslationUnit(S->getBeginLoc(), Loc))
       return S;
   }
   return nullptr;
@@ -418,7 +418,7 @@ const Stmt *findLastStatementBefore(const CompoundStmt *CS, SourceLocation Loc,
   const Stmt *Last = StartAt;
   for (auto E = CS->body_end(); It != E; ++It) {
     const Stmt *S = *It;
-    if (!SM.isBeforeInTranslationUnit(S->getLocStart(), Loc))
+    if (!SM.isBeforeInTranslationUnit(S->getBeginLoc(), Loc))
       return Last;
     Last = S;
   }
@@ -498,7 +498,7 @@ static bool isCaseSelected(const SwitchStmt *S, SourceRange SelectionRange,
                            const SourceManager &SM) {
   for (const SwitchCase *Case = S->getSwitchCaseList(); Case;
        Case = Case->getNextSwitchCase()) {
-    SourceRange Range(Case->getLocStart(), Case->getColonLoc());
+    SourceRange Range(Case->getBeginLoc(), Case->getColonLoc());
     if (areRangesOverlapping(Range, SelectionRange, SM))
       return true;
   }
@@ -584,7 +584,7 @@ Optional<SelectedStmtSet> ASTSlice::computeSelectedStmtSet() {
       // doesn't overlap with any actual statements.
       if (!Result.containsSelectionRangeStart ||
           !Context.getSourceManager().isBeforeInTranslationUnit(
-              Result.containsSelectionRangeStart->getLocStart(),
+              Result.containsSelectionRangeStart->getBeginLoc(),
               SelectionRange.getEnd()))
         return None;
 

@@ -14,9 +14,8 @@ define i64 @bra(i32 %zed) nounwind {
 ;
 ; X64-LABEL: bra:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    andl $-64, %edi # encoding: [0x83,0xe7,0xc0]
-; X64-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; X64-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; X64-NEXT:    andl $-64, %eax # encoding: [0x83,0xe0,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
  %t1 = zext i32 %zed to i64
  %t2 = and i64  %t1, 4294967232
@@ -57,8 +56,8 @@ define i64 @bar(i64 %zed) nounwind {
 ;
 ; X64-LABEL: bar:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $42, %edi # encoding: [0x83,0xe7,0x2a]
 ; X64-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; X64-NEXT:    andl $42, %eax # encoding: [0x83,0xe0,0x2a]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %t1 = and i64 %zed, 42
   ret i64 %t1
@@ -75,9 +74,9 @@ define i64 @baz(i64 %zed) nounwind {
 ;
 ; X64-LABEL: baz:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $2147483647, %edi # encoding: [0x81,0xe7,0xff,0xff,0xff,0x7f]
-; X64-NEXT:    # imm = 0x7FFFFFFF
 ; X64-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; X64-NEXT:    andl $2147483647, %eax # encoding: [0x25,0xff,0xff,0xff,0x7f]
+; X64-NEXT:    # imm = 0x7FFFFFFF
 ; X64-NEXT:    retq # encoding: [0xc3]
   %t1 = and i64 %zed, 2147483647
   ret i64 %t1

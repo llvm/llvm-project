@@ -854,7 +854,7 @@ USEMV(MemVarTmpl, ImportedStaticVar<ExplicitSpec_Imported>)
 // Not importing specialization of a member variable template without explicit
 // dllimport.
 // MSC-DAG: @"??$ImportedStaticVar@UExplicitSpec_NotImported@@@MemVarTmpl@@2HB" = external dso_local constant i32
-// GNU-DAG: @_ZN10MemVarTmpl17ImportedStaticVarI24ExplicitSpec_NotImportedEE       = external dso_local constant i32
+// GNU-DAG: @_ZN10MemVarTmpl17ImportedStaticVarI24ExplicitSpec_NotImportedEE       = external constant i32
 template<> const int MemVarTmpl::ImportedStaticVar<ExplicitSpec_NotImported>;
 USEMV(MemVarTmpl, ImportedStaticVar<ExplicitSpec_NotImported>)
 

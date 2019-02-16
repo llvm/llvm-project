@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test folding constant offsets and symbols into load and store addresses under
 ; a variety of circumstances.
@@ -9,7 +9,7 @@ target triple = "wasm32-unknown-unknown"
 @g = external global [0 x i32], align 4
 
 ; CHECK-LABEL: load_test0:
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test0 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.load  $push1=, g+40($pop0){{$}}
 ; CHECK-NEXT: return    $pop1{{$}}
@@ -19,7 +19,7 @@ define i32 @load_test0() {
 }
 
 ; CHECK-LABEL: load_test0_noinbounds:
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test0_noinbounds () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.load  $push1=, g+40($pop0){{$}}
 ; CHECK-NEXT: return    $pop1{{$}}
@@ -33,8 +33,7 @@ define i32 @load_test0_noinbounds() {
 ; Likewise for stores.
 
 ; CHECK-LABEL: load_test1:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test1 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -47,8 +46,7 @@ define i32 @load_test1(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test2:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test2 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -61,8 +59,7 @@ define i32 @load_test2(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test3:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test3 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -75,8 +72,7 @@ define i32 @load_test3(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test4:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test4 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -88,8 +84,7 @@ define i32 @load_test4(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test5:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test5 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -101,8 +96,7 @@ define i32 @load_test5(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test6:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test6 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -115,8 +109,7 @@ define i32 @load_test6(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test7:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test7 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -129,8 +122,7 @@ define i32 @load_test7(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test8:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test8 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEX T: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.load  $push2=, g+40($pop1){{$}}
@@ -143,7 +135,7 @@ define i32 @load_test8(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test9:
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test9 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.load  $push1=, g-40($pop0){{$}}
 ; CHECK-NEXT: return    $pop1{{$}}
@@ -153,8 +145,7 @@ define i32 @load_test9() {
 }
 
 ; CHECK-LABEL: load_test10:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test10 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.const $push2=, g-40{{$}}
@@ -169,8 +160,7 @@ define i32 @load_test10(i32 %n) {
 }
 
 ; CHECK-LABEL: load_test11:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test11 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load  $push0=, 40($0){{$}}
 ; CHECK-NEXT: return    $pop0{{$}}
 define i32 @load_test11(i32* %p) {
@@ -180,8 +170,7 @@ define i32 @load_test11(i32* %p) {
 }
 
 ; CHECK-LABEL: load_test11_noinbounds:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test11_noinbounds (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.load  $push2=, 0($pop1){{$}}
@@ -193,8 +182,7 @@ define i32 @load_test11_noinbounds(i32* %p) {
 }
 
 ; CHECK-LABEL: load_test12:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test12 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -210,8 +198,7 @@ define i32 @load_test12(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test13:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test13 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -227,8 +214,7 @@ define i32 @load_test13(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test14:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test14 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -242,8 +228,7 @@ define i32 @load_test14(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test15:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test15 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -259,8 +244,7 @@ define i32 @load_test15(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test16:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test16 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -276,8 +260,7 @@ define i32 @load_test16(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test17:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test17 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -293,8 +276,7 @@ define i32 @load_test17(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test18:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test18 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -308,8 +290,7 @@ define i32 @load_test18(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test19:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test19 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -325,8 +306,7 @@ define i32 @load_test19(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: load_test20:
-; CHECK-NEXT: param     i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test20 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, -40{{$}}
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.load  $push2=, 0($pop1){{$}}
@@ -338,8 +318,7 @@ define i32 @load_test20(i32* %p) {
 }
 
 ; CHECK-LABEL: load_test21:
-; CHECK-NEXT: param     i32, i32{{$}}
-; CHECK-NEXT: result    i32{{$}}
+; CHECK-NEXT: .functype load_test21 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -355,7 +334,7 @@ define i32 @load_test21(i32* %p, i32 %n) {
 }
 
 ; CHECK-LABEL: store_test0:
-; CHECK-NEXT: param     i32{{$}}
+; CHECK-NEXT: .functype store_test0 (i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.store g+40($pop0), $0{{$}}
 ; CHECK-NEXT: return{{$}}
@@ -365,7 +344,7 @@ define void @store_test0(i32 %i) {
 }
 
 ; CHECK-LABEL: store_test0_noinbounds:
-; CHECK-NEXT: param     i32{{$}}
+; CHECK-NEXT: .functype store_test0_noinbounds (i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.store g+40($pop0), $0{{$}}
 ; CHECK-NEXT: return{{$}}
@@ -375,7 +354,7 @@ define void @store_test0_noinbounds(i32 %i) {
 }
 
 ; CHECK-LABEL: store_test1:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test1 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -388,7 +367,7 @@ define void @store_test1(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test2:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test2 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -401,7 +380,7 @@ define void @store_test2(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test3:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test3 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -414,7 +393,7 @@ define void @store_test3(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test4:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test4 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -426,7 +405,7 @@ define void @store_test4(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test5:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test5 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -438,7 +417,7 @@ define void @store_test5(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test6:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test6 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -451,7 +430,7 @@ define void @store_test6(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test7:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test7 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -464,7 +443,7 @@ define void @store_test7(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test8:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test8 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEX T: i32.store g+40($pop1), $1{{$}}
@@ -477,7 +456,7 @@ define void @store_test8(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test9:
-; CHECK-NEXT: param     i32{{$}}
+; CHECK-NEXT: .functype store_test9 (i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.store g-40($pop0), $0{{$}}
 ; CHECK-NEXT: return{{$}}
@@ -487,7 +466,7 @@ define void @store_test9(i32 %i) {
 }
 
 ; CHECK-LABEL: store_test10:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test10 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.const $push2=, g-40{{$}}
@@ -502,7 +481,7 @@ define void @store_test10(i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test11:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test11 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 40($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_test11(i32* %p, i32 %i) {
@@ -512,7 +491,7 @@ define void @store_test11(i32* %p, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test11_noinbounds:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test11_noinbounds (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 40{{$}}
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.store 0($pop1), $1{{$}}
@@ -524,7 +503,7 @@ define void @store_test11_noinbounds(i32* %p, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test12:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test12 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -540,7 +519,7 @@ define void @store_test12(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test13:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test13 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -556,7 +535,7 @@ define void @store_test13(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test14:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test14 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -570,7 +549,7 @@ define void @store_test14(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test15:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test15 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -586,7 +565,7 @@ define void @store_test15(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test16:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test16 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -602,7 +581,7 @@ define void @store_test16(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test17:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test17 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -618,7 +597,7 @@ define void @store_test17(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test18:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test18 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -632,7 +611,7 @@ define void @store_test18(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test19:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test19 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}
@@ -648,7 +627,7 @@ define void @store_test19(i32* %p, i32 %n, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test20:
-; CHECK-NEXT: param     i32, i32{{$}}
+; CHECK-NEXT: .functype store_test20 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, -40{{$}}
 ; CHECK-NEXT: i32.add   $push1=, $0, $pop0{{$}}
 ; CHECK-NEXT: i32.store 0($pop1), $1{{$}}
@@ -660,7 +639,7 @@ define void @store_test20(i32* %p, i32 %i) {
 }
 
 ; CHECK-LABEL: store_test21:
-; CHECK-NEXT: param     i32, i32, i32{{$}}
+; CHECK-NEXT: .functype store_test21 (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.const $push0=, 2{{$}}
 ; CHECK-NEXT: i32.shl   $push1=, $1, $pop0{{$}}
 ; CHECK-NEXT: i32.add   $push2=, $0, $pop1{{$}}

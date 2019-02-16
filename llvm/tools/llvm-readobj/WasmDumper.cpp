@@ -23,28 +23,21 @@ using namespace object;
 namespace {
 
 static const EnumEntry<unsigned> WasmSymbolTypes[] = {
-#define ENUM_ENTRY(X) { #X, wasm::WASM_SYMBOL_TYPE_##X }
-  ENUM_ENTRY(FUNCTION),
-  ENUM_ENTRY(DATA),
-  ENUM_ENTRY(GLOBAL),
-  ENUM_ENTRY(SECTION),
+#define ENUM_ENTRY(X)                                                          \
+  { #X, wasm::WASM_SYMBOL_TYPE_##X }
+    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA),  ENUM_ENTRY(GLOBAL),
+    ENUM_ENTRY(SECTION),  ENUM_ENTRY(EVENT),
 #undef ENUM_ENTRY
 };
 
 static const EnumEntry<uint32_t> WasmSectionTypes[] = {
-#define ENUM_ENTRY(X) { #X, wasm::WASM_SEC_##X }
-  ENUM_ENTRY(CUSTOM),
-  ENUM_ENTRY(TYPE),
-  ENUM_ENTRY(IMPORT),
-  ENUM_ENTRY(FUNCTION),
-  ENUM_ENTRY(TABLE),
-  ENUM_ENTRY(MEMORY),
-  ENUM_ENTRY(GLOBAL),
-  ENUM_ENTRY(EXPORT),
-  ENUM_ENTRY(START),
-  ENUM_ENTRY(ELEM),
-  ENUM_ENTRY(CODE),
-  ENUM_ENTRY(DATA),
+#define ENUM_ENTRY(X)                                                          \
+  { #X, wasm::WASM_SEC_##X }
+    ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),  ENUM_ENTRY(IMPORT),
+    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(TABLE), ENUM_ENTRY(MEMORY),
+    ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(EVENT), ENUM_ENTRY(EXPORT),
+    ENUM_ENTRY(START),    ENUM_ENTRY(ELEM),  ENUM_ENTRY(CODE),
+    ENUM_ENTRY(DATA),
 #undef ENUM_ENTRY
 };
 
@@ -54,7 +47,7 @@ public:
       : ObjDumper(Writer), Obj(Obj) {}
 
   void printFileHeaders() override;
-  void printSections() override;
+  void printSectionHeaders() override;
   void printRelocations() override;
   void printSymbols() override;
   void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
@@ -108,7 +101,7 @@ void WasmDumper::printRelocation(const SectionRef &Section,
     if (HasAddend)
       W.printNumber("Addend", WasmReloc.Addend);
   } else {
-    raw_ostream& OS = W.startLine();
+    raw_ostream &OS = W.startLine();
     OS << W.hex(Reloc.getOffset()) << " " << RelocTypeName << " ";
     if (!SymName.empty())
       OS << SymName;
@@ -154,7 +147,7 @@ void WasmDumper::printSymbols() {
     printSymbol(Symbol);
 }
 
-void WasmDumper::printSections() {
+void WasmDumper::printSectionHeaders() {
   ListScope Group(W, "Sections");
   for (const SectionRef &Section : Obj->sections()) {
     const WasmSection &WasmSec = Obj->getWasmSection(Section);
@@ -169,7 +162,7 @@ void WasmDumper::printSections() {
         const wasm::WasmLinkingData &LinkingData = Obj->linkingData();
         if (!LinkingData.InitFunctions.empty()) {
           ListScope Group(W, "InitFunctions");
-          for (const wasm::WasmInitFunc &F: LinkingData.InitFunctions)
+          for (const wasm::WasmInitFunc &F : LinkingData.InitFunctions)
             W.startLine() << F.Symbol << " (priority=" << F.Priority << ")\n";
         }
       }
@@ -177,7 +170,7 @@ void WasmDumper::printSections() {
     case wasm::WASM_SEC_DATA: {
       ListScope Group(W, "Segments");
       for (const WasmSegment &Segment : Obj->dataSegments()) {
-        const wasm::WasmDataSegment& Seg = Segment.Data;
+        const wasm::WasmDataSegment &Seg = Segment.Data;
         DictScope Group(W, "Segment");
         if (!Seg.Name.empty())
           W.printString("Name", Seg.Name);
@@ -219,7 +212,7 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   W.printHex("Flags", Symbol.Info.Flags);
 }
 
-}
+} // namespace
 
 namespace llvm {
 

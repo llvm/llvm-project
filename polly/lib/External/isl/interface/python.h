@@ -10,10 +10,10 @@ private:
 	set<string> done;
 
 public:
-	python_generator(set<RecordDecl *> &exported_types,
+	python_generator(SourceManager &SM, set<RecordDecl *> &exported_types,
 		set<FunctionDecl *> exported_functions,
 		set<FunctionDecl *> functions) :
-		generator(exported_types, exported_functions, functions) {}
+		generator(SM, exported_types, exported_functions, functions) {}
 
 	virtual void generate();
 
@@ -24,7 +24,8 @@ private:
 		const vector<string> &super);
 	void print_type_check(const string &type, int pos, bool upcast,
 		const string &super, const string &name, int n);
-	void print_callback(QualType type, int arg);
+	void print_copy(QualType type);
+	void print_callback(ParmVarDecl *param, int arg);
 	void print_arg_in_call(FunctionDecl *fd, int arg, int skip);
 	void print_argtypes(FunctionDecl *fd);
 	void print_method_return(FunctionDecl *method);

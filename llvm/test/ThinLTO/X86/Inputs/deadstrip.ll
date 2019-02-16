@@ -20,3 +20,8 @@ define void @another_dead_func() {
     call void @dead_func()
     ret void
 }
+
+define linkonce_odr void @linkonceodrfuncwithalias() {
+entry:
+  ret void
+}

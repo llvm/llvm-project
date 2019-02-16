@@ -55,6 +55,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/PredicateInfo.h"
 #include <cassert>
 #include <utility>
 #include <vector>
@@ -246,7 +247,27 @@ class SCCPSolver : public InstVisitor<SCCPSolver> {
   using Edge = std::pair<BasicBlock *, BasicBlock *>;
   DenseSet<Edge> KnownFeasibleEdges;
 
+  DenseMap<Function *, AnalysisResultsForFn> AnalysisResults;
+  DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
+
 public:
+  void addAnalysis(Function &F, AnalysisResultsForFn A) {
+    AnalysisResults.insert({&F, std::move(A)});
+  }
+
+  const PredicateBase *getPredicateInfoFor(Instruction *I) {
+    auto A = AnalysisResults.find(I->getParent()->getParent());
+    if (A == AnalysisResults.end())
+      return nullptr;
+    return A->second.PredInfo->getPredicateInfoFor(I);
+  }
+
+  DomTreeUpdater getDTU(Function &F) {
+    auto A = AnalysisResults.find(&F);
+    assert(A != AnalysisResults.end() && "Need analysis results for function.");
+    return {A->second.DT, A->second.PDT, DomTreeUpdater::UpdateStrategy::Lazy};
+  }
+
   SCCPSolver(const DataLayout &DL, const TargetLibraryInfo *tli)
       : DL(DL), TLI(tli) {}
 
@@ -548,7 +569,7 @@ private:
 
   // getFeasibleSuccessors - Return a vector of booleans to indicate which
   // successors are reachable from a given terminator instruction.
-  void getFeasibleSuccessors(TerminatorInst &TI, SmallVectorImpl<bool> &Succs);
+  void getFeasibleSuccessors(Instruction &TI, SmallVectorImpl<bool> &Succs);
 
   // OperandChangedState - This method is invoked on all of the users of an
   // instruction that was just changed state somehow.  Based on this
@@ -556,6 +577,26 @@ private:
   void OperandChangedState(Instruction *I) {
     if (BBExecutable.count(I->getParent()))   // Inst is executable?
       visit(*I);
+  }
+
+  // Add U as additional user of V.
+  void addAdditionalUser(Value *V, User *U) {
+    auto Iter = AdditionalUsers.insert({V, {}});
+    Iter.first->second.insert(U);
+  }
+
+  // Mark I's users as changed, including AdditionalUsers.
+  void markUsersAsChanged(Value *I) {
+    for (User *U : I->users())
+      if (auto *UI = dyn_cast<Instruction>(U))
+        OperandChangedState(UI);
+
+    auto Iter = AdditionalUsers.find(I);
+    if (Iter != AdditionalUsers.end()) {
+      for (User *U : Iter->second)
+        if (auto *UI = dyn_cast<Instruction>(U))
+          OperandChangedState(UI);
+    }
   }
 
 private:
@@ -569,7 +610,7 @@ private:
   // Terminators
 
   void visitReturnInst(ReturnInst &I);
-  void visitTerminatorInst(TerminatorInst &TI);
+  void visitTerminator(Instruction &TI);
 
   void visitCastInst(CastInst &I);
   void visitSelectInst(SelectInst &I);
@@ -580,7 +621,7 @@ private:
 
   void visitCatchSwitchInst(CatchSwitchInst &CPI) {
     markOverdefined(&CPI);
-    visitTerminatorInst(CPI);
+    visitTerminator(CPI);
   }
 
   // Instructions that cannot be folded away.
@@ -595,12 +636,12 @@ private:
 
   void visitInvokeInst    (InvokeInst &II) {
     visitCallSite(&II);
-    visitTerminatorInst(II);
+    visitTerminator(II);
   }
 
   void visitCallSite      (CallSite CS);
-  void visitResumeInst    (TerminatorInst &I) { /*returns void*/ }
-  void visitUnreachableInst(TerminatorInst &I) { /*returns void*/ }
+  void visitResumeInst    (ResumeInst &I) { /*returns void*/ }
+  void visitUnreachableInst(UnreachableInst &I) { /*returns void*/ }
   void visitFenceInst     (FenceInst &I) { /*returns void*/ }
 
   void visitInstruction(Instruction &I) {
@@ -615,7 +656,7 @@ private:
 
 // getFeasibleSuccessors - Return a vector of booleans to indicate which
 // successors are reachable from a given terminator instruction.
-void SCCPSolver::getFeasibleSuccessors(TerminatorInst &TI,
+void SCCPSolver::getFeasibleSuccessors(Instruction &TI,
                                        SmallVectorImpl<bool> &Succs) {
   Succs.resize(TI.getNumSuccessors());
   if (auto *BI = dyn_cast<BranchInst>(&TI)) {
@@ -640,7 +681,7 @@ void SCCPSolver::getFeasibleSuccessors(TerminatorInst &TI,
   }
 
   // Unwinding instructions successors are always executable.
-  if (TI.isExceptional()) {
+  if (TI.isExceptionalTerminator()) {
     Succs.assign(TI.getNumSuccessors(), true);
     return;
   }
@@ -802,7 +843,7 @@ void SCCPSolver::visitReturnInst(ReturnInst &I) {
   }
 }
 
-void SCCPSolver::visitTerminatorInst(TerminatorInst &TI) {
+void SCCPSolver::visitTerminator(Instruction &TI) {
   SmallVector<bool, 16> SuccFeasible;
   getFeasibleSuccessors(TI, SuccFeasible);
 
@@ -1121,6 +1162,65 @@ void SCCPSolver::visitCallSite(CallSite CS) {
   Function *F = CS.getCalledFunction();
   Instruction *I = CS.getInstruction();
 
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+      if (ValueState[I].isOverdefined())
+        return;
+
+      auto *PI = getPredicateInfoFor(I);
+      if (!PI)
+        return;
+
+      Value *CopyOf = I->getOperand(0);
+      auto *PBranch = dyn_cast<PredicateBranch>(PI);
+      if (!PBranch) {
+        mergeInValue(ValueState[I], I, getValueState(CopyOf));
+        return;
+      }
+
+      Value *Cond = PBranch->Condition;
+
+      // Everything below relies on the condition being a comparison.
+      auto *Cmp = dyn_cast<CmpInst>(Cond);
+      if (!Cmp) {
+        mergeInValue(ValueState[I], I, getValueState(CopyOf));
+        return;
+      }
+
+      Value *CmpOp0 = Cmp->getOperand(0);
+      Value *CmpOp1 = Cmp->getOperand(1);
+      if (CopyOf != CmpOp0 && CopyOf != CmpOp1) {
+        mergeInValue(ValueState[I], I, getValueState(CopyOf));
+        return;
+      }
+
+      if (CmpOp0 != CopyOf)
+        std::swap(CmpOp0, CmpOp1);
+
+      LatticeVal OriginalVal = getValueState(CopyOf);
+      LatticeVal EqVal = getValueState(CmpOp1);
+      LatticeVal &IV = ValueState[I];
+      if (PBranch->TrueEdge && Cmp->getPredicate() == CmpInst::ICMP_EQ) {
+        addAdditionalUser(CmpOp1, I);
+        if (OriginalVal.isConstant())
+          mergeInValue(IV, I, OriginalVal);
+        else
+          mergeInValue(IV, I, EqVal);
+        return;
+      }
+      if (!PBranch->TrueEdge && Cmp->getPredicate() == CmpInst::ICMP_NE) {
+        addAdditionalUser(CmpOp1, I);
+        if (OriginalVal.isConstant())
+          mergeInValue(IV, I, OriginalVal);
+        else
+          mergeInValue(IV, I, EqVal);
+        return;
+      }
+
+      return (void)mergeInValue(IV, I, getValueState(CopyOf));
+    }
+  }
+
   // The common case is that we aren't tracking the callee, either because we
   // are not doing interprocedural analysis or the callee is indirect, or is
   // external.  Handle these cases first.
@@ -1136,6 +1236,8 @@ CallOverdefined:
       SmallVector<Constant*, 8> Operands;
       for (CallSite::arg_iterator AI = CS.arg_begin(), E = CS.arg_end();
            AI != E; ++AI) {
+        if (AI->get()->getType()->isStructTy())
+          return markOverdefined(I); // Can't handle struct args.
         LatticeVal State = getValueState(*AI);
 
         if (State.isUnknown())
@@ -1240,9 +1342,7 @@ void SCCPSolver::Solve() {
       // since all of its users will have already been marked as overdefined
       // Update all of the users of this instruction's value.
       //
-      for (User *U : I->users())
-        if (auto *UI = dyn_cast<Instruction>(U))
-          OperandChangedState(UI);
+      markUsersAsChanged(I);
     }
 
     // Process the instruction work list.
@@ -1259,9 +1359,7 @@ void SCCPSolver::Solve() {
       // Update all of the users of this instruction's value.
       //
       if (I->getType()->isStructTy() || !getValueState(I).isOverdefined())
-        for (User *U : I->users())
-          if (auto *UI = dyn_cast<Instruction>(U))
-            OperandChangedState(UI);
+        markUsersAsChanged(I);
     }
 
     // Process the basic block work list.
@@ -1524,7 +1622,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
     // Check to see if we have a branch or switch on an undefined value.  If so
     // we force the branch to go one way or the other to make the successor
     // values live.  It doesn't really matter which way we force it.
-    TerminatorInst *TI = BB.getTerminator();
+    Instruction *TI = BB.getTerminator();
     if (auto *BI = dyn_cast<BranchInst>(TI)) {
       if (!BI->isConditional()) continue;
       if (!getValueState(BI->getCondition()).isUnknown())
@@ -1696,7 +1794,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
     // constants if we have found them to be of constant values.
     for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {
       Instruction *Inst = &*BI++;
-      if (Inst->getType()->isVoidTy() || isa<TerminatorInst>(Inst))
+      if (Inst->getType()->isVoidTy() || Inst->isTerminator())
         continue;
 
       if (tryToReplaceWithConstant(Solver, Inst)) {
@@ -1800,8 +1898,44 @@ static void findReturnsToZap(Function &F,
   }
 }
 
-bool llvm::runIPSCCP(Module &M, const DataLayout &DL,
-                     const TargetLibraryInfo *TLI) {
+// Update the condition for terminators that are branching on indeterminate
+// values, forcing them to use a specific edge.
+static void forceIndeterminateEdge(Instruction* I, SCCPSolver &Solver) {
+  BasicBlock *Dest = nullptr;
+  Constant *C = nullptr;
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
+    if (!isa<ConstantInt>(SI->getCondition())) {
+      // Indeterminate switch; use first case value.
+      Dest = SI->case_begin()->getCaseSuccessor();
+      C = SI->case_begin()->getCaseValue();
+    }
+  } else if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
+    if (!isa<ConstantInt>(BI->getCondition())) {
+      // Indeterminate branch; use false.
+      Dest = BI->getSuccessor(1);
+      C = ConstantInt::getFalse(BI->getContext());
+    }
+  } else if (IndirectBrInst *IBR = dyn_cast<IndirectBrInst>(I)) {
+    if (!isa<BlockAddress>(IBR->getAddress()->stripPointerCasts())) {
+      // Indeterminate indirectbr; use successor 0.
+      Dest = IBR->getSuccessor(0);
+      C = BlockAddress::get(IBR->getSuccessor(0));
+    }
+  } else {
+    llvm_unreachable("Unexpected terminator instruction");
+  }
+  if (C) {
+    assert(Solver.isEdgeFeasible(I->getParent(), Dest) &&
+           "Didn't find feasible edge?");
+    (void)Dest;
+
+    I->setOperand(0, C);
+  }
+}
+
+bool llvm::runIPSCCP(
+    Module &M, const DataLayout &DL, const TargetLibraryInfo *TLI,
+    function_ref<AnalysisResultsForFn(Function &)> getAnalysis) {
   SCCPSolver Solver(DL, TLI);
 
   // Loop over all functions, marking arguments to those with their addresses
@@ -1809,6 +1943,8 @@ bool llvm::runIPSCCP(Module &M, const DataLayout &DL,
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
+
+    Solver.addAnalysis(F, getAnalysis(F));
 
     // Determine if we can track the function's return values. If so, add the
     // function to the solver's set of return-tracked functions.
@@ -1858,11 +1994,12 @@ bool llvm::runIPSCCP(Module &M, const DataLayout &DL,
 
   // Iterate over all of the instructions in the module, replacing them with
   // constants if we have found them to be of constant values.
-  SmallVector<BasicBlock*, 512> BlocksToErase;
 
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
+
+    SmallVector<BasicBlock *, 512> BlocksToErase;
 
     if (Solver.isBlockExecutable(&F.front()))
       for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
@@ -1899,23 +2036,26 @@ bool llvm::runIPSCCP(Module &M, const DataLayout &DL,
       }
     }
 
-    // Change dead blocks to unreachable. We do it after replacing constants in
-    // all executable blocks, because changeToUnreachable may remove PHI nodes
-    // in executable blocks we found values for. The function's entry block is
-    // not part of BlocksToErase, so we have to handle it separately.
-    for (BasicBlock *BB : BlocksToErase)
+    DomTreeUpdater DTU = Solver.getDTU(F);
+    // Change dead blocks to unreachable. We do it after replacing constants
+    // in all executable blocks, because changeToUnreachable may remove PHI
+    // nodes in executable blocks we found values for. The function's entry
+    // block is not part of BlocksToErase, so we have to handle it separately.
+    for (BasicBlock *BB : BlocksToErase) {
       NumInstRemoved +=
-          changeToUnreachable(BB->getFirstNonPHI(), /*UseLLVMTrap=*/false);
+          changeToUnreachable(BB->getFirstNonPHI(), /*UseLLVMTrap=*/false,
+                              /*PreserveLCSSA=*/false, &DTU);
+    }
     if (!Solver.isBlockExecutable(&F.front()))
       NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHI(),
-                                            /*UseLLVMTrap=*/false);
+                                            /*UseLLVMTrap=*/false,
+                                            /*PreserveLCSSA=*/false, &DTU);
 
-    // Now that all instructions in the function are constant folded, erase dead
-    // blocks, because we can now use ConstantFoldTerminator to get rid of
-    // in-edges.
-    for (unsigned i = 0, e = BlocksToErase.size(); i != e; ++i) {
+    // Now that all instructions in the function are constant folded,
+    // use ConstantFoldTerminator to get rid of in-edges, record DT updates and
+    // delete dead BBs.
+    for (BasicBlock *DeadBB : BlocksToErase) {
       // If there are any PHI nodes in this successor, drop entries for BB now.
-      BasicBlock *DeadBB = BlocksToErase[i];
       for (Value::user_iterator UI = DeadBB->user_begin(),
                                 UE = DeadBB->user_end();
            UI != UE;) {
@@ -1927,41 +2067,34 @@ bool llvm::runIPSCCP(Module &M, const DataLayout &DL,
         // Ignore blockaddress users; BasicBlock's dtor will handle them.
         if (!I) continue;
 
-        bool Folded = ConstantFoldTerminator(I->getParent());
-        if (!Folded) {
-          // If the branch can't be folded, we must have forced an edge
-          // for an indeterminate value. Force the terminator to fold
-          // to that edge.
-          Constant *C;
-          BasicBlock *Dest;
-          if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
-            Dest = SI->case_begin()->getCaseSuccessor();
-            C = SI->case_begin()->getCaseValue();
-          } else if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
-            Dest = BI->getSuccessor(1);
-            C = ConstantInt::getFalse(BI->getContext());
-          } else if (IndirectBrInst *IBR = dyn_cast<IndirectBrInst>(I)) {
-            Dest = IBR->getSuccessor(0);
-            C = BlockAddress::get(IBR->getSuccessor(0));
-          } else {
-            llvm_unreachable("Unexpected terminator instruction");
-          }
-          assert(Solver.isEdgeFeasible(I->getParent(), Dest) &&
-                 "Didn't find feasible edge?");
-          (void)Dest;
-
-          I->setOperand(0, C);
-          Folded = ConstantFoldTerminator(I->getParent());
-        }
+        // If we have forced an edge for an indeterminate value, then force the
+        // terminator to fold to that edge.
+        forceIndeterminateEdge(I, Solver);
+        bool Folded = ConstantFoldTerminator(I->getParent(),
+                                             /*DeleteDeadConditions=*/false,
+                                             /*TLI=*/nullptr, &DTU);
         assert(Folded &&
               "Expect TermInst on constantint or blockaddress to be folded");
         (void) Folded;
       }
-
-      // Finally, delete the basic block.
-      F.getBasicBlockList().erase(DeadBB);
+      // Mark dead BB for deletion.
+      DTU.deleteBB(DeadBB);
     }
-    BlocksToErase.clear();
+
+    for (BasicBlock &BB : F) {
+      for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {
+        Instruction *Inst = &*BI++;
+        if (Solver.getPredicateInfoFor(Inst)) {
+          if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
+            if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+              Value *Op = II->getOperand(0);
+              Inst->replaceAllUsesWith(Op);
+              Inst->eraseFromParent();
+            }
+          }
+        }
+      }
+    }
   }
 
   // If we inferred constant or undef return values for a function, we replaced

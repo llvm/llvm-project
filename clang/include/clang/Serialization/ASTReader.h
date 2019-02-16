@@ -18,6 +18,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -232,7 +233,7 @@ public:
 
   /// If needsImportVisitation returns \c true, this is called for each
   /// AST file imported by this AST file.
-  virtual void visitImport(StringRef Filename) {}
+  virtual void visitImport(StringRef ModuleName, StringRef Filename) {}
 
   /// Indicates that a particular module file extension has been read.
   virtual void readModuleFileExtension(
@@ -539,6 +540,11 @@ private:
   /// declaration that has an exception specification.
   llvm::SmallMapVector<Decl *, FunctionDecl *, 4> PendingExceptionSpecUpdates;
 
+  /// Deduced return type updates that have been loaded but not yet propagated
+  /// across the relevant redeclaration chain. The map key is the canonical
+  /// declaration and the value is the deduced return type.
+  llvm::SmallMapVector<FunctionDecl *, QualType, 4> PendingDeducedTypeUpdates;
+
   /// Declarations that have been imported and have typedef names for
   /// linkage purposes.
   llvm::DenseMap<std::pair<DeclContext *, IdentifierInfo *>, NamedDecl *>
@@ -748,13 +754,6 @@ private:
   /// which the preprocessed entity resides along with the offset that should be
   /// added to the global preprocessing entity ID to produce a local ID.
   GlobalPreprocessedEntityMapType GlobalPreprocessedEntityMap;
-
-  using GlobalSkippedRangeMapType =
-      ContinuousRangeMap<unsigned, ModuleFile *, 4>;
-
-  /// Mapping from global skipped range base IDs to the module in which
-  /// the skipped ranges reside.
-  GlobalSkippedRangeMapType GlobalSkippedRangeMap;
 
   /// \name CodeGen-relevant special data
   /// Fields containing data that is relevant to CodeGen.
@@ -1056,6 +1055,12 @@ private:
   /// Objective-C protocols.
   std::deque<InterestingDecl> PotentiallyInterestingDecls;
 
+  /// The list of deduced function types that we have not yet read, because
+  /// they might contain a deduced return type that refers to a local type
+  /// declared within the function.
+  SmallVector<std::pair<FunctionDecl *, serialization::TypeID>, 16>
+      PendingFunctionTypes;
+
   /// The list of redeclaration chains that still need to be
   /// reconstructed, and the local offset to the corresponding list
   /// of redeclarations.
@@ -1313,6 +1318,8 @@ private:
                                      ASTReaderListener &Listener);
   static bool ParseHeaderSearchOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener);
+  static bool ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
+                                     ASTReaderListener &Listener);
   static bool ParsePreprocessorOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener,
                                        std::string &SuggestedPredefines);
@@ -1703,9 +1710,6 @@ public:
   /// entity with index \p Index came from file \p FID.
   Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
                                               FileID FID) override;
-
-  /// Read a preallocated skipped range from the external source.
-  SourceRange ReadSkippedRange(unsigned Index) override;
 
   /// Read the header file information for the given file entry.
   HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) override;
@@ -2234,6 +2238,9 @@ public:
   CXXTemporary *ReadCXXTemporary(ModuleFile &F, const RecordData &Record,
                                  unsigned &Idx);
 
+  /// Reads one attribute from the current stream position.
+  Attr *ReadAttr(ModuleFile &M, const RecordData &Record, unsigned &Idx);
+
   /// Reads attributes from the current stream position.
   void ReadAttributes(ASTRecordReader &Record, AttrVec &Attrs);
 
@@ -2619,6 +2626,11 @@ public:
     return ASTReader::ReadVersionTuple(Record, Idx);
   }
 
+  /// Reads one attribute from the current stream position, advancing Idx.
+  Attr *readAttr() {
+    return Reader->ReadAttr(*F, Record, Idx);
+  }
+
   /// Reads attributes from the current stream position, advancing Idx.
   void readAttributes(AttrVec &Attrs) {
     return Reader->ReadAttributes(*this, Attrs);
@@ -2657,6 +2669,21 @@ private:
 inline void PCHValidator::Error(const char *Msg) {
   Reader.Error(Msg);
 }
+
+class OMPClauseReader : public OMPClauseVisitor<OMPClauseReader> {
+  ASTRecordReader &Record;
+  ASTContext &Context;
+
+public:
+  OMPClauseReader(ASTRecordReader &Record)
+      : Record(Record), Context(Record.getContext()) {}
+
+#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *C);
+#include "clang/Basic/OpenMPKinds.def"
+  OMPClause *readClause();
+  void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
+  void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
+};
 
 } // namespace clang
 

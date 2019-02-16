@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// REQUIRES: openmp-4.5
 // XFAIL: gcc-4, gcc-5, clang-3.7, clang-3.8, icc-15, icc-16
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +52,8 @@ int test_doacross() {
 int main(int argc, char **argv) {
   int i;
   int num_failed = 0;
+  if (omp_get_max_threads() < 2)
+    omp_set_num_threads(4);
   for (i = 0; i < REPETITIONS; i++) {
     if (!test_doacross()) {
       num_failed++;

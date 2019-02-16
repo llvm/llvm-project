@@ -17,8 +17,8 @@ define i64 @test47(i64 %arg)  {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    movl $7, %ecx
-; X64-NEXT:    cmoveq %rcx, %rax
-; X64-NEXT:    movq %rax, %mm0
+; X64-NEXT:    cmovneq %rax, %rcx
+; X64-NEXT:    movq %rcx, %mm0
 ; X64-NEXT:    psllw %mm0, %mm0
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq

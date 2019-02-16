@@ -730,15 +730,15 @@ Defs = [SREG] in
 // TST Rd
 // Test for zero of minus.
 // This operation is identical to a `Rd AND Rd`.
-//def : InstAlias<"tst\t$rd", (ANDRdRr GPR8:$rd, GPR8:$rd), 1>;
+def : InstAlias<"tst\t$rd", (ANDRdRr GPR8:$rd, GPR8:$rd)>;
 
-let Defs = [SREG] in
-def TSTRd : FTST<0b0010,
-                  0b00,
-                  (outs),
-                  (ins GPR8:$rd),
-                  "tst\t$rd",
-                  [(AVRtst i8:$rd)]>;
+// SBR Rd, K
+//
+// Mnemonic alias to 'ORI Rd, K'. Same bit pattern, same operands,
+// same everything.
+def : InstAlias<"sbr\t$rd, $k",
+                (ORIRdK LD8:$rd, imm_ldi8:$k),
+                /* Disable display, so we don't override ORI */ 0>;
 
 //===----------------------------------------------------------------------===//
 // Jump instructions
@@ -1222,7 +1222,7 @@ isReMaterializable = 1 in
   // ldd Rd,   P+q
   // ldd Rd+1, P+q+1
   let Constraints = "@earlyclobber $dst" in
-  def LDDWRdPtrQ : Pseudo<(outs DREGS:$dst),
+  def LDDWRdPtrQ : Pseudo<(outs DREGS_WITHOUT_Z_WORKAROUND:$dst),
                           (ins memri:$memri),
                           "lddw\t$dst, $memri",
                           [(set i16:$dst, (load addr:$memri))]>,
@@ -1632,12 +1632,7 @@ def LATZRd : FZRd<0b111,
 let Constraints = "$src = $rd",
 Defs = [SREG] in
 {
-  def LSLRd : FRdRr<0b0000,
-                    0b11,
-                    (outs GPR8:$rd),
-                    (ins GPR8:$src),
-                    "lsl\t$rd",
-                    [(set i8:$rd, (AVRlsl i8:$src)), (implicit SREG)]>;
+  // 8-bit LSL is an alias of ADD Rd, Rd
 
   def LSLWRd : Pseudo<(outs DREGS:$rd),
                       (ins DREGS:$src),
@@ -1671,12 +1666,7 @@ Defs = [SREG] in
   // Bit rotate operations.
   let Uses = [SREG] in
   {
-    def ROLRd : FRdRr<0b0001,
-                      0b11,
-                      (outs GPR8:$rd),
-                      (ins GPR8:$src),
-                      "rol\t$rd",
-                      [(set i8:$rd, (AVRrol i8:$src)), (implicit SREG)]>;
+    // 8-bit ROL is an alias of ADC Rd, Rd
 
     def ROLWRd : Pseudo<(outs DREGS:$rd),
                         (ins DREGS:$src),
@@ -1743,15 +1733,6 @@ def BLD : FRdB<0b00,
 let Constraints = "$src = $rd",
 Defs = [SREG] in
 {
-  // SBR Rd, K
-  // Alias for ORI Rd, K
-  def SBRRdK : FRdK<0b0110,
-                    (outs LD8:$rd),
-                    (ins LD8:$src, imm_ldi8:$k),
-                    "sbr\t$rd, $k",
-                    [(set i8:$rd, (or i8:$src, imm:$k)),
-                     (implicit SREG)]>;
-
   // CBR Rd, K
   // Alias for `ANDI Rd, COM(K)` where COM(K) is the complement of K.
   // FIXME: This uses the 'complement' encoder. We need it to also use the
@@ -1768,6 +1749,14 @@ Defs = [SREG] in
 // -------------
 // Clears all bits in a register.
 def CLR : InstAlias<"clr\t$rd", (EORRdRr GPR8:$rd, GPR8:$rd)>;
+
+// LSL Rd
+// Alias for ADD Rd, Rd
+// --------------
+// Logical shift left one bit.
+def LSL : InstAlias<"lsl\t$rd", (ADDRdRr GPR8:$rd, GPR8:$rd)>;
+
+def ROL : InstAlias<"rol\t$rd", (ADCRdRr GPR8:$rd, GPR8:$rd)>;
 
 // SER Rd
 // Alias for LDI Rd, 0xff
@@ -2106,4 +2095,14 @@ def : Pat<(i8 (trunc (AVRlsr (AVRlsr (AVRlsr (AVRlsr (AVRlsr (AVRlsr (AVRlsr
 // BR_JT -> (mul x, 2) -> (shl x, 1)
 def : Pat<(shl i16:$src1, (i8 1)),
           (LSLWRd i16:$src1)>;
+
+// Lowering of 'tst' node to 'TST' instruction.
+// TST is an alias of AND Rd, Rd.
+def : Pat<(AVRtst i8:$rd),
+          (ANDRdRr GPR8:$rd, GPR8:$rd)>;
+
+// Lowering of 'lsl' node to 'LSL' instruction.
+// LSL is an alias of 'ADD Rd, Rd'
+def : Pat<(AVRlsl i8:$rd),
+          (ADDRdRr GPR8:$rd, GPR8:$rd)>;
 

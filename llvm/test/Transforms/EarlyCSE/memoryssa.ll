@@ -106,3 +106,45 @@ end:
   store i32 %v2, i32* @G3
   ret void
 }
+
+;; Check that we respect lifetime.start/lifetime.end intrinsics when deleting
+;; stores that, without the lifetime calls, would be writebacks.
+; CHECK-LABEL: @test_writeback_lifetimes(
+; CHECK-NOMEMSSA-LABEL: @test_writeback_lifetimes(
+define void @test_writeback_lifetimes(i32* %p) {
+entry:
+  %q = getelementptr i32, i32* %p, i64 1
+  %pv = load i32, i32* %p
+  %qv = load i32, i32* %q
+  call void @llvm.lifetime.end.p0i8(i64 8, i32* %p)
+  call void @llvm.lifetime.start.p0i8(i64 8, i32* %p)
+  ; CHECK: store i32 %pv
+  ; CHECK-NOMEMSSA-LABEL: store i32 %pv
+  store i32 %pv, i32* %p
+  ; CHECK: store i32 %qv, i32* %q
+  ; CHECK-NOMEMSSA-LABEL: store i32 %qv, i32* %q
+  store i32 %qv, i32* %q
+  ret void
+}
+
+;; Check that we respect lifetime.start/lifetime.end intrinsics when deleting
+;; stores that, without the lifetime calls, would be writebacks.
+; CHECK-LABEL: @test_writeback_lifetimes_multi_arg(
+; CHECK-NOMEMSSA-LABEL: @test_writeback_lifetimes_multi_arg(
+define void @test_writeback_lifetimes_multi_arg(i32* %p, i32* %q) {
+entry:
+  %pv = load i32, i32* %p
+  %qv = load i32, i32* %q
+  call void @llvm.lifetime.end.p0i8(i64 8, i32* %p)
+  call void @llvm.lifetime.start.p0i8(i64 8, i32* %p)
+  ; CHECK: store i32 %pv
+  ; CHECK-NOMEMSSA-LABEL: store i32 %pv
+  store i32 %pv, i32* %p
+  ; CHECK: store i32 %qv, i32* %q
+  ; CHECK-NOMEMSSA-LABEL: store i32 %qv, i32* %q
+  store i32 %qv, i32* %q
+  ret void
+}
+
+declare void @llvm.lifetime.end.p0i8(i64, i32*)
+declare void @llvm.lifetime.start.p0i8(i64, i32*)

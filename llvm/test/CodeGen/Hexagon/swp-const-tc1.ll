@@ -1,5 +1,5 @@
 ; RUN: llc -march=hexagon -enable-pipeliner -enable-pipeliner-opt-size \
-; RUN:     -verify-machineinstrs \
+; RUN:     -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 \
 ; RUN:     -enable-aa-sched-mi=false -hexagon-expand-condsets=0 \
 ; RUN:     < %s | FileCheck %s
 
@@ -13,7 +13,7 @@
 ; CHECK: memb(r{{[0-9]+}}+#0) =
 
 ; Function Attrs: nounwind optsize
-define void @f0() #0 {
+define void @f0(i1 %x) #0 {
 b0:
   br label %b1
 
@@ -34,7 +34,7 @@ b3:                                               ; preds = %b3, %b2
   %v7 = add i32 %v6, undef
   %v8 = icmp slt i32 undef, %v7
   %v9 = add nsw i32 %v7, 1
-  %v10 = select i1 undef, i32 undef, i32 %v9
+  %v10 = select i1 %x, i32 1, i32 %v9
   %v11 = add i32 %v10, 0
   %v12 = getelementptr inbounds i8, i8* null, i32 %v11
   %v13 = load i8, i8* %v12, align 1, !tbaa !4

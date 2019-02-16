@@ -8,7 +8,7 @@
 define <16 x float> @test1(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmsub213ps %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
 entry:
   %sub.i = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -24,7 +24,7 @@ declare <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float>, <16 x fl
 define <16 x float> @test2(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfnmsub213ps %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.vfmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i32 4) #2
@@ -35,7 +35,7 @@ entry:
 define <16 x float> @test3(<16 x float> %a, <16 x float> %b, <16 x float> %c)  {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmsub213ps %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmadd.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 4) #2
@@ -46,7 +46,7 @@ entry:
 define <16 x float> @test4(<16 x float> %a, <16 x float> %b, <16 x float> %c) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmadd213ps %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512.mask.vfnmsub.ps.512(<16 x float> %a, <16 x float> %b, <16 x float> %c, i16 -1, i32 4) #2
@@ -105,7 +105,7 @@ declare <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float>, <8 x float>, <8 x f
 define <8 x double> @test9(<8 x double> %a, <8 x double> %b, <8 x double> %c) {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfnmsub213pd %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfnmsub213pd {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %c, i32 4) #2
@@ -118,7 +118,7 @@ declare <8 x double> @llvm.x86.avx512.vfmadd.pd.512(<8 x double> %a, <8 x double
 define <2 x double> @test10(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -141,7 +141,7 @@ define <4 x float> @test11(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 ze
 ;
 ; KNL-LABEL: test11:
 ; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0,-0,-0,-0]
+; KNL-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; KNL-NEXT:    vxorps %xmm3, %xmm2, %xmm3
 ; KNL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; KNL-NEXT:    kmovw %edi, %k1
@@ -160,13 +160,13 @@ define <4 x float> @test11b(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 z
 ; SKX-LABEL: test11b:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 {%k1}
+; SKX-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test11b:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfmsub213ss %xmm2, %xmm1, %xmm0 {%k1}
+; KNL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; KNL-NEXT:    retq
 entry:
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -180,14 +180,14 @@ define <8 x double> @test12(<8 x double> %a, <8 x double> %b, <8 x double> %c, i
 ; SKX-LABEL: test12:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfmadd132pd %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    vfmadd132pd {{.*#+}} zmm0 = (zmm0 * zmm1) + zmm2
 ; SKX-NEXT:    vxorpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test12:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfmadd132pd %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    vfmadd132pd {{.*#+}} zmm0 = (zmm0 * zmm1) + zmm2
 ; KNL-NEXT:    vpxorq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 entry:
@@ -297,13 +297,13 @@ define <8 x double> @test17(<8 x double> %a, <8 x double> %b, <8 x double> %c, i
 ; SKX-LABEL: test17:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfmsubadd132pd %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    vfmsubadd132pd {{.*#+}} zmm0 = (zmm0 * zmm1) -/+ zmm2
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test17:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfmsubadd132pd %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    vfmsubadd132pd {{.*#+}} zmm0 = (zmm0 * zmm1) -/+ zmm2
 ; KNL-NEXT:    retq
   %sub.i = fsub <8 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %c
   %res = call <8 x double> @llvm.x86.avx512.vfmaddsub.pd.512(<8 x double> %a, <8 x double> %b, <8 x double> %sub.i, i32 4)
@@ -317,13 +317,13 @@ define <4 x float> @test18(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 ze
 ; SKX-LABEL: test18:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 {%k1}
+; SKX-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test18:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfnmadd213ss %xmm2, %xmm1, %xmm0 {%k1}
+; KNL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2
 ; KNL-NEXT:    retq
 entry:
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
@@ -335,13 +335,13 @@ define <4 x float> @test19(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 ze
 ; SKX-LABEL: test19:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 {%k1}
+; SKX-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test19:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfnmsub213ss %xmm2, %xmm1, %xmm0 {%k1}
+; KNL-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; KNL-NEXT:    retq
 entry:
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %b
@@ -354,14 +354,14 @@ define <4 x float> @test20(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 ze
 ; SKX-LABEL: test20:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfnmadd231ss %xmm1, %xmm0, %xmm2 {%k1}
+; SKX-NEXT:    vfnmadd231ss {{.*#+}} xmm2 = -(xmm0 * xmm1) + xmm2
 ; SKX-NEXT:    vmovaps %xmm2, %xmm0
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test20:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfnmadd231ss %xmm1, %xmm0, %xmm2 {%k1}
+; KNL-NEXT:    vfnmadd231ss {{.*#+}} xmm2 = -(xmm0 * xmm1) + xmm2
 ; KNL-NEXT:    vmovaps %xmm2, %xmm0
 ; KNL-NEXT:    retq
 entry:

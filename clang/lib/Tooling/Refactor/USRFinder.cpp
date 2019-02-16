@@ -467,7 +467,7 @@ static bool overridesSystemMethod(const ObjCMethodDecl *MD,
   SmallVector<const ObjCMethodDecl *, 8> Overrides;
   MD->getOverriddenMethods(Overrides);
   for (const auto *Override : Overrides) {
-    SourceLocation Loc = Override->getLocStart();
+    SourceLocation Loc = Override->getBeginLoc();
     if (Loc.isValid()) {
       if (SM.getFileCharacteristic(Loc) != SrcMgr::C_User)
         return true;
@@ -622,7 +622,7 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
     }
   }
   // Declarations with invalid locations are probably implicit.
-  if (ND->getLocStart().isInvalid())
+  if (ND->getBeginLoc().isInvalid())
     return nullptr;
   // Declarations in system headers can't be renamed.
   auto CheckSystemLoc = [&](SourceLocation Loc) -> bool {
@@ -633,26 +633,26 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
     }
     return false;
   };
-  if (CheckSystemLoc(ND->getLocStart()))
+  if (CheckSystemLoc(ND->getBeginLoc()))
     return nullptr;
   if (const auto *TD = dyn_cast<TypedefNameDecl>(ND)) {
     if (const TypedefNameDecl *CTD = TD->getCanonicalDecl()) {
-      if (CheckSystemLoc(CTD->getLocStart()))
+      if (CheckSystemLoc(CTD->getBeginLoc()))
         return nullptr;
     }
   } else if (const auto *TD = dyn_cast<TagDecl>(ND)) {
     if (const TagDecl *CTD = TD->getCanonicalDecl()) {
-      if (CheckSystemLoc(CTD->getLocStart()))
+      if (CheckSystemLoc(CTD->getBeginLoc()))
         return nullptr;
     }
   } else if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
     if (const FunctionDecl *CFD = FD->getCanonicalDecl()) {
-      if (CheckSystemLoc(CFD->getLocStart()))
+      if (CheckSystemLoc(CFD->getBeginLoc()))
         return nullptr;
     }
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     if (const VarDecl *CVD = VD->getCanonicalDecl()) {
-      if (CheckSystemLoc(CVD->getLocStart()))
+      if (CheckSystemLoc(CVD->getBeginLoc()))
         return nullptr;
     }
   }

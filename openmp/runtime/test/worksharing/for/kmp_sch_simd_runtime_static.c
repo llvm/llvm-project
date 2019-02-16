@@ -1,5 +1,6 @@
 // RUN: %libomp-compile && %libomp-run
 // RUN: %libomp-run 1 && %libomp-run 2
+// REQUIRES: openmp-4.5
 
 // The test checks schedule(simd:runtime)
 // in combination with OMP_SCHEDULE=static[,chunk]
@@ -67,6 +68,7 @@ run_loop(
   int ub;   // Chunk upper bound.
   int st;   // Chunk stride.
   int rc;
+  int nthreads = omp_get_num_threads();
   int tid = omp_get_thread_num();
   int gtid = __kmpc_global_thread_num(&loc);
   int last;
@@ -135,7 +137,7 @@ run_loop(
         printf("Error with iter %d, %d, err %d\n", cur, max, ++err);
       // Update maximum for the next chunk.
       if (last) {
-        if (!no_chunk && cur > ch)
+        if (!no_chunk && cur > ch && nthreads > 1)
           printf("Error: too big last chunk %d (%d), tid %d, err %d\n",
                  (int)cur, ch, tid, ++err);
       } else {

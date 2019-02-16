@@ -46,7 +46,7 @@ public:
 // Function used to report errors
 void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
   llvm::report_fatal_error("Z3 error: " +
-                           llvm::Twine(Z3_get_error_msg_ex(Context, Error)));
+                           llvm::Twine(Z3_get_error_msg(Context, Error)));
 }
 
 /// Wrapper for Z3 context
@@ -77,31 +77,26 @@ class Z3Sort : public SMTSort {
 
 public:
   /// Default constructor, mainly used by make_shared
-  Z3Sort(Z3Context &C, Z3_sort ZS) : SMTSort(), Context(C), Sort(ZS) {
+  Z3Sort(Z3Context &C, Z3_sort ZS) : Context(C), Sort(ZS) {
     Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
   /// Override implicit copy constructor for correct reference counting.
-  Z3Sort(const Z3Sort &Copy)
-      : SMTSort(), Context(Copy.Context), Sort(Copy.Sort) {
+  Z3Sort(const Z3Sort &Other) : Context(Other.Context), Sort(Other.Sort) {
     Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
   }
 
-  /// Provide move constructor
-  Z3Sort(Z3Sort &&Move) : SMTSort(), Context(Move.Context), Sort(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Sort &operator=(Z3Sort &&Move) {
-    if (this != &Move) {
-      if (Sort)
-        Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
-      Sort = Move.Sort;
-      Move.Sort = nullptr;
-    }
+  /// Override implicit copy assignment constructor for correct reference
+  /// counting.
+  Z3Sort &operator=(const Z3Sort &Other) {
+    Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Other.Sort));
+    Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
+    Sort = Other.Sort;
     return *this;
   }
+
+  Z3Sort(Z3Sort &&Other) = delete;
+  Z3Sort &operator=(Z3Sort &&Other) = delete;
 
   ~Z3Sort() {
     if (Sort)
@@ -134,13 +129,6 @@ public:
                          static_cast<const Z3Sort &>(Other).Sort);
   }
 
-  Z3Sort &operator=(const Z3Sort &Move) {
-    Z3_inc_ref(Context.Context, reinterpret_cast<Z3_ast>(Move.Sort));
-    Z3_dec_ref(Context.Context, reinterpret_cast<Z3_ast>(Sort));
-    Sort = Move.Sort;
-    return *this;
-  }
-
   void print(raw_ostream &OS) const override {
     OS << Z3_sort_to_string(Context.Context, Sort);
   }
@@ -167,21 +155,17 @@ public:
     Z3_inc_ref(Context.Context, AST);
   }
 
-  /// Provide move constructor
-  Z3Expr(Z3Expr &&Move) : SMTExpr(), Context(Move.Context), AST(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Expr &operator=(Z3Expr &&Move) {
-    if (this != &Move) {
-      if (AST)
-        Z3_dec_ref(Context.Context, AST);
-      AST = Move.AST;
-      Move.AST = nullptr;
-    }
+  /// Override implicit copy assignment constructor for correct reference
+  /// counting.
+  Z3Expr &operator=(const Z3Expr &Other) {
+    Z3_inc_ref(Context.Context, Other.AST);
+    Z3_dec_ref(Context.Context, AST);
+    AST = Other.AST;
     return *this;
   }
+
+  Z3Expr(Z3Expr &&Other) = delete;
+  Z3Expr &operator=(Z3Expr &&Other) = delete;
 
   ~Z3Expr() {
     if (AST)
@@ -202,14 +186,6 @@ public:
                         static_cast<const Z3Expr &>(Other).AST);
   }
 
-  /// Override implicit move constructor for correct reference counting.
-  Z3Expr &operator=(const Z3Expr &Move) {
-    Z3_inc_ref(Context.Context, Move.AST);
-    Z3_dec_ref(Context.Context, AST);
-    AST = Move.AST;
-    return *this;
-  }
-
   void print(raw_ostream &OS) const override {
     OS << Z3_ast_to_string(Context.Context, AST);
   }
@@ -228,30 +204,13 @@ class Z3Model {
 
 public:
   Z3Model(Z3Context &C, Z3_model ZM) : Context(C), Model(ZM) {
-    assert(C.Context != nullptr);
     Z3_model_inc_ref(Context.Context, Model);
   }
 
-  /// Override implicit copy constructor for correct reference counting.
-  Z3Model(const Z3Model &Copy) : Context(Copy.Context), Model(Copy.Model) {
-    Z3_model_inc_ref(Context.Context, Model);
-  }
-
-  /// Provide move constructor
-  Z3Model(Z3Model &&Move) : Context(Move.Context), Model(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Model &operator=(Z3Model &&Move) {
-    if (this != &Move) {
-      if (Model)
-        Z3_model_dec_ref(Context.Context, Model);
-      Model = Move.Model;
-      Move.Model = nullptr;
-    }
-    return *this;
-  }
+  Z3Model(const Z3Model &Other) = delete;
+  Z3Model(Z3Model &&Other) = delete;
+  Z3Model &operator=(Z3Model &Other) = delete;
+  Z3Model &operator=(Z3Model &&Other) = delete;
 
   ~Z3Model() {
     if (Model)
@@ -310,32 +269,14 @@ class Z3Solver : public SMTSolver {
   Z3_solver Solver;
 
 public:
-  Z3Solver() : SMTSolver(), Solver(Z3_mk_simple_solver(Context.Context)) {
+  Z3Solver() : Solver(Z3_mk_simple_solver(Context.Context)) {
     Z3_solver_inc_ref(Context.Context, Solver);
   }
 
-  /// Override implicit copy constructor for correct reference counting.
-  Z3Solver(const Z3Solver &Copy)
-      : SMTSolver(), Context(Copy.Context), Solver(Copy.Solver) {
-    Z3_solver_inc_ref(Context.Context, Solver);
-  }
-
-  /// Provide move constructor
-  Z3Solver(Z3Solver &&Move)
-      : SMTSolver(), Context(Move.Context), Solver(nullptr) {
-    *this = std::move(Move);
-  }
-
-  /// Provide move assignment constructor
-  Z3Solver &operator=(Z3Solver &&Move) {
-    if (this != &Move) {
-      if (Solver)
-        Z3_solver_dec_ref(Context.Context, Solver);
-      Solver = Move.Solver;
-      Move.Solver = nullptr;
-    }
-    return *this;
-  }
+  Z3Solver(const Z3Solver &Other) = delete;
+  Z3Solver(Z3Solver &&Other) = delete;
+  Z3Solver &operator=(Z3Solver &Other) = delete;
+  Z3Solver &operator=(Z3Solver &&Other) = delete;
 
   ~Z3Solver() {
     if (Solver)
@@ -671,7 +612,7 @@ public:
                               toZ3Expr(*From).AST, toZ3Sort(*To).Sort)));
   }
 
-  SMTExprRef mkFPtoSBV(const SMTExprRef &From, const SMTSortRef &To) override {
+  SMTExprRef mkSBVtoFP(const SMTExprRef &From, const SMTSortRef &To) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context,
@@ -679,7 +620,7 @@ public:
                                toZ3Expr(*From).AST, toZ3Sort(*To).Sort)));
   }
 
-  SMTExprRef mkFPtoUBV(const SMTExprRef &From, const SMTSortRef &To) override {
+  SMTExprRef mkUBVtoFP(const SMTExprRef &From, const SMTSortRef &To) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context,
@@ -687,14 +628,14 @@ public:
                                  toZ3Expr(*From).AST, toZ3Sort(*To).Sort)));
   }
 
-  SMTExprRef mkSBVtoFP(const SMTExprRef &From, unsigned ToWidth) override {
+  SMTExprRef mkFPtoSBV(const SMTExprRef &From, unsigned ToWidth) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context, Z3_mk_fpa_to_sbv(Context.Context, toZ3Expr(*RoundingMode).AST,
                                   toZ3Expr(*From).AST, ToWidth)));
   }
 
-  SMTExprRef mkUBVtoFP(const SMTExprRef &From, unsigned ToWidth) override {
+  SMTExprRef mkFPtoUBV(const SMTExprRef &From, unsigned ToWidth) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context, Z3_mk_fpa_to_ubv(Context.Context, toZ3Expr(*RoundingMode).AST,
@@ -733,9 +674,11 @@ public:
 
   llvm::APSInt getBitvector(const SMTExprRef &Exp, unsigned BitWidth,
                             bool isUnsigned) override {
-    return llvm::APSInt(llvm::APInt(
-        BitWidth, Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
-        10));
+    return llvm::APSInt(
+        llvm::APInt(BitWidth,
+                    Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
+                    10),
+        isUnsigned);
   }
 
   bool getBoolean(const SMTExprRef &Exp) override {
@@ -745,36 +688,6 @@ public:
   SMTExprRef getFloatRoundingMode() override {
     // TODO: Don't assume nearest ties to even rounding mode
     return newExprRef(Z3Expr(Context, Z3_mk_fpa_rne(Context.Context)));
-  }
-
-  SMTExprRef fromBoolean(const bool Bool) override {
-    Z3_ast AST =
-        Bool ? Z3_mk_true(Context.Context) : Z3_mk_false(Context.Context);
-    return newExprRef(Z3Expr(Context, AST));
-  }
-
-  SMTExprRef fromAPFloat(const llvm::APFloat &Float) override {
-    SMTSortRef Sort =
-        getFloatSort(llvm::APFloat::semanticsSizeInBits(Float.getSemantics()));
-
-    llvm::APSInt Int = llvm::APSInt(Float.bitcastToAPInt(), false);
-    SMTExprRef Z3Int = fromAPSInt(Int);
-    return newExprRef(Z3Expr(
-        Context, Z3_mk_fpa_to_fp_bv(Context.Context, toZ3Expr(*Z3Int).AST,
-                                    toZ3Sort(*Sort).Sort)));
-  }
-
-  SMTExprRef fromAPSInt(const llvm::APSInt &Int) override {
-    SMTSortRef Sort = getBitvectorSort(Int.getBitWidth());
-    Z3_ast AST = Z3_mk_numeral(Context.Context, Int.toString(10).c_str(),
-                               toZ3Sort(*Sort).Sort);
-    return newExprRef(Z3Expr(Context, AST));
-  }
-
-  SMTExprRef fromInt(const char *Int, uint64_t BitWidth) override {
-    SMTSortRef Sort = getBitvectorSort(BitWidth);
-    Z3_ast AST = Z3_mk_numeral(Context.Context, Int, toZ3Sort(*Sort).Sort);
-    return newExprRef(Z3Expr(Context, AST));
   }
 
   bool toAPFloat(const SMTSortRef &Sort, const SMTExprRef &AST,
@@ -837,7 +750,7 @@ public:
   }
 
   bool getInterpretation(const SMTExprRef &Exp, llvm::APSInt &Int) override {
-    Z3Model Model = getModel();
+    Z3Model Model(Context, Z3_solver_get_model(Context.Context, Solver));
     Z3_func_decl Func = Z3_get_app_decl(
         Context.Context, Z3_to_app(Context.Context, toZ3Expr(*Exp).AST));
     if (Z3_model_has_interp(Context.Context, Model.Model, Func) != Z3_L_TRUE)
@@ -851,7 +764,7 @@ public:
   }
 
   bool getInterpretation(const SMTExprRef &Exp, llvm::APFloat &Float) override {
-    Z3Model Model = getModel();
+    Z3Model Model(Context, Z3_solver_get_model(Context.Context, Solver));
     Z3_func_decl Func = Z3_get_app_decl(
         Context.Context, Z3_to_app(Context.Context, toZ3Expr(*Exp).AST));
     if (Z3_model_has_interp(Context.Context, Model.Model, Func) != Z3_L_TRUE)
@@ -882,14 +795,10 @@ public:
     return Z3_solver_pop(Context.Context, Solver, NumStates);
   }
 
-  /// Get a model from the solver. Caller should check the model is
-  /// satisfiable.
-  Z3Model getModel() {
-    return Z3Model(Context, Z3_solver_get_model(Context.Context, Solver));
-  }
+  bool isFPSupported() override { return true; }
 
   /// Reset the solver and remove all constraints.
-  void reset() const override { Z3_solver_reset(Context.Context, Solver); }
+  void reset() override { Z3_solver_reset(Context.Context, Solver); }
 
   void print(raw_ostream &OS) const override {
     OS << Z3_solver_to_string(Context.Context, Solver);
@@ -902,49 +811,6 @@ class Z3ConstraintManager : public SMTConstraintManager<ConstraintZ3, Z3Expr> {
 public:
   Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
       : SMTConstraintManager(SE, SB, Solver) {}
-
-  bool canReasonAbout(SVal X) const override {
-    const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
-
-    Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
-    if (!SymVal)
-      return true;
-
-    const SymExpr *Sym = SymVal->getSymbol();
-    QualType Ty = Sym->getType();
-
-    // Complex types are not modeled
-    if (Ty->isComplexType() || Ty->isComplexIntegerType())
-      return false;
-
-    // Non-IEEE 754 floating-point types are not modeled
-    if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-         (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
-          &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
-      return false;
-
-    if (isa<SymbolData>(Sym))
-      return true;
-
-    SValBuilder &SVB = getSValBuilder();
-
-    if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
-      return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
-
-    if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
-      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
-        return canReasonAbout(SVB.makeSymbolVal(SIE->getLHS()));
-
-      if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE))
-        return canReasonAbout(SVB.makeSymbolVal(ISE->getRHS()));
-
-      if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(BSE))
-        return canReasonAbout(SVB.makeSymbolVal(SSE->getLHS())) &&
-               canReasonAbout(SVB.makeSymbolVal(SSE->getRHS()));
-    }
-
-    llvm_unreachable("Unsupported expression to reason about!");
-  }
 }; // end class Z3ConstraintManager
 
 } // end anonymous namespace
@@ -956,7 +822,7 @@ SMTSolverRef clang::ento::CreateZ3Solver() {
   return llvm::make_unique<Z3Solver>();
 #else
   llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_BUILD_Z3=ON",
+                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
                            false);
   return nullptr;
 #endif
@@ -968,7 +834,7 @@ ento::CreateZ3ConstraintManager(ProgramStateManager &StMgr, SubEngine *Eng) {
   return llvm::make_unique<Z3ConstraintManager>(Eng, StMgr.getSValBuilder());
 #else
   llvm::report_fatal_error("Clang was not compiled with Z3 support, rebuild "
-                           "with -DCLANG_ANALYZER_BUILD_Z3=ON",
+                           "with -DCLANG_ANALYZER_ENABLE_Z3_SOLVER=ON",
                            false);
   return nullptr;
 #endif

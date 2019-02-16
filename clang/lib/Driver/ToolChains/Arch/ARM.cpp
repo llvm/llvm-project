@@ -378,6 +378,13 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
                       Features);
   } else if (FPUArg) {
     getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
+  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
+    // Android mandates minimum FPU requirements based on OS version.
+    const char *AndroidFPU =
+        Triple.isAndroidVersionLT(23) ? "vfpv3-d16" : "neon";
+    if (!llvm::ARM::getFPUFeatures(llvm::ARM::parseFPU(AndroidFPU), Features))
+      D.Diag(clang::diag::err_drv_clang_unsupported)
+          << std::string("-mfpu=") + AndroidFPU;
   }
 
   // Honor -mhwdiv=. ClangAs gives preference to -Wa,-mhwdiv=.
@@ -390,6 +397,33 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
                         StringRef(WaHDiv->getValue()).substr(8), Features);
   } else if (HDivArg)
     getARMHWDivFeatures(D, HDivArg, Args, HDivArg->getValue(), Features);
+
+  // Handle (arch-dependent) fp16fml/fullfp16 relationship.
+  // Must happen before any features are disabled due to soft-float.
+  // FIXME: this fp16fml option handling will be reimplemented after the
+  // TargetParser rewrite.
+  const auto ItRNoFullFP16 = std::find(Features.rbegin(), Features.rend(), "-fullfp16");
+  const auto ItRFP16FML = std::find(Features.rbegin(), Features.rend(), "+fp16fml");
+  if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v8_4a) {
+    const auto ItRFullFP16  = std::find(Features.rbegin(), Features.rend(), "+fullfp16");
+    if (ItRFullFP16 < ItRNoFullFP16 && ItRFullFP16 < ItRFP16FML) {
+      // Only entangled feature that can be to the right of this +fullfp16 is -fp16fml.
+      // Only append the +fp16fml if there is no -fp16fml after the +fullfp16.
+      if (std::find(Features.rbegin(), ItRFullFP16, "-fp16fml") == ItRFullFP16)
+        Features.push_back("+fp16fml");
+    }
+    else
+      goto fp16_fml_fallthrough;
+  }
+  else {
+fp16_fml_fallthrough:
+    // In both of these cases, putting the 'other' feature on the end of the vector will
+    // result in the same effect as placing it immediately after the current feature.
+    if (ItRNoFullFP16 < ItRFP16FML)
+      Features.push_back("-fp16fml");
+    else if (ItRNoFullFP16 > ItRFP16FML)
+      Features.push_back("+fullfp16");
+  }
 
   // Setting -msoft-float/-mfloat-abi=soft effectively disables the FPU (GCC
   // ignores the -mfpu options in this case).
@@ -404,7 +438,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
     //        now just be explicit and disable all known dependent features
     //        as well.
     for (std::string Feature : {"vfp2", "vfp3", "vfp4", "fp-armv8", "fullfp16",
-                                "neon", "crypto", "dotprod"})
+                                "neon", "crypto", "dotprod", "fp16fml"})
       if (std::find(std::begin(Features), std::end(Features), "+" + Feature) != std::end(Features))
         Features.push_back(Args.MakeArgString("-" + Feature));
   }
@@ -415,6 +449,26 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
       Features.push_back("+crc");
     else
       Features.push_back("-crc");
+  }
+
+  // For Arch >= ARMv8.0:  crypto = sha2 + aes
+  // FIXME: this needs reimplementation after the TargetParser rewrite
+  if (ArchName.find_lower("armv8a") != StringRef::npos ||
+      ArchName.find_lower("armv8.1a") != StringRef::npos ||
+      ArchName.find_lower("armv8.2a") != StringRef::npos ||
+      ArchName.find_lower("armv8.3a") != StringRef::npos ||
+      ArchName.find_lower("armv8.4a") != StringRef::npos) {
+    if (ArchName.find_lower("+crypto") != StringRef::npos) {
+      if (ArchName.find_lower("+nosha2") == StringRef::npos)
+        Features.push_back("+sha2");
+      if (ArchName.find_lower("+noaes") == StringRef::npos)
+        Features.push_back("+aes");
+    } else if (ArchName.find_lower("-crypto") != StringRef::npos) {
+      if (ArchName.find_lower("+sha2") == StringRef::npos)
+        Features.push_back("-sha2");
+      if (ArchName.find_lower("+aes") == StringRef::npos)
+        Features.push_back("-aes");
+    }
   }
 
   // Look for the last occurrence of -mlong-calls or -mno-long-calls. If
@@ -589,7 +643,7 @@ StringRef arm::getLLVMArchSuffixForARM(StringRef CPU, StringRef Arch,
   return llvm::ARM::getSubArch(ArchKind);
 }
 
-void arm::appendEBLinkFlags(const ArgList &Args, ArgStringList &CmdArgs,
+void arm::appendBE8LinkFlag(const ArgList &Args, ArgStringList &CmdArgs,
                             const llvm::Triple &Triple) {
   if (Args.hasArg(options::OPT_r))
     return;

@@ -852,6 +852,7 @@ private:
   bool parseDirectiveFPOSetFrame(SMLoc L);
   bool parseDirectiveFPOPushReg(SMLoc L);
   bool parseDirectiveFPOStackAlloc(SMLoc L);
+  bool parseDirectiveFPOStackAlign(SMLoc L);
   bool parseDirectiveFPOEndPrologue(SMLoc L);
   bool parseDirectiveFPOEndProc(SMLoc L);
   bool parseDirectiveFPOData(SMLoc L);
@@ -955,7 +956,7 @@ public:
 
   void SetFrameRegister(unsigned RegNo) override;
 
-  bool parseAssignmentExpression(const MCExpr *&Res, SMLoc &EndLoc) override;
+  bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -1054,7 +1055,7 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   // RIP/EIP-relative addressing is only supported in 64-bit mode.
   if (!Is64BitMode && BaseReg != 0 &&
       (BaseReg == X86::RIP || BaseReg == X86::EIP)) {
-    ErrMsg = "RIP-relative addressing requires 64-bit mode";
+    ErrMsg = "IP-relative addressing requires 64-bit mode";
     return true;
   }
 
@@ -1099,7 +1100,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
     // checked.
     // FIXME: Check AH, CH, DH, BH cannot be used in an instruction requiring a
     // REX prefix.
-    if (RegNo == X86::RIZ || RegNo == X86::RIP || RegNo == X86::EIP ||
+    if (RegNo == X86::RIZ || RegNo == X86::RIP ||
         X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo) ||
         X86II::isX86_64NonExtLowByteReg(RegNo) ||
         X86II::isX86_64ExtendedReg(RegNo))
@@ -2239,14 +2240,6 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   if (parseToken(AsmToken::RParen, "unexpected token in memory operand"))
     return nullptr;
 
-  // This is a terrible hack to handle "out[s]?[bwl]? %al, (%dx)" ->
-  // "outb %al, %dx".  Out doesn't take a memory form, but this is a widely
-  // documented form in various unofficial manuals, so a lot of code uses it.
-  if (BaseReg == X86::DX && IndexReg == 0 && Scale == 1 &&
-      SegReg == 0 && isa<MCConstantExpr>(Disp) &&
-      cast<MCConstantExpr>(Disp)->getValue() == 0)
-    return X86Operand::CreateDXReg(BaseLoc, BaseLoc);
-
   StringRef ErrMsg;
   if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, is64BitMode(),
                                       ErrMsg)) {
@@ -2260,15 +2253,17 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   return X86Operand::CreateMem(getPointerWidth(), Disp, MemStart, MemEnd);
 }
 
-// Parse either a standard expression or a register.
-bool X86AsmParser::parseAssignmentExpression(const MCExpr *&Res,
-                                             SMLoc &EndLoc) {
+// Parse either a standard primary expression or a register.
+bool X86AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   MCAsmParser &Parser = getParser();
-  if (Parser.parseExpression(Res, EndLoc)) {
+  if (Parser.parsePrimaryExpr(Res, EndLoc)) {
     SMLoc StartLoc = Parser.getTok().getLoc();
     // Normal Expression parse fails, check if it could be a register.
     unsigned RegNo;
-    if (Parser.getTargetParser().ParseRegister(RegNo, StartLoc, EndLoc))
+    bool TryRegParse =
+        getTok().is(AsmToken::Percent) ||
+        (isParsingIntelSyntax() && getTok().is(AsmToken::Identifier));
+    if (!TryRegParse || ParseRegister(RegNo, StartLoc, EndLoc))
       return true;
     // Clear previous parse error and return correct expression.
     Parser.clearPendingErrors();
@@ -3280,7 +3275,6 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
   if (IDVal.startswith(".code"))
     return ParseDirectiveCode(IDVal, DirectiveID.getLoc());
   else if (IDVal.startswith(".att_syntax")) {
-    getParser().setParsingInlineAsm(false);
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       if (Parser.getTok().getString() == "prefix")
         Parser.Lex();
@@ -3293,7 +3287,6 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return false;
   } else if (IDVal.startswith(".intel_syntax")) {
     getParser().setAssemblerDialect(1);
-    getParser().setParsingInlineAsm(true);
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       if (Parser.getTok().getString() == "noprefix")
         Parser.Lex();
@@ -3313,6 +3306,8 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveFPOPushReg(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_stackalloc")
     return parseDirectiveFPOStackAlloc(DirectiveID.getLoc());
+  else if (IDVal == ".cv_fpo_stackalign")
+    return parseDirectiveFPOStackAlign(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endprologue")
     return parseDirectiveFPOEndPrologue(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endproc")
@@ -3425,6 +3420,16 @@ bool X86AsmParser::parseDirectiveFPOStackAlloc(SMLoc L) {
       Parser.parseEOL("unexpected tokens"))
     return addErrorSuffix(" in '.cv_fpo_stackalloc' directive");
   return getTargetStreamer().emitFPOStackAlloc(Offset, L);
+}
+
+// .cv_fpo_stackalign 8
+bool X86AsmParser::parseDirectiveFPOStackAlign(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+  int64_t Offset;
+  if (Parser.parseIntToken(Offset, "expected offset") ||
+      Parser.parseEOL("unexpected tokens"))
+    return addErrorSuffix(" in '.cv_fpo_stackalign' directive");
+  return getTargetStreamer().emitFPOStackAlign(Offset, L);
 }
 
 // .cv_fpo_endprologue

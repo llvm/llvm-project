@@ -38,7 +38,15 @@ elseif( CMAKE_HOST_UNIX )
   endif()
 endif( MSVC OR MINGW )
 
+# Delay load shell32.dll if possible to speed up process startup.
+set (delayload_flags)
+if (MSVC)
+  set (delayload_flags delayimp -delayload:shell32.dll -delayload:ole32.dll)
+endif()
+
 add_llvm_library(LLVMSupport
+  AArch64TargetParser.cpp
+  ARMTargetParser.cpp
   AMDGPUMetadata.cpp
   APFloat.cpp
   APInt.cpp
@@ -53,6 +61,7 @@ add_llvm_library(LLVMSupport
   BinaryStreamWriter.cpp
   BlockFrequency.cpp
   BranchProbability.cpp
+  BuryPointer.cpp
   CachePruning.cpp
   circular_raw_ostream.cpp
   Chrono.cpp
@@ -83,6 +92,7 @@ add_llvm_library(LLVMSupport
   InitLLVM.cpp
   IntEqClasses.cpp
   IntervalMap.cpp
+  ItaniumManglingCanonicalizer.cpp
   JamCRC.cpp
   JSON.cpp
   KnownBits.cpp
@@ -115,6 +125,7 @@ add_llvm_library(LLVMSupport
   StringPool.cpp
   StringSaver.cpp
   StringRef.cpp
+  SymbolRemappingReader.cpp
   SystemUtils.cpp
   TarWriter.cpp
   TargetParser.cpp
@@ -127,6 +138,7 @@ add_llvm_library(LLVMSupport
   Unicode.cpp
   UnicodeCaseFold.cpp
   VersionTuple.cpp
+  VirtualFileSystem.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp
@@ -163,7 +175,7 @@ add_llvm_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ADT
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
-  LINK_LIBS ${system_libs}
+  LINK_LIBS ${system_libs} ${delayload_flags}
   )
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${system_libs}")

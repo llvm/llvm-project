@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -480,4 +480,8 @@ void PthreadLockChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
 void ento::registerPthreadLockChecker(CheckerManager &mgr) {
   mgr.registerChecker<PthreadLockChecker>();
+}
+
+bool ento::shouldRegisterPthreadLockChecker(const LangOptions &LO) {
+  return true;
 }

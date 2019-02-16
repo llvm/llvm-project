@@ -16,29 +16,37 @@
 namespace llvm {
 namespace pdb {
 
-enum class generic_error_code {
-  invalid_path = 1,
+enum class pdb_error_code {
+  invalid_utf8_path = 1,
   dia_sdk_not_present,
-  type_server_not_found,
+  dia_failed_loading,
+  signature_out_of_date,
+  external_cmdline_ref,
   unspecified,
 };
+} // namespace pdb
+} // namespace llvm
+
+namespace std {
+template <>
+struct is_error_code_enum<llvm::pdb::pdb_error_code> : std::true_type {};
+} // namespace std
+
+namespace llvm {
+namespace pdb {
+const std::error_category &PDBErrCategory();
+
+inline std::error_code make_error_code(pdb_error_code E) {
+  return std::error_code(static_cast<int>(E), PDBErrCategory());
+}
 
 /// Base class for errors originating when parsing raw PDB files
-class GenericError : public ErrorInfo<GenericError> {
+class PDBError : public ErrorInfo<PDBError, StringError> {
 public:
+  using ErrorInfo<PDBError, StringError>::ErrorInfo; // inherit constructors
+  PDBError(const Twine &S) : ErrorInfo(S, pdb_error_code::unspecified) {}
   static char ID;
-  GenericError(generic_error_code C);
-  GenericError(StringRef Context);
-  GenericError(generic_error_code C, StringRef Context);
-
-  void log(raw_ostream &OS) const override;
-  StringRef getErrorMessage() const;
-  std::error_code convertToErrorCode() const override;
-
-private:
-  std::string ErrMsg;
-  generic_error_code Code;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 #endif

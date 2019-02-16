@@ -486,10 +486,8 @@ public:
   DiagnosticsEngine &operator=(const DiagnosticsEngine &) = delete;
   ~DiagnosticsEngine();
 
-  LLVM_DUMP_METHOD void dump() const { DiagStatesByLoc.dump(*SourceMgr); }
-  LLVM_DUMP_METHOD void dump(StringRef DiagName) const {
-    DiagStatesByLoc.dump(*SourceMgr, DiagName);
-  }
+  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump(StringRef DiagName) const;
 
   const IntrusiveRefCntPtr<DiagnosticIDs> &getDiagnosticIDs() const {
     return Diags;

@@ -27,6 +27,17 @@
 ; RUN:    -shared %t1.thinlink.bc -o %t3
 ; RUN: diff %t1.o.thinlto.bc.orig %t1.o.thinlto.bc
 
+; If filename does not end with old suffix, no suffix change should occur,
+; so ".thinlto.bc" will simply be appended to the input file name.
+; RUN: rm -f %t1.thinlink.bc.thinlto.bc
+; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:    -m elf_x86_64 \
+; RUN:    --plugin-opt=thinlto \
+; RUN:    --plugin-opt=thinlto-index-only \
+; RUN:    --plugin-opt=thinlto-object-suffix-replace=".abc;.o" \
+; RUN:    -shared %t1.thinlink.bc -o /dev/null
+; RUN: ls %t1.thinlink.bc.thinlto.bc
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

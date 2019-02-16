@@ -667,8 +667,10 @@ WASM-NEXT:         Size:            13
 WASM-NEXT:       - Index:           2
 WASM:              Name:            puts
 WASM:            - Index:           3
-WASM:              Name:            SomeOtherFunction
+WASM:              Name:            .LSomeOtherFunction_bitcast
 WASM:            - Index:           4
+WASM:              Name:            SomeOtherFunction
+WASM:            - Index:           5
 WASM:              Name:            var
 WASM:          SegmentInfo:
 WASM-NEXT:       - Index:           0

@@ -5,8 +5,8 @@
 define i64 @f1(i32 %a, i32 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    mulxl {{[0-9]+}}(%esp), %eax, %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    mull {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    retl
   %x = zext i32 %a to i64
   %y = zext i32 %b to i64
@@ -17,9 +17,9 @@ define i64 @f1(i32 %a, i32 %b) {
 define i64 @f2(i32 %a, i32* %p) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    mulxl (%eax), %eax, %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    mull (%ecx)
 ; CHECK-NEXT:    retl
   %b = load i32, i32* %p
   %x = zext i32 %a to i64

@@ -25,7 +25,9 @@
 // RUN: echo "}"                        >> %t/Inputs/module.map
 
 // Run test
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -x c++ -I%t/Inputs -verify %s -std=c++1z
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -std=c++1z \
+// RUN:   -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
+// RUN:   -I%t/Inputs -verify %s
 
 #if !defined(FIRST) && !defined(SECOND)
 #include "first.h"
@@ -2244,22 +2246,6 @@ S2 s2;
 #endif
 
 #if defined(FIRST)
-struct T3 {};
-struct S3 {
-  friend const T3;
-};
-#elif defined(SECOND)
-struct T3 {};
-struct S3 {
-  friend T3;
-};
-#else
-S3 s3;
-// expected-error@second.h:* {{'Friend::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend 'Friend::T3'}}
-// expected-note@first.h:* {{but in 'FirstModule' found friend 'const Friend::T3'}}
-#endif
-
-#if defined(FIRST)
 struct T4 {};
 struct S4 {
   friend T4;
@@ -2292,14 +2278,12 @@ S5 s5;
   friend class FriendA;  \
   friend struct FriendB; \
   friend FriendC;        \
-  friend const FriendD;  \
   friend void Function();
 
 #if defined(FIRST) || defined(SECOND)
 class FriendA {};
 class FriendB {};
 class FriendC {};
-class FriendD {};
 #endif
 
 #if defined(FIRST) || defined(SECOND)
@@ -3316,6 +3300,568 @@ enum Valid { v1 = (struct S*)0 == (struct S*)0 };
 Valid V;
 #endif
 }  // namespace Enums
+
+namespace Types {
+namespace Complex {
+#if defined(FIRST)
+void invalid() {
+  _Complex float x;
+}
+void valid() {
+  _Complex float x;
+}
+#elif defined(SECOND)
+void invalid() {
+  _Complex double x;
+}
+void valid() {
+  _Complex float x;
+}
+#else
+auto function1 = invalid;
+// expected-error@second.h:* {{'Types::Complex::invalid' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function2 = valid;
+#endif
+}  // namespace Complex
+
+namespace Decltype {
+#if defined(FIRST)
+void invalid1() {
+  decltype(1 + 1) x;
+}
+int global;
+void invalid2() {
+  decltype(global) x;
+}
+void valid() {
+  decltype(1.5) x;
+  decltype(x) y;
+}
+#elif defined(SECOND)
+void invalid1() {
+  decltype(2) x;
+}
+float global;
+void invalid2() {
+  decltype(global) x;
+}
+void valid() {
+  decltype(1.5) x;
+  decltype(x) y;
+}
+#else
+auto function1 = invalid1;
+// expected-error@second.h:* {{'Types::Decltype::invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function2 = invalid2;
+// expected-error@second.h:* {{'Types::Decltype::invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function3 = valid;
+#endif
+}  // namespace Decltype
+
+namespace Auto {
+#if defined(FIRST)
+void invalid1() {
+  decltype(auto) x = 1;
+}
+void invalid2() {
+  auto x = 1;
+}
+void invalid3() {
+  __auto_type x = 1;
+}
+void valid() {
+  decltype(auto) x = 1;
+  auto y = 1;
+  __auto_type z = 1;
+}
+#elif defined(SECOND)
+void invalid1() {
+  auto x = 1;
+}
+void invalid2() {
+  __auto_type x = 1;
+}
+void invalid3() {
+  decltype(auto) x = 1;
+}
+void valid() {
+  decltype(auto) x = 1;
+  auto y = 1;
+  __auto_type z = 1;
+}
+#else
+auto function1 = invalid1;
+// expected-error@second.h:* {{'Types::Auto::invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function2 = invalid3;
+// expected-error@second.h:* {{'Types::Auto::invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function3 = invalid2;
+// expected-error@second.h:* {{'Types::Auto::invalid3' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function4 = valid;
+#endif
+}  // namespace Auto
+
+namespace DeducedTemplateSpecialization {
+#if defined(FIRST)
+template<typename T> struct A {};
+A() -> A<int>;
+template<typename T> struct B {};
+B() -> B<int>;
+
+void invalid1() {
+  A a{};
+}
+void invalid2() {
+  A a{};
+}
+void valid() {
+  B b{};
+}
+#elif defined(SECOND)
+template<typename T> struct A {};
+A() -> A<float>;
+template<typename T> struct B {};
+B() -> B<int>;
+
+void invalid1() {
+  A a{};
+}
+void invalid2() {
+  B a{};
+}
+void valid() {
+  B b{};
+}
+#else
+auto function1 = invalid1;
+// expected-error@second.h:* {{'Types::DeducedTemplateSpecialization::invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function2 = invalid2;
+// expected-error@second.h:* {{'Types::DeducedTemplateSpecialization::invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function3 = valid;
+#endif
+}  // namespace DeducedTemplateSpecialization
+
+namespace DependentAddressSpace {
+#if defined(FIRST)
+template <int A1, int A2>
+void invalid1() {
+  using type = int __attribute__((address_space(A1)));
+}
+template <int A1>
+void invalid2() {
+  using type = float __attribute__((address_space(A1)));
+}
+template <int A1, int A2>
+void valid() {
+  using type1 = float __attribute__((address_space(A1)));
+  using type2 = int __attribute__((address_space(A2)));
+  using type3 = int __attribute__((address_space(A1 + A2)));
+}
+#elif defined(SECOND)
+template <int A1, int A2>
+void invalid1() {
+  using type = int __attribute__((address_space(A2)));
+}
+template <int A1>
+void invalid2() {
+  using type = int __attribute__((address_space(A1)));
+}
+template <int A1, int A2>
+void valid() {
+  using type1 = float __attribute__((address_space(A1)));
+  using type2 = int __attribute__((address_space(A2)));
+  using type3 = int __attribute__((address_space(A1 + A2)));
+}
+#else
+template <int A, int B>
+class S {
+  static auto function1 = invalid1<A, B>;
+  // expected-error@first.h:* {{'Types::DependentAddressSpace::invalid1' has different definitions in different modules; definition in module 'FirstModule' first difference is function body}}
+  // expected-note@second.h:* {{but in 'SecondModule' found a different body}}
+  static auto function2 = invalid2<B>;
+  // expected-error@first.h:* {{'Types::DependentAddressSpace::invalid2' has different definitions in different modules; definition in module 'FirstModule' first difference is function body}}
+  // expected-note@second.h:* {{but in 'SecondModule' found a different body}}
+  static auto function3 = valid<A, B>;
+};
+#endif
+}  // namespace DependentAddressSpace
+
+namespace DependentSizedExtVector {
+#if defined(FIRST)
+template<int Size>
+void invalid1() {
+  typedef int __attribute__((ext_vector_type(Size))) type;
+}
+template<int Size>
+void invalid2() {
+  typedef int __attribute__((ext_vector_type(Size + 0))) type;
+}
+template<int Size>
+void valid() {
+  typedef int __attribute__((ext_vector_type(Size))) type;
+}
+#elif defined(SECOND)
+template<int Size>
+void invalid1() {
+  typedef float __attribute__((ext_vector_type(Size))) type;
+}
+template<int Size>
+void invalid2() {
+  typedef int __attribute__((ext_vector_type(Size + 1))) type;
+}
+template<int Size>
+void valid() {
+  typedef int __attribute__((ext_vector_type(Size))) type;
+}
+#else
+template <int Num>
+class S {
+  static auto Function1 = invalid1<Num>;
+  // expected-error@first.h:* {{'Types::DependentSizedExtVector::invalid1' has different definitions in different modules; definition in module 'FirstModule' first difference is function body}}
+  // expected-note@second.h:* {{but in 'SecondModule' found a different body}}
+  static auto Function2 = invalid2<Num>;
+  // expected-error@first.h:* {{'Types::DependentSizedExtVector::invalid2' has different definitions in different modules; definition in module 'FirstModule' first difference is function body}}
+  // expected-note@second.h:* {{but in 'SecondModule' found a different body}}
+  static auto Function3 = valid<Num>;
+};
+#endif
+}  // namespace DependentSizedExtVector
+
+namespace InjectedClassName {
+#if defined(FIRST)
+struct Invalid {
+  template <int>
+  struct L2 {
+    template <int>
+    struct L3 {
+      L3 *x;
+    };
+  };
+};
+struct Valid {
+  template <int>
+  struct L2 {
+    template <int>
+    struct L3 {
+      L2 *x;
+      L3 *y;
+    };
+  };
+};
+#elif defined(SECOND)
+struct Invalid {
+  template <int>
+  struct L2 {
+    template <int>
+    struct L3 {
+      L2 *x;
+    };
+  };
+};
+struct Valid {
+  template <int>
+  struct L2 {
+    template <int>
+    struct L3 {
+      L2 *x;
+      L3 *y;
+    };
+  };
+};
+#else
+Invalid::L2<1>::L3<1> invalid;
+// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<>' in module 'FirstModule'}}
+// expected-note@first.h:* {{declaration of 'x' does not match}}
+Valid::L2<1>::L3<1> valid;
+#endif
+}  // namespace InjectedClassName
+
+namespace MemberPointer {
+#if defined(FIRST)
+struct A {};
+struct B {};
+
+void Invalid1() {
+  int A::*x;
+};
+void Invalid2() {
+  int A::*x;
+}
+void Invalid3() {
+  int (A::*x)(int);
+}
+void Valid() {
+  int A::*x;
+  float A::*y;
+  bool B::*z;
+  void (A::*fun1)();
+  int (A::*fun2)();
+  void (B::*fun3)(int);
+  void (B::*fun4)(bool*, int);
+}
+#elif defined(SECOND)
+struct A {};
+struct B {};
+
+void Invalid1() {
+  float A::*x;
+};
+void Invalid2() {
+  int B::*x;
+}
+void Invalid3() {
+  int (A::*x)(int, int);
+}
+void Valid() {
+  int A::*x;
+  float A::*y;
+  bool B::*z;
+  void (A::*fun1)();
+  int (A::*fun2)();
+  void (B::*fun3)(int);
+  void (B::*fun4)(bool*, int);
+}
+#else
+auto function1 = Invalid1;
+// expected-error@second.h:* {{'Types::MemberPointer::Invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function2 = Invalid2;
+// expected-error@second.h:* {{'Types::MemberPointer::Invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function3 = Invalid3;
+// expected-error@second.h:* {{'Types::MemberPointer::Invalid3' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function4 = Valid;
+#endif
+
+}  // namespace MemberPointer
+
+namespace PackExpansion {
+#if defined(FIRST)
+struct Invalid {
+  template <class... A>
+  struct L2 {
+    template <class... B>
+    struct L3 {
+      void run(A...);
+      void run(B...);
+    };
+  };
+};
+struct Valid {
+  template <class... A>
+  struct L2 {
+    template <class... B>
+    struct L3 {
+      void run(A...);
+      void run(B...);
+    };
+  };
+};
+#elif defined(SECOND)
+struct Invalid {
+  template <class... A>
+  struct L2 {
+    template <class... B>
+    struct L3 {
+      void run(B...);
+      void run(A...);
+    };
+  };
+};
+struct Valid {
+  template <class... A>
+  struct L2 {
+    template <class... B>
+    struct L3 {
+      void run(A...);
+      void run(B...);
+    };
+  };
+};
+#else
+Invalid::L2<int>::L3<short, bool> invalid;
+// expected-error@first.h:* {{'Types::PackExpansion::Invalid::L2::L3' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'run' with 1st parameter of type 'A...'}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'run' with 1st parameter of type 'B...'}}
+Valid::L2<int>::L3<short, bool> valid;
+#endif
+
+}  // namespace PackExpansion
+
+namespace Paren {
+#if defined(FIRST)
+void invalid() {
+  int (*x);
+}
+void valid() {
+  int (*x);
+}
+#elif defined(SECOND)
+void invalid() {
+  float (*x);
+}
+void valid() {
+  int (*x);
+}
+#else
+auto function1 = invalid;
+// expected-error@second.h:* {{'Types::Paren::invalid' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+auto function2 = valid;
+#endif
+}  // namespace Paren
+
+namespace SubstTemplateTypeParm {
+#if defined(FIRST)
+template <class> struct wrapper {};
+template <class, class, class> struct triple {};
+struct Valid {
+  template <class T,
+           template <class _T, class _U, class = wrapper<_T>> class A = triple>
+  struct L2 {
+    A<T, T> x;
+  };
+};
+#elif defined(SECOND)
+template <class> struct wrapper {};
+template <class, class, class> struct triple {};
+struct Valid {
+  template <class T,
+           template <class _T, class _U, class = wrapper<_T>> class A = triple>
+  struct L2 {
+    A<T, T> x;
+  };
+};
+#else
+template <class T,
+          template <class _T, class _U, class = wrapper<_T>> class A = triple>
+using V = Valid::L2<T, A>;
+#endif
+}  // namespace SubstTemplateTypeParm
+
+namespace SubstTemplateTypeParmPack {
+}  // namespace SubstTemplateTypeParmPack
+
+namespace UnaryTransform {
+#if defined(FIRST)
+enum class E1a : unsigned {};
+struct Invalid1 {
+  __underlying_type(E1a) x;
+};
+enum E2a : unsigned {};
+struct Invalid2 {
+  __underlying_type(E2a) x;
+};
+enum E3a {};
+struct Invalid3 {
+  __underlying_type(E3a) x;
+};
+enum E4a {};
+struct Invalid4 {
+  __underlying_type(E4a) x;
+};
+enum E1 {};
+struct Valid1 {
+  __underlying_type(E1) x;
+};
+enum E2 : unsigned {};
+struct Valid2 {
+  __underlying_type(E2) x;
+};
+enum class E3 {};
+struct Valid3 {
+  __underlying_type(E3) x;
+};
+#elif defined(SECOND)
+enum class E1b : signed {};
+struct Invalid1 {
+  __underlying_type(E1b) x;
+};
+enum class E2b : unsigned {};
+struct Invalid2 {
+  __underlying_type(E2b) x;
+};
+enum E3b : int {};
+struct Invalid3 {
+  __underlying_type(E3b) x;
+};
+enum E4b {};
+struct Invalid4 {
+  __underlying_type(E4b) x;
+};
+#else
+Invalid1 i1;
+// expected-error@first.h:* {{'Types::UnaryTransform::Invalid1::x' from module 'FirstModule' is not present in definition of 'Types::UnaryTransform::Invalid1' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+Invalid2 i2;
+// expected-error@second.h:* {{'Types::UnaryTransform::Invalid2' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E2b)' (aka 'unsigned int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E2a)' (aka 'unsigned int')}}
+Invalid3 i3;
+// expected-error@first.h:* {{'Types::UnaryTransform::Invalid3::x' from module 'FirstModule' is not present in definition of 'Types::UnaryTransform::Invalid3' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+Invalid4 i4;
+// expected-error@second.h:* {{'Types::UnaryTransform::Invalid4' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E4b)' (aka 'unsigned int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type '__underlying_type(Types::UnaryTransform::E4a)' (aka 'unsigned int')}}
+Valid1 v1;
+Valid2 v2;
+Valid3 v3;
+#endif
+}  // namespace UnaryTransform
+
+namespace UnresolvedUsing {
+#if defined(FIRST)
+template <class T> struct wrapper {};
+template <class T>
+struct Invalid {
+  using typename wrapper<T>::T1;
+  using typename wrapper<T>::T2;
+  T1 x;
+};
+template <class T>
+struct Valid {
+  using typename wrapper<T>::T1;
+  using typename wrapper<T>::T2;
+  T1 x;
+  T2 y;
+};
+#elif defined(SECOND)
+template <class T> struct wrapper {};
+template <class T>
+struct Invalid {
+  using typename wrapper<T>::T1;
+  using typename wrapper<T>::T2;
+  T2 x;
+};
+template <class T>
+struct Valid {
+  using typename wrapper<T>::T1;
+  using typename wrapper<T>::T2;
+  T1 x;
+  T2 y;
+};
+#else
+template <class T> using I = Invalid<T>;
+// expected-error@first.h:* {{'Types::UnresolvedUsing::Invalid::x' from module 'FirstModule' is not present in definition of 'Invalid<T>' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+
+template <class T> using V = Valid<T>;
+#endif
+
+}  // namespace UnresolvedUsing
+
+// Vector
+// void invalid1() {
+//  __attribute((vector_size(8))) int *x1;
+//}
+
+}  // namespace Types
 
 // Collection of interesting cases below.
 

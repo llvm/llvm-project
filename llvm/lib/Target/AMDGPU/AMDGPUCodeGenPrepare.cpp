@@ -18,7 +18,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
@@ -60,10 +60,9 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
   const GCNSubtarget *ST = nullptr;
   AssumptionCache *AC = nullptr;
-  DivergenceAnalysis *DA = nullptr;
+  LegacyDivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   bool HasUnsafeFPMath = false;
-  AMDGPUAS AMDGPUASI;
 
   /// Copies exact/nsw/nuw flags (if any) from binary operation \p I to
   /// binary operation \p V.
@@ -177,7 +176,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DivergenceAnalysis>();
+    AU.addRequired<LegacyDivergenceAnalysis>();
     AU.setPreservesAll();
  }
 };
@@ -559,7 +558,7 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
-  CallInst* FQ = Builder.CreateIntrinsic(Intrinsic::trunc, { FQM });
+  CallInst *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
   FQ->copyFastMathFlags(Builder.getFastMathFlags());
 
   // float fqneg = -fq;
@@ -567,17 +566,17 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
 
   // float fr = mad(fqneg, fb, fa);
   Value *FR = Builder.CreateIntrinsic(Intrinsic::amdgcn_fmad_ftz,
-                                      { FQNeg, FB, FA }, FQ);
+                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateIntrinsic(Intrinsic::fabs, { FR }, FQ);
+  FR = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FR, FQ);
 
   // fb = fabs(fb);
-  FB = Builder.CreateIntrinsic(Intrinsic::fabs, { FB }, FQ);
+  FB = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FB, FQ);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);
@@ -799,8 +798,8 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
   if (!WidenLoads)
     return false;
 
-  if ((I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
-       I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT) &&
+  if ((I.getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+       I.getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
       canWidenScalarExtLoad(I)) {
     IRBuilder<> Builder(&I);
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
@@ -898,9 +897,8 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
   ST = &TM.getSubtarget<GCNSubtarget>(F);
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  DA = &getAnalysis<DivergenceAnalysis>();
+  DA = &getAnalysis<LegacyDivergenceAnalysis>();
   HasUnsafeFPMath = hasUnsafeFPMath(F);
-  AMDGPUASI = TM.getAMDGPUAS();
 
   bool MadeChange = false;
 
@@ -918,7 +916,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)
 

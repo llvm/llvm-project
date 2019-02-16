@@ -16,22 +16,18 @@
 
 namespace llvm {
 namespace pdb {
-class DIASession;
 
 class DIAEnumInjectedSources : public IPDBEnumChildren<IPDBInjectedSource> {
 public:
   explicit DIAEnumInjectedSources(
-      const DIASession &PDBSession,
       CComPtr<IDiaEnumInjectedSources> DiaEnumerator);
 
   uint32_t getChildCount() const override;
   ChildTypePtr getChildAtIndex(uint32_t Index) const override;
   ChildTypePtr getNext() override;
   void reset() override;
-  DIAEnumInjectedSources *clone() const override;
 
 private:
-  const DIASession &Session;
   CComPtr<IDiaEnumInjectedSources> Enumerator;
 };
 } // namespace pdb

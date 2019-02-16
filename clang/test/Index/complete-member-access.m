@@ -61,8 +61,8 @@ int test_two_levels(Other *other) {
 // RUN: c-index-test -code-completion-at=%s:34:12 %s | FileCheck -check-prefix=CHECK-CC3 %s
 // CHECK-CC3: ObjCInstanceMethodDecl:{ResultType int}{TypedText myOtherPropLikeThing} (37)
 // CHECK-CC3: ObjCPropertyDecl:{ResultType int}{TypedText myProp} (35)
-// CHECK-CC3: ObjCPropertyDecl:{ResultType int}{TypedText prop1} (35)
-// CHECK-CC3: ObjCPropertyDecl:{ResultType float}{TypedText ProtoProp} (35)
+// CHECK-CC3: ObjCPropertyDecl:{ResultType int}{TypedText prop1} (37)
+// CHECK-CC3: ObjCPropertyDecl:{ResultType float}{TypedText ProtoProp} (37)
 // CHECK-CC3: Completion contexts:
 // CHECK-CC3-NEXT: Objective-C property access
 // CHECK-CC3-NEXT: Container Kind: ObjCInterfaceDecl
@@ -72,6 +72,6 @@ int test_two_levels(Other *other) {
 // RUN: c-index-test -code-completion-at=%s:42:20 %s | FileCheck -check-prefix=CHECK-CC4 %s
 // CHECK-CC4: ObjCInstanceMethodDecl:{ResultType int}{TypedText myOtherPropLikeThing} (37)
 // CHECK-CC4-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText myProp} (35)
-// CHECK-CC4-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText prop1} (35)
-// CHECK-CC4-NEXT: ObjCPropertyDecl:{ResultType float}{TypedText ProtoProp} (35)
+// CHECK-CC4-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText prop1} (37)
+// CHECK-CC4-NEXT: ObjCPropertyDecl:{ResultType float}{TypedText ProtoProp} (37)
 

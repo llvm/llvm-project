@@ -1,3 +1,5 @@
+// RUN: rm -rf %T/ctudir
+// RUN: mkdir %T/ctudir
 // RUN: %clang_cc1 -fsyntax-only -analyze -analyzer-checker=debug.ExprInspection -analyzer-config experimental-enable-naive-ctu-analysis=true -analyzer-config ctu-dir=%T/ctudir -verify %s
 // expected-no-diagnostics
 

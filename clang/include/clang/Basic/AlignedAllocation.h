@@ -27,8 +27,8 @@ inline llvm::VersionTuple alignedAllocMinVersion(llvm::Triple::OSType OS) {
   default:
     break;
   case llvm::Triple::Darwin:
-  case llvm::Triple::MacOSX: // Earliest supporting version is 10.13.
-    return llvm::VersionTuple(10U, 13U);
+  case llvm::Triple::MacOSX: // Earliest supporting version is 10.14.
+    return llvm::VersionTuple(10U, 14U);
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS: // Earliest supporting version is 11.0.0.
     return llvm::VersionTuple(11U);

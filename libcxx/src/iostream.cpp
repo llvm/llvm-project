@@ -13,21 +13,21 @@
 
 #define _str(s) #s
 #define str(s) _str(s)
-#define _LIBCPP_NAMESPACE_STR str(_LIBCPP_NAMESPACE)
+#define _LIBCPP_ABI_NAMESPACE_STR str(_LIBCPP_ABI_NAMESPACE)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_STDIN
 _ALIGNAS_TYPE (istream) _LIBCPP_FUNC_VIS char cin[sizeof(istream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?cin@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_istream@DU?$char_traits@D@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?cin@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_istream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 _ALIGNAS_TYPE (__stdinbuf<char> ) static char __cin[sizeof(__stdinbuf <char>)];
 static mbstate_t mb_cin;
 _ALIGNAS_TYPE (wistream) _LIBCPP_FUNC_VIS char wcin[sizeof(wistream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?wcin@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_istream@_WU?$char_traits@_W@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?wcin@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_istream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 _ALIGNAS_TYPE (__stdinbuf<wchar_t> ) static char __wcin[sizeof(__stdinbuf <wchar_t>)];
@@ -37,14 +37,14 @@ static mbstate_t mb_wcin;
 #ifndef _LIBCPP_HAS_NO_STDOUT
 _ALIGNAS_TYPE (ostream) _LIBCPP_FUNC_VIS char cout[sizeof(ostream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?cout@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?cout@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 _ALIGNAS_TYPE (__stdoutbuf<char>) static char __cout[sizeof(__stdoutbuf<char>)];
 static mbstate_t mb_cout;
 _ALIGNAS_TYPE (wostream) _LIBCPP_FUNC_VIS char wcout[sizeof(wostream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?wcout@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?wcout@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 _ALIGNAS_TYPE (__stdoutbuf<wchar_t>) static char __wcout[sizeof(__stdoutbuf<wchar_t>)];
@@ -53,14 +53,14 @@ static mbstate_t mb_wcout;
 
 _ALIGNAS_TYPE (ostream) _LIBCPP_FUNC_VIS char cerr[sizeof(ostream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?cerr@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?cerr@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 _ALIGNAS_TYPE (__stdoutbuf<char>) static char __cerr[sizeof(__stdoutbuf<char>)];
 static mbstate_t mb_cerr;
 _ALIGNAS_TYPE (wostream) _LIBCPP_FUNC_VIS char wcerr[sizeof(wostream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?wcerr@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?wcerr@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 _ALIGNAS_TYPE (__stdoutbuf<wchar_t>) static char __wcerr[sizeof(__stdoutbuf<wchar_t>)];
@@ -68,16 +68,16 @@ static mbstate_t mb_wcerr;
 
 _ALIGNAS_TYPE (ostream) _LIBCPP_FUNC_VIS char clog[sizeof(ostream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?clog@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?clog@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@DU?$char_traits@D@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 _ALIGNAS_TYPE (wostream) _LIBCPP_FUNC_VIS char wclog[sizeof(wostream)]
 #if defined(_LIBCPP_ABI_MICROSOFT) && defined(__clang__)
-__asm__("?wclog@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_NAMESPACE_STR "@std@@@12@A")
+__asm__("?wclog@" _LIBCPP_ABI_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_traits@_W@" _LIBCPP_ABI_NAMESPACE_STR "@std@@@12@A")
 #endif
 ;
 
-ios_base::Init __start_std_streams;
+_LIBCPP_HIDDEN ios_base::Init __start_std_streams;
 
 ios_base::Init::Init()
 {

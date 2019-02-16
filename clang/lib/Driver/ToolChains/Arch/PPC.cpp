@@ -107,15 +107,19 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (FloatABI == ppc::FloatABI::Soft)
     Features.push_back("-hard-float");
 
-  ppc::ReadGOTPtrMode ReadGOT = ppc::getPPCReadGOTPtrMode(D, Args);
+  ppc::ReadGOTPtrMode ReadGOT = ppc::getPPCReadGOTPtrMode(D, Triple, Args);
   if (ReadGOT == ppc::ReadGOTPtrMode::SecurePlt)
     Features.push_back("+secure-plt");
 }
 
-ppc::ReadGOTPtrMode ppc::getPPCReadGOTPtrMode(const Driver &D, const ArgList &Args) {
+ppc::ReadGOTPtrMode ppc::getPPCReadGOTPtrMode(const Driver &D, const llvm::Triple &Triple,
+                                              const ArgList &Args) {
   if (Args.getLastArg(options::OPT_msecure_plt))
     return ppc::ReadGOTPtrMode::SecurePlt;
-  return ppc::ReadGOTPtrMode::Bss;
+  if (Triple.isOSOpenBSD())
+    return ppc::ReadGOTPtrMode::SecurePlt;
+  else
+    return ppc::ReadGOTPtrMode::Bss;
 }
 
 ppc::FloatABI ppc::getPPCFloatABI(const Driver &D, const ArgList &Args) {

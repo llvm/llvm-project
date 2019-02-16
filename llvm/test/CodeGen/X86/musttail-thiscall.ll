@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-- < %s | FileCheck %s
-; RUN: llc -mtriple=i686-- -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=i686-- < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=i686-- -O0 < %s | FileCheck %s
 
 ; CHECK-LABEL: t1:
 ; CHECK: jmp {{_?}}t1_callee

@@ -273,3 +273,87 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   %call = call i32 @dummy(i32* getelementptr inbounds ([100 x i32], [100 x i32]* @a, i32 0, i32 0), i32* getelementptr inbounds ([100 x i32], [100 x i32]* @b, i32 0, i32 0))
   ret i32 0
 }
+
+%struct.image = type {i32, i32}
+define i32 @foo4(%struct.image* %input, i32 %length, i32* %in) {
+entry:
+  %stride = getelementptr inbounds %struct.image, %struct.image* %input, i64 0, i32 1
+  %0 = load i32, i32* %stride, align 4
+  %cmp17 = icmp sgt i32 %length, 1
+  br i1 %cmp17, label %for.body.lr.ph, label %for.cond.cleanup
+
+for.body.lr.ph:                                   ; preds = %entry
+  %channel = getelementptr inbounds %struct.image, %struct.image* %input, i64 0, i32 0
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  %1 = phi i32 [ %6, %for.body ]
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %2 = phi i32 [ 0, %entry ], [ %1, %for.cond.cleanup.loopexit ]
+  ret i32 %2
+
+; mul instruction below is widened instead of generating a truncate instruction for it
+; regardless if Load operand of mul is inside or outside the loop (we have both cases).
+; CHECK: for.body:
+; CHECK-NOT: trunc
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %x.018 = phi i32 [ 1, %for.body.lr.ph ], [ %add, %for.body ]
+  %add = add nuw nsw i32 %x.018, 1
+  %3 = load i32, i32* %channel, align 8
+  %mul = mul nsw i32 %3, %add
+  %idx.ext = sext i32 %mul to i64
+  %add.ptr = getelementptr inbounds i32, i32* %in, i64 %idx.ext
+  %4 = load i32, i32* %add.ptr, align 4
+  %mul1 = mul nsw i32 %0, %add
+  %idx.ext1 = sext i32 %mul1 to i64
+  %add.ptr1 = getelementptr inbounds i32, i32* %in, i64 %idx.ext1
+  %5 = load i32, i32* %add.ptr1, align 4
+  %6 = add i32 %4, %5
+  %cmp = icmp slt i32 %add, %length
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+}
+
+
+define i32 @foo5(%struct.image* %input, i32 %length, i32* %in) {
+entry:
+  %stride = getelementptr inbounds %struct.image, %struct.image* %input, i64 0, i32 1
+  %0 = load i32, i32* %stride, align 4
+  %cmp17 = icmp sgt i32 %length, 1
+  br i1 %cmp17, label %for.body.lr.ph, label %for.cond.cleanup
+
+for.body.lr.ph:                                   ; preds = %entry
+  %channel = getelementptr inbounds %struct.image, %struct.image* %input, i64 0, i32 0
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %for.body
+  %1 = phi i32 [ %7, %for.body ]
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %2 = phi i32 [ 0, %entry ], [ %1, %for.cond.cleanup.loopexit ]
+  ret i32 %2
+
+; This example is the same as above except that the first mul is used in two places
+; and this may result in having two versions of the multiply: an i32 and i64 version.
+; In this case, keep the trucate instructions to avoid this redundancy.
+; CHECK: for.body:
+; CHECK: trunc
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %x.018 = phi i32 [ 1, %for.body.lr.ph ], [ %add, %for.body ]
+  %add = add nuw nsw i32 %x.018, 1
+  %3 = load i32, i32* %channel, align 8
+  %mul = mul nsw i32 %3, %add
+  %idx.ext = sext i32 %mul to i64
+  %add.ptr = getelementptr inbounds i32, i32* %in, i64 %idx.ext
+  %4 = load i32, i32* %add.ptr, align 4
+  %mul1 = mul nsw i32 %0, %add
+  %idx.ext1 = sext i32 %mul1 to i64
+  %add.ptr1 = getelementptr inbounds i32, i32* %in, i64 %idx.ext1
+  %5 = load i32, i32* %add.ptr1, align 4
+  %6 = add i32 %4, %5
+  %7 = add i32 %6, %mul
+  %cmp = icmp slt i32 %add, %length
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+}

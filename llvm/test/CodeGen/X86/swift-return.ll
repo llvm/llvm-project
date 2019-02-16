@@ -457,18 +457,18 @@ define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
 ; CHECK-LABEL: gen9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    movl %edi, %r8d
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movl %eax, %r8d
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: gen9:
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    movb %dil, %al
-; CHECK-O0-NEXT:    movb %al, -{{[0-9]+}}(%rsp) # 1-byte Spill
-; CHECK-O0-NEXT:    movb -{{[0-9]+}}(%rsp), %dl # 1-byte Reload
-; CHECK-O0-NEXT:    movb -{{[0-9]+}}(%rsp), %cl # 1-byte Reload
-; CHECK-O0-NEXT:    movb -{{[0-9]+}}(%rsp), %r8b # 1-byte Reload
+; CHECK-O0-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
+; CHECK-O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %dl # 1-byte Reload
+; CHECK-O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %cl # 1-byte Reload
+; CHECK-O0-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %r8b # 1-byte Reload
 ; CHECK-O0-NEXT:    retq
   %v0 = insertvalue { i8, i8, i8, i8 } undef, i8 %key, 0
   %v1 = insertvalue { i8, i8, i8, i8 } %v0, i8 %key, 1
@@ -479,10 +479,10 @@ define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
 define swiftcc { double, double, double, double, i64, i64, i64, i64 } @gen10(double %keyd, i64 %keyi) {
 ; CHECK-LABEL: gen10:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps %xmm0, %xmm2
 ; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    movq %rdi, %rcx
 ; CHECK-NEXT:    movq %rdi, %r8
@@ -490,12 +490,12 @@ define swiftcc { double, double, double, double, i64, i64, i64, i64 } @gen10(dou
 ;
 ; CHECK-O0-LABEL: gen10:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp) # 8-byte Spill
-; CHECK-O0-NEXT:    movsd -{{[0-9]+}}(%rsp), %xmm1 # 8-byte Reload
+; CHECK-O0-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; CHECK-O0-NEXT:    # xmm1 = mem[0],zero
-; CHECK-O0-NEXT:    movsd -{{[0-9]+}}(%rsp), %xmm2 # 8-byte Reload
+; CHECK-O0-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 8-byte Reload
 ; CHECK-O0-NEXT:    # xmm2 = mem[0],zero
-; CHECK-O0-NEXT:    movsd -{{[0-9]+}}(%rsp), %xmm3 # 8-byte Reload
+; CHECK-O0-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 8-byte Reload
 ; CHECK-O0-NEXT:    # xmm3 = mem[0],zero
 ; CHECK-O0-NEXT:    movq %rdi, %rax
 ; CHECK-O0-NEXT:    movq %rdi, %rdx

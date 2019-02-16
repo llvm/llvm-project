@@ -1,3 +1,5 @@
+# FIXME: Disabled on Windows for now because Windows has no ulimit command.
+UNSUPPORTED: windows
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 RUN: ulimit -s 1000
 RUN: not %run %t-SimpleTest

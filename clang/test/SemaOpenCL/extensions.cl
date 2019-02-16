@@ -70,6 +70,13 @@ void f2(void) {
 // expected-error@-2{{use of type 'double' requires cl_khr_fp64 extension to be enabled}}
 #endif
 
+  typedef double double4 __attribute__((ext_vector_type(4)));
+  double4 d4 = {0.0f, 2.0f, 3.0f, 1.0f};
+#ifdef NOFP64
+// expected-error@-3 {{use of type 'double' requires cl_khr_fp64 extension to be enabled}}
+// expected-error@-3 {{use of type 'double4' (vector of 4 'double' values) requires cl_khr_fp64 extension to be enabled}}
+#endif
+
   (void) 1.0;
 
 #ifdef NOFP64

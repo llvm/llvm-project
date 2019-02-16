@@ -7,11 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_UNITTESTS_RENAME_CLANGRENAMETEST_H
+#define LLVM_CLANG_UNITTESTS_RENAME_CLANGRENAMETEST_H
+
 #include "unittests/Tooling/RewriterTestContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PCHContainerOperations.h"
@@ -23,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <string>
@@ -110,3 +113,5 @@ protected:
 } // namespace test
 } // namespace clang_rename
 } // namesdpace clang
+
+#endif

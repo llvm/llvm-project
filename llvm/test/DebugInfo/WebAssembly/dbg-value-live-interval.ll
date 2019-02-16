@@ -2,8 +2,8 @@
 
 ; CHECK: After WebAssembly Optimize Live Intervals:
 ; CHECK: bb.3.for.body.for.body_crit_edge:
-; CHECK: [[REG:%[0-9]+]]:i32 = ADD_I32 {{.*}} fib.c:7:7
-; CHECK: DBG_VALUE debug-use [[REG]]:i32, debug-use $noreg, !"a", {{.*}} fib.c:5:13
+; CHECK: [[REG:%[0-9]+]]:i32 = nsw ADD_I32 {{.*}} fib.c:7:7
+; CHECK: DBG_VALUE [[REG]]:i32, $noreg, !"a", {{.*}} fib.c:5:13
 ; CHECK: After WebAssembly Store Results:
 
 ; ModuleID = 'fib.bc'

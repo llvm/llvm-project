@@ -1566,7 +1566,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
     BasicBlock *BBCopyStart = StartBlockMap[BB];
     BasicBlock *BBCopyEnd = EndBlockMap[BB];
-    TerminatorInst *TI = BB->getTerminator();
+    Instruction *TI = BB->getTerminator();
     if (isa<UnreachableInst>(TI)) {
       while (!BBCopyEnd->empty())
         BBCopyEnd->begin()->eraseFromParent();

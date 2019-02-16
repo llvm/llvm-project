@@ -18,9 +18,11 @@
     defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
     defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
     defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
-    defined HANDLE_DW_RLE || defined HANDLE_DW_CFA ||                          \
+    defined HANDLE_DW_RLE ||                                                   \
+    (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
-    defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX)
+    defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
+    defined HANDLE_DW_END)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -41,7 +43,7 @@
 #endif
 
 #ifndef HANDLE_DW_LANG
-#define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR)
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)
 #endif
 
 #ifndef HANDLE_DW_ATE
@@ -84,6 +86,10 @@
 #define HANDLE_DW_CFA(ID, NAME)
 #endif
 
+#ifndef HANDLE_DW_CFA_PRED
+#define HANDLE_DW_CFA_PRED(ID, NAME, PRED)
+#endif
+
 #ifndef HANDLE_DW_APPLE_PROPERTY
 #define HANDLE_DW_APPLE_PROPERTY(ID, NAME)
 #endif
@@ -98,6 +104,10 @@
 
 #ifndef HANDLE_DW_IDX
 #define HANDLE_DW_IDX(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_END
+#define HANDLE_DW_END(ID, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF)
@@ -622,50 +632,50 @@ HANDLE_DW_OP(0xfb, GNU_addr_index, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 0, GNU)
 
 // DWARF languages.
-HANDLE_DW_LANG(0x0001, C89, 2, DWARF)
-HANDLE_DW_LANG(0x0002, C, 2, DWARF)
-HANDLE_DW_LANG(0x0003, Ada83, 2, DWARF)
-HANDLE_DW_LANG(0x0004, C_plus_plus, 2, DWARF)
-HANDLE_DW_LANG(0x0005, Cobol74, 2, DWARF)
-HANDLE_DW_LANG(0x0006, Cobol85, 2, DWARF)
-HANDLE_DW_LANG(0x0007, Fortran77, 2, DWARF)
-HANDLE_DW_LANG(0x0008, Fortran90, 2, DWARF)
-HANDLE_DW_LANG(0x0009, Pascal83, 2, DWARF)
-HANDLE_DW_LANG(0x000a, Modula2, 2, DWARF)
+HANDLE_DW_LANG(0x0001, C89, 0, 2, DWARF)
+HANDLE_DW_LANG(0x0002, C, 0, 2, DWARF)
+HANDLE_DW_LANG(0x0003, Ada83, 1, 2, DWARF)
+HANDLE_DW_LANG(0x0004, C_plus_plus, 0, 2, DWARF)
+HANDLE_DW_LANG(0x0005, Cobol74, 1, 2, DWARF)
+HANDLE_DW_LANG(0x0006, Cobol85, 1, 2, DWARF)
+HANDLE_DW_LANG(0x0007, Fortran77, 1, 2, DWARF)
+HANDLE_DW_LANG(0x0008, Fortran90, 1, 2, DWARF)
+HANDLE_DW_LANG(0x0009, Pascal83, 1, 2, DWARF)
+HANDLE_DW_LANG(0x000a, Modula2, 1, 2, DWARF)
 // New in DWARF v3:
-HANDLE_DW_LANG(0x000b, Java, 3, DWARF)
-HANDLE_DW_LANG(0x000c, C99, 3, DWARF)
-HANDLE_DW_LANG(0x000d, Ada95, 3, DWARF)
-HANDLE_DW_LANG(0x000e, Fortran95, 3, DWARF)
-HANDLE_DW_LANG(0x000f, PLI, 3, DWARF)
-HANDLE_DW_LANG(0x0010, ObjC, 3, DWARF)
-HANDLE_DW_LANG(0x0011, ObjC_plus_plus, 3, DWARF)
-HANDLE_DW_LANG(0x0012, UPC, 3, DWARF)
-HANDLE_DW_LANG(0x0013, D, 3, DWARF)
+HANDLE_DW_LANG(0x000b, Java, 0, 3, DWARF)
+HANDLE_DW_LANG(0x000c, C99, 0, 3, DWARF)
+HANDLE_DW_LANG(0x000d, Ada95, 1, 3, DWARF)
+HANDLE_DW_LANG(0x000e, Fortran95, 1, 3, DWARF)
+HANDLE_DW_LANG(0x000f, PLI, 1, 3, DWARF)
+HANDLE_DW_LANG(0x0010, ObjC, 0, 3, DWARF)
+HANDLE_DW_LANG(0x0011, ObjC_plus_plus, 0, 3, DWARF)
+HANDLE_DW_LANG(0x0012, UPC, 0, 3, DWARF)
+HANDLE_DW_LANG(0x0013, D, 0, 3, DWARF)
 // New in DWARF v4:
-HANDLE_DW_LANG(0x0014, Python, 4, DWARF)
+HANDLE_DW_LANG(0x0014, Python, 0, 4, DWARF)
 // New in DWARF v5:
-HANDLE_DW_LANG(0x0015, OpenCL, 5, DWARF)
-HANDLE_DW_LANG(0x0016, Go, 5, DWARF)
-HANDLE_DW_LANG(0x0017, Modula3, 5, DWARF)
-HANDLE_DW_LANG(0x0018, Haskell, 5, DWARF)
-HANDLE_DW_LANG(0x0019, C_plus_plus_03, 5, DWARF)
-HANDLE_DW_LANG(0x001a, C_plus_plus_11, 5, DWARF)
-HANDLE_DW_LANG(0x001b, OCaml, 5, DWARF)
-HANDLE_DW_LANG(0x001c, Rust, 5, DWARF)
-HANDLE_DW_LANG(0x001d, C11, 5, DWARF)
-HANDLE_DW_LANG(0x001e, Swift, 5, DWARF)
-HANDLE_DW_LANG(0x001f, Julia, 5, DWARF)
-HANDLE_DW_LANG(0x0020, Dylan, 5, DWARF)
-HANDLE_DW_LANG(0x0021, C_plus_plus_14, 5, DWARF)
-HANDLE_DW_LANG(0x0022, Fortran03, 5, DWARF)
-HANDLE_DW_LANG(0x0023, Fortran08, 5, DWARF)
-HANDLE_DW_LANG(0x0024, RenderScript, 5, DWARF)
-HANDLE_DW_LANG(0x0025, BLISS, 5, DWARF)
+HANDLE_DW_LANG(0x0015, OpenCL, 0, 5, DWARF)
+HANDLE_DW_LANG(0x0016, Go, 0, 5, DWARF)
+HANDLE_DW_LANG(0x0017, Modula3, 1, 5, DWARF)
+HANDLE_DW_LANG(0x0018, Haskell, 0, 5, DWARF)
+HANDLE_DW_LANG(0x0019, C_plus_plus_03, 0, 5, DWARF)
+HANDLE_DW_LANG(0x001a, C_plus_plus_11, 0, 5, DWARF)
+HANDLE_DW_LANG(0x001b, OCaml, 0, 5, DWARF)
+HANDLE_DW_LANG(0x001c, Rust, 0, 5, DWARF)
+HANDLE_DW_LANG(0x001d, C11, 0, 5, DWARF)
+HANDLE_DW_LANG(0x001e, Swift, 0, 5, DWARF)
+HANDLE_DW_LANG(0x001f, Julia, 1, 5, DWARF)
+HANDLE_DW_LANG(0x0020, Dylan, 0, 5, DWARF)
+HANDLE_DW_LANG(0x0021, C_plus_plus_14, 0, 5, DWARF)
+HANDLE_DW_LANG(0x0022, Fortran03, 1, 5, DWARF)
+HANDLE_DW_LANG(0x0023, Fortran08, 1, 5, DWARF)
+HANDLE_DW_LANG(0x0024, RenderScript, 0, 5, DWARF)
+HANDLE_DW_LANG(0x0025, BLISS, 0, 5, DWARF)
 // Vendor extensions:
-HANDLE_DW_LANG(0x8001, Mips_Assembler, 0, MIPS)
-HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript, 0, GOOGLE)
-HANDLE_DW_LANG(0xb000, BORLAND_Delphi, 0, BORLAND)
+HANDLE_DW_LANG(0x8001, Mips_Assembler, None, 0, MIPS)
+HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript, 0, 0, GOOGLE)
+HANDLE_DW_LANG(0xb000, BORLAND_Delphi, 0, 0, BORLAND)
 
 // DWARF attribute type encodings.
 HANDLE_DW_ATE(0x01, address, 2, DWARF)
@@ -689,6 +699,11 @@ HANDLE_DW_ATE(0x10, UTF, 4, DWARF)
 // New in DWARF v5:
 HANDLE_DW_ATE(0x11, UCS, 5, DWARF)
 HANDLE_DW_ATE(0x12, ASCII, 5, DWARF)
+
+// DWARF attribute endianity
+HANDLE_DW_END(0x00, default)
+HANDLE_DW_END(0x01, big)
+HANDLE_DW_END(0x02, little)
 
 // DWARF virtuality codes.
 HANDLE_DW_VIRTUALITY(0x00, none)
@@ -821,9 +836,10 @@ HANDLE_DW_CFA(0x14, val_offset)
 HANDLE_DW_CFA(0x15, val_offset_sf)
 HANDLE_DW_CFA(0x16, val_expression)
 // Vendor extensions:
-HANDLE_DW_CFA(0x1d, MIPS_advance_loc8)
-HANDLE_DW_CFA(0x2d, GNU_window_save)
-HANDLE_DW_CFA(0x2e, GNU_args_size)
+HANDLE_DW_CFA_PRED(0x1d, MIPS_advance_loc8, SELECT_MIPS64)
+HANDLE_DW_CFA_PRED(0x2d, GNU_window_save, SELECT_SPARC)
+HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
+HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
 
 // Apple Objective-C Property Attributes.
 // Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind!
@@ -863,6 +879,7 @@ HANDLE_DWARF_SECTION(DebugTypes, ".debug_types", "debug-types")
 HANDLE_DWARF_SECTION(DebugLine, ".debug_line", "debug-line")
 HANDLE_DWARF_SECTION(DebugLineStr, ".debug_line_str", "debug-line-str")
 HANDLE_DWARF_SECTION(DebugLoc, ".debug_loc", "debug-loc")
+HANDLE_DWARF_SECTION(DebugLoclists, ".debug_loclists", "debug-loclists")
 HANDLE_DWARF_SECTION(DebugFrame, ".debug_frame", "debug-frame")
 HANDLE_DWARF_SECTION(DebugMacro, ".debug_macro", "debug-macro")
 HANDLE_DWARF_SECTION(DebugNames, ".debug_names", "debug-names")
@@ -905,7 +922,9 @@ HANDLE_DW_IDX(0x05, type_hash)
 #undef HANDLE_DW_MACRO
 #undef HANDLE_DW_RLE
 #undef HANDLE_DW_CFA
+#undef HANDLE_DW_CFA_PRED
 #undef HANDLE_DW_APPLE_PROPERTY
 #undef HANDLE_DW_UT
 #undef HANDLE_DWARF_SECTION
 #undef HANDLE_DW_IDX
+#undef HANDLE_DW_END

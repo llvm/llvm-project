@@ -14,6 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SYMBOLSTRINGPOOL_H
 #define LLVM_EXECUTIONENGINE_ORC_SYMBOLSTRINGPOOL_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include <atomic>
 #include <mutex>
@@ -49,9 +50,12 @@ private:
 /// Pointer to a pooled string representing a symbol name.
 class SymbolStringPtr {
   friend class SymbolStringPool;
+  friend struct DenseMapInfo<SymbolStringPtr>;
   friend bool operator==(const SymbolStringPtr &LHS,
                          const SymbolStringPtr &RHS);
   friend bool operator<(const SymbolStringPtr &LHS, const SymbolStringPtr &RHS);
+
+  static SymbolStringPool::PoolMapEntry Tombstone;
 
 public:
   SymbolStringPtr() = default;
@@ -142,6 +146,29 @@ inline bool SymbolStringPool::empty() const {
 }
 
 } // end namespace orc
+
+template <>
+struct DenseMapInfo<orc::SymbolStringPtr> {
+
+  static orc::SymbolStringPtr getEmptyKey() {
+    return orc::SymbolStringPtr();
+  }
+
+  static orc::SymbolStringPtr getTombstoneKey() {
+    return orc::SymbolStringPtr(&orc::SymbolStringPtr::Tombstone);
+  }
+
+  static unsigned getHashValue(orc::SymbolStringPtr V) {
+    uintptr_t IV = reinterpret_cast<uintptr_t>(V.S);
+    return unsigned(IV) ^ unsigned(IV >> 9);
+  }
+
+  static bool isEqual(const orc::SymbolStringPtr &LHS,
+                      const orc::SymbolStringPtr &RHS) {
+    return LHS.S == RHS.S;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_SYMBOLSTRINGPOOL_H

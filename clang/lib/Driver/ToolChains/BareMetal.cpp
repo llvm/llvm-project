@@ -13,13 +13,13 @@
 #include "InputInfo.h"
 #include "Gnu.h"
 
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm::opt;
@@ -119,10 +119,11 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(
     std::error_code EC;
     Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
     // Walk the subdirs, and find the one with the newest gcc version:
-    for (vfs::directory_iterator LI =
-           getDriver().getVFS().dir_begin(Dir.str(), EC), LE;
+    for (llvm::vfs::directory_iterator
+             LI = getDriver().getVFS().dir_begin(Dir.str(), EC),
+             LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
-      StringRef VersionText = llvm::sys::path::filename(LI->getName());
+      StringRef VersionText = llvm::sys::path::filename(LI->path());
       auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
       if (CandidateVersion.Major == -1)
         continue;

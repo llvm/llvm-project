@@ -102,7 +102,6 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   unsigned ThresholdPrivate = UnrollThresholdPrivate;
   unsigned ThresholdLocal = UnrollThresholdLocal;
   unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
-  const AMDGPUAS &ASST = AMDGPU::getAMDGPUAS(TargetTriple);
   for (const BasicBlock *BB : L->getBlocks()) {
     const DataLayout &DL = BB->getModule()->getDataLayout();
     unsigned LocalGEPsSeen = 0;
@@ -140,9 +139,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
       unsigned AS = GEP->getAddressSpace();
       unsigned Threshold = 0;
-      if (AS == ASST.PRIVATE_ADDRESS)
+      if (AS == AMDGPUAS::PRIVATE_ADDRESS)
         Threshold = ThresholdPrivate;
-      else if (AS == ASST.LOCAL_ADDRESS)
+      else if (AS == AMDGPUAS::LOCAL_ADDRESS)
         Threshold = ThresholdLocal;
       else
         continue;
@@ -150,7 +149,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       if (UP.Threshold >= Threshold)
         continue;
 
-      if (AS == ASST.PRIVATE_ADDRESS) {
+      if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
         const Value *Ptr = GEP->getPointerOperand();
         const AllocaInst *Alloca =
             dyn_cast<AllocaInst>(GetUnderlyingObject(Ptr, DL));
@@ -160,7 +159,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
         unsigned AllocaSize = Ty->isSized() ? DL.getTypeAllocSize(Ty) : 0;
         if (AllocaSize > MaxAlloca)
           continue;
-      } else if (AS == ASST.LOCAL_ADDRESS) {
+      } else if (AS == AMDGPUAS::LOCAL_ADDRESS) {
         LocalGEPsSeen++;
         // Inhibit unroll for local memory if we have seen addressing not to
         // a variable, most likely we will be unable to combine it.
@@ -253,19 +252,18 @@ unsigned GCNTTIImpl::getStoreVectorFactor(unsigned VF, unsigned StoreSize,
 }
 
 unsigned GCNTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
-  AMDGPUAS AS = ST->getAMDGPUAS();
-  if (AddrSpace == AS.GLOBAL_ADDRESS ||
-      AddrSpace == AS.CONSTANT_ADDRESS ||
-      AddrSpace == AS.CONSTANT_ADDRESS_32BIT) {
+  if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
+      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
     return 512;
   }
 
-  if (AddrSpace == AS.FLAT_ADDRESS ||
-      AddrSpace == AS.LOCAL_ADDRESS ||
-      AddrSpace == AS.REGION_ADDRESS)
+  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
+      AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+      AddrSpace == AMDGPUAS::REGION_ADDRESS)
     return 128;
 
-  if (AddrSpace == AS.PRIVATE_ADDRESS)
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 8 * ST->getMaxPrivateElementSize();
 
   llvm_unreachable("unhandled address space");
@@ -277,7 +275,7 @@ bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
   // We allow vectorization of flat stores, even though we may need to decompose
   // them later if they may access private memory. We don't have enough context
   // here, and legalization can handle it.
-  if (AddrSpace == ST->getAMDGPUAS().PRIVATE_ADDRESS) {
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
     return (Alignment >= 4 || ST->hasUnalignedScratchAccess()) &&
       ChainSizeInBytes <= ST->getMaxPrivateElementSize();
   }
@@ -545,14 +543,15 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (const Argument *A = dyn_cast<Argument>(V))
     return !isArgPassedInSGPR(A);
 
-  // Loads from the private address space are divergent, because threads
-  // can execute the load instruction with the same inputs and get different
-  // results.
+  // Loads from the private and flat address spaces are divergent, because
+  // threads can execute the load instruction with the same inputs and get
+  // different results.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
-    return Load->getPointerAddressSpace() == ST->getAMDGPUAS().PRIVATE_ADDRESS;
+    return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
+           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS;
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each
@@ -642,20 +641,19 @@ unsigned R600TTIImpl::getMinVectorRegisterBitWidth() const {
 }
 
 unsigned R600TTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
-  AMDGPUAS AS = ST->getAMDGPUAS();
-  if (AddrSpace == AS.GLOBAL_ADDRESS ||
-      AddrSpace == AS.CONSTANT_ADDRESS)
+  if (AddrSpace == AMDGPUAS::GLOBAL_ADDRESS ||
+      AddrSpace == AMDGPUAS::CONSTANT_ADDRESS)
     return 128;
-  if (AddrSpace == AS.LOCAL_ADDRESS ||
-      AddrSpace == AS.REGION_ADDRESS)
+  if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+      AddrSpace == AMDGPUAS::REGION_ADDRESS)
     return 64;
-  if (AddrSpace == AS.PRIVATE_ADDRESS)
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return 32;
 
-  if ((AddrSpace == AS.PARAM_D_ADDRESS ||
-      AddrSpace == AS.PARAM_I_ADDRESS ||
-      (AddrSpace >= AS.CONSTANT_BUFFER_0 &&
-      AddrSpace <= AS.CONSTANT_BUFFER_15)))
+  if ((AddrSpace == AMDGPUAS::PARAM_D_ADDRESS ||
+      AddrSpace == AMDGPUAS::PARAM_I_ADDRESS ||
+      (AddrSpace >= AMDGPUAS::CONSTANT_BUFFER_0 &&
+      AddrSpace <= AMDGPUAS::CONSTANT_BUFFER_15)))
     return 128;
   llvm_unreachable("unhandled address space");
 }
@@ -666,9 +664,7 @@ bool R600TTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
   // We allow vectorization of flat stores, even though we may need to decompose
   // them later if they may access private memory. We don't have enough context
   // here, and legalization can handle it.
-  if (AddrSpace == ST->getAMDGPUAS().PRIVATE_ADDRESS)
-    return false;
-  return true;
+  return (AddrSpace != AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 bool R600TTIImpl::isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,

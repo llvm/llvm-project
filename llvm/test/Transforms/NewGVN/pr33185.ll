@@ -79,7 +79,8 @@ define i32 @test2() local_unnamed_addr {
 ; CHECK:       cond.end.i:
 ; CHECK-NEXT:    [[COND_I:%.*]] = phi i32 [ [[DIV_I]], [[COND_TRUE_I]] ], [ 0, [[FOR_BODY_I]] ]
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[F_08_I]], 1
-; CHECK-NEXT:    [[CALL5:%.*]] = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str4, i64 0, i64 0), i32 0)
+; CHECK-NEXT:    [[TEST:%.*]] = udiv i32 [[MUL_I]], [[INC_I]]
+; CHECK-NEXT:    [[CALL5:%.*]] = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str4, i64 0, i64 0), i32 [[TEST]])
 ; CHECK-NEXT:    [[EXITCOND_I:%.*]] = icmp eq i32 [[INC_I]], 4
 ; CHECK-NEXT:    br i1 [[EXITCOND_I]], label [[FN1_EXIT:%.*]], label [[FOR_BODY_I]]
 ; CHECK:       fn1.exit:

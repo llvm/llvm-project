@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <limits>
 
 namespace llvm {
@@ -26,6 +27,8 @@ class BasicBlock;
 class BlockFrequency;
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
+class AssumptionCache;
+class CallInst;
 class DominatorTree;
 class Function;
 class Instruction;
@@ -55,6 +58,7 @@ class Value;
     const bool AggregateArgs;
     BlockFrequencyInfo *BFI;
     BranchProbabilityInfo *BPI;
+    AssumptionCache *AC;
 
     // If true, varargs functions can be extracted.
     bool AllowVarArgs;
@@ -63,6 +67,11 @@ class Value;
     SetVector<BasicBlock *> Blocks;
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
     Type *RetTy;
+
+    // Suffix to use when creating extracted function (appended to the original
+    // function name + "."). If empty, the default is to use the entry block
+    // label, if non-empty, otherwise "extracted".
+    std::string Suffix;
 
   public:
     /// Create a code extractor for a sequence of blocks.
@@ -78,7 +87,9 @@ class Value;
     CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                   bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                   BranchProbabilityInfo *BPI = nullptr,
-                  bool AllowVarArgs = false, bool AllowAlloca = false);
+                  AssumptionCache *AC = nullptr,
+                  bool AllowVarArgs = false, bool AllowAlloca = false,
+                  std::string Suffix = "");
 
     /// Create a code extractor for a loop body.
     ///
@@ -86,7 +97,9 @@ class Value;
     /// block sequence of the loop.
     CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs = false,
                   BlockFrequencyInfo *BFI = nullptr,
-                  BranchProbabilityInfo *BPI = nullptr);
+                  BranchProbabilityInfo *BPI = nullptr,
+                  AssumptionCache *AC = nullptr,
+                  std::string Suffix = "");
 
     /// Perform the extraction, returning the new function.
     ///
@@ -139,7 +152,8 @@ class Value;
     BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
 
   private:
-    void severSplitPHINodes(BasicBlock *&Header);
+    void severSplitPHINodesOfEntry(BasicBlock *&Header);
+    void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
     void splitReturnBlocks();
 
     Function *constructFunction(const ValueSet &inputs,
@@ -155,10 +169,9 @@ class Value;
         DenseMap<BasicBlock *, BlockFrequency> &ExitWeights,
         BranchProbabilityInfo *BPI);
 
-    void emitCallAndSwitchStatement(Function *newFunction,
-                                    BasicBlock *newHeader,
-                                    ValueSet &inputs,
-                                    ValueSet &outputs);
+    CallInst *emitCallAndSwitchStatement(Function *newFunction,
+                                         BasicBlock *newHeader,
+                                         ValueSet &inputs, ValueSet &outputs);
   };
 
 } // end namespace llvm

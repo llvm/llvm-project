@@ -25,9 +25,14 @@
 
 using namespace llvm;
 
+static unsigned getUnconditionalBranch(const MipsSubtarget &STI) {
+  if (STI.inMicroMipsMode())
+    return STI.isPositionIndependent() ? Mips::B_MM : Mips::J_MM;
+  return STI.isPositionIndependent() ? Mips::B : Mips::J;
+}
+
 MipsSEInstrInfo::MipsSEInstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, STI.isPositionIndependent() ? Mips::B : Mips::J),
-      RI() {}
+    : MipsInstrInfo(STI, getUnconditionalBranch(STI)), RI() {}
 
 const MipsRegisterInfo &MipsSEInstrInfo::getRegisterInfo() const {
   return RI;
@@ -217,9 +222,9 @@ static bool isReadOrWriteToDSPReg(const MachineInstr &MI, bool &isWrite) {
 /// We check for the common case of 'or', as it's MIPS' preferred instruction
 /// for GPRs but we have to check the operands to ensure that is the case.
 /// Other move instructions for MIPS are directly identifiable.
-bool MipsSEInstrInfo::isCopyInstr(const MachineInstr &MI,
-                                  const MachineOperand *&Src,
-                                  const MachineOperand *&Dest) const {
+bool MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI,
+                                      const MachineOperand *&Src,
+                                      const MachineOperand *&Dest) const {
   bool isDSPControlWrite = false;
   // Condition is made to match the creation of WRDSP/RDDSP copy instruction
   // from copyPhysReg function.
@@ -416,12 +421,16 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     expandERet(MBB, MI);
     break;
   case Mips::PseudoMFHI:
-    Opc = isMicroMips ? Mips::MFHI16_MM : Mips::MFHI;
-    expandPseudoMFHiLo(MBB, MI, Opc);
+    expandPseudoMFHiLo(MBB, MI, Mips::MFHI);
+    break;
+  case Mips::PseudoMFHI_MM:
+    expandPseudoMFHiLo(MBB, MI, Mips::MFHI16_MM);
     break;
   case Mips::PseudoMFLO:
-    Opc = isMicroMips ? Mips::MFLO16_MM : Mips::MFLO;
-    expandPseudoMFHiLo(MBB, MI, Opc);
+    expandPseudoMFHiLo(MBB, MI, Mips::MFLO);
+    break;
+  case Mips::PseudoMFLO_MM:
+    expandPseudoMFHiLo(MBB, MI, Mips::MFLO16_MM);
     break;
   case Mips::PseudoMFHI64:
     expandPseudoMFHiLo(MBB, MI, Mips::MFHI64);
@@ -643,7 +652,7 @@ unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
           Opc == Mips::BNE64  || Opc == Mips::BGTZ64 || Opc == Mips::BGEZ64 ||
           Opc == Mips::BLTZ64 || Opc == Mips::BLEZ64 || Opc == Mips::BC1T   ||
           Opc == Mips::BC1F   || Opc == Mips::B      || Opc == Mips::J      ||
-          Opc == Mips::B_MM   || Opc == Mips::BEQZC_MM ||
+          Opc == Mips::J_MM   || Opc == Mips::B_MM   || Opc == Mips::BEQZC_MM ||
           Opc == Mips::BNEZC_MM || Opc == Mips::BEQC || Opc == Mips::BNEC   ||
           Opc == Mips::BLTC   || Opc == Mips::BGEC   || Opc == Mips::BLTUC  ||
           Opc == Mips::BGEUC  || Opc == Mips::BGTZC  || Opc == Mips::BLEZC  ||

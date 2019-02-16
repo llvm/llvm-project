@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=ppc64 -ppc-asm-full-reg-names < %s | FileCheck %s
 target datalayout = "E-m:o-p:32:32-f64:32:64-n32"
-target triple = "powerpc-apple-macosx10.5.0"
+target triple = "powerpc-unknown-linux-gnu"
  
 %struct.sm = type { i8, i8 }
  
@@ -18,9 +18,9 @@ entry:
 }
 
 ; CHECK-LABEL: @foo
-; CHECK: stb {{r[0-9]+}}, [[OFF:[0-9]+]]({{r[3]?1}})
-; CHECK: lhz r3, [[OFF]]({{r[3]?1}})
-; CHECK: bl _bar
+; CHECK: stb {{r[0-9]+}}, [[OFF:[0-9]+]]({{r[3?1]}})
+; CHECK: lhz r4, [[OFF]]({{r[3?1]}})
+; CHECK: bl bar
 ; CHECK: blr
  
 declare void @bar(%struct.sm* byval, %struct.sm* byval)

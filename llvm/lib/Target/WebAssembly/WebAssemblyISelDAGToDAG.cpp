@@ -25,6 +25,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-isel"
 
+extern cl::opt<bool> EnableUnimplementedWasmSIMDInstrs;
+
 //===--------------------------------------------------------------------===//
 /// WebAssembly-specific code to select WebAssembly machine instructions for
 /// SelectionDAG operations.

@@ -12,9 +12,10 @@
 ?anonymous@?A@N@@3HA
 ; CHECK: int N::`anonymous namespace'::anonymous
 
-; FIXME: Reference Temporaries
-; ?$RT1@NeedsReferenceTemporary@@3ABHB
-; ?$RT1@NeedsReferenceTemporary@@3AEBHEB
+?$RT1@NeedsReferenceTemporary@@3ABHB
+; CHECK: int const &NeedsReferenceTemporary::$RT1
+?$RT1@NeedsReferenceTemporary@@3AEBHEB
+; CHECK: int const &NeedsReferenceTemporary::$RT1
 
 ?_c@@YAHXZ
 ; CHECK: int __cdecl _c(void)
@@ -63,6 +64,9 @@
 
 ??Hfoo@@QEAAHH@Z
 ; CHECK: int __cdecl foo::operator+(int)
+
+??$?HH@S@@QEAAAEANH@Z
+; CHECK: double & __cdecl S::operator+<int>(int)
 
 ?static_method@foo@@SAPAV1@XZ
 ; CHECK: static class foo * __cdecl foo::static_method(void)
@@ -178,12 +182,13 @@
 ?color2@@3QBNB
 ; CHECK: double const *const color2
 
-; FIXME-EXTRACONST: These tests fails because we print an extra const inside the parens.
-; ?color3@@3QAY02$$CBNA
-; FIXME-EXTRACONST: double const (*color3)[3]
+; undname prints `double const (* color3)[3]`, but this is a bug in undname.
+?color3@@3QAY02$$CBNA
+; CHECK: double const (*const color3)[3]
 
-; ?color4@@3QAY02$$CBNA
-; FIXME-EXTRACONST: double const (*color4)[3]
+; undname prints `double const (* color4)[3]`, but this is a bug in undname.
+?color4@@3QAY02$$CBNA
+; CHECK: double const (*const color4)[3]
 
 ?memptr1@@3RESB@@HES1@
 ; CHECK: int volatile B::*volatile memptr1
@@ -265,12 +270,11 @@
 ?s6@PR13182@@3PBQBDB
 ; CHECK: char const *const *PR13182::s6
 
-; FIXME: We don't properly support extern "C" functions yet.
-; ?local@?1??extern_c_func@@9@4HA
-; FIXME: int `extern_c_func'::`2'::local
+?local@?1??extern_c_func@@9@4HA
+; CHECK: int `extern "C" extern_c_func'::`2'::local
 
-; ?local@?1??extern_c_func@@9@4HA
-; FIXME: int `extern_c_func'::`2'::local
+?local@?1??extern_c_func@@9@4HA
+; CHECK: int `extern "C" extern_c_func'::`2'::local
 
 ?v@?1??f@@YAHXZ@4U<unnamed-type-v>@?1??1@YAHXZ@A
 ; CHECK: struct `int __cdecl f(void)'::`2'::<unnamed-type-v> `int __cdecl f(void)'::`2'::v
@@ -328,12 +332,11 @@
 ?vector_func@@YQXXZ
 ; CHECK: void __vectorcall vector_func(void)
 
-; FIXME: We don't support extern C funcs currently.
-; ??$fn_tmpl@$1?extern_c_func@@YAXXZ@@YAXXZ
-; FIXME: void __cdecl fn_tmpl<&void __cdecl extern_c_func(void)>(void)
+??$fn_tmpl@$1?extern_c_func@@YAXXZ@@YAXXZ
+; CHECK: void __cdecl fn_tmpl<&void __cdecl extern_c_func(void)>(void)
 
-; ?overloaded_fn@@$$J0YAXXZ
-; FIXME-EXTERNC: extern \"C\" void __cdecl overloaded_fn(void)
+?overloaded_fn@@$$J0YAXXZ
+; CHECK: extern "C" void __cdecl overloaded_fn(void)
 
 ?f@UnnamedType@@YAXQAPAU<unnamed-type-T1>@S@1@@Z
 ; CHECK: void __cdecl UnnamedType::f(struct UnnamedType::S::<unnamed-type-T1> **const)
@@ -389,3 +392,6 @@
 
 ??0?$L@V?$H@PAH@PR26029@@@PR26029@@QAE@XZ
 ; CHECK: __thiscall PR26029::L<class PR26029::H<int *>>::L<class PR26029::H<int *>>(void)
+
+; ??$emplace_back@ABH@?$vector@HV?$allocator@H@std@@@std@@QAE?A?<decltype-auto>@@ABH@Z
+<decltype-auto> __thiscall std::vector<int, class std::allocator<int>>::emplace_back<int const &>(int const &)

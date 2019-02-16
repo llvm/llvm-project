@@ -19,9 +19,9 @@ namespace objc {
 
 void AvoidNSErrorInitCheck::registerMatchers(MatchFinder *Finder) {
   // this check should only be applied to ObjC sources.
-  if (!getLangOpts().ObjC1 && !getLangOpts().ObjC2) {
+  if (!getLangOpts().ObjC)
     return;
-  }
+
   Finder->addMatcher(objcMessageExpr(hasSelector("init"),
                                      hasReceiverType(asString("NSError *")))
                          .bind("nserrorInit"),
@@ -31,7 +31,7 @@ void AvoidNSErrorInitCheck::registerMatchers(MatchFinder *Finder) {
 void AvoidNSErrorInitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr =
       Result.Nodes.getNodeAs<ObjCMessageExpr>("nserrorInit");
-  diag(MatchedExpr->getLocStart(),
+  diag(MatchedExpr->getBeginLoc(),
        "use errorWithDomain:code:userInfo: or initWithDomain:code:userInfo: to "
        "create a new NSError");
 }

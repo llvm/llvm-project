@@ -127,6 +127,7 @@ namespace clang {
                                 CodeGenOpts, C, CoverageInfo)),
           LinkModules(std::move(LinkModules)) {
       FrontendTimesIsEnabled = TimePasses;
+      llvm::TimePassesIsEnabled = TimePasses;
     }
     llvm::Module *getModule() const { return Gen->GetModule(); }
     std::unique_ptr<llvm::Module> takeModule() {
@@ -548,12 +549,16 @@ const FullSourceLoc BackendConsumer::getBestLocationFromDebugLoc(
   SourceLocation DILoc;
 
   if (D.isLocationAvailable()) {
-    D.getLocation(&Filename, &Line, &Column);
-    const FileEntry *FE = FileMgr.getFile(Filename);
-    if (FE && Line > 0) {
-      // If -gcolumn-info was not used, Column will be 0. This upsets the
-      // source manager, so pass 1 if Column is not set.
-      DILoc = SourceMgr.translateFileLineCol(FE, Line, Column ? Column : 1);
+    D.getLocation(Filename, Line, Column);
+    if (Line > 0) {
+      const FileEntry *FE = FileMgr.getFile(Filename);
+      if (!FE)
+        FE = FileMgr.getFile(D.getAbsolutePath());
+      if (FE) {
+        // If -gcolumn-info was not used, Column will be 0. This upsets the
+        // source manager, so pass 1 if Column is not set.
+        DILoc = SourceMgr.translateFileLineCol(FE, Line, Column ? Column : 1);
+      }
     }
     BadDebugInfo = DILoc.isInvalid();
   }

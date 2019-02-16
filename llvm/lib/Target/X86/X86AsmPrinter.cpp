@@ -88,19 +88,19 @@ bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
 void X86AsmPrinter::EmitFunctionBodyStart() {
   if (EmitFPOData) {
-    X86TargetStreamer *XTS =
-        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
-    unsigned ParamsSize =
-        MF->getInfo<X86MachineFunctionInfo>()->getArgumentStackSize();
-    XTS->emitFPOProc(CurrentFnSym, ParamsSize);
+    if (auto *XTS =
+        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
+      XTS->emitFPOProc(
+          CurrentFnSym,
+          MF->getInfo<X86MachineFunctionInfo>()->getArgumentStackSize());
   }
 }
 
 void X86AsmPrinter::EmitFunctionBodyEnd() {
   if (EmitFPOData) {
-    X86TargetStreamer *XTS =
-        static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer());
-    XTS->emitFPOEndProc();
+    if (auto *XTS =
+            static_cast<X86TargetStreamer *>(OutStreamer->getTargetStreamer()))
+      XTS->emitFPOEndProc();
   }
 }
 
@@ -129,6 +129,9 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     if (MO.getTargetFlags() == X86II::MO_DLLIMPORT)
       GVSym =
           P.OutContext.getOrCreateSymbol(Twine("__imp_") + GVSym->getName());
+    else if (MO.getTargetFlags() == X86II::MO_COFFSTUB)
+      GVSym =
+          P.OutContext.getOrCreateSymbol(Twine(".refptr.") + GVSym->getName());
 
     if (MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY ||
         MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE) {
@@ -161,6 +164,7 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case X86II::MO_DARWIN_NONLAZY:
   case X86II::MO_DLLIMPORT:
+  case X86II::MO_COFFSTUB:
     // These affect the name of the symbol, not any suffix.
     break;
   case X86II::MO_GOT_ABSOLUTE_ADDRESS:
@@ -583,21 +587,28 @@ void X86AsmPrinter::EmitStartOfAsmFile(Module &M) {
   if (TT.isOSBinFormatCOFF()) {
     // Emit an absolute @feat.00 symbol.  This appears to be some kind of
     // compiler features bitfield read by link.exe.
+    MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
+    OutStreamer->BeginCOFFSymbolDef(S);
+    OutStreamer->EmitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+    OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+    OutStreamer->EndCOFFSymbolDef();
+    int64_t Feat00Flags = 0;
+
     if (TT.getArch() == Triple::x86) {
-      MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-      OutStreamer->BeginCOFFSymbolDef(S);
-      OutStreamer->EmitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-      OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-      OutStreamer->EndCOFFSymbolDef();
       // According to the PE-COFF spec, the LSB of this value marks the object
       // for "registered SEH".  This means that all SEH handler entry points
       // must be registered in .sxdata.  Use of any unregistered handlers will
       // cause the process to terminate immediately.  LLVM does not know how to
       // register any SEH handlers, so its object files should be safe.
-      OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
-      OutStreamer->EmitAssignment(
-          S, MCConstantExpr::create(int64_t(1), MMI->getContext()));
+      Feat00Flags |= 1;
     }
+
+    if (M.getModuleFlag("cfguardtable"))
+      Feat00Flags |= 0x800; // Object is CFG-aware.
+
+    OutStreamer->EmitSymbolAttribute(S, MCSA_Global);
+    OutStreamer->EmitAssignment(
+        S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));
   }
   OutStreamer->EmitSyntaxDirective();
 
@@ -663,7 +674,7 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     emitNonLazyStubs(MMI, *OutStreamer);
 
     // Emit stack and fault map information.
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
     FM.serializeToFaultMapSection();
 
     // This flag tells the linker that no global symbols contain code that fall
@@ -684,12 +695,12 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
 
   if (TT.isOSBinFormatCOFF()) {
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
     return;
   }
 
   if (TT.isOSBinFormatELF()) {
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
     FM.serializeToFaultMapSection();
     return;
   }

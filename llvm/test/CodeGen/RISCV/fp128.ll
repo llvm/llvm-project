@@ -36,7 +36,6 @@ define i32 @test_load_and_cmp() nounwind {
 ; RV32I-NEXT:    addi a0, sp, 24
 ; RV32I-NEXT:    addi a1, sp, 8
 ; RV32I-NEXT:    call __netf2
-; RV32I-NEXT:    xor a0, a0, zero
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    lw ra, 44(sp)
 ; RV32I-NEXT:    addi sp, sp, 48

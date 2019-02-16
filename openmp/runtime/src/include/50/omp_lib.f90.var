@@ -27,9 +27,11 @@
         integer, parameter :: kmp_size_t_kind        = c_size_t
         integer, parameter :: kmp_affinity_mask_kind = c_intptr_t
         integer, parameter :: kmp_cancel_kind        = omp_integer_kind
-        integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
+        integer, parameter :: omp_sync_hint_kind     = omp_integer_kind
+        integer, parameter :: omp_lock_hint_kind     = omp_sync_hint_kind
         integer, parameter :: omp_control_tool_kind  = omp_integer_kind
         integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
+        integer, parameter :: omp_allocator_kind = c_intptr_t
 
       end module omp_lib_kinds
 
@@ -61,14 +63,19 @@
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_sections = 3
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_taskgroup = 4
 
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none           = 0
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended    = 1
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended      = 2
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = 4
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative    = 8
-        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
-        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
-        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_none           = 0
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_uncontended    = 1
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_contended      = 2
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_nonspeculative = 4
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_speculative    = 8
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none = omp_sync_hint_none
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended = omp_sync_hint_uncontended
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended = omp_sync_hint_contended
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = omp_sync_hint_nonspeculative
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative = omp_sync_hint_speculative
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle         = 65536
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm         = 131072
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive    = 262144
 
         integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_start = 1
         integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_pause = 2
@@ -79,6 +86,16 @@
         integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_nocallback = -1
         integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_success = 0
         integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_ignored = 1
+
+        integer (kind=omp_allocator_kind), parameter :: omp_null_allocator = 0
+        integer (kind=omp_allocator_kind), parameter :: omp_default_mem_alloc = 1
+        integer (kind=omp_allocator_kind), parameter :: omp_large_cap_mem_alloc = 2
+        integer (kind=omp_allocator_kind), parameter :: omp_const_mem_alloc = 3
+        integer (kind=omp_allocator_kind), parameter :: omp_high_bw_mem_alloc = 4
+        integer (kind=omp_allocator_kind), parameter :: omp_low_lat_mem_alloc = 5
+        integer (kind=omp_allocator_kind), parameter :: omp_cgroup_mem_alloc = 6
+        integer (kind=omp_allocator_kind), parameter :: omp_pteam_mem_alloc = 7
+        integer (kind=omp_allocator_kind), parameter :: omp_thread_mem_alloc = 8
 
         interface
 
@@ -277,6 +294,11 @@
             integer (kind=omp_integer_kind) omp_get_initial_device
           end function omp_get_initial_device
 
+          function omp_get_device_num() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_device_num
+          end function omp_get_device_num
+
           subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock
@@ -363,6 +385,37 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_max_task_priority
           end function omp_get_max_task_priority
+
+          subroutine omp_set_default_allocator(svar) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_allocator_kind), value :: svar
+          end subroutine omp_set_default_allocator
+
+          function omp_get_default_allocator() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_allocator_kind) omp_get_default_allocator
+          end function omp_get_default_allocator
+
+          subroutine omp_set_affinity_format(format)
+            character (len=*) :: format
+          end subroutine omp_set_affinity_format
+
+          function omp_get_affinity_format(buffer)
+            use omp_lib_kinds
+            character (len=*) :: buffer
+            integer (kind=kmp_size_t_kind) :: omp_get_affinity_format
+          end function omp_get_affinity_format
+
+          subroutine omp_display_affinity(format)
+            character (len=*) :: format
+          end subroutine omp_display_affinity
+
+          function omp_capture_affinity(buffer, format)
+            use omp_lib_kinds
+            character (len=*) :: format
+            character (len=*) :: buffer
+            integer (kind=kmp_size_t_kind) :: omp_capture_affinity
+          end function omp_capture_affinity
 
 !         ***
 !         *** kmp_* entry points
@@ -531,11 +584,12 @@
             integer (kind=omp_lock_hint_kind), value :: hint
           end subroutine omp_init_nest_lock_with_hint
 
-          function omp_control_tool(command, modifier) bind(c)
+          function omp_control_tool(command, modifier, arg) bind(c)
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_control_tool
             integer (kind=omp_control_tool_kind), value :: command
             integer (kind=omp_control_tool_kind), value :: modifier
+            integer (kind=kmp_pointer_kind), optional :: arg
           end function omp_control_tool
 
         end interface

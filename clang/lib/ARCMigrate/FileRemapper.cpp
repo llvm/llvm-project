@@ -226,7 +226,7 @@ void FileRemapper::remap(const FileEntry *file, const FileEntry *newfile) {
 
 const FileEntry *FileRemapper::getOriginalFile(StringRef filePath) {
   const FileEntry *file = FileMgr->getFile(filePath);
-  // If we are updating a file that overriden an original file,
+  // If we are updating a file that overridden an original file,
   // actually update the original file.
   llvm::DenseMap<const FileEntry *, const FileEntry *>::iterator
     I = ToFromMappings.find(file);

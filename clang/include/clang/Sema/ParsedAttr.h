@@ -16,6 +16,7 @@
 #define LLVM_CLANG_SEMA_ATTRIBUTELIST_H
 
 #include "clang/Basic/AttrSubjectMatchRules.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Ownership.h"
@@ -54,8 +55,7 @@ struct AvailabilityChange {
   bool isValid() const { return !Version.empty(); }
 };
 
-namespace {
-
+namespace detail {
 enum AvailabilitySlot {
   IntroducedSlot, DeprecatedSlot, ObsoletedSlot, NumAvailabilitySlots
 };
@@ -75,6 +75,18 @@ struct AvailabilityData {
     Changes[DeprecatedSlot] = Deprecated;
     Changes[ObsoletedSlot] = Obsoleted;
   }
+};
+
+struct TypeTagForDatatypeData {
+  ParsedType MatchingCType;
+  unsigned LayoutCompatible : 1;
+  unsigned MustBeNull : 1;
+};
+struct PropertyData {
+  IdentifierInfo *GetterId, *SetterId;
+
+  PropertyData(IdentifierInfo *getterId, IdentifierInfo *setterId)
+      : GetterId(getterId), SetterId(setterId) {}
 };
 
 } // namespace
@@ -102,7 +114,27 @@ using ArgsVector = llvm::SmallVector<ArgsUnion, 12U>;
 /// 3: __attribute__(( format(printf, 1, 2) )). ParmName/Args/NumArgs all used.
 /// 4: __attribute__(( aligned(16) )). ParmName is unused, Args/Num used.
 ///
-class ParsedAttr { // TODO: This should really be called ParsedAttribute
+class ParsedAttr final
+    : private llvm::TrailingObjects<
+          ParsedAttr, ArgsUnion, detail::AvailabilityData,
+          detail::TypeTagForDatatypeData, ParsedType, detail::PropertyData> {
+  friend TrailingObjects;
+
+  size_t numTrailingObjects(OverloadToken<ArgsUnion>) const { return NumArgs; }
+  size_t numTrailingObjects(OverloadToken<detail::AvailabilityData>) const {
+    return IsAvailability;
+  }
+  size_t
+      numTrailingObjects(OverloadToken<detail::TypeTagForDatatypeData>) const {
+    return IsTypeTagForDatatype;
+  }
+  size_t numTrailingObjects(OverloadToken<ParsedType>) const {
+    return HasParsedType;
+  }
+  size_t numTrailingObjects(OverloadToken<detail::PropertyData>) const {
+    return IsProperty;
+  }
+
 public:
   /// The style used to specify an attribute.
   enum Syntax {
@@ -176,39 +208,26 @@ private:
   /// A cached value.
   mutable unsigned ProcessingCache : 8;
 
+  /// True if the attribute is specified using '#pragma clang attribute'.
+  mutable unsigned IsPragmaClangAttribute : 1;
+
   /// The location of the 'unavailable' keyword in an
   /// availability attribute.
   SourceLocation UnavailableLoc;
 
   const Expr *MessageExpr;
 
-  /// Arguments, if any, are stored immediately following the object.
-  ArgsUnion *getArgsBuffer() { return reinterpret_cast<ArgsUnion *>(this + 1); }
+  ArgsUnion *getArgsBuffer() { return getTrailingObjects<ArgsUnion>(); }
   ArgsUnion const *getArgsBuffer() const {
-    return reinterpret_cast<ArgsUnion const *>(this + 1);
+    return getTrailingObjects<ArgsUnion>();
   }
 
-  /// Availability information is stored immediately following the arguments,
-  /// if any, at the end of the object.
-  AvailabilityData *getAvailabilityData() {
-    return reinterpret_cast<AvailabilityData*>(getArgsBuffer() + NumArgs);
+  detail::AvailabilityData *getAvailabilityData() {
+    return getTrailingObjects<detail::AvailabilityData>();
   }
-  const AvailabilityData *getAvailabilityData() const {
-    return reinterpret_cast<const AvailabilityData*>(getArgsBuffer() + NumArgs);
+  const detail::AvailabilityData *getAvailabilityData() const {
+    return getTrailingObjects<detail::AvailabilityData>();
   }
-
-public:
-  struct TypeTagForDatatypeData {
-    ParsedType *MatchingCType;
-    unsigned LayoutCompatible : 1;
-    unsigned MustBeNull : 1;
-  };
-  struct PropertyData {
-    IdentifierInfo *GetterId, *SetterId;
-
-    PropertyData(IdentifierInfo *getterId, IdentifierInfo *setterId)
-        : GetterId(getterId), SetterId(setterId) {}
-  };
 
 private:
   friend class AttributeFactory;
@@ -223,7 +242,8 @@ private:
         ScopeLoc(scopeLoc), EllipsisLoc(ellipsisLoc), NumArgs(numArgs),
         SyntaxUsed(syntaxUsed), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
-        HasParsedType(false), HasProcessingCache(false) {
+        HasParsedType(false), HasProcessingCache(false),
+        IsPragmaClangAttribute(false) {
     if (numArgs) memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -240,11 +260,11 @@ private:
         ScopeLoc(scopeLoc), NumArgs(1), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
-        HasProcessingCache(false), UnavailableLoc(unavailable),
-        MessageExpr(messageExpr) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false),
+        UnavailableLoc(unavailable), MessageExpr(messageExpr) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
-    new (getAvailabilityData()) AvailabilityData(
+    new (getAvailabilityData()) detail::AvailabilityData(
         introduced, deprecated, obsoleted, strict, replacementExpr);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -258,7 +278,7 @@ private:
         ScopeLoc(scopeLoc), NumArgs(3), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
-        HasProcessingCache(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
     ArgsUnion *Args = getArgsBuffer();
     Args[0] = Parm1;
     Args[1] = Parm2;
@@ -275,10 +295,10 @@ private:
         ScopeLoc(scopeLoc), NumArgs(1), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(true), IsProperty(false), HasParsedType(false),
-        HasProcessingCache(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
     ArgsUnion PVal(ArgKind);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
-    TypeTagForDatatypeData &ExtraData = getTypeTagForDatatypeDataSlot();
+    detail::TypeTagForDatatypeData &ExtraData = getTypeTagForDatatypeDataSlot();
     new (&ExtraData.MatchingCType) ParsedType(matchingCType);
     ExtraData.LayoutCompatible = layoutCompatible;
     ExtraData.MustBeNull = mustBeNull;
@@ -293,7 +313,7 @@ private:
         ScopeLoc(scopeLoc), NumArgs(0), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(true),
-        HasProcessingCache(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
     new (&getTypeBuffer()) ParsedType(typeArg);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
@@ -307,47 +327,46 @@ private:
         ScopeLoc(scopeLoc), NumArgs(0), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(true), HasParsedType(false),
-        HasProcessingCache(false) {
-    new (&getPropertyDataBuffer()) PropertyData(getterId, setterId);
+        HasProcessingCache(false), IsPragmaClangAttribute(false) {
+    new (&getPropertyDataBuffer()) detail::PropertyData(getterId, setterId);
     AttrKind = getKind(getName(), getScopeName(), syntaxUsed);
   }
 
   /// Type tag information is stored immediately following the arguments, if
   /// any, at the end of the object.  They are mutually exclusive with
   /// availability slots.
-  TypeTagForDatatypeData &getTypeTagForDatatypeDataSlot() {
-    return *reinterpret_cast<TypeTagForDatatypeData*>(getArgsBuffer()+NumArgs);
+  detail::TypeTagForDatatypeData &getTypeTagForDatatypeDataSlot() {
+    return *getTrailingObjects<detail::TypeTagForDatatypeData>();
   }
-  const TypeTagForDatatypeData &getTypeTagForDatatypeDataSlot() const {
-    return *reinterpret_cast<const TypeTagForDatatypeData*>(getArgsBuffer()
-                                                            + NumArgs);
+  const detail::TypeTagForDatatypeData &getTypeTagForDatatypeDataSlot() const {
+    return *getTrailingObjects<detail::TypeTagForDatatypeData>();
   }
 
   /// The type buffer immediately follows the object and are mutually exclusive
   /// with arguments.
-  ParsedType &getTypeBuffer() {
-    return *reinterpret_cast<ParsedType *>(this + 1);
-  }
+  ParsedType &getTypeBuffer() { return *getTrailingObjects<ParsedType>(); }
   const ParsedType &getTypeBuffer() const {
-    return *reinterpret_cast<const ParsedType *>(this + 1);
+    return *getTrailingObjects<ParsedType>();
   }
 
   /// The property data immediately follows the object is is mutually exclusive
   /// with arguments.
-  PropertyData &getPropertyDataBuffer() {
+  detail::PropertyData &getPropertyDataBuffer() {
     assert(IsProperty);
-    return *reinterpret_cast<PropertyData*>(this + 1);
+    return *getTrailingObjects<detail::PropertyData>();
   }
-  const PropertyData &getPropertyDataBuffer() const {
+  const detail::PropertyData &getPropertyDataBuffer() const {
     assert(IsProperty);
-    return *reinterpret_cast<const PropertyData*>(this + 1);
+    return *getTrailingObjects<detail::PropertyData>();
   }
 
   size_t allocated_size() const;
 
 public:
   ParsedAttr(const ParsedAttr &) = delete;
+  ParsedAttr(ParsedAttr &&) = delete;
   ParsedAttr &operator=(const ParsedAttr &) = delete;
+  ParsedAttr &operator=(ParsedAttr &&) = delete;
   ~ParsedAttr() = delete;
 
   void operator delete(void *) = delete;
@@ -367,6 +386,11 @@ public:
   bool hasScope() const { return ScopeName; }
   IdentifierInfo *getScopeName() const { return ScopeName; }
   SourceLocation getScopeLoc() const { return ScopeLoc; }
+
+  bool isGNUScope() const {
+    return ScopeName &&
+           (ScopeName->isStr("gnu") || ScopeName->isStr("__gnu__"));
+  }
 
   bool hasParsedType() const { return HasParsedType; }
 
@@ -417,6 +441,11 @@ public:
   bool isUsedAsTypeAttr() const { return UsedAsTypeAttr; }
   void setUsedAsTypeAttr() { UsedAsTypeAttr = true; }
 
+  /// True if the attribute is specified using '#pragma clang attribute'.
+  bool isPragmaClangAttribute() const { return IsPragmaClangAttribute; }
+
+  void setIsPragmaClangAttribute() { IsPragmaClangAttribute = true; }
+
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
 
@@ -451,17 +480,17 @@ public:
 
   const AvailabilityChange &getAvailabilityIntroduced() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return getAvailabilityData()->Changes[IntroducedSlot];
+    return getAvailabilityData()->Changes[detail::IntroducedSlot];
   }
 
   const AvailabilityChange &getAvailabilityDeprecated() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return getAvailabilityData()->Changes[DeprecatedSlot];
+    return getAvailabilityData()->Changes[detail::DeprecatedSlot];
   }
 
   const AvailabilityChange &getAvailabilityObsoleted() const {
     assert(getKind() == AT_Availability && "Not an availability attribute");
-    return getAvailabilityData()->Changes[ObsoletedSlot];
+    return getAvailabilityData()->Changes[detail::ObsoletedSlot];
   }
 
   SourceLocation getStrictLoc() const {
@@ -487,7 +516,7 @@ public:
   const ParsedType &getMatchingCType() const {
     assert(getKind() == AT_TypeTagForDatatype &&
            "Not a type_tag_for_datatype attribute");
-    return *getTypeTagForDatatypeDataSlot().MatchingCType;
+    return getTypeTagForDatatypeDataSlot().MatchingCType;
   }
 
   bool getLayoutCompatible() const {
@@ -507,9 +536,16 @@ public:
     return getTypeBuffer();
   }
 
-  const PropertyData &getPropertyData() const {
-    assert(isDeclspecPropertyAttribute() && "Not a __delcspec(property) attribute");
-    return getPropertyDataBuffer();
+  IdentifierInfo *getPropertyDataGetter() const {
+    assert(isDeclspecPropertyAttribute() &&
+           "Not a __delcspec(property) attribute");
+    return getPropertyDataBuffer().GetterId;
+  }
+
+  IdentifierInfo *getPropertyDataSetter() const {
+    assert(isDeclspecPropertyAttribute() &&
+           "Not a __delcspec(property) attribute");
+    return getPropertyDataBuffer().SetterId;
   }
 
   /// Get an index into the attribute spelling list
@@ -552,20 +588,18 @@ class AttributePool;
 class AttributeFactory {
 public:
   enum {
-    /// The required allocation size of an availability attribute,
-    /// which we want to ensure is a multiple of sizeof(void*).
     AvailabilityAllocSize =
-        sizeof(ParsedAttr) +
-        ((sizeof(AvailabilityData) + sizeof(void *) + sizeof(ArgsUnion) - 1) /
-         sizeof(void *) * sizeof(void *)),
-    TypeTagForDatatypeAllocSize = sizeof(ParsedAttr) +
-                                  (sizeof(ParsedAttr::TypeTagForDatatypeData) +
-                                   sizeof(void *) + sizeof(ArgsUnion) - 1) /
-                                      sizeof(void *) * sizeof(void *),
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(1, 1, 0, 0, 0),
+    TypeTagForDatatypeAllocSize =
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(1, 0, 1, 0, 0),
     PropertyAllocSize =
-        sizeof(ParsedAttr) +
-        (sizeof(ParsedAttr::PropertyData) + sizeof(void *) - 1) /
-            sizeof(void *) * sizeof(void *)
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(0, 0, 0, 0, 1),
   };
 
 private:
@@ -656,7 +690,16 @@ public:
                      ArgsUnion *args, unsigned numArgs,
                      ParsedAttr::Syntax syntax,
                      SourceLocation ellipsisLoc = SourceLocation()) {
-    void *memory = allocate(sizeof(ParsedAttr) + numArgs * sizeof(ArgsUnion));
+    size_t temp =
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(numArgs, 0, 0, 0, 0);
+    (void)temp;
+    void *memory = allocate(
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(numArgs, 0, 0, 0,
+                                                           0));
     return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
                                        args, numArgs, syntax, ellipsisLoc));
   }
@@ -679,8 +722,10 @@ public:
                      IdentifierInfo *scopeName, SourceLocation scopeLoc,
                      IdentifierLoc *Param1, IdentifierLoc *Param2,
                      IdentifierLoc *Param3, ParsedAttr::Syntax syntax) {
-    size_t size = sizeof(ParsedAttr) + 3 * sizeof(ArgsUnion);
-    void *memory = allocate(size);
+    void *memory = allocate(
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(3, 0, 0, 0, 0));
     return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
                                        Param1, Param2, Param3, syntax));
   }
@@ -702,7 +747,10 @@ public:
                                   IdentifierInfo *scopeName,
                                   SourceLocation scopeLoc, ParsedType typeArg,
                                   ParsedAttr::Syntax syntaxUsed) {
-    void *memory = allocate(sizeof(ParsedAttr) + sizeof(void *));
+    void *memory = allocate(
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(0, 0, 0, 1, 0));
     return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
                                        typeArg, syntaxUsed));
   }
@@ -728,10 +776,6 @@ public:
   ParsedAttr &operator[](SizeType pos) { return *AttrList[pos]; }
   const ParsedAttr &operator[](SizeType pos) const { return *AttrList[pos]; }
 
-  void addAtStart(ParsedAttr *newAttr) {
-    assert(newAttr);
-    AttrList.insert(AttrList.begin(), newAttr);
-  }
   void addAtEnd(ParsedAttr *newAttr) {
     assert(newAttr);
     AttrList.push_back(newAttr);
@@ -785,6 +829,23 @@ public:
   iterator end() { return iterator(AttrList.end()); }
   const_iterator end() const { return const_iterator(AttrList.end()); }
 
+  ParsedAttr &front() {
+    assert(!empty());
+    return *AttrList.front();
+  }
+  const ParsedAttr &front() const {
+    assert(!empty());
+    return *AttrList.front();
+  }
+  ParsedAttr &back() {
+    assert(!empty());
+    return *AttrList.back();
+  }
+  const ParsedAttr &back() const {
+    assert(!empty());
+    return *AttrList.back();
+  }
+
   bool hasAttribute(ParsedAttr::Kind K) const {
     return llvm::any_of(
         AttrList, [K](const ParsedAttr *AL) { return AL->getKind() == K; });
@@ -826,7 +887,7 @@ public:
                      SourceLocation ellipsisLoc = SourceLocation()) {
     ParsedAttr *attr = pool.create(attrName, attrRange, scopeName, scopeLoc,
                                    args, numArgs, syntax, ellipsisLoc);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -842,7 +903,7 @@ public:
     ParsedAttr *attr = pool.create(
         attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
         obsoleted, unavailable, MessageExpr, syntax, strict, ReplacementExpr);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -853,7 +914,7 @@ public:
                      IdentifierLoc *Param3, ParsedAttr::Syntax syntax) {
     ParsedAttr *attr = pool.create(attrName, attrRange, scopeName, scopeLoc,
                                    Param1, Param2, Param3, syntax);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -867,7 +928,7 @@ public:
     ParsedAttr *attr = pool.createTypeTagForDatatype(
         attrName, attrRange, scopeName, scopeLoc, argumentKind, matchingCType,
         layoutCompatible, mustBeNull, syntax);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -878,7 +939,7 @@ public:
                              ParsedAttr::Syntax syntaxUsed) {
     ParsedAttr *attr = pool.createTypeAttribute(attrName, attrRange, scopeName,
                                                 scopeLoc, typeArg, syntaxUsed);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -891,7 +952,7 @@ public:
     ParsedAttr *attr =
         pool.createPropertyAttribute(attrName, attrRange, scopeName, scopeLoc,
                                      getterId, setterId, syntaxUsed);
-    addAtStart(attr);
+    addAtEnd(attr);
     return attr;
   }
 
@@ -925,6 +986,34 @@ enum AttributeDeclKind {
   ExpectedKernelFunction,
   ExpectedFunctionWithProtoType,
 };
+
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           const ParsedAttr &At) {
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(At.getName()),
+                  DiagnosticsEngine::ak_identifierinfo);
+  return DB;
+}
+
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           const ParsedAttr &At) {
+  PD.AddTaggedVal(reinterpret_cast<intptr_t>(At.getName()),
+                  DiagnosticsEngine::ak_identifierinfo);
+  return PD;
+}
+
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           const ParsedAttr *At) {
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(At->getName()),
+                  DiagnosticsEngine::ak_identifierinfo);
+  return DB;
+}
+
+inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
+                                           const ParsedAttr *At) {
+  PD.AddTaggedVal(reinterpret_cast<intptr_t>(At->getName()),
+                  DiagnosticsEngine::ak_identifierinfo);
+  return PD;
+}
 
 } // namespace clang
 

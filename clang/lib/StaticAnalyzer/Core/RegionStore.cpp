@@ -347,11 +347,9 @@ public:
     : StoreManager(mgr), Features(f),
       RBFactory(mgr.getAllocator()), CBFactory(mgr.getAllocator()),
       SmallStructLimit(0) {
-    if (SubEngine *Eng = StateMgr.getOwningEngine()) {
-      AnalyzerOptions &Options = Eng->getAnalysisManager().options;
-      SmallStructLimit =
-        Options.getOptionAsInteger("region-store-small-struct-limit", 2);
-    }
+    SubEngine &Eng = StateMgr.getOwningEngine();
+    AnalyzerOptions &Options = Eng.getAnalysisManager().options;
+    SmallStructLimit = Options.RegionStoreSmallStructLimit;
   }
 
 
@@ -1330,11 +1328,11 @@ RegionStoreManager::invalidateRegions(Store store,
   case GFK_All:
     B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind,
                                Ex, Count, LCtx, B, Invalidated);
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case GFK_SystemOnly:
     B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind,
                                Ex, Count, LCtx, B, Invalidated);
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case GFK_None:
     break;
   }
@@ -2571,24 +2569,9 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
     const MemRegion *Base = I.getKey();
 
     // If the cluster has been visited, we know the region has been marked.
-    if (W.isVisited(Base))
-      continue;
-
-    // Remove the dead entry.
-    B = B.remove(Base);
-
-    if (const SymbolicRegion *SymR = dyn_cast<SymbolicRegion>(Base))
-      SymReaper.maybeDead(SymR->getSymbol());
-
-    // Mark all non-live symbols that this binding references as dead.
-    const ClusterBindings &Cluster = I.getData();
-    for (ClusterBindings::iterator CI = Cluster.begin(), CE = Cluster.end();
-         CI != CE; ++CI) {
-      SVal X = CI.getData();
-      SymExpr::symbol_iterator SI = X.symbol_begin(), SE = X.symbol_end();
-      for (; SI != SE; ++SI)
-        SymReaper.maybeDead(*SI);
-    }
+    // Otherwise, remove the dead entry.
+    if (!W.isVisited(Base))
+      B = B.remove(Base);
   }
 
   return StoreRef(B.asStore(), *this);

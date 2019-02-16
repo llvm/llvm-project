@@ -10,8 +10,8 @@ define void @sret_void(i32* sret %p) {
 }
 
 ; X64-LABEL: sret_void
-; X64-DAG: movl $0, (%rdi)
 ; X64-DAG: movq %rdi, %rax
+; X64-DAG: movl $0, (%rdi)
 ; X64: retq
 
 ; X86-LABEL: sret_void
@@ -24,8 +24,8 @@ define i256 @sret_demoted() {
 }
 
 ; X64-LABEL: sret_demoted
-; X64-DAG: movq $0, (%rdi)
 ; X64-DAG: movq %rdi, %rax
+; X64-DAG: movq $0, (%rdi)
 ; X64: retq
 
 ; X86-LABEL: sret_demoted

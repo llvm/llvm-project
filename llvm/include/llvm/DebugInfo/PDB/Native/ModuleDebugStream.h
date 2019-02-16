@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -43,13 +44,17 @@ public:
   symbols(bool *HadError) const;
 
   const codeview::CVSymbolArray &getSymbolArray() const { return SymbolArray; }
+  const codeview::CVSymbolArray
+  getSymbolArrayForScope(uint32_t ScopeBegin) const;
 
   BinarySubstreamRef getSymbolsSubstream() const;
   BinarySubstreamRef getC11LinesSubstream() const;
   BinarySubstreamRef getC13LinesSubstream() const;
   BinarySubstreamRef getGlobalRefsSubstream() const;
 
-  ModuleDebugStreamRef &operator=(ModuleDebugStreamRef &&Other) = default;
+  ModuleDebugStreamRef &operator=(ModuleDebugStreamRef &&Other) = delete;
+
+  codeview::CVSymbol readSymbolAtOffset(uint32_t Offset) const;
 
   iterator_range<DebugSubsectionIterator> subsections() const;
   codeview::DebugSubsectionArray getSubsectionsArray() const {
@@ -64,7 +69,7 @@ public:
   findChecksumsSubsection() const;
 
 private:
-  const DbiModuleDescriptor &Mod;
+  DbiModuleDescriptor Mod;
 
   uint32_t Signature;
 

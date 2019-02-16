@@ -85,14 +85,14 @@ public:
   bool empty() const { return Units.none(); }
 
   /// Adds register units covered by physical register \p Reg.
-  void addReg(unsigned Reg) {
+  void addReg(MCPhysReg Reg) {
     for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit)
       Units.set(*Unit);
   }
 
   /// Adds register units covered by physical register \p Reg that are
   /// part of the lanemask \p Mask.
-  void addRegMasked(unsigned Reg, LaneBitmask Mask) {
+  void addRegMasked(MCPhysReg Reg, LaneBitmask Mask) {
     for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
       LaneBitmask UnitMask = (*Unit).second;
       if (UnitMask.none() || (UnitMask & Mask).any())
@@ -101,7 +101,7 @@ public:
   }
 
   /// Removes all register units covered by physical register \p Reg.
-  void removeReg(unsigned Reg) {
+  void removeReg(MCPhysReg Reg) {
     for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit)
       Units.reset(*Unit);
   }
@@ -115,7 +115,7 @@ public:
   void addRegsInMask(const uint32_t *RegMask);
 
   /// Returns true if no part of physical register \p Reg is live.
-  bool available(unsigned Reg) const {
+  bool available(MCPhysReg Reg) const {
     for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
       if (Units.test(*Unit))
         return false;

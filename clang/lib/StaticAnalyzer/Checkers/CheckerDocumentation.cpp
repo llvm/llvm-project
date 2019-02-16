@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -169,7 +169,7 @@ public:
   /// This callback should be used by the checkers to aggressively clean
   /// up/reduce the checker state, which is important for reducing the overall
   /// memory usage. Specifically, if a checker keeps symbol specific information
-  /// in the sate, it can and should be dropped after the symbol becomes dead.
+  /// in the state, it can and should be dropped after the symbol becomes dead.
   /// In addition, reporting a bug as soon as the checker becomes dead leads to
   /// more precise diagnostics. (For example, one should report that a malloced
   /// variable is not freed right after it goes out of scope.)
@@ -216,7 +216,7 @@ public:
 
   /// Evaluates function call.
   ///
-  /// The analysis core threats all function calls in the same way. However, some
+  /// The analysis core treats all function calls in the same way. However, some
   /// functions have special meaning, which should be reflected in the program
   /// state. This callback allows a checker to provide domain specific knowledge
   /// about the particular functions it knows about.

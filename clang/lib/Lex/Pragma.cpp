@@ -31,7 +31,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorLexer.h"
-#include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -404,10 +403,7 @@ void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
 
 void Preprocessor::HandlePragmaMark() {
   assert(CurPPLexer && "No current lexer?");
-  if (CurLexer)
-    CurLexer->ReadToEndOfLine();
-  else
-    CurPTHLexer->DiscardToEndOfLine();
+  CurLexer->ReadToEndOfLine();
 }
 
 /// HandlePragmaPoison - Handle \#pragma GCC poison.  PoisonTok is the 'poison'.
@@ -511,7 +507,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   const DirectoryLookup *CurDir;
   const FileEntry *File =
       LookupFile(FilenameTok.getLocation(), Filename, isAngled, nullptr,
-                 nullptr, CurDir, nullptr, nullptr, nullptr, nullptr);
+                 nullptr, CurDir, nullptr, nullptr, nullptr, nullptr, nullptr);
   if (!File) {
     if (!SuppressIncludeNotFoundError)
       Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
@@ -810,12 +806,6 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
     DiscardUntilEndOfDirective();
   }
 
-  if (CurPTHLexer) {
-    // FIXME: Support this somehow?
-    Diag(Loc, diag::err_pp_module_build_pth);
-    return;
-  }
-
   CurLexer->LexingRawMode = true;
 
   auto TryConsumeIdentifier = [&](StringRef Ident) -> bool {
@@ -874,6 +864,37 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
          "module source range not contained within same file buffer");
   TheModuleLoader.loadModuleFromSource(Loc, ModuleName->getName(),
                                        StringRef(Start, End - Start));
+}
+
+void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
+  Lex(Tok);
+  if (Tok.is(tok::l_paren)) {
+    Diag(Tok.getLocation(), diag::warn_pp_hdrstop_filename_ignored);
+
+    std::string FileName;
+    if (!LexStringLiteral(Tok, FileName, "pragma hdrstop", false))
+      return;
+
+    if (Tok.isNot(tok::r_paren)) {
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+      return;
+    }
+    Lex(Tok);
+  }
+  if (Tok.isNot(tok::eod))
+    Diag(Tok.getLocation(), diag::ext_pp_extra_tokens_at_eol)
+        << "pragma hdrstop";
+
+  if (creatingPCHWithPragmaHdrStop() &&
+      SourceMgr.isInMainFile(Tok.getLocation())) {
+    assert(CurLexer && "no lexer for #pragma hdrstop processing");
+    Token &Result = Tok;
+    Result.startToken();
+    CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+    CurLexer->cutOffLexing();
+  }
+  if (usingPCHWithPragmaHdrStop())
+    SkippingUntilPragmaHdrStop = false;
 }
 
 /// AddPragmaHandler - Add the specified pragma handler to the preprocessor.
@@ -1099,10 +1120,6 @@ struct PragmaDebugHandler : public PragmaHandler {
   }
 
   void HandleCaptured(Preprocessor &PP) {
-    // Skip if emitting preprocessed output.
-    if (PP.isPreprocessedOutput())
-      return;
-
     Token Tok;
     PP.LexUnexpandedToken(Tok);
 
@@ -1217,6 +1234,15 @@ public:
         << WarningName;
     else if (Callbacks)
       Callbacks->PragmaDiagnostic(DiagLoc, Namespace, SV, WarningName);
+  }
+};
+
+/// "\#pragma hdrstop [<header-name-string>]"
+struct PragmaHdrstopHandler : public PragmaHandler {
+  PragmaHdrstopHandler() : PragmaHandler("hdrstop") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &DepToken) override {
+    PP.HandlePragmaHdrstop(DepToken);
   }
 };
 
@@ -1799,6 +1825,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   if (LangOpts.MicrosoftExt) {
     AddPragmaHandler(new PragmaWarningHandler());
     AddPragmaHandler(new PragmaIncludeAliasHandler());
+    AddPragmaHandler(new PragmaHdrstopHandler());
   }
 
   // Pragmas added by plugins

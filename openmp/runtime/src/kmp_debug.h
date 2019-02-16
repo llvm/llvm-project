@@ -35,24 +35,33 @@ extern void __kmp_dump_debug_buffer(void);
 extern int __kmp_debug_assert(char const *expr, char const *file, int line);
 #ifdef KMP_DEBUG
 #define KMP_ASSERT(cond)                                                       \
-  ((cond) ? 0 : __kmp_debug_assert(#cond, __FILE__, __LINE__))
+  if (!(cond)) {                                                               \
+    __kmp_debug_assert(#cond, __FILE__, __LINE__);                             \
+  }
 #define KMP_ASSERT2(cond, msg)                                                 \
-  ((cond) ? 0 : __kmp_debug_assert((msg), __FILE__, __LINE__))
+  if (!(cond)) {                                                               \
+    __kmp_debug_assert((msg), __FILE__, __LINE__);                             \
+  }
 #define KMP_DEBUG_ASSERT(cond) KMP_ASSERT(cond)
 #define KMP_DEBUG_ASSERT2(cond, msg) KMP_ASSERT2(cond, msg)
+#define KMP_DEBUG_USE_VAR(x) /* Nothing (it is used!) */
 #else
 // Do not expose condition in release build. Use "assertion failure".
 #define KMP_ASSERT(cond)                                                       \
-  ((cond) ? 0 : __kmp_debug_assert("assertion failure", __FILE__, __LINE__))
+  if (!(cond)) {                                                               \
+    __kmp_debug_assert("assertion failure", __FILE__, __LINE__);               \
+  }
 #define KMP_ASSERT2(cond, msg) KMP_ASSERT(cond)
-#define KMP_DEBUG_ASSERT(cond) 0
-#define KMP_DEBUG_ASSERT2(cond, msg) 0
+#define KMP_DEBUG_ASSERT(cond) /* Nothing */
+#define KMP_DEBUG_ASSERT2(cond, msg) /* Nothing */
+#define KMP_DEBUG_USE_VAR(x) ((void)(x))
 #endif // KMP_DEBUG
 #else
-#define KMP_ASSERT(cond) 0
-#define KMP_ASSERT2(cond, msg) 0
-#define KMP_DEBUG_ASSERT(cond) 0
-#define KMP_DEBUG_ASSERT2(cond, msg) 0
+#define KMP_ASSERT(cond) /* Nothing */
+#define KMP_ASSERT2(cond, msg) /* Nothing */
+#define KMP_DEBUG_ASSERT(cond) /* Nothing */
+#define KMP_DEBUG_ASSERT2(cond, msg) /* Nothing */
+#define KMP_DEBUG_USE_VAR(x) ((void)(x))
 #endif // KMP_USE_ASSERT
 
 #ifdef KMP_DEBUG

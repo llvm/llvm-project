@@ -110,24 +110,31 @@ std::tuple<Profile, const char *> ParseProfile(const char *P) {
 
 TEST(profileCollectorServiceTest, PostSerializeCollect) {
   profilingFlags()->setDefaults();
-  // The most basic use-case (the one we actually only care about) is the one
-  // where we ensure that we can post FunctionCallTrie instances, which are then
-  // destroyed but serialized properly.
-  //
-  // First, we initialise a set of allocators in the local scope. This ensures
-  // that we're able to copy the contents of the FunctionCallTrie that uses
-  // the local allocators.
-  auto Allocators = FunctionCallTrie::InitAllocators();
+  bool Success = false;
+  BufferQueue BQ(profilingFlags()->per_thread_allocator_max,
+                 profilingFlags()->buffers_max, Success);
+  ASSERT_EQ(Success, true);
+  FunctionCallTrie::Allocators::Buffers Buffers;
+  ASSERT_EQ(BQ.getBuffer(Buffers.NodeBuffer), BufferQueue::ErrorCode::Ok);
+  ASSERT_EQ(BQ.getBuffer(Buffers.RootsBuffer), BufferQueue::ErrorCode::Ok);
+  ASSERT_EQ(BQ.getBuffer(Buffers.ShadowStackBuffer),
+            BufferQueue::ErrorCode::Ok);
+  ASSERT_EQ(BQ.getBuffer(Buffers.NodeIdPairBuffer), BufferQueue::ErrorCode::Ok);
+  auto Allocators = FunctionCallTrie::InitAllocatorsFromBuffers(Buffers);
   FunctionCallTrie T(Allocators);
 
-  // Then, we populate the trie with some data.
-  T.enterFunction(1, 1);
-  T.enterFunction(2, 2);
-  T.exitFunction(2, 3);
-  T.exitFunction(1, 4);
+  // Populate the trie with some data.
+  T.enterFunction(1, 1, 0);
+  T.enterFunction(2, 2, 0);
+  T.exitFunction(2, 3, 0);
+  T.exitFunction(1, 4, 0);
+
+  // Reset the collector data structures.
+  profileCollectorService::reset();
 
   // Then we post the data to the global profile collector service.
-  profileCollectorService::post(T, 1);
+  profileCollectorService::post(&BQ, std::move(T), std::move(Allocators),
+                                std::move(Buffers), 1);
 
   // Then we serialize the data.
   profileCollectorService::serialize();
@@ -174,19 +181,37 @@ TEST(profileCollectorServiceTest, PostSerializeCollect) {
 // profileCollectorService. This simulates what the threads being profiled would
 // be doing anyway, but through the XRay logging implementation.
 void threadProcessing() {
-  thread_local auto Allocators = FunctionCallTrie::InitAllocators();
+  static bool Success = false;
+  static BufferQueue BQ(profilingFlags()->per_thread_allocator_max,
+                        profilingFlags()->buffers_max, Success);
+  thread_local FunctionCallTrie::Allocators::Buffers Buffers = [] {
+    FunctionCallTrie::Allocators::Buffers B;
+    BQ.getBuffer(B.NodeBuffer);
+    BQ.getBuffer(B.RootsBuffer);
+    BQ.getBuffer(B.ShadowStackBuffer);
+    BQ.getBuffer(B.NodeIdPairBuffer);
+    return B;
+  }();
+
+  thread_local auto Allocators =
+      FunctionCallTrie::InitAllocatorsFromBuffers(Buffers);
+
   FunctionCallTrie T(Allocators);
 
-  T.enterFunction(1, 1);
-  T.enterFunction(2, 2);
-  T.exitFunction(2, 3);
-  T.exitFunction(1, 4);
+  T.enterFunction(1, 1, 0);
+  T.enterFunction(2, 2, 0);
+  T.exitFunction(2, 3, 0);
+  T.exitFunction(1, 4, 0);
 
-  profileCollectorService::post(T, GetTid());
+  profileCollectorService::post(&BQ, std::move(T), std::move(Allocators),
+                                std::move(Buffers), GetTid());
 }
 
 TEST(profileCollectorServiceTest, PostSerializeCollectMultipleThread) {
   profilingFlags()->setDefaults();
+
+  profileCollectorService::reset();
+
   std::thread t1(threadProcessing);
   std::thread t2(threadProcessing);
 

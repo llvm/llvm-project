@@ -28,8 +28,8 @@ void ARMTargetInfo::setABIAAPCS() {
   DoubleAlign = LongLongAlign = LongDoubleAlign = SuitableAlign = 64;
   const llvm::Triple &T = getTriple();
 
-  bool IsNetBSD = T.getOS() == llvm::Triple::NetBSD;
-  bool IsOpenBSD = T.getOS() == llvm::Triple::OpenBSD;
+  bool IsNetBSD = T.isOSNetBSD();
+  bool IsOpenBSD = T.isOSOpenBSD();
   if (!T.isOSWindows() && !IsNetBSD && !IsOpenBSD)
     WCharType = UnsignedInt;
 
@@ -189,6 +189,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "8_3A";
   case llvm::ARM::ArchKind::ARMV8_4A:
     return "8_4A";
+  case llvm::ARM::ArchKind::ARMV8_5A:
+    return "8_5A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -215,8 +217,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
                              const TargetOptions &Opts)
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
-  bool IsOpenBSD = Triple.getOS() == llvm::Triple::OpenBSD;
-  bool IsNetBSD = Triple.getOS() == llvm::Triple::NetBSD;
+  bool IsOpenBSD = Triple.isOSOpenBSD();
+  bool IsNetBSD = Triple.isOSNetBSD();
 
   // FIXME: the isOSBinFormatMachO is a workaround for identifying a Darwin-like
   // environment where size_t is `unsigned long` rather than `unsigned int`
@@ -280,9 +282,9 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
       setABI("apcs-gnu");
       break;
     default:
-      if (Triple.getOS() == llvm::Triple::NetBSD)
+      if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (Triple.getOS() == llvm::Triple::OpenBSD)
+      else if (IsOpenBSD)
         setABI("aapcs-linux");
       else
         setABI("aapcs");
@@ -661,7 +663,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   // ACLE 6.4.9 32-bit SIMD instructions
-  if (ArchVersion >= 6 && (CPUProfile != "M" || CPUAttr == "7EM"))
+  if ((CPUProfile != "M" && ArchVersion >= 6) || (CPUProfile == "M" && DSP))
     Builder.defineMacro("__ARM_FEATURE_SIMD32", "1");
 
   // ACLE 6.4.10 Hardware Integer Divide
@@ -994,6 +996,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_Swift:
     return CCCR_OK;
   default:
     return CCCR_Warning;

@@ -19,7 +19,7 @@ entry:
 !1 = !DIFile(filename: "hello.cc", directory: "/home/nlewycky")
 !2 = !DIFile(filename: "hello.cc", directory: "/home/nlewycky")
 !3 = !{}
-!5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !1, type: !6, retainedNodes: !3)
+!5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", line: 1, virtualIndex: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, scopeLine: 1, file: !1, scope: !1, type: !6, retainedNodes: !3)
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !DILocation(line: 1, scope: !5)

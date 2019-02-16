@@ -1,5 +1,5 @@
-# RUN: not llvm-mc -triple mips-unknown-linux -filetype=obj %s 2>%t
-# RUN: FileCheck %s < %t
+# RUN: not llvm-mc -triple mips-unknown-linux -filetype=obj -o %t %s 2>&1 \
+# RUN:  |  FileCheck %s
 
 # Check that we emit an error for unsupported relocations instead of crashing.
 
@@ -8,6 +8,8 @@
         .data
 foo:
         .byte   x
+# CHECK: :[[@LINE-1]]:17: error: MIPS does not support one byte relocations
         .byte   x+1
-
-# CHECK: LLVM ERROR: MIPS does not support one byte relocations
+# CHECK: :[[@LINE-1]]:17: error: MIPS does not support one byte relocations
+        .quad   x-foo
+# CHECK: :[[@LINE-1]]:17: error: MIPS does not support 64-bit PC-relative relocations

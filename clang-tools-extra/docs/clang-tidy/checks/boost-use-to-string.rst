@@ -11,7 +11,7 @@ It doesn't replace conversion from floating points despite the ``to_string``
 overloads, because it would change the behaviour.
 
 
-  .. code-block:: c++
+.. code-block:: c++
 
     auto str = boost::lexical_cast<std::string>(42);
     auto wstr = boost::lexical_cast<std::wstring>(2137LL);

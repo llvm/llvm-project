@@ -66,8 +66,10 @@ protected:
   enum StorageType { Uniqued, Distinct, Temporary };
 
   /// Storage flag for non-uniqued, otherwise unowned, metadata.
-  unsigned char Storage;
+  unsigned char Storage : 7;
   // TODO: expose remaining bits to subclasses.
+
+  unsigned char ImplicitCode : 1;
 
   unsigned short SubclassData16 = 0;
   unsigned SubclassData32 = 0;
@@ -80,7 +82,7 @@ public:
 
 protected:
   Metadata(unsigned ID, StorageType Storage)
-      : SubclassID(ID), Storage(Storage) {
+      : SubclassID(ID), Storage(Storage), ImplicitCode(false) {
     static_assert(sizeof(*this) == 8, "Metadata fields poorly packed");
   }
 
@@ -1316,10 +1318,11 @@ public:
 //===----------------------------------------------------------------------===//
 /// A tuple of MDNodes.
 ///
-/// Despite its name, a NamedMDNode isn't itself an MDNode. NamedMDNodes belong
-/// to modules, have names, and contain lists of MDNodes.
+/// Despite its name, a NamedMDNode isn't itself an MDNode.
 ///
-/// TODO: Inherit from Metadata.
+/// NamedMDNodes are named module-level entities that contain lists of MDNodes.
+///
+/// It is illegal for a NamedMDNode to appear as an operand of an MDNode.
 class NamedMDNode : public ilist_node<NamedMDNode> {
   friend class LLVMContextImpl;
   friend class Module;
@@ -1419,6 +1422,9 @@ public:
     return make_range(op_begin(), op_end());
   }
 };
+
+// Create wrappers for C Binding types (see CBindingWrapping.h).
+DEFINE_ISA_CONVERSION_FUNCTIONS(NamedMDNode, LLVMNamedMDNodeRef)
 
 } // end namespace llvm
 

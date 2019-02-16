@@ -2,6 +2,7 @@
 
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
+config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
 config.test_openmp_flags = "@OPENMP_TEST_OPENMP_FLAGS@"
 config.test_extra_flags = "@OPENMP_TEST_FLAGS@"
 config.libomptarget_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
@@ -15,4 +16,4 @@ config.libomptarget_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
 config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LIBOMPTARGET_BASE_DIR@/test/lit.cfg")
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

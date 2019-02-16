@@ -37,15 +37,18 @@ extern template class DomTreeNodeBase<BasicBlock>;
 extern template class DominatorTreeBase<BasicBlock, false>; // DomTree
 extern template class DominatorTreeBase<BasicBlock, true>; // PostDomTree
 
+extern template class cfg::Update<BasicBlock *>;
+
 namespace DomTreeBuilder {
 using BBDomTree = DomTreeBase<BasicBlock>;
 using BBPostDomTree = PostDomTreeBase<BasicBlock>;
 
-extern template struct Update<BasicBlock *>;
-
-using BBUpdates = ArrayRef<Update<BasicBlock *>>;
+using BBUpdates = ArrayRef<llvm::cfg::Update<BasicBlock *>>;
 
 extern template void Calculate<BBDomTree>(BBDomTree &DT);
+extern template void CalculateWithUpdates<BBDomTree>(BBDomTree &DT,
+                                                     BBUpdates U);
+
 extern template void Calculate<BBPostDomTree>(BBPostDomTree &DT);
 
 extern template void InsertEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From,
@@ -145,6 +148,9 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
 
   DominatorTree() = default;
   explicit DominatorTree(Function &F) { recalculate(F); }
+  explicit DominatorTree(DominatorTree &DT, DomTreeBuilder::BBUpdates U) {
+    recalculate(*DT.Parent, U);
+  }
 
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -276,94 +282,6 @@ public:
 
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 };
-
-//===-------------------------------------
-/// Class to defer updates to a DominatorTree.
-///
-/// Definition: Applying updates to every edge insertion and deletion is
-/// expensive and not necessary. When one needs the DominatorTree for analysis
-/// they can request a flush() to perform a larger batch update. This has the
-/// advantage of the DominatorTree inspecting the set of updates to find
-/// duplicates or unnecessary subtree updates.
-///
-/// The scope of DeferredDominance operates at a Function level.
-///
-/// It is not necessary for the user to scrub the updates for duplicates or
-/// updates that point to the same block (Delete, BB_A, BB_A). Performance
-/// can be gained if the caller attempts to batch updates before submitting
-/// to applyUpdates(ArrayRef) in cases where duplicate edge requests will
-/// occur.
-///
-/// It is required for the state of the LLVM IR to be applied *before*
-/// submitting updates. The update routines must analyze the current state
-/// between a pair of (From, To) basic blocks to determine if the update
-/// needs to be queued.
-/// Example (good):
-///     TerminatorInstructionBB->removeFromParent();
-///     DDT->deleteEdge(BB, Successor);
-/// Example (bad):
-///     DDT->deleteEdge(BB, Successor);
-///     TerminatorInstructionBB->removeFromParent();
-class DeferredDominance {
-public:
-  DeferredDominance(DominatorTree &DT_) : DT(DT_) {}
-
-  /// Queues multiple updates and discards duplicates.
-  void applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates);
-
-  /// Helper method for a single edge insertion. It's almost always
-  /// better to batch updates and call applyUpdates to quickly remove duplicate
-  /// edges. This is best used when there is only a single insertion needed to
-  /// update Dominators.
-  void insertEdge(BasicBlock *From, BasicBlock *To);
-
-  /// Helper method for a single edge deletion. It's almost always better
-  /// to batch updates and call applyUpdates to quickly remove duplicate edges.
-  /// This is best used when there is only a single deletion needed to update
-  /// Dominators.
-  void deleteEdge(BasicBlock *From, BasicBlock *To);
-
-  /// Delays the deletion of a basic block until a flush() event.
-  void deleteBB(BasicBlock *DelBB);
-
-  /// Returns true if DelBB is awaiting deletion at a flush() event.
-  bool pendingDeletedBB(BasicBlock *DelBB);
-
-  /// Returns true if pending DT updates are queued for a flush() event.
-  bool pending();
-
-  /// Flushes all pending updates and block deletions. Returns a
-  /// correct DominatorTree reference to be used by the caller for analysis.
-  DominatorTree &flush();
-
-  /// Drops all internal state and forces a (slow) recalculation of the
-  /// DominatorTree based on the current state of the LLVM IR in F. This should
-  /// only be used in corner cases such as the Entry block of F being deleted.
-  void recalculate(Function &F);
-
-  /// Debug method to help view the state of pending updates.
-  LLVM_DUMP_METHOD void dump() const;
-
-private:
-  DominatorTree &DT;
-  SmallVector<DominatorTree::UpdateType, 16> PendUpdates;
-  SmallPtrSet<BasicBlock *, 8> DeletedBBs;
-
-  /// Apply an update (Kind, From, To) to the internal queued updates. The
-  /// update is only added when determined to be necessary. Checks for
-  /// self-domination, unnecessary updates, duplicate requests, and balanced
-  /// pairs of requests are all performed. Returns true if the update is
-  /// queued and false if it is discarded.
-  bool applyUpdate(DominatorTree::UpdateKind Kind, BasicBlock *From,
-                   BasicBlock *To);
-
-  /// Performs all pending basic block deletions. We have to defer the deletion
-  /// of these blocks until after the DominatorTree updates are applied. The
-  /// internal workings of the DominatorTree code expect every update's From
-  /// and To blocks to exist and to be a member of the same Function.
-  bool flushDelBB();
-};
-
 } // end namespace llvm
 
 #endif // LLVM_IR_DOMINATORS_H

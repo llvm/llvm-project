@@ -14,11 +14,13 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
+class ASTContext;
 class Decl;
 class MacroDefinitionRecord;
 class Module;
 class SourceLocation;
 class SourceManager;
+class QualType;
 
 namespace index {
 
@@ -71,6 +73,11 @@ bool generateUSRForMacro(const MacroDefinitionRecord *MD,
 bool generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
                          const SourceManager &SM, SmallVectorImpl<char> &Buf);
 
+/// Generates a USR for a type.
+///
+/// \return true on error, false on success.
+bool generateUSRForType(QualType T, ASTContext &Ctx, SmallVectorImpl<char> &Buf);
+
 /// Generate a USR for a module, including the USR prefix.
 /// \returns true on error, false on success.
 bool generateFullUSRForModule(const Module *Mod, raw_ostream &OS);
@@ -87,8 +94,9 @@ bool generateUSRFragmentForModule(const Module *Mod, raw_ostream &OS);
 /// \returns true on error, false on success.
 bool generateUSRFragmentForModuleName(StringRef ModName, raw_ostream &OS);
 
+
 } // namespace index
 } // namespace clang
 
-#endif // LLVM_CLANG_IDE_USRGENERATION_H
+#endif // LLVM_CLANG_INDEX_USRGENERATION_H
 

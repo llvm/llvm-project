@@ -141,7 +141,7 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateReplacement(FunctionNameSourceRange, EmplacePrefix);
 
   const SourceRange CallParensRange =
-      MakeCall ? SourceRange(MakeCall->getCallee()->getLocEnd(),
+      MakeCall ? SourceRange(MakeCall->getCallee()->getEndLoc(),
                              MakeCall->getRParenLoc())
                : CtorCall->getParenOrBraceRange();
 

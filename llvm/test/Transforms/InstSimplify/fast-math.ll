@@ -226,6 +226,58 @@ define float @nofold_fadd_x_0(float %a) {
   ret float %no_zero
 }
 
+define float @fold_fadd_nsz_x_0(float %a) {
+; CHECK-LABEL: @fold_fadd_nsz_x_0(
+; CHECK-NEXT:    ret float [[A:%.*]]
+;
+  %add = fadd nsz float %a, 0.0
+  ret float %add
+}
+
+define float @fold_fadd_cannot_be_neg0_nsz_src_x_0(float %a, float %b) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_nsz_src_x_0(
+; CHECK-NEXT:    [[NSZ:%.*]] = fmul nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret float [[NSZ]]
+;
+  %nsz = fmul nsz float %a, %b
+  %add = fadd float %nsz, 0.0
+  ret float %add
+}
+
+define float @fold_fadd_cannot_be_neg0_fabs_src_x_0(float %a) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_fabs_src_x_0(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %a)
+  %add = fadd float %fabs, 0.0
+  ret float %add
+}
+
+define float @fold_fadd_cannot_be_neg0_sqrt_nsz_src_x_0(float %a, float %b) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_sqrt_nsz_src_x_0(
+; CHECK-NEXT:    [[NSZ:%.*]] = fmul nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SQRT:%.*]] = call float @llvm.sqrt.f32(float [[NSZ]])
+; CHECK-NEXT:    ret float [[SQRT]]
+;
+  %nsz = fmul nsz float %a, %b
+  %sqrt = call float @llvm.sqrt.f32(float %nsz)
+  %add = fadd float %sqrt, 0.0
+  ret float %add
+}
+
+define float @fold_fadd_cannot_be_neg0_canonicalize_nsz_src_x_0(float %a, float %b) {
+; CHECK-LABEL: @fold_fadd_cannot_be_neg0_canonicalize_nsz_src_x_0(
+; CHECK-NEXT:    [[NSZ:%.*]] = fmul nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[NSZ]])
+; CHECK-NEXT:    ret float [[CANON]]
+;
+  %nsz = fmul nsz float %a, %b
+  %canon = call float @llvm.canonicalize.f32(float %nsz)
+  %add = fadd float %canon, 0.0
+  ret float %add
+}
+
 ; fdiv nsz nnan 0, X ==> 0
 ; 0 / X -> 0
 
@@ -347,6 +399,15 @@ define float @fdiv_neg_swapped2(float %f) {
   ret float %div
 }
 
+define <2 x float> @fdiv_neg_vec_undef_elt(<2 x float> %f) {
+; CHECK-LABEL: @fdiv_neg_vec_undef_elt(
+; CHECK-NEXT:    ret <2 x float> <float -1.000000e+00, float -1.000000e+00>
+;
+  %neg = fsub <2 x float> <float 0.0, float undef>, %f
+  %div = fdiv nnan <2 x float> %f, %neg
+  ret <2 x float> %div
+}
+
 ; PR21126: http://llvm.org/bugs/show_bug.cgi?id=21126
 ; With loose math, sqrt(X) * sqrt(X) is just X.
 
@@ -396,3 +457,6 @@ define double @sqrt_squared_not_fast_enough3(double %f) {
   ret double %mul
 }
 
+declare float @llvm.fabs.f32(float)
+declare float @llvm.sqrt.f32(float)
+declare float @llvm.canonicalize.f32(float)

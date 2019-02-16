@@ -1,0 +1,47 @@
+#===-- Makefile.pstl -----------------------------------------------------===##
+#
+#                     The LLVM Compiler Infrastructure
+#
+# This file is dual licensed under the MIT and the University of Illinois Open
+# Source Licenses. See LICENSE.TXT for details.
+#
+#===----------------------------------------------------------------------===##
+
+#------------------------------------------------------------------------------
+# Define rules for making the Parallel STL library.
+#------------------------------------------------------------------------------
+
+proj_root ?= $(CURDIR)/..
+
+include $(proj_root)/build/Makefile.common
+
+.PHONY: clean
+
+VPATH = $(proj_root)/src
+
+lib_src = $(wildcard $(proj_root)/src/*.cpp)
+lib_obj = $(notdir $(lib_src:.cpp=$(OBJ_SFX)))
+
+all: pstl
+
+pstl: $(PSTL_LIB_NAME)
+
+%$(OBJ_SFX): %.cpp $(proj_root)/build/Makefile.pstl
+	$(CPLUS) $(CPLUS_FLAGS) -c $< $(FKEY)o$@
+
+%.s: %.cpp $(proj_root)/build/Makefile
+	$(CPLUS) $(CPLUS_FLAGS) -S $< $(FKEY)o$@
+
+%.E: %.cpp
+	$(CPLUS) $(CPLUS_FLAGS) -E $< >$@
+
+clean:
+	$(DEL_CMD) *$(OBJ_SFX) *.lib *.dll *.so *.exp *$(PSTL_LIB_NAME)*
+
+info:
+	@echo OS = $(os_name)
+	@echo proj_root = "$(proj_root)"
+	@echo $(CURDIR)
+	@echo VPATH=$(VPATH)
+
+-include *.d

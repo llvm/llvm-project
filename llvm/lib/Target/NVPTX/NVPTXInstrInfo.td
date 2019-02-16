@@ -1318,9 +1318,6 @@ def ROTR64reg_sw :
 
 // Create SDNodes so they can be used in the DAG code, e.g.
 // NVPTXISelLowering (LowerShiftLeftParts and LowerShiftRightParts)
-def SDTIntShiftDOp :
-  SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
-                       SDTCisInt<0>, SDTCisInt<3>]>;
 def FUN_SHFL_CLAMP : SDNode<"NVPTXISD::FUN_SHFL_CLAMP", SDTIntShiftDOp, []>;
 def FUN_SHFR_CLAMP : SDNode<"NVPTXISD::FUN_SHFR_CLAMP", SDTIntShiftDOp, []>;
 
@@ -1888,6 +1885,7 @@ def SDTStoreRetvalProfile : SDTypeProfile<0, 2, [SDTCisInt<0>]>;
 def SDTStoreRetvalV2Profile : SDTypeProfile<0, 3, [SDTCisInt<0>]>;
 def SDTStoreRetvalV4Profile : SDTypeProfile<0, 5, [SDTCisInt<0>]>;
 def SDTPseudoUseParamProfile : SDTypeProfile<0, 1, []>;
+def SDTProxyRegProfile : SDTypeProfile<1, 1, []>;
 
 def DeclareParam :
   SDNode<"NVPTXISD::DeclareParam", SDTDeclareParamProfile,
@@ -1975,6 +1973,9 @@ def PseudoUseParam :
 def RETURNNode :
   SDNode<"NVPTXISD::RETURN", SDTCallArgMarkProfile,
          [SDNPHasChain, SDNPSideEffect]>;
+def ProxyReg :
+  SDNode<"NVPTXISD::ProxyReg", SDTProxyRegProfile,
+         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 
 let mayLoad = 1 in {
   class LoadParamMemInst<NVPTXRegClass regclass, string opstr> :
@@ -2252,6 +2253,21 @@ def PseudoUseParamI16 : PseudoUseParamInst<Int16Regs>;
 def PseudoUseParamF64 : PseudoUseParamInst<Float64Regs>;
 def PseudoUseParamF32 : PseudoUseParamInst<Float32Regs>;
 
+class ProxyRegInst<string SzStr, NVPTXRegClass regclass> :
+  NVPTXInst<(outs regclass:$dst), (ins regclass:$src),
+            !strconcat("mov.", SzStr, " \t$dst, $src;"),
+            [(set regclass:$dst, (ProxyReg regclass:$src))]>;
+
+let isCodeGenOnly=1, isPseudo=1 in {
+  def ProxyRegI1    : ProxyRegInst<"pred", Int1Regs>;
+  def ProxyRegI16   : ProxyRegInst<"b16",  Int16Regs>;
+  def ProxyRegI32   : ProxyRegInst<"b32",  Int32Regs>;
+  def ProxyRegI64   : ProxyRegInst<"b64",  Int64Regs>;
+  def ProxyRegF16   : ProxyRegInst<"b16",  Float16Regs>;
+  def ProxyRegF32   : ProxyRegInst<"f32",  Float32Regs>;
+  def ProxyRegF64   : ProxyRegInst<"f64",  Float64Regs>;
+  def ProxyRegF16x2 : ProxyRegInst<"b32",  Float16x2Regs>;
+}
 
 //
 // Load / Store Handling
@@ -2544,7 +2560,7 @@ let mayStore=1, hasSideEffects=0 in {
 class F_BITCONVERT<string SzStr, NVPTXRegClass regclassIn,
   NVPTXRegClass regclassOut> :
            NVPTXInst<(outs regclassOut:$d), (ins regclassIn:$a),
-           !strconcat("mov.b", !strconcat(SzStr, " \t$d, $a;")),
+           !strconcat("mov.b", SzStr, " \t$d, $a;"),
      [(set regclassOut:$d, (bitconvert regclassIn:$a))]>;
 
 def BITCONVERT_16_I2F : F_BITCONVERT<"16", Int16Regs, Float16Regs>;
@@ -2625,15 +2641,9 @@ def : Pat<(f64 (uint_to_fp Int64Regs:$a)),
 def : Pat<(i1 (fp_to_sint Float16Regs:$a)),
           (SETP_b16ri (BITCONVERT_16_F2I Float16Regs:$a), 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint Float16Regs:$a)),
-          (CVT_s16_f16 Float16Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i16 (fp_to_sint Float16Regs:$a)),
           (CVT_s16_f16 Float16Regs:$a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint Float16Regs:$a)),
-          (CVT_s32_f16 Float16Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i32 (fp_to_sint Float16Regs:$a)),
           (CVT_s32_f16 Float16Regs:$a, CvtRZI)>;
-def : Pat<(i64 (fp_to_sint Float16Regs:$a)),
-          (CVT_s64_f16 Float16Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(i64 (fp_to_sint Float16Regs:$a)),
           (CVT_s64_f16 Float16Regs:$a, CvtRZI)>;
 
@@ -2641,15 +2651,9 @@ def : Pat<(i64 (fp_to_sint Float16Regs:$a)),
 def : Pat<(i1 (fp_to_uint Float16Regs:$a)),
           (SETP_b16ri (BITCONVERT_16_F2I Float16Regs:$a), 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint Float16Regs:$a)),
-          (CVT_u16_f16 Float16Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i16 (fp_to_uint Float16Regs:$a)),
           (CVT_u16_f16 Float16Regs:$a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint Float16Regs:$a)),
-          (CVT_u32_f16 Float16Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(i32 (fp_to_uint Float16Regs:$a)),
           (CVT_u32_f16 Float16Regs:$a, CvtRZI)>;
-def : Pat<(i64 (fp_to_uint Float16Regs:$a)),
-          (CVT_u64_f16 Float16Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(i64 (fp_to_uint Float16Regs:$a)),
           (CVT_u64_f16 Float16Regs:$a, CvtRZI)>;
 
@@ -2948,13 +2952,9 @@ def : Pat<(i32 (zext (ctpop Int16Regs:$a))),
 
 // fpround f32 -> f16
 def : Pat<(f16 (fpround Float32Regs:$a)),
-          (CVT_f16_f32 Float32Regs:$a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f16 (fpround Float32Regs:$a)),
           (CVT_f16_f32 Float32Regs:$a, CvtRN)>;
 
 // fpround f64 -> f16
-def : Pat<(f16 (fpround Float64Regs:$a)),
-          (CVT_f16_f64 Float64Regs:$a, CvtRN_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f16 (fpround Float64Regs:$a)),
           (CVT_f16_f64 Float64Regs:$a, CvtRN)>;
 
@@ -2972,8 +2972,6 @@ def : Pat<(f32 (fpextend Float16Regs:$a)),
 
 // fpextend f16 -> f64
 def : Pat<(f64 (fpextend Float16Regs:$a)),
-          (CVT_f64_f16 Float16Regs:$a, CvtNONE_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(f64 (fpextend Float16Regs:$a)),
           (CVT_f64_f16 Float16Regs:$a, CvtNONE)>;
 
 // fpextend f32 -> f64
@@ -2988,9 +2986,7 @@ def retflag : SDNode<"NVPTXISD::RET_FLAG", SDTNone,
 // fceil, ffloor, fround, ftrunc.
 
 def : Pat<(fceil Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRPI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(fceil Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRPI)>, Requires<[doNoF32FTZ]>;
+          (CVT_f16_f16 Float16Regs:$a, CvtRPI)>;
 def : Pat<(fceil Float32Regs:$a),
           (CVT_f32_f32 Float32Regs:$a, CvtRPI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(fceil Float32Regs:$a),
@@ -2999,9 +2995,7 @@ def : Pat<(fceil Float64Regs:$a),
           (CVT_f64_f64 Float64Regs:$a, CvtRPI)>;
 
 def : Pat<(ffloor Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRMI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(ffloor Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRMI)>, Requires<[doNoF32FTZ]>;
+          (CVT_f16_f16 Float16Regs:$a, CvtRMI)>;
 def : Pat<(ffloor Float32Regs:$a),
           (CVT_f32_f32 Float32Regs:$a, CvtRMI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(ffloor Float32Regs:$a),
@@ -3009,10 +3003,8 @@ def : Pat<(ffloor Float32Regs:$a),
 def : Pat<(ffloor Float64Regs:$a),
           (CVT_f64_f64 Float64Regs:$a, CvtRMI)>;
 
-def : Pat<(fround Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f16 (fround Float16Regs:$a)),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
+          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
 def : Pat<(fround Float32Regs:$a),
           (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(f32 (fround Float32Regs:$a)),
@@ -3021,9 +3013,7 @@ def : Pat<(f64 (fround Float64Regs:$a)),
           (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
 
 def : Pat<(ftrunc Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(ftrunc Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRZI)>, Requires<[doNoF32FTZ]>;
+          (CVT_f16_f16 Float16Regs:$a, CvtRZI)>;
 def : Pat<(ftrunc Float32Regs:$a),
           (CVT_f32_f32 Float32Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(ftrunc Float32Regs:$a),
@@ -3036,9 +3026,7 @@ def : Pat<(ftrunc Float64Regs:$a),
 // matches what CUDA's "libm" does.
 
 def : Pat<(fnearbyint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(fnearbyint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
+          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
 def : Pat<(fnearbyint Float32Regs:$a),
           (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(fnearbyint Float32Regs:$a),
@@ -3047,9 +3035,7 @@ def : Pat<(fnearbyint Float64Regs:$a),
           (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
 
 def : Pat<(frint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(frint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
+          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
 def : Pat<(frint Float32Regs:$a),
           (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
 def : Pat<(frint Float32Regs:$a),

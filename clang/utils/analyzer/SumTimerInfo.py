@@ -6,13 +6,14 @@ Script to Summarize statistics in the scan-build output.
 Statistics are enabled by passing '-internal-stats' option to scan-build
 (or '-analyzer-stats' to the analyzer).
 """
+from __future__ import absolute_import, division, print_function
 
 import sys
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print >> sys.stderr, 'Usage: ', sys.argv[0],\
-                             'scan_build_output_file'
+        print('Usage: ', sys.argv[0],\
+                             'scan_build_output_file', file=sys.stderr)
         sys.exit(-1)
 
     f = open(sys.argv[1], 'r')
@@ -65,15 +66,15 @@ if __name__ == '__main__':
             s = line.split()
             TotalTime = TotalTime + float(s[6])
 
-    print "TU Count %d" % (Count)
-    print "Time %f" % (Time)
-    print "Warnings %d" % (Warnings)
-    print "Functions Analyzed %d" % (FunctionsAnalyzed)
-    print "Reachable Blocks %d" % (ReachableBlocks)
-    print "Reached Max Steps %d" % (ReachedMaxSteps)
-    print "Number of Steps %d" % (NumSteps)
-    print "Number of Inlined calls %d (bifurcated %d)" % (
-        NumInlinedCallSites, NumBifurcatedCallSites)
-    print "MaxTime %f" % (MaxTime)
-    print "TotalTime %f" % (TotalTime)
-    print "Max CFG Size %d" % (MaxCFGSize)
+    print("TU Count %d" % (Count))
+    print("Time %f" % (Time))
+    print("Warnings %d" % (Warnings))
+    print("Functions Analyzed %d" % (FunctionsAnalyzed))
+    print("Reachable Blocks %d" % (ReachableBlocks))
+    print("Reached Max Steps %d" % (ReachedMaxSteps))
+    print("Number of Steps %d" % (NumSteps))
+    print("Number of Inlined calls %d (bifurcated %d)" % (
+        NumInlinedCallSites, NumBifurcatedCallSites))
+    print("MaxTime %f" % (MaxTime))
+    print("TotalTime %f" % (TotalTime))
+    print("Max CFG Size %d" % (MaxCFGSize))

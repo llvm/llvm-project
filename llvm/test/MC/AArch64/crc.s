@@ -5,6 +5,8 @@
 // RUN:   FileCheck %s --check-prefix=CRC
 // RUN: llvm-mc -triple aarch64-- -mcpu=cortex-a75 %s 2>&1 |\
 // RUN:   FileCheck %s --check-prefix=CRC
+// RUN: llvm-mc -triple aarch64-- -mcpu=tsv110 %s 2>&1 |\
+// RUN:   FileCheck %s --check-prefix=CRC
 
 // RUN: not llvm-mc -triple aarch64-- %s 2>&1 |\
 // RUN:   FileCheck %s --check-prefix=NOCRC

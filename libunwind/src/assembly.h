@@ -44,6 +44,7 @@
 #if defined(__APPLE__)
 
 #define SYMBOL_IS_FUNC(name)
+#define EXPORT_SYMBOL(name)
 #define HIDDEN_SYMBOL(name) .private_extern name
 #define NO_EXEC_STACK_DIRECTIVE
 
@@ -54,6 +55,7 @@
 #else
 #define SYMBOL_IS_FUNC(name) .type name,@function
 #endif
+#define EXPORT_SYMBOL(name)
 #define HIDDEN_SYMBOL(name) .hidden name
 
 #if defined(__GNU__) || defined(__FreeBSD__) || defined(__Fuchsia__) || \
@@ -70,6 +72,15 @@
     .scl 2 SEPARATOR                                                           \
     .type 32 SEPARATOR                                                         \
   .endef
+#define EXPORT_SYMBOL2(name)                              \
+  .section .drectve,"yn" SEPARATOR                        \
+  .ascii "-export:", #name, "\0" SEPARATOR                \
+  .text
+#if defined(_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+#define EXPORT_SYMBOL(name)
+#else
+#define EXPORT_SYMBOL(name) EXPORT_SYMBOL2(name)
+#endif
 #define HIDDEN_SYMBOL(name)
 
 #define NO_EXEC_STACK_DIRECTIVE
@@ -82,6 +93,7 @@
 
 #define DEFINE_LIBUNWIND_FUNCTION(name)                   \
   .globl SYMBOL_NAME(name) SEPARATOR                      \
+  EXPORT_SYMBOL(name) SEPARATOR                           \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR             \
   SYMBOL_NAME(name):
 

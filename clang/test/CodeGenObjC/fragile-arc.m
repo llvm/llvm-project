@@ -37,7 +37,7 @@
 // CHECK-NEXT: [[IVAR:%.*]] = bitcast i8* [[T1]] to [[OPAQUE]]**
 // CHECK-NEXT: [[T0:%.*]] = load [[OPAQUE]]*, [[OPAQUE]]** [[IVAR]]
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[OPAQUE]]* [[T0]] to i8*
-// CHECK-NEXT: [[T2:%.*]] = call i8* @objc_retain(i8* [[T1]])
+// CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.retain(i8* [[T1]])
 // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[OPAQUE]]*
 // CHECK-NEXT: store [[OPAQUE]]* [[T3]], [[OPAQUE]]** [[X]]
   Opaque *x = strong;
@@ -48,10 +48,10 @@
 // CHECK-NEXT: [[IVAR:%.*]] = bitcast i8* [[T1]] to [[OPAQUE]]**
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[OPAQUE]]** [[IVAR]] to i8**
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[OPAQUE]]* [[VALUE]] to i8*
-// CHECK-NEXT: call void @objc_storeStrong(i8** [[T0]], i8* [[T1]])
+// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[T0]], i8* [[T1]])
   strong = x;
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[OPAQUE]]** [[X]] to i8**
-// CHECK-NEXT: call void @objc_storeStrong(i8** [[T0]], i8* null)
+// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[T0]], i8* null)
 // CHECK-NEXT: ret void
 }
 
@@ -64,7 +64,7 @@
 // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i32 8
 // CHECK-NEXT: [[IVAR:%.*]] = bitcast i8* [[T1]] to [[OPAQUE]]**
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[OPAQUE]]** [[IVAR]] to i8**
-// CHECK-NEXT: [[T1:%.*]] = call i8* @objc_loadWeakRetained(i8** [[T0]])
+// CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T0]])
 // CHECK-NEXT: [[T2:%.*]] = bitcast i8* [[T1]] to [[OPAQUE]]*
 // CHECK-NEXT: store [[OPAQUE]]* [[T2]], [[OPAQUE]]** [[X]]
   Opaque *x = weak;
@@ -75,10 +75,10 @@
 // CHECK-NEXT: [[IVAR:%.*]] = bitcast i8* [[T1]] to [[OPAQUE]]**
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[OPAQUE]]** [[IVAR]] to i8**
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[OPAQUE]]* [[VALUE]] to i8*
-// CHECK-NEXT: call i8* @objc_storeWeak(i8** [[T0]], i8* [[T1]])
+// CHECK-NEXT: call i8* @llvm.objc.storeWeak(i8** [[T0]], i8* [[T1]])
   weak = x;
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[OPAQUE]]** [[X]] to i8**
-// CHECK-NEXT: call void @objc_storeStrong(i8** [[T0]], i8* null)
+// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[T0]], i8* null)
 // CHECK-NEXT: ret void
 }
 
@@ -89,12 +89,12 @@
 // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i32 8
 // CHECK-NEXT: [[IVAR:%.*]] = bitcast i8* [[T1]] to [[OPAQUE]]**
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[OPAQUE]]** [[IVAR]] to i8**
-// CHECK-NEXT: call void @objc_destroyWeak(i8** [[T0]])
+// CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[T0]])
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[A]]* [[SELF]] to i8*
 // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i32 4
 // CHECK-NEXT: [[IVAR:%.*]] = bitcast i8* [[T1]] to [[OPAQUE]]**
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[OPAQUE]]** [[IVAR]] to i8**
-// CHECK-NEXT: call void @objc_storeStrong(i8** [[T0]], i8* null)
+// CHECK-NEXT: call void @llvm.objc.storeStrong(i8** [[T0]], i8* null)
 // CHECK-NEXT: ret void
 @end
 
@@ -151,17 +151,17 @@ void testBlockLayoutWeak(__weak id x) {
 // CHECK: br i1
 // CHECK: [[T0:%.*]] = bitcast i8* [[EXN]] to [[A]]*
 // CHECK: [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-// CHECK: [[T2:%.*]] = call i8* @objc_retain(i8* [[T1]])
+// CHECK: [[T2:%.*]] = call i8* @llvm.objc.retain(i8* [[T1]])
 // CHECK: [[T3:%.*]] = bitcast i8* [[T2]] to [[A]]*
 // CHECK: store [[A]]* [[T3]], [[A]]** [[X]]
 // CHECK: call void @checkpoint(i32 1)
 // CHECK: [[T0:%.*]] = bitcast [[A]]** [[X]] to i8**
-// CHECK: call void @objc_storeStrong(i8** [[T0]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** [[T0]], i8* null)
 // CHECK: br label
-// CHECK: [[T0:%.*]] = call i8* @objc_retain(i8* [[EXN]])
+// CHECK: [[T0:%.*]] = call i8* @llvm.objc.retain(i8* [[EXN]])
 // CHECK: store i8* [[T0]], i8** [[Y]]
 // CHECK: call void @checkpoint(i32 2)
-// CHECK: call void @objc_storeStrong(i8** [[Y]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** [[Y]], i8* null)
 extern void checkpoint(int n);
 void testCatch() {
   @try {

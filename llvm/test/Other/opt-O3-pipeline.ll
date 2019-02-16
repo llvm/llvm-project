@@ -28,8 +28,10 @@
 ; CHECK-NEXT:     Force set function attributes
 ; CHECK-NEXT:     Infer set function attributes
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Call-site splitting
 ; CHECK-NEXT:     Interprocedural Sparse Conditional Constant Propagation
+; CHECK-NEXT:       Unnamed pass: implement Pass::getPassName()
 ; CHECK-NEXT:     Called Value Propagation
 ; CHECK-NEXT:     Global Variable Optimizer
 ; CHECK-NEXT:       Unnamed pass: implement Pass::getPassName()
@@ -253,6 +255,10 @@
 ; CHECK-NEXT:       Scalar Evolution Analysis
 ; CHECK-NEXT:       Loop Pass Manager
 ; CHECK-NEXT:         Loop Invariant Code Motion
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
+; CHECK-NEXT:       Warn about non-applied transformations
 ; CHECK-NEXT:       Alignment from assumptions
 ; CHECK-NEXT:     Strip Unused Function Prototypes
 ; CHECK-NEXT:     Dead Global Elimination
@@ -280,6 +286,9 @@
 ; CHECK-NEXT:       Simplify the CFG
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:     Bitcode Writer
+; CHECK-NEXT: Pass Arguments:
+; CHECK-NEXT:  FunctionPass Manager
+; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT:   FunctionPass Manager

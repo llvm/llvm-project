@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
 
 struct S {
   int __attribute__((target("sse4.2"))) foo(int) { return 0; }
@@ -64,74 +65,156 @@ int templ_use() {
   return a.foo(1) + b.foo(2);
 }
 
-// CHECK: @_ZN1SaSERKS_.ifunc = ifunc %struct.S* (%struct.S*, %struct.S*), %struct.S* (%struct.S*, %struct.S*)* ()* @_ZN1SaSERKS_.resolver
-// CHECK: @_ZNK9ConvertTocv1SEv.ifunc = ifunc void (%struct.ConvertTo*), void (%struct.ConvertTo*)* ()* @_ZNK9ConvertTocv1SEv.resolver
-// CHECK: @_ZN1S3fooEi.ifunc = ifunc i32 (%struct.S*, i32), i32 (%struct.S*, i32)* ()* @_ZN1S3fooEi.resolver
-// CHECK: @_ZN2S23fooEi.ifunc = ifunc i32 (%struct.S2*, i32), i32 (%struct.S2*, i32)* ()* @_ZN2S23fooEi.resolver
+// LINUX: @_ZN1SaSERKS_.ifunc = ifunc %struct.S* (%struct.S*, %struct.S*), %struct.S* (%struct.S*, %struct.S*)* ()* @_ZN1SaSERKS_.resolver
+// LINUX: @_ZNK9ConvertTocv1SEv.ifunc = ifunc void (%struct.ConvertTo*), void (%struct.ConvertTo*)* ()* @_ZNK9ConvertTocv1SEv.resolver
+// LINUX: @_ZN1S3fooEi.ifunc = ifunc i32 (%struct.S*, i32), i32 (%struct.S*, i32)* ()* @_ZN1S3fooEi.resolver
+// LINUX: @_ZN2S23fooEi.ifunc = ifunc i32 (%struct.S2*, i32), i32 (%struct.S2*, i32)* ()* @_ZN2S23fooEi.resolver
 // Templates:
-// CHECK: @_ZN5templIiE3fooEi.ifunc = ifunc i32 (%struct.templ*, i32), i32 (%struct.templ*, i32)* ()* @_ZN5templIiE3fooEi.resolver
-// CHECK: @_ZN5templIdE3fooEi.ifunc = ifunc i32 (%struct.templ.0*, i32), i32 (%struct.templ.0*, i32)* ()* @_ZN5templIdE3fooEi.resolver
+// LINUX: @_ZN5templIiE3fooEi.ifunc = ifunc i32 (%struct.templ*, i32), i32 (%struct.templ*, i32)* ()* @_ZN5templIiE3fooEi.resolver
+// LINUX: @_ZN5templIdE3fooEi.ifunc = ifunc i32 (%struct.templ.0*, i32), i32 (%struct.templ.0*, i32)* ()* @_ZN5templIdE3fooEi.resolver
 
-// CHECK: define i32 @_Z3barv()
-// CHECK: %s = alloca %struct.S, align 1
-// CHECK: %s2 = alloca %struct.S, align 1
-// CHECK: %C = alloca %struct.ConvertTo, align 1
-// CHECK: call dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
-// CHECK: call void @_ZNK9ConvertTocv1SEv.ifunc(%struct.ConvertTo* %C)
-// CHECK: call dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
-// CHECK: call i32 @_ZN1S3fooEi.ifunc(%struct.S* %s, i32 0)
+// LINUX: define i32 @_Z3barv()
+// LINUX: %s = alloca %struct.S, align 1
+// LINUX: %s2 = alloca %struct.S, align 1
+// LINUX: %C = alloca %struct.ConvertTo, align 1
+// LINUX: call dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
+// LINUX: call void @_ZNK9ConvertTocv1SEv.ifunc(%struct.ConvertTo* %C)
+// LINUX: call dereferenceable(1) %struct.S* @_ZN1SaSERKS_.ifunc(%struct.S* %s2
+// LINUX: call i32 @_ZN1S3fooEi.ifunc(%struct.S* %s, i32 0)
 
-// CHECK: define %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.resolver() comdat
-// CHECK: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.arch_ivybridge
-// CHECK: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_
+// WINDOWS: define dso_local i32 @"?bar@@YAHXZ"()
+// WINDOWS: %s = alloca %struct.S, align 1
+// WINDOWS: %s2 = alloca %struct.S, align 1
+// WINDOWS: %C = alloca %struct.ConvertTo, align 1
+// WINDOWS: call dereferenceable(1) %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %s2
+// WINDOWS: call void @"??BConvertTo@@QEBA?AUS@@XZ.resolver"(%struct.ConvertTo* %C
+// WINDOWS: call dereferenceable(1) %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S* %s2
+// WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* %s, i32 0)
 
-// CHECK: define void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.resolver() comdat
-// CHECK: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.arch_ivybridge
-// CHECK: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv
+// LINUX: define %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.resolver() comdat
+// LINUX: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_.arch_ivybridge
+// LINUX: ret %struct.S* (%struct.S*, %struct.S*)* @_ZN1SaSERKS_
 
-// CHECK: define i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver() comdat 
-// CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_sandybridge
-// CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_ivybridge
-// CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.sse4.2
-// CHECK: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi
+// WINDOWS: define dso_local %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.resolver"(%struct.S*, %struct.S*)
+// WINDOWS: call %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z.arch_ivybridge"
+// WINDOWS: call %struct.S* @"??4S@@QEAAAEAU0@AEBU0@@Z"
 
-// CHECK: define i32 @_Z4bar2v()
-// CHECK:call i32 @_ZN2S23fooEi.ifunc
-// define i32 (%struct.S2*, i32)* @_ZN2S23fooEi.resolver() comdat
-// CHECK: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_sandybridge
-// CHECK: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_ivybridge
-// CHECK: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.sse4.2
-// CHECK: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi
+// LINUX: define void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.resolver() comdat
+// LINUX: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv.arch_ivybridge
+// LINUX: ret void (%struct.ConvertTo*)* @_ZNK9ConvertTocv1SEv
 
-// CHECK: define i32 @_ZN2S23fooEi.sse4.2(%struct.S2* %this, i32)
-// CHECK: define i32 @_ZN2S23fooEi.arch_ivybridge(%struct.S2* %this, i32)
-// CHECK: define i32 @_ZN2S23fooEi(%struct.S2* %this, i32)
+// WINDOWS: define dso_local void @"??BConvertTo@@QEBA?AUS@@XZ.resolver"(%struct.ConvertTo*, %struct.S*)
+// WINDOWS: call void @"??BConvertTo@@QEBA?AUS@@XZ.arch_ivybridge"
+// WINDOWS: call void @"??BConvertTo@@QEBA?AUS@@XZ"
 
-// CHECK: define i32 @_Z9templ_usev()
-// CHECK:  call i32 @_ZN5templIiE3fooEi.ifunc
-// CHECK:  call i32 @_ZN5templIdE3fooEi.ifunc
+// LINUX: define i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver() comdat
+// LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_sandybridge
+// LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_ivybridge
+// LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.sse4.2
+// LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi
 
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S*, i32)
+// WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_sandybridge"
+// WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"
+// WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.sse4.2"
+// WINDOWS: call i32 @"?foo@S@@QEAAHH@Z"
 
-// CHECK: define i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.resolver() comdat
-// CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_sandybridge
-// CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_ivybridge
-// CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.sse4.2
-// CHECK: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi
-//
-// CHECK: define i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.resolver() comdat
-// CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_sandybridge
-// CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_ivybridge
-// CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.sse4.2
-// CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi
+// LINUX: define i32 @_Z4bar2v()
+// LINUX: call i32 @_ZN2S23fooEi.ifunc
 
-// CHECK: define linkonce_odr i32 @_ZN1S3fooEi.sse4.2(%struct.S* %this, i32)
-// CHECK: ret i32 0
+// WINDOWS: define dso_local i32 @"?bar2@@YAHXZ"()
+// WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.resolver"
 
-// CHECK: declare i32 @_ZN1S3fooEi.arch_sandybridge(%struct.S*, i32)
+// LINUX: define i32 (%struct.S2*, i32)* @_ZN2S23fooEi.resolver() comdat
+// LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_sandybridge
+// LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.arch_ivybridge
+// LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi.sse4.2
+// LINUX: ret i32 (%struct.S2*, i32)* @_ZN2S23fooEi
 
-// CHECK: define linkonce_odr i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* %this, i32)
-// CHECK: ret i32 1
+// WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z.resolver"(%struct.S2*, i32)
+// WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.arch_sandybridge"
+// WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.arch_ivybridge"
+// WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.sse4.2"
+// WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z"
 
-// CHECK: define linkonce_odr i32 @_ZN1S3fooEi(%struct.S* %this, i32)
-// CHECK: ret i32 2
+// LINUX: define i32 @_ZN2S23fooEi.sse4.2(%struct.S2* %this, i32)
+// LINUX: define i32 @_ZN2S23fooEi.arch_ivybridge(%struct.S2* %this, i32)
+// LINUX: define i32 @_ZN2S23fooEi(%struct.S2* %this, i32)
 
+// WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z.sse4.2"(%struct.S2* %this, i32)
+// WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z.arch_ivybridge"(%struct.S2* %this, i32)
+// WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z"(%struct.S2* %this, i32)
+
+// LINUX: define i32 @_Z9templ_usev()
+// LINUX: call i32 @_ZN5templIiE3fooEi.ifunc
+// LINUX: call i32 @_ZN5templIdE3fooEi.ifunc
+
+// WINDOWS: define dso_local i32 @"?templ_use@@YAHXZ"()
+// WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.resolver"
+// WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.resolver"
+
+// LINUX: define i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.resolver() comdat
+// LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_sandybridge
+// LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.arch_ivybridge
+// LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi.sse4.2
+// LINUX: ret i32 (%struct.templ*, i32)* @_ZN5templIiE3fooEi
+
+// WINDOWS: define dso_local i32 @"?foo@?$templ@H@@QEAAHH@Z.resolver"(%struct.templ*, i32)
+// WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.arch_sandybridge"
+// WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.arch_ivybridge"
+// WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z.sse4.2"
+// WINDOWS: call i32 @"?foo@?$templ@H@@QEAAHH@Z"
+
+// LINUX: define i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.resolver() comdat
+// LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_sandybridge
+// LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.arch_ivybridge
+// LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.sse4.2
+// LINUX: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi
+
+// WINDOWS: define dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.resolver"(%struct.templ.0*, i32) comdat
+// WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_sandybridge"
+// WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_ivybridge"
+// WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z.sse4.2"
+// WINDOWS: call i32 @"?foo@?$templ@N@@QEAAHH@Z"
+
+// LINUX: define linkonce_odr i32 @_ZN1S3fooEi.sse4.2(%struct.S* %this, i32)
+// LINUX: ret i32 0
+
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@S@@QEAAHH@Z.sse4.2"(%struct.S* %this, i32)
+// WINDOWS: ret i32 0
+
+// LINUX: declare i32 @_ZN1S3fooEi.arch_sandybridge(%struct.S*, i32)
+
+// WINDOWS: declare dso_local i32 @"?foo@S@@QEAAHH@Z.arch_sandybridge"(%struct.S*, i32)
+
+// LINUX: define linkonce_odr i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* %this, i32)
+// LINUX: ret i32 1
+
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"(%struct.S* %this, i32)
+// WINDOWS: ret i32 1
+
+// LINUX: define linkonce_odr i32 @_ZN1S3fooEi(%struct.S* %this, i32)
+// LINUX: ret i32 2
+
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@S@@QEAAHH@Z"(%struct.S* %this, i32)
+// WINDOWS: ret i32 2
+
+// LINUX: define linkonce_odr i32 @_ZN5templIiE3fooEi.sse4.2
+// LINUX: declare i32 @_ZN5templIiE3fooEi.arch_sandybridge
+// LINUX: define linkonce_odr i32 @_ZN5templIiE3fooEi.arch_ivybridge
+// LINUX: define linkonce_odr i32 @_ZN5templIiE3fooEi
+
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@?$templ@H@@QEAAHH@Z.sse4.2"
+// WINDOWS: declare dso_local i32 @"?foo@?$templ@H@@QEAAHH@Z.arch_sandybridge"
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@?$templ@H@@QEAAHH@Z.arch_ivybridge"
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@?$templ@H@@QEAAHH@Z"
+
+// LINUX: define linkonce_odr i32 @_ZN5templIdE3fooEi.sse4.2
+// LINUX: declare i32 @_ZN5templIdE3fooEi.arch_sandybridge
+// LINUX: define linkonce_odr i32 @_ZN5templIdE3fooEi.arch_ivybridge
+// LINUX: define linkonce_odr i32 @_ZN5templIdE3fooEi
+
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.sse4.2"
+// WINDOWS: declare dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_sandybridge"
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z.arch_ivybridge"
+// WINDOWS: define linkonce_odr dso_local i32 @"?foo@?$templ@N@@QEAAHH@Z"

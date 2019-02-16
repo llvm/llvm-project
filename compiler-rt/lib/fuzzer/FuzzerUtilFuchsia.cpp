@@ -49,9 +49,6 @@ void CrashTrampolineAsm() __asm__("CrashTrampolineAsm");
 
 namespace {
 
-// TODO(phosek): remove this and replace it with ZX_TIME_INFINITE
-#define ZX_TIME_INFINITE_OLD INT64_MAX
-
 // A magic value for the Zircon exception port, chosen to spell 'FUZZING'
 // when interpreted as a byte sequence on little-endian platforms.
 const uint64_t kFuzzingCrash = 0x474e495a5a5546;
@@ -237,7 +234,7 @@ void CrashHandler(zx_handle_t *Event) {
             "_zx_object_signal");
 
   zx_port_packet_t Packet;
-  ExitOnErr(_zx_port_wait(Port.Handle, ZX_TIME_INFINITE_OLD, &Packet),
+  ExitOnErr(_zx_port_wait(Port.Handle, ZX_TIME_INFINITE, &Packet),
             "_zx_port_wait");
 
   // At this point, we want to get the state of the crashing thread, but
@@ -315,8 +312,8 @@ void SetSignalHandler(const FuzzingOptions &Options) {
   ExitOnErr(_zx_event_create(0, &Event), "_zx_event_create");
 
   std::thread T(CrashHandler, &Event);
-  zx_status_t Status = _zx_object_wait_one(Event, ZX_USER_SIGNAL_0,
-                                           ZX_TIME_INFINITE_OLD, nullptr);
+  zx_status_t Status =
+      _zx_object_wait_one(Event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr);
   _zx_handle_close(Event);
   ExitOnErr(Status, "_zx_object_wait_one");
 
@@ -378,19 +375,28 @@ int ExecuteCommand(const Command &Cmd) {
     Argv[i] = Args[i].c_str();
   Argv[Argc] = nullptr;
 
-  // Determine stdout
+  // Determine output.  On Fuchsia, the fuzzer is typically run as a component
+  // that lacks a mutable working directory. Fortunately, when this is the case
+  // a mutable output directory must be specified using "-artifact_prefix=...",
+  // so write the log file(s) there.
   int FdOut = STDOUT_FILENO;
-
   if (Cmd.hasOutputFile()) {
-    auto Filename = Cmd.getOutputFile();
-    FdOut = open(Filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
+    std::string Path;
+    if (Cmd.hasFlag("artifact_prefix"))
+      Path = Cmd.getFlagValue("artifact_prefix") + "/" + Cmd.getOutputFile();
+    else
+      Path = Cmd.getOutputFile();
+    FdOut = open(Path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
     if (FdOut == -1) {
-      Printf("libFuzzer: failed to open %s: %s\n", Filename.c_str(),
+      Printf("libFuzzer: failed to open %s: %s\n", Path.c_str(),
              strerror(errno));
       return ZX_ERR_IO;
     }
   }
-  auto CloseFdOut = at_scope_exit([&]() { close(FdOut); } );
+  auto CloseFdOut = at_scope_exit([FdOut]() {
+    if (FdOut != STDOUT_FILENO)
+      close(FdOut);
+  });
 
   // Determine stderr
   int FdErr = STDERR_FILENO;
@@ -440,7 +446,7 @@ int ExecuteCommand(const Command &Cmd) {
 
   // Now join the process and return the exit status.
   if ((rc = _zx_object_wait_one(ProcessHandle, ZX_PROCESS_TERMINATED,
-                                ZX_TIME_INFINITE_OLD, nullptr)) != ZX_OK) {
+                                ZX_TIME_INFINITE, nullptr)) != ZX_OK) {
     Printf("libFuzzer: failed to join '%s': %s\n", Argv[0],
            _zx_status_get_string(rc));
     return rc;

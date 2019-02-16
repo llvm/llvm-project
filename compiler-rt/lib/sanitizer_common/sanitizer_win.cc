@@ -29,6 +29,10 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_win_defs.h"
 
+#if defined(PSAPI_VERSION) && PSAPI_VERSION == 1
+#pragma comment(lib, "psapi")
+#endif
+
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in
 // code that is called when terminating the process, the expansion of the
@@ -733,10 +737,6 @@ bool WriteToFile(fd_t fd, const void *buff, uptr buff_size, uptr *bytes_written,
   }
 }
 
-bool RenameFile(const char *oldpath, const char *newpath, error_t *error_p) {
-  UNIMPLEMENTED();
-}
-
 uptr internal_sched_yield() {
   Sleep(0);
   return 0;
@@ -1004,6 +1004,10 @@ void CheckVMASize() {
   // Do nothing.
 }
 
+void InitializePlatformEarly() {
+  // Do nothing.
+}
+
 void MaybeReexec() {
   // No need to re-exec on Windows.
 }
@@ -1012,7 +1016,16 @@ void CheckASLR() {
   // Do nothing
 }
 
+void CheckMPROTECT() {
+  // Do nothing
+}
+
 char **GetArgv() {
+  // FIXME: Actually implement this function.
+  return 0;
+}
+
+char **GetEnviron() {
   // FIXME: Actually implement this function.
   return 0;
 }

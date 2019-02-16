@@ -6,7 +6,10 @@ idiv %eax
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      55
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        4
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.07
 # CHECK-NEXT: IPC:               0.04
 # CHECK-NEXT: Block RThroughput: 25.0
 
@@ -22,17 +25,17 @@ idiv %eax
 # CHECK-NEXT:  2      25    25.00                 U     idivl	%eax
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      26
+# CHECK-NEXT: RAT     - Register unavailable:                      26  (47.3%)
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
-# CHECK:      Dispatch Logic - number of cycles where we saw N instructions dispatched:
+# CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
 # CHECK-NEXT:  0,              53  (96.4%)
-# CHECK-NEXT:  1,              2  (3.6%)
+# CHECK-NEXT:  2,              2  (3.6%)
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    6

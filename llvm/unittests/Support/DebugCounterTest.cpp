@@ -14,10 +14,9 @@
 using namespace llvm;
 
 #ifndef NDEBUG
-DEBUG_COUNTER(TestCounter, "test-counter",
-              "Counter used for unit test");
-
 TEST(DebugCounterTest, CounterCheck) {
+  DEBUG_COUNTER(TestCounter, "test-counter", "Counter used for unit test");
+
   EXPECT_FALSE(DebugCounter::isCounterSet(TestCounter));
 
   auto DC = &DebugCounter::instance();

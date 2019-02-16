@@ -17,16 +17,20 @@
 #define LLVM_CODEGEN_MACHINEINSTR_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ArrayRecycler.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -61,7 +65,7 @@ class MachineInstr
     : public ilist_node_with_parent<MachineInstr, MachineBasicBlock,
                                     ilist_sentinel_tracking<true>> {
 public:
-  using mmo_iterator = MachineMemOperand **;
+  using mmo_iterator = ArrayRef<MachineMemOperand *>::iterator;
 
   /// Flags to specify different kinds of comments to output in
   /// assembly code.  These flags carry semantic information not
@@ -93,8 +97,14 @@ public:
                                         // contraction operations like fma.
     FmAfn        = 1 << 9,              // Instruction may map to Fast math
                                         // instrinsic approximation.
-    FmReassoc    = 1 << 10              // Instruction supports Fast math
+    FmReassoc    = 1 << 10,             // Instruction supports Fast math
                                         // reassociation of operand order.
+    NoUWrap      = 1 << 11,             // Instruction supports binary operator
+                                        // no unsigned wrap.
+    NoSWrap      = 1 << 12,             // Instruction supports binary operator
+                                        // no signed wrap.
+    IsExact      = 1 << 13              // Instruction supports division is
+                                        // known to be exact.
   };
 
 private:
@@ -118,14 +128,102 @@ private:
                                         // anything other than to convey comment
                                         // information to AsmPrinter.
 
-  uint8_t NumMemRefs = 0;               // Information on memory references.
-  // Note that MemRefs == nullptr,  means 'don't know', not 'no memory access'.
-  // Calling code must treat missing information conservatively.  If the number
-  // of memory operands required to be precise exceeds the maximum value of
-  // NumMemRefs - currently 256 - we remove the operands entirely. Note also
-  // that this is a non-owning reference to a shared copy on write buffer owned
-  // by the MachineFunction and created via MF.allocateMemRefsArray.
-  mmo_iterator MemRefs = nullptr;
+  /// Internal implementation detail class that provides out-of-line storage for
+  /// extra info used by the machine instruction when this info cannot be stored
+  /// in-line within the instruction itself.
+  ///
+  /// This has to be defined eagerly due to the implementation constraints of
+  /// `PointerSumType` where it is used.
+  class ExtraInfo final
+      : TrailingObjects<ExtraInfo, MachineMemOperand *, MCSymbol *> {
+  public:
+    static ExtraInfo *create(BumpPtrAllocator &Allocator,
+                             ArrayRef<MachineMemOperand *> MMOs,
+                             MCSymbol *PreInstrSymbol = nullptr,
+                             MCSymbol *PostInstrSymbol = nullptr) {
+      bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
+      bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
+      auto *Result = new (Allocator.Allocate(
+          totalSizeToAlloc<MachineMemOperand *, MCSymbol *>(
+              MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol),
+          alignof(ExtraInfo)))
+          ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol);
+
+      // Copy the actual data into the trailing objects.
+      std::copy(MMOs.begin(), MMOs.end(),
+                Result->getTrailingObjects<MachineMemOperand *>());
+
+      if (HasPreInstrSymbol)
+        Result->getTrailingObjects<MCSymbol *>()[0] = PreInstrSymbol;
+      if (HasPostInstrSymbol)
+        Result->getTrailingObjects<MCSymbol *>()[HasPreInstrSymbol] =
+            PostInstrSymbol;
+
+      return Result;
+    }
+
+    ArrayRef<MachineMemOperand *> getMMOs() const {
+      return makeArrayRef(getTrailingObjects<MachineMemOperand *>(), NumMMOs);
+    }
+
+    MCSymbol *getPreInstrSymbol() const {
+      return HasPreInstrSymbol ? getTrailingObjects<MCSymbol *>()[0] : nullptr;
+    }
+
+    MCSymbol *getPostInstrSymbol() const {
+      return HasPostInstrSymbol
+                 ? getTrailingObjects<MCSymbol *>()[HasPreInstrSymbol]
+                 : nullptr;
+    }
+
+  private:
+    friend TrailingObjects;
+
+    // Description of the extra info, used to interpret the actual optional
+    // data appended.
+    //
+    // Note that this is not terribly space optimized. This leaves a great deal
+    // of flexibility to fit more in here later.
+    const int NumMMOs;
+    const bool HasPreInstrSymbol;
+    const bool HasPostInstrSymbol;
+
+    // Implement the `TrailingObjects` internal API.
+    size_t numTrailingObjects(OverloadToken<MachineMemOperand *>) const {
+      return NumMMOs;
+    }
+    size_t numTrailingObjects(OverloadToken<MCSymbol *>) const {
+      return HasPreInstrSymbol + HasPostInstrSymbol;
+    }
+
+    // Just a boring constructor to allow us to initialize the sizes. Always use
+    // the `create` routine above.
+    ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol)
+        : NumMMOs(NumMMOs), HasPreInstrSymbol(HasPreInstrSymbol),
+          HasPostInstrSymbol(HasPostInstrSymbol) {}
+  };
+
+  /// Enumeration of the kinds of inline extra info available. It is important
+  /// that the `MachineMemOperand` inline kind has a tag value of zero to make
+  /// it accessible as an `ArrayRef`.
+  enum ExtraInfoInlineKinds {
+    EIIK_MMO = 0,
+    EIIK_PreInstrSymbol,
+    EIIK_PostInstrSymbol,
+    EIIK_OutOfLine
+  };
+
+  // We store extra information about the instruction here. The common case is
+  // expected to be nothing or a single pointer (typically a MMO or a symbol).
+  // We work to optimize this common case by storing it inline here rather than
+  // requiring a separate allocation, but we fall back to an allocation when
+  // multiple pointers are needed.
+  PointerSumType<ExtraInfoInlineKinds,
+                 PointerSumTypeMember<EIIK_MMO, MachineMemOperand *>,
+                 PointerSumTypeMember<EIIK_PreInstrSymbol, MCSymbol *>,
+                 PointerSumTypeMember<EIIK_PostInstrSymbol, MCSymbol *>,
+                 PointerSumTypeMember<EIIK_OutOfLine, ExtraInfo *>>
+      Info;
 
   DebugLoc debugLoc;                    // Source line information.
 
@@ -310,7 +408,7 @@ public:
   /// Returns the opcode of this MachineInstr.
   unsigned getOpcode() const { return MCID->Opcode; }
 
-  /// Access to explicit operands of the instruction.
+  /// Retuns the total number of operands.
   unsigned getNumOperands() const { return NumOperands; }
 
   const MachineOperand& getOperand(unsigned i) const {
@@ -412,28 +510,70 @@ public:
     return I - operands_begin();
   }
 
-  /// Access to memory operands of the instruction
-  mmo_iterator memoperands_begin() const { return MemRefs; }
-  mmo_iterator memoperands_end() const { return MemRefs + NumMemRefs; }
+  /// Access to memory operands of the instruction. If there are none, that does
+  /// not imply anything about whether the function accesses memory. Instead,
+  /// the caller must behave conservatively.
+  ArrayRef<MachineMemOperand *> memoperands() const {
+    if (!Info)
+      return {};
+
+    if (Info.is<EIIK_MMO>())
+      return makeArrayRef(Info.getAddrOfZeroTagPointer(), 1);
+
+    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
+      return EI->getMMOs();
+
+    return {};
+  }
+
+  /// Access to memory operands of the instruction.
+  ///
+  /// If `memoperands_begin() == memoperands_end()`, that does not imply
+  /// anything about whether the function accesses memory. Instead, the caller
+  /// must behave conservatively.
+  mmo_iterator memoperands_begin() const { return memoperands().begin(); }
+
+  /// Access to memory operands of the instruction.
+  ///
+  /// If `memoperands_begin() == memoperands_end()`, that does not imply
+  /// anything about whether the function accesses memory. Instead, the caller
+  /// must behave conservatively.
+  mmo_iterator memoperands_end() const { return memoperands().end(); }
+
   /// Return true if we don't have any memory operands which described the
   /// memory access done by this instruction.  If this is true, calling code
   /// must be conservative.
-  bool memoperands_empty() const { return NumMemRefs == 0; }
-
-  iterator_range<mmo_iterator>  memoperands() {
-    return make_range(memoperands_begin(), memoperands_end());
-  }
-  iterator_range<mmo_iterator> memoperands() const {
-    return make_range(memoperands_begin(), memoperands_end());
-  }
+  bool memoperands_empty() const { return memoperands().empty(); }
 
   /// Return true if this instruction has exactly one MachineMemOperand.
-  bool hasOneMemOperand() const {
-    return NumMemRefs == 1;
-  }
+  bool hasOneMemOperand() const { return memoperands().size() == 1; }
 
   /// Return the number of memory operands.
-  unsigned getNumMemOperands() const { return NumMemRefs; }
+  unsigned getNumMemOperands() const { return memoperands().size(); }
+
+  /// Helper to extract a pre-instruction symbol if one has been added.
+  MCSymbol *getPreInstrSymbol() const {
+    if (!Info)
+      return nullptr;
+    if (MCSymbol *S = Info.get<EIIK_PreInstrSymbol>())
+      return S;
+    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
+      return EI->getPreInstrSymbol();
+
+    return nullptr;
+  }
+
+  /// Helper to extract a post-instruction symbol if one has been added.
+  MCSymbol *getPostInstrSymbol() const {
+    if (!Info)
+      return nullptr;
+    if (MCSymbol *S = Info.get<EIIK_PostInstrSymbol>())
+      return S;
+    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
+      return EI->getPostInstrSymbol();
+
+    return nullptr;
+  }
 
   /// API for querying MachineInstr properties. They are the same as MCInstrDesc
   /// queries but they are bundle aware.
@@ -450,6 +590,8 @@ public:
   /// The second argument indicates whether the query should look inside
   /// instruction bundles.
   bool hasProperty(unsigned MCFlag, QueryType Type = AnyInBundle) const {
+    assert(MCFlag < 64 &&
+           "MCFlag out of range for bit mask in getFlags/hasPropertyInBundle.");
     // Inline the fast path for unbundled or bundle-internal instructions.
     if (Type == IgnoreBundle || !isBundled() || isBundledWithPred())
       return getDesc().getFlags() & (1ULL << MCFlag);
@@ -480,6 +622,12 @@ public:
 
   bool isReturn(QueryType Type = AnyInBundle) const {
     return hasProperty(MCID::Return, Type);
+  }
+
+  /// Return true if this is an instruction that marks the end of an EH scope,
+  /// i.e., a catchpad or a cleanuppad instruction.
+  bool isEHScopeReturn(QueryType Type = AnyInBundle) const {
+    return hasProperty(MCID::EHScopeReturn, Type);
   }
 
   bool isCall(QueryType Type = AnyInBundle) const {
@@ -1323,47 +1471,63 @@ public:
   /// fewer operand than it started with.
   void RemoveOperand(unsigned OpNo);
 
+  /// Clear this MachineInstr's memory reference descriptor list.  This resets
+  /// the memrefs to their most conservative state.  This should be used only
+  /// as a last resort since it greatly pessimizes our knowledge of the memory
+  /// access performed by the instruction.
+  void dropMemRefs(MachineFunction &MF);
+
+  /// Assign this MachineInstr's memory reference descriptor list.
+  ///
+  /// Unlike other methods, this *will* allocate them into a new array
+  /// associated with the provided `MachineFunction`.
+  void setMemRefs(MachineFunction &MF, ArrayRef<MachineMemOperand *> MemRefs);
+
   /// Add a MachineMemOperand to the machine instruction.
   /// This function should be used only occasionally. The setMemRefs function
   /// is the primary method for setting up a MachineInstr's MemRefs list.
   void addMemOperand(MachineFunction &MF, MachineMemOperand *MO);
 
-  /// Assign this MachineInstr's memory reference descriptor list.
-  /// This does not transfer ownership.
-  void setMemRefs(mmo_iterator NewMemRefs, mmo_iterator NewMemRefsEnd) {
-    setMemRefs(std::make_pair(NewMemRefs, NewMemRefsEnd-NewMemRefs));
-  }
+  /// Clone another MachineInstr's memory reference descriptor list and replace
+  /// ours with it.
+  ///
+  /// Note that `*this` may be the incoming MI!
+  ///
+  /// Prefer this API whenever possible as it can avoid allocations in common
+  /// cases.
+  void cloneMemRefs(MachineFunction &MF, const MachineInstr &MI);
 
-  /// Assign this MachineInstr's memory reference descriptor list.  First
-  /// element in the pair is the begin iterator/pointer to the array; the
-  /// second is the number of MemoryOperands.  This does not transfer ownership
-  /// of the underlying memory.
-  void setMemRefs(std::pair<mmo_iterator, unsigned> NewMemRefs) {
-    MemRefs = NewMemRefs.first;
-    NumMemRefs = uint8_t(NewMemRefs.second);
-    assert(NumMemRefs == NewMemRefs.second &&
-           "Too many memrefs - must drop memory operands");
-  }
+  /// Clone the merge of multiple MachineInstrs' memory reference descriptors
+  /// list and replace ours with it.
+  ///
+  /// Note that `*this` may be one of the incoming MIs!
+  ///
+  /// Prefer this API whenever possible as it can avoid allocations in common
+  /// cases.
+  void cloneMergedMemRefs(MachineFunction &MF,
+                          ArrayRef<const MachineInstr *> MIs);
 
-  /// Return a set of memrefs (begin iterator, size) which conservatively
-  /// describe the memory behavior of both MachineInstrs.  This is appropriate
-  /// for use when merging two MachineInstrs into one. This routine does not
-  /// modify the memrefs of the this MachineInstr.
-  std::pair<mmo_iterator, unsigned> mergeMemRefsWith(const MachineInstr& Other);
+  /// Set a symbol that will be emitted just prior to the instruction itself.
+  ///
+  /// Setting this to a null pointer will remove any such symbol.
+  ///
+  /// FIXME: This is not fully implemented yet.
+  void setPreInstrSymbol(MachineFunction &MF, MCSymbol *Symbol);
+
+  /// Set a symbol that will be emitted just after the instruction itself.
+  ///
+  /// Setting this to a null pointer will remove any such symbol.
+  ///
+  /// FIXME: This is not fully implemented yet.
+  void setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol);
 
   /// Return the MIFlags which represent both MachineInstrs. This
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
   uint16_t mergeFlagsWith(const MachineInstr& Other) const;
 
-  /// Clear this MachineInstr's memory reference descriptor list.  This resets
-  /// the memrefs to their most conservative state.  This should be used only
-  /// as a last resort since it greatly pessimizes our knowledge of the memory
-  /// access performed by the instruction.
-  void dropMemRefs() {
-    MemRefs = nullptr;
-    NumMemRefs = 0;
-  }
+  /// Copy all flags to MachineInst MIFlags
+  void copyIRFlags(const Instruction &I);
 
   /// Break any tie involving OpIdx.
   void untieRegOperand(unsigned OpIdx) {
@@ -1379,6 +1543,10 @@ public:
 
   /// Scan instructions following MI and collect any matching DBG_VALUEs.
   void collectDebugValues(SmallVectorImpl<MachineInstr *> &DbgValues);
+
+  /// Find all DBG_VALUEs immediately following this instruction that point
+  /// to a register def in this instruction and point them to \p Reg instead.
+  void changeDebugValuesDefReg(unsigned Reg);
 
 private:
   /// If this instruction is embedded into a MachineFunction, return the
@@ -1397,7 +1565,7 @@ private:
   void AddRegOperandsToUseLists(MachineRegisterInfo&);
 
   /// Slow path for hasProperty when we're dealing with a bundle.
-  bool hasPropertyInBundle(unsigned Mask, QueryType Type) const;
+  bool hasPropertyInBundle(uint64_t Mask, QueryType Type) const;
 
   /// Implements the logic of getRegClassConstraintEffectForVReg for the
   /// this MI and the given operand index \p OpIdx.

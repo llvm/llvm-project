@@ -118,13 +118,13 @@ body:             |
   bb.2.sw.bb:
     successors: %bb.3(0x00000800), %bb.6(0x7ffff800)
   
-    $al = ACQUIRE_MOV8rm $rip, 1, $noreg, @static_local_guard, $noreg :: (volatile load acquire 1 from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
+    $al = MOV8rm $rip, 1, $noreg, @static_local_guard, $noreg :: (volatile load acquire 1 from `i8* bitcast (i64* @static_local_guard to i8*)`, align 8)
     TEST8rr killed $al, $al, implicit-def $eflags
     JNE_1 %bb.6, implicit killed $eflags
     JMP_1 %bb.3
   
   bb.3.init.check.i:
-    dead $edi = MOV32ri64 @static_local_guard, implicit-def $rdi
+    dead $edi = MOV32ri @static_local_guard, implicit-def $rdi
     TCRETURNdi64 @initialize_static_local, 0, csr_64, implicit $rsp, implicit $rdi
   
   bb.4.sw.bb2:

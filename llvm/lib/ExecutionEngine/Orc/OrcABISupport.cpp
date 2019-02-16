@@ -537,5 +537,451 @@ Error OrcI386::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
   return Error::success();
 }
 
+void OrcMips32_Base::writeResolverCode(uint8_t *ResolverMem,
+                                       JITReentryFn ReentryFn,
+                                       void *CallbackMgr, bool isBigEndian) {
+
+  const uint32_t ResolverCode[] = {
+      // resolver_entry:
+      0x27bdff98,                    // 0x00: addiu $sp,$sp,-104
+      0xafa20000,                    // 0x04: sw $v0,0($sp)
+      0xafa30004,                    // 0x08: sw $v1,4($sp)
+      0xafa40008,                    // 0x0c: sw $a0,8($sp)
+      0xafa5000c,                    // 0x10: sw $a1,12($sp)
+      0xafa60010,                    // 0x14: sw $a2,16($sp)
+      0xafa70014,                    // 0x18: sw $a3,20($sp)
+      0xafb00018,                    // 0x1c: sw $s0,24($sp)
+      0xafb1001c,                    // 0x20: sw $s1,28($sp)
+      0xafb20020,                    // 0x24: sw $s2,32($sp)
+      0xafb30024,                    // 0x28: sw $s3,36($sp)
+      0xafb40028,                    // 0x2c: sw $s4,40($sp)
+      0xafb5002c,                    // 0x30: sw $s5,44($sp)
+      0xafb60030,                    // 0x34: sw $s6,48($sp)
+      0xafb70034,                    // 0x38: sw $s7,52($sp)
+      0xafa80038,                    // 0x3c: sw $t0,56($sp)
+      0xafa9003c,                    // 0x40: sw $t1,60($sp)
+      0xafaa0040,                    // 0x44: sw $t2,64($sp)
+      0xafab0044,                    // 0x48: sw $t3,68($sp)
+      0xafac0048,                    // 0x4c: sw $t4,72($sp)
+      0xafad004c,                    // 0x50: sw $t5,76($sp)
+      0xafae0050,                    // 0x54: sw $t6,80($sp)
+      0xafaf0054,                    // 0x58: sw $t7,84($sp)
+      0xafb80058,                    // 0x5c: sw $t8,88($sp)
+      0xafb9005c,                    // 0x60: sw $t9,92($sp)
+      0xafbe0060,                    // 0x64: sw $fp,96($sp)
+      0xafbf0064,                    // 0x68: sw $ra,100($sp)
+
+      // Callback manager addr.
+      0x00000000,                    // 0x6c: lui $a0,callbackmgr
+      0x00000000,                    // 0x70: addiu $a0,$a0,callbackmgr
+
+      0x03e02825,                    // 0x74: move $a1, $ra
+      0x24a5ffec,                    // 0x78: addiu $a1,$a1,-20
+
+      // JIT re-entry fn addr:
+      0x00000000,                    // 0x7c: lui $t9,reentry
+      0x00000000,                    // 0x80: addiu $t9,$t9,reentry
+
+      0x0320f809,                    // 0x84: jalr $t9
+      0x00000000,                    // 0x88: nop
+      0x8fbf0064,                    // 0x8c: lw $ra,100($sp)
+      0x8fbe0060,                    // 0x90: lw $fp,96($sp)
+      0x8fb9005c,                    // 0x94: lw $t9,92($sp)
+      0x8fb80058,                    // 0x98: lw $t8,88($sp)
+      0x8faf0054,                    // 0x9c: lw $t7,84($sp)
+      0x8fae0050,                    // 0xa0: lw $t6,80($sp)
+      0x8fad004c,                    // 0xa4: lw $t5,76($sp)
+      0x8fac0048,                    // 0xa8: lw $t4,72($sp)
+      0x8fab0044,                    // 0xac: lw $t3,68($sp)
+      0x8faa0040,                    // 0xb0: lw $t2,64($sp)
+      0x8fa9003c,                    // 0xb4: lw $t1,60($sp)
+      0x8fa80038,                    // 0xb8: lw $t0,56($sp)
+      0x8fb70034,                    // 0xbc: lw $s7,52($sp)
+      0x8fb60030,                    // 0xc0: lw $s6,48($sp)
+      0x8fb5002c,                    // 0xc4: lw $s5,44($sp)
+      0x8fb40028,                    // 0xc8: lw $s4,40($sp)
+      0x8fb30024,                    // 0xcc: lw $s3,36($sp)
+      0x8fb20020,                    // 0xd0: lw $s2,32($sp)
+      0x8fb1001c,                    // 0xd4: lw $s1,28($sp)
+      0x8fb00018,                    // 0xd8: lw $s0,24($sp)
+      0x8fa70014,                    // 0xdc: lw $a3,20($sp)
+      0x8fa60010,                    // 0xe0: lw $a2,16($sp)
+      0x8fa5000c,                    // 0xe4: lw $a1,12($sp)
+      0x8fa40008,                    // 0xe8: lw $a0,8($sp)
+      0x27bd0068,                    // 0xec: addiu $sp,$sp,104
+      0x0300f825,                    // 0xf0: move $ra, $t8
+      0x00000000                     // 0xf4: jr $v0/v1
+  };
+
+  const unsigned ReentryFnAddrOffset = 0x7c;   // JIT re-entry fn addr lui
+  const unsigned CallbackMgrAddrOffset = 0x6c; // Callback manager addr lui
+  const unsigned offsett = 0xf4;
+
+  memcpy(ResolverMem, ResolverCode, sizeof(ResolverCode));
+
+  //Depending on endian return value will be in v0 or v1.
+  uint32_t JumpV0 = 0x00400008;
+  uint32_t JumpV1 = 0x00600008;
+
+  if(isBigEndian == true)
+    memcpy(ResolverMem + offsett, &JumpV1, sizeof(JumpV1));
+  else
+    memcpy(ResolverMem + offsett, &JumpV0, sizeof(JumpV0));
+
+  uint64_t CallMgrAddr = reinterpret_cast<uint64_t>(CallbackMgr);
+  uint32_t CallMgrLUi = 0x3c040000 | (((CallMgrAddr + 0x8000) >> 16) & 0xFFFF);
+  uint32_t CallMgrADDiu = 0x24840000 | ((CallMgrAddr) & 0xFFFF);
+  memcpy(ResolverMem + CallbackMgrAddrOffset, &CallMgrLUi, sizeof(CallMgrLUi));
+  memcpy(ResolverMem + CallbackMgrAddrOffset + 4, &CallMgrADDiu,
+         sizeof(CallMgrADDiu));
+
+  uint64_t ReentryAddr = reinterpret_cast<uint64_t>(ReentryFn);
+  uint32_t ReentryLUi = 0x3c190000 | (((ReentryAddr + 0x8000) >> 16) & 0xFFFF);
+  uint32_t ReentryADDiu = 0x27390000 | ((ReentryAddr) & 0xFFFF);
+  memcpy(ResolverMem + ReentryFnAddrOffset, &ReentryLUi, sizeof(ReentryLUi));
+  memcpy(ResolverMem + ReentryFnAddrOffset + 4, &ReentryADDiu,
+         sizeof(ReentryADDiu));
+}
+
+void OrcMips32_Base::writeTrampolines(uint8_t *TrampolineMem,
+                                      void *ResolverAddr,
+                                      unsigned NumTrampolines) {
+
+  uint32_t *Trampolines = reinterpret_cast<uint32_t *>(TrampolineMem);
+  uint64_t ResolveAddr = reinterpret_cast<uint64_t>(ResolverAddr);
+  uint32_t RHiAddr = ((ResolveAddr + 0x8000) >> 16);
+
+  for (unsigned I = 0; I < NumTrampolines; ++I) {
+    Trampolines[5 * I + 0] = 0x03e0c025;                           // move $t8,$ra
+    Trampolines[5 * I + 1] = 0x3c190000 | (RHiAddr & 0xFFFF);      // lui $t9,resolveAddr
+    Trampolines[5 * I + 2] = 0x27390000 | (ResolveAddr & 0xFFFF);  // addiu $t9,$t9,resolveAddr
+    Trampolines[5 * I + 3] = 0x0320f809;                           // jalr $t9
+    Trampolines[5 * I + 4] = 0x00000000;                           // nop
+  }
+}
+
+Error OrcMips32_Base::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
+                                             unsigned MinStubs,
+                                             void *InitialPtrVal) {
+  // Stub format is:
+  //
+  // .section __orc_stubs
+  // stub1:
+  //                 lui $t9, ptr1
+  //                 lw $t9, %lo(ptr1)($t9)
+  //                 jr $t9
+  // stub2:
+  //                 lui $t9, ptr2
+  //                 lw $t9,%lo(ptr1)($t9)
+  //                 jr $t9
+  //
+  // ...
+  //
+  // .section __orc_ptrs
+  // ptr1:
+  //                 .word 0x0
+  // ptr2:
+  //                 .word 0x0
+  //
+  // ...
+
+  const unsigned StubSize = IndirectStubsInfo::StubSize;
+
+  // Emit at least MinStubs, rounded up to fill the pages allocated.
+  unsigned PageSize = sys::Process::getPageSize();
+  unsigned NumPages = ((MinStubs * StubSize) + (PageSize - 1)) / PageSize;
+  unsigned NumStubs = (NumPages * PageSize) / StubSize;
+
+  // Allocate memory for stubs and pointers in one call.
+  std::error_code EC;
+  auto StubsMem = sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
+      2 * NumPages * PageSize, nullptr,
+      sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
+
+  if (EC)
+    return errorCodeToError(EC);
+
+  // Create separate MemoryBlocks representing the stubs and pointers.
+  sys::MemoryBlock StubsBlock(StubsMem.base(), NumPages * PageSize);
+  sys::MemoryBlock PtrsBlock(static_cast<char *>(StubsMem.base()) +
+                                 NumPages * PageSize,
+                             NumPages * PageSize);
+
+  // Populate the stubs page stubs and mark it executable.
+  uint32_t *Stub = reinterpret_cast<uint32_t *>(StubsBlock.base());
+  uint64_t PtrAddr = reinterpret_cast<uint64_t>(Stub) + NumPages * PageSize;
+
+  for (unsigned I = 0; I < NumStubs; ++I) {
+    uint32_t HiAddr = ((PtrAddr + 0x8000) >> 16);
+    Stub[4 * I + 0] = 0x3c190000 | (HiAddr & 0xFFFF);  // lui $t9,ptr1
+    Stub[4 * I + 1] = 0x8f390000 | (PtrAddr & 0xFFFF); // lw $t9,%lo(ptr1)($t9)
+    Stub[4 * I + 2] = 0x03200008;                      // jr $t9
+    Stub[4 * I + 3] = 0x00000000;                      // nop
+    PtrAddr += 4;
+  }
+
+  if (auto EC = sys::Memory::protectMappedMemory(
+          StubsBlock, sys::Memory::MF_READ | sys::Memory::MF_EXEC))
+    return errorCodeToError(EC);
+
+  // Initialize all pointers to point at FailureAddress.
+  void **Ptr = reinterpret_cast<void **>(PtrsBlock.base());
+  for (unsigned I = 0; I < NumStubs; ++I)
+    Ptr[I] = InitialPtrVal;
+
+  StubsInfo = IndirectStubsInfo(NumStubs, std::move(StubsMem));
+
+  return Error::success();
+}
+
+void OrcMips64::writeResolverCode(uint8_t *ResolverMem, JITReentryFn ReentryFn,
+                                  void *CallbackMgr) {
+
+  const uint32_t ResolverCode[] = {
+      //resolver_entry:
+      0x67bdff30,                     // 0x00: daddiu $sp,$sp,-208
+      0xffa20000,                     // 0x04: sd v0,0(sp)
+      0xffa30008,                     // 0x08: sd v1,8(sp)
+      0xffa40010,                     // 0x0c: sd a0,16(sp)
+      0xffa50018,                     // 0x10: sd a1,24(sp)
+      0xffa60020,                     // 0x14: sd a2,32(sp)
+      0xffa70028,                     // 0x18: sd a3,40(sp)
+      0xffa80030,                     // 0x1c: sd a4,48(sp)
+      0xffa90038,                     // 0x20: sd a5,56(sp)
+      0xffaa0040,                     // 0x24: sd a6,64(sp)
+      0xffab0048,                     // 0x28: sd a7,72(sp)
+      0xffac0050,                     // 0x2c: sd t0,80(sp)
+      0xffad0058,                     // 0x30: sd t1,88(sp)
+      0xffae0060,                     // 0x34: sd t2,96(sp)
+      0xffaf0068,                     // 0x38: sd t3,104(sp)
+      0xffb00070,                     // 0x3c: sd s0,112(sp)
+      0xffb10078,                     // 0x40: sd s1,120(sp)
+      0xffb20080,                     // 0x44: sd s2,128(sp)
+      0xffb30088,                     // 0x48: sd s3,136(sp)
+      0xffb40090,                     // 0x4c: sd s4,144(sp)
+      0xffb50098,                     // 0x50: sd s5,152(sp)
+      0xffb600a0,                     // 0x54: sd s6,160(sp)
+      0xffb700a8,                     // 0x58: sd s7,168(sp)
+      0xffb800b0,                     // 0x5c: sd t8,176(sp)
+      0xffb900b8,                     // 0x60: sd t9,184(sp)
+      0xffbe00c0,                     // 0x64: sd fp,192(sp)
+      0xffbf00c8,                     // 0x68: sd ra,200(sp)
+
+      // Callback manager addr.
+      0x00000000,                     // 0x6c: lui $a0,heighest(callbackmgr)
+      0x00000000,                     // 0x70: daddiu $a0,$a0,heigher(callbackmgr)
+      0x00000000,                     // 0x74: dsll $a0,$a0,16
+      0x00000000,                     // 0x78: daddiu $a0,$a0,hi(callbackmgr)
+      0x00000000,                     // 0x7c: dsll $a0,$a0,16
+      0x00000000,                     // 0x80: daddiu $a0,$a0,lo(callbackmgr)
+
+      0x03e02825,                     // 0x84: move $a1, $ra
+      0x64a5ffdc,                     // 0x88: daddiu $a1,$a1,-36
+
+      // JIT re-entry fn addr:
+      0x00000000,                     // 0x8c: lui $t9,reentry
+      0x00000000,                     // 0x90: daddiu $t9,$t9,reentry
+      0x00000000,                     // 0x94: dsll $t9,$t9,
+      0x00000000,                     // 0x98: daddiu $t9,$t9,
+      0x00000000,                     // 0x9c: dsll $t9,$t9,
+      0x00000000,                     // 0xa0: daddiu $t9,$t9,
+      0x0320f809,                     // 0xa4: jalr $t9
+      0x00000000,                     // 0xa8: nop
+      0xdfbf00c8,                     // 0xac: ld ra, 200(sp)
+      0xdfbe00c0,                     // 0xb0: ld fp, 192(sp)
+      0xdfb900b8,                     // 0xb4: ld t9, 184(sp)
+      0xdfb800b0,                     // 0xb8: ld t8, 176(sp)
+      0xdfb700a8,                     // 0xbc: ld s7, 168(sp)
+      0xdfb600a0,                     // 0xc0: ld s6, 160(sp)
+      0xdfb50098,                     // 0xc4: ld s5, 152(sp)
+      0xdfb40090,                     // 0xc8: ld s4, 144(sp)
+      0xdfb30088,                     // 0xcc: ld s3, 136(sp)
+      0xdfb20080,                     // 0xd0: ld s2, 128(sp)
+      0xdfb10078,                     // 0xd4: ld s1, 120(sp)
+      0xdfb00070,                     // 0xd8: ld s0, 112(sp)
+      0xdfaf0068,                     // 0xdc: ld t3, 104(sp)
+      0xdfae0060,                     // 0xe0: ld t2, 96(sp)
+      0xdfad0058,                     // 0xe4: ld t1, 88(sp)
+      0xdfac0050,                     // 0xe8: ld t0, 80(sp)
+      0xdfab0048,                     // 0xec: ld a7, 72(sp)
+      0xdfaa0040,                     // 0xf0: ld a6, 64(sp)
+      0xdfa90038,                     // 0xf4: ld a5, 56(sp)
+      0xdfa80030,                     // 0xf8: ld a4, 48(sp)
+      0xdfa70028,                     // 0xfc: ld a3, 40(sp)
+      0xdfa60020,                     // 0x100: ld a2, 32(sp)
+      0xdfa50018,                     // 0x104: ld a1, 24(sp)
+      0xdfa40010,                     // 0x108: ld a0, 16(sp)
+      0xdfa30008,                     // 0x10c: ld v1, 8(sp)
+      0x67bd00d0,                     // 0x110: daddiu $sp,$sp,208
+      0x0300f825,                     // 0x114: move $ra, $t8
+      0x00400008                      // 0x118: jr $v0
+  };
+
+  const unsigned ReentryFnAddrOffset = 0x8c;   // JIT re-entry fn addr lui
+  const unsigned CallbackMgrAddrOffset = 0x6c; // Callback manager addr lui
+
+  memcpy(ResolverMem, ResolverCode, sizeof(ResolverCode));
+
+  uint64_t CallMgrAddr = reinterpret_cast<uint64_t>(CallbackMgr);
+
+  uint32_t CallMgrLUi =
+      0x3c040000 | (((CallMgrAddr + 0x800080008000) >> 48) & 0xFFFF);
+  uint32_t CallMgrDADDiu =
+      0x64840000 | (((CallMgrAddr + 0x80008000) >> 32) & 0xFFFF);
+  uint32_t CallMgrDSLL = 0x00042438;
+  uint32_t CallMgrDADDiu2 =
+      0x64840000 | ((((CallMgrAddr + 0x8000) >> 16) & 0xFFFF));
+  uint32_t CallMgrDSLL2 = 0x00042438;
+  uint32_t CallMgrDADDiu3 = 0x64840000 | ((CallMgrAddr)&0xFFFF);
+
+  memcpy(ResolverMem + CallbackMgrAddrOffset, &CallMgrLUi, sizeof(CallMgrLUi));
+  memcpy(ResolverMem + (CallbackMgrAddrOffset + 4), &CallMgrDADDiu,
+         sizeof(CallMgrDADDiu));
+  memcpy(ResolverMem + (CallbackMgrAddrOffset + 8), &CallMgrDSLL,
+         sizeof(CallMgrDSLL));
+  memcpy(ResolverMem + (CallbackMgrAddrOffset + 12), &CallMgrDADDiu2,
+         sizeof(CallMgrDADDiu2));
+  memcpy(ResolverMem + (CallbackMgrAddrOffset + 16), &CallMgrDSLL2,
+         sizeof(CallMgrDSLL2));
+  memcpy(ResolverMem + (CallbackMgrAddrOffset + 20), &CallMgrDADDiu3,
+         sizeof(CallMgrDADDiu3));
+
+  uint64_t ReentryAddr = reinterpret_cast<uint64_t>(ReentryFn);
+
+  uint32_t ReentryLUi =
+      0x3c190000 | (((ReentryAddr + 0x800080008000) >> 48) & 0xFFFF);
+
+  uint32_t ReentryDADDiu =
+      0x67390000 | (((ReentryAddr + 0x80008000) >> 32) & 0xFFFF);
+
+  uint32_t ReentryDSLL = 0x0019cc38;
+
+  uint32_t ReentryDADDiu2 =
+      0x67390000 | (((ReentryAddr + 0x8000) >> 16) & 0xFFFF);
+
+  uint32_t ReentryDSLL2 = 0x0019cc38;
+
+  uint32_t ReentryDADDiu3 = 0x67390000 | ((ReentryAddr)&0xFFFF);
+
+  memcpy(ResolverMem + ReentryFnAddrOffset, &ReentryLUi, sizeof(ReentryLUi));
+  memcpy(ResolverMem + (ReentryFnAddrOffset + 4), &ReentryDADDiu,
+         sizeof(ReentryDADDiu));
+  memcpy(ResolverMem + (ReentryFnAddrOffset + 8), &ReentryDSLL,
+         sizeof(ReentryDSLL));
+  memcpy(ResolverMem + (ReentryFnAddrOffset + 12), &ReentryDADDiu2,
+         sizeof(ReentryDADDiu2));
+  memcpy(ResolverMem + (ReentryFnAddrOffset + 16), &ReentryDSLL2,
+         sizeof(ReentryDSLL2));
+  memcpy(ResolverMem + (ReentryFnAddrOffset + 20), &ReentryDADDiu3,
+         sizeof(ReentryDADDiu3));
+}
+
+void OrcMips64::writeTrampolines(uint8_t *TrampolineMem, void *ResolverAddr,
+                                 unsigned NumTrampolines) {
+
+  uint32_t *Trampolines = reinterpret_cast<uint32_t *>(TrampolineMem);
+  uint64_t ResolveAddr = reinterpret_cast<uint64_t>(ResolverAddr);
+
+  uint64_t HeighestAddr = ((ResolveAddr + 0x800080008000) >> 48);
+  uint64_t HeigherAddr = ((ResolveAddr + 0x80008000) >> 32);
+  uint64_t HiAddr = ((ResolveAddr + 0x8000) >> 16);
+
+  for (unsigned I = 0; I < NumTrampolines; ++I) {
+    Trampolines[10 * I + 0] = 0x03e0c025;                            // move $t8,$ra
+    Trampolines[10 * I + 1] = 0x3c190000 | (HeighestAddr & 0xFFFF);  // lui $t9,resolveAddr
+    Trampolines[10 * I + 2] = 0x67390000 | (HeigherAddr & 0xFFFF);   // daddiu $t9,$t9,%higher(resolveAddr)
+    Trampolines[10 * I + 3] = 0x0019cc38;                            // dsll $t9,$t9,16
+    Trampolines[10 * I + 4] = 0x67390000 | (HiAddr & 0xFFFF);        // daddiu $t9,$t9,%hi(ptr)
+    Trampolines[10 * I + 5] = 0x0019cc38;                            // dsll $t9,$t9,16
+    Trampolines[10 * I + 6] = 0x67390000 | (ResolveAddr & 0xFFFF);   // daddiu $t9,$t9,%lo(ptr)
+    Trampolines[10 * I + 7] = 0x0320f809;                            // jalr $t9
+    Trampolines[10 * I + 8] = 0x00000000;                            // nop
+    Trampolines[10 * I + 9] = 0x00000000;                            // nop
+  }
+}
+
+Error OrcMips64::emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,
+                                        unsigned MinStubs,
+                                        void *InitialPtrVal) {
+  // Stub format is:
+  //
+  // .section __orc_stubs
+  // stub1:
+  //                 lui $t9,ptr1
+  //                 dsll $t9,$t9,16
+  //                 daddiu $t9,$t9,%hi(ptr)
+  //                 dsll $t9,$t9,16
+  //                 ld $t9,%lo(ptr)
+  //                 jr $t9
+  // stub2:
+  //                 lui $t9,ptr1
+  //                 dsll $t9,$t9,16
+  //                 daddiu $t9,$t9,%hi(ptr)
+  //                 dsll $t9,$t9,16
+  //                 ld $t9,%lo(ptr)
+  //                 jr $t9
+  //
+  // ...
+  //
+  // .section __orc_ptrs
+  // ptr1:
+  //                 .dword 0x0
+  // ptr2:
+  //                 .dword 0x0
+  //
+  // ...
+  const unsigned StubSize = IndirectStubsInfo::StubSize;
+
+  // Emit at least MinStubs, rounded up to fill the pages allocated.
+  unsigned PageSize = sys::Process::getPageSize();
+  unsigned NumPages = ((MinStubs * StubSize) + (PageSize - 1)) / PageSize;
+  unsigned NumStubs = (NumPages * PageSize) / StubSize;
+
+  // Allocate memory for stubs and pointers in one call.
+  std::error_code EC;
+  auto StubsMem = sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
+      2 * NumPages * PageSize, nullptr,
+      sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
+
+  if (EC)
+    return errorCodeToError(EC);
+
+  // Create separate MemoryBlocks representing the stubs and pointers.
+  sys::MemoryBlock StubsBlock(StubsMem.base(), NumPages * PageSize);
+  sys::MemoryBlock PtrsBlock(static_cast<char *>(StubsMem.base()) +
+                                 NumPages * PageSize,
+                             NumPages * PageSize);
+
+  // Populate the stubs page stubs and mark it executable.
+  uint32_t *Stub = reinterpret_cast<uint32_t *>(StubsBlock.base());
+  uint64_t PtrAddr = reinterpret_cast<uint64_t>(PtrsBlock.base());
+
+  for (unsigned I = 0; I < NumStubs; ++I, PtrAddr += 8) {
+    uint64_t HeighestAddr = ((PtrAddr + 0x800080008000) >> 48);
+    uint64_t HeigherAddr = ((PtrAddr + 0x80008000) >> 32);
+    uint64_t HiAddr = ((PtrAddr + 0x8000) >> 16);
+    Stub[8 * I + 0] = 0x3c190000 | (HeighestAddr & 0xFFFF);  // lui $t9,ptr1
+    Stub[8 * I + 1] = 0x67390000 | (HeigherAddr & 0xFFFF);   // daddiu $t9,$t9,%higher(ptr)
+    Stub[8 * I + 2] = 0x0019cc38;                            // dsll $t9,$t9,16
+    Stub[8 * I + 3] = 0x67390000 | (HiAddr & 0xFFFF);        // daddiu $t9,$t9,%hi(ptr)
+    Stub[8 * I + 4] = 0x0019cc38;                            // dsll $t9,$t9,16
+    Stub[8 * I + 5] = 0xdf390000 | (PtrAddr & 0xFFFF);       // ld $t9,%lo(ptr)
+    Stub[8 * I + 6] = 0x03200008;                            // jr $t9
+    Stub[8 * I + 7] = 0x00000000;                            // nop
+  }
+
+  if (auto EC = sys::Memory::protectMappedMemory(
+          StubsBlock, sys::Memory::MF_READ | sys::Memory::MF_EXEC))
+    return errorCodeToError(EC);
+
+  // Initialize all pointers to point at FailureAddress.
+  void **Ptr = reinterpret_cast<void **>(PtrsBlock.base());
+  for (unsigned I = 0; I < NumStubs; ++I)
+    Ptr[I] = InitialPtrVal;
+
+  StubsInfo = IndirectStubsInfo(NumStubs, std::move(StubsMem));
+
+  return Error::success();
+}
 } // End namespace orc.
 } // End namespace llvm.

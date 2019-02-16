@@ -298,7 +298,7 @@ static unsigned HashEndOfMBB(const MachineBasicBlock &MBB) {
 
 ///  Whether MI should be counted as an instruction when calculating common tail.
 static bool countsAsInstruction(const MachineInstr &MI) {
-  return !(MI.isDebugValue() || MI.isCFIInstruction());
+  return !(MI.isDebugInstr() || MI.isCFIInstruction());
 }
 
 /// ComputeCommonTailLength - Given two machine basic blocks, compute the number
@@ -865,7 +865,7 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
 
     // Merge MMOs from memory operations in the common block.
     if (MBBICommon->mayLoad() || MBBICommon->mayStore())
-      MBBICommon->setMemRefs(MBBICommon->mergeMemRefsWith(*MBBI));
+      MBBICommon->cloneMergedMemRefs(*MBB->getParent(), {&*MBBICommon, &*MBBI});
     // Drop undef flags if they aren't present in all merged instructions.
     for (unsigned I = 0, E = MBBICommon->getNumOperands(); I != E; ++I) {
       MachineOperand &MO = MBBICommon->getOperand(I);
@@ -1363,9 +1363,9 @@ static void copyDebugInfoToPredecessor(const TargetInstrInfo *TII,
                                        MachineBasicBlock &PredMBB) {
   auto InsertBefore = PredMBB.getFirstTerminator();
   for (MachineInstr &MI : MBB.instrs())
-    if (MI.isDebugValue()) {
+    if (MI.isDebugInstr()) {
       TII->duplicate(PredMBB, InsertBefore, MI);
-      LLVM_DEBUG(dbgs() << "Copied debug value from empty block to pred: "
+      LLVM_DEBUG(dbgs() << "Copied debug entity from empty block to pred: "
                         << MI);
     }
 }
@@ -1375,9 +1375,9 @@ static void copyDebugInfoToSuccessor(const TargetInstrInfo *TII,
                                      MachineBasicBlock &SuccMBB) {
   auto InsertBefore = SuccMBB.SkipPHIsAndLabels(SuccMBB.begin());
   for (MachineInstr &MI : MBB.instrs())
-    if (MI.isDebugValue()) {
+    if (MI.isDebugInstr()) {
       TII->duplicate(SuccMBB, InsertBefore, MI);
-      LLVM_DEBUG(dbgs() << "Copied debug value from empty block to succ: "
+      LLVM_DEBUG(dbgs() << "Copied debug entity from empty block to succ: "
                         << MI);
     }
 }

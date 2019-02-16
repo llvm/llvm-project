@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+fp64 2> %t0 | \
+# RUN: not llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64 2> %t0 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 # RUN: FileCheck %s -check-prefix=CHECK-ERROR < %t0
 #

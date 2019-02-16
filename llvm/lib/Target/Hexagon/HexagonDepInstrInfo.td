@@ -1,4 +1,4 @@
-//===- HexagonDepInstrInfo.td ---------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -9,12 +9,11 @@
 // Automatically generated file, please consult code owner before editing.
 //===----------------------------------------------------------------------===//
 
-
 def A2_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = abs($Rs32)",
-tc_c2f7d806, TypeS_2op>, Enc_5e2823 {
+tc_cf8126ae, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001100100;
 let hasNewValue = 1;
@@ -25,7 +24,7 @@ def A2_absp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = abs($Rss32)",
-tc_c2f7d806, TypeS_2op>, Enc_b9c5fb {
+tc_cf8126ae, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000000100;
 let prefersSlot3 = 1;
@@ -34,7 +33,7 @@ def A2_abssat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = abs($Rs32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_5e2823 {
+tc_cf8126ae, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10001100100;
 let hasNewValue = 1;
@@ -46,7 +45,7 @@ def A2_add : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = add($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_5ab2be, PredNewRel, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011000;
@@ -62,7 +61,7 @@ def A2_addh_h16_hh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.h,$Rs32.h):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -74,7 +73,7 @@ def A2_addh_h16_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.h,$Rs32.l):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -86,7 +85,7 @@ def A2_addh_h16_lh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.h):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -98,7 +97,7 @@ def A2_addh_h16_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.l):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -110,7 +109,7 @@ def A2_addh_h16_sat_hh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.h,$Rs32.h):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -123,7 +122,7 @@ def A2_addh_h16_sat_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.h,$Rs32.l):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -136,7 +135,7 @@ def A2_addh_h16_sat_lh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.h):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -149,7 +148,7 @@ def A2_addh_h16_sat_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.l):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101010;
@@ -162,7 +161,7 @@ def A2_addh_l16_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.h)",
-tc_1b9c9ee5, TypeALU64>, Enc_bd6011 {
+tc_4414d8b1, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101000;
@@ -174,7 +173,7 @@ def A2_addh_l16_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.l)",
-tc_1b9c9ee5, TypeALU64>, Enc_bd6011 {
+tc_4414d8b1, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101000;
@@ -186,7 +185,7 @@ def A2_addh_l16_sat_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.h):sat",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101000;
@@ -199,7 +198,7 @@ def A2_addh_l16_sat_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = add($Rt32.l,$Rs32.l):sat",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101000;
@@ -212,7 +211,7 @@ def A2_addi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = add($Rs32,#$Ii)",
-tc_b9488031, TypeALU32_ADDI>, Enc_cb9321, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_ADDI>, Enc_cb9321, PredNewRel, ImmRegRel {
 let Inst{31-28} = 0b1011;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -231,7 +230,7 @@ def A2_addp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = add($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_946df596, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -242,7 +241,7 @@ def A2_addpsat : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = add($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_a56825 {
+tc_779080bf, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
@@ -254,7 +253,7 @@ def A2_addsat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = add($Rs32,$Rt32):sat",
-tc_5ba5997d, TypeALU32_3op>, Enc_5ab2be {
+tc_61830035, TypeALU32_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110010;
@@ -269,14 +268,14 @@ def A2_addsp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "$Rdd32 = add($Rs32,$Rtt32)",
-tc_897d1a9d, TypeALU64> {
+tc_679309b8, TypeALU64> {
 let isPseudo = 1;
 }
 def A2_addsph : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = add($Rss32,$Rtt32):raw:hi",
-tc_897d1a9d, TypeALU64>, Enc_a56825 {
+tc_679309b8, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
@@ -286,7 +285,7 @@ def A2_addspl : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = add($Rss32,$Rtt32):raw:lo",
-tc_897d1a9d, TypeALU64>, Enc_a56825 {
+tc_679309b8, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
@@ -296,7 +295,7 @@ def A2_and : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = and($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_5ab2be, PredNewRel, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110001000;
@@ -312,7 +311,7 @@ def A2_andir : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = and($Rs32,#$Ii)",
-tc_b9488031, TypeALU32_2op>, Enc_140c83, ImmRegRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_140c83, ImmRegRel {
 let Inst{31-22} = 0b0111011000;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -328,7 +327,7 @@ def A2_andp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = and($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_946df596, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011111;
@@ -338,7 +337,7 @@ def A2_aslh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = aslh($Rs32)",
-tc_68cb12ce, TypeALU32_2op>, Enc_5e2823, PredNewRel {
+tc_57890846, TypeALU32_2op>, Enc_5e2823, PredNewRel {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01110000000;
 let hasNewValue = 1;
@@ -350,7 +349,7 @@ def A2_asrh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = asrh($Rs32)",
-tc_68cb12ce, TypeALU32_2op>, Enc_5e2823, PredNewRel {
+tc_57890846, TypeALU32_2op>, Enc_5e2823, PredNewRel {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01110000001;
 let hasNewValue = 1;
@@ -362,7 +361,7 @@ def A2_combine_hh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = combine($Rt32.h,$Rs32.h)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011100;
@@ -374,7 +373,7 @@ def A2_combine_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = combine($Rt32.h,$Rs32.l)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011101;
@@ -386,7 +385,7 @@ def A2_combine_lh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = combine($Rt32.l,$Rs32.h)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011110;
@@ -398,7 +397,7 @@ def A2_combine_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = combine($Rt32.l,$Rs32.l)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011111;
@@ -410,7 +409,7 @@ def A2_combineii : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins s32_0Imm:$Ii, s8_0Imm:$II),
 "$Rdd32 = combine(#$Ii,#$II)",
-tc_b9488031, TypeALU32_2op>, Enc_18c338 {
+tc_5a2711e5, TypeALU32_2op>, Enc_18c338 {
 let Inst{31-23} = 0b011111000;
 let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
@@ -425,7 +424,7 @@ def A2_combinew : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = combine($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_be32a5, PredNewRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_be32a5, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110101000;
@@ -437,7 +436,7 @@ def A2_max : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = max($Rs32,$Rt32)",
-tc_b44c6e2a, TypeALU64>, Enc_5ab2be {
+tc_779080bf, TypeALU64>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101110;
@@ -449,7 +448,7 @@ def A2_maxp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = max($Rss32,$Rtt32)",
-tc_b44c6e2a, TypeALU64>, Enc_a56825 {
+tc_779080bf, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -459,7 +458,7 @@ def A2_maxu : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = maxu($Rs32,$Rt32)",
-tc_b44c6e2a, TypeALU64>, Enc_5ab2be {
+tc_779080bf, TypeALU64>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101110;
@@ -471,7 +470,7 @@ def A2_maxup : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = maxu($Rss32,$Rtt32)",
-tc_b44c6e2a, TypeALU64>, Enc_a56825 {
+tc_779080bf, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -481,7 +480,7 @@ def A2_min : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = min($Rt32,$Rs32)",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101101;
@@ -493,7 +492,7 @@ def A2_minp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = min($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -503,7 +502,7 @@ def A2_minu : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = minu($Rt32,$Rs32)",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101101;
@@ -515,7 +514,7 @@ def A2_minup : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = minu($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -525,7 +524,7 @@ def A2_neg : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = neg($Rs32)",
-tc_68cb12ce, TypeALU32_2op> {
+tc_57890846, TypeALU32_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -535,7 +534,7 @@ def A2_negp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = neg($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_b9c5fb {
+tc_0ae0825c, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10000000100;
 }
@@ -543,7 +542,7 @@ def A2_negsat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = neg($Rs32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_5e2823 {
+tc_cf8126ae, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10001100100;
 let hasNewValue = 1;
@@ -555,7 +554,7 @@ def A2_nop : HInst<
 (outs),
 (ins),
 "nop",
-tc_6efc556e, TypeALU32_2op>, Enc_e3b0c4 {
+tc_2eabeebe, TypeALU32_2op>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-16} = 0b0111111100000000;
 }
@@ -563,7 +562,7 @@ def A2_not : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = not($Rs32)",
-tc_68cb12ce, TypeALU32_2op> {
+tc_57890846, TypeALU32_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -573,7 +572,7 @@ def A2_notp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = not($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_b9c5fb {
+tc_0ae0825c, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000000100;
 }
@@ -581,7 +580,7 @@ def A2_or : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = or($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_5ab2be, PredNewRel, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110001001;
@@ -597,7 +596,7 @@ def A2_orir : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = or($Rs32,#$Ii)",
-tc_b9488031, TypeALU32_2op>, Enc_140c83, ImmRegRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_140c83, ImmRegRel {
 let Inst{31-22} = 0b0111011010;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -613,7 +612,7 @@ def A2_orp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = or($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_946df596, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011111;
@@ -623,7 +622,7 @@ def A2_paddf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4) $Rd32 = add($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111011000;
@@ -639,7 +638,7 @@ def A2_paddfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4.new) $Rd32 = add($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111011000;
@@ -656,7 +655,7 @@ def A2_paddif : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, s32_0Imm:$Ii),
 "if (!$Pu4) $Rd32 = add($Rs32,#$Ii)",
-tc_d6bf0472, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
+tc_4c5ba658, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b0;
 let Inst{31-23} = 0b011101001;
 let isPredicated = 1;
@@ -676,7 +675,7 @@ def A2_paddifnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, s32_0Imm:$Ii),
 "if (!$Pu4.new) $Rd32 = add($Rs32,#$Ii)",
-tc_2b2f4060, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
+tc_05c070ec, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b1;
 let Inst{31-23} = 0b011101001;
 let isPredicated = 1;
@@ -697,7 +696,7 @@ def A2_paddit : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, s32_0Imm:$Ii),
 "if ($Pu4) $Rd32 = add($Rs32,#$Ii)",
-tc_d6bf0472, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
+tc_4c5ba658, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b0;
 let Inst{31-23} = 0b011101000;
 let isPredicated = 1;
@@ -716,7 +715,7 @@ def A2_padditnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, s32_0Imm:$Ii),
 "if ($Pu4.new) $Rd32 = add($Rs32,#$Ii)",
-tc_2b2f4060, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
+tc_05c070ec, TypeALU32_2op>, Enc_e38e1f, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b1;
 let Inst{31-23} = 0b011101000;
 let isPredicated = 1;
@@ -736,7 +735,7 @@ def A2_paddt : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4) $Rd32 = add($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111011000;
@@ -751,7 +750,7 @@ def A2_paddtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4.new) $Rd32 = add($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel, ImmRegRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111011000;
@@ -767,7 +766,7 @@ def A2_pandf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4) $Rd32 = and($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111001000;
@@ -781,7 +780,7 @@ def A2_pandfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4.new) $Rd32 = and($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111001000;
@@ -796,7 +795,7 @@ def A2_pandt : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4) $Rd32 = and($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111001000;
@@ -809,7 +808,7 @@ def A2_pandtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4.new) $Rd32 = and($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111001000;
@@ -823,7 +822,7 @@ def A2_porf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4) $Rd32 = or($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111001001;
@@ -837,7 +836,7 @@ def A2_porfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4.new) $Rd32 = or($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111001001;
@@ -852,7 +851,7 @@ def A2_port : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4) $Rd32 = or($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111001001;
@@ -865,7 +864,7 @@ def A2_portnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4.new) $Rd32 = or($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111001001;
@@ -879,7 +878,7 @@ def A2_psubf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rt32, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = sub($Rt32,$Rs32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111011001;
@@ -893,7 +892,7 @@ def A2_psubfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rt32, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = sub($Rt32,$Rs32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111011001;
@@ -908,7 +907,7 @@ def A2_psubt : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rt32, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = sub($Rt32,$Rs32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111011001;
@@ -921,7 +920,7 @@ def A2_psubtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rt32, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = sub($Rt32,$Rs32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_9b0bc1, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111011001;
@@ -935,7 +934,7 @@ def A2_pxorf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4) $Rd32 = xor($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111001011;
@@ -949,7 +948,7 @@ def A2_pxorfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4.new) $Rd32 = xor($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111001011;
@@ -964,7 +963,7 @@ def A2_pxort : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4) $Rd32 = xor($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111001011;
@@ -977,7 +976,7 @@ def A2_pxortnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4.new) $Rd32 = xor($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_ea4c54, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111001011;
@@ -991,7 +990,7 @@ def A2_roundsat : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = round($Rss32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_cf8126ae, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000110;
 let hasNewValue = 1;
@@ -1003,7 +1002,7 @@ def A2_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = sat($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_90cd8b {
+tc_0ae0825c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001000110;
 let hasNewValue = 1;
@@ -1014,7 +1013,7 @@ def A2_satb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = satb($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10001100110;
 let hasNewValue = 1;
@@ -1025,7 +1024,7 @@ def A2_sath : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = sath($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001100110;
 let hasNewValue = 1;
@@ -1036,7 +1035,7 @@ def A2_satub : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = satub($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10001100110;
 let hasNewValue = 1;
@@ -1047,7 +1046,7 @@ def A2_satuh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = satuh($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10001100110;
 let hasNewValue = 1;
@@ -1058,7 +1057,7 @@ def A2_sub : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32,$Rs32)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011, PredNewRel, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011001;
@@ -1073,7 +1072,7 @@ def A2_subh_h16_hh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.h,$Rs32.h):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1085,7 +1084,7 @@ def A2_subh_h16_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.h,$Rs32.l):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1097,7 +1096,7 @@ def A2_subh_h16_lh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.h):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1109,7 +1108,7 @@ def A2_subh_h16_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.l):<<16",
-tc_897d1a9d, TypeALU64>, Enc_bd6011 {
+tc_679309b8, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1121,7 +1120,7 @@ def A2_subh_h16_sat_hh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.h,$Rs32.h):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1134,7 +1133,7 @@ def A2_subh_h16_sat_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.h,$Rs32.l):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1147,7 +1146,7 @@ def A2_subh_h16_sat_lh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.h):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1160,7 +1159,7 @@ def A2_subh_h16_sat_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.l):sat:<<16",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101011;
@@ -1173,7 +1172,7 @@ def A2_subh_l16_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.h)",
-tc_1b9c9ee5, TypeALU64>, Enc_bd6011 {
+tc_4414d8b1, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101001;
@@ -1185,7 +1184,7 @@ def A2_subh_l16_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.l)",
-tc_1b9c9ee5, TypeALU64>, Enc_bd6011 {
+tc_4414d8b1, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101001;
@@ -1197,7 +1196,7 @@ def A2_subh_l16_sat_hl : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.h):sat",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101001;
@@ -1210,7 +1209,7 @@ def A2_subh_l16_sat_ll : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32.l,$Rs32.l):sat",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101001;
@@ -1223,7 +1222,7 @@ def A2_subp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = sub($Rtt32,$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_946df596, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -1232,7 +1231,7 @@ def A2_subri : HInst<
 (outs IntRegs:$Rd32),
 (ins s32_0Imm:$Ii, IntRegs:$Rs32),
 "$Rd32 = sub(#$Ii,$Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_140c83, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_140c83, PredNewRel, ImmRegRel {
 let Inst{31-22} = 0b0111011001;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -1248,7 +1247,7 @@ def A2_subsat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32,$Rs32):sat",
-tc_5ba5997d, TypeALU32_3op>, Enc_bd6011 {
+tc_61830035, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110110;
@@ -1262,7 +1261,7 @@ def A2_svaddh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = vaddh($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be {
+tc_5a2711e5, TypeALU32_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110000;
@@ -1275,7 +1274,7 @@ def A2_svaddhs : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = vaddh($Rs32,$Rt32):sat",
-tc_5ba5997d, TypeALU32_3op>, Enc_5ab2be {
+tc_61830035, TypeALU32_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110001;
@@ -1290,7 +1289,7 @@ def A2_svadduhs : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = vadduh($Rs32,$Rt32):sat",
-tc_5ba5997d, TypeALU32_3op>, Enc_5ab2be {
+tc_61830035, TypeALU32_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110011;
@@ -1305,12 +1304,13 @@ def A2_svavgh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = vavgh($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be {
+tc_1c80410a, TypeALU32_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110111000;
 let hasNewValue = 1;
 let opNewValue = 0;
+let prefersSlot3 = 1;
 let InputType = "reg";
 let isCommutable = 1;
 }
@@ -1318,12 +1318,13 @@ def A2_svavghs : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = vavgh($Rs32,$Rt32):rnd",
-tc_8fe6b782, TypeALU32_3op>, Enc_5ab2be {
+tc_d08ee0f4, TypeALU32_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110111001;
 let hasNewValue = 1;
 let opNewValue = 0;
+let prefersSlot3 = 1;
 let InputType = "reg";
 let isCommutable = 1;
 }
@@ -1331,19 +1332,20 @@ def A2_svnavgh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = vnavgh($Rt32,$Rs32)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_1c80410a, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110111011;
 let hasNewValue = 1;
 let opNewValue = 0;
+let prefersSlot3 = 1;
 let InputType = "reg";
 }
 def A2_svsubh : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = vsubh($Rt32,$Rs32)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110100;
@@ -1355,7 +1357,7 @@ def A2_svsubhs : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = vsubh($Rt32,$Rs32):sat",
-tc_5ba5997d, TypeALU32_3op>, Enc_bd6011 {
+tc_61830035, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110101;
@@ -1369,7 +1371,7 @@ def A2_svsubuhs : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = vsubuh($Rt32,$Rs32):sat",
-tc_5ba5997d, TypeALU32_3op>, Enc_bd6011 {
+tc_61830035, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110110111;
@@ -1383,7 +1385,7 @@ def A2_swiz : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = swiz($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10001100100;
 let hasNewValue = 1;
@@ -1393,7 +1395,7 @@ def A2_sxtb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = sxtb($Rs32)",
-tc_68cb12ce, TypeALU32_2op>, Enc_5e2823, PredNewRel {
+tc_57890846, TypeALU32_2op>, Enc_5e2823, PredNewRel {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01110000101;
 let hasNewValue = 1;
@@ -1405,7 +1407,7 @@ def A2_sxth : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = sxth($Rs32)",
-tc_68cb12ce, TypeALU32_2op>, Enc_5e2823, PredNewRel {
+tc_57890846, TypeALU32_2op>, Enc_5e2823, PredNewRel {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01110000111;
 let hasNewValue = 1;
@@ -1417,7 +1419,7 @@ def A2_sxtw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = sxtw($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_3a3d62 {
+tc_0ae0825c, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10000100010;
 }
@@ -1425,7 +1427,7 @@ def A2_tfr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = $Rs32",
-tc_68cb12ce, TypeALU32_2op>, Enc_5e2823, PredNewRel {
+tc_57890846, TypeALU32_2op>, Enc_5e2823, PredNewRel {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01110000011;
 let hasNewValue = 1;
@@ -1438,7 +1440,7 @@ def A2_tfrcrr : HInst<
 (outs IntRegs:$Rd32),
 (ins CtrRegs:$Cs32),
 "$Rd32 = $Cs32",
-tc_29175780, TypeCR>, Enc_0cb018 {
+tc_b9272d6c, TypeCR>, Enc_0cb018 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01101010000;
 let hasNewValue = 1;
@@ -1448,7 +1450,7 @@ def A2_tfrf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = $Rs32",
-tc_d6bf0472, TypeALU32_2op>, PredNewRel, ImmRegRel {
+tc_4c5ba658, TypeALU32_2op>, PredNewRel, ImmRegRel {
 let isPredicated = 1;
 let isPredicatedFalse = 1;
 let hasNewValue = 1;
@@ -1463,7 +1465,7 @@ def A2_tfrfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = $Rs32",
-tc_2b2f4060, TypeALU32_2op>, PredNewRel, ImmRegRel {
+tc_05c070ec, TypeALU32_2op>, PredNewRel, ImmRegRel {
 let isPredicated = 1;
 let isPredicatedFalse = 1;
 let hasNewValue = 1;
@@ -1479,7 +1481,7 @@ def A2_tfrih : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, u16_0Imm:$Ii),
 "$Rx32.h = #$Ii",
-tc_b9488031, TypeALU32_2op>, Enc_51436c {
+tc_5a2711e5, TypeALU32_2op>, Enc_51436c {
 let Inst{21-21} = 0b1;
 let Inst{31-24} = 0b01110010;
 let hasNewValue = 1;
@@ -1490,7 +1492,7 @@ def A2_tfril : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, u16_0Imm:$Ii),
 "$Rx32.l = #$Ii",
-tc_b9488031, TypeALU32_2op>, Enc_51436c {
+tc_5a2711e5, TypeALU32_2op>, Enc_51436c {
 let Inst{21-21} = 0b1;
 let Inst{31-24} = 0b01110001;
 let hasNewValue = 1;
@@ -1501,7 +1503,7 @@ def A2_tfrp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = $Rss32",
-tc_b9488031, TypeALU32_2op>, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, PredNewRel {
 let BaseOpcode = "A2_tfrp";
 let isPredicable = 1;
 let isPseudo = 1;
@@ -1510,7 +1512,7 @@ def A2_tfrpf : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, DoubleRegs:$Rss32),
 "if (!$Pu4) $Rdd32 = $Rss32",
-tc_b9488031, TypeALU32_2op>, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, PredNewRel {
 let isPredicated = 1;
 let isPredicatedFalse = 1;
 let BaseOpcode = "A2_tfrp";
@@ -1520,7 +1522,7 @@ def A2_tfrpfnew : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, DoubleRegs:$Rss32),
 "if (!$Pu4.new) $Rdd32 = $Rss32",
-tc_5f6847a1, TypeALU32_2op>, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, PredNewRel {
 let isPredicated = 1;
 let isPredicatedFalse = 1;
 let isPredicatedNew = 1;
@@ -1531,7 +1533,7 @@ def A2_tfrpi : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins s8_0Imm:$Ii),
 "$Rdd32 = #$Ii",
-tc_b9488031, TypeALU64> {
+tc_5a2711e5, TypeALU64> {
 let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
 let isMoveImm = 1;
@@ -1541,7 +1543,7 @@ def A2_tfrpt : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, DoubleRegs:$Rss32),
 "if ($Pu4) $Rdd32 = $Rss32",
-tc_b9488031, TypeALU32_2op>, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, PredNewRel {
 let isPredicated = 1;
 let BaseOpcode = "A2_tfrp";
 let isPseudo = 1;
@@ -1550,7 +1552,7 @@ def A2_tfrptnew : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, DoubleRegs:$Rss32),
 "if ($Pu4.new) $Rdd32 = $Rss32",
-tc_5f6847a1, TypeALU32_2op>, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, PredNewRel {
 let isPredicated = 1;
 let isPredicatedNew = 1;
 let BaseOpcode = "A2_tfrp";
@@ -1560,7 +1562,7 @@ def A2_tfrrcr : HInst<
 (outs CtrRegs:$Cd32),
 (ins IntRegs:$Rs32),
 "$Cd32 = $Rs32",
-tc_a21dc435, TypeCR>, Enc_bd811a {
+tc_434c8e1e, TypeCR>, Enc_bd811a {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01100010001;
 let hasNewValue = 1;
@@ -1570,7 +1572,7 @@ def A2_tfrsi : HInst<
 (outs IntRegs:$Rd32),
 (ins s32_0Imm:$Ii),
 "$Rd32 = #$Ii",
-tc_68cb12ce, TypeALU32_2op>, Enc_5e87ce, PredNewRel, ImmRegRel {
+tc_57890846, TypeALU32_2op>, Enc_5e87ce, PredNewRel, ImmRegRel {
 let Inst{21-21} = 0b0;
 let Inst{31-24} = 0b01111000;
 let hasNewValue = 1;
@@ -1592,7 +1594,7 @@ def A2_tfrt : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = $Rs32",
-tc_d6bf0472, TypeALU32_2op>, PredNewRel, ImmRegRel {
+tc_4c5ba658, TypeALU32_2op>, PredNewRel, ImmRegRel {
 let isPredicated = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -1606,7 +1608,7 @@ def A2_tfrtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = $Rs32",
-tc_2b2f4060, TypeALU32_2op>, PredNewRel, ImmRegRel {
+tc_05c070ec, TypeALU32_2op>, PredNewRel, ImmRegRel {
 let isPredicated = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -1621,7 +1623,7 @@ def A2_vabsh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vabsh($Rss32)",
-tc_c2f7d806, TypeS_2op>, Enc_b9c5fb {
+tc_cf8126ae, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000000010;
 let prefersSlot3 = 1;
@@ -1630,7 +1632,7 @@ def A2_vabshsat : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vabsh($Rss32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_b9c5fb {
+tc_cf8126ae, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10000000010;
 let prefersSlot3 = 1;
@@ -1640,7 +1642,7 @@ def A2_vabsw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vabsw($Rss32)",
-tc_c2f7d806, TypeS_2op>, Enc_b9c5fb {
+tc_cf8126ae, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000000010;
 let prefersSlot3 = 1;
@@ -1649,7 +1651,7 @@ def A2_vabswsat : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vabsw($Rss32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_b9c5fb {
+tc_cf8126ae, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10000000010;
 let prefersSlot3 = 1;
@@ -1659,7 +1661,7 @@ def A2_vaddb_map : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vaddb($Rss32,$Rtt32)",
-tc_540fdfbc, TypeMAPPING> {
+tc_946df596, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -1667,7 +1669,7 @@ def A2_vaddh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vaddh($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_946df596, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -1676,7 +1678,7 @@ def A2_vaddhs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vaddh($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_a56825 {
+tc_779080bf, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -1687,7 +1689,7 @@ def A2_vaddub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vaddub($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_946df596, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -1696,7 +1698,7 @@ def A2_vaddubs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vaddub($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_a56825 {
+tc_779080bf, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -1707,7 +1709,7 @@ def A2_vadduhs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vadduh($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_a56825 {
+tc_779080bf, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -1718,7 +1720,7 @@ def A2_vaddw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vaddw($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_946df596, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -1727,7 +1729,7 @@ def A2_vaddws : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vaddw($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_a56825 {
+tc_779080bf, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
@@ -1738,16 +1740,17 @@ def A2_vavgh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgh($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_6132ba3d, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011010;
+let prefersSlot3 = 1;
 }
 def A2_vavghcr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgh($Rss32,$Rtt32):crnd",
-tc_2b6f77c6, TypeALU64>, Enc_a56825 {
+tc_002cb246, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011010;
@@ -1757,79 +1760,87 @@ def A2_vavghr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgh($Rss32,$Rtt32):rnd",
-tc_dbdffe3d, TypeALU64>, Enc_a56825 {
+tc_e4a7f9f0, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011010;
+let prefersSlot3 = 1;
 }
 def A2_vavgub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgub($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_6132ba3d, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011010;
+let prefersSlot3 = 1;
 }
 def A2_vavgubr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgub($Rss32,$Rtt32):rnd",
-tc_dbdffe3d, TypeALU64>, Enc_a56825 {
+tc_e4a7f9f0, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011010;
+let prefersSlot3 = 1;
 }
 def A2_vavguh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavguh($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_6132ba3d, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011010;
+let prefersSlot3 = 1;
 }
 def A2_vavguhr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavguh($Rss32,$Rtt32):rnd",
-tc_dbdffe3d, TypeALU64>, Enc_a56825 {
+tc_e4a7f9f0, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011010;
+let prefersSlot3 = 1;
 }
 def A2_vavguw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavguw($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_6132ba3d, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
+let prefersSlot3 = 1;
 }
 def A2_vavguwr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavguw($Rss32,$Rtt32):rnd",
-tc_dbdffe3d, TypeALU64>, Enc_a56825 {
+tc_e4a7f9f0, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
+let prefersSlot3 = 1;
 }
 def A2_vavgw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgw($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_6132ba3d, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
+let prefersSlot3 = 1;
 }
 def A2_vavgwcr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgw($Rss32,$Rtt32):crnd",
-tc_2b6f77c6, TypeALU64>, Enc_a56825 {
+tc_002cb246, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
@@ -1839,16 +1850,17 @@ def A2_vavgwr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vavgw($Rss32,$Rtt32):rnd",
-tc_dbdffe3d, TypeALU64>, Enc_a56825 {
+tc_e4a7f9f0, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011011;
+let prefersSlot3 = 1;
 }
 def A2_vcmpbeq : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmpb.eq($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b110000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1857,7 +1869,7 @@ def A2_vcmpbgtu : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmpb.gtu($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b111000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1866,7 +1878,7 @@ def A2_vcmpheq : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmph.eq($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1875,7 +1887,7 @@ def A2_vcmphgt : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmph.gt($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1884,7 +1896,7 @@ def A2_vcmphgtu : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmph.gtu($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b101000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1893,7 +1905,7 @@ def A2_vcmpweq : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmpw.eq($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1902,7 +1914,7 @@ def A2_vcmpwgt : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmpw.gt($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1911,7 +1923,7 @@ def A2_vcmpwgtu : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmpw.gtu($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b010000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010000;
@@ -1920,7 +1932,7 @@ def A2_vconj : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vconj($Rss32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_b9c5fb {
+tc_cf8126ae, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10000000100;
 let prefersSlot3 = 1;
@@ -1930,7 +1942,7 @@ def A2_vmaxb : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vmaxb($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -1940,7 +1952,7 @@ def A2_vmaxh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vmaxh($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -1950,7 +1962,7 @@ def A2_vmaxub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vmaxub($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -1960,7 +1972,7 @@ def A2_vmaxuh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vmaxuh($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -1970,7 +1982,7 @@ def A2_vmaxuw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vmaxuw($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -1980,7 +1992,7 @@ def A2_vmaxw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vmaxw($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -1990,7 +2002,7 @@ def A2_vminb : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vminb($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011110;
@@ -2000,7 +2012,7 @@ def A2_vminh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vminh($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -2010,7 +2022,7 @@ def A2_vminub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vminub($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -2020,7 +2032,7 @@ def A2_vminuh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vminuh($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -2030,7 +2042,7 @@ def A2_vminuw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vminuw($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -2040,7 +2052,7 @@ def A2_vminw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vminw($Rtt32,$Rss32)",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011101;
@@ -2050,16 +2062,17 @@ def A2_vnavgh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vnavgh($Rtt32,$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_6132ba3d, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011100;
+let prefersSlot3 = 1;
 }
 def A2_vnavghcr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vnavgh($Rtt32,$Rss32):crnd:sat",
-tc_2b6f77c6, TypeALU64>, Enc_ea23e4 {
+tc_002cb246, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011100;
@@ -2070,7 +2083,7 @@ def A2_vnavghr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vnavgh($Rtt32,$Rss32):rnd:sat",
-tc_2b6f77c6, TypeALU64>, Enc_ea23e4 {
+tc_002cb246, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011100;
@@ -2081,16 +2094,17 @@ def A2_vnavgw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vnavgw($Rtt32,$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_6132ba3d, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011100;
+let prefersSlot3 = 1;
 }
 def A2_vnavgwcr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vnavgw($Rtt32,$Rss32):crnd:sat",
-tc_2b6f77c6, TypeALU64>, Enc_ea23e4 {
+tc_002cb246, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011100;
@@ -2101,7 +2115,7 @@ def A2_vnavgwr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vnavgw($Rtt32,$Rss32):rnd:sat",
-tc_2b6f77c6, TypeALU64>, Enc_ea23e4 {
+tc_002cb246, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011100;
@@ -2112,7 +2126,7 @@ def A2_vraddub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vraddub($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000010;
@@ -2122,7 +2136,7 @@ def A2_vraddub_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vraddub($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010010;
@@ -2133,7 +2147,7 @@ def A2_vrsadub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrsadub($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000010;
@@ -2143,7 +2157,7 @@ def A2_vrsadub_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrsadub($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010010;
@@ -2154,7 +2168,7 @@ def A2_vsubb_map : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vsubb($Rss32,$Rtt32)",
-tc_540fdfbc, TypeMAPPING> {
+tc_946df596, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -2162,7 +2176,7 @@ def A2_vsubh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vsubh($Rtt32,$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_946df596, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -2171,7 +2185,7 @@ def A2_vsubhs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vsubh($Rtt32,$Rss32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -2182,7 +2196,7 @@ def A2_vsubub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vsubub($Rtt32,$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_946df596, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -2191,7 +2205,7 @@ def A2_vsububs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vsubub($Rtt32,$Rss32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -2202,7 +2216,7 @@ def A2_vsubuhs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vsubuh($Rtt32,$Rss32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -2213,7 +2227,7 @@ def A2_vsubw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vsubw($Rtt32,$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_946df596, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -2222,7 +2236,7 @@ def A2_vsubws : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vsubw($Rtt32,$Rss32):sat",
-tc_b44c6e2a, TypeALU64>, Enc_ea23e4 {
+tc_779080bf, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011001;
@@ -2233,7 +2247,7 @@ def A2_xor : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = xor($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be, PredNewRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_5ab2be, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110001011;
@@ -2248,7 +2262,7 @@ def A2_xorp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = xor($Rss32,$Rtt32)",
-tc_540fdfbc, TypeALU64>, Enc_a56825 {
+tc_946df596, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011111;
@@ -2258,7 +2272,7 @@ def A2_zxtb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = zxtb($Rs32)",
-tc_b9488031, TypeALU32_2op>, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, PredNewRel {
 let hasNewValue = 1;
 let opNewValue = 0;
 let BaseOpcode = "A2_zxtb";
@@ -2270,7 +2284,7 @@ def A2_zxth : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = zxth($Rs32)",
-tc_68cb12ce, TypeALU32_2op>, Enc_5e2823, PredNewRel {
+tc_57890846, TypeALU32_2op>, Enc_5e2823, PredNewRel {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01110000110;
 let hasNewValue = 1;
@@ -2282,7 +2296,7 @@ def A4_addp_c : HInst<
 (outs DoubleRegs:$Rdd32, PredRegs:$Px4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32, PredRegs:$Px4in),
 "$Rdd32 = add($Rss32,$Rtt32,$Px4):carry",
-tc_523fcf30, TypeS_3op>, Enc_2b3f60 {
+tc_9c3ecd83, TypeS_3op>, Enc_2b3f60 {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000010110;
@@ -2293,7 +2307,7 @@ def A4_andn : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = and($Rt32,~$Rs32)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110001100;
@@ -2305,7 +2319,7 @@ def A4_andnp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = and($Rtt32,~$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_946df596, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011111;
@@ -2314,7 +2328,7 @@ def A4_bitsplit : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = bitsplit($Rs32,$Rt32)",
-tc_1b9c9ee5, TypeALU64>, Enc_be32a5 {
+tc_4414d8b1, TypeALU64>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010100001;
@@ -2324,7 +2338,7 @@ def A4_bitspliti : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rdd32 = bitsplit($Rs32,#$Ii)",
-tc_1b9c9ee5, TypeS_2op>, Enc_311abd {
+tc_4414d8b1, TypeS_2op>, Enc_311abd {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001000110;
@@ -2334,14 +2348,14 @@ def A4_boundscheck : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "$Pd4 = boundscheck($Rs32,$Rtt32)",
-tc_1e856f58, TypeALU64> {
+tc_85d5d03f, TypeALU64> {
 let isPseudo = 1;
 }
 def A4_boundscheck_hi : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = boundscheck($Rss32,$Rtt32):raw:hi",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b101000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11010010000;
@@ -2350,7 +2364,7 @@ def A4_boundscheck_lo : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = boundscheck($Rss32,$Rtt32):raw:lo",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11010010000;
@@ -2359,7 +2373,7 @@ def A4_cmpbeq : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmpb.eq($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, ImmRegRel {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b110000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111110;
@@ -2372,7 +2386,7 @@ def A4_cmpbeqi : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u8_0Imm:$Ii),
 "$Pd4 = cmpb.eq($Rs32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_08d755, ImmRegRel {
+tc_643b4717, TypeALU64>, Enc_08d755, ImmRegRel {
 let Inst{4-2} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011101000;
@@ -2385,7 +2399,7 @@ def A4_cmpbgt : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmpb.gt($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, ImmRegRel {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b010000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111110;
@@ -2397,7 +2411,7 @@ def A4_cmpbgti : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s8_0Imm:$Ii),
 "$Pd4 = cmpb.gt($Rs32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_08d755, ImmRegRel {
+tc_643b4717, TypeALU64>, Enc_08d755, ImmRegRel {
 let Inst{4-2} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011101001;
@@ -2409,7 +2423,7 @@ def A4_cmpbgtu : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmpb.gtu($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, ImmRegRel {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b111000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111110;
@@ -2421,7 +2435,7 @@ def A4_cmpbgtui : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Pd4 = cmpb.gtu($Rs32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_02553a, ImmRegRel {
+tc_643b4717, TypeALU64>, Enc_02553a, ImmRegRel {
 let Inst{4-2} = 0b000;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b11011101010;
@@ -2438,7 +2452,7 @@ def A4_cmpheq : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmph.eq($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, ImmRegRel {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111110;
@@ -2451,7 +2465,7 @@ def A4_cmpheqi : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Pd4 = cmph.eq($Rs32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_08d755, ImmRegRel {
+tc_643b4717, TypeALU64>, Enc_08d755, ImmRegRel {
 let Inst{4-2} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011101000;
@@ -2469,7 +2483,7 @@ def A4_cmphgt : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmph.gt($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, ImmRegRel {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111110;
@@ -2481,7 +2495,7 @@ def A4_cmphgti : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Pd4 = cmph.gt($Rs32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_08d755, ImmRegRel {
+tc_643b4717, TypeALU64>, Enc_08d755, ImmRegRel {
 let Inst{4-2} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011101001;
@@ -2498,7 +2512,7 @@ def A4_cmphgtu : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmph.gtu($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, ImmRegRel {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b101000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111110;
@@ -2510,7 +2524,7 @@ def A4_cmphgtui : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Pd4 = cmph.gtu($Rs32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_02553a, ImmRegRel {
+tc_643b4717, TypeALU64>, Enc_02553a, ImmRegRel {
 let Inst{4-2} = 0b010;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b11011101010;
@@ -2527,7 +2541,7 @@ def A4_combineii : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins s8_0Imm:$Ii, u32_0Imm:$II),
 "$Rdd32 = combine(#$Ii,#$II)",
-tc_b9488031, TypeALU32_2op>, Enc_f0cca7 {
+tc_5a2711e5, TypeALU32_2op>, Enc_f0cca7 {
 let Inst{31-21} = 0b01111100100;
 let isExtendable = 1;
 let opExtendable = 2;
@@ -2539,7 +2553,7 @@ def A4_combineir : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins s32_0Imm:$Ii, IntRegs:$Rs32),
 "$Rdd32 = combine(#$Ii,$Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_9cdba7 {
+tc_5a2711e5, TypeALU32_2op>, Enc_9cdba7 {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b01110011001;
 let isExtendable = 1;
@@ -2552,7 +2566,7 @@ def A4_combineri : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rdd32 = combine($Rs32,#$Ii)",
-tc_b9488031, TypeALU32_2op>, Enc_9cdba7 {
+tc_5a2711e5, TypeALU32_2op>, Enc_9cdba7 {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b01110011000;
 let isExtendable = 1;
@@ -2565,7 +2579,7 @@ def A4_cround_ri : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = cround($Rs32,#$Ii)",
-tc_2b6f77c6, TypeS_2op>, Enc_a05677 {
+tc_002cb246, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100111;
@@ -2577,7 +2591,7 @@ def A4_cround_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = cround($Rs32,$Rt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_5ab2be {
+tc_002cb246, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110110;
@@ -2589,14 +2603,14 @@ def A4_ext : HInst<
 (outs),
 (ins u26_6Imm:$Ii),
 "immext(#$Ii)",
-tc_452f85af, TypeEXTENDER>, Enc_2b518f {
+tc_862b3e70, TypeEXTENDER>, Enc_2b518f {
 let Inst{31-28} = 0b0000;
 }
 def A4_modwrapu : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = modwrap($Rs32,$Rt32)",
-tc_b44c6e2a, TypeALU64>, Enc_5ab2be {
+tc_779080bf, TypeALU64>, Enc_5ab2be {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011111;
@@ -2608,7 +2622,7 @@ def A4_orn : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = or($Rt32,~$Rs32)",
-tc_b9488031, TypeALU32_3op>, Enc_bd6011 {
+tc_5a2711e5, TypeALU32_3op>, Enc_bd6011 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110001101;
@@ -2620,7 +2634,7 @@ def A4_ornp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = or($Rtt32,~$Rss32)",
-tc_540fdfbc, TypeALU64>, Enc_ea23e4 {
+tc_946df596, TypeALU64>, Enc_ea23e4 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011111;
@@ -2629,7 +2643,7 @@ def A4_paslhf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = aslh($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1010;
 let Inst{31-21} = 0b01110000000;
@@ -2643,7 +2657,7 @@ def A4_paslhfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = aslh($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1011;
 let Inst{31-21} = 0b01110000000;
@@ -2658,7 +2672,7 @@ def A4_paslht : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = aslh($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1000;
 let Inst{31-21} = 0b01110000000;
@@ -2671,7 +2685,7 @@ def A4_paslhtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = aslh($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1001;
 let Inst{31-21} = 0b01110000000;
@@ -2685,7 +2699,7 @@ def A4_pasrhf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = asrh($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1010;
 let Inst{31-21} = 0b01110000001;
@@ -2699,7 +2713,7 @@ def A4_pasrhfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = asrh($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1011;
 let Inst{31-21} = 0b01110000001;
@@ -2714,7 +2728,7 @@ def A4_pasrht : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = asrh($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1000;
 let Inst{31-21} = 0b01110000001;
@@ -2727,7 +2741,7 @@ def A4_pasrhtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = asrh($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1001;
 let Inst{31-21} = 0b01110000001;
@@ -2741,7 +2755,7 @@ def A4_psxtbf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = sxtb($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1010;
 let Inst{31-21} = 0b01110000101;
@@ -2755,7 +2769,7 @@ def A4_psxtbfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = sxtb($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1011;
 let Inst{31-21} = 0b01110000101;
@@ -2770,7 +2784,7 @@ def A4_psxtbt : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = sxtb($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1000;
 let Inst{31-21} = 0b01110000101;
@@ -2783,7 +2797,7 @@ def A4_psxtbtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = sxtb($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1001;
 let Inst{31-21} = 0b01110000101;
@@ -2797,7 +2811,7 @@ def A4_psxthf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = sxth($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1010;
 let Inst{31-21} = 0b01110000111;
@@ -2811,7 +2825,7 @@ def A4_psxthfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = sxth($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1011;
 let Inst{31-21} = 0b01110000111;
@@ -2826,7 +2840,7 @@ def A4_psxtht : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = sxth($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1000;
 let Inst{31-21} = 0b01110000111;
@@ -2839,7 +2853,7 @@ def A4_psxthtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = sxth($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1001;
 let Inst{31-21} = 0b01110000111;
@@ -2853,7 +2867,7 @@ def A4_pzxtbf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = zxtb($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1010;
 let Inst{31-21} = 0b01110000100;
@@ -2867,7 +2881,7 @@ def A4_pzxtbfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = zxtb($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1011;
 let Inst{31-21} = 0b01110000100;
@@ -2882,7 +2896,7 @@ def A4_pzxtbt : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = zxtb($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1000;
 let Inst{31-21} = 0b01110000100;
@@ -2895,7 +2909,7 @@ def A4_pzxtbtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = zxtb($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1001;
 let Inst{31-21} = 0b01110000100;
@@ -2909,7 +2923,7 @@ def A4_pzxthf : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) $Rd32 = zxth($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1010;
 let Inst{31-21} = 0b01110000110;
@@ -2923,7 +2937,7 @@ def A4_pzxthfnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) $Rd32 = zxth($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1011;
 let Inst{31-21} = 0b01110000110;
@@ -2938,7 +2952,7 @@ def A4_pzxtht : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) $Rd32 = zxth($Rs32)",
-tc_b9488031, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1000;
 let Inst{31-21} = 0b01110000110;
@@ -2951,7 +2965,7 @@ def A4_pzxthtnew : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) $Rd32 = zxth($Rs32)",
-tc_5f6847a1, TypeALU32_2op>, Enc_fb6577, PredNewRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_fb6577, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1001;
 let Inst{31-21} = 0b01110000110;
@@ -2965,7 +2979,7 @@ def A4_rcmpeq : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = cmp.eq($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be, ImmRegRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_5ab2be, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011010;
@@ -2979,7 +2993,7 @@ def A4_rcmpeqi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = cmp.eq($Rs32,#$Ii)",
-tc_b9488031, TypeALU32_2op>, Enc_b8c967, ImmRegRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_b8c967, ImmRegRel {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b01110011010;
 let hasNewValue = 1;
@@ -2996,7 +3010,7 @@ def A4_rcmpneq : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = !cmp.eq($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_5ab2be, ImmRegRel {
+tc_5a2711e5, TypeALU32_3op>, Enc_5ab2be, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110011011;
@@ -3010,7 +3024,7 @@ def A4_rcmpneqi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = !cmp.eq($Rs32,#$Ii)",
-tc_b9488031, TypeALU32_2op>, Enc_b8c967, ImmRegRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_b8c967, ImmRegRel {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b01110011011;
 let hasNewValue = 1;
@@ -3027,7 +3041,7 @@ def A4_round_ri : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = round($Rs32,#$Ii)",
-tc_2b6f77c6, TypeS_2op>, Enc_a05677 {
+tc_002cb246, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100111;
@@ -3039,7 +3053,7 @@ def A4_round_ri_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = round($Rs32,#$Ii):sat",
-tc_2b6f77c6, TypeS_2op>, Enc_a05677 {
+tc_002cb246, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100111;
@@ -3052,7 +3066,7 @@ def A4_round_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = round($Rs32,$Rt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_5ab2be {
+tc_002cb246, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110110;
@@ -3064,7 +3078,7 @@ def A4_round_rr_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = round($Rs32,$Rt32):sat",
-tc_2b6f77c6, TypeS_3op>, Enc_5ab2be {
+tc_002cb246, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110110;
@@ -3077,7 +3091,7 @@ def A4_subp_c : HInst<
 (outs DoubleRegs:$Rdd32, PredRegs:$Px4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32, PredRegs:$Px4in),
 "$Rdd32 = sub($Rss32,$Rtt32,$Px4):carry",
-tc_523fcf30, TypeS_3op>, Enc_2b3f60 {
+tc_9c3ecd83, TypeS_3op>, Enc_2b3f60 {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000010111;
@@ -3088,7 +3102,7 @@ def A4_tfrcpp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins CtrRegs64:$Css32),
 "$Rdd32 = $Css32",
-tc_29175780, TypeCR>, Enc_667b39 {
+tc_b9272d6c, TypeCR>, Enc_667b39 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01101000000;
 }
@@ -3096,7 +3110,7 @@ def A4_tfrpcp : HInst<
 (outs CtrRegs64:$Cdd32),
 (ins DoubleRegs:$Rss32),
 "$Cdd32 = $Rss32",
-tc_a21dc435, TypeCR>, Enc_0ed752 {
+tc_434c8e1e, TypeCR>, Enc_0ed752 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01100011001;
 }
@@ -3104,7 +3118,7 @@ def A4_tlbmatch : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Pd4 = tlbmatch($Rss32,$Rt32)",
-tc_04c9decc, TypeALU64>, Enc_03833b {
+tc_4837eefb, TypeALU64>, Enc_03833b {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11010010000;
@@ -3114,7 +3128,7 @@ def A4_vcmpbeq_any : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = any8(vcmpb.eq($Rss32,$Rtt32))",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11010010000;
@@ -3123,7 +3137,7 @@ def A4_vcmpbeqi : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, u8_0Imm:$Ii),
 "$Pd4 = vcmpb.eq($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_0d8adb {
+tc_643b4717, TypeALU64>, Enc_0d8adb {
 let Inst{4-2} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011100000;
@@ -3132,7 +3146,7 @@ def A4_vcmpbgt : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = vcmpb.gt($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b010000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11010010000;
@@ -3141,7 +3155,7 @@ def A4_vcmpbgti : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, s8_0Imm:$Ii),
 "$Pd4 = vcmpb.gt($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_0d8adb {
+tc_643b4717, TypeALU64>, Enc_0d8adb {
 let Inst{4-2} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011100001;
@@ -3150,7 +3164,7 @@ def A4_vcmpbgtui : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, u7_0Imm:$Ii),
 "$Pd4 = vcmpb.gtu($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_3680c2 {
+tc_643b4717, TypeALU64>, Enc_3680c2 {
 let Inst{4-2} = 0b000;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b11011100010;
@@ -3159,7 +3173,7 @@ def A4_vcmpheqi : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, s8_0Imm:$Ii),
 "$Pd4 = vcmph.eq($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_0d8adb {
+tc_643b4717, TypeALU64>, Enc_0d8adb {
 let Inst{4-2} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011100000;
@@ -3168,7 +3182,7 @@ def A4_vcmphgti : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, s8_0Imm:$Ii),
 "$Pd4 = vcmph.gt($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_0d8adb {
+tc_643b4717, TypeALU64>, Enc_0d8adb {
 let Inst{4-2} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011100001;
@@ -3177,7 +3191,7 @@ def A4_vcmphgtui : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, u7_0Imm:$Ii),
 "$Pd4 = vcmph.gtu($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_3680c2 {
+tc_643b4717, TypeALU64>, Enc_3680c2 {
 let Inst{4-2} = 0b010;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b11011100010;
@@ -3186,7 +3200,7 @@ def A4_vcmpweqi : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, s8_0Imm:$Ii),
 "$Pd4 = vcmpw.eq($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_0d8adb {
+tc_643b4717, TypeALU64>, Enc_0d8adb {
 let Inst{4-2} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011100000;
@@ -3195,7 +3209,7 @@ def A4_vcmpwgti : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, s8_0Imm:$Ii),
 "$Pd4 = vcmpw.gt($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_0d8adb {
+tc_643b4717, TypeALU64>, Enc_0d8adb {
 let Inst{4-2} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11011100001;
@@ -3204,7 +3218,7 @@ def A4_vcmpwgtui : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, u7_0Imm:$Ii),
 "$Pd4 = vcmpw.gtu($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_3680c2 {
+tc_643b4717, TypeALU64>, Enc_3680c2 {
 let Inst{4-2} = 0b100;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b11011100010;
@@ -3213,7 +3227,7 @@ def A4_vrmaxh : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrmaxh($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011001;
@@ -3224,7 +3238,7 @@ def A4_vrmaxuh : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrmaxuh($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11001011001;
@@ -3235,7 +3249,7 @@ def A4_vrmaxuw : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrmaxuw($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11001011001;
@@ -3246,7 +3260,7 @@ def A4_vrmaxw : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrmaxw($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011001;
@@ -3257,7 +3271,7 @@ def A4_vrminh : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrminh($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011001;
@@ -3268,7 +3282,7 @@ def A4_vrminuh : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrminuh($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11001011001;
@@ -3279,7 +3293,7 @@ def A4_vrminuw : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrminuw($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11001011001;
@@ -3290,7 +3304,7 @@ def A4_vrminw : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Ru32),
 "$Rxx32 = vrminw($Rss32,$Ru32)",
-tc_c6ce9b3f, TypeS_3op>, Enc_412ff0 {
+tc_5b54b33f, TypeS_3op>, Enc_412ff0 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011001;
@@ -3301,7 +3315,7 @@ def A5_ACS : HInst<
 (outs DoubleRegs:$Rxx32, PredRegs:$Pe4),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32,$Pe4 = vacsh($Rss32,$Rtt32)",
-tc_caaebcba, TypeM>, Enc_831a7d, Requires<[HasV55]> {
+tc_d1aa9eaa, TypeM>, Enc_831a7d, Requires<[HasV55]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010101;
@@ -3314,7 +3328,7 @@ def A5_vaddhubs : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vaddhub($Rss32,$Rtt32):sat",
-tc_2b6f77c6, TypeS_3op>, Enc_d2216a, Requires<[HasV5]> {
+tc_002cb246, TypeS_3op>, Enc_d2216a {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001010;
@@ -3327,7 +3341,7 @@ def A6_vcmpbeq_notany : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = !any8(vcmpb.eq($Rss32,$Rtt32))",
-tc_55050d58, TypeALU64>, Enc_fcf7a7, Requires<[HasV65]> {
+tc_1fc97744, TypeALU64>, Enc_fcf7a7, Requires<[HasV65]> {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11010010000;
@@ -3336,7 +3350,7 @@ def A6_vminub_RdP : HInst<
 (outs DoubleRegs:$Rdd32, PredRegs:$Pe4),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32,$Pe4 = vminub($Rtt32,$Rss32)",
-tc_ef84f62f, TypeM>, Enc_d2c7f1, Requires<[HasV62]> {
+tc_f9058dd7, TypeM>, Enc_d2c7f1, Requires<[HasV62]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010111;
@@ -3347,7 +3361,7 @@ def C2_all8 : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4),
 "$Pd4 = all8($Ps4)",
-tc_f2704b9a, TypeCR>, Enc_65d691 {
+tc_de554571, TypeCR>, Enc_65d691 {
 let Inst{13-2} = 0b000000000000;
 let Inst{31-18} = 0b01101011101000;
 }
@@ -3355,7 +3369,7 @@ def C2_and : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Pt4, PredRegs:$Ps4),
 "$Pd4 = and($Pt4,$Ps4)",
-tc_53bc8a6a, TypeCR>, Enc_454a26 {
+tc_640086b5, TypeCR>, Enc_454a26 {
 let Inst{7-2} = 0b000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011000000;
@@ -3364,7 +3378,7 @@ def C2_andn : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Pt4, PredRegs:$Ps4),
 "$Pd4 = and($Pt4,!$Ps4)",
-tc_53bc8a6a, TypeCR>, Enc_454a26 {
+tc_640086b5, TypeCR>, Enc_454a26 {
 let Inst{7-2} = 0b000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011011000;
@@ -3373,7 +3387,7 @@ def C2_any8 : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4),
 "$Pd4 = any8($Ps4)",
-tc_f2704b9a, TypeCR>, Enc_65d691 {
+tc_de554571, TypeCR>, Enc_65d691 {
 let Inst{13-2} = 0b000000000000;
 let Inst{31-18} = 0b01101011100000;
 }
@@ -3381,7 +3395,7 @@ def C2_bitsclr : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = bitsclr($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111100;
@@ -3390,7 +3404,7 @@ def C2_bitsclri : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u6_0Imm:$Ii),
 "$Pd4 = bitsclr($Rs32,#$Ii)",
-tc_7a830544, TypeS_2op>, Enc_5d6c34 {
+tc_643b4717, TypeS_2op>, Enc_5d6c34 {
 let Inst{7-2} = 0b000000;
 let Inst{31-21} = 0b10000101100;
 }
@@ -3398,7 +3412,7 @@ def C2_bitsset : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = bitsset($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111010;
@@ -3407,7 +3421,7 @@ def C2_ccombinewf : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4) $Rdd32 = combine($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111101000;
@@ -3419,7 +3433,7 @@ def C2_ccombinewnewf : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pu4.new) $Rdd32 = combine($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111101000;
@@ -3432,7 +3446,7 @@ def C2_ccombinewnewt : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4.new) $Rdd32 = combine($Rs32,$Rt32)",
-tc_2b2f4060, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
+tc_05c070ec, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11111101000;
@@ -3444,7 +3458,7 @@ def C2_ccombinewt : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pu4) $Rdd32 = combine($Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
+tc_4c5ba658, TypeALU32_3op>, Enc_cb4b4e, PredNewRel {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11111101000;
@@ -3455,7 +3469,7 @@ def C2_cmoveif : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if (!$Pu4) $Rd32 = #$Ii",
-tc_b9488031, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b0;
 let Inst{20-20} = 0b0;
 let Inst{31-23} = 0b011111101;
@@ -3477,7 +3491,7 @@ def C2_cmoveit : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if ($Pu4) $Rd32 = #$Ii",
-tc_b9488031, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
+tc_5a2711e5, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b0;
 let Inst{20-20} = 0b0;
 let Inst{31-23} = 0b011111100;
@@ -3498,7 +3512,7 @@ def C2_cmovenewif : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if (!$Pu4.new) $Rd32 = #$Ii",
-tc_5f6847a1, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b1;
 let Inst{20-20} = 0b0;
 let Inst{31-23} = 0b011111101;
@@ -3521,7 +3535,7 @@ def C2_cmovenewit : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if ($Pu4.new) $Rd32 = #$Ii",
-tc_5f6847a1, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
+tc_1ae57e39, TypeALU32_2op>, Enc_cda00a, PredNewRel, ImmRegRel {
 let Inst{13-13} = 0b1;
 let Inst{20-20} = 0b0;
 let Inst{31-23} = 0b011111100;
@@ -3543,7 +3557,7 @@ def C2_cmpeq : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmp.eq($Rs32,$Rt32)",
-tc_c6aa82f7, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
+tc_de4df740, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110010000;
@@ -3556,7 +3570,7 @@ def C2_cmpeqi : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Pd4 = cmp.eq($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
+tc_56f114f4, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
 let Inst{4-2} = 0b000;
 let Inst{31-22} = 0b0111010100;
 let CextOpcode = "C2_cmpeq";
@@ -3572,7 +3586,7 @@ def C2_cmpeqp : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = cmp.eq($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010100;
@@ -3583,7 +3597,7 @@ def C2_cmpgei : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s8_0Imm:$Ii),
 "$Pd4 = cmp.ge($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op> {
+tc_56f114f4, TypeALU32_2op> {
 let isCompare = 1;
 let isPseudo = 1;
 }
@@ -3591,7 +3605,7 @@ def C2_cmpgeui : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u8_0Imm:$Ii),
 "$Pd4 = cmp.geu($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op> {
+tc_56f114f4, TypeALU32_2op> {
 let isCompare = 1;
 let isPseudo = 1;
 }
@@ -3599,7 +3613,7 @@ def C2_cmpgt : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmp.gt($Rs32,$Rt32)",
-tc_c6aa82f7, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
+tc_de4df740, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110010010;
@@ -3611,7 +3625,7 @@ def C2_cmpgti : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Pd4 = cmp.gt($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
+tc_56f114f4, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
 let Inst{4-2} = 0b000;
 let Inst{31-22} = 0b0111010101;
 let CextOpcode = "C2_cmpgt";
@@ -3627,7 +3641,7 @@ def C2_cmpgtp : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = cmp.gt($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b010000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010100;
@@ -3637,7 +3651,7 @@ def C2_cmpgtu : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmp.gtu($Rs32,$Rt32)",
-tc_c6aa82f7, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
+tc_de4df740, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110010011;
@@ -3649,7 +3663,7 @@ def C2_cmpgtui : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Pd4 = cmp.gtu($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op>, Enc_c0cdde, ImmRegRel {
+tc_56f114f4, TypeALU32_2op>, Enc_c0cdde, ImmRegRel {
 let Inst{4-2} = 0b000;
 let Inst{31-21} = 0b01110101100;
 let CextOpcode = "C2_cmpgtu";
@@ -3665,7 +3679,7 @@ def C2_cmpgtup : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = cmp.gtu($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7 {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010100;
@@ -3675,7 +3689,7 @@ def C2_cmplt : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmp.lt($Rs32,$Rt32)",
-tc_6ebb4a12, TypeALU32_3op> {
+tc_56f114f4, TypeALU32_3op> {
 let isCompare = 1;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
@@ -3684,7 +3698,7 @@ def C2_cmpltu : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = cmp.ltu($Rs32,$Rt32)",
-tc_6ebb4a12, TypeALU32_3op> {
+tc_56f114f4, TypeALU32_3op> {
 let isCompare = 1;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
@@ -3693,7 +3707,7 @@ def C2_mask : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4),
 "$Rdd32 = mask($Pt4)",
-tc_cde8b071, TypeS_2op>, Enc_78e566 {
+tc_0ae0825c, TypeS_2op>, Enc_78e566 {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b0000;
 let Inst{31-16} = 0b1000011000000000;
@@ -3702,7 +3716,7 @@ def C2_mux : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mux($Pu4,$Rs32,$Rt32)",
-tc_d6bf0472, TypeALU32_3op>, Enc_ea4c54 {
+tc_4c5ba658, TypeALU32_3op>, Enc_ea4c54 {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110100000;
@@ -3714,7 +3728,7 @@ def C2_muxii : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii, s8_0Imm:$II),
 "$Rd32 = mux($Pu4,#$Ii,#$II)",
-tc_d6bf0472, TypeALU32_2op>, Enc_830e5d {
+tc_4c5ba658, TypeALU32_2op>, Enc_830e5d {
 let Inst{31-25} = 0b0111101;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -3728,7 +3742,7 @@ def C2_muxir : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = mux($Pu4,$Rs32,#$Ii)",
-tc_d6bf0472, TypeALU32_2op>, Enc_e38e1f {
+tc_4c5ba658, TypeALU32_2op>, Enc_e38e1f {
 let Inst{13-13} = 0b0;
 let Inst{31-23} = 0b011100110;
 let hasNewValue = 1;
@@ -3744,7 +3758,7 @@ def C2_muxri : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii, IntRegs:$Rs32),
 "$Rd32 = mux($Pu4,#$Ii,$Rs32)",
-tc_d6bf0472, TypeALU32_2op>, Enc_e38e1f {
+tc_4c5ba658, TypeALU32_2op>, Enc_e38e1f {
 let Inst{13-13} = 0b0;
 let Inst{31-23} = 0b011100111;
 let hasNewValue = 1;
@@ -3760,7 +3774,7 @@ def C2_not : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4),
 "$Pd4 = not($Ps4)",
-tc_f2704b9a, TypeCR>, Enc_65d691 {
+tc_de554571, TypeCR>, Enc_65d691 {
 let Inst{13-2} = 0b000000000000;
 let Inst{31-18} = 0b01101011110000;
 }
@@ -3768,7 +3782,7 @@ def C2_or : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Pt4, PredRegs:$Ps4),
 "$Pd4 = or($Pt4,$Ps4)",
-tc_53bc8a6a, TypeCR>, Enc_454a26 {
+tc_640086b5, TypeCR>, Enc_454a26 {
 let Inst{7-2} = 0b000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011001000;
@@ -3777,7 +3791,7 @@ def C2_orn : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Pt4, PredRegs:$Ps4),
 "$Pd4 = or($Pt4,!$Ps4)",
-tc_53bc8a6a, TypeCR>, Enc_454a26 {
+tc_640086b5, TypeCR>, Enc_454a26 {
 let Inst{7-2} = 0b000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011111000;
@@ -3786,7 +3800,7 @@ def C2_pxfer_map : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4),
 "$Pd4 = $Ps4",
-tc_53bc8a6a, TypeMAPPING> {
+tc_640086b5, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -3794,7 +3808,7 @@ def C2_tfrpr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Ps4),
 "$Rd32 = $Ps4",
-tc_cde8b071, TypeS_2op>, Enc_f5e933 {
+tc_0ae0825c, TypeS_2op>, Enc_f5e933 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-18} = 0b10001001010000;
 let hasNewValue = 1;
@@ -3804,7 +3818,7 @@ def C2_tfrrp : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32),
 "$Pd4 = $Rs32",
-tc_351fed2d, TypeS_2op>, Enc_48b75f {
+tc_cfd8378a, TypeS_2op>, Enc_48b75f {
 let Inst{13-2} = 0b000000000000;
 let Inst{31-21} = 0b10000101010;
 }
@@ -3812,7 +3826,7 @@ def C2_vitpack : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Ps4, PredRegs:$Pt4),
 "$Rd32 = vitpack($Ps4,$Pt4)",
-tc_1b9c9ee5, TypeS_2op>, Enc_527412 {
+tc_4414d8b1, TypeS_2op>, Enc_527412 {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b10001001000000;
@@ -3824,7 +3838,7 @@ def C2_vmux : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pu4, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmux($Pu4,$Rss32,$Rtt32)",
-tc_f8eeed7a, TypeALU64>, Enc_329361 {
+tc_b4b5c03a, TypeALU64>, Enc_329361 {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010001000;
@@ -3833,7 +3847,7 @@ def C2_xor : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4),
 "$Pd4 = xor($Ps4,$Pt4)",
-tc_53bc8a6a, TypeCR>, Enc_284ebb {
+tc_640086b5, TypeCR>, Enc_284ebb {
 let Inst{7-2} = 0b000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011010000;
@@ -3842,7 +3856,7 @@ def C4_addipc : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii),
 "$Rd32 = add(pc,#$Ii)",
-tc_b9c4623f, TypeCR>, Enc_607661 {
+tc_a813cf9a, TypeCR>, Enc_607661 {
 let Inst{6-5} = 0b00;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0110101001001001;
@@ -3858,7 +3872,7 @@ def C4_and_and : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = and($Ps4,and($Pt4,$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011000100;
@@ -3867,7 +3881,7 @@ def C4_and_andn : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = and($Ps4,and($Pt4,!$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011100100;
@@ -3876,7 +3890,7 @@ def C4_and_or : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = and($Ps4,or($Pt4,$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011001100;
@@ -3885,7 +3899,7 @@ def C4_and_orn : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = and($Ps4,or($Pt4,!$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011101100;
@@ -3894,7 +3908,7 @@ def C4_cmplte : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = !cmp.gt($Rs32,$Rt32)",
-tc_c6aa82f7, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
+tc_de4df740, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b000100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110010010;
@@ -3906,7 +3920,7 @@ def C4_cmpltei : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Pd4 = !cmp.gt($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
+tc_56f114f4, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
 let Inst{4-2} = 0b100;
 let Inst{31-22} = 0b0111010101;
 let CextOpcode = "C4_cmplte";
@@ -3922,7 +3936,7 @@ def C4_cmplteu : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = !cmp.gtu($Rs32,$Rt32)",
-tc_c6aa82f7, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
+tc_de4df740, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b000100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110010011;
@@ -3934,7 +3948,7 @@ def C4_cmplteui : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Pd4 = !cmp.gtu($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op>, Enc_c0cdde, ImmRegRel {
+tc_56f114f4, TypeALU32_2op>, Enc_c0cdde, ImmRegRel {
 let Inst{4-2} = 0b100;
 let Inst{31-21} = 0b01110101100;
 let CextOpcode = "C4_cmplteu";
@@ -3950,7 +3964,7 @@ def C4_cmpneq : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = !cmp.eq($Rs32,$Rt32)",
-tc_c6aa82f7, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
+tc_de4df740, TypeALU32_3op>, Enc_c2b48e, ImmRegRel {
 let Inst{7-2} = 0b000100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110010000;
@@ -3963,7 +3977,7 @@ def C4_cmpneqi : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Pd4 = !cmp.eq($Rs32,#$Ii)",
-tc_6ebb4a12, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
+tc_56f114f4, TypeALU32_2op>, Enc_bd0b33, ImmRegRel {
 let Inst{4-2} = 0b100;
 let Inst{31-22} = 0b0111010100;
 let CextOpcode = "C4_cmpneq";
@@ -3979,7 +3993,7 @@ def C4_fastcorner9 : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4),
 "$Pd4 = fastcorner9($Ps4,$Pt4)",
-tc_53bc8a6a, TypeCR>, Enc_284ebb {
+tc_640086b5, TypeCR>, Enc_284ebb {
 let Inst{7-2} = 0b100100;
 let Inst{13-10} = 0b1000;
 let Inst{31-18} = 0b01101011000000;
@@ -3988,7 +4002,7 @@ def C4_fastcorner9_not : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4),
 "$Pd4 = !fastcorner9($Ps4,$Pt4)",
-tc_53bc8a6a, TypeCR>, Enc_284ebb {
+tc_640086b5, TypeCR>, Enc_284ebb {
 let Inst{7-2} = 0b100100;
 let Inst{13-10} = 0b1000;
 let Inst{31-18} = 0b01101011000100;
@@ -3997,7 +4011,7 @@ def C4_nbitsclr : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = !bitsclr($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111101;
@@ -4006,7 +4020,7 @@ def C4_nbitsclri : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u6_0Imm:$Ii),
 "$Pd4 = !bitsclr($Rs32,#$Ii)",
-tc_7a830544, TypeS_2op>, Enc_5d6c34 {
+tc_643b4717, TypeS_2op>, Enc_5d6c34 {
 let Inst{7-2} = 0b000000;
 let Inst{31-21} = 0b10000101101;
 }
@@ -4014,7 +4028,7 @@ def C4_nbitsset : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = !bitsset($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111011;
@@ -4023,7 +4037,7 @@ def C4_or_and : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = or($Ps4,and($Pt4,$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011010100;
@@ -4032,7 +4046,7 @@ def C4_or_andn : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = or($Ps4,and($Pt4,!$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011110100;
@@ -4041,7 +4055,7 @@ def C4_or_or : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = or($Ps4,or($Pt4,$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011011100;
@@ -4050,7 +4064,7 @@ def C4_or_orn : HInst<
 (outs PredRegs:$Pd4),
 (ins PredRegs:$Ps4, PredRegs:$Pt4, PredRegs:$Pu4),
 "$Pd4 = or($Ps4,or($Pt4,!$Pu4))",
-tc_481e5e5c, TypeCR>, Enc_9ac432 {
+tc_b31c2e97, TypeCR>, Enc_9ac432 {
 let Inst{5-2} = 0b0000;
 let Inst{13-10} = 0b0000;
 let Inst{31-18} = 0b01101011111100;
@@ -4059,7 +4073,7 @@ def F2_conv_d2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_d2df($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000011;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4069,7 +4083,7 @@ def F2_conv_d2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_d2sf($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000010;
 let hasNewValue = 1;
@@ -4081,7 +4095,7 @@ def F2_conv_df2d : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2d($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4091,7 +4105,7 @@ def F2_conv_df2d_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2d($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4101,7 +4115,7 @@ def F2_conv_df2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2sf($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000000;
 let hasNewValue = 1;
@@ -4113,7 +4127,7 @@ def F2_conv_df2ud : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2ud($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4123,7 +4137,7 @@ def F2_conv_df2ud_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_df2ud($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4133,7 +4147,7 @@ def F2_conv_df2uw : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2uw($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000011;
 let hasNewValue = 1;
@@ -4145,7 +4159,7 @@ def F2_conv_df2uw_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2uw($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000101;
 let hasNewValue = 1;
@@ -4157,7 +4171,7 @@ def F2_conv_df2w : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2w($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000100;
 let hasNewValue = 1;
@@ -4169,7 +4183,7 @@ def F2_conv_df2w_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_df2w($Rss32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000111;
 let hasNewValue = 1;
@@ -4181,7 +4195,7 @@ def F2_conv_sf2d : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2d($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4191,7 +4205,7 @@ def F2_conv_sf2d_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2d($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4201,7 +4215,7 @@ def F2_conv_sf2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2df($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4211,7 +4225,7 @@ def F2_conv_sf2ud : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2ud($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000011;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4221,7 +4235,7 @@ def F2_conv_sf2ud_chop : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_sf2ud($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4231,7 +4245,7 @@ def F2_conv_sf2uw : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2uw($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011011;
 let hasNewValue = 1;
@@ -4243,7 +4257,7 @@ def F2_conv_sf2uw_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2uw($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001011011;
 let hasNewValue = 1;
@@ -4255,7 +4269,7 @@ def F2_conv_sf2w : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2w($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011100;
 let hasNewValue = 1;
@@ -4267,7 +4281,7 @@ def F2_conv_sf2w_chop : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_sf2w($Rs32):chop",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001011100;
 let hasNewValue = 1;
@@ -4279,7 +4293,7 @@ def F2_conv_ud2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = convert_ud2df($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_b9c5fb, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000000111;
 let isFP = 1;
@@ -4289,7 +4303,7 @@ def F2_conv_ud2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = convert_ud2sf($Rss32)",
-tc_f3eaa14b, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10001000001;
 let hasNewValue = 1;
@@ -4301,7 +4315,7 @@ def F2_conv_uw2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_uw2df($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4311,7 +4325,7 @@ def F2_conv_uw2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_uw2sf($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011001;
 let hasNewValue = 1;
@@ -4323,7 +4337,7 @@ def F2_conv_w2df : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = convert_w2df($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_3a3d62, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000100100;
 let isFP = 1;
@@ -4333,7 +4347,7 @@ def F2_conv_w2sf : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = convert_w2sf($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011010;
 let hasNewValue = 1;
@@ -4341,11 +4355,22 @@ let opNewValue = 0;
 let isFP = 1;
 let Uses = [USR];
 }
+def F2_dfadd : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
+"$Rdd32 = dfadd($Rss32,$Rtt32)",
+tc_2f7c551d, TypeM>, Enc_a56825, Requires<[HasV66]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11101000000;
+let isFP = 1;
+let Uses = [USR];
+}
 def F2_dfclass : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, u5_0Imm:$Ii),
 "$Pd4 = dfclass($Rss32,#$Ii)",
-tc_7a830544, TypeALU64>, Enc_1f19b5, Requires<[HasV5]> {
+tc_643b4717, TypeALU64>, Enc_1f19b5 {
 let Inst{4-2} = 0b100;
 let Inst{13-10} = 0b0000;
 let Inst{31-21} = 0b11011100100;
@@ -4356,7 +4381,7 @@ def F2_dfcmpeq : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.eq($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4368,7 +4393,7 @@ def F2_dfcmpge : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.ge($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b010000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4380,7 +4405,7 @@ def F2_dfcmpgt : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.gt($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4392,7 +4417,7 @@ def F2_dfcmpuo : HInst<
 (outs PredRegs:$Pd4),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Pd4 = dfcmp.uo($Rss32,$Rtt32)",
-tc_1e856f58, TypeALU64>, Enc_fcf7a7, Requires<[HasV5]> {
+tc_85d5d03f, TypeALU64>, Enc_fcf7a7 {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010010111;
@@ -4404,7 +4429,7 @@ def F2_dfimm_n : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins u10_0Imm:$Ii),
 "$Rdd32 = dfmake(#$Ii):neg",
-tc_234a11a5, TypeALU64>, Enc_e6c957, Requires<[HasV5]> {
+tc_9e313203, TypeALU64>, Enc_e6c957 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101100101;
 let prefersSlot3 = 1;
@@ -4413,16 +4438,27 @@ def F2_dfimm_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins u10_0Imm:$Ii),
 "$Rdd32 = dfmake(#$Ii):pos",
-tc_234a11a5, TypeALU64>, Enc_e6c957, Requires<[HasV5]> {
+tc_9e313203, TypeALU64>, Enc_e6c957 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101100100;
 let prefersSlot3 = 1;
+}
+def F2_dfsub : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
+"$Rdd32 = dfsub($Rss32,$Rtt32)",
+tc_2f7c551d, TypeM>, Enc_a56825, Requires<[HasV66]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11101000100;
+let isFP = 1;
+let Uses = [USR];
 }
 def F2_sfadd : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfadd($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_3b470976, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011000;
@@ -4436,7 +4472,7 @@ def F2_sfclass : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Pd4 = sfclass($Rs32,#$Ii)",
-tc_7a830544, TypeS_2op>, Enc_83ee64, Requires<[HasV5]> {
+tc_643b4717, TypeS_2op>, Enc_83ee64 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10000101111;
@@ -4447,7 +4483,7 @@ def F2_sfcmpeq : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.eq($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4459,7 +4495,7 @@ def F2_sfcmpge : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.ge($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4471,7 +4507,7 @@ def F2_sfcmpgt : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.gt($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4483,7 +4519,7 @@ def F2_sfcmpuo : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = sfcmp.uo($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e, Requires<[HasV5]> {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111111;
@@ -4495,7 +4531,7 @@ def F2_sffixupd : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sffixupd($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_3b470976, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011110;
@@ -4507,7 +4543,7 @@ def F2_sffixupn : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sffixupn($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_3b470976, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011110;
@@ -4519,7 +4555,7 @@ def F2_sffixupr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = sffixupr($Rs32)",
-tc_f3eaa14b, TypeS_2op>, Enc_5e2823, Requires<[HasV5]> {
+tc_3a867367, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001011101;
 let hasNewValue = 1;
@@ -4530,7 +4566,7 @@ def F2_sffma : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += sfmpy($Rs32,$Rt32)",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_a58fd5cc, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4544,7 +4580,7 @@ def F2_sffma_lib : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += sfmpy($Rs32,$Rt32):lib",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_a58fd5cc, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4558,7 +4594,7 @@ def F2_sffma_sc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32, PredRegs:$Pu4),
 "$Rx32 += sfmpy($Rs32,$Rt32,$Pu4):scale",
-tc_038a1342, TypeM>, Enc_437f33, Requires<[HasV5]> {
+tc_4560740b, TypeM>, Enc_437f33 {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111011;
@@ -4572,7 +4608,7 @@ def F2_sffms : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= sfmpy($Rs32,$Rt32)",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_a58fd5cc, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4586,7 +4622,7 @@ def F2_sffms_lib : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= sfmpy($Rs32,$Rt32):lib",
-tc_d580173f, TypeM>, Enc_2ae154, Requires<[HasV5]> {
+tc_a58fd5cc, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -4600,7 +4636,7 @@ def F2_sfimm_n : HInst<
 (outs IntRegs:$Rd32),
 (ins u10_0Imm:$Ii),
 "$Rd32 = sfmake(#$Ii):neg",
-tc_234a11a5, TypeALU64>, Enc_6c9440, Requires<[HasV5]> {
+tc_9e313203, TypeALU64>, Enc_6c9440 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101011001;
 let hasNewValue = 1;
@@ -4611,7 +4647,7 @@ def F2_sfimm_p : HInst<
 (outs IntRegs:$Rd32),
 (ins u10_0Imm:$Ii),
 "$Rd32 = sfmake(#$Ii):pos",
-tc_234a11a5, TypeALU64>, Enc_6c9440, Requires<[HasV5]> {
+tc_9e313203, TypeALU64>, Enc_6c9440 {
 let Inst{20-16} = 0b00000;
 let Inst{31-22} = 0b1101011000;
 let hasNewValue = 1;
@@ -4622,7 +4658,7 @@ def F2_sfinvsqrta : HInst<
 (outs IntRegs:$Rd32, PredRegs:$Pe4),
 (ins IntRegs:$Rs32),
 "$Rd32,$Pe4 = sfinvsqrta($Rs32)",
-tc_4d99bca9, TypeS_2op>, Enc_890909, Requires<[HasV5]> {
+tc_b8bffe55, TypeS_2op>, Enc_890909 {
 let Inst{13-7} = 0b0000000;
 let Inst{31-21} = 0b10001011111;
 let hasNewValue = 1;
@@ -4634,7 +4670,7 @@ def F2_sfmax : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfmax($Rs32,$Rt32)",
-tc_976ddc4f, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_88b4f13d, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011100;
@@ -4648,7 +4684,7 @@ def F2_sfmin : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfmin($Rs32,$Rt32)",
-tc_976ddc4f, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_88b4f13d, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011100;
@@ -4662,7 +4698,7 @@ def F2_sfmpy : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfmpy($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_3b470976, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011010;
@@ -4676,7 +4712,7 @@ def F2_sfrecipa : HInst<
 (outs IntRegs:$Rd32, PredRegs:$Pe4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32,$Pe4 = sfrecipa($Rs32,$Rt32)",
-tc_9c00ce8d, TypeM>, Enc_a94f3b, Requires<[HasV5]> {
+tc_2ff964b4, TypeM>, Enc_a94f3b {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011111;
@@ -4689,7 +4725,7 @@ def F2_sfsub : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = sfsub($Rs32,$Rt32)",
-tc_6792d5ff, TypeM>, Enc_5ab2be, Requires<[HasV5]> {
+tc_3b470976, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101011000;
@@ -4702,7 +4738,7 @@ def G4_tfrgcpp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins GuestRegs64:$Gss32),
 "$Rdd32 = $Gss32",
-tc_6fa4db47, TypeCR>, Enc_0aa344 {
+tc_0d8f5752, TypeCR>, Enc_0aa344 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01101000001;
 }
@@ -4710,7 +4746,7 @@ def G4_tfrgcrr : HInst<
 (outs IntRegs:$Rd32),
 (ins GuestRegs:$Gs32),
 "$Rd32 = $Gs32",
-tc_6fa4db47, TypeCR>, Enc_44271f {
+tc_0d8f5752, TypeCR>, Enc_44271f {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01101010001;
 let hasNewValue = 1;
@@ -4720,7 +4756,7 @@ def G4_tfrgpcp : HInst<
 (outs GuestRegs64:$Gdd32),
 (ins DoubleRegs:$Rss32),
 "$Gdd32 = $Rss32",
-tc_994333cd, TypeCR>, Enc_ed5027 {
+tc_bcf98408, TypeCR>, Enc_ed5027 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01100011000;
 let hasNewValue = 1;
@@ -4730,7 +4766,7 @@ def G4_tfrgrcr : HInst<
 (outs GuestRegs:$Gd32),
 (ins IntRegs:$Rs32),
 "$Gd32 = $Rs32",
-tc_994333cd, TypeCR>, Enc_621fba {
+tc_bcf98408, TypeCR>, Enc_621fba {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01100010000;
 let hasNewValue = 1;
@@ -4740,7 +4776,7 @@ def J2_call : HInst<
 (outs),
 (ins a30_2Imm:$Ii),
 "call $Ii",
-tc_a27582fa, TypeJ>, Enc_81ac1d, PredRel {
+tc_4ae7b58b, TypeJ>, Enc_81ac1d, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{31-25} = 0b0101101;
 let isCall = 1;
@@ -4762,7 +4798,7 @@ def J2_callf : HInst<
 (outs),
 (ins PredRegs:$Pu4, a30_2Imm:$Ii),
 "if (!$Pu4) call $Ii",
-tc_2f185f5c, TypeJ>, Enc_daea09, PredRel {
+tc_1d81e60e, TypeJ>, Enc_daea09, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b000;
 let Inst{21-21} = 0b1;
@@ -4789,7 +4825,7 @@ def J2_callr : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "callr $Rs32",
-tc_15411484, TypeJ>, Enc_ecbcc8 {
+tc_3bd75825, TypeJ>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01010000101;
 let isCall = 1;
@@ -4803,7 +4839,7 @@ def J2_callrf : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) callr $Rs32",
-tc_10b97e27, TypeJ>, Enc_88d4d9 {
+tc_1ad90acd, TypeJ>, Enc_88d4d9 {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-21} = 0b01010001001;
@@ -4821,7 +4857,7 @@ def J2_callrt : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) callr $Rs32",
-tc_10b97e27, TypeJ>, Enc_88d4d9 {
+tc_1ad90acd, TypeJ>, Enc_88d4d9 {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-21} = 0b01010001000;
@@ -4838,7 +4874,7 @@ def J2_callt : HInst<
 (outs),
 (ins PredRegs:$Pu4, a30_2Imm:$Ii),
 "if ($Pu4) call $Ii",
-tc_2f185f5c, TypeJ>, Enc_daea09, PredRel {
+tc_1d81e60e, TypeJ>, Enc_daea09, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b000;
 let Inst{21-21} = 0b0;
@@ -4864,7 +4900,7 @@ def J2_endloop0 : HInst<
 (outs),
 (ins),
 "endloop0",
-tc_52d7bbea, TypeJ> {
+tc_1b6f7cec, TypeJ> {
 let Uses = [LC0, SA0];
 let Defs = [LC0, P3, PC, USR];
 let isBranch = 1;
@@ -4875,7 +4911,7 @@ def J2_endloop01 : HInst<
 (outs),
 (ins),
 "endloop01",
-tc_52d7bbea, TypeJ> {
+tc_1b6f7cec, TypeJ> {
 let Uses = [LC0, LC1, SA0, SA1];
 let Defs = [LC0, LC1, P3, PC, USR];
 let isPseudo = 1;
@@ -4884,7 +4920,7 @@ def J2_endloop1 : HInst<
 (outs),
 (ins),
 "endloop1",
-tc_52d7bbea, TypeJ> {
+tc_1b6f7cec, TypeJ> {
 let Uses = [LC1, SA1];
 let Defs = [LC1, PC];
 let isBranch = 1;
@@ -4895,7 +4931,7 @@ def J2_jump : HInst<
 (outs),
 (ins b30_2Imm:$Ii),
 "jump $Ii",
-tc_3669266a, TypeJ>, Enc_81ac1d, PredNewRel {
+tc_ae53734a, TypeJ>, Enc_81ac1d, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{31-25} = 0b0101100;
 let isTerminator = 1;
@@ -4917,7 +4953,7 @@ def J2_jumpf : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if (!$Pu4) jump:nt $Ii",
-tc_e9fae2d6, TypeJ>, Enc_daea09, PredNewRel {
+tc_db2bce9c, TypeJ>, Enc_daea09, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b000;
 let Inst{21-21} = 0b1;
@@ -4943,7 +4979,7 @@ def J2_jumpf_nopred_map : HInst<
 (outs),
 (ins PredRegs:$Pu4, b15_2Imm:$Ii),
 "if (!$Pu4) jump $Ii",
-tc_e9fae2d6, TypeMAPPING>, Requires<[HasV60]> {
+tc_db2bce9c, TypeMAPPING>, Requires<[HasV60]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -4951,7 +4987,7 @@ def J2_jumpfnew : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if (!$Pu4.new) jump:nt $Ii",
-tc_a46f0df5, TypeJ>, Enc_daea09, PredNewRel {
+tc_20cdee80, TypeJ>, Enc_daea09, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b010;
 let Inst{21-21} = 0b1;
@@ -4978,7 +5014,7 @@ def J2_jumpfnewpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if (!$Pu4.new) jump:t $Ii",
-tc_a46f0df5, TypeJ>, Enc_daea09, PredNewRel {
+tc_20cdee80, TypeJ>, Enc_daea09, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b110;
 let Inst{21-21} = 0b1;
@@ -5005,7 +5041,7 @@ def J2_jumpfpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if (!$Pu4) jump:t $Ii",
-tc_e1e99bfa, TypeJ>, Enc_daea09, Requires<[HasV60]>, PredNewRel {
+tc_cd374165, TypeJ>, Enc_daea09, Requires<[HasV60]>, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b100;
 let Inst{21-21} = 0b1;
@@ -5031,7 +5067,7 @@ def J2_jumpr : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "jumpr $Rs32",
-tc_9faf76ae, TypeJ>, Enc_ecbcc8, PredNewRel {
+tc_d5b7b0c1, TypeJ>, Enc_ecbcc8, PredNewRel {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01010010100;
 let isTerminator = 1;
@@ -5048,7 +5084,7 @@ def J2_jumprf : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) jumpr:nt $Rs32",
-tc_e0739b8c, TypeJ>, Enc_88d4d9, PredNewRel {
+tc_85c9c08f, TypeJ>, Enc_88d4d9, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-21} = 0b01010011011;
@@ -5067,7 +5103,7 @@ def J2_jumprf_nopred_map : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) jumpr $Rs32",
-tc_e0739b8c, TypeMAPPING>, Requires<[HasV60]> {
+tc_85c9c08f, TypeMAPPING>, Requires<[HasV60]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -5075,7 +5111,7 @@ def J2_jumprfnew : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) jumpr:nt $Rs32",
-tc_181af5d0, TypeJ>, Enc_88d4d9, PredNewRel {
+tc_b51dc29a, TypeJ>, Enc_88d4d9, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0010;
 let Inst{31-21} = 0b01010011011;
@@ -5095,7 +5131,7 @@ def J2_jumprfnewpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4.new) jumpr:t $Rs32",
-tc_181af5d0, TypeJ>, Enc_88d4d9, PredNewRel {
+tc_b51dc29a, TypeJ>, Enc_88d4d9, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0110;
 let Inst{31-21} = 0b01010011011;
@@ -5115,7 +5151,7 @@ def J2_jumprfpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if (!$Pu4) jumpr:t $Rs32",
-tc_97743097, TypeJ>, Enc_88d4d9, Requires<[HasV60]>, PredNewRel {
+tc_e78647bd, TypeJ>, Enc_88d4d9, Requires<[HasV60]>, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0100;
 let Inst{31-21} = 0b01010011011;
@@ -5134,7 +5170,7 @@ def J2_jumprgtez : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32>=#0) jump:nt $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b0;
 let Inst{31-22} = 0b0110000101;
@@ -5152,7 +5188,7 @@ def J2_jumprgtezpt : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32>=#0) jump:t $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b1;
 let Inst{31-22} = 0b0110000101;
@@ -5170,7 +5206,7 @@ def J2_jumprltez : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32<=#0) jump:nt $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b0;
 let Inst{31-22} = 0b0110000111;
@@ -5188,7 +5224,7 @@ def J2_jumprltezpt : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32<=#0) jump:t $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b1;
 let Inst{31-22} = 0b0110000111;
@@ -5206,7 +5242,7 @@ def J2_jumprnz : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32==#0) jump:nt $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b0;
 let Inst{31-22} = 0b0110000110;
@@ -5224,7 +5260,7 @@ def J2_jumprnzpt : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32==#0) jump:t $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b1;
 let Inst{31-22} = 0b0110000110;
@@ -5242,7 +5278,7 @@ def J2_jumprt : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) jumpr:nt $Rs32",
-tc_e0739b8c, TypeJ>, Enc_88d4d9, PredNewRel {
+tc_85c9c08f, TypeJ>, Enc_88d4d9, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0000;
 let Inst{31-21} = 0b01010011010;
@@ -5260,7 +5296,7 @@ def J2_jumprt_nopred_map : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) jumpr $Rs32",
-tc_e0739b8c, TypeMAPPING>, Requires<[HasV60]> {
+tc_85c9c08f, TypeMAPPING>, Requires<[HasV60]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -5268,7 +5304,7 @@ def J2_jumprtnew : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) jumpr:nt $Rs32",
-tc_181af5d0, TypeJ>, Enc_88d4d9, PredNewRel {
+tc_b51dc29a, TypeJ>, Enc_88d4d9, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0010;
 let Inst{31-21} = 0b01010011010;
@@ -5287,7 +5323,7 @@ def J2_jumprtnewpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4.new) jumpr:t $Rs32",
-tc_181af5d0, TypeJ>, Enc_88d4d9, PredNewRel {
+tc_b51dc29a, TypeJ>, Enc_88d4d9, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0110;
 let Inst{31-21} = 0b01010011010;
@@ -5306,7 +5342,7 @@ def J2_jumprtpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, IntRegs:$Rs32),
 "if ($Pu4) jumpr:t $Rs32",
-tc_97743097, TypeJ>, Enc_88d4d9, Requires<[HasV60]>, PredNewRel {
+tc_e78647bd, TypeJ>, Enc_88d4d9, Requires<[HasV60]>, PredNewRel {
 let Inst{7-0} = 0b00000000;
 let Inst{13-10} = 0b0100;
 let Inst{31-21} = 0b01010011010;
@@ -5324,7 +5360,7 @@ def J2_jumprz : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32!=#0) jump:nt $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b0;
 let Inst{31-22} = 0b0110000100;
@@ -5342,7 +5378,7 @@ def J2_jumprzpt : HInst<
 (outs),
 (ins IntRegs:$Rs32, b13_2Imm:$Ii),
 "if ($Rs32!=#0) jump:t $Ii",
-tc_73043bf4, TypeCR>, Enc_0fa531 {
+tc_d9d43ecb, TypeCR>, Enc_0fa531 {
 let Inst{0-0} = 0b0;
 let Inst{12-12} = 0b1;
 let Inst{31-22} = 0b0110000100;
@@ -5360,7 +5396,7 @@ def J2_jumpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if ($Pu4) jump:nt $Ii",
-tc_e9fae2d6, TypeJ>, Enc_daea09, PredNewRel {
+tc_db2bce9c, TypeJ>, Enc_daea09, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b000;
 let Inst{21-21} = 0b0;
@@ -5385,7 +5421,7 @@ def J2_jumpt_nopred_map : HInst<
 (outs),
 (ins PredRegs:$Pu4, b15_2Imm:$Ii),
 "if ($Pu4) jump $Ii",
-tc_e9fae2d6, TypeMAPPING>, Requires<[HasV60]> {
+tc_db2bce9c, TypeMAPPING>, Requires<[HasV60]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -5393,7 +5429,7 @@ def J2_jumptnew : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if ($Pu4.new) jump:nt $Ii",
-tc_a46f0df5, TypeJ>, Enc_daea09, PredNewRel {
+tc_20cdee80, TypeJ>, Enc_daea09, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b010;
 let Inst{21-21} = 0b0;
@@ -5419,7 +5455,7 @@ def J2_jumptnewpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if ($Pu4.new) jump:t $Ii",
-tc_a46f0df5, TypeJ>, Enc_daea09, PredNewRel {
+tc_20cdee80, TypeJ>, Enc_daea09, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b110;
 let Inst{21-21} = 0b0;
@@ -5445,7 +5481,7 @@ def J2_jumptpt : HInst<
 (outs),
 (ins PredRegs:$Pu4, b30_2Imm:$Ii),
 "if ($Pu4) jump:t $Ii",
-tc_e1e99bfa, TypeJ>, Enc_daea09, Requires<[HasV60]>, PredNewRel {
+tc_cd374165, TypeJ>, Enc_daea09, Requires<[HasV60]>, PredNewRel {
 let Inst{0-0} = 0b0;
 let Inst{12-10} = 0b100;
 let Inst{21-21} = 0b0;
@@ -5470,7 +5506,7 @@ def J2_loop0i : HInst<
 (outs),
 (ins b30_2Imm:$Ii, u10_0Imm:$II),
 "loop0($Ii,#$II)",
-tc_cf59f215, TypeCR>, Enc_4dc228 {
+tc_a9d88b22, TypeCR>, Enc_4dc228 {
 let Inst{2-2} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01101001000;
@@ -5487,7 +5523,7 @@ def J2_loop0r : HInst<
 (outs),
 (ins b30_2Imm:$Ii, IntRegs:$Rs32),
 "loop0($Ii,$Rs32)",
-tc_7934b9df, TypeCR>, Enc_864a5a {
+tc_df3319ed, TypeCR>, Enc_864a5a {
 let Inst{2-0} = 0b000;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5505,7 +5541,7 @@ def J2_loop1i : HInst<
 (outs),
 (ins b30_2Imm:$Ii, u10_0Imm:$II),
 "loop1($Ii,#$II)",
-tc_cf59f215, TypeCR>, Enc_4dc228 {
+tc_a9d88b22, TypeCR>, Enc_4dc228 {
 let Inst{2-2} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01101001001;
@@ -5522,7 +5558,7 @@ def J2_loop1r : HInst<
 (outs),
 (ins b30_2Imm:$Ii, IntRegs:$Rs32),
 "loop1($Ii,$Rs32)",
-tc_7934b9df, TypeCR>, Enc_864a5a {
+tc_df3319ed, TypeCR>, Enc_864a5a {
 let Inst{2-0} = 0b000;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5540,7 +5576,7 @@ def J2_pause : HInst<
 (outs),
 (ins u8_0Imm:$Ii),
 "pause(#$Ii)",
-tc_681a2300, TypeJ>, Enc_a51a9a {
+tc_8d9d0154, TypeJ>, Enc_a51a9a {
 let Inst{1-0} = 0b00;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5551,7 +5587,7 @@ def J2_ploop1si : HInst<
 (outs),
 (ins b30_2Imm:$Ii, u10_0Imm:$II),
 "p3 = sp1loop0($Ii,#$II)",
-tc_c5e2426d, TypeCR>, Enc_4dc228 {
+tc_1c4528a2, TypeCR>, Enc_4dc228 {
 let Inst{2-2} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01101001101;
@@ -5569,7 +5605,7 @@ def J2_ploop1sr : HInst<
 (outs),
 (ins b30_2Imm:$Ii, IntRegs:$Rs32),
 "p3 = sp1loop0($Ii,$Rs32)",
-tc_4f7cd700, TypeCR>, Enc_864a5a {
+tc_32779c6f, TypeCR>, Enc_864a5a {
 let Inst{2-0} = 0b000;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5588,7 +5624,7 @@ def J2_ploop2si : HInst<
 (outs),
 (ins b30_2Imm:$Ii, u10_0Imm:$II),
 "p3 = sp2loop0($Ii,#$II)",
-tc_c5e2426d, TypeCR>, Enc_4dc228 {
+tc_1c4528a2, TypeCR>, Enc_4dc228 {
 let Inst{2-2} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01101001110;
@@ -5606,7 +5642,7 @@ def J2_ploop2sr : HInst<
 (outs),
 (ins b30_2Imm:$Ii, IntRegs:$Rs32),
 "p3 = sp2loop0($Ii,$Rs32)",
-tc_4f7cd700, TypeCR>, Enc_864a5a {
+tc_32779c6f, TypeCR>, Enc_864a5a {
 let Inst{2-0} = 0b000;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5625,7 +5661,7 @@ def J2_ploop3si : HInst<
 (outs),
 (ins b30_2Imm:$Ii, u10_0Imm:$II),
 "p3 = sp3loop0($Ii,#$II)",
-tc_c5e2426d, TypeCR>, Enc_4dc228 {
+tc_1c4528a2, TypeCR>, Enc_4dc228 {
 let Inst{2-2} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01101001111;
@@ -5643,7 +5679,7 @@ def J2_ploop3sr : HInst<
 (outs),
 (ins b30_2Imm:$Ii, IntRegs:$Rs32),
 "p3 = sp3loop0($Ii,$Rs32)",
-tc_4f7cd700, TypeCR>, Enc_864a5a {
+tc_32779c6f, TypeCR>, Enc_864a5a {
 let Inst{2-0} = 0b000;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5662,18 +5698,19 @@ def J2_trap0 : HInst<
 (outs),
 (ins u8_0Imm:$Ii),
 "trap0(#$Ii)",
-tc_14cd4cfa, TypeJ>, Enc_a51a9a {
+tc_fc3999b4, TypeJ>, Enc_a51a9a {
 let Inst{1-0} = 0b00;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0101010000000000;
 let isSolo = 1;
+let hasSideEffects = 1;
 }
 def J2_trap1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, u8_0Imm:$Ii),
 "trap1($Rx32,#$Ii)",
-tc_59a01ead, TypeJ>, Enc_33f8ba {
+tc_b9e09e03, TypeJ>, Enc_33f8ba {
 let Inst{1-0} = 0b00;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5683,13 +5720,15 @@ let opNewValue = 0;
 let isSolo = 1;
 let Uses = [GOSP];
 let Defs = [GOSP, PC];
+let hasSideEffects = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
 def J2_trap1_noregmap : HInst<
 (outs),
 (ins u8_0Imm:$Ii),
 "trap1(#$Ii)",
-tc_59a01ead, TypeMAPPING> {
+tc_b9e09e03, TypeMAPPING> {
+let hasSideEffects = 1;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -5697,7 +5736,7 @@ def J4_cmpeq_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (!cmp.eq($Ns8.new,$Rt32)) jump:nt $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -5723,7 +5762,7 @@ def J4_cmpeq_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (!cmp.eq($Ns8.new,$Rt32)) jump:t $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -5749,7 +5788,7 @@ def J4_cmpeq_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,$Rt16); if (!p0.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b00;
 let Inst{31-22} = 0b0001010001;
@@ -5775,7 +5814,7 @@ def J4_cmpeq_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,$Rt16); if (!p0.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b10;
 let Inst{31-22} = 0b0001010001;
@@ -5801,7 +5840,7 @@ def J4_cmpeq_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,$Rt16); if (!p1.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-22} = 0b0001010001;
@@ -5827,7 +5866,7 @@ def J4_cmpeq_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,$Rt16); if (!p1.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b11;
 let Inst{31-22} = 0b0001010001;
@@ -5853,7 +5892,7 @@ def J4_cmpeq_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (cmp.eq($Ns8.new,$Rt32)) jump:nt $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -5878,7 +5917,7 @@ def J4_cmpeq_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (cmp.eq($Ns8.new,$Rt32)) jump:t $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -5903,7 +5942,7 @@ def J4_cmpeq_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,$Rt16); if (p0.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b00;
 let Inst{31-22} = 0b0001010000;
@@ -5928,7 +5967,7 @@ def J4_cmpeq_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,$Rt16); if (p0.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b10;
 let Inst{31-22} = 0b0001010000;
@@ -5953,7 +5992,7 @@ def J4_cmpeq_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,$Rt16); if (p1.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-22} = 0b0001010000;
@@ -5978,7 +6017,7 @@ def J4_cmpeq_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,$Rt16); if (p1.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b11;
 let Inst{31-22} = 0b0001010000;
@@ -6003,7 +6042,7 @@ def J4_cmpeqi_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (!cmp.eq($Ns8.new,#$II)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -6029,7 +6068,7 @@ def J4_cmpeqi_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (!cmp.eq($Ns8.new,#$II)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -6055,7 +6094,7 @@ def J4_cmpeqi_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$II); if (!p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001000001;
@@ -6081,7 +6120,7 @@ def J4_cmpeqi_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$II); if (!p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001000001;
@@ -6107,7 +6146,7 @@ def J4_cmpeqi_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$II); if (!p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001001001;
@@ -6133,7 +6172,7 @@ def J4_cmpeqi_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$II); if (!p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001001001;
@@ -6159,7 +6198,7 @@ def J4_cmpeqi_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (cmp.eq($Ns8.new,#$II)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -6184,7 +6223,7 @@ def J4_cmpeqi_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (cmp.eq($Ns8.new,#$II)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -6209,7 +6248,7 @@ def J4_cmpeqi_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$II); if (p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001000000;
@@ -6234,7 +6273,7 @@ def J4_cmpeqi_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$II); if (p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001000000;
@@ -6259,7 +6298,7 @@ def J4_cmpeqi_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$II); if (p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001001000;
@@ -6284,7 +6323,7 @@ def J4_cmpeqi_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$II); if (p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001001000;
@@ -6309,7 +6348,7 @@ def J4_cmpeqn1_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (!cmp.eq($Ns8.new,#$n1)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_e90a15, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_e90a15, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{19-19} = 0b0;
@@ -6335,7 +6374,7 @@ def J4_cmpeqn1_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (!cmp.eq($Ns8.new,#$n1)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_5a18b3, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_5a18b3, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{19-19} = 0b0;
@@ -6361,7 +6400,7 @@ def J4_cmpeqn1_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$n1); if (!p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_1de724, PredRel {
+tc_3d495a39, TypeCJ>, Enc_1de724, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{31-22} = 0b0001000111;
@@ -6387,7 +6426,7 @@ def J4_cmpeqn1_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$n1); if (!p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14640c, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14640c, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{31-22} = 0b0001000111;
@@ -6413,7 +6452,7 @@ def J4_cmpeqn1_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$n1); if (!p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_668704, PredRel {
+tc_3d495a39, TypeCJ>, Enc_668704, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{31-22} = 0b0001001111;
@@ -6439,7 +6478,7 @@ def J4_cmpeqn1_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$n1); if (!p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_800e04, PredRel {
+tc_3d495a39, TypeCJ>, Enc_800e04, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{31-22} = 0b0001001111;
@@ -6465,7 +6504,7 @@ def J4_cmpeqn1_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (cmp.eq($Ns8.new,#$n1)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_4aca3a, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_4aca3a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{19-19} = 0b0;
@@ -6490,7 +6529,7 @@ def J4_cmpeqn1_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (cmp.eq($Ns8.new,#$n1)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_f7ea77, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_f7ea77, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{19-19} = 0b0;
@@ -6515,7 +6554,7 @@ def J4_cmpeqn1_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$n1); if (p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_405228, PredRel {
+tc_3d495a39, TypeCJ>, Enc_405228, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{31-22} = 0b0001000110;
@@ -6540,7 +6579,7 @@ def J4_cmpeqn1_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$n1); if (p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_3a2484, PredRel {
+tc_3d495a39, TypeCJ>, Enc_3a2484, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{31-22} = 0b0001000110;
@@ -6565,7 +6604,7 @@ def J4_cmpeqn1_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$n1); if (p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_736575, PredRel {
+tc_3d495a39, TypeCJ>, Enc_736575, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{31-22} = 0b0001001110;
@@ -6590,7 +6629,7 @@ def J4_cmpeqn1_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.eq($Rs16,#$n1); if (p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_8e583a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_8e583a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{31-22} = 0b0001001110;
@@ -6615,7 +6654,7 @@ def J4_cmpgt_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (!cmp.gt($Ns8.new,$Rt32)) jump:nt $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -6641,7 +6680,7 @@ def J4_cmpgt_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (!cmp.gt($Ns8.new,$Rt32)) jump:t $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -6667,7 +6706,7 @@ def J4_cmpgt_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,$Rt16); if (!p0.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b00;
 let Inst{31-22} = 0b0001010011;
@@ -6693,7 +6732,7 @@ def J4_cmpgt_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,$Rt16); if (!p0.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b10;
 let Inst{31-22} = 0b0001010011;
@@ -6719,7 +6758,7 @@ def J4_cmpgt_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,$Rt16); if (!p1.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-22} = 0b0001010011;
@@ -6745,7 +6784,7 @@ def J4_cmpgt_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,$Rt16); if (!p1.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b11;
 let Inst{31-22} = 0b0001010011;
@@ -6771,7 +6810,7 @@ def J4_cmpgt_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (cmp.gt($Ns8.new,$Rt32)) jump:nt $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -6796,7 +6835,7 @@ def J4_cmpgt_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (cmp.gt($Ns8.new,$Rt32)) jump:t $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -6821,7 +6860,7 @@ def J4_cmpgt_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,$Rt16); if (p0.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b00;
 let Inst{31-22} = 0b0001010010;
@@ -6846,7 +6885,7 @@ def J4_cmpgt_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,$Rt16); if (p0.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b10;
 let Inst{31-22} = 0b0001010010;
@@ -6871,7 +6910,7 @@ def J4_cmpgt_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,$Rt16); if (p1.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-22} = 0b0001010010;
@@ -6896,7 +6935,7 @@ def J4_cmpgt_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,$Rt16); if (p1.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b11;
 let Inst{31-22} = 0b0001010010;
@@ -6921,7 +6960,7 @@ def J4_cmpgti_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (!cmp.gt($Ns8.new,#$II)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -6947,7 +6986,7 @@ def J4_cmpgti_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (!cmp.gt($Ns8.new,#$II)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -6973,7 +7012,7 @@ def J4_cmpgti_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$II); if (!p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001000011;
@@ -6999,7 +7038,7 @@ def J4_cmpgti_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$II); if (!p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001000011;
@@ -7025,7 +7064,7 @@ def J4_cmpgti_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$II); if (!p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001001011;
@@ -7051,7 +7090,7 @@ def J4_cmpgti_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$II); if (!p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001001011;
@@ -7077,7 +7116,7 @@ def J4_cmpgti_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (cmp.gt($Ns8.new,#$II)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -7102,7 +7141,7 @@ def J4_cmpgti_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (cmp.gt($Ns8.new,#$II)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -7127,7 +7166,7 @@ def J4_cmpgti_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$II); if (p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001000010;
@@ -7152,7 +7191,7 @@ def J4_cmpgti_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$II); if (p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001000010;
@@ -7177,7 +7216,7 @@ def J4_cmpgti_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$II); if (p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001001010;
@@ -7202,7 +7241,7 @@ def J4_cmpgti_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$II); if (p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001001010;
@@ -7227,7 +7266,7 @@ def J4_cmpgtn1_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (!cmp.gt($Ns8.new,#$n1)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_3694bd, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_3694bd, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{19-19} = 0b0;
@@ -7253,7 +7292,7 @@ def J4_cmpgtn1_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (!cmp.gt($Ns8.new,#$n1)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_a6853f, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_a6853f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{19-19} = 0b0;
@@ -7279,7 +7318,7 @@ def J4_cmpgtn1_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$n1); if (!p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_a42857, PredRel {
+tc_3d495a39, TypeCJ>, Enc_a42857, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000001;
 let Inst{31-22} = 0b0001000111;
@@ -7305,7 +7344,7 @@ def J4_cmpgtn1_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$n1); if (!p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_f6fe0b, PredRel {
+tc_3d495a39, TypeCJ>, Enc_f6fe0b, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100001;
 let Inst{31-22} = 0b0001000111;
@@ -7331,7 +7370,7 @@ def J4_cmpgtn1_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$n1); if (!p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_3e3989, PredRel {
+tc_3d495a39, TypeCJ>, Enc_3e3989, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000001;
 let Inst{31-22} = 0b0001001111;
@@ -7357,7 +7396,7 @@ def J4_cmpgtn1_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$n1); if (!p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_b909d2, PredRel {
+tc_3d495a39, TypeCJ>, Enc_b909d2, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100001;
 let Inst{31-22} = 0b0001001111;
@@ -7383,7 +7422,7 @@ def J4_cmpgtn1_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (cmp.gt($Ns8.new,#$n1)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_f82302, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_f82302, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{19-19} = 0b0;
@@ -7408,7 +7447,7 @@ def J4_cmpgtn1_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, n1Const:$n1, b30_2Imm:$Ii),
 "if (cmp.gt($Ns8.new,#$n1)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_6413b6, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_6413b6, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{19-19} = 0b0;
@@ -7433,7 +7472,7 @@ def J4_cmpgtn1_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$n1); if (p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_b78edd, PredRel {
+tc_3d495a39, TypeCJ>, Enc_b78edd, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000001;
 let Inst{31-22} = 0b0001000110;
@@ -7458,7 +7497,7 @@ def J4_cmpgtn1_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p0 = cmp.gt($Rs16,#$n1); if (p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_041d7b, PredRel {
+tc_3d495a39, TypeCJ>, Enc_041d7b, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100001;
 let Inst{31-22} = 0b0001000110;
@@ -7483,7 +7522,7 @@ def J4_cmpgtn1_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$n1); if (p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_b1e1fb, PredRel {
+tc_3d495a39, TypeCJ>, Enc_b1e1fb, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000001;
 let Inst{31-22} = 0b0001001110;
@@ -7508,7 +7547,7 @@ def J4_cmpgtn1_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1, b30_2Imm:$Ii),
 "p1 = cmp.gt($Rs16,#$n1); if (p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_178717, PredRel {
+tc_3d495a39, TypeCJ>, Enc_178717, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100001;
 let Inst{31-22} = 0b0001001110;
@@ -7533,7 +7572,7 @@ def J4_cmpgtu_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (!cmp.gtu($Ns8.new,$Rt32)) jump:nt $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -7559,7 +7598,7 @@ def J4_cmpgtu_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (!cmp.gtu($Ns8.new,$Rt32)) jump:t $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -7585,7 +7624,7 @@ def J4_cmpgtu_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,$Rt16); if (!p0.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b00;
 let Inst{31-22} = 0b0001010101;
@@ -7611,7 +7650,7 @@ def J4_cmpgtu_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,$Rt16); if (!p0.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b10;
 let Inst{31-22} = 0b0001010101;
@@ -7637,7 +7676,7 @@ def J4_cmpgtu_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,$Rt16); if (!p1.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-22} = 0b0001010101;
@@ -7663,7 +7702,7 @@ def J4_cmpgtu_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,$Rt16); if (!p1.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b11;
 let Inst{31-22} = 0b0001010101;
@@ -7689,7 +7728,7 @@ def J4_cmpgtu_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (cmp.gtu($Ns8.new,$Rt32)) jump:nt $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -7714,7 +7753,7 @@ def J4_cmpgtu_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, IntRegs:$Rt32, b30_2Imm:$Ii),
 "if (cmp.gtu($Ns8.new,$Rt32)) jump:t $Ii",
-tc_51b866be, TypeNCJ>, Enc_c9a18e, PredRel {
+tc_9bfd761f, TypeNCJ>, Enc_c9a18e, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -7739,7 +7778,7 @@ def J4_cmpgtu_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,$Rt16); if (p0.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b00;
 let Inst{31-22} = 0b0001010100;
@@ -7764,7 +7803,7 @@ def J4_cmpgtu_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,$Rt16); if (p0.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b10;
 let Inst{31-22} = 0b0001010100;
@@ -7789,7 +7828,7 @@ def J4_cmpgtu_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,$Rt16); if (p1.new) jump:nt $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-22} = 0b0001010100;
@@ -7814,7 +7853,7 @@ def J4_cmpgtu_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, GeneralSubRegs:$Rt16, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,$Rt16); if (p1.new) jump:t $Ii",
-tc_855b0b61, TypeCJ>, Enc_6a5972, PredRel {
+tc_56336eb0, TypeCJ>, Enc_6a5972, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b11;
 let Inst{31-22} = 0b0001010100;
@@ -7839,7 +7878,7 @@ def J4_cmpgtui_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (!cmp.gtu($Ns8.new,#$II)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -7865,7 +7904,7 @@ def J4_cmpgtui_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (!cmp.gtu($Ns8.new,#$II)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -7891,7 +7930,7 @@ def J4_cmpgtui_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,#$II); if (!p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001000101;
@@ -7917,7 +7956,7 @@ def J4_cmpgtui_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,#$II); if (!p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001000101;
@@ -7943,7 +7982,7 @@ def J4_cmpgtui_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,#$II); if (!p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001001101;
@@ -7969,7 +8008,7 @@ def J4_cmpgtui_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,#$II); if (!p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001001101;
@@ -7995,7 +8034,7 @@ def J4_cmpgtui_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (cmp.gtu($Ns8.new,#$II)) jump:nt $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -8020,7 +8059,7 @@ def J4_cmpgtui_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, u5_0Imm:$II, b30_2Imm:$Ii),
 "if (cmp.gtu($Ns8.new,#$II)) jump:t $Ii",
-tc_bde7aaf4, TypeNCJ>, Enc_eafd18, PredRel {
+tc_bd8382d1, TypeNCJ>, Enc_eafd18, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -8045,7 +8084,7 @@ def J4_cmpgtui_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,#$II); if (p0.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001000100;
@@ -8070,7 +8109,7 @@ def J4_cmpgtui_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p0 = cmp.gtu($Rs16,#$II); if (p0.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001000100;
@@ -8095,7 +8134,7 @@ def J4_cmpgtui_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,#$II); if (p1.new) jump:nt $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-22} = 0b0001001100;
@@ -8120,7 +8159,7 @@ def J4_cmpgtui_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u5_0Imm:$II, b30_2Imm:$Ii),
 "p1 = cmp.gtu($Rs16,#$II); if (p1.new) jump:t $Ii",
-tc_99be14ca, TypeCJ>, Enc_14d27a, PredRel {
+tc_3d495a39, TypeCJ>, Enc_14d27a, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-22} = 0b0001001100;
@@ -8145,7 +8184,7 @@ def J4_cmplt_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (!cmp.gt($Rt32,$Ns8.new)) jump:nt $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -8171,7 +8210,7 @@ def J4_cmplt_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (!cmp.gt($Rt32,$Ns8.new)) jump:t $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -8197,7 +8236,7 @@ def J4_cmplt_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (cmp.gt($Rt32,$Ns8.new)) jump:nt $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -8222,7 +8261,7 @@ def J4_cmplt_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (cmp.gt($Rt32,$Ns8.new)) jump:t $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -8247,7 +8286,7 @@ def J4_cmpltu_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (!cmp.gtu($Rt32,$Ns8.new)) jump:nt $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -8273,7 +8312,7 @@ def J4_cmpltu_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (!cmp.gtu($Rt32,$Ns8.new)) jump:t $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -8299,7 +8338,7 @@ def J4_cmpltu_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (cmp.gtu($Rt32,$Ns8.new)) jump:nt $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{19-19} = 0b0;
@@ -8324,7 +8363,7 @@ def J4_cmpltu_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Rt32, IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (cmp.gtu($Rt32,$Ns8.new)) jump:t $Ii",
-tc_5eb851fc, TypeNCJ>, Enc_5de85f, PredRel {
+tc_b343892a, TypeNCJ>, Enc_5de85f, PredRel {
 let Inst{0-0} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{19-19} = 0b0;
@@ -8349,7 +8388,7 @@ def J4_hintjumpr : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "hintjr($Rs32)",
-tc_9faf76ae, TypeJ>, Enc_ecbcc8 {
+tc_d5b7b0c1, TypeJ>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01010010101;
 let isTerminator = 1;
@@ -8361,7 +8400,7 @@ def J4_jumpseti : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins u6_0Imm:$II, b30_2Imm:$Ii),
 "$Rd16 = #$II ; jump $Ii",
-tc_49eb22c8, TypeCJ>, Enc_9e4c3f {
+tc_0663f615, TypeCJ>, Enc_9e4c3f {
 let Inst{0-0} = 0b0;
 let Inst{31-22} = 0b0001011000;
 let hasNewValue = 1;
@@ -8381,7 +8420,7 @@ def J4_jumpsetr : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "$Rd16 = $Rs16 ; jump $Ii",
-tc_49eb22c8, TypeCJ>, Enc_66bce1 {
+tc_0663f615, TypeCJ>, Enc_66bce1 {
 let Inst{0-0} = 0b0;
 let Inst{13-12} = 0b00;
 let Inst{31-22} = 0b0001011100;
@@ -8402,7 +8441,7 @@ def J4_tstbit0_f_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (!tstbit($Ns8.new,#0)) jump:nt $Ii",
-tc_746baa8e, TypeNCJ>, Enc_69d63b {
+tc_8c945be0, TypeNCJ>, Enc_69d63b {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{19-19} = 0b0;
@@ -8427,7 +8466,7 @@ def J4_tstbit0_f_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (!tstbit($Ns8.new,#0)) jump:t $Ii",
-tc_746baa8e, TypeNCJ>, Enc_69d63b {
+tc_8c945be0, TypeNCJ>, Enc_69d63b {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{19-19} = 0b0;
@@ -8452,7 +8491,7 @@ def J4_tstbit0_fp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p0 = tstbit($Rs16,#0); if (!p0.new) jump:nt $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000011;
 let Inst{31-22} = 0b0001000111;
@@ -8477,7 +8516,7 @@ def J4_tstbit0_fp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p0 = tstbit($Rs16,#0); if (!p0.new) jump:t $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100011;
 let Inst{31-22} = 0b0001000111;
@@ -8502,7 +8541,7 @@ def J4_tstbit0_fp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p1 = tstbit($Rs16,#0); if (!p1.new) jump:nt $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000011;
 let Inst{31-22} = 0b0001001111;
@@ -8527,7 +8566,7 @@ def J4_tstbit0_fp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p1 = tstbit($Rs16,#0); if (!p1.new) jump:t $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100011;
 let Inst{31-22} = 0b0001001111;
@@ -8552,7 +8591,7 @@ def J4_tstbit0_t_jumpnv_nt : HInst<
 (outs),
 (ins IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (tstbit($Ns8.new,#0)) jump:nt $Ii",
-tc_746baa8e, TypeNCJ>, Enc_69d63b {
+tc_8c945be0, TypeNCJ>, Enc_69d63b {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000000;
 let Inst{19-19} = 0b0;
@@ -8576,7 +8615,7 @@ def J4_tstbit0_t_jumpnv_t : HInst<
 (outs),
 (ins IntRegs:$Ns8, b30_2Imm:$Ii),
 "if (tstbit($Ns8.new,#0)) jump:t $Ii",
-tc_746baa8e, TypeNCJ>, Enc_69d63b {
+tc_8c945be0, TypeNCJ>, Enc_69d63b {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100000;
 let Inst{19-19} = 0b0;
@@ -8600,7 +8639,7 @@ def J4_tstbit0_tp0_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p0 = tstbit($Rs16,#0); if (p0.new) jump:nt $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000011;
 let Inst{31-22} = 0b0001000110;
@@ -8624,7 +8663,7 @@ def J4_tstbit0_tp0_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p0 = tstbit($Rs16,#0); if (p0.new) jump:t $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100011;
 let Inst{31-22} = 0b0001000110;
@@ -8648,7 +8687,7 @@ def J4_tstbit0_tp1_jump_nt : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p1 = tstbit($Rs16,#0); if (p1.new) jump:nt $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b000011;
 let Inst{31-22} = 0b0001001110;
@@ -8672,7 +8711,7 @@ def J4_tstbit0_tp1_jump_t : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, b30_2Imm:$Ii),
 "p1 = tstbit($Rs16,#0); if (p1.new) jump:t $Ii",
-tc_3cb8ea06, TypeCJ>, Enc_ad1c74 {
+tc_2332b92e, TypeCJ>, Enc_ad1c74 {
 let Inst{0-0} = 0b0;
 let Inst{13-8} = 0b100011;
 let Inst{31-22} = 0b0001001110;
@@ -8696,7 +8735,7 @@ def L2_deallocframe : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = deallocframe($Rs32):raw",
-tc_d1090e34, TypeLD>, Enc_3a3d62 {
+tc_15aa71c5, TypeLD>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10010000000;
 let accessSize = DoubleWordAccess;
@@ -8708,7 +8747,7 @@ def L2_loadalignb_io : HInst<
 (outs DoubleRegs:$Ryy32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Ryy32 = memb_fifo($Rs32+#$Ii)",
-tc_ef52ed71, TypeLD>, Enc_a27588 {
+tc_5ef37dc4, TypeLD>, Enc_a27588 {
 let Inst{24-21} = 0b0100;
 let Inst{31-27} = 0b10010;
 let addrMode = BaseImmOffset;
@@ -8725,9 +8764,10 @@ def L2_loadalignb_pbr : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Ryy32 = memb_fifo($Rx32++$Mu2:brev)",
-tc_bad2bcaf, TypeLD>, Enc_1f5d8f {
+tc_3c76b0ff, TypeLD>, Enc_1f5d8f {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011110100;
+let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
 let Constraints = "$Ryy32 = $Ryy32in, $Rx32 = $Rx32in";
@@ -8736,7 +8776,7 @@ def L2_loadalignb_pci : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2),
 "$Ryy32 = memb_fifo($Rx32++#$Ii:circ($Mu2))",
-tc_03220ffa, TypeLD>, Enc_74aef2 {
+tc_785f65a7, TypeLD>, Enc_74aef2 {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011000100;
 let addrMode = PostInc;
@@ -8749,7 +8789,7 @@ def L2_loadalignb_pcr : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Ryy32 = memb_fifo($Rx32++I:circ($Mu2))",
-tc_bad2bcaf, TypeLD>, Enc_1f5d8f {
+tc_3c76b0ff, TypeLD>, Enc_1f5d8f {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011000100;
 let addrMode = PostInc;
@@ -8762,7 +8802,7 @@ def L2_loadalignb_pi : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "$Ryy32 = memb_fifo($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_6b197f {
+tc_3c76b0ff, TypeLD>, Enc_6b197f {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011010100;
 let addrMode = PostInc;
@@ -8774,7 +8814,7 @@ def L2_loadalignb_pr : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Ryy32 = memb_fifo($Rx32++$Mu2)",
-tc_bad2bcaf, TypeLD>, Enc_1f5d8f {
+tc_3c76b0ff, TypeLD>, Enc_1f5d8f {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011100100;
 let addrMode = PostInc;
@@ -8786,7 +8826,7 @@ def L2_loadalignb_zomap : HInst<
 (outs DoubleRegs:$Ryy32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rs32),
 "$Ryy32 = memb_fifo($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let Constraints = "$Ryy32 = $Ryy32in";
@@ -8795,7 +8835,7 @@ def L2_loadalignh_io : HInst<
 (outs DoubleRegs:$Ryy32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rs32, s31_1Imm:$Ii),
 "$Ryy32 = memh_fifo($Rs32+#$Ii)",
-tc_ef52ed71, TypeLD>, Enc_5cd7e9 {
+tc_5ef37dc4, TypeLD>, Enc_5cd7e9 {
 let Inst{24-21} = 0b0010;
 let Inst{31-27} = 0b10010;
 let addrMode = BaseImmOffset;
@@ -8812,9 +8852,10 @@ def L2_loadalignh_pbr : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Ryy32 = memh_fifo($Rx32++$Mu2:brev)",
-tc_bad2bcaf, TypeLD>, Enc_1f5d8f {
+tc_3c76b0ff, TypeLD>, Enc_1f5d8f {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011110010;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
 let Constraints = "$Ryy32 = $Ryy32in, $Rx32 = $Rx32in";
@@ -8823,7 +8864,7 @@ def L2_loadalignh_pci : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2),
 "$Ryy32 = memh_fifo($Rx32++#$Ii:circ($Mu2))",
-tc_03220ffa, TypeLD>, Enc_9e2e1c {
+tc_785f65a7, TypeLD>, Enc_9e2e1c {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011000010;
 let addrMode = PostInc;
@@ -8836,7 +8877,7 @@ def L2_loadalignh_pcr : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Ryy32 = memh_fifo($Rx32++I:circ($Mu2))",
-tc_bad2bcaf, TypeLD>, Enc_1f5d8f {
+tc_3c76b0ff, TypeLD>, Enc_1f5d8f {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011000010;
 let addrMode = PostInc;
@@ -8849,7 +8890,7 @@ def L2_loadalignh_pi : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "$Ryy32 = memh_fifo($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_bd1cbc {
+tc_3c76b0ff, TypeLD>, Enc_bd1cbc {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011010010;
 let addrMode = PostInc;
@@ -8861,7 +8902,7 @@ def L2_loadalignh_pr : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Rx32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Ryy32 = memh_fifo($Rx32++$Mu2)",
-tc_bad2bcaf, TypeLD>, Enc_1f5d8f {
+tc_3c76b0ff, TypeLD>, Enc_1f5d8f {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011100010;
 let addrMode = PostInc;
@@ -8873,7 +8914,7 @@ def L2_loadalignh_zomap : HInst<
 (outs DoubleRegs:$Ryy32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rs32),
 "$Ryy32 = memh_fifo($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let Constraints = "$Ryy32 = $Ryy32in";
@@ -8882,7 +8923,7 @@ def L2_loadbsw2_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii),
 "$Rd32 = membh($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_de0214 {
+tc_17e0d2cd, TypeLD>, Enc_de0214 {
 let Inst{24-21} = 0b0001;
 let Inst{31-27} = 0b10010;
 let hasNewValue = 1;
@@ -8900,11 +8941,12 @@ def L2_loadbsw2_pbr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = membh($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011110001;
 let hasNewValue = 1;
 let opNewValue = 0;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -8913,7 +8955,7 @@ def L2_loadbsw2_pci : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2),
 "$Rd32 = membh($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_e83554 {
+tc_e93a3d71, TypeLD>, Enc_e83554 {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011000001;
 let hasNewValue = 1;
@@ -8928,7 +8970,7 @@ def L2_loadbsw2_pcr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = membh($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011000001;
 let hasNewValue = 1;
@@ -8943,7 +8985,7 @@ def L2_loadbsw2_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii),
 "$Rd32 = membh($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_152467 {
+tc_44d3da28, TypeLD>, Enc_152467 {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011010001;
 let hasNewValue = 1;
@@ -8957,7 +8999,7 @@ def L2_loadbsw2_pr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = membh($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011100001;
 let hasNewValue = 1;
@@ -8971,7 +9013,7 @@ def L2_loadbsw2_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = membh($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -8981,7 +9023,7 @@ def L2_loadbsw4_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, s30_2Imm:$Ii),
 "$Rdd32 = membh($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_2d7491 {
+tc_17e0d2cd, TypeLD>, Enc_2d7491 {
 let Inst{24-21} = 0b0111;
 let Inst{31-27} = 0b10010;
 let addrMode = BaseImmOffset;
@@ -8997,9 +9039,10 @@ def L2_loadbsw4_pbr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = membh($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011110111;
+let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9008,7 +9051,7 @@ def L2_loadbsw4_pci : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii, ModRegs:$Mu2),
 "$Rdd32 = membh($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_70b24b {
+tc_e93a3d71, TypeLD>, Enc_70b24b {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011000111;
 let addrMode = PostInc;
@@ -9021,7 +9064,7 @@ def L2_loadbsw4_pcr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = membh($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011000111;
 let addrMode = PostInc;
@@ -9034,7 +9077,7 @@ def L2_loadbsw4_pi : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii),
 "$Rdd32 = membh($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_71f1b4 {
+tc_44d3da28, TypeLD>, Enc_71f1b4 {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011010111;
 let addrMode = PostInc;
@@ -9046,7 +9089,7 @@ def L2_loadbsw4_pr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = membh($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011100111;
 let addrMode = PostInc;
@@ -9058,7 +9101,7 @@ def L2_loadbsw4_zomap : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = membh($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -9066,7 +9109,7 @@ def L2_loadbzw2_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii),
 "$Rd32 = memubh($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_de0214 {
+tc_17e0d2cd, TypeLD>, Enc_de0214 {
 let Inst{24-21} = 0b0011;
 let Inst{31-27} = 0b10010;
 let hasNewValue = 1;
@@ -9084,11 +9127,12 @@ def L2_loadbzw2_pbr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memubh($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011110011;
 let hasNewValue = 1;
 let opNewValue = 0;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9097,7 +9141,7 @@ def L2_loadbzw2_pci : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2),
 "$Rd32 = memubh($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_e83554 {
+tc_e93a3d71, TypeLD>, Enc_e83554 {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011000011;
 let hasNewValue = 1;
@@ -9112,7 +9156,7 @@ def L2_loadbzw2_pcr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memubh($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011000011;
 let hasNewValue = 1;
@@ -9127,7 +9171,7 @@ def L2_loadbzw2_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii),
 "$Rd32 = memubh($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_152467 {
+tc_44d3da28, TypeLD>, Enc_152467 {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011010011;
 let hasNewValue = 1;
@@ -9141,7 +9185,7 @@ def L2_loadbzw2_pr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memubh($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011100011;
 let hasNewValue = 1;
@@ -9155,7 +9199,7 @@ def L2_loadbzw2_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = memubh($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -9165,7 +9209,7 @@ def L2_loadbzw4_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, s30_2Imm:$Ii),
 "$Rdd32 = memubh($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_2d7491 {
+tc_17e0d2cd, TypeLD>, Enc_2d7491 {
 let Inst{24-21} = 0b0101;
 let Inst{31-27} = 0b10010;
 let addrMode = BaseImmOffset;
@@ -9181,9 +9225,10 @@ def L2_loadbzw4_pbr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = memubh($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011110101;
+let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9192,7 +9237,7 @@ def L2_loadbzw4_pci : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii, ModRegs:$Mu2),
 "$Rdd32 = memubh($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_70b24b {
+tc_e93a3d71, TypeLD>, Enc_70b24b {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011000101;
 let addrMode = PostInc;
@@ -9205,7 +9250,7 @@ def L2_loadbzw4_pcr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = memubh($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011000101;
 let addrMode = PostInc;
@@ -9218,7 +9263,7 @@ def L2_loadbzw4_pi : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii),
 "$Rdd32 = memubh($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_71f1b4 {
+tc_44d3da28, TypeLD>, Enc_71f1b4 {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011010101;
 let addrMode = PostInc;
@@ -9230,7 +9275,7 @@ def L2_loadbzw4_pr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = memubh($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011100101;
 let addrMode = PostInc;
@@ -9242,7 +9287,7 @@ def L2_loadbzw4_zomap : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = memubh($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -9250,7 +9295,7 @@ def L2_loadrb_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = memb($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_211aaa, AddrModeRel, PostInc_BaseImm {
+tc_17e0d2cd, TypeLD>, Enc_211aaa, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1000;
 let Inst{31-27} = 0b10010;
 let hasNewValue = 1;
@@ -9271,11 +9316,12 @@ def L2_loadrb_pbr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memb($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011111000;
 let hasNewValue = 1;
 let opNewValue = 0;
+let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9284,7 +9330,7 @@ def L2_loadrb_pci : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2),
 "$Rd32 = memb($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_e0a47a {
+tc_e93a3d71, TypeLD>, Enc_e0a47a {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011001000;
 let hasNewValue = 1;
@@ -9299,7 +9345,7 @@ def L2_loadrb_pcr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memb($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011001000;
 let hasNewValue = 1;
@@ -9314,7 +9360,7 @@ def L2_loadrb_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii),
 "$Rd32 = memb($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_222336, PredNewRel, PostInc_BaseImm {
+tc_44d3da28, TypeLD>, Enc_222336, PredNewRel, PostInc_BaseImm {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011011000;
 let hasNewValue = 1;
@@ -9331,7 +9377,7 @@ def L2_loadrb_pr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memb($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011101000;
 let hasNewValue = 1;
@@ -9345,7 +9391,7 @@ def L2_loadrb_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = memb($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -9355,7 +9401,7 @@ def L2_loadrbgp : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii),
 "$Rd32 = memb(gp+#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_25bef0, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_25bef0, AddrModeRel {
 let Inst{24-21} = 0b1000;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -9374,7 +9420,7 @@ def L2_loadrd_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, s29_3Imm:$Ii),
 "$Rdd32 = memd($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_fa3ba4, AddrModeRel, PostInc_BaseImm {
+tc_17e0d2cd, TypeLD>, Enc_fa3ba4, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1110;
 let Inst{31-27} = 0b10010;
 let addrMode = BaseImmOffset;
@@ -9393,9 +9439,10 @@ def L2_loadrd_pbr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = memd($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011111110;
+let addrMode = PostInc;
 let accessSize = DoubleWordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9404,7 +9451,7 @@ def L2_loadrd_pci : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_3Imm:$Ii, ModRegs:$Mu2),
 "$Rdd32 = memd($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_b05839 {
+tc_e93a3d71, TypeLD>, Enc_b05839 {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011001110;
 let addrMode = PostInc;
@@ -9417,7 +9464,7 @@ def L2_loadrd_pcr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = memd($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011001110;
 let addrMode = PostInc;
@@ -9430,7 +9477,7 @@ def L2_loadrd_pi : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_3Imm:$Ii),
 "$Rdd32 = memd($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_5bdd42, PredNewRel, PostInc_BaseImm {
+tc_44d3da28, TypeLD>, Enc_5bdd42, PredNewRel, PostInc_BaseImm {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011011110;
 let addrMode = PostInc;
@@ -9445,7 +9492,7 @@ def L2_loadrd_pr : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rdd32 = memd($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_7eee72 {
+tc_44d3da28, TypeLD>, Enc_7eee72 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011101110;
 let addrMode = PostInc;
@@ -9457,7 +9504,7 @@ def L2_loadrd_zomap : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = memd($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -9465,7 +9512,7 @@ def L2_loadrdgp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins u29_3Imm:$Ii),
 "$Rdd32 = memd(gp+#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_509701, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_509701, AddrModeRel {
 let Inst{24-21} = 0b1110;
 let Inst{31-27} = 0b01001;
 let accessSize = DoubleWordAccess;
@@ -9482,7 +9529,7 @@ def L2_loadrh_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii),
 "$Rd32 = memh($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_de0214, AddrModeRel, PostInc_BaseImm {
+tc_17e0d2cd, TypeLD>, Enc_de0214, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1010;
 let Inst{31-27} = 0b10010;
 let hasNewValue = 1;
@@ -9503,11 +9550,12 @@ def L2_loadrh_pbr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memh($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011111010;
 let hasNewValue = 1;
 let opNewValue = 0;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9516,7 +9564,7 @@ def L2_loadrh_pci : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2),
 "$Rd32 = memh($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_e83554 {
+tc_e93a3d71, TypeLD>, Enc_e83554 {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011001010;
 let hasNewValue = 1;
@@ -9531,7 +9579,7 @@ def L2_loadrh_pcr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memh($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011001010;
 let hasNewValue = 1;
@@ -9546,7 +9594,7 @@ def L2_loadrh_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii),
 "$Rd32 = memh($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_152467, PredNewRel, PostInc_BaseImm {
+tc_44d3da28, TypeLD>, Enc_152467, PredNewRel, PostInc_BaseImm {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011011010;
 let hasNewValue = 1;
@@ -9563,7 +9611,7 @@ def L2_loadrh_pr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memh($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011101010;
 let hasNewValue = 1;
@@ -9577,7 +9625,7 @@ def L2_loadrh_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = memh($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -9587,7 +9635,7 @@ def L2_loadrhgp : HInst<
 (outs IntRegs:$Rd32),
 (ins u31_1Imm:$Ii),
 "$Rd32 = memh(gp+#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_8df4be, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_8df4be, AddrModeRel {
 let Inst{24-21} = 0b1010;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -9606,7 +9654,7 @@ def L2_loadri_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s30_2Imm:$Ii),
 "$Rd32 = memw($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_2a3787, AddrModeRel, PostInc_BaseImm {
+tc_17e0d2cd, TypeLD>, Enc_2a3787, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1100;
 let Inst{31-27} = 0b10010;
 let hasNewValue = 1;
@@ -9627,11 +9675,12 @@ def L2_loadri_pbr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memw($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011111100;
 let hasNewValue = 1;
 let opNewValue = 0;
+let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9640,7 +9689,7 @@ def L2_loadri_pci : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii, ModRegs:$Mu2),
 "$Rd32 = memw($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_27fd0e {
+tc_e93a3d71, TypeLD>, Enc_27fd0e {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011001100;
 let hasNewValue = 1;
@@ -9655,7 +9704,7 @@ def L2_loadri_pcr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memw($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011001100;
 let hasNewValue = 1;
@@ -9670,7 +9719,7 @@ def L2_loadri_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii),
 "$Rd32 = memw($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_3d920a, PredNewRel, PostInc_BaseImm {
+tc_44d3da28, TypeLD>, Enc_3d920a, PredNewRel, PostInc_BaseImm {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011011100;
 let hasNewValue = 1;
@@ -9687,7 +9736,7 @@ def L2_loadri_pr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memw($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011101100;
 let hasNewValue = 1;
@@ -9701,7 +9750,7 @@ def L2_loadri_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = memw($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -9711,7 +9760,7 @@ def L2_loadrigp : HInst<
 (outs IntRegs:$Rd32),
 (ins u30_2Imm:$Ii),
 "$Rd32 = memw(gp+#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_4f4ed7, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_4f4ed7, AddrModeRel {
 let Inst{24-21} = 0b1100;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -9730,7 +9779,7 @@ def L2_loadrub_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = memub($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_211aaa, AddrModeRel, PostInc_BaseImm {
+tc_17e0d2cd, TypeLD>, Enc_211aaa, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1001;
 let Inst{31-27} = 0b10010;
 let hasNewValue = 1;
@@ -9751,11 +9800,12 @@ def L2_loadrub_pbr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memub($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011111001;
 let hasNewValue = 1;
 let opNewValue = 0;
+let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9764,7 +9814,7 @@ def L2_loadrub_pci : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2),
 "$Rd32 = memub($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_e0a47a {
+tc_e93a3d71, TypeLD>, Enc_e0a47a {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011001001;
 let hasNewValue = 1;
@@ -9779,7 +9829,7 @@ def L2_loadrub_pcr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memub($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011001001;
 let hasNewValue = 1;
@@ -9794,7 +9844,7 @@ def L2_loadrub_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii),
 "$Rd32 = memub($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_222336, PredNewRel, PostInc_BaseImm {
+tc_44d3da28, TypeLD>, Enc_222336, PredNewRel, PostInc_BaseImm {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011011001;
 let hasNewValue = 1;
@@ -9811,7 +9861,7 @@ def L2_loadrub_pr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memub($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011101001;
 let hasNewValue = 1;
@@ -9825,7 +9875,7 @@ def L2_loadrub_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = memub($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -9835,7 +9885,7 @@ def L2_loadrubgp : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii),
 "$Rd32 = memub(gp+#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_25bef0, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_25bef0, AddrModeRel {
 let Inst{24-21} = 0b1001;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -9854,7 +9904,7 @@ def L2_loadruh_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii),
 "$Rd32 = memuh($Rs32+#$Ii)",
-tc_7f881c76, TypeLD>, Enc_de0214, AddrModeRel, PostInc_BaseImm {
+tc_17e0d2cd, TypeLD>, Enc_de0214, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1011;
 let Inst{31-27} = 0b10010;
 let hasNewValue = 1;
@@ -9875,11 +9925,12 @@ def L2_loadruh_pbr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memuh($Rx32++$Mu2:brev)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011111011;
 let hasNewValue = 1;
 let opNewValue = 0;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayLoad = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -9888,7 +9939,7 @@ def L2_loadruh_pci : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2),
 "$Rd32 = memuh($Rx32++#$Ii:circ($Mu2))",
-tc_4403ca65, TypeLD>, Enc_e83554 {
+tc_e93a3d71, TypeLD>, Enc_e83554 {
 let Inst{12-9} = 0b0000;
 let Inst{31-21} = 0b10011001011;
 let hasNewValue = 1;
@@ -9903,7 +9954,7 @@ def L2_loadruh_pcr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memuh($Rx32++I:circ($Mu2))",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b10011001011;
 let hasNewValue = 1;
@@ -9918,7 +9969,7 @@ def L2_loadruh_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii),
 "$Rd32 = memuh($Rx32++#$Ii)",
-tc_2fc0c436, TypeLD>, Enc_152467, PredNewRel, PostInc_BaseImm {
+tc_44d3da28, TypeLD>, Enc_152467, PredNewRel, PostInc_BaseImm {
 let Inst{13-9} = 0b00000;
 let Inst{31-21} = 0b10011011011;
 let hasNewValue = 1;
@@ -9935,7 +9986,7 @@ def L2_loadruh_pr : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Rd32 = memuh($Rx32++$Mu2)",
-tc_2fc0c436, TypeLD>, Enc_74d4e5 {
+tc_44d3da28, TypeLD>, Enc_74d4e5 {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b10011101011;
 let hasNewValue = 1;
@@ -9949,7 +10000,7 @@ def L2_loadruh_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = memuh($Rs32)",
-tc_7f881c76, TypeMAPPING> {
+tc_17e0d2cd, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -9959,7 +10010,7 @@ def L2_loadruhgp : HInst<
 (outs IntRegs:$Rd32),
 (ins u31_1Imm:$Ii),
 "$Rd32 = memuh(gp+#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_8df4be, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_8df4be, AddrModeRel {
 let Inst{24-21} = 0b1011;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -9978,7 +10029,7 @@ def L2_loadw_locked : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = memw_locked($Rs32)",
-tc_6aa5711a, TypeLD>, Enc_5e2823 {
+tc_b43e7930, TypeLD>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10010010000;
 let hasNewValue = 1;
@@ -9991,7 +10042,7 @@ def L2_ploadrbf_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memb($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000101000;
 let isPredicated = 1;
@@ -10013,7 +10064,7 @@ def L2_ploadrbf_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memb($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_f4413a, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011011000;
 let isPredicated = 1;
@@ -10030,7 +10081,7 @@ def L2_ploadrbf_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4) $Rd32 = memb($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10040,7 +10091,7 @@ def L2_ploadrbfnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memb($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000111000;
 let isPredicated = 1;
@@ -10063,7 +10114,7 @@ def L2_ploadrbfnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memb($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_f4413a, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011011000;
 let isPredicated = 1;
@@ -10081,7 +10132,7 @@ def L2_ploadrbfnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4.new) $Rd32 = memb($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10091,7 +10142,7 @@ def L2_ploadrbt_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memb($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000001000;
 let isPredicated = 1;
@@ -10112,7 +10163,7 @@ def L2_ploadrbt_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memb($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_f4413a, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011011000;
 let isPredicated = 1;
@@ -10128,7 +10179,7 @@ def L2_ploadrbt_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4) $Rd32 = memb($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10138,7 +10189,7 @@ def L2_ploadrbtnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memb($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000011000;
 let isPredicated = 1;
@@ -10160,7 +10211,7 @@ def L2_ploadrbtnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memb($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_f4413a, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011011000;
 let isPredicated = 1;
@@ -10177,7 +10228,7 @@ def L2_ploadrbtnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4.new) $Rd32 = memb($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10187,7 +10238,7 @@ def L2_ploadrdf_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u29_3Imm:$Ii),
 "if (!$Pt4) $Rdd32 = memd($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000101110;
 let isPredicated = 1;
@@ -10207,7 +10258,7 @@ def L2_ploadrdf_pi : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_3Imm:$Ii),
 "if (!$Pt4) $Rdd32 = memd($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_9d1247, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_9d1247, PredNewRel {
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011011110;
 let isPredicated = 1;
@@ -10222,7 +10273,7 @@ def L2_ploadrdf_zomap : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4) $Rdd32 = memd($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -10230,7 +10281,7 @@ def L2_ploadrdfnew_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u29_3Imm:$Ii),
 "if (!$Pt4.new) $Rdd32 = memd($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000111110;
 let isPredicated = 1;
@@ -10251,7 +10302,7 @@ def L2_ploadrdfnew_pi : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_3Imm:$Ii),
 "if (!$Pt4.new) $Rdd32 = memd($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_9d1247, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_9d1247, PredNewRel {
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011011110;
 let isPredicated = 1;
@@ -10267,7 +10318,7 @@ def L2_ploadrdfnew_zomap : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4.new) $Rdd32 = memd($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -10275,7 +10326,7 @@ def L2_ploadrdt_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u29_3Imm:$Ii),
 "if ($Pt4) $Rdd32 = memd($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000001110;
 let isPredicated = 1;
@@ -10294,7 +10345,7 @@ def L2_ploadrdt_pi : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_3Imm:$Ii),
 "if ($Pt4) $Rdd32 = memd($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_9d1247, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_9d1247, PredNewRel {
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011011110;
 let isPredicated = 1;
@@ -10308,7 +10359,7 @@ def L2_ploadrdt_zomap : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4) $Rdd32 = memd($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -10316,7 +10367,7 @@ def L2_ploadrdtnew_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u29_3Imm:$Ii),
 "if ($Pt4.new) $Rdd32 = memd($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_acd6ed, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000011110;
 let isPredicated = 1;
@@ -10336,7 +10387,7 @@ def L2_ploadrdtnew_pi : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_3Imm:$Ii),
 "if ($Pt4.new) $Rdd32 = memd($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_9d1247, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_9d1247, PredNewRel {
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011011110;
 let isPredicated = 1;
@@ -10351,7 +10402,7 @@ def L2_ploadrdtnew_zomap : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4.new) $Rdd32 = memd($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -10359,7 +10410,7 @@ def L2_ploadrhf_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if (!$Pt4) $Rd32 = memh($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000101010;
 let isPredicated = 1;
@@ -10381,7 +10432,7 @@ def L2_ploadrhf_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if (!$Pt4) $Rd32 = memh($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_733b27, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011011010;
 let isPredicated = 1;
@@ -10398,7 +10449,7 @@ def L2_ploadrhf_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4) $Rd32 = memh($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10408,7 +10459,7 @@ def L2_ploadrhfnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memh($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000111010;
 let isPredicated = 1;
@@ -10431,7 +10482,7 @@ def L2_ploadrhfnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memh($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_733b27, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011011010;
 let isPredicated = 1;
@@ -10449,7 +10500,7 @@ def L2_ploadrhfnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4.new) $Rd32 = memh($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10459,7 +10510,7 @@ def L2_ploadrht_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if ($Pt4) $Rd32 = memh($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000001010;
 let isPredicated = 1;
@@ -10480,7 +10531,7 @@ def L2_ploadrht_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if ($Pt4) $Rd32 = memh($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_733b27, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011011010;
 let isPredicated = 1;
@@ -10496,7 +10547,7 @@ def L2_ploadrht_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4) $Rd32 = memh($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10506,7 +10557,7 @@ def L2_ploadrhtnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memh($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000011010;
 let isPredicated = 1;
@@ -10528,7 +10579,7 @@ def L2_ploadrhtnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memh($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_733b27, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011011010;
 let isPredicated = 1;
@@ -10545,7 +10596,7 @@ def L2_ploadrhtnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4.new) $Rd32 = memh($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10555,7 +10606,7 @@ def L2_ploadrif_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u30_2Imm:$Ii),
 "if (!$Pt4) $Rd32 = memw($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000101100;
 let isPredicated = 1;
@@ -10577,7 +10628,7 @@ def L2_ploadrif_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_2Imm:$Ii),
 "if (!$Pt4) $Rd32 = memw($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_b97f71, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_b97f71, PredNewRel {
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011011100;
 let isPredicated = 1;
@@ -10594,7 +10645,7 @@ def L2_ploadrif_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4) $Rd32 = memw($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10604,7 +10655,7 @@ def L2_ploadrifnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u30_2Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memw($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000111100;
 let isPredicated = 1;
@@ -10627,7 +10678,7 @@ def L2_ploadrifnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_2Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memw($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_b97f71, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_b97f71, PredNewRel {
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011011100;
 let isPredicated = 1;
@@ -10645,7 +10696,7 @@ def L2_ploadrifnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4.new) $Rd32 = memw($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10655,7 +10706,7 @@ def L2_ploadrit_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u30_2Imm:$Ii),
 "if ($Pt4) $Rd32 = memw($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000001100;
 let isPredicated = 1;
@@ -10676,7 +10727,7 @@ def L2_ploadrit_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_2Imm:$Ii),
 "if ($Pt4) $Rd32 = memw($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_b97f71, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_b97f71, PredNewRel {
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011011100;
 let isPredicated = 1;
@@ -10692,7 +10743,7 @@ def L2_ploadrit_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4) $Rd32 = memw($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10702,7 +10753,7 @@ def L2_ploadritnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u30_2Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memw($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_f82eaf, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000011100;
 let isPredicated = 1;
@@ -10724,7 +10775,7 @@ def L2_ploadritnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_2Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memw($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_b97f71, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_b97f71, PredNewRel {
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011011100;
 let isPredicated = 1;
@@ -10741,7 +10792,7 @@ def L2_ploadritnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4.new) $Rd32 = memw($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10751,7 +10802,7 @@ def L2_ploadrubf_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memub($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000101001;
 let isPredicated = 1;
@@ -10773,7 +10824,7 @@ def L2_ploadrubf_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memub($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_f4413a, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011011001;
 let isPredicated = 1;
@@ -10790,7 +10841,7 @@ def L2_ploadrubf_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4) $Rd32 = memub($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10800,7 +10851,7 @@ def L2_ploadrubfnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memub($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000111001;
 let isPredicated = 1;
@@ -10823,7 +10874,7 @@ def L2_ploadrubfnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memub($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_f4413a, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011011001;
 let isPredicated = 1;
@@ -10841,7 +10892,7 @@ def L2_ploadrubfnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4.new) $Rd32 = memub($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10851,7 +10902,7 @@ def L2_ploadrubt_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memub($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000001001;
 let isPredicated = 1;
@@ -10872,7 +10923,7 @@ def L2_ploadrubt_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memub($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_f4413a, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011011001;
 let isPredicated = 1;
@@ -10888,7 +10939,7 @@ def L2_ploadrubt_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4) $Rd32 = memub($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10898,7 +10949,7 @@ def L2_ploadrubtnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memub($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a21d47, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a21d47, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000011001;
 let isPredicated = 1;
@@ -10920,7 +10971,7 @@ def L2_ploadrubtnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memub($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_f4413a, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_f4413a, PredNewRel {
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011011001;
 let isPredicated = 1;
@@ -10937,7 +10988,7 @@ def L2_ploadrubtnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4.new) $Rd32 = memub($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10947,7 +10998,7 @@ def L2_ploadruhf_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if (!$Pt4) $Rd32 = memuh($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000101011;
 let isPredicated = 1;
@@ -10969,7 +11020,7 @@ def L2_ploadruhf_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if (!$Pt4) $Rd32 = memuh($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_733b27, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011011011;
 let isPredicated = 1;
@@ -10986,7 +11037,7 @@ def L2_ploadruhf_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4) $Rd32 = memuh($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -10996,7 +11047,7 @@ def L2_ploadruhfnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memuh($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000111011;
 let isPredicated = 1;
@@ -11019,7 +11070,7 @@ def L2_ploadruhfnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memuh($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_733b27, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011011011;
 let isPredicated = 1;
@@ -11037,7 +11088,7 @@ def L2_ploadruhfnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if (!$Pt4.new) $Rd32 = memuh($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -11047,7 +11098,7 @@ def L2_ploadruht_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if ($Pt4) $Rd32 = memuh($Rs32+#$Ii)",
-tc_ef52ed71, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_5ef37dc4, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000001011;
 let isPredicated = 1;
@@ -11068,7 +11119,7 @@ def L2_ploadruht_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if ($Pt4) $Rd32 = memuh($Rx32++#$Ii)",
-tc_bad2bcaf, TypeLD>, Enc_733b27, PredNewRel {
+tc_3c76b0ff, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011011011;
 let isPredicated = 1;
@@ -11084,7 +11135,7 @@ def L2_ploadruht_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4) $Rd32 = memuh($Rs32)",
-tc_ef52ed71, TypeMAPPING> {
+tc_5ef37dc4, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -11094,7 +11145,7 @@ def L2_ploadruhtnew_io : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32, u31_1Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memuh($Rs32+#$Ii)",
-tc_2fc0c436, TypeV2LDST>, Enc_a198f6, AddrModeRel {
+tc_44d3da28, TypeV2LDST>, Enc_a198f6, AddrModeRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01000011011;
 let isPredicated = 1;
@@ -11116,7 +11167,7 @@ def L2_ploadruhtnew_pi : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Rx32),
 (ins PredRegs:$Pt4, IntRegs:$Rx32in, s4_1Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memuh($Rx32++#$Ii)",
-tc_63fe3df7, TypeLD>, Enc_733b27, PredNewRel {
+tc_e9f3243f, TypeLD>, Enc_733b27, PredNewRel {
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011011011;
 let isPredicated = 1;
@@ -11133,7 +11184,7 @@ def L2_ploadruhtnew_zomap : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, IntRegs:$Rs32),
 "if ($Pt4.new) $Rd32 = memuh($Rs32)",
-tc_2fc0c436, TypeMAPPING> {
+tc_44d3da28, TypeMAPPING> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -11143,7 +11194,7 @@ def L4_add_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rs32+#$Ii) += $Rt32",
-tc_44126683, TypeV4LDST>, Enc_d44e31 {
+tc_7186d325, TypeV4LDST>, Enc_d44e31 {
 let Inst{6-5} = 0b00;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110000;
@@ -11162,7 +11213,7 @@ def L4_add_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memb($Rs32) += $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11170,7 +11221,7 @@ def L4_add_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+#$Ii) += $Rt32",
-tc_44126683, TypeV4LDST>, Enc_163a3c {
+tc_7186d325, TypeV4LDST>, Enc_163a3c {
 let Inst{6-5} = 0b00;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110001;
@@ -11189,7 +11240,7 @@ def L4_add_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memh($Rs32) += $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11197,7 +11248,7 @@ def L4_add_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "memw($Rs32+#$Ii) += $Rt32",
-tc_44126683, TypeV4LDST>, Enc_226535 {
+tc_7186d325, TypeV4LDST>, Enc_226535 {
 let Inst{6-5} = 0b00;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110010;
@@ -11216,7 +11267,7 @@ def L4_add_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memw($Rs32) += $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11224,7 +11275,7 @@ def L4_and_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rs32+#$Ii) &= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_d44e31 {
+tc_7186d325, TypeV4LDST>, Enc_d44e31 {
 let Inst{6-5} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110000;
@@ -11243,7 +11294,7 @@ def L4_and_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memb($Rs32) &= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11251,7 +11302,7 @@ def L4_and_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+#$Ii) &= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_163a3c {
+tc_7186d325, TypeV4LDST>, Enc_163a3c {
 let Inst{6-5} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110001;
@@ -11270,7 +11321,7 @@ def L4_and_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memh($Rs32) &= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11278,7 +11329,7 @@ def L4_and_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "memw($Rs32+#$Ii) &= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_226535 {
+tc_7186d325, TypeV4LDST>, Enc_226535 {
 let Inst{6-5} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110010;
@@ -11297,7 +11348,7 @@ def L4_and_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memw($Rs32) &= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11305,7 +11356,7 @@ def L4_iadd_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, u5_0Imm:$II),
 "memb($Rs32+#$Ii) += #$II",
-tc_44126683, TypeV4LDST>, Enc_46c951 {
+tc_096199d3, TypeV4LDST>, Enc_46c951 {
 let Inst{6-5} = 0b00;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111000;
@@ -11324,7 +11375,7 @@ def L4_iadd_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memb($Rs32) += #$II",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11332,7 +11383,7 @@ def L4_iadd_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, u5_0Imm:$II),
 "memh($Rs32+#$Ii) += #$II",
-tc_44126683, TypeV4LDST>, Enc_e66a97 {
+tc_096199d3, TypeV4LDST>, Enc_e66a97 {
 let Inst{6-5} = 0b00;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111001;
@@ -11351,7 +11402,7 @@ def L4_iadd_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memh($Rs32) += #$II",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11359,7 +11410,7 @@ def L4_iadd_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, u5_0Imm:$II),
 "memw($Rs32+#$Ii) += #$II",
-tc_44126683, TypeV4LDST>, Enc_84b2cd {
+tc_096199d3, TypeV4LDST>, Enc_84b2cd {
 let Inst{6-5} = 0b00;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111010;
@@ -11378,7 +11429,7 @@ def L4_iadd_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memw($Rs32) += #$II",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11386,7 +11437,7 @@ def L4_iand_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, u5_0Imm:$II),
 "memb($Rs32+#$Ii) = clrbit(#$II)",
-tc_44126683, TypeV4LDST>, Enc_46c951 {
+tc_096199d3, TypeV4LDST>, Enc_46c951 {
 let Inst{6-5} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111000;
@@ -11405,7 +11456,7 @@ def L4_iand_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memb($Rs32) = clrbit(#$II)",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11413,7 +11464,7 @@ def L4_iand_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, u5_0Imm:$II),
 "memh($Rs32+#$Ii) = clrbit(#$II)",
-tc_44126683, TypeV4LDST>, Enc_e66a97 {
+tc_096199d3, TypeV4LDST>, Enc_e66a97 {
 let Inst{6-5} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111001;
@@ -11432,7 +11483,7 @@ def L4_iand_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memh($Rs32) = clrbit(#$II)",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11440,7 +11491,7 @@ def L4_iand_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, u5_0Imm:$II),
 "memw($Rs32+#$Ii) = clrbit(#$II)",
-tc_44126683, TypeV4LDST>, Enc_84b2cd {
+tc_096199d3, TypeV4LDST>, Enc_84b2cd {
 let Inst{6-5} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111010;
@@ -11459,7 +11510,7 @@ def L4_iand_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memw($Rs32) = clrbit(#$II)",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11467,7 +11518,7 @@ def L4_ior_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, u5_0Imm:$II),
 "memb($Rs32+#$Ii) = setbit(#$II)",
-tc_44126683, TypeV4LDST>, Enc_46c951 {
+tc_096199d3, TypeV4LDST>, Enc_46c951 {
 let Inst{6-5} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111000;
@@ -11486,7 +11537,7 @@ def L4_ior_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memb($Rs32) = setbit(#$II)",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11494,7 +11545,7 @@ def L4_ior_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, u5_0Imm:$II),
 "memh($Rs32+#$Ii) = setbit(#$II)",
-tc_44126683, TypeV4LDST>, Enc_e66a97 {
+tc_096199d3, TypeV4LDST>, Enc_e66a97 {
 let Inst{6-5} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111001;
@@ -11513,7 +11564,7 @@ def L4_ior_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memh($Rs32) = setbit(#$II)",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11521,7 +11572,7 @@ def L4_ior_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, u5_0Imm:$II),
 "memw($Rs32+#$Ii) = setbit(#$II)",
-tc_44126683, TypeV4LDST>, Enc_84b2cd {
+tc_096199d3, TypeV4LDST>, Enc_84b2cd {
 let Inst{6-5} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111010;
@@ -11540,7 +11591,7 @@ def L4_ior_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memw($Rs32) = setbit(#$II)",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11548,7 +11599,7 @@ def L4_isub_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, u5_0Imm:$II),
 "memb($Rs32+#$Ii) -= #$II",
-tc_44126683, TypeV4LDST>, Enc_46c951 {
+tc_096199d3, TypeV4LDST>, Enc_46c951 {
 let Inst{6-5} = 0b01;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111000;
@@ -11567,7 +11618,7 @@ def L4_isub_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memb($Rs32) -= #$II",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11575,7 +11626,7 @@ def L4_isub_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, u5_0Imm:$II),
 "memh($Rs32+#$Ii) -= #$II",
-tc_44126683, TypeV4LDST>, Enc_e66a97 {
+tc_096199d3, TypeV4LDST>, Enc_e66a97 {
 let Inst{6-5} = 0b01;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111001;
@@ -11594,7 +11645,7 @@ def L4_isub_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memh($Rs32) -= #$II",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11602,7 +11653,7 @@ def L4_isub_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, u5_0Imm:$II),
 "memw($Rs32+#$Ii) -= #$II",
-tc_44126683, TypeV4LDST>, Enc_84b2cd {
+tc_096199d3, TypeV4LDST>, Enc_84b2cd {
 let Inst{6-5} = 0b01;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111111010;
@@ -11621,7 +11672,7 @@ def L4_isub_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, u5_0Imm:$II),
 "memw($Rs32) -= #$II",
-tc_44126683, TypeMAPPING> {
+tc_096199d3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -11629,7 +11680,7 @@ def L4_loadalignb_ap : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Re32),
 (ins DoubleRegs:$Ryy32in, u32_0Imm:$II),
 "$Ryy32 = memb_fifo($Re32=#$II)",
-tc_5acef64a, TypeLD>, Enc_f394d3 {
+tc_7a91e76a, TypeLD>, Enc_f394d3 {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011010100;
@@ -11649,7 +11700,7 @@ def L4_loadalignb_ur : HInst<
 (outs DoubleRegs:$Ryy32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Ryy32 = memb_fifo($Rt32<<#$Ii+#$II)",
-tc_0cd51c76, TypeLD>, Enc_04c959 {
+tc_a5d4aeec, TypeLD>, Enc_04c959 {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011100100;
 let addrMode = BaseLongOffset;
@@ -11669,7 +11720,7 @@ def L4_loadalignh_ap : HInst<
 (outs DoubleRegs:$Ryy32, IntRegs:$Re32),
 (ins DoubleRegs:$Ryy32in, u32_0Imm:$II),
 "$Ryy32 = memh_fifo($Re32=#$II)",
-tc_5acef64a, TypeLD>, Enc_f394d3 {
+tc_7a91e76a, TypeLD>, Enc_f394d3 {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011010010;
@@ -11689,7 +11740,7 @@ def L4_loadalignh_ur : HInst<
 (outs DoubleRegs:$Ryy32),
 (ins DoubleRegs:$Ryy32in, IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Ryy32 = memh_fifo($Rt32<<#$Ii+#$II)",
-tc_0cd51c76, TypeLD>, Enc_04c959 {
+tc_a5d4aeec, TypeLD>, Enc_04c959 {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011100010;
 let addrMode = BaseLongOffset;
@@ -11709,7 +11760,7 @@ def L4_loadbsw2_ap : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rd32 = membh($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_323f2d {
+tc_3b5b7ef9, TypeLD>, Enc_323f2d {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011010001;
@@ -11730,7 +11781,7 @@ def L4_loadbsw2_ur : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rd32 = membh($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_4f677b {
+tc_bab0eed9, TypeLD>, Enc_4f677b {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011100001;
 let hasNewValue = 1;
@@ -11751,7 +11802,7 @@ def L4_loadbsw4_ap : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rdd32 = membh($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_7fa7f6 {
+tc_3b5b7ef9, TypeLD>, Enc_7fa7f6 {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011010111;
@@ -11770,7 +11821,7 @@ def L4_loadbsw4_ur : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rdd32 = membh($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_6185fe {
+tc_bab0eed9, TypeLD>, Enc_6185fe {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011100111;
 let addrMode = BaseLongOffset;
@@ -11789,7 +11840,7 @@ def L4_loadbzw2_ap : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rd32 = memubh($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_323f2d {
+tc_3b5b7ef9, TypeLD>, Enc_323f2d {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011010011;
@@ -11810,7 +11861,7 @@ def L4_loadbzw2_ur : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rd32 = memubh($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_4f677b {
+tc_bab0eed9, TypeLD>, Enc_4f677b {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011100011;
 let hasNewValue = 1;
@@ -11831,7 +11882,7 @@ def L4_loadbzw4_ap : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rdd32 = memubh($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_7fa7f6 {
+tc_3b5b7ef9, TypeLD>, Enc_7fa7f6 {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011010101;
@@ -11850,7 +11901,7 @@ def L4_loadbzw4_ur : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rdd32 = memubh($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_6185fe {
+tc_bab0eed9, TypeLD>, Enc_6185fe {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011100101;
 let addrMode = BaseLongOffset;
@@ -11869,7 +11920,7 @@ def L4_loadd_locked : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = memd_locked($Rs32)",
-tc_6aa5711a, TypeLD>, Enc_3a3d62 {
+tc_b43e7930, TypeLD>, Enc_3a3d62 {
 let Inst{13-5} = 0b010000000;
 let Inst{31-21} = 0b10010010000;
 let accessSize = DoubleWordAccess;
@@ -11880,7 +11931,7 @@ def L4_loadrb_ap : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rd32 = memb($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_323f2d {
+tc_3b5b7ef9, TypeLD>, Enc_323f2d {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011011000;
@@ -11901,7 +11952,7 @@ def L4_loadrb_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rd32 = memb($Rs32+$Rt32<<#$Ii)",
-tc_f47d212f, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
+tc_bf061958, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111010000;
 let hasNewValue = 1;
@@ -11918,7 +11969,7 @@ def L4_loadrb_ur : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rd32 = memb($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
+tc_bab0eed9, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011101000;
 let hasNewValue = 1;
@@ -11940,7 +11991,7 @@ def L4_loadrd_ap : HInst<
 (outs DoubleRegs:$Rdd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rdd32 = memd($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_7fa7f6 {
+tc_3b5b7ef9, TypeLD>, Enc_7fa7f6 {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011011110;
@@ -11959,7 +12010,7 @@ def L4_loadrd_rr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rdd32 = memd($Rs32+$Rt32<<#$Ii)",
-tc_f47d212f, TypeLD>, Enc_84bff1, AddrModeRel, ImmRegShl {
+tc_bf061958, TypeLD>, Enc_84bff1, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111010110;
 let addrMode = BaseRegOffset;
@@ -11974,7 +12025,7 @@ def L4_loadrd_ur : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rdd32 = memd($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_6185fe, AddrModeRel, ImmRegShl {
+tc_bab0eed9, TypeLD>, Enc_6185fe, AddrModeRel, ImmRegShl {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011101110;
 let addrMode = BaseLongOffset;
@@ -11994,7 +12045,7 @@ def L4_loadrh_ap : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rd32 = memh($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_323f2d {
+tc_3b5b7ef9, TypeLD>, Enc_323f2d {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011011010;
@@ -12015,7 +12066,7 @@ def L4_loadrh_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rd32 = memh($Rs32+$Rt32<<#$Ii)",
-tc_f47d212f, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
+tc_bf061958, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111010010;
 let hasNewValue = 1;
@@ -12032,7 +12083,7 @@ def L4_loadrh_ur : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rd32 = memh($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
+tc_bab0eed9, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011101010;
 let hasNewValue = 1;
@@ -12054,7 +12105,7 @@ def L4_loadri_ap : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rd32 = memw($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_323f2d {
+tc_3b5b7ef9, TypeLD>, Enc_323f2d {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011011100;
@@ -12075,7 +12126,7 @@ def L4_loadri_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rd32 = memw($Rs32+$Rt32<<#$Ii)",
-tc_f47d212f, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
+tc_bf061958, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111010100;
 let hasNewValue = 1;
@@ -12092,7 +12143,7 @@ def L4_loadri_ur : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rd32 = memw($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
+tc_bab0eed9, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011101100;
 let hasNewValue = 1;
@@ -12114,7 +12165,7 @@ def L4_loadrub_ap : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rd32 = memub($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_323f2d {
+tc_3b5b7ef9, TypeLD>, Enc_323f2d {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011011001;
@@ -12135,7 +12186,7 @@ def L4_loadrub_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rd32 = memub($Rs32+$Rt32<<#$Ii)",
-tc_f47d212f, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
+tc_bf061958, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111010001;
 let hasNewValue = 1;
@@ -12152,7 +12203,7 @@ def L4_loadrub_ur : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rd32 = memub($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
+tc_bab0eed9, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011101001;
 let hasNewValue = 1;
@@ -12174,7 +12225,7 @@ def L4_loadruh_ap : HInst<
 (outs IntRegs:$Rd32, IntRegs:$Re32),
 (ins u32_0Imm:$II),
 "$Rd32 = memuh($Re32=#$II)",
-tc_b77c481f, TypeLD>, Enc_323f2d {
+tc_3b5b7ef9, TypeLD>, Enc_323f2d {
 let Inst{7-7} = 0b0;
 let Inst{13-12} = 0b01;
 let Inst{31-21} = 0b10011011011;
@@ -12195,7 +12246,7 @@ def L4_loadruh_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rd32 = memuh($Rs32+$Rt32<<#$Ii)",
-tc_f47d212f, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
+tc_bf061958, TypeLD>, Enc_da664b, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111010011;
 let hasNewValue = 1;
@@ -12212,7 +12263,7 @@ def L4_loadruh_ur : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, u2_0Imm:$Ii, u32_0Imm:$II),
 "$Rd32 = memuh($Rt32<<#$Ii+#$II)",
-tc_cf47a43f, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
+tc_bab0eed9, TypeLD>, Enc_4f677b, AddrModeRel, ImmRegShl {
 let Inst{12-12} = 0b1;
 let Inst{31-21} = 0b10011101011;
 let hasNewValue = 1;
@@ -12234,7 +12285,7 @@ def L4_or_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rs32+#$Ii) |= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_d44e31 {
+tc_7186d325, TypeV4LDST>, Enc_d44e31 {
 let Inst{6-5} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110000;
@@ -12253,7 +12304,7 @@ def L4_or_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memb($Rs32) |= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -12261,7 +12312,7 @@ def L4_or_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+#$Ii) |= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_163a3c {
+tc_7186d325, TypeV4LDST>, Enc_163a3c {
 let Inst{6-5} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110001;
@@ -12280,7 +12331,7 @@ def L4_or_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memh($Rs32) |= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -12288,7 +12339,7 @@ def L4_or_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "memw($Rs32+#$Ii) |= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_226535 {
+tc_7186d325, TypeV4LDST>, Enc_226535 {
 let Inst{6-5} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110010;
@@ -12307,7 +12358,7 @@ def L4_or_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memw($Rs32) |= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -12315,7 +12366,7 @@ def L4_ploadrbf_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memb(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011111000;
@@ -12340,7 +12391,7 @@ def L4_ploadrbf_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4) $Rd32 = memb($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110001000;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12357,7 +12408,7 @@ def L4_ploadrbfnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memb(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011111000;
@@ -12383,7 +12434,7 @@ def L4_ploadrbfnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4.new) $Rd32 = memb($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110011000;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12401,7 +12452,7 @@ def L4_ploadrbt_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memb(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011111000;
@@ -12425,7 +12476,7 @@ def L4_ploadrbt_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4) $Rd32 = memb($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110000000;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -12441,7 +12492,7 @@ def L4_ploadrbtnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memb(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011111000;
@@ -12466,7 +12517,7 @@ def L4_ploadrbtnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4.new) $Rd32 = memb($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110010000;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -12483,7 +12534,7 @@ def L4_ploadrdf_abs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4) $Rdd32 = memd(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2a7b91, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2a7b91, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011111110;
@@ -12506,7 +12557,7 @@ def L4_ploadrdf_rr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4) $Rdd32 = memd($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_98c0b8, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_98c0b8, AddrModeRel {
 let Inst{31-21} = 0b00110001110;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12521,7 +12572,7 @@ def L4_ploadrdfnew_abs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rdd32 = memd(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2a7b91, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2a7b91, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011111110;
@@ -12545,7 +12596,7 @@ def L4_ploadrdfnew_rr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4.new) $Rdd32 = memd($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_98c0b8, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_98c0b8, AddrModeRel {
 let Inst{31-21} = 0b00110011110;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12561,7 +12612,7 @@ def L4_ploadrdt_abs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4) $Rdd32 = memd(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2a7b91, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2a7b91, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011111110;
@@ -12583,7 +12634,7 @@ def L4_ploadrdt_rr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4) $Rdd32 = memd($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_98c0b8, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_98c0b8, AddrModeRel {
 let Inst{31-21} = 0b00110000110;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -12597,7 +12648,7 @@ def L4_ploadrdtnew_abs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rdd32 = memd(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2a7b91, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2a7b91, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011111110;
@@ -12620,7 +12671,7 @@ def L4_ploadrdtnew_rr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4.new) $Rdd32 = memd($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_98c0b8, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_98c0b8, AddrModeRel {
 let Inst{31-21} = 0b00110010110;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -12635,7 +12686,7 @@ def L4_ploadrhf_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memh(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011111010;
@@ -12660,7 +12711,7 @@ def L4_ploadrhf_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4) $Rd32 = memh($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110001010;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12677,7 +12728,7 @@ def L4_ploadrhfnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memh(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011111010;
@@ -12703,7 +12754,7 @@ def L4_ploadrhfnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4.new) $Rd32 = memh($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110011010;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12721,7 +12772,7 @@ def L4_ploadrht_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memh(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011111010;
@@ -12745,7 +12796,7 @@ def L4_ploadrht_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4) $Rd32 = memh($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110000010;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -12761,7 +12812,7 @@ def L4_ploadrhtnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memh(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011111010;
@@ -12786,7 +12837,7 @@ def L4_ploadrhtnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4.new) $Rd32 = memh($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110010010;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -12803,7 +12854,7 @@ def L4_ploadrif_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memw(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011111100;
@@ -12828,7 +12879,7 @@ def L4_ploadrif_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4) $Rd32 = memw($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110001100;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12845,7 +12896,7 @@ def L4_ploadrifnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memw(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011111100;
@@ -12871,7 +12922,7 @@ def L4_ploadrifnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4.new) $Rd32 = memw($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110011100;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -12889,7 +12940,7 @@ def L4_ploadrit_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memw(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011111100;
@@ -12913,7 +12964,7 @@ def L4_ploadrit_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4) $Rd32 = memw($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110000100;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -12929,7 +12980,7 @@ def L4_ploadritnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memw(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011111100;
@@ -12954,7 +13005,7 @@ def L4_ploadritnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4.new) $Rd32 = memw($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110010100;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -12971,7 +13022,7 @@ def L4_ploadrubf_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memub(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011111001;
@@ -12996,7 +13047,7 @@ def L4_ploadrubf_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4) $Rd32 = memub($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110001001;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -13013,7 +13064,7 @@ def L4_ploadrubfnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memub(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011111001;
@@ -13039,7 +13090,7 @@ def L4_ploadrubfnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4.new) $Rd32 = memub($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110011001;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -13057,7 +13108,7 @@ def L4_ploadrubt_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memub(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011111001;
@@ -13081,7 +13132,7 @@ def L4_ploadrubt_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4) $Rd32 = memub($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110000001;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -13097,7 +13148,7 @@ def L4_ploadrubtnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memub(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011111001;
@@ -13122,7 +13173,7 @@ def L4_ploadrubtnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4.new) $Rd32 = memub($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110010001;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -13139,7 +13190,7 @@ def L4_ploadruhf_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4) $Rd32 = memuh(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b101;
 let Inst{31-21} = 0b10011111011;
@@ -13164,7 +13215,7 @@ def L4_ploadruhf_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4) $Rd32 = memuh($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110001011;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -13181,7 +13232,7 @@ def L4_ploadruhfnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if (!$Pt4.new) $Rd32 = memuh(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b111;
 let Inst{31-21} = 0b10011111011;
@@ -13207,7 +13258,7 @@ def L4_ploadruhfnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if (!$Pv4.new) $Rd32 = memuh($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110011011;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -13225,7 +13276,7 @@ def L4_ploadruht_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4) $Rd32 = memuh(#$Ii)",
-tc_1d5a38a8, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_7646c131, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b100;
 let Inst{31-21} = 0b10011111011;
@@ -13249,7 +13300,7 @@ def L4_ploadruht_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4) $Rd32 = memuh($Rs32+$Rt32<<#$Ii)",
-tc_9ef61e5c, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_e4b3cb20, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110000011;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -13265,7 +13316,7 @@ def L4_ploadruhtnew_abs : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pt4, u32_0Imm:$Ii),
 "if ($Pt4.new) $Rd32 = memuh(#$Ii)",
-tc_b77c481f, TypeLD>, Enc_2301d6, AddrModeRel {
+tc_3b5b7ef9, TypeLD>, Enc_2301d6, AddrModeRel {
 let Inst{7-5} = 0b100;
 let Inst{13-11} = 0b110;
 let Inst{31-21} = 0b10011111011;
@@ -13290,7 +13341,7 @@ def L4_ploadruhtnew_rr : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "if ($Pv4.new) $Rd32 = memuh($Rs32+$Rt32<<#$Ii)",
-tc_b7dd427e, TypeLD>, Enc_2e1979, AddrModeRel {
+tc_25a78932, TypeLD>, Enc_2e1979, AddrModeRel {
 let Inst{31-21} = 0b00110010011;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -13307,7 +13358,7 @@ def L4_return : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = dealloc_return($Rs32):raw",
-tc_3d04548d, TypeLD>, Enc_3a3d62, PredNewRel {
+tc_675e4897, TypeLD>, Enc_3a3d62, PredNewRel {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10010110000;
 let isTerminator = 1;
@@ -13328,7 +13379,7 @@ def L4_return_f : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32),
 "if (!$Pv4) $Rdd32 = dealloc_return($Rs32):raw",
-tc_513bef45, TypeLD>, Enc_b7fad3, PredNewRel {
+tc_2b8da4c2, TypeLD>, Enc_b7fad3, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1100;
 let Inst{31-21} = 0b10010110000;
@@ -13350,7 +13401,7 @@ def L4_return_fnew_pnt : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32),
 "if (!$Pv4.new) $Rdd32 = dealloc_return($Rs32):nt:raw",
-tc_395dc00f, TypeLD>, Enc_b7fad3, PredNewRel {
+tc_9da59d12, TypeLD>, Enc_b7fad3, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1010;
 let Inst{31-21} = 0b10010110000;
@@ -13373,7 +13424,7 @@ def L4_return_fnew_pt : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32),
 "if (!$Pv4.new) $Rdd32 = dealloc_return($Rs32):t:raw",
-tc_395dc00f, TypeLD>, Enc_b7fad3, PredNewRel {
+tc_9da59d12, TypeLD>, Enc_b7fad3, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b1110;
 let Inst{31-21} = 0b10010110000;
@@ -13396,7 +13447,7 @@ def L4_return_map_to_raw_f : HInst<
 (outs),
 (ins PredRegs:$Pv4),
 "if (!$Pv4) dealloc_return",
-tc_513bef45, TypeMAPPING>, Requires<[HasV65]> {
+tc_2b8da4c2, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13404,7 +13455,7 @@ def L4_return_map_to_raw_fnew_pnt : HInst<
 (outs),
 (ins PredRegs:$Pv4),
 "if (!$Pv4.new) dealloc_return:nt",
-tc_395dc00f, TypeMAPPING>, Requires<[HasV65]> {
+tc_9da59d12, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13412,7 +13463,7 @@ def L4_return_map_to_raw_fnew_pt : HInst<
 (outs),
 (ins PredRegs:$Pv4),
 "if (!$Pv4.new) dealloc_return:t",
-tc_395dc00f, TypeMAPPING>, Requires<[HasV65]> {
+tc_9da59d12, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13420,7 +13471,7 @@ def L4_return_map_to_raw_t : HInst<
 (outs),
 (ins PredRegs:$Pv4),
 "if ($Pv4) dealloc_return",
-tc_3bc2c5d3, TypeMAPPING>, Requires<[HasV65]> {
+tc_4d5fa3a1, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13428,7 +13479,7 @@ def L4_return_map_to_raw_tnew_pnt : HInst<
 (outs),
 (ins PredRegs:$Pv4),
 "if ($Pv4.new) dealloc_return:nt",
-tc_e7624c08, TypeMAPPING>, Requires<[HasV65]> {
+tc_e06f432a, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13436,7 +13487,7 @@ def L4_return_map_to_raw_tnew_pt : HInst<
 (outs),
 (ins PredRegs:$Pv4),
 "if ($Pv4.new) dealloc_return:t",
-tc_e7624c08, TypeMAPPING>, Requires<[HasV65]> {
+tc_e06f432a, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13444,7 +13495,7 @@ def L4_return_t : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32),
 "if ($Pv4) $Rdd32 = dealloc_return($Rs32):raw",
-tc_513bef45, TypeLD>, Enc_b7fad3, PredNewRel {
+tc_2b8da4c2, TypeLD>, Enc_b7fad3, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b0100;
 let Inst{31-21} = 0b10010110000;
@@ -13465,7 +13516,7 @@ def L4_return_tnew_pnt : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32),
 "if ($Pv4.new) $Rdd32 = dealloc_return($Rs32):nt:raw",
-tc_395dc00f, TypeLD>, Enc_b7fad3, PredNewRel {
+tc_9da59d12, TypeLD>, Enc_b7fad3, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b0010;
 let Inst{31-21} = 0b10010110000;
@@ -13487,7 +13538,7 @@ def L4_return_tnew_pt : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins PredRegs:$Pv4, IntRegs:$Rs32),
 "if ($Pv4.new) $Rdd32 = dealloc_return($Rs32):t:raw",
-tc_395dc00f, TypeLD>, Enc_b7fad3, PredNewRel {
+tc_9da59d12, TypeLD>, Enc_b7fad3, PredNewRel {
 let Inst{7-5} = 0b000;
 let Inst{13-10} = 0b0110;
 let Inst{31-21} = 0b10010110000;
@@ -13509,7 +13560,7 @@ def L4_sub_memopb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rs32+#$Ii) -= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_d44e31 {
+tc_7186d325, TypeV4LDST>, Enc_d44e31 {
 let Inst{6-5} = 0b01;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110000;
@@ -13528,7 +13579,7 @@ def L4_sub_memopb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memb($Rs32) -= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13536,7 +13587,7 @@ def L4_sub_memoph_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+#$Ii) -= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_163a3c {
+tc_7186d325, TypeV4LDST>, Enc_163a3c {
 let Inst{6-5} = 0b01;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110001;
@@ -13555,7 +13606,7 @@ def L4_sub_memoph_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memh($Rs32) -= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13563,7 +13614,7 @@ def L4_sub_memopw_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "memw($Rs32+#$Ii) -= $Rt32",
-tc_44126683, TypeV4LDST>, Enc_226535 {
+tc_7186d325, TypeV4LDST>, Enc_226535 {
 let Inst{6-5} = 0b01;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00111110010;
@@ -13582,7 +13633,7 @@ def L4_sub_memopw_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memw($Rs32) -= $Rt32",
-tc_44126683, TypeMAPPING> {
+tc_7186d325, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13590,15 +13641,26 @@ def L6_deallocframe_map_to_raw : HInst<
 (outs),
 (ins),
 "deallocframe",
-tc_d1090e34, TypeMAPPING>, Requires<[HasV65]> {
+tc_15aa71c5, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
+}
+def L6_memcpy : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32, ModRegs:$Mu2),
+"memcpy($Rs32,$Rt32,$Mu2)",
+tc_a6b1eca9, TypeLD>, Enc_a75aa6, Requires<[HasV66]> {
+let Inst{7-0} = 0b01000000;
+let Inst{31-21} = 0b10010010000;
+let mayLoad = 1;
+let isSolo = 1;
+let mayStore = 1;
 }
 def L6_return_map_to_raw : HInst<
 (outs),
 (ins),
 "dealloc_return",
-tc_3d04548d, TypeMAPPING>, Requires<[HasV65]> {
+tc_675e4897, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -13606,7 +13668,7 @@ def M2_acci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += add($Rs32,$Rt32)",
-tc_c74f796f, TypeM>, Enc_2ae154, ImmRegRel {
+tc_f675fee8, TypeM>, Enc_2ae154, ImmRegRel {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -13621,7 +13683,7 @@ def M2_accii : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rx32 += add($Rs32,#$Ii)",
-tc_c74f796f, TypeM>, Enc_c90aca, ImmRegRel {
+tc_f675fee8, TypeM>, Enc_c90aca, ImmRegRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100010000;
 let hasNewValue = 1;
@@ -13640,7 +13702,7 @@ def M2_cmaci_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += cmpyi($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111000;
@@ -13651,7 +13713,7 @@ def M2_cmacr_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += cmpyr($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111000;
@@ -13662,7 +13724,7 @@ def M2_cmacs_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += cmpy($Rs32,$Rt32):sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111000;
@@ -13674,7 +13736,7 @@ def M2_cmacs_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += cmpy($Rs32,$Rt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111100;
@@ -13686,7 +13748,7 @@ def M2_cmacsc_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += cmpy($Rs32,$Rt32*):sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111010;
@@ -13698,7 +13760,7 @@ def M2_cmacsc_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += cmpy($Rs32,$Rt32*):<<1:sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111110;
@@ -13710,7 +13772,7 @@ def M2_cmpyi_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = cmpyi($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101000;
@@ -13720,7 +13782,7 @@ def M2_cmpyr_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = cmpyr($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101000;
@@ -13730,7 +13792,7 @@ def M2_cmpyrs_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = cmpy($Rs32,$Rt32):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101001;
@@ -13743,7 +13805,7 @@ def M2_cmpyrs_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = cmpy($Rs32,$Rt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101101;
@@ -13756,7 +13818,7 @@ def M2_cmpyrsc_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = cmpy($Rs32,$Rt32*):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101011;
@@ -13769,7 +13831,7 @@ def M2_cmpyrsc_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = cmpy($Rs32,$Rt32*):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101111;
@@ -13782,7 +13844,7 @@ def M2_cmpys_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = cmpy($Rs32,$Rt32):sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101000;
@@ -13793,7 +13855,7 @@ def M2_cmpys_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = cmpy($Rs32,$Rt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101100;
@@ -13804,7 +13866,7 @@ def M2_cmpysc_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = cmpy($Rs32,$Rt32*):sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101010;
@@ -13815,7 +13877,7 @@ def M2_cmpysc_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = cmpy($Rs32,$Rt32*):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101110;
@@ -13826,7 +13888,7 @@ def M2_cnacs_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= cmpy($Rs32,$Rt32):sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111000;
@@ -13838,7 +13900,7 @@ def M2_cnacs_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= cmpy($Rs32,$Rt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111100;
@@ -13850,7 +13912,7 @@ def M2_cnacsc_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= cmpy($Rs32,$Rt32*):sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111010;
@@ -13862,7 +13924,7 @@ def M2_cnacsc_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= cmpy($Rs32,$Rt32*):<<1:sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111110;
@@ -13874,7 +13936,7 @@ def M2_dpmpyss_acc_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111000;
@@ -13885,7 +13947,7 @@ def M2_dpmpyss_nac_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111001;
@@ -13896,7 +13958,7 @@ def M2_dpmpyss_rnd_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32):rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101001;
@@ -13908,7 +13970,7 @@ def M2_dpmpyss_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101000;
@@ -13918,7 +13980,7 @@ def M2_dpmpyuu_acc_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111010;
@@ -13929,7 +13991,7 @@ def M2_dpmpyuu_nac_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111011;
@@ -13940,7 +14002,7 @@ def M2_dpmpyuu_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101010;
@@ -13950,7 +14012,7 @@ def M2_hmmpyh_rs1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32.h):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101101;
@@ -13963,7 +14025,7 @@ def M2_hmmpyh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32.h):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101101;
@@ -13976,7 +14038,7 @@ def M2_hmmpyl_rs1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32.l):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101111;
@@ -13989,7 +14051,7 @@ def M2_hmmpyl_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32.l):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101101;
@@ -14002,7 +14064,7 @@ def M2_maci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyi($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_2ae154, ImmRegRel {
+tc_d773585a, TypeM>, Enc_2ae154, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -14017,7 +14079,7 @@ def M2_macsin : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Rx32 -= mpyi($Rs32,#$Ii)",
-tc_16d0d8d5, TypeM>, Enc_c90aca {
+tc_05d3a09b, TypeM>, Enc_c90aca {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100001100;
 let hasNewValue = 1;
@@ -14035,7 +14097,7 @@ def M2_macsip : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Rx32 += mpyi($Rs32,#$Ii)",
-tc_16d0d8d5, TypeM>, Enc_c90aca, ImmRegRel {
+tc_05d3a09b, TypeM>, Enc_c90aca, ImmRegRel {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100001000;
 let hasNewValue = 1;
@@ -14054,7 +14116,7 @@ def M2_mmachs_rs0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywoh($Rss32,$Rtt32):rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010001;
@@ -14066,7 +14128,7 @@ def M2_mmachs_rs1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywoh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010101;
@@ -14078,7 +14140,7 @@ def M2_mmachs_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywoh($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010000;
@@ -14090,7 +14152,7 @@ def M2_mmachs_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywoh($Rss32,$Rtt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010100;
@@ -14102,7 +14164,7 @@ def M2_mmacls_rs0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweh($Rss32,$Rtt32):rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010001;
@@ -14114,7 +14176,7 @@ def M2_mmacls_rs1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010101;
@@ -14126,7 +14188,7 @@ def M2_mmacls_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweh($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010000;
@@ -14138,7 +14200,7 @@ def M2_mmacls_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweh($Rss32,$Rtt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010100;
@@ -14150,7 +14212,7 @@ def M2_mmacuhs_rs0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywouh($Rss32,$Rtt32):rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010011;
@@ -14162,7 +14224,7 @@ def M2_mmacuhs_rs1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywouh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010111;
@@ -14174,7 +14236,7 @@ def M2_mmacuhs_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywouh($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010010;
@@ -14186,7 +14248,7 @@ def M2_mmacuhs_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpywouh($Rss32,$Rtt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010110;
@@ -14198,7 +14260,7 @@ def M2_mmaculs_rs0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweuh($Rss32,$Rtt32):rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010011;
@@ -14210,7 +14272,7 @@ def M2_mmaculs_rs1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweuh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010111;
@@ -14222,7 +14284,7 @@ def M2_mmaculs_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweuh($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010010;
@@ -14234,7 +14296,7 @@ def M2_mmaculs_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyweuh($Rss32,$Rtt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010110;
@@ -14246,7 +14308,7 @@ def M2_mmpyh_rs0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywoh($Rss32,$Rtt32):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000001;
@@ -14257,7 +14319,7 @@ def M2_mmpyh_rs1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywoh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -14268,7 +14330,7 @@ def M2_mmpyh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywoh($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000000;
@@ -14279,7 +14341,7 @@ def M2_mmpyh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywoh($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000100;
@@ -14290,7 +14352,7 @@ def M2_mmpyl_rs0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweh($Rss32,$Rtt32):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000001;
@@ -14301,7 +14363,7 @@ def M2_mmpyl_rs1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -14312,7 +14374,7 @@ def M2_mmpyl_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweh($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000000;
@@ -14323,7 +14385,7 @@ def M2_mmpyl_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweh($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000100;
@@ -14334,7 +14396,7 @@ def M2_mmpyuh_rs0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywouh($Rss32,$Rtt32):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000011;
@@ -14345,7 +14407,7 @@ def M2_mmpyuh_rs1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywouh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000111;
@@ -14356,7 +14418,7 @@ def M2_mmpyuh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywouh($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000010;
@@ -14367,7 +14429,7 @@ def M2_mmpyuh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpywouh($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000110;
@@ -14378,7 +14440,7 @@ def M2_mmpyul_rs0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweuh($Rss32,$Rtt32):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000011;
@@ -14389,7 +14451,7 @@ def M2_mmpyul_rs1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweuh($Rss32,$Rtt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000111;
@@ -14400,7 +14462,7 @@ def M2_mmpyul_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweuh($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000010;
@@ -14411,18 +14473,31 @@ def M2_mmpyul_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyweuh($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000110;
 let prefersSlot3 = 1;
 let Defs = [USR_OVF];
 }
+def M2_mnaci : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rx32 -= mpyi($Rs32,$Rt32)",
+tc_bdceeac1, TypeM>, Enc_2ae154, Requires<[HasV66]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b11101111100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let prefersSlot3 = 1;
+let Constraints = "$Rx32 = $Rx32in";
+}
 def M2_mpy_acc_hh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14435,7 +14510,7 @@ def M2_mpy_acc_hh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14448,7 +14523,7 @@ def M2_mpy_acc_hl_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14461,7 +14536,7 @@ def M2_mpy_acc_hl_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14474,7 +14549,7 @@ def M2_mpy_acc_lh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14487,7 +14562,7 @@ def M2_mpy_acc_lh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14500,7 +14575,7 @@ def M2_mpy_acc_ll_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14513,7 +14588,7 @@ def M2_mpy_acc_ll_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14526,7 +14601,7 @@ def M2_mpy_acc_sat_hh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.h):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14540,7 +14615,7 @@ def M2_mpy_acc_sat_hh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.h):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14554,7 +14629,7 @@ def M2_mpy_acc_sat_hl_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.l):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14568,7 +14643,7 @@ def M2_mpy_acc_sat_hl_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.h,$Rt32.l):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14582,7 +14657,7 @@ def M2_mpy_acc_sat_lh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.h):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14596,7 +14671,7 @@ def M2_mpy_acc_sat_lh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.h):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14610,7 +14685,7 @@ def M2_mpy_acc_sat_ll_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.l):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110000;
@@ -14624,7 +14699,7 @@ def M2_mpy_acc_sat_ll_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32.l,$Rt32.l):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110100;
@@ -14638,7 +14713,7 @@ def M2_mpy_hh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -14650,7 +14725,7 @@ def M2_mpy_hh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -14662,7 +14737,7 @@ def M2_mpy_hl_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -14674,7 +14749,7 @@ def M2_mpy_hl_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -14686,7 +14761,7 @@ def M2_mpy_lh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -14698,7 +14773,7 @@ def M2_mpy_lh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -14710,7 +14785,7 @@ def M2_mpy_ll_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -14722,7 +14797,7 @@ def M2_mpy_ll_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -14734,7 +14809,7 @@ def M2_mpy_nac_hh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14747,7 +14822,7 @@ def M2_mpy_nac_hh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14760,7 +14835,7 @@ def M2_mpy_nac_hl_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14773,7 +14848,7 @@ def M2_mpy_nac_hl_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14786,7 +14861,7 @@ def M2_mpy_nac_lh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14799,7 +14874,7 @@ def M2_mpy_nac_lh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14812,7 +14887,7 @@ def M2_mpy_nac_ll_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14825,7 +14900,7 @@ def M2_mpy_nac_ll_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14838,7 +14913,7 @@ def M2_mpy_nac_sat_hh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.h):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14852,7 +14927,7 @@ def M2_mpy_nac_sat_hh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.h):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14866,7 +14941,7 @@ def M2_mpy_nac_sat_hl_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.l):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14880,7 +14955,7 @@ def M2_mpy_nac_sat_hl_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.h,$Rt32.l):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14894,7 +14969,7 @@ def M2_mpy_nac_sat_lh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.h):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14908,7 +14983,7 @@ def M2_mpy_nac_sat_lh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.h):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14922,7 +14997,7 @@ def M2_mpy_nac_sat_ll_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.l):sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110001;
@@ -14936,7 +15011,7 @@ def M2_mpy_nac_sat_ll_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32.l,$Rt32.l):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110101;
@@ -14950,7 +15025,7 @@ def M2_mpy_rnd_hh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h):rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -14962,7 +15037,7 @@ def M2_mpy_rnd_hh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -14974,7 +15049,7 @@ def M2_mpy_rnd_hl_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l):rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -14986,7 +15061,7 @@ def M2_mpy_rnd_hl_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -14998,7 +15073,7 @@ def M2_mpy_rnd_lh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h):rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -15010,7 +15085,7 @@ def M2_mpy_rnd_lh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -15022,7 +15097,7 @@ def M2_mpy_rnd_ll_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l):rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -15034,7 +15109,7 @@ def M2_mpy_rnd_ll_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -15046,7 +15121,7 @@ def M2_mpy_sat_hh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h):sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -15059,7 +15134,7 @@ def M2_mpy_sat_hh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -15072,7 +15147,7 @@ def M2_mpy_sat_hl_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l):sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -15085,7 +15160,7 @@ def M2_mpy_sat_hl_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -15098,7 +15173,7 @@ def M2_mpy_sat_lh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h):sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -15111,7 +15186,7 @@ def M2_mpy_sat_lh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -15124,7 +15199,7 @@ def M2_mpy_sat_ll_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l):sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100000;
@@ -15137,7 +15212,7 @@ def M2_mpy_sat_ll_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100100;
@@ -15150,7 +15225,7 @@ def M2_mpy_sat_rnd_hh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -15163,7 +15238,7 @@ def M2_mpy_sat_rnd_hh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.h):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -15176,7 +15251,7 @@ def M2_mpy_sat_rnd_hl_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -15189,7 +15264,7 @@ def M2_mpy_sat_rnd_hl_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.h,$Rt32.l):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -15202,7 +15277,7 @@ def M2_mpy_sat_rnd_lh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -15215,7 +15290,7 @@ def M2_mpy_sat_rnd_lh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.h):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -15228,7 +15303,7 @@ def M2_mpy_sat_rnd_ll_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100001;
@@ -15241,7 +15316,7 @@ def M2_mpy_sat_rnd_ll_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32.l,$Rt32.l):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100101;
@@ -15254,7 +15329,7 @@ def M2_mpy_up : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101000;
@@ -15266,7 +15341,7 @@ def M2_mpy_up_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101101;
@@ -15278,7 +15353,7 @@ def M2_mpy_up_s1_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpy($Rs32,$Rt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101111;
@@ -15291,7 +15366,7 @@ def M2_mpyd_acc_hh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110000;
@@ -15302,7 +15377,7 @@ def M2_mpyd_acc_hh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110100;
@@ -15313,7 +15388,7 @@ def M2_mpyd_acc_hl_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110000;
@@ -15324,7 +15399,7 @@ def M2_mpyd_acc_hl_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110100;
@@ -15335,7 +15410,7 @@ def M2_mpyd_acc_lh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110000;
@@ -15346,7 +15421,7 @@ def M2_mpyd_acc_lh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110100;
@@ -15357,7 +15432,7 @@ def M2_mpyd_acc_ll_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110000;
@@ -15368,7 +15443,7 @@ def M2_mpyd_acc_ll_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpy($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110100;
@@ -15379,7 +15454,7 @@ def M2_mpyd_hh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100000;
@@ -15389,7 +15464,7 @@ def M2_mpyd_hh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100100;
@@ -15399,7 +15474,7 @@ def M2_mpyd_hl_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100000;
@@ -15409,7 +15484,7 @@ def M2_mpyd_hl_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100100;
@@ -15419,7 +15494,7 @@ def M2_mpyd_lh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100000;
@@ -15429,7 +15504,7 @@ def M2_mpyd_lh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100100;
@@ -15439,7 +15514,7 @@ def M2_mpyd_ll_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100000;
@@ -15449,7 +15524,7 @@ def M2_mpyd_ll_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100100;
@@ -15459,7 +15534,7 @@ def M2_mpyd_nac_hh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110001;
@@ -15470,7 +15545,7 @@ def M2_mpyd_nac_hh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110101;
@@ -15481,7 +15556,7 @@ def M2_mpyd_nac_hl_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110001;
@@ -15492,7 +15567,7 @@ def M2_mpyd_nac_hl_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110101;
@@ -15503,7 +15578,7 @@ def M2_mpyd_nac_lh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110001;
@@ -15514,7 +15589,7 @@ def M2_mpyd_nac_lh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110101;
@@ -15525,7 +15600,7 @@ def M2_mpyd_nac_ll_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110001;
@@ -15536,7 +15611,7 @@ def M2_mpyd_nac_ll_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpy($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110101;
@@ -15547,7 +15622,7 @@ def M2_mpyd_rnd_hh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.h):rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100001;
@@ -15557,7 +15632,7 @@ def M2_mpyd_rnd_hh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.h):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100101;
@@ -15567,7 +15642,7 @@ def M2_mpyd_rnd_hl_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.l):rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100001;
@@ -15577,7 +15652,7 @@ def M2_mpyd_rnd_hl_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.h,$Rt32.l):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100101;
@@ -15587,7 +15662,7 @@ def M2_mpyd_rnd_lh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.h):rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100001;
@@ -15597,7 +15672,7 @@ def M2_mpyd_rnd_lh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.h):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100101;
@@ -15607,7 +15682,7 @@ def M2_mpyd_rnd_ll_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.l):rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100001;
@@ -15617,7 +15692,7 @@ def M2_mpyd_rnd_ll_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpy($Rs32.l,$Rt32.l):<<1:rnd",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100101;
@@ -15627,7 +15702,7 @@ def M2_mpyi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyi($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_5ab2be, ImmRegRel {
+tc_bafaade3, TypeM>, Enc_5ab2be, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101000;
@@ -15641,7 +15716,7 @@ def M2_mpysin : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u8_0Imm:$Ii),
 "$Rd32 = -mpyi($Rs32,#$Ii)",
-tc_1853ea6d, TypeM>, Enc_b8c967 {
+tc_c8ce0b5c, TypeM>, Enc_b8c967 {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100000100;
 let hasNewValue = 1;
@@ -15652,7 +15727,7 @@ def M2_mpysip : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Rd32 = +mpyi($Rs32,#$Ii)",
-tc_1853ea6d, TypeM>, Enc_b8c967 {
+tc_c8ce0b5c, TypeM>, Enc_b8c967 {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100000000;
 let hasNewValue = 1;
@@ -15668,7 +15743,7 @@ def M2_mpysmi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, m32_0Imm:$Ii),
 "$Rd32 = mpyi($Rs32,#$Ii)",
-tc_1853ea6d, TypeM>, ImmRegRel {
+tc_c8ce0b5c, TypeM>, ImmRegRel {
 let hasNewValue = 1;
 let opNewValue = 0;
 let CextOpcode = "M2_mpyi";
@@ -15684,7 +15759,7 @@ def M2_mpysu_up : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpysu($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101011;
@@ -15696,7 +15771,7 @@ def M2_mpyu_acc_hh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110010;
@@ -15709,7 +15784,7 @@ def M2_mpyu_acc_hh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110110;
@@ -15722,7 +15797,7 @@ def M2_mpyu_acc_hl_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110010;
@@ -15735,7 +15810,7 @@ def M2_mpyu_acc_hl_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110110;
@@ -15748,7 +15823,7 @@ def M2_mpyu_acc_lh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110010;
@@ -15761,7 +15836,7 @@ def M2_mpyu_acc_lh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110110;
@@ -15774,7 +15849,7 @@ def M2_mpyu_acc_ll_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110010;
@@ -15787,7 +15862,7 @@ def M2_mpyu_acc_ll_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpyu($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110110;
@@ -15800,7 +15875,7 @@ def M2_mpyu_hh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.h,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100010;
@@ -15812,7 +15887,7 @@ def M2_mpyu_hh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.h,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100110;
@@ -15824,7 +15899,7 @@ def M2_mpyu_hl_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.h,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100010;
@@ -15836,7 +15911,7 @@ def M2_mpyu_hl_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.h,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100110;
@@ -15848,7 +15923,7 @@ def M2_mpyu_lh_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.l,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100010;
@@ -15860,7 +15935,7 @@ def M2_mpyu_lh_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.l,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100110;
@@ -15872,7 +15947,7 @@ def M2_mpyu_ll_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.l,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100010;
@@ -15884,7 +15959,7 @@ def M2_mpyu_ll_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32.l,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101100110;
@@ -15896,7 +15971,7 @@ def M2_mpyu_nac_hh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110011;
@@ -15909,7 +15984,7 @@ def M2_mpyu_nac_hh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110111;
@@ -15922,7 +15997,7 @@ def M2_mpyu_nac_hl_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110011;
@@ -15935,7 +16010,7 @@ def M2_mpyu_nac_hl_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110111;
@@ -15948,7 +16023,7 @@ def M2_mpyu_nac_lh_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110011;
@@ -15961,7 +16036,7 @@ def M2_mpyu_nac_lh_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110111;
@@ -15974,7 +16049,7 @@ def M2_mpyu_nac_ll_s0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110011;
@@ -15987,7 +16062,7 @@ def M2_mpyu_nac_ll_s1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpyu($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101110111;
@@ -16000,7 +16075,7 @@ def M2_mpyu_up : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyu($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101010;
@@ -16012,7 +16087,7 @@ def M2_mpyud_acc_hh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110010;
@@ -16023,7 +16098,7 @@ def M2_mpyud_acc_hh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110110;
@@ -16034,7 +16109,7 @@ def M2_mpyud_acc_hl_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110010;
@@ -16045,7 +16120,7 @@ def M2_mpyud_acc_hl_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110110;
@@ -16056,7 +16131,7 @@ def M2_mpyud_acc_lh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110010;
@@ -16067,7 +16142,7 @@ def M2_mpyud_acc_lh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110110;
@@ -16078,7 +16153,7 @@ def M2_mpyud_acc_ll_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110010;
@@ -16089,7 +16164,7 @@ def M2_mpyud_acc_ll_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += mpyu($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110110;
@@ -16100,7 +16175,7 @@ def M2_mpyud_hh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.h,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100010;
@@ -16110,7 +16185,7 @@ def M2_mpyud_hh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.h,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100110;
@@ -16120,7 +16195,7 @@ def M2_mpyud_hl_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.h,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100010;
@@ -16130,7 +16205,7 @@ def M2_mpyud_hl_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.h,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100110;
@@ -16140,7 +16215,7 @@ def M2_mpyud_lh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.l,$Rt32.h)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100010;
@@ -16150,7 +16225,7 @@ def M2_mpyud_lh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.l,$Rt32.h):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100110;
@@ -16160,7 +16235,7 @@ def M2_mpyud_ll_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.l,$Rt32.l)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100010;
@@ -16170,7 +16245,7 @@ def M2_mpyud_ll_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = mpyu($Rs32.l,$Rt32.l):<<1",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100100110;
@@ -16180,7 +16255,7 @@ def M2_mpyud_nac_hh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.h,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110011;
@@ -16191,7 +16266,7 @@ def M2_mpyud_nac_hh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.h,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110111;
@@ -16202,7 +16277,7 @@ def M2_mpyud_nac_hl_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.h,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110011;
@@ -16213,7 +16288,7 @@ def M2_mpyud_nac_hl_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.h,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110111;
@@ -16224,7 +16299,7 @@ def M2_mpyud_nac_lh_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.l,$Rt32.h)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110011;
@@ -16235,7 +16310,7 @@ def M2_mpyud_nac_lh_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.l,$Rt32.h):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110111;
@@ -16246,7 +16321,7 @@ def M2_mpyud_nac_ll_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.l,$Rt32.l)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110011;
@@ -16257,7 +16332,7 @@ def M2_mpyud_nac_ll_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 -= mpyu($Rs32.l,$Rt32.l):<<1",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100110111;
@@ -16268,7 +16343,7 @@ def M2_mpyui : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = mpyui($Rs32,$Rt32)",
-tc_8fd5f294, TypeM> {
+tc_bafaade3, TypeM> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -16278,7 +16353,7 @@ def M2_nacci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= add($Rs32,$Rt32)",
-tc_c74f796f, TypeM>, Enc_2ae154 {
+tc_f675fee8, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111100;
@@ -16292,7 +16367,7 @@ def M2_naccii : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rx32 -= add($Rs32,#$Ii)",
-tc_c74f796f, TypeM>, Enc_c90aca {
+tc_f675fee8, TypeM>, Enc_c90aca {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100010100;
 let hasNewValue = 1;
@@ -16310,7 +16385,7 @@ def M2_subacc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rx32 += sub($Rt32,$Rs32)",
-tc_c74f796f, TypeM>, Enc_a568d4 {
+tc_f675fee8, TypeM>, Enc_a568d4 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111000;
@@ -16324,7 +16399,7 @@ def M2_vabsdiffh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vabsdiffh($Rtt32,$Rss32)",
-tc_2b6f77c6, TypeM>, Enc_ea23e4 {
+tc_002cb246, TypeM>, Enc_ea23e4 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000011;
@@ -16334,7 +16409,7 @@ def M2_vabsdiffw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vabsdiffw($Rtt32,$Rss32)",
-tc_2b6f77c6, TypeM>, Enc_ea23e4 {
+tc_002cb246, TypeM>, Enc_ea23e4 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000001;
@@ -16344,7 +16419,7 @@ def M2_vcmac_s0_sat_i : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vcmpyi($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010010;
@@ -16356,7 +16431,7 @@ def M2_vcmac_s0_sat_r : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vcmpyr($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010001;
@@ -16368,7 +16443,7 @@ def M2_vcmpy_s0_sat_i : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vcmpyi($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000010;
@@ -16379,7 +16454,7 @@ def M2_vcmpy_s0_sat_r : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vcmpyr($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000001;
@@ -16390,7 +16465,7 @@ def M2_vcmpy_s1_sat_i : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vcmpyi($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000110;
@@ -16401,7 +16476,7 @@ def M2_vcmpy_s1_sat_r : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vcmpyr($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -16412,7 +16487,7 @@ def M2_vdmacs_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vdmpy($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010000;
@@ -16424,7 +16499,7 @@ def M2_vdmacs_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vdmpy($Rss32,$Rtt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010100;
@@ -16436,7 +16511,7 @@ def M2_vdmpyrs_s0 : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vdmpy($Rss32,$Rtt32):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_d2216a {
+tc_bafaade3, TypeM>, Enc_d2216a {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101001000;
@@ -16449,7 +16524,7 @@ def M2_vdmpyrs_s1 : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vdmpy($Rss32,$Rtt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_d2216a {
+tc_bafaade3, TypeM>, Enc_d2216a {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101001100;
@@ -16462,7 +16537,7 @@ def M2_vdmpys_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vdmpy($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000000;
@@ -16473,7 +16548,7 @@ def M2_vdmpys_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vdmpy($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000100;
@@ -16484,7 +16559,7 @@ def M2_vmac2 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += vmpyh($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111001;
@@ -16495,7 +16570,7 @@ def M2_vmac2es : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyeh($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010001;
@@ -16506,7 +16581,7 @@ def M2_vmac2es_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyeh($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010000;
@@ -16518,7 +16593,7 @@ def M2_vmac2es_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vmpyeh($Rss32,$Rtt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010100;
@@ -16530,7 +16605,7 @@ def M2_vmac2s_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += vmpyh($Rs32,$Rt32):sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111000;
@@ -16542,7 +16617,7 @@ def M2_vmac2s_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += vmpyh($Rs32,$Rt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111100;
@@ -16554,7 +16629,7 @@ def M2_vmac2su_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += vmpyhsu($Rs32,$Rt32):sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111011;
@@ -16566,7 +16641,7 @@ def M2_vmac2su_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += vmpyhsu($Rs32,$Rt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111111;
@@ -16578,7 +16653,7 @@ def M2_vmpy2es_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyeh($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000000;
@@ -16589,7 +16664,7 @@ def M2_vmpy2es_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vmpyeh($Rss32,$Rtt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000100;
@@ -16600,7 +16675,7 @@ def M2_vmpy2s_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = vmpyh($Rs32,$Rt32):sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101000;
@@ -16611,7 +16686,7 @@ def M2_vmpy2s_s0pack : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = vmpyh($Rs32,$Rt32):rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101001;
@@ -16624,7 +16699,7 @@ def M2_vmpy2s_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = vmpyh($Rs32,$Rt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101100;
@@ -16635,7 +16710,7 @@ def M2_vmpy2s_s1pack : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = vmpyh($Rs32,$Rt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM>, Enc_5ab2be {
+tc_bafaade3, TypeM>, Enc_5ab2be {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101101101;
@@ -16648,7 +16723,7 @@ def M2_vmpy2su_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = vmpyhsu($Rs32,$Rt32):sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101000;
@@ -16659,7 +16734,7 @@ def M2_vmpy2su_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = vmpyhsu($Rs32,$Rt32):<<1:sat",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101100;
@@ -16670,7 +16745,7 @@ def M2_vraddh : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vraddh($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_d2216a {
+tc_bafaade3, TypeM>, Enc_d2216a {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101001001;
@@ -16682,7 +16757,7 @@ def M2_vradduh : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vradduh($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_d2216a {
+tc_bafaade3, TypeM>, Enc_d2216a {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101001000;
@@ -16694,7 +16769,7 @@ def M2_vrcmaci_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrcmpyi($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010000;
@@ -16705,7 +16780,7 @@ def M2_vrcmaci_s0c : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrcmpyi($Rss32,$Rtt32*)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010010;
@@ -16716,7 +16791,7 @@ def M2_vrcmacr_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrcmpyr($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010000;
@@ -16727,7 +16802,7 @@ def M2_vrcmacr_s0c : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrcmpyr($Rss32,$Rtt32*)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010011;
@@ -16738,7 +16813,7 @@ def M2_vrcmpyi_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrcmpyi($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000000;
@@ -16748,7 +16823,7 @@ def M2_vrcmpyi_s0c : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrcmpyi($Rss32,$Rtt32*)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000010;
@@ -16758,7 +16833,7 @@ def M2_vrcmpyr_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrcmpyr($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000000;
@@ -16768,7 +16843,7 @@ def M2_vrcmpyr_s0c : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrcmpyr($Rss32,$Rtt32*)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000011;
@@ -16778,7 +16853,7 @@ def M2_vrcmpys_acc_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 += vrcmpys($Rss32,$Rt32):<<1:sat",
-tc_e913dc32, TypeM> {
+tc_d773585a, TypeM> {
 let isPseudo = 1;
 let Constraints = "$Rxx32 = $Rxx32in";
 }
@@ -16786,7 +16861,7 @@ def M2_vrcmpys_acc_s1_h : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrcmpys($Rss32,$Rtt32):<<1:sat:raw:hi",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010101;
@@ -16798,7 +16873,7 @@ def M2_vrcmpys_acc_s1_l : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrcmpys($Rss32,$Rtt32):<<1:sat:raw:lo",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010111;
@@ -16810,14 +16885,14 @@ def M2_vrcmpys_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vrcmpys($Rss32,$Rt32):<<1:sat",
-tc_8fd5f294, TypeM> {
+tc_bafaade3, TypeM> {
 let isPseudo = 1;
 }
 def M2_vrcmpys_s1_h : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrcmpys($Rss32,$Rtt32):<<1:sat:raw:hi",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -16828,7 +16903,7 @@ def M2_vrcmpys_s1_l : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrcmpys($Rss32,$Rtt32):<<1:sat:raw:lo",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000111;
@@ -16839,7 +16914,7 @@ def M2_vrcmpys_s1rp : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = vrcmpys($Rss32,$Rt32):<<1:rnd:sat",
-tc_8fd5f294, TypeM> {
+tc_bafaade3, TypeM> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -16848,7 +16923,7 @@ def M2_vrcmpys_s1rp_h : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vrcmpys($Rss32,$Rtt32):<<1:rnd:sat:raw:hi",
-tc_8fd5f294, TypeM>, Enc_d2216a {
+tc_bafaade3, TypeM>, Enc_d2216a {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101001101;
@@ -16861,7 +16936,7 @@ def M2_vrcmpys_s1rp_l : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = vrcmpys($Rss32,$Rtt32):<<1:rnd:sat:raw:lo",
-tc_8fd5f294, TypeM>, Enc_d2216a {
+tc_bafaade3, TypeM>, Enc_d2216a {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101001101;
@@ -16874,7 +16949,7 @@ def M2_vrmac_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrmpyh($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010000;
@@ -16885,7 +16960,7 @@ def M2_vrmpy_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrmpyh($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000000;
@@ -16895,7 +16970,7 @@ def M2_xor_xacc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 ^= xor($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111100;
@@ -16909,7 +16984,7 @@ def M4_and_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= and($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111010;
@@ -16923,7 +16998,7 @@ def M4_and_andn : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= and($Rs32,~$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111001;
@@ -16937,7 +17012,7 @@ def M4_and_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= or($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111010;
@@ -16951,7 +17026,7 @@ def M4_and_xor : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= xor($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111010;
@@ -16965,7 +17040,7 @@ def M4_cmpyi_wh : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = cmpyiwh($Rss32,$Rt32):<<1:rnd:sat",
-tc_8fd5f294, TypeS_3op>, Enc_3d5b28 {
+tc_bafaade3, TypeS_3op>, Enc_3d5b28 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000101000;
@@ -16978,7 +17053,7 @@ def M4_cmpyi_whc : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = cmpyiwh($Rss32,$Rt32*):<<1:rnd:sat",
-tc_8fd5f294, TypeS_3op>, Enc_3d5b28, Requires<[HasV5]> {
+tc_bafaade3, TypeS_3op>, Enc_3d5b28 {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000101000;
@@ -16991,7 +17066,7 @@ def M4_cmpyr_wh : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = cmpyrwh($Rss32,$Rt32):<<1:rnd:sat",
-tc_8fd5f294, TypeS_3op>, Enc_3d5b28 {
+tc_bafaade3, TypeS_3op>, Enc_3d5b28 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000101000;
@@ -17004,7 +17079,7 @@ def M4_cmpyr_whc : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = cmpyrwh($Rss32,$Rt32*):<<1:rnd:sat",
-tc_8fd5f294, TypeS_3op>, Enc_3d5b28, Requires<[HasV5]> {
+tc_bafaade3, TypeS_3op>, Enc_3d5b28 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000101000;
@@ -17017,7 +17092,7 @@ def M4_mac_up_s1_sat : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += mpy($Rs32,$Rt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111011;
@@ -17032,7 +17107,7 @@ def M4_mpyri_addi : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii, IntRegs:$Rs32, u6_0Imm:$II),
 "$Rd32 = add(#$Ii,mpyi($Rs32,#$II))",
-tc_16d0d8d5, TypeALU64>, Enc_322e1b, ImmRegRel {
+tc_05d3a09b, TypeALU64>, Enc_322e1b, ImmRegRel {
 let Inst{31-24} = 0b11011000;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17048,7 +17123,7 @@ def M4_mpyri_addr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Ru32, IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Rd32 = add($Ru32,mpyi($Rs32,#$Ii))",
-tc_16d0d8d5, TypeALU64>, Enc_420cf3, ImmRegRel {
+tc_05d3a09b, TypeALU64>, Enc_420cf3, ImmRegRel {
 let Inst{31-23} = 0b110111111;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17065,7 +17140,7 @@ def M4_mpyri_addr_u2 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Ru32, u6_2Imm:$Ii, IntRegs:$Rs32),
 "$Rd32 = add($Ru32,mpyi(#$Ii,$Rs32))",
-tc_bcc96cee, TypeALU64>, Enc_277737 {
+tc_1a2fd869, TypeALU64>, Enc_277737 {
 let Inst{31-23} = 0b110111110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17075,7 +17150,7 @@ def M4_mpyrr_addi : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = add(#$Ii,mpyi($Rs32,$Rt32))",
-tc_e913dc32, TypeALU64>, Enc_a7b8e8, ImmRegRel {
+tc_d773585a, TypeALU64>, Enc_a7b8e8, ImmRegRel {
 let Inst{31-23} = 0b110101110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17092,7 +17167,7 @@ def M4_mpyrr_addr : HInst<
 (outs IntRegs:$Ry32),
 (ins IntRegs:$Ru32, IntRegs:$Ry32in, IntRegs:$Rs32),
 "$Ry32 = add($Ru32,mpyi($Ry32in,$Rs32))",
-tc_e913dc32, TypeM>, Enc_7f1a05, ImmRegRel {
+tc_d773585a, TypeM>, Enc_7f1a05, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100011000;
@@ -17107,7 +17182,7 @@ def M4_nac_up_s1_sat : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= mpy($Rs32,$Rt32):<<1:sat",
-tc_e913dc32, TypeM>, Enc_2ae154 {
+tc_d773585a, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111011;
@@ -17122,7 +17197,7 @@ def M4_or_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= and($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111010;
@@ -17136,7 +17211,7 @@ def M4_or_andn : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= and($Rs32,~$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111001;
@@ -17150,7 +17225,7 @@ def M4_or_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= or($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111110;
@@ -17164,7 +17239,7 @@ def M4_or_xor : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= xor($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111110;
@@ -17178,7 +17253,7 @@ def M4_pmpyw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = pmpyw($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101010;
@@ -17188,7 +17263,7 @@ def M4_pmpyw_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 ^= pmpyw($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111001;
@@ -17199,7 +17274,7 @@ def M4_vpmpyh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = vpmpyh($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101110;
@@ -17209,7 +17284,7 @@ def M4_vpmpyh_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 ^= vpmpyh($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111101;
@@ -17220,7 +17295,7 @@ def M4_vrmpyeh_acc_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrmpyweh($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010001;
@@ -17231,7 +17306,7 @@ def M4_vrmpyeh_acc_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrmpyweh($Rss32,$Rtt32):<<1",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010101;
@@ -17242,7 +17317,7 @@ def M4_vrmpyeh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrmpyweh($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000010;
@@ -17252,7 +17327,7 @@ def M4_vrmpyeh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrmpyweh($Rss32,$Rtt32):<<1",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000110;
@@ -17262,7 +17337,7 @@ def M4_vrmpyoh_acc_s0 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrmpywoh($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010011;
@@ -17273,7 +17348,7 @@ def M4_vrmpyoh_acc_s1 : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrmpywoh($Rss32,$Rtt32):<<1",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010111;
@@ -17284,7 +17359,7 @@ def M4_vrmpyoh_s0 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrmpywoh($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000001;
@@ -17294,7 +17369,7 @@ def M4_vrmpyoh_s1 : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrmpywoh($Rss32,$Rtt32):<<1",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -17304,7 +17379,7 @@ def M4_xor_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 ^= and($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111110;
@@ -17318,7 +17393,7 @@ def M4_xor_andn : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 ^= and($Rs32,~$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111001;
@@ -17332,7 +17407,7 @@ def M4_xor_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 ^= or($Rs32,$Rt32)",
-tc_84df2cd3, TypeM>, Enc_2ae154 {
+tc_f429765c, TypeM>, Enc_2ae154 {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101111110;
@@ -17346,7 +17421,7 @@ def M4_xor_xacc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 ^= xor($Rss32,$Rtt32)",
-tc_84df2cd3, TypeS_3op>, Enc_88c16c {
+tc_f429765c, TypeS_3op>, Enc_88c16c {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001010100;
@@ -17357,7 +17432,7 @@ def M5_vdmacbsu : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vdmpybsu($Rss32,$Rtt32):sat",
-tc_e913dc32, TypeM>, Enc_88c16c, Requires<[HasV5]> {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010001;
@@ -17369,7 +17444,7 @@ def M5_vdmpybsu : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vdmpybsu($Rss32,$Rtt32):sat",
-tc_8fd5f294, TypeM>, Enc_a56825, Requires<[HasV5]> {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -17380,7 +17455,7 @@ def M5_vmacbsu : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += vmpybsu($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111110;
@@ -17391,7 +17466,7 @@ def M5_vmacbuu : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rxx32 += vmpybu($Rs32,$Rt32)",
-tc_e913dc32, TypeM>, Enc_61f0b0 {
+tc_d773585a, TypeM>, Enc_61f0b0 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100111100;
@@ -17402,7 +17477,7 @@ def M5_vmpybsu : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = vmpybsu($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101010;
@@ -17412,7 +17487,7 @@ def M5_vmpybuu : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = vmpybu($Rs32,$Rt32)",
-tc_8fd5f294, TypeM>, Enc_be32a5 {
+tc_bafaade3, TypeM>, Enc_be32a5 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100101100;
@@ -17422,7 +17497,7 @@ def M5_vrmacbsu : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrmpybsu($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010110;
@@ -17433,7 +17508,7 @@ def M5_vrmacbuu : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 += vrmpybu($Rss32,$Rtt32)",
-tc_e913dc32, TypeM>, Enc_88c16c {
+tc_d773585a, TypeM>, Enc_88c16c {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101010100;
@@ -17444,7 +17519,7 @@ def M5_vrmpybsu : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrmpybsu($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000110;
@@ -17454,7 +17529,7 @@ def M5_vrmpybuu : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vrmpybu($Rss32,$Rtt32)",
-tc_8fd5f294, TypeM>, Enc_a56825 {
+tc_bafaade3, TypeM>, Enc_a56825 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000100;
@@ -17464,7 +17539,7 @@ def M6_vabsdiffb : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vabsdiffb($Rtt32,$Rss32)",
-tc_f49e76f4, TypeM>, Enc_ea23e4, Requires<[HasV62]> {
+tc_9461ff31, TypeM>, Enc_ea23e4, Requires<[HasV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000111;
@@ -17474,7 +17549,7 @@ def M6_vabsdiffub : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = vabsdiffub($Rtt32,$Rss32)",
-tc_f49e76f4, TypeM>, Enc_ea23e4, Requires<[HasV62]> {
+tc_9461ff31, TypeM>, Enc_ea23e4, Requires<[HasV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11101000101;
@@ -17484,7 +17559,7 @@ def PS_loadrbabs : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii),
 "$Rd32 = memb(#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_25bef0, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_25bef0, AddrModeRel {
 let Inst{24-21} = 0b1000;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -17507,7 +17582,7 @@ def PS_loadrdabs : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins u29_3Imm:$Ii),
 "$Rdd32 = memd(#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_509701, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_509701, AddrModeRel {
 let Inst{24-21} = 0b1110;
 let Inst{31-27} = 0b01001;
 let addrMode = Absolute;
@@ -17528,7 +17603,7 @@ def PS_loadrhabs : HInst<
 (outs IntRegs:$Rd32),
 (ins u31_1Imm:$Ii),
 "$Rd32 = memh(#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_8df4be, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_8df4be, AddrModeRel {
 let Inst{24-21} = 0b1010;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -17551,7 +17626,7 @@ def PS_loadriabs : HInst<
 (outs IntRegs:$Rd32),
 (ins u30_2Imm:$Ii),
 "$Rd32 = memw(#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_4f4ed7, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_4f4ed7, AddrModeRel {
 let Inst{24-21} = 0b1100;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -17574,7 +17649,7 @@ def PS_loadrubabs : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii),
 "$Rd32 = memub(#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_25bef0, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_25bef0, AddrModeRel {
 let Inst{24-21} = 0b1001;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -17597,7 +17672,7 @@ def PS_loadruhabs : HInst<
 (outs IntRegs:$Rd32),
 (ins u31_1Imm:$Ii),
 "$Rd32 = memuh(#$Ii)",
-tc_9c98e8af, TypeV2LDST>, Enc_8df4be, AddrModeRel {
+tc_c4db48cb, TypeV2LDST>, Enc_8df4be, AddrModeRel {
 let Inst{24-21} = 0b1011;
 let Inst{31-27} = 0b01001;
 let hasNewValue = 1;
@@ -17620,7 +17695,7 @@ def PS_storerbabs : HInst<
 (outs),
 (ins u32_0Imm:$Ii, IntRegs:$Rt32),
 "memb(#$Ii) = $Rt32",
-tc_a788683e, TypeV2LDST>, Enc_1b64fb, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_1b64fb, AddrModeRel {
 let Inst{24-21} = 0b0000;
 let Inst{31-27} = 0b01001;
 let addrMode = Absolute;
@@ -17642,7 +17717,7 @@ def PS_storerbnewabs : HInst<
 (outs),
 (ins u32_0Imm:$Ii, IntRegs:$Nt8),
 "memb(#$Ii) = $Nt8.new",
-tc_ff9ee76e, TypeV2LDST>, Enc_ad1831, AddrModeRel {
+tc_5bf126a6, TypeV2LDST>, Enc_ad1831, AddrModeRel {
 let Inst{12-11} = 0b00;
 let Inst{24-21} = 0b0101;
 let Inst{31-27} = 0b01001;
@@ -17668,7 +17743,7 @@ def PS_storerdabs : HInst<
 (outs),
 (ins u29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "memd(#$Ii) = $Rtt32",
-tc_a788683e, TypeV2LDST>, Enc_5c124a, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_5c124a, AddrModeRel {
 let Inst{24-21} = 0b0110;
 let Inst{31-27} = 0b01001;
 let addrMode = Absolute;
@@ -17689,7 +17764,7 @@ def PS_storerfabs : HInst<
 (outs),
 (ins u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh(#$Ii) = $Rt32.h",
-tc_a788683e, TypeV2LDST>, Enc_fda92c, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_fda92c, AddrModeRel {
 let Inst{24-21} = 0b0011;
 let Inst{31-27} = 0b01001;
 let addrMode = Absolute;
@@ -17710,7 +17785,7 @@ def PS_storerhabs : HInst<
 (outs),
 (ins u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh(#$Ii) = $Rt32",
-tc_a788683e, TypeV2LDST>, Enc_fda92c, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_fda92c, AddrModeRel {
 let Inst{24-21} = 0b0010;
 let Inst{31-27} = 0b01001;
 let addrMode = Absolute;
@@ -17732,7 +17807,7 @@ def PS_storerhnewabs : HInst<
 (outs),
 (ins u31_1Imm:$Ii, IntRegs:$Nt8),
 "memh(#$Ii) = $Nt8.new",
-tc_ff9ee76e, TypeV2LDST>, Enc_bc03e5, AddrModeRel {
+tc_5bf126a6, TypeV2LDST>, Enc_bc03e5, AddrModeRel {
 let Inst{12-11} = 0b01;
 let Inst{24-21} = 0b0101;
 let Inst{31-27} = 0b01001;
@@ -17758,7 +17833,7 @@ def PS_storeriabs : HInst<
 (outs),
 (ins u30_2Imm:$Ii, IntRegs:$Rt32),
 "memw(#$Ii) = $Rt32",
-tc_a788683e, TypeV2LDST>, Enc_541f26, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_541f26, AddrModeRel {
 let Inst{24-21} = 0b0100;
 let Inst{31-27} = 0b01001;
 let addrMode = Absolute;
@@ -17780,7 +17855,7 @@ def PS_storerinewabs : HInst<
 (outs),
 (ins u30_2Imm:$Ii, IntRegs:$Nt8),
 "memw(#$Ii) = $Nt8.new",
-tc_ff9ee76e, TypeV2LDST>, Enc_78cbf0, AddrModeRel {
+tc_5bf126a6, TypeV2LDST>, Enc_78cbf0, AddrModeRel {
 let Inst{12-11} = 0b10;
 let Inst{24-21} = 0b0101;
 let Inst{31-27} = 0b01001;
@@ -17806,7 +17881,7 @@ def S2_addasl_rrri : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32, u3_0Imm:$Ii),
 "$Rd32 = addasl($Rt32,$Rs32,#$Ii)",
-tc_c74f796f, TypeS_3op>, Enc_47ef61 {
+tc_f675fee8, TypeS_3op>, Enc_47ef61 {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000100000;
 let hasNewValue = 1;
@@ -17817,7 +17892,7 @@ def S2_allocframe : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, u11_3Imm:$Ii),
 "allocframe($Rx32,#$Ii):raw",
-tc_e216a5db, TypeST>, Enc_22c845 {
+tc_b44ecf75, TypeST>, Enc_22c845 {
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b10100000100;
 let hasNewValue = 1;
@@ -17833,7 +17908,7 @@ def S2_asl_i_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = asl($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_5eac98 {
+tc_946df596, TypeS_2op>, Enc_5eac98 {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b10000000000;
 }
@@ -17841,7 +17916,7 @@ def S2_asl_i_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 += asl($Rss32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_70fb07 {
+tc_f675fee8, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -17851,7 +17926,7 @@ def S2_asl_i_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 &= asl($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -17861,7 +17936,7 @@ def S2_asl_i_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 -= asl($Rss32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_70fb07 {
+tc_f675fee8, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -17871,7 +17946,7 @@ def S2_asl_i_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 |= asl($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -17881,7 +17956,7 @@ def S2_asl_i_p_xacc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 ^= asl($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b10000010100;
 let prefersSlot3 = 1;
@@ -17891,7 +17966,7 @@ def S2_asl_i_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = asl($Rs32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_a05677 {
+tc_946df596, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100000;
@@ -17902,7 +17977,7 @@ def S2_asl_i_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 += asl($Rs32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_28a2dc {
+tc_f675fee8, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -17915,7 +17990,7 @@ def S2_asl_i_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 &= asl($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -17928,7 +18003,7 @@ def S2_asl_i_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 -= asl($Rs32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_28a2dc {
+tc_f675fee8, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -17941,7 +18016,7 @@ def S2_asl_i_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 |= asl($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -17954,7 +18029,7 @@ def S2_asl_i_r_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = asl($Rs32,#$Ii):sat",
-tc_b44c6e2a, TypeS_2op>, Enc_a05677 {
+tc_779080bf, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100010;
@@ -17967,7 +18042,7 @@ def S2_asl_i_r_xacc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 ^= asl($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110100;
@@ -17980,7 +18055,7 @@ def S2_asl_i_vh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rdd32 = vaslh($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_12b6e9 {
+tc_946df596, TypeS_2op>, Enc_12b6e9 {
 let Inst{7-5} = 0b010;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10000000100;
@@ -17989,7 +18064,7 @@ def S2_asl_i_vw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u5_0Imm:$Ii),
 "$Rdd32 = vaslw($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_7e5a82 {
+tc_946df596, TypeS_2op>, Enc_7e5a82 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10000000010;
@@ -17998,7 +18073,7 @@ def S2_asl_r_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = asl($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011100;
@@ -18007,7 +18082,7 @@ def S2_asl_r_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 += asl($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011110;
@@ -18018,7 +18093,7 @@ def S2_asl_r_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 &= asl($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011010;
@@ -18029,7 +18104,7 @@ def S2_asl_r_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 -= asl($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011100;
@@ -18040,7 +18115,7 @@ def S2_asl_r_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 |= asl($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011000;
@@ -18051,7 +18126,7 @@ def S2_asl_r_p_xor : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 ^= asl($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011011;
@@ -18062,7 +18137,7 @@ def S2_asl_r_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = asl($Rs32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_5ab2be {
+tc_946df596, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110010;
@@ -18073,7 +18148,7 @@ def S2_asl_r_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += asl($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100110;
@@ -18086,7 +18161,7 @@ def S2_asl_r_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= asl($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100010;
@@ -18099,7 +18174,7 @@ def S2_asl_r_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= asl($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100100;
@@ -18112,7 +18187,7 @@ def S2_asl_r_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= asl($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100000;
@@ -18125,7 +18200,7 @@ def S2_asl_r_r_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = asl($Rs32,$Rt32):sat",
-tc_b44c6e2a, TypeS_3op>, Enc_5ab2be {
+tc_779080bf, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110000;
@@ -18138,7 +18213,7 @@ def S2_asl_r_vh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vaslh($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011010;
@@ -18147,7 +18222,7 @@ def S2_asl_r_vw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vaslw($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011000;
@@ -18156,7 +18231,7 @@ def S2_asr_i_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = asr($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_5eac98 {
+tc_946df596, TypeS_2op>, Enc_5eac98 {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b10000000000;
 }
@@ -18164,7 +18239,7 @@ def S2_asr_i_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 += asr($Rss32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_70fb07 {
+tc_f675fee8, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b100;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -18174,7 +18249,7 @@ def S2_asr_i_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 &= asr($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -18184,7 +18259,7 @@ def S2_asr_i_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 -= asr($Rss32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_70fb07 {
+tc_f675fee8, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -18194,7 +18269,7 @@ def S2_asr_i_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 |= asr($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b100;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -18204,7 +18279,7 @@ def S2_asr_i_p_rnd : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = asr($Rss32,#$Ii):rnd",
-tc_2b6f77c6, TypeS_2op>, Enc_5eac98, Requires<[HasV5]> {
+tc_002cb246, TypeS_2op>, Enc_5eac98 {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b10000000110;
 let prefersSlot3 = 1;
@@ -18213,14 +18288,14 @@ def S2_asr_i_p_rnd_goodsyntax : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = asrrnd($Rss32,#$Ii)",
-tc_2b6f77c6, TypeS_2op>, Requires<[HasV5]> {
+tc_002cb246, TypeS_2op> {
 let isPseudo = 1;
 }
 def S2_asr_i_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = asr($Rs32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_a05677 {
+tc_946df596, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100000;
@@ -18231,7 +18306,7 @@ def S2_asr_i_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 += asr($Rs32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_28a2dc {
+tc_f675fee8, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -18244,7 +18319,7 @@ def S2_asr_i_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 &= asr($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -18257,7 +18332,7 @@ def S2_asr_i_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 -= asr($Rs32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_28a2dc {
+tc_f675fee8, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -18270,7 +18345,7 @@ def S2_asr_i_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 |= asr($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -18283,7 +18358,7 @@ def S2_asr_i_r_rnd : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = asr($Rs32,#$Ii):rnd",
-tc_2b6f77c6, TypeS_2op>, Enc_a05677 {
+tc_002cb246, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100010;
@@ -18295,7 +18370,7 @@ def S2_asr_i_r_rnd_goodsyntax : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = asrrnd($Rs32,#$Ii)",
-tc_2b6f77c6, TypeS_2op> {
+tc_002cb246, TypeS_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -18304,7 +18379,7 @@ def S2_asr_i_svw_trun : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, u5_0Imm:$Ii),
 "$Rd32 = vasrw($Rss32,#$Ii)",
-tc_1b9c9ee5, TypeS_2op>, Enc_8dec2e {
+tc_4414d8b1, TypeS_2op>, Enc_8dec2e {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001000110;
@@ -18316,7 +18391,7 @@ def S2_asr_i_vh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rdd32 = vasrh($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_12b6e9 {
+tc_946df596, TypeS_2op>, Enc_12b6e9 {
 let Inst{7-5} = 0b000;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10000000100;
@@ -18325,7 +18400,7 @@ def S2_asr_i_vw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u5_0Imm:$Ii),
 "$Rdd32 = vasrw($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_7e5a82 {
+tc_946df596, TypeS_2op>, Enc_7e5a82 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10000000010;
@@ -18334,7 +18409,7 @@ def S2_asr_r_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = asr($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011100;
@@ -18343,7 +18418,7 @@ def S2_asr_r_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 += asr($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011110;
@@ -18354,7 +18429,7 @@ def S2_asr_r_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 &= asr($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011010;
@@ -18365,7 +18440,7 @@ def S2_asr_r_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 -= asr($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011100;
@@ -18376,7 +18451,7 @@ def S2_asr_r_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 |= asr($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011000;
@@ -18387,7 +18462,7 @@ def S2_asr_r_p_xor : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 ^= asr($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011011;
@@ -18398,7 +18473,7 @@ def S2_asr_r_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = asr($Rs32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_5ab2be {
+tc_946df596, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110010;
@@ -18409,7 +18484,7 @@ def S2_asr_r_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += asr($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100110;
@@ -18422,7 +18497,7 @@ def S2_asr_r_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= asr($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100010;
@@ -18435,7 +18510,7 @@ def S2_asr_r_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= asr($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100100;
@@ -18448,7 +18523,7 @@ def S2_asr_r_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= asr($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100000;
@@ -18461,7 +18536,7 @@ def S2_asr_r_r_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = asr($Rs32,$Rt32):sat",
-tc_b44c6e2a, TypeS_3op>, Enc_5ab2be {
+tc_779080bf, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110000;
@@ -18474,7 +18549,7 @@ def S2_asr_r_svw_trun : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rd32 = vasrw($Rss32,$Rt32)",
-tc_1b9c9ee5, TypeS_3op>, Enc_3d5b28 {
+tc_4414d8b1, TypeS_3op>, Enc_3d5b28 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000101000;
@@ -18486,7 +18561,7 @@ def S2_asr_r_vh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vasrh($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011010;
@@ -18495,7 +18570,7 @@ def S2_asr_r_vw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vasrw($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011000;
@@ -18504,7 +18579,7 @@ def S2_brev : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = brev($Rs32)",
-tc_d088982c, TypeS_2op>, Enc_5e2823 {
+tc_14b5c689, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10001100010;
 let hasNewValue = 1;
@@ -18515,7 +18590,7 @@ def S2_brevp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = brev($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_b9c5fb {
+tc_14b5c689, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000000110;
 let prefersSlot3 = 1;
@@ -18524,7 +18599,7 @@ def S2_cabacdecbin : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = decbin($Rss32,$Rtt32)",
-tc_c6ebf8dd, TypeS_3op>, Enc_a56825 {
+tc_76851da1, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001110;
@@ -18536,7 +18611,7 @@ def S2_cl0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = cl0($Rs32)",
-tc_d088982c, TypeS_2op>, Enc_5e2823 {
+tc_14b5c689, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10001100000;
 let hasNewValue = 1;
@@ -18547,7 +18622,7 @@ def S2_cl0p : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = cl0($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_90cd8b {
+tc_14b5c689, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10001000010;
 let hasNewValue = 1;
@@ -18558,7 +18633,7 @@ def S2_cl1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = cl1($Rs32)",
-tc_d088982c, TypeS_2op>, Enc_5e2823 {
+tc_14b5c689, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10001100000;
 let hasNewValue = 1;
@@ -18569,7 +18644,7 @@ def S2_cl1p : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = cl1($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_90cd8b {
+tc_14b5c689, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001000010;
 let hasNewValue = 1;
@@ -18580,7 +18655,7 @@ def S2_clb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = clb($Rs32)",
-tc_d088982c, TypeS_2op>, Enc_5e2823 {
+tc_14b5c689, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001100000;
 let hasNewValue = 1;
@@ -18591,7 +18666,7 @@ def S2_clbnorm : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = normamt($Rs32)",
-tc_d088982c, TypeS_2op>, Enc_5e2823 {
+tc_14b5c689, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10001100000;
 let hasNewValue = 1;
@@ -18602,7 +18677,7 @@ def S2_clbp : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = clb($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_90cd8b {
+tc_14b5c689, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001000010;
 let hasNewValue = 1;
@@ -18613,7 +18688,7 @@ def S2_clrbit_i : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = clrbit($Rs32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_a05677 {
+tc_946df596, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100110;
@@ -18624,7 +18699,7 @@ def S2_clrbit_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = clrbit($Rs32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_5ab2be {
+tc_946df596, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110100;
@@ -18635,7 +18710,7 @@ def S2_ct0 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = ct0($Rs32)",
-tc_d088982c, TypeS_2op>, Enc_5e2823 {
+tc_14b5c689, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001100010;
 let hasNewValue = 1;
@@ -18646,7 +18721,7 @@ def S2_ct0p : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = ct0($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_90cd8b {
+tc_14b5c689, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10001000111;
 let hasNewValue = 1;
@@ -18657,7 +18732,7 @@ def S2_ct1 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = ct1($Rs32)",
-tc_d088982c, TypeS_2op>, Enc_5e2823 {
+tc_14b5c689, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10001100010;
 let hasNewValue = 1;
@@ -18668,7 +18743,7 @@ def S2_ct1p : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = ct1($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_90cd8b {
+tc_14b5c689, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001000111;
 let hasNewValue = 1;
@@ -18679,7 +18754,7 @@ def S2_deinterleave : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = deinterleave($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_b9c5fb {
+tc_14b5c689, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000000110;
 let prefersSlot3 = 1;
@@ -18688,7 +18763,7 @@ def S2_extractu : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii, u5_0Imm:$II),
 "$Rd32 = extractu($Rs32,#$Ii,#$II)",
-tc_c74f796f, TypeS_2op>, Enc_b388cf {
+tc_f675fee8, TypeS_2op>, Enc_b388cf {
 let Inst{13-13} = 0b0;
 let Inst{31-23} = 0b100011010;
 let hasNewValue = 1;
@@ -18699,7 +18774,7 @@ def S2_extractu_rp : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "$Rd32 = extractu($Rs32,$Rtt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_e07374 {
+tc_002cb246, TypeS_3op>, Enc_e07374 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001001000;
@@ -18711,7 +18786,7 @@ def S2_extractup : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii, u6_0Imm:$II),
 "$Rdd32 = extractu($Rss32,#$Ii,#$II)",
-tc_c74f796f, TypeS_2op>, Enc_b84c4c {
+tc_f675fee8, TypeS_2op>, Enc_b84c4c {
 let Inst{31-24} = 0b10000001;
 let prefersSlot3 = 1;
 }
@@ -18719,7 +18794,7 @@ def S2_extractup_rp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = extractu($Rss32,$Rtt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_a56825 {
+tc_002cb246, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001000;
@@ -18729,7 +18804,7 @@ def S2_insert : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii, u5_0Imm:$II),
 "$Rx32 = insert($Rs32,#$Ii,#$II)",
-tc_87735c3b, TypeS_2op>, Enc_a1e29d {
+tc_bfec0f01, TypeS_2op>, Enc_a1e29d {
 let Inst{13-13} = 0b0;
 let Inst{31-23} = 0b100011110;
 let hasNewValue = 1;
@@ -18741,7 +18816,7 @@ def S2_insert_rp : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "$Rx32 = insert($Rs32,$Rtt32)",
-tc_84df2cd3, TypeS_3op>, Enc_179b35 {
+tc_f429765c, TypeS_3op>, Enc_179b35 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001000000;
@@ -18754,7 +18829,7 @@ def S2_insertp : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii, u6_0Imm:$II),
 "$Rxx32 = insert($Rss32,#$Ii,#$II)",
-tc_87735c3b, TypeS_2op>, Enc_143a3c {
+tc_bfec0f01, TypeS_2op>, Enc_143a3c {
 let Inst{31-24} = 0b10000011;
 let prefersSlot3 = 1;
 let Constraints = "$Rxx32 = $Rxx32in";
@@ -18763,7 +18838,7 @@ def S2_insertp_rp : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rxx32 = insert($Rss32,$Rtt32)",
-tc_84df2cd3, TypeS_3op>, Enc_88c16c {
+tc_f429765c, TypeS_3op>, Enc_88c16c {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001010000;
@@ -18774,7 +18849,7 @@ def S2_interleave : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = interleave($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_b9c5fb {
+tc_14b5c689, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10000000110;
 let prefersSlot3 = 1;
@@ -18783,7 +18858,7 @@ def S2_lfsp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = lfs($Rss32,$Rtt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_a56825 {
+tc_002cb246, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001100;
@@ -18793,7 +18868,7 @@ def S2_lsl_r_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = lsl($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011100;
@@ -18802,7 +18877,7 @@ def S2_lsl_r_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 += lsl($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011110;
@@ -18813,7 +18888,7 @@ def S2_lsl_r_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 &= lsl($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011010;
@@ -18824,7 +18899,7 @@ def S2_lsl_r_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 -= lsl($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011100;
@@ -18835,7 +18910,7 @@ def S2_lsl_r_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 |= lsl($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011000;
@@ -18846,7 +18921,7 @@ def S2_lsl_r_p_xor : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 ^= lsl($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011011;
@@ -18857,7 +18932,7 @@ def S2_lsl_r_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = lsl($Rs32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_5ab2be {
+tc_946df596, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110010;
@@ -18868,7 +18943,7 @@ def S2_lsl_r_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += lsl($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100110;
@@ -18881,7 +18956,7 @@ def S2_lsl_r_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= lsl($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100010;
@@ -18894,7 +18969,7 @@ def S2_lsl_r_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= lsl($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100100;
@@ -18907,7 +18982,7 @@ def S2_lsl_r_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= lsl($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100000;
@@ -18920,7 +18995,7 @@ def S2_lsl_r_vh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vlslh($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011010;
@@ -18929,7 +19004,7 @@ def S2_lsl_r_vw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vlslw($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011000;
@@ -18938,7 +19013,7 @@ def S2_lsr_i_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = lsr($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_5eac98 {
+tc_946df596, TypeS_2op>, Enc_5eac98 {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b10000000000;
 }
@@ -18946,7 +19021,7 @@ def S2_lsr_i_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 += lsr($Rss32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_70fb07 {
+tc_f675fee8, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b101;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -18956,7 +19031,7 @@ def S2_lsr_i_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 &= lsr($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -18966,7 +19041,7 @@ def S2_lsr_i_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 -= lsr($Rss32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_70fb07 {
+tc_f675fee8, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -18976,7 +19051,7 @@ def S2_lsr_i_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 |= lsr($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b101;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -18986,7 +19061,7 @@ def S2_lsr_i_p_xacc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 ^= lsr($Rss32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_70fb07 {
+tc_f429765c, TypeS_2op>, Enc_70fb07 {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b10000010100;
 let prefersSlot3 = 1;
@@ -18996,7 +19071,7 @@ def S2_lsr_i_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = lsr($Rs32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_a05677 {
+tc_946df596, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100000;
@@ -19007,7 +19082,7 @@ def S2_lsr_i_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 += lsr($Rs32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_28a2dc {
+tc_f675fee8, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -19020,7 +19095,7 @@ def S2_lsr_i_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 &= lsr($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -19033,7 +19108,7 @@ def S2_lsr_i_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 -= lsr($Rs32,#$Ii)",
-tc_c74f796f, TypeS_2op>, Enc_28a2dc {
+tc_f675fee8, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -19046,7 +19121,7 @@ def S2_lsr_i_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 |= lsr($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -19059,7 +19134,7 @@ def S2_lsr_i_r_xacc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 ^= lsr($Rs32,#$Ii)",
-tc_84df2cd3, TypeS_2op>, Enc_28a2dc {
+tc_f429765c, TypeS_2op>, Enc_28a2dc {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110100;
@@ -19072,7 +19147,7 @@ def S2_lsr_i_vh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rdd32 = vlsrh($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_12b6e9 {
+tc_946df596, TypeS_2op>, Enc_12b6e9 {
 let Inst{7-5} = 0b001;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10000000100;
@@ -19081,7 +19156,7 @@ def S2_lsr_i_vw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u5_0Imm:$Ii),
 "$Rdd32 = vlsrw($Rss32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_7e5a82 {
+tc_946df596, TypeS_2op>, Enc_7e5a82 {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10000000010;
@@ -19090,7 +19165,7 @@ def S2_lsr_r_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = lsr($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011100;
@@ -19099,7 +19174,7 @@ def S2_lsr_r_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 += lsr($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011110;
@@ -19110,7 +19185,7 @@ def S2_lsr_r_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 &= lsr($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011010;
@@ -19121,7 +19196,7 @@ def S2_lsr_r_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 -= lsr($Rss32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_1aa186 {
+tc_f675fee8, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011100;
@@ -19132,7 +19207,7 @@ def S2_lsr_r_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 |= lsr($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011000;
@@ -19143,7 +19218,7 @@ def S2_lsr_r_p_xor : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 ^= lsr($Rss32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_1aa186 {
+tc_f429765c, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001011011;
@@ -19154,7 +19229,7 @@ def S2_lsr_r_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = lsr($Rs32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_5ab2be {
+tc_946df596, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110010;
@@ -19165,7 +19240,7 @@ def S2_lsr_r_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 += lsr($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100110;
@@ -19178,7 +19253,7 @@ def S2_lsr_r_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 &= lsr($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100010;
@@ -19191,7 +19266,7 @@ def S2_lsr_r_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 -= lsr($Rs32,$Rt32)",
-tc_c74f796f, TypeS_3op>, Enc_2ae154 {
+tc_f675fee8, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100100;
@@ -19204,7 +19279,7 @@ def S2_lsr_r_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rx32 |= lsr($Rs32,$Rt32)",
-tc_84df2cd3, TypeS_3op>, Enc_2ae154 {
+tc_f429765c, TypeS_3op>, Enc_2ae154 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001100000;
@@ -19217,7 +19292,7 @@ def S2_lsr_r_vh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vlsrh($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011010;
@@ -19226,16 +19301,28 @@ def S2_lsr_r_vw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vlsrw($Rss32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_927852 {
+tc_946df596, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011000;
+}
+def S2_mask : HInst<
+(outs IntRegs:$Rd32),
+(ins u5_0Imm:$Ii, u5_0Imm:$II),
+"$Rd32 = mask(#$Ii,#$II)",
+tc_9461ff31, TypeS_2op>, Enc_c85e2a, Requires<[HasV66]> {
+let Inst{13-13} = 0b1;
+let Inst{20-16} = 0b00000;
+let Inst{31-23} = 0b100011010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let prefersSlot3 = 1;
 }
 def S2_packhl : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = packhl($Rs32,$Rt32)",
-tc_b9488031, TypeALU32_3op>, Enc_be32a5 {
+tc_5a2711e5, TypeALU32_3op>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11110101100;
@@ -19245,7 +19332,7 @@ def S2_parityp : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rd32 = parity($Rss32,$Rtt32)",
-tc_2b6f77c6, TypeALU64>, Enc_d2216a {
+tc_002cb246, TypeALU64>, Enc_d2216a {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010000000;
@@ -19257,7 +19344,7 @@ def S2_pstorerbf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memb($Rs32+#$Ii) = $Rt32",
-tc_8b15472a, TypeV2LDST>, Enc_da8d43, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_da8d43, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000100000;
 let isPredicated = 1;
@@ -19279,7 +19366,7 @@ def S2_pstorerbf_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memb($Rx32++#$Ii) = $Rt32",
-tc_cd7374a0, TypeST>, Enc_cc449f, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_cc449f, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -19297,7 +19384,7 @@ def S2_pstorerbf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4) memb($Rs32) = $Rt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -19305,7 +19392,7 @@ def S2_pstorerbfnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memb($Rx32++#$Ii) = $Rt32",
-tc_74e47fd9, TypeST>, Enc_cc449f, AddrModeRel {
+tc_53559e35, TypeST>, Enc_cc449f, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -19324,7 +19411,7 @@ def S2_pstorerbnewf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memb($Rs32+#$Ii) = $Nt8.new",
-tc_594ab548, TypeV2LDST>, Enc_585242, AddrModeRel {
+tc_8fb7ab1b, TypeV2LDST>, Enc_585242, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b01000100101;
@@ -19350,7 +19437,7 @@ def S2_pstorerbnewf_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memb($Rx32++#$Ii) = $Nt8.new",
-tc_d9f95eef, TypeST>, Enc_52a5dd, AddrModeRel {
+tc_838b34ea, TypeST>, Enc_52a5dd, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b100;
@@ -19372,7 +19459,7 @@ def S2_pstorerbnewf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if (!$Pv4) memb($Rs32) = $Nt8.new",
-tc_594ab548, TypeMAPPING> {
+tc_8fb7ab1b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -19381,7 +19468,7 @@ def S2_pstorerbnewfnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memb($Rx32++#$Ii) = $Nt8.new",
-tc_d24b2d85, TypeST>, Enc_52a5dd, AddrModeRel {
+tc_d65dbf51, TypeST>, Enc_52a5dd, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b100;
@@ -19404,7 +19491,7 @@ def S2_pstorerbnewt_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memb($Rs32+#$Ii) = $Nt8.new",
-tc_594ab548, TypeV2LDST>, Enc_585242, AddrModeRel {
+tc_8fb7ab1b, TypeV2LDST>, Enc_585242, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b01000000101;
@@ -19429,7 +19516,7 @@ def S2_pstorerbnewt_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memb($Rx32++#$Ii) = $Nt8.new",
-tc_d9f95eef, TypeST>, Enc_52a5dd, AddrModeRel {
+tc_838b34ea, TypeST>, Enc_52a5dd, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b100;
@@ -19450,7 +19537,7 @@ def S2_pstorerbnewt_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if ($Pv4) memb($Rs32) = $Nt8.new",
-tc_594ab548, TypeMAPPING> {
+tc_8fb7ab1b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -19459,7 +19546,7 @@ def S2_pstorerbnewtnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memb($Rx32++#$Ii) = $Nt8.new",
-tc_d24b2d85, TypeST>, Enc_52a5dd, AddrModeRel {
+tc_d65dbf51, TypeST>, Enc_52a5dd, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b100;
@@ -19481,7 +19568,7 @@ def S2_pstorerbt_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memb($Rs32+#$Ii) = $Rt32",
-tc_8b15472a, TypeV2LDST>, Enc_da8d43, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_da8d43, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000000000;
 let isPredicated = 1;
@@ -19502,7 +19589,7 @@ def S2_pstorerbt_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memb($Rx32++#$Ii) = $Rt32",
-tc_cd7374a0, TypeST>, Enc_cc449f, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_cc449f, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -19519,7 +19606,7 @@ def S2_pstorerbt_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4) memb($Rs32) = $Rt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -19527,7 +19614,7 @@ def S2_pstorerbtnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memb($Rx32++#$Ii) = $Rt32",
-tc_74e47fd9, TypeST>, Enc_cc449f, AddrModeRel {
+tc_53559e35, TypeST>, Enc_cc449f, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -19545,7 +19632,7 @@ def S2_pstorerdf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4) memd($Rs32+#$Ii) = $Rtt32",
-tc_8b15472a, TypeV2LDST>, Enc_57a33e, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_57a33e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000100110;
 let isPredicated = 1;
@@ -19566,7 +19653,7 @@ def S2_pstorerdf_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4) memd($Rx32++#$Ii) = $Rtt32",
-tc_cd7374a0, TypeST>, Enc_9a33d5, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_9a33d5, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -19584,7 +19671,7 @@ def S2_pstorerdf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "if (!$Pv4) memd($Rs32) = $Rtt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -19592,7 +19679,7 @@ def S2_pstorerdfnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4.new) memd($Rx32++#$Ii) = $Rtt32",
-tc_74e47fd9, TypeST>, Enc_9a33d5, AddrModeRel {
+tc_53559e35, TypeST>, Enc_9a33d5, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -19611,7 +19698,7 @@ def S2_pstorerdt_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4) memd($Rs32+#$Ii) = $Rtt32",
-tc_8b15472a, TypeV2LDST>, Enc_57a33e, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_57a33e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000000110;
 let isPredicated = 1;
@@ -19631,7 +19718,7 @@ def S2_pstorerdt_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4) memd($Rx32++#$Ii) = $Rtt32",
-tc_cd7374a0, TypeST>, Enc_9a33d5, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_9a33d5, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -19648,7 +19735,7 @@ def S2_pstorerdt_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "if ($Pv4) memd($Rs32) = $Rtt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -19656,7 +19743,7 @@ def S2_pstorerdtnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4.new) memd($Rx32++#$Ii) = $Rtt32",
-tc_74e47fd9, TypeST>, Enc_9a33d5, AddrModeRel {
+tc_53559e35, TypeST>, Enc_9a33d5, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -19674,7 +19761,7 @@ def S2_pstorerff_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rs32+#$Ii) = $Rt32.h",
-tc_8b15472a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000100011;
 let isPredicated = 1;
@@ -19695,7 +19782,7 @@ def S2_pstorerff_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rx32++#$Ii) = $Rt32.h",
-tc_cd7374a0, TypeST>, Enc_b886fd, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -19713,7 +19800,7 @@ def S2_pstorerff_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rs32) = $Rt32.h",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -19721,7 +19808,7 @@ def S2_pstorerffnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rx32++#$Ii) = $Rt32.h",
-tc_74e47fd9, TypeST>, Enc_b886fd, AddrModeRel {
+tc_53559e35, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -19740,7 +19827,7 @@ def S2_pstorerft_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh($Rs32+#$Ii) = $Rt32.h",
-tc_8b15472a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000000011;
 let isPredicated = 1;
@@ -19760,7 +19847,7 @@ def S2_pstorerft_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh($Rx32++#$Ii) = $Rt32.h",
-tc_cd7374a0, TypeST>, Enc_b886fd, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -19777,7 +19864,7 @@ def S2_pstorerft_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4) memh($Rs32) = $Rt32.h",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -19785,7 +19872,7 @@ def S2_pstorerftnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rx32++#$Ii) = $Rt32.h",
-tc_74e47fd9, TypeST>, Enc_b886fd, AddrModeRel {
+tc_53559e35, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -19803,7 +19890,7 @@ def S2_pstorerhf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rs32+#$Ii) = $Rt32",
-tc_8b15472a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000100010;
 let isPredicated = 1;
@@ -19825,7 +19912,7 @@ def S2_pstorerhf_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rx32++#$Ii) = $Rt32",
-tc_cd7374a0, TypeST>, Enc_b886fd, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -19843,7 +19930,7 @@ def S2_pstorerhf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rs32) = $Rt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -19851,7 +19938,7 @@ def S2_pstorerhfnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rx32++#$Ii) = $Rt32",
-tc_74e47fd9, TypeST>, Enc_b886fd, AddrModeRel {
+tc_53559e35, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -19870,7 +19957,7 @@ def S2_pstorerhnewf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memh($Rs32+#$Ii) = $Nt8.new",
-tc_594ab548, TypeV2LDST>, Enc_f44229, AddrModeRel {
+tc_8fb7ab1b, TypeV2LDST>, Enc_f44229, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b01000100101;
@@ -19896,7 +19983,7 @@ def S2_pstorerhnewf_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memh($Rx32++#$Ii) = $Nt8.new",
-tc_d9f95eef, TypeST>, Enc_31aa6a, AddrModeRel {
+tc_838b34ea, TypeST>, Enc_31aa6a, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b101;
@@ -19918,7 +20005,7 @@ def S2_pstorerhnewf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if (!$Pv4) memh($Rs32) = $Nt8.new",
-tc_594ab548, TypeMAPPING> {
+tc_8fb7ab1b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -19927,7 +20014,7 @@ def S2_pstorerhnewfnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memh($Rx32++#$Ii) = $Nt8.new",
-tc_d24b2d85, TypeST>, Enc_31aa6a, AddrModeRel {
+tc_d65dbf51, TypeST>, Enc_31aa6a, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b101;
@@ -19950,7 +20037,7 @@ def S2_pstorerhnewt_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memh($Rs32+#$Ii) = $Nt8.new",
-tc_594ab548, TypeV2LDST>, Enc_f44229, AddrModeRel {
+tc_8fb7ab1b, TypeV2LDST>, Enc_f44229, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b01000000101;
@@ -19975,7 +20062,7 @@ def S2_pstorerhnewt_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memh($Rx32++#$Ii) = $Nt8.new",
-tc_d9f95eef, TypeST>, Enc_31aa6a, AddrModeRel {
+tc_838b34ea, TypeST>, Enc_31aa6a, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b101;
@@ -19996,7 +20083,7 @@ def S2_pstorerhnewt_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if ($Pv4) memh($Rs32) = $Nt8.new",
-tc_594ab548, TypeMAPPING> {
+tc_8fb7ab1b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -20005,7 +20092,7 @@ def S2_pstorerhnewtnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memh($Rx32++#$Ii) = $Nt8.new",
-tc_d24b2d85, TypeST>, Enc_31aa6a, AddrModeRel {
+tc_d65dbf51, TypeST>, Enc_31aa6a, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b101;
@@ -20027,7 +20114,7 @@ def S2_pstorerht_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh($Rs32+#$Ii) = $Rt32",
-tc_8b15472a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000000010;
 let isPredicated = 1;
@@ -20048,7 +20135,7 @@ def S2_pstorerht_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh($Rx32++#$Ii) = $Rt32",
-tc_cd7374a0, TypeST>, Enc_b886fd, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -20065,7 +20152,7 @@ def S2_pstorerht_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4) memh($Rs32) = $Rt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -20073,7 +20160,7 @@ def S2_pstorerhtnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rx32++#$Ii) = $Rt32",
-tc_74e47fd9, TypeST>, Enc_b886fd, AddrModeRel {
+tc_53559e35, TypeST>, Enc_b886fd, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -20091,7 +20178,7 @@ def S2_pstorerif_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memw($Rs32+#$Ii) = $Rt32",
-tc_8b15472a, TypeV2LDST>, Enc_397f23, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_397f23, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000100100;
 let isPredicated = 1;
@@ -20113,7 +20200,7 @@ def S2_pstorerif_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memw($Rx32++#$Ii) = $Rt32",
-tc_cd7374a0, TypeST>, Enc_7eaeb6, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_7eaeb6, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -20131,7 +20218,7 @@ def S2_pstorerif_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4) memw($Rs32) = $Rt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -20139,7 +20226,7 @@ def S2_pstorerifnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memw($Rx32++#$Ii) = $Rt32",
-tc_74e47fd9, TypeST>, Enc_7eaeb6, AddrModeRel {
+tc_53559e35, TypeST>, Enc_7eaeb6, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -20159,7 +20246,7 @@ def S2_pstorerinewf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memw($Rs32+#$Ii) = $Nt8.new",
-tc_594ab548, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
+tc_8fb7ab1b, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b01000100101;
@@ -20185,7 +20272,7 @@ def S2_pstorerinewf_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memw($Rx32++#$Ii) = $Nt8.new",
-tc_d9f95eef, TypeST>, Enc_65f095, AddrModeRel {
+tc_838b34ea, TypeST>, Enc_65f095, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b110;
@@ -20207,7 +20294,7 @@ def S2_pstorerinewf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if (!$Pv4) memw($Rs32) = $Nt8.new",
-tc_594ab548, TypeMAPPING> {
+tc_8fb7ab1b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -20216,7 +20303,7 @@ def S2_pstorerinewfnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memw($Rx32++#$Ii) = $Nt8.new",
-tc_d24b2d85, TypeST>, Enc_65f095, AddrModeRel {
+tc_d65dbf51, TypeST>, Enc_65f095, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b110;
@@ -20239,7 +20326,7 @@ def S2_pstorerinewt_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memw($Rs32+#$Ii) = $Nt8.new",
-tc_594ab548, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
+tc_8fb7ab1b, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b01000000101;
@@ -20264,7 +20351,7 @@ def S2_pstorerinewt_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memw($Rx32++#$Ii) = $Nt8.new",
-tc_d9f95eef, TypeST>, Enc_65f095, AddrModeRel {
+tc_838b34ea, TypeST>, Enc_65f095, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b110;
@@ -20285,7 +20372,7 @@ def S2_pstorerinewt_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if ($Pv4) memw($Rs32) = $Nt8.new",
-tc_594ab548, TypeMAPPING> {
+tc_8fb7ab1b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -20294,7 +20381,7 @@ def S2_pstorerinewtnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memw($Rx32++#$Ii) = $Nt8.new",
-tc_d24b2d85, TypeST>, Enc_65f095, AddrModeRel {
+tc_d65dbf51, TypeST>, Enc_65f095, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b110;
@@ -20316,7 +20403,7 @@ def S2_pstorerit_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memw($Rs32+#$Ii) = $Rt32",
-tc_8b15472a, TypeV2LDST>, Enc_397f23, AddrModeRel {
+tc_f8e23f0b, TypeV2LDST>, Enc_397f23, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000000100;
 let isPredicated = 1;
@@ -20337,7 +20424,7 @@ def S2_pstorerit_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memw($Rx32++#$Ii) = $Rt32",
-tc_cd7374a0, TypeST>, Enc_7eaeb6, AddrModeRel {
+tc_24b66c99, TypeST>, Enc_7eaeb6, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
@@ -20354,7 +20441,7 @@ def S2_pstorerit_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4) memw($Rs32) = $Rt32",
-tc_8b15472a, TypeMAPPING> {
+tc_f8e23f0b, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -20362,7 +20449,7 @@ def S2_pstoreritnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memw($Rx32++#$Ii) = $Rt32",
-tc_74e47fd9, TypeST>, Enc_7eaeb6, AddrModeRel {
+tc_53559e35, TypeST>, Enc_7eaeb6, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -20380,7 +20467,7 @@ def S2_setbit_i : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = setbit($Rs32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_a05677 {
+tc_946df596, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100110;
@@ -20391,7 +20478,7 @@ def S2_setbit_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = setbit($Rs32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_5ab2be {
+tc_946df596, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110100;
@@ -20402,7 +20489,7 @@ def S2_shuffeb : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = shuffeb($Rss32,$Rtt32)",
-tc_540fdfbc, TypeS_3op>, Enc_a56825 {
+tc_946df596, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001000;
@@ -20411,7 +20498,7 @@ def S2_shuffeh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = shuffeh($Rss32,$Rtt32)",
-tc_540fdfbc, TypeS_3op>, Enc_a56825 {
+tc_946df596, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001000;
@@ -20420,7 +20507,7 @@ def S2_shuffob : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = shuffob($Rtt32,$Rss32)",
-tc_540fdfbc, TypeS_3op>, Enc_ea23e4 {
+tc_946df596, TypeS_3op>, Enc_ea23e4 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001000;
@@ -20429,7 +20516,7 @@ def S2_shuffoh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32),
 "$Rdd32 = shuffoh($Rtt32,$Rss32)",
-tc_540fdfbc, TypeS_3op>, Enc_ea23e4 {
+tc_946df596, TypeS_3op>, Enc_ea23e4 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001100;
@@ -20438,7 +20525,7 @@ def S2_storerb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rs32+#$Ii) = $Rt32",
-tc_05b6c987, TypeST>, Enc_448f7f, AddrModeRel, PostInc_BaseImm {
+tc_30b9bb4a, TypeST>, Enc_448f7f, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1000;
 let Inst{31-27} = 0b10100;
 let addrMode = BaseImmOffset;
@@ -20459,9 +20546,10 @@ def S2_storerb_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memb($Rx32++$Mu2:brev) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f, AddrModeRel {
+tc_da97ee82, TypeST>, Enc_d5c73f, AddrModeRel {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101111000;
+let addrMode = PostInc;
 let accessSize = ByteAccess;
 let mayStore = 1;
 let BaseOpcode = "S2_storerb_pbr";
@@ -20472,7 +20560,7 @@ def S2_storerb_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Rt32),
 "memb($Rx32++#$Ii:circ($Mu2)) = $Rt32",
-tc_9fdb5406, TypeST>, Enc_b15941, AddrModeRel {
+tc_e86aa961, TypeST>, Enc_b15941, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{31-21} = 0b10101001000;
@@ -20488,7 +20576,7 @@ def S2_storerb_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memb($Rx32++I:circ($Mu2)) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f, AddrModeRel {
+tc_da97ee82, TypeST>, Enc_d5c73f, AddrModeRel {
 let Inst{7-0} = 0b00000010;
 let Inst{31-21} = 0b10101001000;
 let addrMode = PostInc;
@@ -20503,7 +20591,7 @@ def S2_storerb_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rx32++#$Ii) = $Rt32",
-tc_f86c328a, TypeST>, Enc_10bc21, AddrModeRel, PostInc_BaseImm {
+tc_da97ee82, TypeST>, Enc_10bc21, AddrModeRel, PostInc_BaseImm {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
@@ -20521,7 +20609,7 @@ def S2_storerb_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memb($Rx32++$Mu2) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f {
+tc_da97ee82, TypeST>, Enc_d5c73f {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101101000;
 let addrMode = PostInc;
@@ -20534,7 +20622,7 @@ def S2_storerb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memb($Rs32) = $Rt32",
-tc_05b6c987, TypeMAPPING> {
+tc_30b9bb4a, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -20542,7 +20630,7 @@ def S2_storerbgp : HInst<
 (outs),
 (ins u32_0Imm:$Ii, IntRegs:$Rt32),
 "memb(gp+#$Ii) = $Rt32",
-tc_a788683e, TypeV2LDST>, Enc_1b64fb, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_1b64fb, AddrModeRel {
 let Inst{24-21} = 0b0000;
 let Inst{31-27} = 0b01001;
 let accessSize = ByteAccess;
@@ -20560,7 +20648,7 @@ def S2_storerbnew_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii, IntRegs:$Nt8),
 "memb($Rs32+#$Ii) = $Nt8.new",
-tc_f7dd9c9f, TypeST>, Enc_4df4e9, AddrModeRel {
+tc_be9602ff, TypeST>, Enc_4df4e9, AddrModeRel {
 let Inst{12-11} = 0b00;
 let Inst{24-21} = 0b1101;
 let Inst{31-27} = 0b10100;
@@ -20585,10 +20673,11 @@ def S2_storerbnew_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memb($Rx32++$Mu2:brev) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_8dbe85, AddrModeRel {
 let Inst{7-0} = 0b00000000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b10101111101;
+let addrMode = PostInc;
 let accessSize = ByteAccess;
 let isNVStore = 1;
 let isNewValue = 1;
@@ -20602,7 +20691,7 @@ def S2_storerbnew_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Nt8),
 "memb($Rx32++#$Ii:circ($Mu2)) = $Nt8.new",
-tc_9d5941c7, TypeST>, Enc_96ce4f, AddrModeRel {
+tc_d5c0729a, TypeST>, Enc_96ce4f, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{12-11} = 0b00;
@@ -20622,7 +20711,7 @@ def S2_storerbnew_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memb($Rx32++I:circ($Mu2)) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_8dbe85, AddrModeRel {
 let Inst{7-0} = 0b00000010;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b10101001101;
@@ -20641,7 +20730,7 @@ def S2_storerbnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_0Imm:$Ii, IntRegs:$Nt8),
 "memb($Rx32++#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_c7cd90, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_c7cd90, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b000;
@@ -20662,7 +20751,7 @@ def S2_storerbnew_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memb($Rx32++$Mu2) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85 {
+tc_c79a189f, TypeST>, Enc_8dbe85 {
 let Inst{7-0} = 0b00000000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b10101101101;
@@ -20679,7 +20768,7 @@ def S2_storerbnew_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Nt8),
 "memb($Rs32) = $Nt8.new",
-tc_f7dd9c9f, TypeMAPPING> {
+tc_be9602ff, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 1;
@@ -20688,7 +20777,7 @@ def S2_storerbnewgp : HInst<
 (outs),
 (ins u32_0Imm:$Ii, IntRegs:$Nt8),
 "memb(gp+#$Ii) = $Nt8.new",
-tc_ff9ee76e, TypeV2LDST>, Enc_ad1831, AddrModeRel {
+tc_5bf126a6, TypeV2LDST>, Enc_ad1831, AddrModeRel {
 let Inst{12-11} = 0b00;
 let Inst{24-21} = 0b0101;
 let Inst{31-27} = 0b01001;
@@ -20710,7 +20799,7 @@ def S2_storerd_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "memd($Rs32+#$Ii) = $Rtt32",
-tc_05b6c987, TypeST>, Enc_ce6828, AddrModeRel, PostInc_BaseImm {
+tc_30b9bb4a, TypeST>, Enc_ce6828, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1110;
 let Inst{31-27} = 0b10100;
 let addrMode = BaseImmOffset;
@@ -20730,9 +20819,10 @@ def S2_storerd_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, DoubleRegs:$Rtt32),
 "memd($Rx32++$Mu2:brev) = $Rtt32",
-tc_f86c328a, TypeST>, Enc_928ca1 {
+tc_da97ee82, TypeST>, Enc_928ca1 {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101111110;
+let addrMode = PostInc;
 let accessSize = DoubleWordAccess;
 let mayStore = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -20741,7 +20831,7 @@ def S2_storerd_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_3Imm:$Ii, ModRegs:$Mu2, DoubleRegs:$Rtt32),
 "memd($Rx32++#$Ii:circ($Mu2)) = $Rtt32",
-tc_9fdb5406, TypeST>, Enc_395cc4 {
+tc_e86aa961, TypeST>, Enc_395cc4 {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{31-21} = 0b10101001110;
@@ -20755,7 +20845,7 @@ def S2_storerd_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, DoubleRegs:$Rtt32),
 "memd($Rx32++I:circ($Mu2)) = $Rtt32",
-tc_f86c328a, TypeST>, Enc_928ca1 {
+tc_da97ee82, TypeST>, Enc_928ca1 {
 let Inst{7-0} = 0b00000010;
 let Inst{31-21} = 0b10101001110;
 let addrMode = PostInc;
@@ -20768,7 +20858,7 @@ def S2_storerd_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_3Imm:$Ii, DoubleRegs:$Rtt32),
 "memd($Rx32++#$Ii) = $Rtt32",
-tc_f86c328a, TypeST>, Enc_85bf58, AddrModeRel, PostInc_BaseImm {
+tc_da97ee82, TypeST>, Enc_85bf58, AddrModeRel, PostInc_BaseImm {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
@@ -20785,7 +20875,7 @@ def S2_storerd_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, DoubleRegs:$Rtt32),
 "memd($Rx32++$Mu2) = $Rtt32",
-tc_f86c328a, TypeST>, Enc_928ca1 {
+tc_da97ee82, TypeST>, Enc_928ca1 {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101101110;
 let addrMode = PostInc;
@@ -20797,7 +20887,7 @@ def S2_storerd_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "memd($Rs32) = $Rtt32",
-tc_05b6c987, TypeMAPPING> {
+tc_30b9bb4a, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -20805,7 +20895,7 @@ def S2_storerdgp : HInst<
 (outs),
 (ins u29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "memd(gp+#$Ii) = $Rtt32",
-tc_a788683e, TypeV2LDST>, Enc_5c124a, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_5c124a, AddrModeRel {
 let Inst{24-21} = 0b0110;
 let Inst{31-27} = 0b01001;
 let accessSize = DoubleWordAccess;
@@ -20822,7 +20912,7 @@ def S2_storerf_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+#$Ii) = $Rt32.h",
-tc_05b6c987, TypeST>, Enc_e957fb, AddrModeRel, PostInc_BaseImm {
+tc_30b9bb4a, TypeST>, Enc_e957fb, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1011;
 let Inst{31-27} = 0b10100;
 let addrMode = BaseImmOffset;
@@ -20842,9 +20932,10 @@ def S2_storerf_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++$Mu2:brev) = $Rt32.h",
-tc_f86c328a, TypeST>, Enc_d5c73f {
+tc_da97ee82, TypeST>, Enc_d5c73f {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101111011;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayStore = 1;
 let Constraints = "$Rx32 = $Rx32in";
@@ -20853,7 +20944,7 @@ def S2_storerf_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++#$Ii:circ($Mu2)) = $Rt32.h",
-tc_9fdb5406, TypeST>, Enc_935d9b {
+tc_e86aa961, TypeST>, Enc_935d9b {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{31-21} = 0b10101001011;
@@ -20867,7 +20958,7 @@ def S2_storerf_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++I:circ($Mu2)) = $Rt32.h",
-tc_f86c328a, TypeST>, Enc_d5c73f {
+tc_da97ee82, TypeST>, Enc_d5c73f {
 let Inst{7-0} = 0b00000010;
 let Inst{31-21} = 0b10101001011;
 let addrMode = PostInc;
@@ -20880,7 +20971,7 @@ def S2_storerf_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rx32++#$Ii) = $Rt32.h",
-tc_f86c328a, TypeST>, Enc_052c7d, AddrModeRel, PostInc_BaseImm {
+tc_da97ee82, TypeST>, Enc_052c7d, AddrModeRel, PostInc_BaseImm {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
@@ -20897,7 +20988,7 @@ def S2_storerf_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++$Mu2) = $Rt32.h",
-tc_f86c328a, TypeST>, Enc_d5c73f {
+tc_da97ee82, TypeST>, Enc_d5c73f {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101101011;
 let addrMode = PostInc;
@@ -20909,7 +21000,7 @@ def S2_storerf_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memh($Rs32) = $Rt32.h",
-tc_05b6c987, TypeMAPPING> {
+tc_30b9bb4a, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -20917,7 +21008,7 @@ def S2_storerfgp : HInst<
 (outs),
 (ins u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh(gp+#$Ii) = $Rt32.h",
-tc_a788683e, TypeV2LDST>, Enc_fda92c, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_fda92c, AddrModeRel {
 let Inst{24-21} = 0b0011;
 let Inst{31-27} = 0b01001;
 let accessSize = HalfWordAccess;
@@ -20934,7 +21025,7 @@ def S2_storerh_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+#$Ii) = $Rt32",
-tc_05b6c987, TypeST>, Enc_e957fb, AddrModeRel, PostInc_BaseImm {
+tc_30b9bb4a, TypeST>, Enc_e957fb, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1010;
 let Inst{31-27} = 0b10100;
 let addrMode = BaseImmOffset;
@@ -20955,9 +21046,10 @@ def S2_storerh_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++$Mu2:brev) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f, AddrModeRel {
+tc_da97ee82, TypeST>, Enc_d5c73f, AddrModeRel {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101111010;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let mayStore = 1;
 let BaseOpcode = "S2_storerh_pbr";
@@ -20968,7 +21060,7 @@ def S2_storerh_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++#$Ii:circ($Mu2)) = $Rt32",
-tc_9fdb5406, TypeST>, Enc_935d9b, AddrModeRel {
+tc_e86aa961, TypeST>, Enc_935d9b, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{31-21} = 0b10101001010;
@@ -20984,7 +21076,7 @@ def S2_storerh_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++I:circ($Mu2)) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f, AddrModeRel {
+tc_da97ee82, TypeST>, Enc_d5c73f, AddrModeRel {
 let Inst{7-0} = 0b00000010;
 let Inst{31-21} = 0b10101001010;
 let addrMode = PostInc;
@@ -20999,7 +21091,7 @@ def S2_storerh_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rx32++#$Ii) = $Rt32",
-tc_f86c328a, TypeST>, Enc_052c7d, AddrModeRel, PostInc_BaseImm {
+tc_da97ee82, TypeST>, Enc_052c7d, AddrModeRel, PostInc_BaseImm {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
@@ -21017,7 +21109,7 @@ def S2_storerh_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memh($Rx32++$Mu2) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f {
+tc_da97ee82, TypeST>, Enc_d5c73f {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101101010;
 let addrMode = PostInc;
@@ -21030,7 +21122,7 @@ def S2_storerh_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memh($Rs32) = $Rt32",
-tc_05b6c987, TypeMAPPING> {
+tc_30b9bb4a, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -21038,7 +21130,7 @@ def S2_storerhgp : HInst<
 (outs),
 (ins u31_1Imm:$Ii, IntRegs:$Rt32),
 "memh(gp+#$Ii) = $Rt32",
-tc_a788683e, TypeV2LDST>, Enc_fda92c, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_fda92c, AddrModeRel {
 let Inst{24-21} = 0b0010;
 let Inst{31-27} = 0b01001;
 let accessSize = HalfWordAccess;
@@ -21056,7 +21148,7 @@ def S2_storerhnew_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii, IntRegs:$Nt8),
 "memh($Rs32+#$Ii) = $Nt8.new",
-tc_f7dd9c9f, TypeST>, Enc_0d8870, AddrModeRel {
+tc_be9602ff, TypeST>, Enc_0d8870, AddrModeRel {
 let Inst{12-11} = 0b01;
 let Inst{24-21} = 0b1101;
 let Inst{31-27} = 0b10100;
@@ -21081,10 +21173,11 @@ def S2_storerhnew_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memh($Rx32++$Mu2:brev) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_8dbe85, AddrModeRel {
 let Inst{7-0} = 0b00000000;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b10101111101;
+let addrMode = PostInc;
 let accessSize = HalfWordAccess;
 let isNVStore = 1;
 let isNewValue = 1;
@@ -21098,7 +21191,7 @@ def S2_storerhnew_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, ModRegs:$Mu2, IntRegs:$Nt8),
 "memh($Rx32++#$Ii:circ($Mu2)) = $Nt8.new",
-tc_9d5941c7, TypeST>, Enc_91b9fe, AddrModeRel {
+tc_d5c0729a, TypeST>, Enc_91b9fe, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{12-11} = 0b01;
@@ -21118,7 +21211,7 @@ def S2_storerhnew_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memh($Rx32++I:circ($Mu2)) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_8dbe85, AddrModeRel {
 let Inst{7-0} = 0b00000010;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b10101001101;
@@ -21137,7 +21230,7 @@ def S2_storerhnew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_1Imm:$Ii, IntRegs:$Nt8),
 "memh($Rx32++#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_e26546, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_e26546, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b001;
@@ -21158,7 +21251,7 @@ def S2_storerhnew_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memh($Rx32++$Mu2) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85 {
+tc_c79a189f, TypeST>, Enc_8dbe85 {
 let Inst{7-0} = 0b00000000;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b10101101101;
@@ -21175,7 +21268,7 @@ def S2_storerhnew_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Nt8),
 "memh($Rs32) = $Nt8.new",
-tc_f7dd9c9f, TypeMAPPING> {
+tc_be9602ff, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 1;
@@ -21184,7 +21277,7 @@ def S2_storerhnewgp : HInst<
 (outs),
 (ins u31_1Imm:$Ii, IntRegs:$Nt8),
 "memh(gp+#$Ii) = $Nt8.new",
-tc_ff9ee76e, TypeV2LDST>, Enc_bc03e5, AddrModeRel {
+tc_5bf126a6, TypeV2LDST>, Enc_bc03e5, AddrModeRel {
 let Inst{12-11} = 0b01;
 let Inst{24-21} = 0b0101;
 let Inst{31-27} = 0b01001;
@@ -21206,7 +21299,7 @@ def S2_storeri_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s30_2Imm:$Ii, IntRegs:$Rt32),
 "memw($Rs32+#$Ii) = $Rt32",
-tc_05b6c987, TypeST>, Enc_143445, AddrModeRel, PostInc_BaseImm {
+tc_30b9bb4a, TypeST>, Enc_143445, AddrModeRel, PostInc_BaseImm {
 let Inst{24-21} = 0b1100;
 let Inst{31-27} = 0b10100;
 let addrMode = BaseImmOffset;
@@ -21227,9 +21320,10 @@ def S2_storeri_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memw($Rx32++$Mu2:brev) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f, AddrModeRel {
+tc_da97ee82, TypeST>, Enc_d5c73f, AddrModeRel {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101111100;
+let addrMode = PostInc;
 let accessSize = WordAccess;
 let mayStore = 1;
 let BaseOpcode = "S2_storeri_pbr";
@@ -21240,7 +21334,7 @@ def S2_storeri_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii, ModRegs:$Mu2, IntRegs:$Rt32),
 "memw($Rx32++#$Ii:circ($Mu2)) = $Rt32",
-tc_9fdb5406, TypeST>, Enc_79b8c8, AddrModeRel {
+tc_e86aa961, TypeST>, Enc_79b8c8, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{31-21} = 0b10101001100;
@@ -21256,7 +21350,7 @@ def S2_storeri_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memw($Rx32++I:circ($Mu2)) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f, AddrModeRel {
+tc_da97ee82, TypeST>, Enc_d5c73f, AddrModeRel {
 let Inst{7-0} = 0b00000010;
 let Inst{31-21} = 0b10101001100;
 let addrMode = PostInc;
@@ -21271,7 +21365,7 @@ def S2_storeri_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Rt32),
 "memw($Rx32++#$Ii) = $Rt32",
-tc_f86c328a, TypeST>, Enc_db40cd, AddrModeRel, PostInc_BaseImm {
+tc_da97ee82, TypeST>, Enc_db40cd, AddrModeRel, PostInc_BaseImm {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
@@ -21289,7 +21383,7 @@ def S2_storeri_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Rt32),
 "memw($Rx32++$Mu2) = $Rt32",
-tc_f86c328a, TypeST>, Enc_d5c73f {
+tc_da97ee82, TypeST>, Enc_d5c73f {
 let Inst{7-0} = 0b00000000;
 let Inst{31-21} = 0b10101101100;
 let addrMode = PostInc;
@@ -21302,7 +21396,7 @@ def S2_storeri_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memw($Rs32) = $Rt32",
-tc_05b6c987, TypeMAPPING> {
+tc_30b9bb4a, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -21310,7 +21404,7 @@ def S2_storerigp : HInst<
 (outs),
 (ins u30_2Imm:$Ii, IntRegs:$Rt32),
 "memw(gp+#$Ii) = $Rt32",
-tc_a788683e, TypeV2LDST>, Enc_541f26, AddrModeRel {
+tc_0371abea, TypeV2LDST>, Enc_541f26, AddrModeRel {
 let Inst{24-21} = 0b0100;
 let Inst{31-27} = 0b01001;
 let accessSize = WordAccess;
@@ -21328,7 +21422,7 @@ def S2_storerinew_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s30_2Imm:$Ii, IntRegs:$Nt8),
 "memw($Rs32+#$Ii) = $Nt8.new",
-tc_f7dd9c9f, TypeST>, Enc_690862, AddrModeRel {
+tc_be9602ff, TypeST>, Enc_690862, AddrModeRel {
 let Inst{12-11} = 0b10;
 let Inst{24-21} = 0b1101;
 let Inst{31-27} = 0b10100;
@@ -21353,10 +21447,11 @@ def S2_storerinew_pbr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memw($Rx32++$Mu2:brev) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_8dbe85, AddrModeRel {
 let Inst{7-0} = 0b00000000;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b10101111101;
+let addrMode = PostInc;
 let accessSize = WordAccess;
 let isNVStore = 1;
 let isNewValue = 1;
@@ -21370,7 +21465,7 @@ def S2_storerinew_pci : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii, ModRegs:$Mu2, IntRegs:$Nt8),
 "memw($Rx32++#$Ii:circ($Mu2)) = $Nt8.new",
-tc_9d5941c7, TypeST>, Enc_3f97c8, AddrModeRel {
+tc_d5c0729a, TypeST>, Enc_3f97c8, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{12-11} = 0b10;
@@ -21390,7 +21485,7 @@ def S2_storerinew_pcr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memw($Rx32++I:circ($Mu2)) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_8dbe85, AddrModeRel {
 let Inst{7-0} = 0b00000010;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b10101001101;
@@ -21409,7 +21504,7 @@ def S2_storerinew_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s4_2Imm:$Ii, IntRegs:$Nt8),
 "memw($Rx32++#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_223005, AddrModeRel {
+tc_c79a189f, TypeST>, Enc_223005, AddrModeRel {
 let Inst{2-0} = 0b000;
 let Inst{7-7} = 0b0;
 let Inst{13-11} = 0b010;
@@ -21429,7 +21524,7 @@ def S2_storerinew_pr : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Nt8),
 "memw($Rx32++$Mu2) = $Nt8.new",
-tc_e7d02c66, TypeST>, Enc_8dbe85 {
+tc_c79a189f, TypeST>, Enc_8dbe85 {
 let Inst{7-0} = 0b00000000;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b10101101101;
@@ -21446,7 +21541,7 @@ def S2_storerinew_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Nt8),
 "memw($Rs32) = $Nt8.new",
-tc_f7dd9c9f, TypeMAPPING> {
+tc_be9602ff, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 1;
@@ -21455,7 +21550,7 @@ def S2_storerinewgp : HInst<
 (outs),
 (ins u30_2Imm:$Ii, IntRegs:$Nt8),
 "memw(gp+#$Ii) = $Nt8.new",
-tc_ff9ee76e, TypeV2LDST>, Enc_78cbf0, AddrModeRel {
+tc_5bf126a6, TypeV2LDST>, Enc_78cbf0, AddrModeRel {
 let Inst{12-11} = 0b10;
 let Inst{24-21} = 0b0101;
 let Inst{31-27} = 0b01001;
@@ -21477,7 +21572,7 @@ def S2_storew_locked : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "memw_locked($Rs32,$Pd4) = $Rt32",
-tc_1372bca1, TypeST>, Enc_c2b48e {
+tc_5abb5e3f, TypeST>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10100000101;
@@ -21490,7 +21585,7 @@ def S2_svsathb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = vsathb($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001100100;
 let hasNewValue = 1;
@@ -21501,7 +21596,7 @@ def S2_svsathub : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = vsathub($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10001100100;
 let hasNewValue = 1;
@@ -21512,7 +21607,7 @@ def S2_tableidxb : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, s6_0Imm:$II),
 "$Rx32 = tableidxb($Rs32,#$Ii,#$II):raw",
-tc_87735c3b, TypeS_2op>, Enc_cd82bc {
+tc_bfec0f01, TypeS_2op>, Enc_cd82bc {
 let Inst{31-22} = 0b1000011100;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -21523,7 +21618,7 @@ def S2_tableidxb_goodsyntax : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, u5_0Imm:$II),
 "$Rx32 = tableidxb($Rs32,#$Ii,#$II)",
-tc_87735c3b, TypeS_2op> {
+tc_bfec0f01, TypeS_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -21534,7 +21629,7 @@ def S2_tableidxd : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, s6_0Imm:$II),
 "$Rx32 = tableidxd($Rs32,#$Ii,#$II):raw",
-tc_87735c3b, TypeS_2op>, Enc_cd82bc {
+tc_bfec0f01, TypeS_2op>, Enc_cd82bc {
 let Inst{31-22} = 0b1000011111;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -21545,7 +21640,7 @@ def S2_tableidxd_goodsyntax : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, u5_0Imm:$II),
 "$Rx32 = tableidxd($Rs32,#$Ii,#$II)",
-tc_87735c3b, TypeS_2op> {
+tc_bfec0f01, TypeS_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -21555,7 +21650,7 @@ def S2_tableidxh : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, s6_0Imm:$II),
 "$Rx32 = tableidxh($Rs32,#$Ii,#$II):raw",
-tc_87735c3b, TypeS_2op>, Enc_cd82bc {
+tc_bfec0f01, TypeS_2op>, Enc_cd82bc {
 let Inst{31-22} = 0b1000011101;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -21566,7 +21661,7 @@ def S2_tableidxh_goodsyntax : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, u5_0Imm:$II),
 "$Rx32 = tableidxh($Rs32,#$Ii,#$II)",
-tc_87735c3b, TypeS_2op> {
+tc_bfec0f01, TypeS_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -21576,7 +21671,7 @@ def S2_tableidxw : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, s6_0Imm:$II),
 "$Rx32 = tableidxw($Rs32,#$Ii,#$II):raw",
-tc_87735c3b, TypeS_2op>, Enc_cd82bc {
+tc_bfec0f01, TypeS_2op>, Enc_cd82bc {
 let Inst{31-22} = 0b1000011110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -21587,7 +21682,7 @@ def S2_tableidxw_goodsyntax : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u4_0Imm:$Ii, u5_0Imm:$II),
 "$Rx32 = tableidxw($Rs32,#$Ii,#$II)",
-tc_87735c3b, TypeS_2op> {
+tc_bfec0f01, TypeS_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -21597,7 +21692,7 @@ def S2_togglebit_i : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = togglebit($Rs32,#$Ii)",
-tc_540fdfbc, TypeS_2op>, Enc_a05677 {
+tc_946df596, TypeS_2op>, Enc_a05677 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100110;
@@ -21608,7 +21703,7 @@ def S2_togglebit_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = togglebit($Rs32,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_5ab2be {
+tc_946df596, TypeS_3op>, Enc_5ab2be {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110100;
@@ -21619,7 +21714,7 @@ def S2_tstbit_i : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Pd4 = tstbit($Rs32,#$Ii)",
-tc_7a830544, TypeS_2op>, Enc_83ee64 {
+tc_643b4717, TypeS_2op>, Enc_83ee64 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10000101000;
@@ -21628,7 +21723,7 @@ def S2_tstbit_r : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = tstbit($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111000;
@@ -21637,7 +21732,7 @@ def S2_valignib : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32, u3_0Imm:$Ii),
 "$Rdd32 = valignb($Rtt32,$Rss32,#$Ii)",
-tc_f8eeed7a, TypeS_3op>, Enc_729ff7 {
+tc_b4b5c03a, TypeS_3op>, Enc_729ff7 {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000000000;
 }
@@ -21645,7 +21740,7 @@ def S2_valignrb : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rtt32, DoubleRegs:$Rss32, PredRegs:$Pu4),
 "$Rdd32 = valignb($Rtt32,$Rss32,$Pu4)",
-tc_f8eeed7a, TypeS_3op>, Enc_8c6530 {
+tc_b4b5c03a, TypeS_3op>, Enc_8c6530 {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000010000;
@@ -21654,7 +21749,7 @@ def S2_vcnegh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vcnegh($Rss32,$Rt32)",
-tc_b44c6e2a, TypeS_3op>, Enc_927852 {
+tc_779080bf, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011110;
@@ -21665,7 +21760,7 @@ def S2_vcrotate : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rdd32 = vcrotate($Rss32,$Rt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_927852 {
+tc_002cb246, TypeS_3op>, Enc_927852 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000011110;
@@ -21676,7 +21771,7 @@ def S2_vrcnegh : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32),
 "$Rxx32 += vrcnegh($Rss32,$Rt32)",
-tc_e913dc32, TypeS_3op>, Enc_1aa186 {
+tc_d773585a, TypeS_3op>, Enc_1aa186 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b11001011001;
@@ -21687,7 +21782,7 @@ def S2_vrndpackwh : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vrndwh($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_90cd8b {
+tc_14b5c689, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001000100;
 let hasNewValue = 1;
@@ -21698,7 +21793,7 @@ def S2_vrndpackwhs : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vrndwh($Rss32):sat",
-tc_c2f7d806, TypeS_2op>, Enc_90cd8b {
+tc_cf8126ae, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10001000100;
 let hasNewValue = 1;
@@ -21710,7 +21805,7 @@ def S2_vsathb : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vsathb($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_90cd8b {
+tc_0ae0825c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10001000000;
 let hasNewValue = 1;
@@ -21721,7 +21816,7 @@ def S2_vsathb_nopack : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vsathb($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_b9c5fb {
+tc_0ae0825c, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10000000000;
 let Defs = [USR_OVF];
@@ -21730,7 +21825,7 @@ def S2_vsathub : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vsathub($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_90cd8b {
+tc_0ae0825c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001000000;
 let hasNewValue = 1;
@@ -21741,7 +21836,7 @@ def S2_vsathub_nopack : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vsathub($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_b9c5fb {
+tc_0ae0825c, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000000000;
 let Defs = [USR_OVF];
@@ -21750,7 +21845,7 @@ def S2_vsatwh : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vsatwh($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_90cd8b {
+tc_0ae0825c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10001000000;
 let hasNewValue = 1;
@@ -21761,7 +21856,7 @@ def S2_vsatwh_nopack : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vsatwh($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_b9c5fb {
+tc_0ae0825c, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000000000;
 let Defs = [USR_OVF];
@@ -21770,7 +21865,7 @@ def S2_vsatwuh : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vsatwuh($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_90cd8b {
+tc_0ae0825c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10001000000;
 let hasNewValue = 1;
@@ -21781,7 +21876,7 @@ def S2_vsatwuh_nopack : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32),
 "$Rdd32 = vsatwuh($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_b9c5fb {
+tc_0ae0825c, TypeS_2op>, Enc_b9c5fb {
 let Inst{13-5} = 0b000000101;
 let Inst{31-21} = 0b10000000000;
 let Defs = [USR_OVF];
@@ -21790,7 +21885,7 @@ def S2_vsplatrb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = vsplatb($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_5e2823 {
+tc_0ae0825c, TypeS_2op>, Enc_5e2823 {
 let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10001100010;
 let hasNewValue = 1;
@@ -21802,7 +21897,7 @@ def S2_vsplatrh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = vsplath($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_3a3d62 {
+tc_0ae0825c, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000100010;
 let isReMaterializable = 1;
@@ -21812,7 +21907,7 @@ def S2_vspliceib : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32, u3_0Imm:$Ii),
 "$Rdd32 = vspliceb($Rss32,$Rtt32,#$Ii)",
-tc_f8eeed7a, TypeS_3op>, Enc_d50cd3 {
+tc_b4b5c03a, TypeS_3op>, Enc_d50cd3 {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000000100;
 }
@@ -21820,7 +21915,7 @@ def S2_vsplicerb : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32, PredRegs:$Pu4),
 "$Rdd32 = vspliceb($Rss32,$Rtt32,$Pu4)",
-tc_f8eeed7a, TypeS_3op>, Enc_dbd70c {
+tc_b4b5c03a, TypeS_3op>, Enc_dbd70c {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000010100;
@@ -21829,7 +21924,7 @@ def S2_vsxtbh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = vsxtbh($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_3a3d62 {
+tc_0ae0825c, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10000100000;
 let isReMaterializable = 1;
@@ -21839,7 +21934,7 @@ def S2_vsxthw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = vsxthw($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_3a3d62 {
+tc_0ae0825c, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000100000;
 let isReMaterializable = 1;
@@ -21849,7 +21944,7 @@ def S2_vtrunehb : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vtrunehb($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_90cd8b {
+tc_0ae0825c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10001000100;
 let hasNewValue = 1;
@@ -21859,7 +21954,7 @@ def S2_vtrunewh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vtrunewh($Rss32,$Rtt32)",
-tc_540fdfbc, TypeS_3op>, Enc_a56825 {
+tc_946df596, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001100;
@@ -21868,7 +21963,7 @@ def S2_vtrunohb : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = vtrunohb($Rss32)",
-tc_cde8b071, TypeS_2op>, Enc_90cd8b {
+tc_0ae0825c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001000100;
 let hasNewValue = 1;
@@ -21878,7 +21973,7 @@ def S2_vtrunowh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vtrunowh($Rss32,$Rtt32)",
-tc_540fdfbc, TypeS_3op>, Enc_a56825 {
+tc_946df596, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001100;
@@ -21887,7 +21982,7 @@ def S2_vzxtbh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = vzxtbh($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_3a3d62 {
+tc_0ae0825c, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000100000;
 let isReMaterializable = 1;
@@ -21897,7 +21992,7 @@ def S2_vzxthw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = vzxthw($Rs32)",
-tc_cde8b071, TypeS_2op>, Enc_3a3d62 {
+tc_0ae0825c, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000100000;
 let isReMaterializable = 1;
@@ -21907,7 +22002,7 @@ def S4_addaddi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, s32_0Imm:$Ii),
 "$Rd32 = add($Rs32,add($Ru32,#$Ii))",
-tc_c74f796f, TypeALU64>, Enc_8b8d61 {
+tc_f675fee8, TypeALU64>, Enc_8b8d61 {
 let Inst{31-23} = 0b110110110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -21922,7 +22017,7 @@ def S4_addi_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = add(#$Ii,asl($Rx32in,#$II))",
-tc_c74f796f, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b100;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -21940,7 +22035,7 @@ def S4_addi_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = add(#$Ii,lsr($Rx32in,#$II))",
-tc_c74f796f, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b100;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
@@ -21958,7 +22053,7 @@ def S4_andi_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = and(#$Ii,asl($Rx32in,#$II))",
-tc_84df2cd3, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b000;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -21976,7 +22071,7 @@ def S4_andi_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = and(#$Ii,lsr($Rx32in,#$II))",
-tc_84df2cd3, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b000;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
@@ -21994,7 +22089,7 @@ def S4_clbaddi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s6_0Imm:$Ii),
 "$Rd32 = add(clb($Rs32),#$Ii)",
-tc_2b6f77c6, TypeS_2op>, Enc_9fae8a {
+tc_002cb246, TypeS_2op>, Enc_9fae8a {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b10001100001;
 let hasNewValue = 1;
@@ -22005,7 +22100,7 @@ def S4_clbpaddi : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, s6_0Imm:$Ii),
 "$Rd32 = add(clb($Rss32),#$Ii)",
-tc_2b6f77c6, TypeS_2op>, Enc_a1640c {
+tc_002cb246, TypeS_2op>, Enc_a1640c {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b10001000011;
 let hasNewValue = 1;
@@ -22016,7 +22111,7 @@ def S4_clbpnorm : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = normamt($Rss32)",
-tc_d088982c, TypeS_2op>, Enc_90cd8b {
+tc_14b5c689, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10001000011;
 let hasNewValue = 1;
@@ -22027,7 +22122,7 @@ def S4_extract : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii, u5_0Imm:$II),
 "$Rd32 = extract($Rs32,#$Ii,#$II)",
-tc_c74f796f, TypeS_2op>, Enc_b388cf {
+tc_f675fee8, TypeS_2op>, Enc_b388cf {
 let Inst{13-13} = 0b0;
 let Inst{31-23} = 0b100011011;
 let hasNewValue = 1;
@@ -22038,7 +22133,7 @@ def S4_extract_rp : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "$Rd32 = extract($Rs32,$Rtt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_e07374 {
+tc_002cb246, TypeS_3op>, Enc_e07374 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11001001000;
@@ -22050,7 +22145,7 @@ def S4_extractp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii, u6_0Imm:$II),
 "$Rdd32 = extract($Rss32,#$Ii,#$II)",
-tc_c74f796f, TypeS_2op>, Enc_b84c4c {
+tc_f675fee8, TypeS_2op>, Enc_b84c4c {
 let Inst{31-24} = 0b10001010;
 let prefersSlot3 = 1;
 }
@@ -22058,7 +22153,7 @@ def S4_extractp_rp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = extract($Rss32,$Rtt32)",
-tc_2b6f77c6, TypeS_3op>, Enc_a56825 {
+tc_002cb246, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001110;
@@ -22068,7 +22163,7 @@ def S4_lsli : HInst<
 (outs IntRegs:$Rd32),
 (ins s6_0Imm:$Ii, IntRegs:$Rt32),
 "$Rd32 = lsl(#$Ii,$Rt32)",
-tc_540fdfbc, TypeS_3op>, Enc_fef969 {
+tc_946df596, TypeS_3op>, Enc_fef969 {
 let Inst{7-6} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000110100;
@@ -22079,7 +22174,7 @@ def S4_ntstbit_i : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Pd4 = !tstbit($Rs32,#$Ii)",
-tc_7a830544, TypeS_2op>, Enc_83ee64 {
+tc_643b4717, TypeS_2op>, Enc_83ee64 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10000101001;
@@ -22088,7 +22183,7 @@ def S4_ntstbit_r : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Pd4 = !tstbit($Rs32,$Rt32)",
-tc_1e856f58, TypeS_3op>, Enc_c2b48e {
+tc_85d5d03f, TypeS_3op>, Enc_c2b48e {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000111001;
@@ -22097,7 +22192,7 @@ def S4_or_andi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rx32 |= and($Rs32,#$Ii)",
-tc_84df2cd3, TypeALU64>, Enc_b0e9d8 {
+tc_f429765c, TypeALU64>, Enc_b0e9d8 {
 let Inst{31-22} = 0b1101101000;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -22114,7 +22209,7 @@ def S4_or_andix : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Ru32, IntRegs:$Rx32in, s32_0Imm:$Ii),
 "$Rx32 = or($Ru32,and($Rx32in,#$Ii))",
-tc_84df2cd3, TypeALU64>, Enc_b4e6cf {
+tc_f429765c, TypeALU64>, Enc_b4e6cf {
 let Inst{31-22} = 0b1101101001;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -22130,7 +22225,7 @@ def S4_or_ori : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rx32 |= or($Rs32,#$Ii)",
-tc_84df2cd3, TypeALU64>, Enc_b0e9d8 {
+tc_f429765c, TypeALU64>, Enc_b0e9d8 {
 let Inst{31-22} = 0b1101101010;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -22147,7 +22242,7 @@ def S4_ori_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = or(#$Ii,asl($Rx32in,#$II))",
-tc_84df2cd3, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b010;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -22165,7 +22260,7 @@ def S4_ori_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = or(#$Ii,lsr($Rx32in,#$II))",
-tc_84df2cd3, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b010;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
@@ -22183,7 +22278,7 @@ def S4_parity : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = parity($Rs32,$Rt32)",
-tc_2b6f77c6, TypeALU64>, Enc_5ab2be {
+tc_002cb246, TypeALU64>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101111;
@@ -22195,7 +22290,7 @@ def S4_pstorerbf_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memb(#$Ii) = $Rt32",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -22220,7 +22315,7 @@ def S4_pstorerbf_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memb($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110101000;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -22236,7 +22331,7 @@ def S4_pstorerbfnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memb(#$Ii) = $Rt32",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -22262,7 +22357,7 @@ def S4_pstorerbfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memb($Rs32+#$Ii) = $Rt32",
-tc_f86c328a, TypeV2LDST>, Enc_da8d43, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_da8d43, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000110000;
 let isPredicated = 1;
@@ -22285,7 +22380,7 @@ def S4_pstorerbfnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memb($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110111000;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -22302,7 +22397,7 @@ def S4_pstorerbfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4.new) memb($Rs32) = $Rt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -22310,7 +22405,7 @@ def S4_pstorerbnewf_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memb(#$Ii) = $Nt8.new",
-tc_6ac37025, TypeST>, Enc_44215c, AddrModeRel {
+tc_4b68bce4, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b000;
@@ -22338,7 +22433,7 @@ def S4_pstorerbnewf_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memb($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_adb14c66, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_e95795ec, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b00;
 let Inst{31-21} = 0b00110101101;
 let isPredicated = 1;
@@ -22358,7 +22453,7 @@ def S4_pstorerbnewfnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memb(#$Ii) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_44215c, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b100;
@@ -22387,7 +22482,7 @@ def S4_pstorerbnewfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memb($Rs32+#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeV2LDST>, Enc_585242, AddrModeRel {
+tc_c79a189f, TypeV2LDST>, Enc_585242, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b01000110101;
@@ -22414,7 +22509,7 @@ def S4_pstorerbnewfnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memb($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_e421e012, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_b90a29b1, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b00;
 let Inst{31-21} = 0b00110111101;
 let isPredicated = 1;
@@ -22435,7 +22530,7 @@ def S4_pstorerbnewfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if (!$Pv4.new) memb($Rs32) = $Nt8.new",
-tc_e7d02c66, TypeMAPPING> {
+tc_c79a189f, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -22444,7 +22539,7 @@ def S4_pstorerbnewt_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memb(#$Ii) = $Nt8.new",
-tc_6ac37025, TypeST>, Enc_44215c, AddrModeRel {
+tc_4b68bce4, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b000;
@@ -22471,7 +22566,7 @@ def S4_pstorerbnewt_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memb($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_adb14c66, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_e95795ec, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b00;
 let Inst{31-21} = 0b00110100101;
 let isPredicated = 1;
@@ -22490,7 +22585,7 @@ def S4_pstorerbnewtnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memb(#$Ii) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_44215c, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b100;
@@ -22518,7 +22613,7 @@ def S4_pstorerbnewtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memb($Rs32+#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeV2LDST>, Enc_585242, AddrModeRel {
+tc_c79a189f, TypeV2LDST>, Enc_585242, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b01000010101;
@@ -22544,7 +22639,7 @@ def S4_pstorerbnewtnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memb($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_e421e012, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_b90a29b1, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b00;
 let Inst{31-21} = 0b00110110101;
 let isPredicated = 1;
@@ -22564,7 +22659,7 @@ def S4_pstorerbnewtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if ($Pv4.new) memb($Rs32) = $Nt8.new",
-tc_e7d02c66, TypeMAPPING> {
+tc_c79a189f, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -22573,7 +22668,7 @@ def S4_pstorerbt_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memb(#$Ii) = $Rt32",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -22597,7 +22692,7 @@ def S4_pstorerbt_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memb($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110100000;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -22612,7 +22707,7 @@ def S4_pstorerbtnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memb(#$Ii) = $Rt32",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -22637,7 +22732,7 @@ def S4_pstorerbtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memb($Rs32+#$Ii) = $Rt32",
-tc_f86c328a, TypeV2LDST>, Enc_da8d43, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_da8d43, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000010000;
 let isPredicated = 1;
@@ -22659,7 +22754,7 @@ def S4_pstorerbtnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memb($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110110000;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -22675,7 +22770,7 @@ def S4_pstorerbtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4.new) memb($Rs32) = $Rt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -22683,7 +22778,7 @@ def S4_pstorerdf_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4) memd(#$Ii) = $Rtt32",
-tc_238d91d2, TypeST>, Enc_50b5ac, AddrModeRel {
+tc_362c6592, TypeST>, Enc_50b5ac, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -22707,7 +22802,7 @@ def S4_pstorerdf_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4) memd($Rs32+$Ru32<<#$Ii) = $Rtt32",
-tc_5274e61a, TypeST>, Enc_1a9974, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_1a9974, AddrModeRel {
 let Inst{31-21} = 0b00110101110;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -22722,7 +22817,7 @@ def S4_pstorerdfnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4.new) memd(#$Ii) = $Rtt32",
-tc_66888ded, TypeST>, Enc_50b5ac, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_50b5ac, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -22747,7 +22842,7 @@ def S4_pstorerdfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4.new) memd($Rs32+#$Ii) = $Rtt32",
-tc_f86c328a, TypeV2LDST>, Enc_57a33e, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_57a33e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000110110;
 let isPredicated = 1;
@@ -22769,7 +22864,7 @@ def S4_pstorerdfnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if (!$Pv4.new) memd($Rs32+$Ru32<<#$Ii) = $Rtt32",
-tc_3e07fb90, TypeST>, Enc_1a9974, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_1a9974, AddrModeRel {
 let Inst{31-21} = 0b00110111110;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -22785,7 +22880,7 @@ def S4_pstorerdfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "if (!$Pv4.new) memd($Rs32) = $Rtt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -22793,7 +22888,7 @@ def S4_pstorerdt_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4) memd(#$Ii) = $Rtt32",
-tc_238d91d2, TypeST>, Enc_50b5ac, AddrModeRel {
+tc_362c6592, TypeST>, Enc_50b5ac, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -22816,7 +22911,7 @@ def S4_pstorerdt_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4) memd($Rs32+$Ru32<<#$Ii) = $Rtt32",
-tc_5274e61a, TypeST>, Enc_1a9974, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_1a9974, AddrModeRel {
 let Inst{31-21} = 0b00110100110;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -22830,7 +22925,7 @@ def S4_pstorerdtnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4.new) memd(#$Ii) = $Rtt32",
-tc_66888ded, TypeST>, Enc_50b5ac, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_50b5ac, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -22854,7 +22949,7 @@ def S4_pstorerdtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4.new) memd($Rs32+#$Ii) = $Rtt32",
-tc_f86c328a, TypeV2LDST>, Enc_57a33e, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_57a33e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000010110;
 let isPredicated = 1;
@@ -22875,7 +22970,7 @@ def S4_pstorerdtnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, DoubleRegs:$Rtt32),
 "if ($Pv4.new) memd($Rs32+$Ru32<<#$Ii) = $Rtt32",
-tc_3e07fb90, TypeST>, Enc_1a9974, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_1a9974, AddrModeRel {
 let Inst{31-21} = 0b00110110110;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -22890,7 +22985,7 @@ def S4_pstorerdtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "if ($Pv4.new) memd($Rs32) = $Rtt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -22898,7 +22993,7 @@ def S4_pstorerff_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh(#$Ii) = $Rt32.h",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -22922,7 +23017,7 @@ def S4_pstorerff_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rs32+$Ru32<<#$Ii) = $Rt32.h",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110101011;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -22937,7 +23032,7 @@ def S4_pstorerffnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh(#$Ii) = $Rt32.h",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -22962,7 +23057,7 @@ def S4_pstorerffnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rs32+#$Ii) = $Rt32.h",
-tc_f86c328a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000110011;
 let isPredicated = 1;
@@ -22984,7 +23079,7 @@ def S4_pstorerffnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rs32+$Ru32<<#$Ii) = $Rt32.h",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110111011;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -23000,7 +23095,7 @@ def S4_pstorerffnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rs32) = $Rt32.h",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -23008,7 +23103,7 @@ def S4_pstorerft_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh(#$Ii) = $Rt32.h",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -23031,7 +23126,7 @@ def S4_pstorerft_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh($Rs32+$Ru32<<#$Ii) = $Rt32.h",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110100011;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -23045,7 +23140,7 @@ def S4_pstorerftnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh(#$Ii) = $Rt32.h",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -23069,7 +23164,7 @@ def S4_pstorerftnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rs32+#$Ii) = $Rt32.h",
-tc_f86c328a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000010011;
 let isPredicated = 1;
@@ -23090,7 +23185,7 @@ def S4_pstorerftnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rs32+$Ru32<<#$Ii) = $Rt32.h",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110110011;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -23105,7 +23200,7 @@ def S4_pstorerftnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rs32) = $Rt32.h",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -23113,7 +23208,7 @@ def S4_pstorerhf_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh(#$Ii) = $Rt32",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -23138,7 +23233,7 @@ def S4_pstorerhf_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memh($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110101010;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -23154,7 +23249,7 @@ def S4_pstorerhfnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh(#$Ii) = $Rt32",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -23180,7 +23275,7 @@ def S4_pstorerhfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rs32+#$Ii) = $Rt32",
-tc_f86c328a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000110010;
 let isPredicated = 1;
@@ -23203,7 +23298,7 @@ def S4_pstorerhfnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110111010;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -23220,7 +23315,7 @@ def S4_pstorerhfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4.new) memh($Rs32) = $Rt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -23228,7 +23323,7 @@ def S4_pstorerhnewf_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memh(#$Ii) = $Nt8.new",
-tc_6ac37025, TypeST>, Enc_44215c, AddrModeRel {
+tc_4b68bce4, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b001;
@@ -23256,7 +23351,7 @@ def S4_pstorerhnewf_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memh($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_adb14c66, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_e95795ec, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b01;
 let Inst{31-21} = 0b00110101101;
 let isPredicated = 1;
@@ -23276,7 +23371,7 @@ def S4_pstorerhnewfnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memh(#$Ii) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_44215c, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b101;
@@ -23305,7 +23400,7 @@ def S4_pstorerhnewfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memh($Rs32+#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeV2LDST>, Enc_f44229, AddrModeRel {
+tc_c79a189f, TypeV2LDST>, Enc_f44229, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b01000110101;
@@ -23332,7 +23427,7 @@ def S4_pstorerhnewfnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memh($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_e421e012, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_b90a29b1, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b01;
 let Inst{31-21} = 0b00110111101;
 let isPredicated = 1;
@@ -23353,7 +23448,7 @@ def S4_pstorerhnewfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if (!$Pv4.new) memh($Rs32) = $Nt8.new",
-tc_e7d02c66, TypeMAPPING> {
+tc_c79a189f, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -23362,7 +23457,7 @@ def S4_pstorerhnewt_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memh(#$Ii) = $Nt8.new",
-tc_6ac37025, TypeST>, Enc_44215c, AddrModeRel {
+tc_4b68bce4, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b001;
@@ -23389,7 +23484,7 @@ def S4_pstorerhnewt_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memh($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_adb14c66, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_e95795ec, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b01;
 let Inst{31-21} = 0b00110100101;
 let isPredicated = 1;
@@ -23408,7 +23503,7 @@ def S4_pstorerhnewtnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memh(#$Ii) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_44215c, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b101;
@@ -23436,7 +23531,7 @@ def S4_pstorerhnewtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memh($Rs32+#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeV2LDST>, Enc_f44229, AddrModeRel {
+tc_c79a189f, TypeV2LDST>, Enc_f44229, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b01000010101;
@@ -23462,7 +23557,7 @@ def S4_pstorerhnewtnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memh($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_e421e012, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_b90a29b1, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b01;
 let Inst{31-21} = 0b00110110101;
 let isPredicated = 1;
@@ -23482,7 +23577,7 @@ def S4_pstorerhnewtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if ($Pv4.new) memh($Rs32) = $Nt8.new",
-tc_e7d02c66, TypeMAPPING> {
+tc_c79a189f, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -23491,7 +23586,7 @@ def S4_pstorerht_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh(#$Ii) = $Rt32",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -23515,7 +23610,7 @@ def S4_pstorerht_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memh($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110100010;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -23530,7 +23625,7 @@ def S4_pstorerhtnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh(#$Ii) = $Rt32",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -23555,7 +23650,7 @@ def S4_pstorerhtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u31_1Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rs32+#$Ii) = $Rt32",
-tc_f86c328a, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_e8c45e, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000010010;
 let isPredicated = 1;
@@ -23577,7 +23672,7 @@ def S4_pstorerhtnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110110010;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -23593,7 +23688,7 @@ def S4_pstorerhtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4.new) memh($Rs32) = $Rt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -23601,7 +23696,7 @@ def S4_pstorerif_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memw(#$Ii) = $Rt32",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -23626,7 +23721,7 @@ def S4_pstorerif_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4) memw($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110101100;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -23642,7 +23737,7 @@ def S4_pstorerifnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memw(#$Ii) = $Rt32",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -23668,7 +23763,7 @@ def S4_pstorerifnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memw($Rs32+#$Ii) = $Rt32",
-tc_f86c328a, TypeV2LDST>, Enc_397f23, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_397f23, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000110100;
 let isPredicated = 1;
@@ -23691,7 +23786,7 @@ def S4_pstorerifnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if (!$Pv4.new) memw($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110111100;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -23708,7 +23803,7 @@ def S4_pstorerifnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if (!$Pv4.new) memw($Rs32) = $Rt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -23716,7 +23811,7 @@ def S4_pstorerinewf_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memw(#$Ii) = $Nt8.new",
-tc_6ac37025, TypeST>, Enc_44215c, AddrModeRel {
+tc_4b68bce4, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b010;
@@ -23744,7 +23839,7 @@ def S4_pstorerinewf_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4) memw($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_adb14c66, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_e95795ec, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b10;
 let Inst{31-21} = 0b00110101101;
 let isPredicated = 1;
@@ -23764,7 +23859,7 @@ def S4_pstorerinewfnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memw(#$Ii) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_44215c, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b1;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b110;
@@ -23793,7 +23888,7 @@ def S4_pstorerinewfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memw($Rs32+#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
+tc_c79a189f, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b01000110101;
@@ -23820,7 +23915,7 @@ def S4_pstorerinewfnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if (!$Pv4.new) memw($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_e421e012, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_b90a29b1, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b10;
 let Inst{31-21} = 0b00110111101;
 let isPredicated = 1;
@@ -23841,7 +23936,7 @@ def S4_pstorerinewfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if (!$Pv4.new) memw($Rs32) = $Nt8.new",
-tc_e7d02c66, TypeMAPPING> {
+tc_c79a189f, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -23850,7 +23945,7 @@ def S4_pstorerinewt_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memw(#$Ii) = $Nt8.new",
-tc_6ac37025, TypeST>, Enc_44215c, AddrModeRel {
+tc_4b68bce4, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b010;
@@ -23877,7 +23972,7 @@ def S4_pstorerinewt_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4) memw($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_adb14c66, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_e95795ec, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b10;
 let Inst{31-21} = 0b00110100101;
 let isPredicated = 1;
@@ -23896,7 +23991,7 @@ def S4_pstorerinewtnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memw(#$Ii) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_44215c, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_44215c, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-11} = 0b110;
@@ -23924,7 +24019,7 @@ def S4_pstorerinewtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memw($Rs32+#$Ii) = $Nt8.new",
-tc_e7d02c66, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
+tc_c79a189f, TypeV2LDST>, Enc_8dbdfe, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b01000010101;
@@ -23950,7 +24045,7 @@ def S4_pstorerinewtnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "if ($Pv4.new) memw($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_e421e012, TypeST>, Enc_47ee5e, AddrModeRel {
+tc_b90a29b1, TypeST>, Enc_47ee5e, AddrModeRel {
 let Inst{4-3} = 0b10;
 let Inst{31-21} = 0b00110110101;
 let isPredicated = 1;
@@ -23970,7 +24065,7 @@ def S4_pstorerinewtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Nt8),
 "if ($Pv4.new) memw($Rs32) = $Nt8.new",
-tc_e7d02c66, TypeMAPPING> {
+tc_c79a189f, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 let opNewValue = 2;
@@ -23979,7 +24074,7 @@ def S4_pstorerit_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memw(#$Ii) = $Rt32",
-tc_238d91d2, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_362c6592, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b0;
@@ -24003,7 +24098,7 @@ def S4_pstorerit_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4) memw($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_5274e61a, TypeST>, Enc_6339d5, AddrModeRel {
+tc_3962fa26, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110100100;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -24018,7 +24113,7 @@ def S4_pstoreritnew_abs : HInst<
 (outs),
 (ins PredRegs:$Pv4, u32_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memw(#$Ii) = $Rt32",
-tc_66888ded, TypeST>, Enc_1cf4ca, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_1cf4ca, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
@@ -24043,7 +24138,7 @@ def S4_pstoreritnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u30_2Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memw($Rs32+#$Ii) = $Rt32",
-tc_f86c328a, TypeV2LDST>, Enc_397f23, AddrModeRel {
+tc_da97ee82, TypeV2LDST>, Enc_397f23, AddrModeRel {
 let Inst{2-2} = 0b0;
 let Inst{31-21} = 0b01000010100;
 let isPredicated = 1;
@@ -24065,7 +24160,7 @@ def S4_pstoreritnew_rr : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "if ($Pv4.new) memw($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_3e07fb90, TypeST>, Enc_6339d5, AddrModeRel {
+tc_40116ca8, TypeST>, Enc_6339d5, AddrModeRel {
 let Inst{31-21} = 0b00110110100;
 let isPredicated = 1;
 let addrMode = BaseRegOffset;
@@ -24081,7 +24176,7 @@ def S4_pstoreritnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, IntRegs:$Rt32),
 "if ($Pv4.new) memw($Rs32) = $Rt32",
-tc_f86c328a, TypeMAPPING> {
+tc_da97ee82, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24089,7 +24184,7 @@ def S4_stored_locked : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "memd_locked($Rs32,$Pd4) = $Rtt32",
-tc_1372bca1, TypeST>, Enc_d7dc10 {
+tc_5abb5e3f, TypeST>, Enc_d7dc10 {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10100000111;
@@ -24102,7 +24197,7 @@ def S4_storeirb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u6_0Imm:$Ii, s32_0Imm:$II),
 "memb($Rs32+#$Ii) = #$II",
-tc_05b6c987, TypeST>, Enc_8203bb, PredNewRel {
+tc_b83e6d73, TypeST>, Enc_8203bb, PredNewRel {
 let Inst{31-21} = 0b00111100000;
 let addrMode = BaseImmOffset;
 let accessSize = ByteAccess;
@@ -24121,7 +24216,7 @@ def S4_storeirb_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, s8_0Imm:$II),
 "memb($Rs32) = #$II",
-tc_05b6c987, TypeMAPPING> {
+tc_b83e6d73, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24129,7 +24224,7 @@ def S4_storeirbf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_0Imm:$Ii, s32_0Imm:$II),
 "if (!$Pv4) memb($Rs32+#$Ii) = #$II",
-tc_8b15472a, TypeST>, Enc_d7a65e, PredNewRel {
+tc_0b2be201, TypeST>, Enc_d7a65e, PredNewRel {
 let Inst{31-21} = 0b00111000100;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -24149,7 +24244,7 @@ def S4_storeirbf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if (!$Pv4) memb($Rs32) = #$II",
-tc_8b15472a, TypeMAPPING> {
+tc_0b2be201, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24157,7 +24252,7 @@ def S4_storeirbfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_0Imm:$Ii, s32_0Imm:$II),
 "if (!$Pv4.new) memb($Rs32+#$Ii) = #$II",
-tc_f86c328a, TypeST>, Enc_d7a65e, PredNewRel {
+tc_c4f596e3, TypeST>, Enc_d7a65e, PredNewRel {
 let Inst{31-21} = 0b00111001100;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -24178,7 +24273,7 @@ def S4_storeirbfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if (!$Pv4.new) memb($Rs32) = #$II",
-tc_f86c328a, TypeMAPPING> {
+tc_c4f596e3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24186,7 +24281,7 @@ def S4_storeirbt_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_0Imm:$Ii, s32_0Imm:$II),
 "if ($Pv4) memb($Rs32+#$Ii) = #$II",
-tc_8b15472a, TypeST>, Enc_d7a65e, PredNewRel {
+tc_0b2be201, TypeST>, Enc_d7a65e, PredNewRel {
 let Inst{31-21} = 0b00111000000;
 let isPredicated = 1;
 let addrMode = BaseImmOffset;
@@ -24205,7 +24300,7 @@ def S4_storeirbt_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if ($Pv4) memb($Rs32) = #$II",
-tc_8b15472a, TypeMAPPING> {
+tc_0b2be201, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24213,7 +24308,7 @@ def S4_storeirbtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_0Imm:$Ii, s32_0Imm:$II),
 "if ($Pv4.new) memb($Rs32+#$Ii) = #$II",
-tc_f86c328a, TypeST>, Enc_d7a65e, PredNewRel {
+tc_c4f596e3, TypeST>, Enc_d7a65e, PredNewRel {
 let Inst{31-21} = 0b00111001000;
 let isPredicated = 1;
 let addrMode = BaseImmOffset;
@@ -24233,7 +24328,7 @@ def S4_storeirbtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if ($Pv4.new) memb($Rs32) = #$II",
-tc_f86c328a, TypeMAPPING> {
+tc_c4f596e3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24241,7 +24336,7 @@ def S4_storeirh_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u6_1Imm:$Ii, s32_0Imm:$II),
 "memh($Rs32+#$Ii) = #$II",
-tc_05b6c987, TypeST>, Enc_a803e0, PredNewRel {
+tc_b83e6d73, TypeST>, Enc_a803e0, PredNewRel {
 let Inst{31-21} = 0b00111100001;
 let addrMode = BaseImmOffset;
 let accessSize = HalfWordAccess;
@@ -24260,7 +24355,7 @@ def S4_storeirh_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, s8_0Imm:$II),
 "memh($Rs32) = #$II",
-tc_05b6c987, TypeMAPPING> {
+tc_b83e6d73, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24268,7 +24363,7 @@ def S4_storeirhf_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_1Imm:$Ii, s32_0Imm:$II),
 "if (!$Pv4) memh($Rs32+#$Ii) = #$II",
-tc_8b15472a, TypeST>, Enc_f20719, PredNewRel {
+tc_0b2be201, TypeST>, Enc_f20719, PredNewRel {
 let Inst{31-21} = 0b00111000101;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -24288,7 +24383,7 @@ def S4_storeirhf_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if (!$Pv4) memh($Rs32) = #$II",
-tc_8b15472a, TypeMAPPING> {
+tc_0b2be201, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24296,7 +24391,7 @@ def S4_storeirhfnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_1Imm:$Ii, s32_0Imm:$II),
 "if (!$Pv4.new) memh($Rs32+#$Ii) = #$II",
-tc_f86c328a, TypeST>, Enc_f20719, PredNewRel {
+tc_c4f596e3, TypeST>, Enc_f20719, PredNewRel {
 let Inst{31-21} = 0b00111001101;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -24317,7 +24412,7 @@ def S4_storeirhfnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if (!$Pv4.new) memh($Rs32) = #$II",
-tc_f86c328a, TypeMAPPING> {
+tc_c4f596e3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24325,7 +24420,7 @@ def S4_storeirht_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_1Imm:$Ii, s32_0Imm:$II),
 "if ($Pv4) memh($Rs32+#$Ii) = #$II",
-tc_8b15472a, TypeST>, Enc_f20719, PredNewRel {
+tc_0b2be201, TypeST>, Enc_f20719, PredNewRel {
 let Inst{31-21} = 0b00111000001;
 let isPredicated = 1;
 let addrMode = BaseImmOffset;
@@ -24344,7 +24439,7 @@ def S4_storeirht_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if ($Pv4) memh($Rs32) = #$II",
-tc_8b15472a, TypeMAPPING> {
+tc_0b2be201, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24352,7 +24447,7 @@ def S4_storeirhtnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_1Imm:$Ii, s32_0Imm:$II),
 "if ($Pv4.new) memh($Rs32+#$Ii) = #$II",
-tc_f86c328a, TypeST>, Enc_f20719, PredNewRel {
+tc_c4f596e3, TypeST>, Enc_f20719, PredNewRel {
 let Inst{31-21} = 0b00111001001;
 let isPredicated = 1;
 let addrMode = BaseImmOffset;
@@ -24372,7 +24467,7 @@ def S4_storeirhtnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if ($Pv4.new) memh($Rs32) = #$II",
-tc_f86c328a, TypeMAPPING> {
+tc_c4f596e3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24380,7 +24475,7 @@ def S4_storeiri_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u6_2Imm:$Ii, s32_0Imm:$II),
 "memw($Rs32+#$Ii) = #$II",
-tc_05b6c987, TypeST>, Enc_f37377, PredNewRel {
+tc_b83e6d73, TypeST>, Enc_f37377, PredNewRel {
 let Inst{31-21} = 0b00111100010;
 let addrMode = BaseImmOffset;
 let accessSize = WordAccess;
@@ -24399,7 +24494,7 @@ def S4_storeiri_zomap : HInst<
 (outs),
 (ins IntRegs:$Rs32, s8_0Imm:$II),
 "memw($Rs32) = #$II",
-tc_05b6c987, TypeMAPPING> {
+tc_b83e6d73, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24407,7 +24502,7 @@ def S4_storeirif_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_2Imm:$Ii, s32_0Imm:$II),
 "if (!$Pv4) memw($Rs32+#$Ii) = #$II",
-tc_8b15472a, TypeST>, Enc_5ccba9, PredNewRel {
+tc_0b2be201, TypeST>, Enc_5ccba9, PredNewRel {
 let Inst{31-21} = 0b00111000110;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -24427,7 +24522,7 @@ def S4_storeirif_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if (!$Pv4) memw($Rs32) = #$II",
-tc_8b15472a, TypeMAPPING> {
+tc_0b2be201, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24435,7 +24530,7 @@ def S4_storeirifnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_2Imm:$Ii, s32_0Imm:$II),
 "if (!$Pv4.new) memw($Rs32+#$Ii) = #$II",
-tc_f86c328a, TypeST>, Enc_5ccba9, PredNewRel {
+tc_c4f596e3, TypeST>, Enc_5ccba9, PredNewRel {
 let Inst{31-21} = 0b00111001110;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -24456,7 +24551,7 @@ def S4_storeirifnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if (!$Pv4.new) memw($Rs32) = #$II",
-tc_f86c328a, TypeMAPPING> {
+tc_c4f596e3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24464,7 +24559,7 @@ def S4_storeirit_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_2Imm:$Ii, s32_0Imm:$II),
 "if ($Pv4) memw($Rs32+#$Ii) = #$II",
-tc_8b15472a, TypeST>, Enc_5ccba9, PredNewRel {
+tc_0b2be201, TypeST>, Enc_5ccba9, PredNewRel {
 let Inst{31-21} = 0b00111000010;
 let isPredicated = 1;
 let addrMode = BaseImmOffset;
@@ -24483,7 +24578,7 @@ def S4_storeirit_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if ($Pv4) memw($Rs32) = #$II",
-tc_8b15472a, TypeMAPPING> {
+tc_0b2be201, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24491,7 +24586,7 @@ def S4_storeiritnew_io : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, u6_2Imm:$Ii, s32_0Imm:$II),
 "if ($Pv4.new) memw($Rs32+#$Ii) = #$II",
-tc_f86c328a, TypeST>, Enc_5ccba9, PredNewRel {
+tc_c4f596e3, TypeST>, Enc_5ccba9, PredNewRel {
 let Inst{31-21} = 0b00111001010;
 let isPredicated = 1;
 let addrMode = BaseImmOffset;
@@ -24511,7 +24606,7 @@ def S4_storeiritnew_zomap : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rs32, s6_0Imm:$II),
 "if ($Pv4.new) memw($Rs32) = #$II",
-tc_f86c328a, TypeMAPPING> {
+tc_c4f596e3, TypeMAPPING> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -24519,7 +24614,7 @@ def S4_storerb_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, IntRegs:$Rt32),
 "memb($Re32=#$II) = $Rt32",
-tc_66888ded, TypeST>, Enc_8bcba4, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_8bcba4, AddrModeRel {
 let Inst{7-6} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10101011000;
@@ -24540,7 +24635,7 @@ def S4_storerb_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_d9709180, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
+tc_5aee39f7, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111011000;
 let addrMode = BaseRegOffset;
@@ -24556,7 +24651,7 @@ def S4_storerb_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, IntRegs:$Rt32),
 "memb($Ru32<<#$Ii+#$II) = $Rt32",
-tc_0dc560de, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
+tc_14b272fa, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
 let Inst{7-7} = 0b1;
 let Inst{31-21} = 0b10101101000;
 let addrMode = BaseLongOffset;
@@ -24578,7 +24673,7 @@ def S4_storerbnew_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, IntRegs:$Nt8),
 "memb($Re32=#$II) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_724154, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_724154, AddrModeRel {
 let Inst{7-6} = 0b10;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b10101011101;
@@ -24602,7 +24697,7 @@ def S4_storerbnew_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "memb($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_b166348b, TypeST>, Enc_c6220b, AddrModeRel {
+tc_67435e81, TypeST>, Enc_c6220b, AddrModeRel {
 let Inst{6-3} = 0b0000;
 let Inst{31-21} = 0b00111011101;
 let addrMode = BaseRegOffset;
@@ -24621,7 +24716,7 @@ def S4_storerbnew_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, IntRegs:$Nt8),
 "memb($Ru32<<#$Ii+#$II) = $Nt8.new",
-tc_a8acdac0, TypeST>, Enc_7eb485, AddrModeRel {
+tc_fcc3ddf9, TypeST>, Enc_7eb485, AddrModeRel {
 let Inst{7-7} = 0b1;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b10101101101;
@@ -24646,7 +24741,7 @@ def S4_storerd_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, DoubleRegs:$Rtt32),
 "memd($Re32=#$II) = $Rtt32",
-tc_66888ded, TypeST>, Enc_c7a204 {
+tc_da4a37ed, TypeST>, Enc_c7a204 {
 let Inst{7-6} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10101011110;
@@ -24666,7 +24761,7 @@ def S4_storerd_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, DoubleRegs:$Rtt32),
 "memd($Rs32+$Ru32<<#$Ii) = $Rtt32",
-tc_d9709180, TypeST>, Enc_55355c, AddrModeRel, ImmRegShl {
+tc_5aee39f7, TypeST>, Enc_55355c, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111011110;
 let addrMode = BaseRegOffset;
@@ -24681,7 +24776,7 @@ def S4_storerd_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, DoubleRegs:$Rtt32),
 "memd($Ru32<<#$Ii+#$II) = $Rtt32",
-tc_0dc560de, TypeST>, Enc_f79415, AddrModeRel, ImmRegShl {
+tc_14b272fa, TypeST>, Enc_f79415, AddrModeRel, ImmRegShl {
 let Inst{7-7} = 0b1;
 let Inst{31-21} = 0b10101101110;
 let addrMode = BaseLongOffset;
@@ -24702,7 +24797,7 @@ def S4_storerf_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, IntRegs:$Rt32),
 "memh($Re32=#$II) = $Rt32.h",
-tc_66888ded, TypeST>, Enc_8bcba4 {
+tc_da4a37ed, TypeST>, Enc_8bcba4 {
 let Inst{7-6} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10101011011;
@@ -24722,7 +24817,7 @@ def S4_storerf_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+$Ru32<<#$Ii) = $Rt32.h",
-tc_d9709180, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
+tc_5aee39f7, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111011011;
 let addrMode = BaseRegOffset;
@@ -24737,7 +24832,7 @@ def S4_storerf_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, IntRegs:$Rt32),
 "memh($Ru32<<#$Ii+#$II) = $Rt32.h",
-tc_0dc560de, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
+tc_14b272fa, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
 let Inst{7-7} = 0b1;
 let Inst{31-21} = 0b10101101011;
 let addrMode = BaseLongOffset;
@@ -24758,7 +24853,7 @@ def S4_storerh_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, IntRegs:$Rt32),
 "memh($Re32=#$II) = $Rt32",
-tc_66888ded, TypeST>, Enc_8bcba4, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_8bcba4, AddrModeRel {
 let Inst{7-6} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10101011010;
@@ -24779,7 +24874,7 @@ def S4_storerh_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_d9709180, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
+tc_5aee39f7, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111011010;
 let addrMode = BaseRegOffset;
@@ -24795,7 +24890,7 @@ def S4_storerh_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, IntRegs:$Rt32),
 "memh($Ru32<<#$Ii+#$II) = $Rt32",
-tc_0dc560de, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
+tc_14b272fa, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
 let Inst{7-7} = 0b1;
 let Inst{31-21} = 0b10101101010;
 let addrMode = BaseLongOffset;
@@ -24817,7 +24912,7 @@ def S4_storerhnew_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, IntRegs:$Nt8),
 "memh($Re32=#$II) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_724154, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_724154, AddrModeRel {
 let Inst{7-6} = 0b10;
 let Inst{13-11} = 0b001;
 let Inst{31-21} = 0b10101011101;
@@ -24841,7 +24936,7 @@ def S4_storerhnew_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "memh($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_b166348b, TypeST>, Enc_c6220b, AddrModeRel {
+tc_67435e81, TypeST>, Enc_c6220b, AddrModeRel {
 let Inst{6-3} = 0b0001;
 let Inst{31-21} = 0b00111011101;
 let addrMode = BaseRegOffset;
@@ -24860,7 +24955,7 @@ def S4_storerhnew_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, IntRegs:$Nt8),
 "memh($Ru32<<#$Ii+#$II) = $Nt8.new",
-tc_a8acdac0, TypeST>, Enc_7eb485, AddrModeRel {
+tc_fcc3ddf9, TypeST>, Enc_7eb485, AddrModeRel {
 let Inst{7-7} = 0b1;
 let Inst{12-11} = 0b01;
 let Inst{31-21} = 0b10101101101;
@@ -24885,7 +24980,7 @@ def S4_storeri_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, IntRegs:$Rt32),
 "memw($Re32=#$II) = $Rt32",
-tc_66888ded, TypeST>, Enc_8bcba4, AddrModeRel {
+tc_da4a37ed, TypeST>, Enc_8bcba4, AddrModeRel {
 let Inst{7-6} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10101011100;
@@ -24906,7 +25001,7 @@ def S4_storeri_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Rt32),
 "memw($Rs32+$Ru32<<#$Ii) = $Rt32",
-tc_d9709180, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
+tc_5aee39f7, TypeST>, Enc_eca7c8, AddrModeRel, ImmRegShl {
 let Inst{6-5} = 0b00;
 let Inst{31-21} = 0b00111011100;
 let addrMode = BaseRegOffset;
@@ -24922,7 +25017,7 @@ def S4_storeri_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, IntRegs:$Rt32),
 "memw($Ru32<<#$Ii+#$II) = $Rt32",
-tc_0dc560de, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
+tc_14b272fa, TypeST>, Enc_9ea4cf, AddrModeRel, ImmRegShl {
 let Inst{7-7} = 0b1;
 let Inst{31-21} = 0b10101101100;
 let addrMode = BaseLongOffset;
@@ -24944,7 +25039,7 @@ def S4_storerinew_ap : HInst<
 (outs IntRegs:$Re32),
 (ins u32_0Imm:$II, IntRegs:$Nt8),
 "memw($Re32=#$II) = $Nt8.new",
-tc_53bdb2f6, TypeST>, Enc_724154, AddrModeRel {
+tc_d2e63d61, TypeST>, Enc_724154, AddrModeRel {
 let Inst{7-6} = 0b10;
 let Inst{13-11} = 0b010;
 let Inst{31-21} = 0b10101011101;
@@ -24968,7 +25063,7 @@ def S4_storerinew_rr : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, u2_0Imm:$Ii, IntRegs:$Nt8),
 "memw($Rs32+$Ru32<<#$Ii) = $Nt8.new",
-tc_b166348b, TypeST>, Enc_c6220b, AddrModeRel {
+tc_67435e81, TypeST>, Enc_c6220b, AddrModeRel {
 let Inst{6-3} = 0b0010;
 let Inst{31-21} = 0b00111011101;
 let addrMode = BaseRegOffset;
@@ -24987,7 +25082,7 @@ def S4_storerinew_ur : HInst<
 (outs),
 (ins IntRegs:$Ru32, u2_0Imm:$Ii, u32_0Imm:$II, IntRegs:$Nt8),
 "memw($Ru32<<#$Ii+#$II) = $Nt8.new",
-tc_a8acdac0, TypeST>, Enc_7eb485, AddrModeRel {
+tc_fcc3ddf9, TypeST>, Enc_7eb485, AddrModeRel {
 let Inst{7-7} = 0b1;
 let Inst{12-11} = 0b10;
 let Inst{31-21} = 0b10101101101;
@@ -25012,7 +25107,7 @@ def S4_subaddi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii, IntRegs:$Ru32),
 "$Rd32 = add($Rs32,sub(#$Ii,$Ru32))",
-tc_c74f796f, TypeALU64>, Enc_8b8d61 {
+tc_f675fee8, TypeALU64>, Enc_8b8d61 {
 let Inst{31-23} = 0b110110111;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25027,7 +25122,7 @@ def S4_subi_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = sub(#$Ii,asl($Rx32in,#$II))",
-tc_c74f796f, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b110;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -25045,7 +25140,7 @@ def S4_subi_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = sub(#$Ii,lsr($Rx32in,#$II))",
-tc_c74f796f, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910 {
 let Inst{2-0} = 0b110;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
@@ -25063,7 +25158,7 @@ def S4_vrcrotate : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rdd32 = vrcrotate($Rss32,$Rt32,#$Ii)",
-tc_b9c0b731, TypeS_3op>, Enc_645d54 {
+tc_13bfbcf9, TypeS_3op>, Enc_645d54 {
 let Inst{7-6} = 0b11;
 let Inst{31-21} = 0b11000011110;
 let prefersSlot3 = 1;
@@ -25072,7 +25167,7 @@ def S4_vrcrotate_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, IntRegs:$Rt32, u2_0Imm:$Ii),
 "$Rxx32 += vrcrotate($Rss32,$Rt32,#$Ii)",
-tc_60571023, TypeS_3op>, Enc_b72622 {
+tc_9debc299, TypeS_3op>, Enc_b72622 {
 let Inst{7-6} = 0b00;
 let Inst{31-21} = 0b11001011101;
 let prefersSlot3 = 1;
@@ -25082,7 +25177,7 @@ def S4_vxaddsubh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vxaddsubh($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeS_3op>, Enc_a56825 {
+tc_779080bf, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001010;
@@ -25093,7 +25188,7 @@ def S4_vxaddsubhr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vxaddsubh($Rss32,$Rtt32):rnd:>>1:sat",
-tc_2b6f77c6, TypeS_3op>, Enc_a56825 {
+tc_002cb246, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001110;
@@ -25104,7 +25199,7 @@ def S4_vxaddsubw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vxaddsubw($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeS_3op>, Enc_a56825 {
+tc_779080bf, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001010;
@@ -25115,7 +25210,7 @@ def S4_vxsubaddh : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vxsubaddh($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeS_3op>, Enc_a56825 {
+tc_779080bf, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001010;
@@ -25126,7 +25221,7 @@ def S4_vxsubaddhr : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vxsubaddh($Rss32,$Rtt32):rnd:>>1:sat",
-tc_2b6f77c6, TypeS_3op>, Enc_a56825 {
+tc_002cb246, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001110;
@@ -25137,7 +25232,7 @@ def S4_vxsubaddw : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vxsubaddw($Rss32,$Rtt32):sat",
-tc_b44c6e2a, TypeS_3op>, Enc_a56825 {
+tc_779080bf, TypeS_3op>, Enc_a56825 {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001010;
@@ -25148,7 +25243,7 @@ def S5_asrhub_rnd_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rd32 = vasrhub($Rss32,#$Ii):raw",
-tc_2b6f77c6, TypeS_2op>, Enc_11a146, Requires<[HasV5]> {
+tc_002cb246, TypeS_2op>, Enc_11a146 {
 let Inst{7-5} = 0b100;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10001000011;
@@ -25161,7 +25256,7 @@ def S5_asrhub_rnd_sat_goodsyntax : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rd32 = vasrhub($Rss32,#$Ii):rnd:sat",
-tc_2b6f77c6, TypeS_2op>, Requires<[HasV5]> {
+tc_002cb246, TypeS_2op> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -25170,7 +25265,7 @@ def S5_asrhub_sat : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rd32 = vasrhub($Rss32,#$Ii):sat",
-tc_2b6f77c6, TypeS_2op>, Enc_11a146, Requires<[HasV5]> {
+tc_002cb246, TypeS_2op>, Enc_11a146 {
 let Inst{7-5} = 0b101;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10001000011;
@@ -25183,7 +25278,7 @@ def S5_popcountp : HInst<
 (outs IntRegs:$Rd32),
 (ins DoubleRegs:$Rss32),
 "$Rd32 = popcount($Rss32)",
-tc_00afc57e, TypeS_2op>, Enc_90cd8b, Requires<[HasV5]> {
+tc_703e822c, TypeS_2op>, Enc_90cd8b {
 let Inst{13-5} = 0b000000011;
 let Inst{31-21} = 0b10001000011;
 let hasNewValue = 1;
@@ -25194,7 +25289,7 @@ def S5_vasrhrnd : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rdd32 = vasrh($Rss32,#$Ii):raw",
-tc_2b6f77c6, TypeS_2op>, Enc_12b6e9, Requires<[HasV5]> {
+tc_002cb246, TypeS_2op>, Enc_12b6e9 {
 let Inst{7-5} = 0b000;
 let Inst{13-12} = 0b00;
 let Inst{31-21} = 0b10000000001;
@@ -25204,14 +25299,14 @@ def S5_vasrhrnd_goodsyntax : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u4_0Imm:$Ii),
 "$Rdd32 = vasrh($Rss32,#$Ii):rnd",
-tc_2b6f77c6, TypeS_2op>, Requires<[HasV5]> {
+tc_002cb246, TypeS_2op> {
 let isPseudo = 1;
 }
 def S6_allocframe_to_raw : HInst<
 (outs),
 (ins u11_3Imm:$Ii),
 "allocframe(#$Ii)",
-tc_e216a5db, TypeMAPPING>, Requires<[HasV65]> {
+tc_b44ecf75, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
 }
@@ -25219,7 +25314,7 @@ def S6_rol_i_p : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rdd32 = rol($Rss32,#$Ii)",
-tc_55050d58, TypeS_2op>, Enc_5eac98, Requires<[HasV60]> {
+tc_1fc97744, TypeS_2op>, Enc_5eac98, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b10000000000;
 }
@@ -25227,7 +25322,7 @@ def S6_rol_i_p_acc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 += rol($Rss32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -25237,7 +25332,7 @@ def S6_rol_i_p_and : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 &= rol($Rss32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -25247,7 +25342,7 @@ def S6_rol_i_p_nac : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 -= rol($Rss32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b10000010000;
 let prefersSlot3 = 1;
@@ -25257,7 +25352,7 @@ def S6_rol_i_p_or : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 |= rol($Rss32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b10000010010;
 let prefersSlot3 = 1;
@@ -25267,7 +25362,7 @@ def S6_rol_i_p_xacc : HInst<
 (outs DoubleRegs:$Rxx32),
 (ins DoubleRegs:$Rxx32in, DoubleRegs:$Rss32, u6_0Imm:$Ii),
 "$Rxx32 ^= rol($Rss32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_70fb07, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b10000010100;
 let prefersSlot3 = 1;
@@ -25277,7 +25372,7 @@ def S6_rol_i_r : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rd32 = rol($Rs32,#$Ii)",
-tc_55050d58, TypeS_2op>, Enc_a05677, Requires<[HasV60]> {
+tc_1fc97744, TypeS_2op>, Enc_a05677, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001100000;
@@ -25288,7 +25383,7 @@ def S6_rol_i_r_acc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 += rol($Rs32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -25301,7 +25396,7 @@ def S6_rol_i_r_and : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 &= rol($Rs32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -25314,7 +25409,7 @@ def S6_rol_i_r_nac : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 -= rol($Rs32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110000;
@@ -25327,7 +25422,7 @@ def S6_rol_i_r_or : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 |= rol($Rs32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110010;
@@ -25340,7 +25435,7 @@ def S6_rol_i_r_xacc : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, IntRegs:$Rs32, u5_0Imm:$Ii),
 "$Rx32 ^= rol($Rs32,#$Ii)",
-tc_41d5298e, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
+tc_784490da, TypeS_2op>, Enc_28a2dc, Requires<[HasV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10001110100;
@@ -25353,7 +25448,7 @@ def S6_vsplatrbp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = vsplatb($Rs32)",
-tc_be706f30, TypeS_2op>, Enc_3a3d62, Requires<[HasV62]> {
+tc_a1c00888, TypeS_2op>, Enc_3a3d62, Requires<[HasV62]> {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000100010;
 }
@@ -25361,7 +25456,7 @@ def S6_vtrunehb_ppp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vtrunehb($Rss32,$Rtt32)",
-tc_55050d58, TypeS_3op>, Enc_a56825, Requires<[HasV62]> {
+tc_1fc97744, TypeS_3op>, Enc_a56825, Requires<[HasV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001100;
@@ -25370,7 +25465,7 @@ def S6_vtrunohb_ppp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins DoubleRegs:$Rss32, DoubleRegs:$Rtt32),
 "$Rdd32 = vtrunohb($Rss32,$Rtt32)",
-tc_55050d58, TypeS_3op>, Enc_a56825, Requires<[HasV62]> {
+tc_1fc97744, TypeS_3op>, Enc_a56825, Requires<[HasV62]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11000001100;
@@ -25379,7 +25474,7 @@ def SA1_addi : HInst<
 (outs GeneralSubRegs:$Rx16),
 (ins IntRegs:$Rx16in, s32_0Imm:$Ii),
 "$Rx16 = add($Rx16in,#$Ii)",
-tc_609d2efe, TypeSUBINSN>, Enc_93af4c {
+tc_0a705168, TypeSUBINSN>, Enc_93af4c {
 let Inst{12-11} = 0b00;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25396,7 +25491,7 @@ def SA1_addrx : HInst<
 (outs GeneralSubRegs:$Rx16),
 (ins IntRegs:$Rx16in, GeneralSubRegs:$Rs16),
 "$Rx16 = add($Rx16in,$Rs16)",
-tc_609d2efe, TypeSUBINSN>, Enc_0527db {
+tc_0a705168, TypeSUBINSN>, Enc_0527db {
 let Inst{12-8} = 0b11000;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25408,7 +25503,7 @@ def SA1_addsp : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins u6_2Imm:$Ii),
 "$Rd16 = add(r29,#$Ii)",
-tc_a904d137, TypeSUBINSN>, Enc_2df31d {
+tc_9fc3dae0, TypeSUBINSN>, Enc_2df31d {
 let Inst{12-10} = 0b011;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25420,7 +25515,7 @@ def SA1_and1 : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16),
 "$Rd16 = and($Rs16,#1)",
-tc_a904d137, TypeSUBINSN>, Enc_97d666 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_97d666 {
 let Inst{12-8} = 0b10010;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25431,7 +25526,7 @@ def SA1_clrf : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins),
 "if (!p0) $Rd16 = #0",
-tc_1b82a277, TypeSUBINSN>, Enc_1f5ba6 {
+tc_a1123dda, TypeSUBINSN>, Enc_1f5ba6 {
 let Inst{12-4} = 0b110100111;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -25445,7 +25540,7 @@ def SA1_clrfnew : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins),
 "if (!p0.new) $Rd16 = #0",
-tc_e9c822f7, TypeSUBINSN>, Enc_1f5ba6 {
+tc_8b3e402a, TypeSUBINSN>, Enc_1f5ba6 {
 let Inst{12-4} = 0b110100101;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -25460,7 +25555,7 @@ def SA1_clrt : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins),
 "if (p0) $Rd16 = #0",
-tc_1b82a277, TypeSUBINSN>, Enc_1f5ba6 {
+tc_a1123dda, TypeSUBINSN>, Enc_1f5ba6 {
 let Inst{12-4} = 0b110100110;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -25473,7 +25568,7 @@ def SA1_clrtnew : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins),
 "if (p0.new) $Rd16 = #0",
-tc_e9c822f7, TypeSUBINSN>, Enc_1f5ba6 {
+tc_8b3e402a, TypeSUBINSN>, Enc_1f5ba6 {
 let Inst{12-4} = 0b110100100;
 let isPredicated = 1;
 let hasNewValue = 1;
@@ -25487,7 +25582,7 @@ def SA1_cmpeqi : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u2_0Imm:$Ii),
 "p0 = cmp.eq($Rs16,#$Ii)",
-tc_90f3e30c, TypeSUBINSN>, Enc_63eaeb {
+tc_5b7c0967, TypeSUBINSN>, Enc_63eaeb {
 let Inst{3-2} = 0b00;
 let Inst{12-8} = 0b11001;
 let AsmVariantName = "NonParsable";
@@ -25498,7 +25593,7 @@ def SA1_combine0i : HInst<
 (outs GeneralDoubleLow8Regs:$Rdd8),
 (ins u2_0Imm:$Ii),
 "$Rdd8 = combine(#0,#$Ii)",
-tc_a904d137, TypeSUBINSN>, Enc_ed48be {
+tc_9fc3dae0, TypeSUBINSN>, Enc_ed48be {
 let Inst{4-3} = 0b00;
 let Inst{12-7} = 0b111000;
 let hasNewValue = 1;
@@ -25510,7 +25605,7 @@ def SA1_combine1i : HInst<
 (outs GeneralDoubleLow8Regs:$Rdd8),
 (ins u2_0Imm:$Ii),
 "$Rdd8 = combine(#1,#$Ii)",
-tc_a904d137, TypeSUBINSN>, Enc_ed48be {
+tc_9fc3dae0, TypeSUBINSN>, Enc_ed48be {
 let Inst{4-3} = 0b01;
 let Inst{12-7} = 0b111000;
 let hasNewValue = 1;
@@ -25522,7 +25617,7 @@ def SA1_combine2i : HInst<
 (outs GeneralDoubleLow8Regs:$Rdd8),
 (ins u2_0Imm:$Ii),
 "$Rdd8 = combine(#2,#$Ii)",
-tc_a904d137, TypeSUBINSN>, Enc_ed48be {
+tc_9fc3dae0, TypeSUBINSN>, Enc_ed48be {
 let Inst{4-3} = 0b10;
 let Inst{12-7} = 0b111000;
 let hasNewValue = 1;
@@ -25534,7 +25629,7 @@ def SA1_combine3i : HInst<
 (outs GeneralDoubleLow8Regs:$Rdd8),
 (ins u2_0Imm:$Ii),
 "$Rdd8 = combine(#3,#$Ii)",
-tc_a904d137, TypeSUBINSN>, Enc_ed48be {
+tc_9fc3dae0, TypeSUBINSN>, Enc_ed48be {
 let Inst{4-3} = 0b11;
 let Inst{12-7} = 0b111000;
 let hasNewValue = 1;
@@ -25546,7 +25641,7 @@ def SA1_combinerz : HInst<
 (outs GeneralDoubleLow8Regs:$Rdd8),
 (ins GeneralSubRegs:$Rs16),
 "$Rdd8 = combine($Rs16,#0)",
-tc_a904d137, TypeSUBINSN>, Enc_399e12 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_399e12 {
 let Inst{3-3} = 0b1;
 let Inst{12-8} = 0b11101;
 let hasNewValue = 1;
@@ -25558,7 +25653,7 @@ def SA1_combinezr : HInst<
 (outs GeneralDoubleLow8Regs:$Rdd8),
 (ins GeneralSubRegs:$Rs16),
 "$Rdd8 = combine(#0,$Rs16)",
-tc_a904d137, TypeSUBINSN>, Enc_399e12 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_399e12 {
 let Inst{3-3} = 0b0;
 let Inst{12-8} = 0b11101;
 let hasNewValue = 1;
@@ -25570,7 +25665,7 @@ def SA1_dec : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16, n1Const:$n1),
 "$Rd16 = add($Rs16,#$n1)",
-tc_609d2efe, TypeSUBINSN>, Enc_ee5ed0 {
+tc_0a705168, TypeSUBINSN>, Enc_ee5ed0 {
 let Inst{12-8} = 0b10011;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25581,7 +25676,7 @@ def SA1_inc : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16),
 "$Rd16 = add($Rs16,#1)",
-tc_a904d137, TypeSUBINSN>, Enc_97d666 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_97d666 {
 let Inst{12-8} = 0b10001;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25592,7 +25687,7 @@ def SA1_seti : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins u32_0Imm:$Ii),
 "$Rd16 = #$Ii",
-tc_a904d137, TypeSUBINSN>, Enc_e39bb2 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_e39bb2 {
 let Inst{12-10} = 0b010;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25608,7 +25703,7 @@ def SA1_setin1 : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins n1Const:$n1),
 "$Rd16 = #$n1",
-tc_a904d137, TypeSUBINSN>, Enc_7a0ea6 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_7a0ea6 {
 let Inst{12-4} = 0b110100000;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25619,7 +25714,7 @@ def SA1_sxtb : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16),
 "$Rd16 = sxtb($Rs16)",
-tc_a904d137, TypeSUBINSN>, Enc_97d666 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_97d666 {
 let Inst{12-8} = 0b10101;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25630,7 +25725,7 @@ def SA1_sxth : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16),
 "$Rd16 = sxth($Rs16)",
-tc_a904d137, TypeSUBINSN>, Enc_97d666 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_97d666 {
 let Inst{12-8} = 0b10100;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25641,7 +25736,7 @@ def SA1_tfr : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16),
 "$Rd16 = $Rs16",
-tc_a904d137, TypeSUBINSN>, Enc_97d666 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_97d666 {
 let Inst{12-8} = 0b10000;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25652,7 +25747,7 @@ def SA1_zxtb : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16),
 "$Rd16 = and($Rs16,#255)",
-tc_a904d137, TypeSUBINSN>, Enc_97d666 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_97d666 {
 let Inst{12-8} = 0b10111;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25663,7 +25758,7 @@ def SA1_zxth : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16),
 "$Rd16 = zxth($Rs16)",
-tc_a904d137, TypeSUBINSN>, Enc_97d666 {
+tc_9fc3dae0, TypeSUBINSN>, Enc_97d666 {
 let Inst{12-8} = 0b10110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25674,7 +25769,7 @@ def SL1_loadri_io : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16, u4_2Imm:$Ii),
 "$Rd16 = memw($Rs16+#$Ii)",
-tc_7f881c76, TypeSUBINSN>, Enc_53dca9 {
+tc_17e0d2cd, TypeSUBINSN>, Enc_53dca9 {
 let Inst{12-12} = 0b0;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25688,7 +25783,7 @@ def SL1_loadrub_io : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16, u4_0Imm:$Ii),
 "$Rd16 = memub($Rs16+#$Ii)",
-tc_7f881c76, TypeSUBINSN>, Enc_c175d0 {
+tc_17e0d2cd, TypeSUBINSN>, Enc_c175d0 {
 let Inst{12-12} = 0b1;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25702,7 +25797,7 @@ def SL2_deallocframe : HInst<
 (outs),
 (ins),
 "deallocframe",
-tc_36c68ad1, TypeSUBINSN>, Enc_e3b0c4 {
+tc_39dfefe8, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111100000000;
 let accessSize = DoubleWordAccess;
 let AsmVariantName = "NonParsable";
@@ -25715,7 +25810,7 @@ def SL2_jumpr31 : HInst<
 (outs),
 (ins),
 "jumpr r31",
-tc_2a160009, TypeSUBINSN>, Enc_e3b0c4 {
+tc_b4407292, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111111000000;
 let isTerminator = 1;
 let isIndirectBranch = 1;
@@ -25730,7 +25825,7 @@ def SL2_jumpr31_f : HInst<
 (outs),
 (ins),
 "if (!p0) jumpr r31",
-tc_2a160009, TypeSUBINSN>, Enc_e3b0c4 {
+tc_b4407292, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111111000101;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -25748,7 +25843,7 @@ def SL2_jumpr31_fnew : HInst<
 (outs),
 (ins),
 "if (!p0.new) jumpr:nt r31",
-tc_2a160009, TypeSUBINSN>, Enc_e3b0c4 {
+tc_b4407292, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111111000111;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -25767,7 +25862,7 @@ def SL2_jumpr31_t : HInst<
 (outs),
 (ins),
 "if (p0) jumpr r31",
-tc_2a160009, TypeSUBINSN>, Enc_e3b0c4 {
+tc_b4407292, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111111000100;
 let isPredicated = 1;
 let isTerminator = 1;
@@ -25784,7 +25879,7 @@ def SL2_jumpr31_tnew : HInst<
 (outs),
 (ins),
 "if (p0.new) jumpr:nt r31",
-tc_2a160009, TypeSUBINSN>, Enc_e3b0c4 {
+tc_b4407292, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111111000110;
 let isPredicated = 1;
 let isTerminator = 1;
@@ -25802,7 +25897,7 @@ def SL2_loadrb_io : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16, u3_0Imm:$Ii),
 "$Rd16 = memb($Rs16+#$Ii)",
-tc_7f881c76, TypeSUBINSN>, Enc_2fbf3c {
+tc_17e0d2cd, TypeSUBINSN>, Enc_2fbf3c {
 let Inst{12-11} = 0b10;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25816,7 +25911,7 @@ def SL2_loadrd_sp : HInst<
 (outs GeneralDoubleLow8Regs:$Rdd8),
 (ins u5_3Imm:$Ii),
 "$Rdd8 = memd(r29+#$Ii)",
-tc_9c98e8af, TypeSUBINSN>, Enc_86a14b {
+tc_c4db48cb, TypeSUBINSN>, Enc_86a14b {
 let Inst{12-8} = 0b11110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25831,7 +25926,7 @@ def SL2_loadrh_io : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16, u3_1Imm:$Ii),
 "$Rd16 = memh($Rs16+#$Ii)",
-tc_7f881c76, TypeSUBINSN>, Enc_2bae10 {
+tc_17e0d2cd, TypeSUBINSN>, Enc_2bae10 {
 let Inst{12-11} = 0b00;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25845,7 +25940,7 @@ def SL2_loadri_sp : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins u5_2Imm:$Ii),
 "$Rd16 = memw(r29+#$Ii)",
-tc_9c98e8af, TypeSUBINSN>, Enc_51635c {
+tc_c4db48cb, TypeSUBINSN>, Enc_51635c {
 let Inst{12-9} = 0b1110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25860,7 +25955,7 @@ def SL2_loadruh_io : HInst<
 (outs GeneralSubRegs:$Rd16),
 (ins GeneralSubRegs:$Rs16, u3_1Imm:$Ii),
 "$Rd16 = memuh($Rs16+#$Ii)",
-tc_7f881c76, TypeSUBINSN>, Enc_2bae10 {
+tc_17e0d2cd, TypeSUBINSN>, Enc_2bae10 {
 let Inst{12-11} = 0b01;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25874,7 +25969,7 @@ def SL2_return : HInst<
 (outs),
 (ins),
 "dealloc_return",
-tc_fcab4871, TypeSUBINSN>, Enc_e3b0c4 {
+tc_36153880, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111101000000;
 let isTerminator = 1;
 let isIndirectBranch = 1;
@@ -25892,7 +25987,7 @@ def SL2_return_f : HInst<
 (outs),
 (ins),
 "if (!p0) dealloc_return",
-tc_fcab4871, TypeSUBINSN>, Enc_e3b0c4 {
+tc_36153880, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111101000101;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -25913,7 +26008,7 @@ def SL2_return_fnew : HInst<
 (outs),
 (ins),
 "if (!p0.new) dealloc_return:nt",
-tc_fcab4871, TypeSUBINSN>, Enc_e3b0c4 {
+tc_36153880, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111101000111;
 let isPredicated = 1;
 let isPredicatedFalse = 1;
@@ -25935,7 +26030,7 @@ def SL2_return_t : HInst<
 (outs),
 (ins),
 "if (p0) dealloc_return",
-tc_fcab4871, TypeSUBINSN>, Enc_e3b0c4 {
+tc_36153880, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111101000100;
 let isPredicated = 1;
 let isTerminator = 1;
@@ -25955,7 +26050,7 @@ def SL2_return_tnew : HInst<
 (outs),
 (ins),
 "if (p0.new) dealloc_return:nt",
-tc_fcab4871, TypeSUBINSN>, Enc_e3b0c4 {
+tc_36153880, TypeSUBINSN>, Enc_e3b0c4 {
 let Inst{12-0} = 0b1111101000110;
 let isPredicated = 1;
 let isTerminator = 1;
@@ -25976,7 +26071,7 @@ def SS1_storeb_io : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u4_0Imm:$Ii, GeneralSubRegs:$Rt16),
 "memb($Rs16+#$Ii) = $Rt16",
-tc_05b6c987, TypeSUBINSN>, Enc_b38ffc {
+tc_30b9bb4a, TypeSUBINSN>, Enc_b38ffc {
 let Inst{12-12} = 0b1;
 let addrMode = BaseImmOffset;
 let accessSize = ByteAccess;
@@ -25988,7 +26083,7 @@ def SS1_storew_io : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u4_2Imm:$Ii, GeneralSubRegs:$Rt16),
 "memw($Rs16+#$Ii) = $Rt16",
-tc_05b6c987, TypeSUBINSN>, Enc_f55a0c {
+tc_30b9bb4a, TypeSUBINSN>, Enc_f55a0c {
 let Inst{12-12} = 0b0;
 let addrMode = BaseImmOffset;
 let accessSize = WordAccess;
@@ -26000,7 +26095,7 @@ def SS2_allocframe : HInst<
 (outs),
 (ins u5_3Imm:$Ii),
 "allocframe(#$Ii)",
-tc_0fc1ae07, TypeSUBINSN>, Enc_6f70ca {
+tc_49a8207d, TypeSUBINSN>, Enc_6f70ca {
 let Inst{3-0} = 0b0000;
 let Inst{12-9} = 0b1110;
 let addrMode = BaseImmOffset;
@@ -26015,7 +26110,7 @@ def SS2_storebi0 : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u4_0Imm:$Ii),
 "memb($Rs16+#$Ii) = #0",
-tc_57288781, TypeSUBINSN>, Enc_84d359 {
+tc_89e94ad3, TypeSUBINSN>, Enc_84d359 {
 let Inst{12-8} = 0b10010;
 let addrMode = BaseImmOffset;
 let accessSize = ByteAccess;
@@ -26027,7 +26122,7 @@ def SS2_storebi1 : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u4_0Imm:$Ii),
 "memb($Rs16+#$Ii) = #1",
-tc_57288781, TypeSUBINSN>, Enc_84d359 {
+tc_89e94ad3, TypeSUBINSN>, Enc_84d359 {
 let Inst{12-8} = 0b10011;
 let addrMode = BaseImmOffset;
 let accessSize = ByteAccess;
@@ -26039,7 +26134,7 @@ def SS2_stored_sp : HInst<
 (outs),
 (ins s6_3Imm:$Ii, GeneralDoubleLow8Regs:$Rtt8),
 "memd(r29+#$Ii) = $Rtt8",
-tc_a788683e, TypeSUBINSN>, Enc_b8309d {
+tc_0371abea, TypeSUBINSN>, Enc_b8309d {
 let Inst{12-9} = 0b0101;
 let addrMode = BaseImmOffset;
 let accessSize = DoubleWordAccess;
@@ -26052,7 +26147,7 @@ def SS2_storeh_io : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u3_1Imm:$Ii, GeneralSubRegs:$Rt16),
 "memh($Rs16+#$Ii) = $Rt16",
-tc_05b6c987, TypeSUBINSN>, Enc_625deb {
+tc_30b9bb4a, TypeSUBINSN>, Enc_625deb {
 let Inst{12-11} = 0b00;
 let addrMode = BaseImmOffset;
 let accessSize = HalfWordAccess;
@@ -26064,7 +26159,7 @@ def SS2_storew_sp : HInst<
 (outs),
 (ins u5_2Imm:$Ii, GeneralSubRegs:$Rt16),
 "memw(r29+#$Ii) = $Rt16",
-tc_a788683e, TypeSUBINSN>, Enc_87c142 {
+tc_0371abea, TypeSUBINSN>, Enc_87c142 {
 let Inst{12-9} = 0b0100;
 let addrMode = BaseImmOffset;
 let accessSize = WordAccess;
@@ -26077,7 +26172,7 @@ def SS2_storewi0 : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u4_2Imm:$Ii),
 "memw($Rs16+#$Ii) = #0",
-tc_57288781, TypeSUBINSN>, Enc_a6ce9c {
+tc_89e94ad3, TypeSUBINSN>, Enc_a6ce9c {
 let Inst{12-8} = 0b10000;
 let addrMode = BaseImmOffset;
 let accessSize = WordAccess;
@@ -26089,7 +26184,7 @@ def SS2_storewi1 : HInst<
 (outs),
 (ins GeneralSubRegs:$Rs16, u4_2Imm:$Ii),
 "memw($Rs16+#$Ii) = #1",
-tc_57288781, TypeSUBINSN>, Enc_a6ce9c {
+tc_89e94ad3, TypeSUBINSN>, Enc_a6ce9c {
 let Inst{12-8} = 0b10001;
 let addrMode = BaseImmOffset;
 let accessSize = WordAccess;
@@ -26227,7 +26322,7 @@ def V6_extractw : HInst<
 (outs IntRegs:$Rd32),
 (ins HvxVR:$Vu32, IntRegs:$Rs32),
 "$Rd32 = vextract($Vu32,$Rs32)",
-tc_9777e6bf, TypeLD>, Enc_50e578, Requires<[UseHVXV60]> {
+tc_540c3da3, TypeLD>, Enc_50e578, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10010010000;
@@ -26448,7 +26543,7 @@ def V6_lvsplatb : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32),
 "$Vd32.b = vsplat($Rt32)",
-tc_6b78cf13, TypeCVI_VX>, Enc_a5ed8a, Requires<[UseHVXV62]> {
+tc_c4edf264, TypeCVI_VX>, Enc_a5ed8a, Requires<[UseHVXV62]> {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b00011001110;
 let hasNewValue = 1;
@@ -26459,7 +26554,7 @@ def V6_lvsplath : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32),
 "$Vd32.h = vsplat($Rt32)",
-tc_6b78cf13, TypeCVI_VX>, Enc_a5ed8a, Requires<[UseHVXV62]> {
+tc_c4edf264, TypeCVI_VX>, Enc_a5ed8a, Requires<[UseHVXV62]> {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b00011001110;
 let hasNewValue = 1;
@@ -26470,7 +26565,7 @@ def V6_lvsplatw : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32),
 "$Vd32 = vsplat($Rt32)",
-tc_6b78cf13, TypeCVI_VX_LATE>, Enc_a5ed8a, Requires<[UseHVXV60]> {
+tc_c4edf264, TypeCVI_VX_LATE>, Enc_a5ed8a, Requires<[UseHVXV60]> {
 let Inst{13-5} = 0b000000001;
 let Inst{31-21} = 0b00011001101;
 let hasNewValue = 1;
@@ -26481,7 +26576,7 @@ def V6_pred_and : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4, HvxQR:$Qt4),
 "$Qd4 = and($Qs4,$Qt4)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000000;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
@@ -26494,7 +26589,7 @@ def V6_pred_and_n : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4, HvxQR:$Qt4),
 "$Qd4 = and($Qs4,!$Qt4)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000101;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
@@ -26507,7 +26602,7 @@ def V6_pred_not : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4),
 "$Qd4 = not($Qs4)",
-tc_71337255, TypeCVI_VA>, Enc_bfbf03, Requires<[UseHVXV60]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_bfbf03, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000010;
 let Inst{13-10} = 0b0000;
 let Inst{31-16} = 0b0001111000000011;
@@ -26519,7 +26614,7 @@ def V6_pred_or : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4, HvxQR:$Qt4),
 "$Qd4 = or($Qs4,$Qt4)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000001;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
@@ -26532,7 +26627,7 @@ def V6_pred_or_n : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4, HvxQR:$Qt4),
 "$Qd4 = or($Qs4,!$Qt4)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000100;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
@@ -26545,7 +26640,7 @@ def V6_pred_scalar2 : HInst<
 (outs HvxQR:$Qd4),
 (ins IntRegs:$Rt32),
 "$Qd4 = vsetq($Rt32)",
-tc_4105d6b5, TypeCVI_VP>, Enc_7222b7, Requires<[UseHVXV60]> {
+tc_5bf8afbb, TypeCVI_VP>, Enc_7222b7, Requires<[UseHVXV60]> {
 let Inst{13-2} = 0b000000010001;
 let Inst{31-21} = 0b00011001101;
 let hasNewValue = 1;
@@ -26556,7 +26651,7 @@ def V6_pred_scalar2v2 : HInst<
 (outs HvxQR:$Qd4),
 (ins IntRegs:$Rt32),
 "$Qd4 = vsetq2($Rt32)",
-tc_4105d6b5, TypeCVI_VP>, Enc_7222b7, Requires<[UseHVXV62]> {
+tc_5bf8afbb, TypeCVI_VP>, Enc_7222b7, Requires<[UseHVXV62]> {
 let Inst{13-2} = 0b000000010011;
 let Inst{31-21} = 0b00011001101;
 let hasNewValue = 1;
@@ -26567,7 +26662,7 @@ def V6_pred_xor : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4, HvxQR:$Qt4),
 "$Qd4 = xor($Qs4,$Qt4)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000011;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
@@ -26580,7 +26675,7 @@ def V6_shuffeqh : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4, HvxQR:$Qt4),
 "$Qd4.b = vshuffe($Qs4.h,$Qt4.h)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV62]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV62]> {
 let Inst{7-2} = 0b000110;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
@@ -26593,7 +26688,7 @@ def V6_shuffeqw : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxQR:$Qs4, HvxQR:$Qt4),
 "$Qd4.h = vshuffe($Qs4.w,$Qt4.w)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV62]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_134437, Requires<[UseHVXV62]> {
 let Inst{7-2} = 0b000111;
 let Inst{13-10} = 0b0000;
 let Inst{21-16} = 0b000011;
@@ -26743,7 +26838,7 @@ def V6_vL32Ub_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32 = vmemu($Rt32+#$Ii)",
-tc_35e92f8e, TypeCVI_VM_VP_LDU>, Enc_f3f408, Requires<[UseHVXV60]> {
+tc_a7e6707d, TypeCVI_VM_VP_LDU>, Enc_f3f408, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000000;
@@ -26760,7 +26855,7 @@ def V6_vL32Ub_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32 = vmemu($Rx32++#$Ii)",
-tc_4fd8566e, TypeCVI_VM_VP_LDU>, Enc_a255dc, Requires<[UseHVXV60]> {
+tc_3c56e5ce, TypeCVI_VM_VP_LDU>, Enc_a255dc, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001000;
@@ -26779,7 +26874,7 @@ def V6_vL32Ub_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32 = vmemu($Rx32++$Mu2)",
-tc_4fd8566e, TypeCVI_VM_VP_LDU>, Enc_2ebe3b, Requires<[UseHVXV60]> {
+tc_3c56e5ce, TypeCVI_VM_VP_LDU>, Enc_2ebe3b, Requires<[UseHVXV60]> {
 let Inst{12-5} = 0b00000111;
 let Inst{31-21} = 0b00101011000;
 let hasNewValue = 1;
@@ -26796,7 +26891,7 @@ def V6_vL32b_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32 = vmem($Rt32+#$Ii)",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
+tc_c0749f3c, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000000;
@@ -26816,7 +26911,7 @@ def V6_vL32b_cur_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.cur = vmem($Rt32+#$Ii)",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
+tc_c0749f3c, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000000;
@@ -26836,7 +26931,7 @@ def V6_vL32b_cur_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -26856,7 +26951,7 @@ def V6_vL32b_cur_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -26878,7 +26973,7 @@ def V6_vL32b_cur_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000101;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -26899,7 +26994,7 @@ def V6_vL32b_cur_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.cur = vmem($Rx32++#$Ii)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001000;
@@ -26920,7 +27015,7 @@ def V6_vL32b_cur_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.cur = vmem($Rx32++$Mu2)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
 let Inst{12-5} = 0b00000001;
 let Inst{31-21} = 0b00101011000;
 let hasNewValue = 1;
@@ -26940,7 +27035,7 @@ def V6_vL32b_cur_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -26959,7 +27054,7 @@ def V6_vL32b_cur_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -26980,7 +27075,7 @@ def V6_vL32b_cur_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000100;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27000,7 +27095,7 @@ def V6_vL32b_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -27019,7 +27114,7 @@ def V6_vL32b_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -27040,7 +27135,7 @@ def V6_vL32b_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000011;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27060,7 +27155,7 @@ def V6_vL32b_nt_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32 = vmem($Rt32+#$Ii):nt",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
+tc_c0749f3c, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000010;
@@ -27081,7 +27176,7 @@ def V6_vL32b_nt_cur_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.cur = vmem($Rt32+#$Ii):nt",
-tc_b712833a, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
+tc_c0749f3c, TypeCVI_VM_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000010;
@@ -27102,7 +27197,7 @@ def V6_vL32b_nt_cur_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -27123,7 +27218,7 @@ def V6_vL32b_nt_cur_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -27146,7 +27241,7 @@ def V6_vL32b_nt_cur_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000101;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -27168,7 +27263,7 @@ def V6_vL32b_nt_cur_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.cur = vmem($Rx32++#$Ii):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b001;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001010;
@@ -27190,7 +27285,7 @@ def V6_vL32b_nt_cur_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.cur = vmem($Rx32++$Mu2):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
 let Inst{12-5} = 0b00000001;
 let Inst{31-21} = 0b00101011010;
 let hasNewValue = 1;
@@ -27211,7 +27306,7 @@ def V6_vL32b_nt_cur_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -27231,7 +27326,7 @@ def V6_vL32b_nt_cur_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -27253,7 +27348,7 @@ def V6_vL32b_nt_cur_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.cur = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000100;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -27274,7 +27369,7 @@ def V6_vL32b_nt_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -27294,7 +27389,7 @@ def V6_vL32b_nt_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -27316,7 +27411,7 @@ def V6_vL32b_nt_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000011;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -27337,7 +27432,7 @@ def V6_vL32b_nt_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32 = vmem($Rx32++#$Ii):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001010;
@@ -27359,7 +27454,7 @@ def V6_vL32b_nt_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32 = vmem($Rx32++$Mu2):nt",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101011010;
 let hasNewValue = 1;
@@ -27380,7 +27475,7 @@ def V6_vL32b_nt_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rt32+#$Ii):nt",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -27399,7 +27494,7 @@ def V6_vL32b_nt_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rx32++#$Ii):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -27420,7 +27515,7 @@ def V6_vL32b_nt_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32 = vmem($Rx32++$Mu2):nt",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000010;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -27440,7 +27535,7 @@ def V6_vL32b_nt_tmp_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rt32+#$Ii):nt",
-tc_77a4c701, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
+tc_52447ecc, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000010;
@@ -27460,7 +27555,7 @@ def V6_vL32b_nt_tmp_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_3904b926, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -27480,7 +27575,7 @@ def V6_vL32b_nt_tmp_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -27502,7 +27597,7 @@ def V6_vL32b_nt_tmp_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000111;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -27523,7 +27618,7 @@ def V6_vL32b_nt_tmp_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rx32++#$Ii):nt",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
+tc_663c80a7, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001010;
@@ -27544,7 +27639,7 @@ def V6_vL32b_nt_tmp_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.tmp = vmem($Rx32++$Mu2):nt",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
+tc_663c80a7, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
 let Inst{12-5} = 0b00000010;
 let Inst{31-21} = 0b00101011010;
 let hasNewValue = 1;
@@ -27564,7 +27659,7 @@ def V6_vL32b_nt_tmp_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii):nt",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_3904b926, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b00101000110;
 let isPredicated = 1;
@@ -27583,7 +27678,7 @@ def V6_vL32b_nt_tmp_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -27604,7 +27699,7 @@ def V6_vL32b_nt_tmp_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2):nt",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000110;
 let Inst{31-21} = 0b00101011110;
 let isPredicated = 1;
@@ -27624,7 +27719,7 @@ def V6_vL32b_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32 = vmem($Rx32++#$Ii)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b000;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001000;
@@ -27645,7 +27740,7 @@ def V6_vL32b_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32 = vmem($Rx32++$Mu2)",
-tc_eb669007, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
+tc_1ba8a0cd, TypeCVI_VM_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101011000;
 let hasNewValue = 1;
@@ -27665,7 +27760,7 @@ def V6_vL32b_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rt32+#$Ii)",
-tc_5cbf490b, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_abe8c3b2, TypeCVI_VM_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -27683,7 +27778,7 @@ def V6_vL32b_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32 = vmem($Rx32++#$Ii)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -27703,7 +27798,7 @@ def V6_vL32b_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32 = vmem($Rx32++$Mu2)",
-tc_da979fb3, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_453fe68d, TypeCVI_VM_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000010;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27722,7 +27817,7 @@ def V6_vL32b_tmp_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rt32+#$Ii)",
-tc_77a4c701, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
+tc_52447ecc, TypeCVI_VM_TMP_LD>, Enc_f3f408, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000000;
@@ -27741,7 +27836,7 @@ def V6_vL32b_tmp_npred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_3904b926, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -27760,7 +27855,7 @@ def V6_vL32b_tmp_npred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -27781,7 +27876,7 @@ def V6_vL32b_tmp_npred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if (!$Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000111;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27801,7 +27896,7 @@ def V6_vL32b_tmp_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "$Vd32.tmp = vmem($Rx32++#$Ii)",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
+tc_663c80a7, TypeCVI_VM_TMP_LD>, Enc_a255dc, Requires<[UseHVXV60]>, PredRel {
 let Inst{7-5} = 0b010;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001000;
@@ -27821,7 +27916,7 @@ def V6_vL32b_tmp_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "$Vd32.tmp = vmem($Rx32++$Mu2)",
-tc_9c267309, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
+tc_663c80a7, TypeCVI_VM_TMP_LD>, Enc_2ebe3b, Requires<[UseHVXV60]>, PredRel {
 let Inst{12-5} = 0b00000010;
 let Inst{31-21} = 0b00101011000;
 let hasNewValue = 1;
@@ -27840,7 +27935,7 @@ def V6_vL32b_tmp_pred_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rt32+#$Ii)",
-tc_51cd3aab, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
+tc_3904b926, TypeCVI_VM_TMP_LD>, Enc_8d8a30, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b00101000100;
 let isPredicated = 1;
@@ -27858,7 +27953,7 @@ def V6_vL32b_tmp_pred_pi : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++#$Ii)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_58a8bf, Requires<[UseHVXV62]>, PredRel {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -27878,7 +27973,7 @@ def V6_vL32b_tmp_pred_ppu : HInst<
 (outs HvxVR:$Vd32, IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
 "if ($Pv4) $Vd32.tmp = vmem($Rx32++$Mu2)",
-tc_38208312, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
+tc_b9db8205, TypeCVI_VM_TMP_LD>, Enc_f8c1c4, Requires<[UseHVXV62]>, PredRel {
 let Inst{10-5} = 0b000110;
 let Inst{31-21} = 0b00101011100;
 let isPredicated = 1;
@@ -27897,7 +27992,7 @@ def V6_vS32Ub_ai : HInst<
 (outs),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "vmemu($Rt32+#$Ii) = $Vs32",
-tc_354299ad, TypeCVI_VM_STU>, Enc_c9e3bc, Requires<[UseHVXV60]>, NewValueRel {
+tc_f21e8abb, TypeCVI_VM_STU>, Enc_c9e3bc, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b111;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000001;
@@ -27912,7 +28007,7 @@ def V6_vS32Ub_npred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Pv4) vmemu($Rt32+#$Ii) = $Vs32",
-tc_d642eff3, TypeCVI_VM_STU>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
+tc_131f1c81, TypeCVI_VM_STU>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b111;
 let Inst{31-21} = 0b00101000101;
 let isPredicated = 1;
@@ -27927,7 +28022,7 @@ def V6_vS32Ub_npred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Pv4) vmemu($Rx32++#$Ii) = $Vs32",
-tc_6fd9ad30, TypeCVI_VM_STU>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
+tc_c7039829, TypeCVI_VM_STU>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001101;
@@ -27944,7 +28039,7 @@ def V6_vS32Ub_npred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if (!$Pv4) vmemu($Rx32++$Mu2) = $Vs32",
-tc_6fd9ad30, TypeCVI_VM_STU>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
+tc_c7039829, TypeCVI_VM_STU>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-5} = 0b000111;
 let Inst{31-21} = 0b00101011101;
 let isPredicated = 1;
@@ -27960,7 +28055,7 @@ def V6_vS32Ub_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "vmemu($Rx32++#$Ii) = $Vs32",
-tc_7fa82b08, TypeCVI_VM_STU>, Enc_b62ef7, Requires<[UseHVXV60]>, NewValueRel {
+tc_e2d2e9e5, TypeCVI_VM_STU>, Enc_b62ef7, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b111;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001001;
@@ -27976,7 +28071,7 @@ def V6_vS32Ub_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "vmemu($Rx32++$Mu2) = $Vs32",
-tc_7fa82b08, TypeCVI_VM_STU>, Enc_d15d19, Requires<[UseHVXV60]>, NewValueRel {
+tc_e2d2e9e5, TypeCVI_VM_STU>, Enc_d15d19, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{12-5} = 0b00000111;
 let Inst{31-21} = 0b00101011001;
 let addrMode = PostInc;
@@ -27991,7 +28086,7 @@ def V6_vS32Ub_pred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Pv4) vmemu($Rt32+#$Ii) = $Vs32",
-tc_d642eff3, TypeCVI_VM_STU>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
+tc_131f1c81, TypeCVI_VM_STU>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b00101000101;
 let isPredicated = 1;
@@ -28005,7 +28100,7 @@ def V6_vS32Ub_pred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Pv4) vmemu($Rx32++#$Ii) = $Vs32",
-tc_6fd9ad30, TypeCVI_VM_STU>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
+tc_c7039829, TypeCVI_VM_STU>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001101;
@@ -28021,7 +28116,7 @@ def V6_vS32Ub_pred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if ($Pv4) vmemu($Rx32++$Mu2) = $Vs32",
-tc_6fd9ad30, TypeCVI_VM_STU>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
+tc_c7039829, TypeCVI_VM_STU>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-5} = 0b000110;
 let Inst{31-21} = 0b00101011101;
 let isPredicated = 1;
@@ -28036,7 +28131,7 @@ def V6_vS32b_ai : HInst<
 (outs),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "vmem($Rt32+#$Ii) = $Vs32",
-tc_e3748cdf, TypeCVI_VM_ST>, Enc_c9e3bc, Requires<[UseHVXV60]>, NewValueRel {
+tc_c5dba46e, TypeCVI_VM_ST>, Enc_c9e3bc, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000001;
@@ -28052,7 +28147,7 @@ def V6_vS32b_new_ai : HInst<
 (outs),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Os8),
 "vmem($Rt32+#$Ii) = $Os8.new",
-tc_1b93bdc6, TypeCVI_VM_NEW_ST>, Enc_f77fbc, Requires<[UseHVXV60]>, NewValueRel {
+tc_ab23f776, TypeCVI_VM_NEW_ST>, Enc_f77fbc, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b00100;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000001;
@@ -28071,7 +28166,7 @@ def V6_vS32b_new_npred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Os8),
 "if (!$Pv4) vmem($Rt32+#$Ii) = $Os8.new",
-tc_d5090f3e, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
+tc_7177e272, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01101;
 let Inst{31-21} = 0b00101000101;
 let isPredicated = 1;
@@ -28090,7 +28185,7 @@ def V6_vS32b_new_npred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Os8),
 "if (!$Pv4) vmem($Rx32++#$Ii) = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001101;
@@ -28111,7 +28206,7 @@ def V6_vS32b_new_npred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Os8),
 "if (!$Pv4) vmem($Rx32++$Mu2) = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-3} = 0b00001101;
 let Inst{31-21} = 0b00101011101;
 let isPredicated = 1;
@@ -28131,7 +28226,7 @@ def V6_vS32b_new_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Os8),
 "vmem($Rx32++#$Ii) = $Os8.new",
-tc_db5b9e2f, TypeCVI_VM_NEW_ST>, Enc_1aaec1, Requires<[UseHVXV60]>, NewValueRel {
+tc_6942b6e0, TypeCVI_VM_NEW_ST>, Enc_1aaec1, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b00100;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001001;
@@ -28151,7 +28246,7 @@ def V6_vS32b_new_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Os8),
 "vmem($Rx32++$Mu2) = $Os8.new",
-tc_db5b9e2f, TypeCVI_VM_NEW_ST>, Enc_cf1927, Requires<[UseHVXV60]>, NewValueRel {
+tc_6942b6e0, TypeCVI_VM_NEW_ST>, Enc_cf1927, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{12-3} = 0b0000000100;
 let Inst{31-21} = 0b00101011001;
 let addrMode = PostInc;
@@ -28170,7 +28265,7 @@ def V6_vS32b_new_pred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Os8),
 "if ($Pv4) vmem($Rt32+#$Ii) = $Os8.new",
-tc_d5090f3e, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
+tc_7177e272, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01000;
 let Inst{31-21} = 0b00101000101;
 let isPredicated = 1;
@@ -28188,7 +28283,7 @@ def V6_vS32b_new_pred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Os8),
 "if ($Pv4) vmem($Rx32++#$Ii) = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001101;
@@ -28208,7 +28303,7 @@ def V6_vS32b_new_pred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Os8),
 "if ($Pv4) vmem($Rx32++$Mu2) = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-3} = 0b00001000;
 let Inst{31-21} = 0b00101011101;
 let isPredicated = 1;
@@ -28227,7 +28322,7 @@ def V6_vS32b_npred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Pv4) vmem($Rt32+#$Ii) = $Vs32",
-tc_85d237e3, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
+tc_a02a10a8, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b00101000101;
 let isPredicated = 1;
@@ -28243,7 +28338,7 @@ def V6_vS32b_npred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Pv4) vmem($Rx32++#$Ii) = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001101;
@@ -28261,7 +28356,7 @@ def V6_vS32b_npred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if (!$Pv4) vmem($Rx32++$Mu2) = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-5} = 0b000001;
 let Inst{31-21} = 0b00101011101;
 let isPredicated = 1;
@@ -28278,7 +28373,7 @@ def V6_vS32b_nqpred_ai : HInst<
 (outs),
 (ins HvxQR:$Qv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Qv4) vmem($Rt32+#$Ii) = $Vs32",
-tc_aedb9f9e, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
+tc_447d9895, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b00101000100;
 let addrMode = BaseImmOffset;
@@ -28290,7 +28385,7 @@ def V6_vS32b_nqpred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Qv4) vmem($Rx32++#$Ii) = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -28304,7 +28399,7 @@ def V6_vS32b_nqpred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if (!$Qv4) vmem($Rx32++$Mu2) = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
 let Inst{10-5} = 0b000001;
 let Inst{31-21} = 0b00101011100;
 let addrMode = PostInc;
@@ -28317,7 +28412,7 @@ def V6_vS32b_nt_ai : HInst<
 (outs),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "vmem($Rt32+#$Ii):nt = $Vs32",
-tc_e3748cdf, TypeCVI_VM_ST>, Enc_c9e3bc, Requires<[UseHVXV60]>, NewValueRel {
+tc_c5dba46e, TypeCVI_VM_ST>, Enc_c9e3bc, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000011;
@@ -28334,7 +28429,7 @@ def V6_vS32b_nt_new_ai : HInst<
 (outs),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Os8),
 "vmem($Rt32+#$Ii):nt = $Os8.new",
-tc_1b93bdc6, TypeCVI_VM_NEW_ST>, Enc_f77fbc, Requires<[UseHVXV60]>, NewValueRel {
+tc_ab23f776, TypeCVI_VM_NEW_ST>, Enc_f77fbc, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b00100;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000011;
@@ -28354,7 +28449,7 @@ def V6_vS32b_nt_new_npred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Os8),
 "if (!$Pv4) vmem($Rt32+#$Ii):nt = $Os8.new",
-tc_d5090f3e, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
+tc_7177e272, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01111;
 let Inst{31-21} = 0b00101000111;
 let isPredicated = 1;
@@ -28374,7 +28469,7 @@ def V6_vS32b_nt_new_npred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Os8),
 "if (!$Pv4) vmem($Rx32++#$Ii):nt = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001111;
@@ -28396,7 +28491,7 @@ def V6_vS32b_nt_new_npred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Os8),
 "if (!$Pv4) vmem($Rx32++$Mu2):nt = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-3} = 0b00001111;
 let Inst{31-21} = 0b00101011111;
 let isPredicated = 1;
@@ -28417,7 +28512,7 @@ def V6_vS32b_nt_new_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Os8),
 "vmem($Rx32++#$Ii):nt = $Os8.new",
-tc_db5b9e2f, TypeCVI_VM_NEW_ST>, Enc_1aaec1, Requires<[UseHVXV60]>, NewValueRel {
+tc_6942b6e0, TypeCVI_VM_NEW_ST>, Enc_1aaec1, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b00100;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001011;
@@ -28438,7 +28533,7 @@ def V6_vS32b_nt_new_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Os8),
 "vmem($Rx32++$Mu2):nt = $Os8.new",
-tc_db5b9e2f, TypeCVI_VM_NEW_ST>, Enc_cf1927, Requires<[UseHVXV60]>, NewValueRel {
+tc_6942b6e0, TypeCVI_VM_NEW_ST>, Enc_cf1927, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{12-3} = 0b0000000100;
 let Inst{31-21} = 0b00101011011;
 let addrMode = PostInc;
@@ -28458,7 +28553,7 @@ def V6_vS32b_nt_new_pred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Os8),
 "if ($Pv4) vmem($Rt32+#$Ii):nt = $Os8.new",
-tc_d5090f3e, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
+tc_7177e272, TypeCVI_VM_NEW_ST>, Enc_f7430e, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01010;
 let Inst{31-21} = 0b00101000111;
 let isPredicated = 1;
@@ -28477,7 +28572,7 @@ def V6_vS32b_nt_new_pred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Os8),
 "if ($Pv4) vmem($Rx32++#$Ii):nt = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_784502, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-3} = 0b01010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001111;
@@ -28498,7 +28593,7 @@ def V6_vS32b_nt_new_pred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Os8),
 "if ($Pv4) vmem($Rx32++$Mu2):nt = $Os8.new",
-tc_8b6a873f, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
+tc_e99d4c2e, TypeCVI_VM_NEW_ST>, Enc_372c9d, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-3} = 0b00001010;
 let Inst{31-21} = 0b00101011111;
 let isPredicated = 1;
@@ -28518,7 +28613,7 @@ def V6_vS32b_nt_npred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Pv4) vmem($Rt32+#$Ii):nt = $Vs32",
-tc_85d237e3, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
+tc_a02a10a8, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b00101000111;
 let isPredicated = 1;
@@ -28535,7 +28630,7 @@ def V6_vS32b_nt_npred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Pv4) vmem($Rx32++#$Ii):nt = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001111;
@@ -28554,7 +28649,7 @@ def V6_vS32b_nt_npred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if (!$Pv4) vmem($Rx32++$Mu2):nt = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-5} = 0b000001;
 let Inst{31-21} = 0b00101011111;
 let isPredicated = 1;
@@ -28572,7 +28667,7 @@ def V6_vS32b_nt_nqpred_ai : HInst<
 (outs),
 (ins HvxQR:$Qv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Qv4) vmem($Rt32+#$Ii):nt = $Vs32",
-tc_aedb9f9e, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
+tc_447d9895, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b00101000110;
 let addrMode = BaseImmOffset;
@@ -28585,7 +28680,7 @@ def V6_vS32b_nt_nqpred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if (!$Qv4) vmem($Rx32++#$Ii):nt = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -28600,7 +28695,7 @@ def V6_vS32b_nt_nqpred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if (!$Qv4) vmem($Rx32++$Mu2):nt = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
 let Inst{10-5} = 0b000001;
 let Inst{31-21} = 0b00101011110;
 let addrMode = PostInc;
@@ -28614,7 +28709,7 @@ def V6_vS32b_nt_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "vmem($Rx32++#$Ii):nt = $Vs32",
-tc_a4c9df3b, TypeCVI_VM_ST>, Enc_b62ef7, Requires<[UseHVXV60]>, NewValueRel {
+tc_3e2aaafc, TypeCVI_VM_ST>, Enc_b62ef7, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001011;
@@ -28632,7 +28727,7 @@ def V6_vS32b_nt_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "vmem($Rx32++$Mu2):nt = $Vs32",
-tc_a4c9df3b, TypeCVI_VM_ST>, Enc_d15d19, Requires<[UseHVXV60]>, NewValueRel {
+tc_3e2aaafc, TypeCVI_VM_ST>, Enc_d15d19, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101011011;
 let addrMode = PostInc;
@@ -28649,7 +28744,7 @@ def V6_vS32b_nt_pred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rt32+#$Ii):nt = $Vs32",
-tc_85d237e3, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
+tc_a02a10a8, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b00101000111;
 let isPredicated = 1;
@@ -28665,7 +28760,7 @@ def V6_vS32b_nt_pred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rx32++#$Ii):nt = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001111;
@@ -28683,7 +28778,7 @@ def V6_vS32b_nt_pred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rx32++$Mu2):nt = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-5} = 0b000000;
 let Inst{31-21} = 0b00101011111;
 let isPredicated = 1;
@@ -28700,7 +28795,7 @@ def V6_vS32b_nt_qpred_ai : HInst<
 (outs),
 (ins HvxQR:$Qv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Qv4) vmem($Rt32+#$Ii):nt = $Vs32",
-tc_aedb9f9e, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
+tc_447d9895, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b00101000110;
 let addrMode = BaseImmOffset;
@@ -28713,7 +28808,7 @@ def V6_vS32b_nt_qpred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Qv4) vmem($Rx32++#$Ii):nt = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001110;
@@ -28728,7 +28823,7 @@ def V6_vS32b_nt_qpred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if ($Qv4) vmem($Rx32++$Mu2):nt = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
 let Inst{10-5} = 0b000000;
 let Inst{31-21} = 0b00101011110;
 let addrMode = PostInc;
@@ -28742,7 +28837,7 @@ def V6_vS32b_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "vmem($Rx32++#$Ii) = $Vs32",
-tc_a4c9df3b, TypeCVI_VM_ST>, Enc_b62ef7, Requires<[UseHVXV60]>, NewValueRel {
+tc_3e2aaafc, TypeCVI_VM_ST>, Enc_b62ef7, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001001;
@@ -28759,7 +28854,7 @@ def V6_vS32b_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "vmem($Rx32++$Mu2) = $Vs32",
-tc_a4c9df3b, TypeCVI_VM_ST>, Enc_d15d19, Requires<[UseHVXV60]>, NewValueRel {
+tc_3e2aaafc, TypeCVI_VM_ST>, Enc_d15d19, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101011001;
 let addrMode = PostInc;
@@ -28774,7 +28869,7 @@ def V6_vS32b_pred_ai : HInst<
 (outs),
 (ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rt32+#$Ii) = $Vs32",
-tc_85d237e3, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
+tc_a02a10a8, TypeCVI_VM_ST>, Enc_27b757, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b00101000101;
 let isPredicated = 1;
@@ -28789,7 +28884,7 @@ def V6_vS32b_pred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rx32++#$Ii) = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_865390, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001101;
@@ -28806,7 +28901,7 @@ def V6_vS32b_pred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if ($Pv4) vmem($Rx32++$Mu2) = $Vs32",
-tc_0317c6ca, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
+tc_54a0dc47, TypeCVI_VM_ST>, Enc_1ef990, Requires<[UseHVXV60]>, NewValueRel {
 let Inst{10-5} = 0b000000;
 let Inst{31-21} = 0b00101011101;
 let isPredicated = 1;
@@ -28822,7 +28917,7 @@ def V6_vS32b_qpred_ai : HInst<
 (outs),
 (ins HvxQR:$Qv4, IntRegs:$Rt32, s4_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Qv4) vmem($Rt32+#$Ii) = $Vs32",
-tc_aedb9f9e, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
+tc_447d9895, TypeCVI_VM_ST>, Enc_2ea740, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b00101000100;
 let addrMode = BaseImmOffset;
@@ -28834,7 +28929,7 @@ def V6_vS32b_qpred_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, s3_0Imm:$Ii, HvxVR:$Vs32),
 "if ($Qv4) vmem($Rx32++#$Ii) = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_0b51ce, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00101001100;
@@ -28848,7 +28943,7 @@ def V6_vS32b_qpred_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins HvxQR:$Qv4, IntRegs:$Rx32in, ModRegs:$Mu2, HvxVR:$Vs32),
 "if ($Qv4) vmem($Rx32++$Mu2) = $Vs32",
-tc_99093773, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
+tc_191381c1, TypeCVI_VM_ST>, Enc_4dff07, Requires<[UseHVXV60]> {
 let Inst{10-5} = 0b000000;
 let Inst{31-21} = 0b00101011100;
 let addrMode = PostInc;
@@ -28861,7 +28956,7 @@ def V6_vS32b_srls_ai : HInst<
 (outs),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
 "vmem($Rt32+#$Ii):scatter_release",
-tc_29841470, TypeCVI_SCATTER_NEW_RST>, Enc_ff3442, Requires<[UseHVXV65]> {
+tc_3ce09744, TypeCVI_SCATTER_NEW_RST>, Enc_ff3442, Requires<[UseHVXV65]> {
 let Inst{7-0} = 0b00101000;
 let Inst{12-11} = 0b00;
 let Inst{31-21} = 0b00101000001;
@@ -28875,7 +28970,7 @@ def V6_vS32b_srls_pi : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, s3_0Imm:$Ii),
 "vmem($Rx32++#$Ii):scatter_release",
-tc_5c03dc63, TypeCVI_SCATTER_NEW_RST>, Enc_6c9ee0, Requires<[UseHVXV65]> {
+tc_20a4bbec, TypeCVI_SCATTER_NEW_RST>, Enc_6c9ee0, Requires<[UseHVXV65]> {
 let Inst{7-0} = 0b00101000;
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b00101001001;
@@ -28890,7 +28985,7 @@ def V6_vS32b_srls_ppu : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, ModRegs:$Mu2),
 "vmem($Rx32++$Mu2):scatter_release",
-tc_5c03dc63, TypeCVI_SCATTER_NEW_RST>, Enc_44661f, Requires<[UseHVXV65]> {
+tc_20a4bbec, TypeCVI_SCATTER_NEW_RST>, Enc_44661f, Requires<[UseHVXV65]> {
 let Inst{12-0} = 0b0000000101000;
 let Inst{31-21} = 0b00101011001;
 let addrMode = PostInc;
@@ -28904,7 +28999,7 @@ def V6_vabsb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.b = vabs($Vu32.b)",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV65]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000001;
@@ -28927,7 +29022,7 @@ def V6_vabsb_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.b = vabs($Vu32.b):sat",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV65]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000001;
@@ -28950,7 +29045,7 @@ def V6_vabsdiffh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vabsdiff($Vu32.h,$Vv32.h)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -28973,7 +29068,7 @@ def V6_vabsdiffub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vabsdiff($Vu32.ub,$Vv32.ub)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -28996,7 +29091,7 @@ def V6_vabsdiffuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vabsdiff($Vu32.uh,$Vv32.uh)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -29019,7 +29114,7 @@ def V6_vabsdiffw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uw = vabsdiff($Vu32.w,$Vv32.w)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -29042,7 +29137,7 @@ def V6_vabsh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vabs($Vu32.h)",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000000;
@@ -29065,7 +29160,7 @@ def V6_vabsh_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vabs($Vu32.h):sat",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000000;
@@ -29088,7 +29183,7 @@ def V6_vabsub_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.ub = vabs($Vu32.b)",
-tc_71337255, TypeMAPPING>, Requires<[UseHVXV65]> {
+tc_0ec46cf9, TypeMAPPING>, Requires<[UseHVXV65]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -29099,7 +29194,7 @@ def V6_vabsuh_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.uh = vabs($Vu32.h)",
-tc_71337255, TypeMAPPING>, Requires<[UseHVXV65]> {
+tc_0ec46cf9, TypeMAPPING>, Requires<[UseHVXV65]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -29110,7 +29205,7 @@ def V6_vabsuw_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.uw = vabs($Vu32.w)",
-tc_71337255, TypeMAPPING>, Requires<[UseHVXV65]> {
+tc_0ec46cf9, TypeMAPPING>, Requires<[UseHVXV65]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -29121,7 +29216,7 @@ def V6_vabsw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vabs($Vu32.w)",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000000;
@@ -29144,7 +29239,7 @@ def V6_vabsw_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vabs($Vu32.w):sat",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000000;
@@ -29167,7 +29262,7 @@ def V6_vaddb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vadd($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -29190,7 +29285,7 @@ def V6_vaddb_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.b = vadd($Vuu32.b,$Vvv32.b)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -29213,7 +29308,7 @@ def V6_vaddbnq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if (!$Qv4) $Vx32.b += $Vu32.b",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -29241,7 +29336,7 @@ def V6_vaddbq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if ($Qv4) $Vx32.b += $Vu32.b",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -29269,7 +29364,7 @@ def V6_vaddbsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vadd($Vu32.b,$Vv32.b):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -29292,7 +29387,7 @@ def V6_vaddbsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.b = vadd($Vuu32.b,$Vvv32.b):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110101;
@@ -29315,7 +29410,7 @@ def V6_vaddcarry : HInst<
 (outs HvxVR:$Vd32, HvxQR:$Qx4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, HvxQR:$Qx4in),
 "$Vd32.w = vadd($Vu32.w,$Vv32.w,$Qx4):carry",
-tc_5a9fc4ec, TypeCVI_VA>, Enc_b43b67, Requires<[UseHVXV62]> {
+tc_7e6a3e89, TypeCVI_VA>, Enc_b43b67, Requires<[UseHVXV62]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100101;
@@ -29324,11 +29419,37 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Qx4 = $Qx4in";
 }
+def V6_vaddcarryo : HInst<
+(outs HvxVR:$Vd32, HvxQR:$Qe4),
+(ins HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vd32.w,$Qe4 = vadd($Vu32.w,$Vv32.w):carry",
+tc_e35c1e93, TypeCOPROC_VX>, Enc_c1d806, Requires<[UseHVXV66]> {
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011101101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasNewValue2 = 1;
+let opNewValue2 = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vaddcarrysat : HInst<
+(outs HvxVR:$Vd32),
+(ins HvxVR:$Vu32, HvxVR:$Vv32, HvxQR:$Qs4),
+"$Vd32.w = vadd($Vu32.w,$Vv32.w,$Qs4):carry:sat",
+tc_257f6f7c, TypeCVI_VA>, Enc_e0820b, Requires<[UseHVXV66]> {
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011101100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
 def V6_vaddclbh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vadd(vclb($Vu32.h),$Vv32.h)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -29340,7 +29461,7 @@ def V6_vaddclbw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vadd(vclb($Vu32.w),$Vv32.w)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -29352,7 +29473,7 @@ def V6_vaddh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vadd($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -29375,7 +29496,7 @@ def V6_vaddh_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.h = vadd($Vuu32.h,$Vvv32.h)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -29398,7 +29519,7 @@ def V6_vaddhnq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if (!$Qv4) $Vx32.h += $Vu32.h",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -29426,7 +29547,7 @@ def V6_vaddhq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if ($Qv4) $Vx32.h += $Vu32.h",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -29454,7 +29575,7 @@ def V6_vaddhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vadd($Vu32.h,$Vv32.h):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -29477,7 +29598,7 @@ def V6_vaddhsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.h = vadd($Vuu32.h,$Vvv32.h):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -29500,7 +29621,7 @@ def V6_vaddhw : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.w = vadd($Vu32.h,$Vv32.h)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -29512,7 +29633,7 @@ def V6_vaddhw_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.w += vadd($Vu32.h,$Vv32.h)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -29550,7 +29671,7 @@ def V6_vaddubh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.h = vadd($Vu32.ub,$Vv32.ub)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -29562,7 +29683,7 @@ def V6_vaddubh_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.h += vadd($Vu32.ub,$Vv32.ub)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100010;
@@ -29600,7 +29721,7 @@ def V6_vaddubsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vadd($Vu32.ub,$Vv32.ub):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -29623,7 +29744,7 @@ def V6_vaddubsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.ub = vadd($Vuu32.ub,$Vvv32.ub):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -29646,7 +29767,7 @@ def V6_vaddububb_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vadd($Vu32.ub,$Vv32.b):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110101;
@@ -29658,7 +29779,7 @@ def V6_vadduhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vadd($Vu32.uh,$Vv32.uh):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -29681,7 +29802,7 @@ def V6_vadduhsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.uh = vadd($Vuu32.uh,$Vvv32.uh):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -29704,7 +29825,7 @@ def V6_vadduhw : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.w = vadd($Vu32.uh,$Vv32.uh)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -29716,7 +29837,7 @@ def V6_vadduhw_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.w += vadd($Vu32.uh,$Vv32.uh)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100010;
@@ -29754,7 +29875,7 @@ def V6_vadduwsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uw = vadd($Vu32.uw,$Vv32.uw):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -29777,7 +29898,7 @@ def V6_vadduwsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.uw = vadd($Vuu32.uw,$Vvv32.uw):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110101;
@@ -29800,7 +29921,7 @@ def V6_vaddw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vadd($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -29823,7 +29944,7 @@ def V6_vaddw_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.w = vadd($Vuu32.w,$Vvv32.w)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -29846,7 +29967,7 @@ def V6_vaddwnq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if (!$Qv4) $Vx32.w += $Vu32.w",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -29874,7 +29995,7 @@ def V6_vaddwq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if ($Qv4) $Vx32.w += $Vu32.w",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -29902,7 +30023,7 @@ def V6_vaddwsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vadd($Vu32.w,$Vv32.w):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -29925,7 +30046,7 @@ def V6_vaddwsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.w = vadd($Vuu32.w,$Vvv32.w):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -29948,7 +30069,7 @@ def V6_valignb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = valign($Vu32,$Vv32,$Rt8)",
-tc_c4b515c5, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_56e64202, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -29960,7 +30081,7 @@ def V6_valignbi : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, u3_0Imm:$Ii),
 "$Vd32 = valign($Vu32,$Vv32,#$Ii)",
-tc_c4b515c5, TypeCVI_VP>, Enc_0b2e5b, Requires<[UseHVXV60]> {
+tc_56e64202, TypeCVI_VP>, Enc_0b2e5b, Requires<[UseHVXV60]> {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011110001;
 let hasNewValue = 1;
@@ -29971,7 +30092,7 @@ def V6_vand : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32 = vand($Vu32,$Vv32)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -29983,7 +30104,7 @@ def V6_vandnqrt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qu4, IntRegs:$Rt32),
 "$Vd32 = vand(!$Qu4,$Rt32)",
-tc_e231aa4f, TypeCVI_VX>, Enc_7b7ba8, Requires<[UseHVXV62]> {
+tc_ac4046bc, TypeCVI_VX>, Enc_7b7ba8, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b101;
 let Inst{13-10} = 0b0001;
 let Inst{31-21} = 0b00011001101;
@@ -29995,7 +30116,7 @@ def V6_vandnqrt_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxQR:$Qu4, IntRegs:$Rt32),
 "$Vx32 |= vand(!$Qu4,$Rt32)",
-tc_9311da3f, TypeCVI_VX>, Enc_895bd9, Requires<[UseHVXV62]> {
+tc_2e8f5f6e, TypeCVI_VX>, Enc_895bd9, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-10} = 0b1001;
 let Inst{31-21} = 0b00011001011;
@@ -30033,7 +30154,7 @@ def V6_vandqrt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qu4, IntRegs:$Rt32),
 "$Vd32 = vand($Qu4,$Rt32)",
-tc_e231aa4f, TypeCVI_VX_LATE>, Enc_7b7ba8, Requires<[UseHVXV60]> {
+tc_ac4046bc, TypeCVI_VX_LATE>, Enc_7b7ba8, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-10} = 0b0000;
 let Inst{31-21} = 0b00011001101;
@@ -30045,7 +30166,7 @@ def V6_vandqrt_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxQR:$Qu4, IntRegs:$Rt32),
 "$Vx32 |= vand($Qu4,$Rt32)",
-tc_9311da3f, TypeCVI_VX_LATE>, Enc_895bd9, Requires<[UseHVXV60]> {
+tc_2e8f5f6e, TypeCVI_VX_LATE>, Enc_895bd9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-10} = 0b1000;
 let Inst{31-21} = 0b00011001011;
@@ -30083,7 +30204,7 @@ def V6_vandvnqv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qv4, HvxVR:$Vu32),
 "$Vd32 = vand(!$Qv4,$Vu32)",
-tc_bbaf280e, TypeCVI_VA>, Enc_c4dc92, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_c4dc92, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000011;
@@ -30096,7 +30217,7 @@ def V6_vandvqv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qv4, HvxVR:$Vu32),
 "$Vd32 = vand($Qv4,$Vu32)",
-tc_bbaf280e, TypeCVI_VA>, Enc_c4dc92, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_c4dc92, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000011;
@@ -30109,7 +30230,7 @@ def V6_vandvrt : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Qd4 = vand($Vu32,$Rt32)",
-tc_e231aa4f, TypeCVI_VX_LATE>, Enc_0f8bab, Requires<[UseHVXV60]> {
+tc_ac4046bc, TypeCVI_VX_LATE>, Enc_0f8bab, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b010010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001101;
@@ -30121,7 +30242,7 @@ def V6_vandvrt_acc : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Qx4 |= vand($Vu32,$Rt32)",
-tc_9311da3f, TypeCVI_VX_LATE>, Enc_adf111, Requires<[UseHVXV60]> {
+tc_2e8f5f6e, TypeCVI_VX_LATE>, Enc_adf111, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001011;
@@ -30155,7 +30276,7 @@ def V6_vaslh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.h = vasl($Vu32.h,$Rt32)",
-tc_41f4b64e, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_7417e785, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001100;
@@ -30167,7 +30288,7 @@ def V6_vaslh_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.h += vasl($Vu32.h,$Rt32)",
-tc_c00bf9c9, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV65]> {
+tc_309dbb4f, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001101;
@@ -30205,7 +30326,7 @@ def V6_vaslhv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vasl($Vu32.h,$Vv32.h)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -30228,7 +30349,7 @@ def V6_vaslw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vasl($Vu32.w,$Rt32)",
-tc_41f4b64e, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_7417e785, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -30240,7 +30361,7 @@ def V6_vaslw_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vasl($Vu32.w,$Rt32)",
-tc_c00bf9c9, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_309dbb4f, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001011;
@@ -30278,7 +30399,7 @@ def V6_vaslwv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vasl($Vu32.w,$Vv32.w)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -30297,11 +30418,36 @@ let isPseudo = 1;
 let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
+def V6_vasr_into : HInst<
+(outs HvxWR:$Vxx32),
+(ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vxx32.w = vasrinto($Vu32.w,$Vv32.w)",
+tc_df80eeb0, TypeCVI_VP_VS>, Enc_3fc427, Requires<[UseHVXV66]> {
+let Inst{7-5} = 0b111;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011010101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_vasr_into_alt : HInst<
+(outs HvxWR:$Vxx32),
+(ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vxx32 = vasrinto($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[UseHVXV66]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
 def V6_vasrh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.h = vasr($Vu32.h,$Rt32)",
-tc_41f4b64e, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_7417e785, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -30313,7 +30459,7 @@ def V6_vasrh_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.h += vasr($Vu32.h,$Rt32)",
-tc_c00bf9c9, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV65]> {
+tc_309dbb4f, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -30351,7 +30497,7 @@ def V6_vasrhbrndsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.b = vasr($Vu32.h,$Vv32.h,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
@@ -30363,7 +30509,7 @@ def V6_vasrhbrndsat_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vasrhb($Vu32,$Vv32,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeMAPPING>, Requires<[HasV60]> {
+tc_16ff9ef8, TypeMAPPING>, Requires<[HasV60]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30373,7 +30519,7 @@ def V6_vasrhbsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.b = vasr($Vu32.h,$Vv32.h,$Rt8):sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV62]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011000;
@@ -30385,7 +30531,7 @@ def V6_vasrhubrndsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.ub = vasr($Vu32.h,$Vv32.h,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -30397,7 +30543,7 @@ def V6_vasrhubrndsat_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vasrhub($Vu32,$Vv32,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeMAPPING>, Requires<[HasV60]> {
+tc_16ff9ef8, TypeMAPPING>, Requires<[HasV60]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30407,7 +30553,7 @@ def V6_vasrhubsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.ub = vasr($Vu32.h,$Vv32.h,$Rt8):sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -30419,7 +30565,7 @@ def V6_vasrhubsat_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vasrhub($Vu32,$Vv32,$Rt8):sat",
-tc_7fa8b40f, TypeMAPPING>, Requires<[HasV60]> {
+tc_16ff9ef8, TypeMAPPING>, Requires<[HasV60]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30429,7 +30575,7 @@ def V6_vasrhv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vasr($Vu32.h,$Vv32.h)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -30452,7 +30598,7 @@ def V6_vasruhubrndsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.ub = vasr($Vu32.uh,$Vv32.uh,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV65]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011000;
@@ -30464,7 +30610,7 @@ def V6_vasruhubsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.ub = vasr($Vu32.uh,$Vv32.uh,$Rt8):sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV65]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011000;
@@ -30476,7 +30622,7 @@ def V6_vasruwuhrndsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.uh = vasr($Vu32.uw,$Vv32.uw,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV62]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011000;
@@ -30488,7 +30634,7 @@ def V6_vasruwuhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.uh = vasr($Vu32.uw,$Vv32.uw,$Rt8):sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV65]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011000;
@@ -30500,7 +30646,7 @@ def V6_vasrw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vasr($Vu32.w,$Rt32)",
-tc_41f4b64e, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_7417e785, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -30512,7 +30658,7 @@ def V6_vasrw_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vasr($Vu32.w,$Rt32)",
-tc_c00bf9c9, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_309dbb4f, TypeCVI_VS>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001011;
@@ -30550,7 +30696,7 @@ def V6_vasrwh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.h = vasr($Vu32.w,$Vv32.w,$Rt8)",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -30562,7 +30708,7 @@ def V6_vasrwh_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vasrwh($Vu32,$Vv32,$Rt8)",
-tc_7fa8b40f, TypeMAPPING>, Requires<[HasV60]> {
+tc_16ff9ef8, TypeMAPPING>, Requires<[HasV60]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30572,7 +30718,7 @@ def V6_vasrwhrndsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.h = vasr($Vu32.w,$Vv32.w,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -30584,7 +30730,7 @@ def V6_vasrwhrndsat_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vasrwh($Vu32,$Vv32,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeMAPPING>, Requires<[HasV60]> {
+tc_16ff9ef8, TypeMAPPING>, Requires<[HasV60]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30594,7 +30740,7 @@ def V6_vasrwhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.h = vasr($Vu32.w,$Vv32.w,$Rt8):sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -30606,7 +30752,7 @@ def V6_vasrwhsat_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vasrwh($Vu32,$Vv32,$Rt8):sat",
-tc_7fa8b40f, TypeMAPPING>, Requires<[HasV60]> {
+tc_16ff9ef8, TypeMAPPING>, Requires<[HasV60]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30616,7 +30762,7 @@ def V6_vasrwuhrndsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.uh = vasr($Vu32.w,$Vv32.w,$Rt8):rnd:sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV62]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011000;
@@ -30628,7 +30774,7 @@ def V6_vasrwuhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.uh = vasr($Vu32.w,$Vv32.w,$Rt8):sat",
-tc_7fa8b40f, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_16ff9ef8, TypeCVI_VS>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -30640,7 +30786,7 @@ def V6_vasrwuhsat_alt : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vasrwuh($Vu32,$Vv32,$Rt8):sat",
-tc_7fa8b40f, TypeMAPPING>, Requires<[HasV60]> {
+tc_16ff9ef8, TypeMAPPING>, Requires<[HasV60]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -30650,7 +30796,7 @@ def V6_vasrwv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vasr($Vu32.w,$Vv32.w)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -30673,7 +30819,7 @@ def V6_vassign : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32 = $Vu32",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000011;
@@ -30695,7 +30841,7 @@ def V6_vavgb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vavg($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -30718,7 +30864,7 @@ def V6_vavgbrnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vavg($Vu32.b,$Vv32.b):rnd",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -30741,7 +30887,7 @@ def V6_vavgh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vavg($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -30764,7 +30910,7 @@ def V6_vavghrnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vavg($Vu32.h,$Vv32.h):rnd",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -30787,7 +30933,7 @@ def V6_vavgub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vavg($Vu32.ub,$Vv32.ub)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -30810,7 +30956,7 @@ def V6_vavgubrnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vavg($Vu32.ub,$Vv32.ub):rnd",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -30833,7 +30979,7 @@ def V6_vavguh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vavg($Vu32.uh,$Vv32.uh)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -30856,7 +31002,7 @@ def V6_vavguhrnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vavg($Vu32.uh,$Vv32.uh):rnd",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -30879,7 +31025,7 @@ def V6_vavguw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uw = vavg($Vu32.uw,$Vv32.uw)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -30902,7 +31048,7 @@ def V6_vavguwrnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uw = vavg($Vu32.uw,$Vv32.uw):rnd",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -30925,7 +31071,7 @@ def V6_vavgw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vavg($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100110;
@@ -30948,7 +31094,7 @@ def V6_vavgwrnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vavg($Vu32.w,$Vv32.w):rnd",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -30971,7 +31117,7 @@ def V6_vccombine : HInst<
 (outs HvxWR:$Vdd32),
 (ins PredRegs:$Ps4, HvxVR:$Vu32, HvxVR:$Vv32),
 "if ($Ps4) $Vdd32 = vcombine($Vu32,$Vv32)",
-tc_2171ebae, TypeCVI_VA_DV>, Enc_8c2412, Requires<[UseHVXV60]> {
+tc_af25efd9, TypeCVI_VA_DV>, Enc_8c2412, Requires<[UseHVXV60]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011010011;
@@ -30984,7 +31130,7 @@ def V6_vcl0h : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.uh = vcl0($Vu32.uh)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -31007,7 +31153,7 @@ def V6_vcl0w : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.uw = vcl0($Vu32.uw)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -31030,7 +31176,7 @@ def V6_vcmov : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Ps4, HvxVR:$Vu32),
 "if ($Ps4) $Vd32 = $Vu32",
-tc_b06ab583, TypeCVI_VA>, Enc_770858, Requires<[UseHVXV60]> {
+tc_3aacf4a8, TypeCVI_VA>, Enc_770858, Requires<[UseHVXV60]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001101000000000;
@@ -31043,7 +31189,7 @@ def V6_vcombine : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32 = vcombine($Vu32,$Vv32)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -31067,7 +31213,7 @@ def V6_vdd0 : HInst<
 (outs HvxWR:$Vdd32),
 (ins),
 "$Vdd32 = #0",
-tc_8a6eb39a, TypeMAPPING>, Requires<[UseHVXV65]> {
+tc_718b5c53, TypeMAPPING>, Requires<[UseHVXV65]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let isPseudo = 1;
@@ -31078,7 +31224,7 @@ def V6_vdeal : HInst<
 (outs HvxVR:$Vy32, HvxVR:$Vx32),
 (ins HvxVR:$Vy32in, HvxVR:$Vx32in, IntRegs:$Rt32),
 "vdeal($Vy32,$Vx32,$Rt32)",
-tc_5c120602, TypeCVI_VP_VS>, Enc_989021, Requires<[UseHVXV60]> {
+tc_561aaa58, TypeCVI_VP_VS>, Enc_989021, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001111;
@@ -31093,7 +31239,7 @@ def V6_vdealb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.b = vdeal($Vu32.b)",
-tc_e6299d16, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_946013d8, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000000;
@@ -31105,7 +31251,7 @@ def V6_vdealb4w : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vdeale($Vu32.b,$Vv32.b)",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -31139,7 +31285,7 @@ def V6_vdealh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vdeal($Vu32.h)",
-tc_e6299d16, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_946013d8, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000000;
@@ -31162,7 +31308,7 @@ def V6_vdealvdd : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vdd32 = vdeal($Vu32,$Vv32,$Rt8)",
-tc_4e2a5159, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV60]> {
+tc_87adc037, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
@@ -31174,7 +31320,7 @@ def V6_vdelta : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32 = vdelta($Vu32,$Vv32)",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -31186,7 +31332,7 @@ def V6_vdmpybus : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.h = vdmpy($Vu32.ub,$Rt32.b)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -31198,7 +31344,7 @@ def V6_vdmpybus_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.h += vdmpy($Vu32.ub,$Rt32.b)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -31236,7 +31382,7 @@ def V6_vdmpybus_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.h = vdmpy($Vuu32.ub,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -31248,7 +31394,7 @@ def V6_vdmpybus_dv_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.h += vdmpy($Vuu32.ub,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -31286,7 +31432,7 @@ def V6_vdmpyhb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vdmpy($Vu32.h,$Rt32.b)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -31298,7 +31444,7 @@ def V6_vdmpyhb_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vdmpy($Vu32.h,$Rt32.b)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -31336,7 +31482,7 @@ def V6_vdmpyhb_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.w = vdmpy($Vuu32.h,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -31348,7 +31494,7 @@ def V6_vdmpyhb_dv_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.w += vdmpy($Vuu32.h,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -31386,7 +31532,7 @@ def V6_vdmpyhisat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vd32.w = vdmpy($Vuu32.h,$Rt32.h):sat",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_0e41fa, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_0e41fa, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -31398,7 +31544,7 @@ def V6_vdmpyhisat_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vx32.w += vdmpy($Vuu32.h,$Rt32.h):sat",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_cc857d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_cc857d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -31436,7 +31582,7 @@ def V6_vdmpyhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vdmpy($Vu32.h,$Rt32.h):sat",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -31448,7 +31594,7 @@ def V6_vdmpyhsat_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vdmpy($Vu32.h,$Rt32.h):sat",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -31486,7 +31632,7 @@ def V6_vdmpyhsuisat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vd32.w = vdmpy($Vuu32.h,$Rt32.uh,#1):sat",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_0e41fa, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_0e41fa, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -31498,7 +31644,7 @@ def V6_vdmpyhsuisat_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vx32.w += vdmpy($Vuu32.h,$Rt32.uh,#1):sat",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_cc857d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_cc857d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -31536,7 +31682,7 @@ def V6_vdmpyhsusat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vdmpy($Vu32.h,$Rt32.uh):sat",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -31548,7 +31694,7 @@ def V6_vdmpyhsusat_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vdmpy($Vu32.h,$Rt32.uh):sat",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -31586,7 +31732,7 @@ def V6_vdmpyhvsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vdmpy($Vu32.h,$Vv32.h):sat",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -31598,7 +31744,7 @@ def V6_vdmpyhvsat_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.w += vdmpy($Vu32.h,$Vv32.h):sat",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -31636,7 +31782,7 @@ def V6_vdsaduh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.uw = vdsad($Vuu32.uh,$Rt32.uh)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -31648,7 +31794,7 @@ def V6_vdsaduh_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.uw += vdsad($Vuu32.uh,$Rt32.uh)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001011;
@@ -31686,7 +31832,7 @@ def V6_veqb : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.eq($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -31698,7 +31844,7 @@ def V6_veqb_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.eq($Vu32.b,$Vv32.b)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31709,7 +31855,7 @@ def V6_veqb_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.eq($Vu32.b,$Vv32.b)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b010000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31721,7 +31867,7 @@ def V6_veqb_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.eq($Vu32.b,$Vv32.b)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b100000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31732,7 +31878,7 @@ def V6_veqh : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.eq($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -31744,7 +31890,7 @@ def V6_veqh_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.eq($Vu32.h,$Vv32.h)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31755,7 +31901,7 @@ def V6_veqh_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.eq($Vu32.h,$Vv32.h)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b010001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31767,7 +31913,7 @@ def V6_veqh_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.eq($Vu32.h,$Vv32.h)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b100001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31778,7 +31924,7 @@ def V6_veqw : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.eq($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -31790,7 +31936,7 @@ def V6_veqw_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.eq($Vu32.w,$Vv32.w)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31801,7 +31947,7 @@ def V6_veqw_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.eq($Vu32.w,$Vv32.w)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b010010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31813,7 +31959,7 @@ def V6_veqw_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.eq($Vu32.w,$Vv32.w)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b100010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31824,7 +31970,7 @@ def V6_vgathermh : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "vtmp.h = vgather($Rt32,$Mu2,$Vv32.h).h",
-tc_66bb62ea, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
+tc_e8797b98, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
 let Inst{12-5} = 0b00001000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -31840,7 +31986,7 @@ def V6_vgathermhq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "if ($Qs4) vtmp.h = vgather($Rt32,$Mu2,$Vv32.h).h",
-tc_63e3d94c, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
+tc_05ac6f98, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
 let Inst{12-7} = 0b001010;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -31856,7 +32002,7 @@ def V6_vgathermhw : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxWR:$Vvv32),
 "vtmp.h = vgather($Rt32,$Mu2,$Vvv32.w).h",
-tc_bfe309d5, TypeCVI_GATHER>, Enc_28dcbb, Requires<[UseHVXV65]> {
+tc_05058f6f, TypeCVI_GATHER>, Enc_28dcbb, Requires<[UseHVXV65]> {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -31872,7 +32018,7 @@ def V6_vgathermhwq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxWR:$Vvv32),
 "if ($Qs4) vtmp.h = vgather($Rt32,$Mu2,$Vvv32.w).h",
-tc_98733e9d, TypeCVI_GATHER>, Enc_4e4a80, Requires<[UseHVXV65]> {
+tc_fd7610da, TypeCVI_GATHER>, Enc_4e4a80, Requires<[UseHVXV65]> {
 let Inst{12-7} = 0b001100;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -31888,7 +32034,7 @@ def V6_vgathermw : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "vtmp.w = vgather($Rt32,$Mu2,$Vv32.w).w",
-tc_66bb62ea, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
+tc_e8797b98, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -31904,7 +32050,7 @@ def V6_vgathermwq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "if ($Qs4) vtmp.w = vgather($Rt32,$Mu2,$Vv32.w).w",
-tc_63e3d94c, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
+tc_05ac6f98, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
 let Inst{12-7} = 0b001000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -31920,7 +32066,7 @@ def V6_vgtb : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.gt($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -31932,7 +32078,7 @@ def V6_vgtb_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.gt($Vu32.b,$Vv32.b)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31943,7 +32089,7 @@ def V6_vgtb_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.gt($Vu32.b,$Vv32.b)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b010100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31955,7 +32101,7 @@ def V6_vgtb_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.gt($Vu32.b,$Vv32.b)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b100100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31966,7 +32112,7 @@ def V6_vgth : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.gt($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -31978,7 +32124,7 @@ def V6_vgth_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.gt($Vu32.h,$Vv32.h)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -31989,7 +32135,7 @@ def V6_vgth_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.gt($Vu32.h,$Vv32.h)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b010101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32001,7 +32147,7 @@ def V6_vgth_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.gt($Vu32.h,$Vv32.h)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b100101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32012,7 +32158,7 @@ def V6_vgtub : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.gt($Vu32.ub,$Vv32.ub)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -32024,7 +32170,7 @@ def V6_vgtub_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.gt($Vu32.ub,$Vv32.ub)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b001000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32035,7 +32181,7 @@ def V6_vgtub_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.gt($Vu32.ub,$Vv32.ub)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b011000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32047,7 +32193,7 @@ def V6_vgtub_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.gt($Vu32.ub,$Vv32.ub)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b101000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32058,7 +32204,7 @@ def V6_vgtuh : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.gt($Vu32.uh,$Vv32.uh)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b001001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -32070,7 +32216,7 @@ def V6_vgtuh_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.gt($Vu32.uh,$Vv32.uh)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b001001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32081,7 +32227,7 @@ def V6_vgtuh_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.gt($Vu32.uh,$Vv32.uh)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b011001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32093,7 +32239,7 @@ def V6_vgtuh_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.gt($Vu32.uh,$Vv32.uh)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b101001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32104,7 +32250,7 @@ def V6_vgtuw : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.gt($Vu32.uw,$Vv32.uw)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b001010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -32116,7 +32262,7 @@ def V6_vgtuw_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.gt($Vu32.uw,$Vv32.uw)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b001010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32127,7 +32273,7 @@ def V6_vgtuw_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.gt($Vu32.uw,$Vv32.uw)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b011010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32139,7 +32285,7 @@ def V6_vgtuw_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.gt($Vu32.uw,$Vv32.uw)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b101010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32150,7 +32296,7 @@ def V6_vgtw : HInst<
 (outs HvxQR:$Qd4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qd4 = vcmp.gt($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_95441f, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111100;
@@ -32162,7 +32308,7 @@ def V6_vgtw_and : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 &= vcmp.gt($Vu32.w,$Vv32.w)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b000110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32173,7 +32319,7 @@ def V6_vgtw_or : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 |= vcmp.gt($Vu32.w,$Vv32.w)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b010110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32185,7 +32331,7 @@ def V6_vgtw_xor : HInst<
 (outs HvxQR:$Qx4),
 (ins HvxQR:$Qx4in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Qx4 ^= vcmp.gt($Vu32.w,$Vv32.w)",
-tc_a3127e12, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_eaa9f8, Requires<[UseHVXV60]> {
 let Inst{7-2} = 0b100110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100100;
@@ -32196,7 +32342,7 @@ def V6_vhist : HInst<
 (outs),
 (ins),
 "vhist",
-tc_e5053c8f, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV60]> {
+tc_1381a97c, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV60]> {
 let Inst{13-0} = 0b10000010000000;
 let Inst{31-16} = 0b0001111000000000;
 let DecoderNamespace = "EXT_mmvec";
@@ -32205,7 +32351,7 @@ def V6_vhistq : HInst<
 (outs),
 (ins HvxQR:$Qv4),
 "vhist($Qv4)",
-tc_cedf314b, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV60]> {
+tc_e3f68a46, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV60]> {
 let Inst{13-0} = 0b10000010000000;
 let Inst{21-16} = 0b000010;
 let Inst{31-24} = 0b00011110;
@@ -32215,7 +32361,7 @@ def V6_vinsertwr : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, IntRegs:$Rt32),
 "$Vx32.w = vinsert($Rt32)",
-tc_e231aa4f, TypeCVI_VX_LATE>, Enc_569cfe, Requires<[UseHVXV60]> {
+tc_ac4046bc, TypeCVI_VX_LATE>, Enc_569cfe, Requires<[UseHVXV60]> {
 let Inst{13-5} = 0b100000001;
 let Inst{31-21} = 0b00011001101;
 let hasNewValue = 1;
@@ -32227,7 +32373,7 @@ def V6_vlalignb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32 = vlalign($Vu32,$Vv32,$Rt8)",
-tc_c4b515c5, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_56e64202, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011011;
@@ -32239,7 +32385,7 @@ def V6_vlalignbi : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, u3_0Imm:$Ii),
 "$Vd32 = vlalign($Vu32,$Vv32,#$Ii)",
-tc_c4b515c5, TypeCVI_VP>, Enc_0b2e5b, Requires<[UseHVXV60]> {
+tc_56e64202, TypeCVI_VP>, Enc_0b2e5b, Requires<[UseHVXV60]> {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011110011;
 let hasNewValue = 1;
@@ -32250,7 +32396,7 @@ def V6_vlsrb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.ub = vlsr($Vu32.ub,$Rt32)",
-tc_41f4b64e, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV62]> {
+tc_7417e785, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001100;
@@ -32262,7 +32408,7 @@ def V6_vlsrh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.uh = vlsr($Vu32.uh,$Rt32)",
-tc_41f4b64e, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_7417e785, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001100;
@@ -32285,7 +32431,7 @@ def V6_vlsrhv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vlsr($Vu32.h,$Vv32.h)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -32308,7 +32454,7 @@ def V6_vlsrw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.uw = vlsr($Vu32.uw,$Rt32)",
-tc_41f4b64e, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_7417e785, TypeCVI_VS>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001100;
@@ -32331,7 +32477,7 @@ def V6_vlsrwv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vlsr($Vu32.w,$Vv32.w)",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -32354,7 +32500,7 @@ def V6_vlut4 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vd32.h = vlut4($Vu32.uh,$Rtt32.h)",
-tc_fa99dc24, TypeCVI_VX_DV>, Enc_263841, Requires<[UseHVXV65]> {
+tc_f1de44ef, TypeCVI_VX_DV>, Enc_263841, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -32366,7 +32512,7 @@ def V6_vlutvvb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.b = vlut32($Vu32.b,$Vv32.b,$Rt8)",
-tc_c4b515c5, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV60]> {
+tc_56e64202, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
@@ -32378,7 +32524,7 @@ def V6_vlutvvb_nm : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vd32.b = vlut32($Vu32.b,$Vv32.b,$Rt8):nomatch",
-tc_c4b515c5, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV62]> {
+tc_56e64202, TypeCVI_VP>, Enc_a30110, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011000;
@@ -32390,7 +32536,7 @@ def V6_vlutvvb_oracc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vx32.b |= vlut32($Vu32.b,$Vv32.b,$Rt8)",
-tc_cbf6d1dc, TypeCVI_VP_VS>, Enc_245865, Requires<[UseHVXV60]> {
+tc_9d1dc972, TypeCVI_VP_VS>, Enc_245865, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
@@ -32404,7 +32550,7 @@ def V6_vlutvvb_oracci : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32, u3_0Imm:$Ii),
 "$Vx32.b |= vlut32($Vu32.b,$Vv32.b,#$Ii)",
-tc_cbf6d1dc, TypeCVI_VP_VS>, Enc_cd4705, Requires<[UseHVXV62]> {
+tc_9d1dc972, TypeCVI_VP_VS>, Enc_cd4705, Requires<[UseHVXV62]> {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100110;
 let hasNewValue = 1;
@@ -32417,7 +32563,7 @@ def V6_vlutvvbi : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, u3_0Imm:$Ii),
 "$Vd32.b = vlut32($Vu32.b,$Vv32.b,#$Ii)",
-tc_c4b515c5, TypeCVI_VP>, Enc_0b2e5b, Requires<[UseHVXV62]> {
+tc_56e64202, TypeCVI_VP>, Enc_0b2e5b, Requires<[UseHVXV62]> {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110001;
 let hasNewValue = 1;
@@ -32428,7 +32574,7 @@ def V6_vlutvwh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vdd32.h = vlut16($Vu32.b,$Vv32.h,$Rt8)",
-tc_4e2a5159, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV60]> {
+tc_87adc037, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
@@ -32440,7 +32586,7 @@ def V6_vlutvwh_nm : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vdd32.h = vlut16($Vu32.b,$Vv32.h,$Rt8):nomatch",
-tc_4e2a5159, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV62]> {
+tc_87adc037, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-24} = 0b00011000;
@@ -32452,7 +32598,7 @@ def V6_vlutvwh_oracc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vxx32.h |= vlut16($Vu32.b,$Vv32.h,$Rt8)",
-tc_cbf6d1dc, TypeCVI_VP_VS>, Enc_7b523d, Requires<[UseHVXV60]> {
+tc_9d1dc972, TypeCVI_VP_VS>, Enc_7b523d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
@@ -32466,7 +32612,7 @@ def V6_vlutvwh_oracci : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32, u3_0Imm:$Ii),
 "$Vxx32.h |= vlut16($Vu32.b,$Vv32.h,#$Ii)",
-tc_cbf6d1dc, TypeCVI_VP_VS>, Enc_1178da, Requires<[UseHVXV62]> {
+tc_9d1dc972, TypeCVI_VP_VS>, Enc_1178da, Requires<[UseHVXV62]> {
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100111;
 let hasNewValue = 1;
@@ -32479,7 +32625,7 @@ def V6_vlutvwhi : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, u3_0Imm:$Ii),
 "$Vdd32.h = vlut16($Vu32.b,$Vv32.h,#$Ii)",
-tc_4e2a5159, TypeCVI_VP_VS>, Enc_4b39e4, Requires<[UseHVXV62]> {
+tc_87adc037, TypeCVI_VP_VS>, Enc_4b39e4, Requires<[UseHVXV62]> {
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110011;
 let hasNewValue = 1;
@@ -32490,7 +32636,7 @@ def V6_vmaxb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vmax($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -32513,7 +32659,7 @@ def V6_vmaxh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vmax($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -32536,7 +32682,7 @@ def V6_vmaxub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vmax($Vu32.ub,$Vv32.ub)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -32559,7 +32705,7 @@ def V6_vmaxuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vmax($Vu32.uh,$Vv32.uh)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -32582,7 +32728,7 @@ def V6_vmaxw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmax($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -32605,7 +32751,7 @@ def V6_vminb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vmin($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -32628,7 +32774,7 @@ def V6_vminh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vmin($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -32651,7 +32797,7 @@ def V6_vminub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vmin($Vu32.ub,$Vv32.ub)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -32674,7 +32820,7 @@ def V6_vminuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vmin($Vu32.uh,$Vv32.uh)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -32697,7 +32843,7 @@ def V6_vminw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmin($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111000;
@@ -32720,7 +32866,7 @@ def V6_vmpabus : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.h = vmpa($Vuu32.ub,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -32732,7 +32878,7 @@ def V6_vmpabus_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.h += vmpa($Vuu32.ub,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -32770,7 +32916,7 @@ def V6_vmpabusv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.h = vmpa($Vuu32.ub,$Vvv32.b)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -32793,7 +32939,7 @@ def V6_vmpabuu : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.h = vmpa($Vuu32.ub,$Rt32.ub)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV65]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -32805,7 +32951,7 @@ def V6_vmpabuu_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.h += vmpa($Vuu32.ub,$Rt32.ub)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV65]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001101;
@@ -32843,7 +32989,7 @@ def V6_vmpabuuv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.h = vmpa($Vuu32.ub,$Vvv32.ub)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -32866,7 +33012,7 @@ def V6_vmpahb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.w = vmpa($Vuu32.h,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -32878,7 +33024,7 @@ def V6_vmpahb_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.w += vmpa($Vuu32.h,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -32916,7 +33062,7 @@ def V6_vmpahhsat : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vx32.h = vmpa($Vx32in.h,$Vu32.h,$Rtt32.h):sat",
-tc_7474003e, TypeCVI_VX_DV>, Enc_310ba1, Requires<[UseHVXV65]> {
+tc_90bcc1db, TypeCVI_VX_DV>, Enc_310ba1, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -32929,7 +33075,7 @@ def V6_vmpauhb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.w = vmpa($Vuu32.uh,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV62]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001100;
@@ -32941,7 +33087,7 @@ def V6_vmpauhb_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.w += vmpa($Vuu32.uh,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV62]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -32979,7 +33125,7 @@ def V6_vmpauhuhsat : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vx32.h = vmpa($Vx32in.h,$Vu32.uh,$Rtt32.uh):sat",
-tc_7474003e, TypeCVI_VX_DV>, Enc_310ba1, Requires<[UseHVXV65]> {
+tc_90bcc1db, TypeCVI_VX_DV>, Enc_310ba1, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -32992,7 +33138,7 @@ def V6_vmpsuhuhsat : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vx32.h = vmps($Vx32in.h,$Vu32.uh,$Rtt32.uh):sat",
-tc_7474003e, TypeCVI_VX_DV>, Enc_310ba1, Requires<[UseHVXV65]> {
+tc_90bcc1db, TypeCVI_VX_DV>, Enc_310ba1, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -33005,7 +33151,7 @@ def V6_vmpybus : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vdd32.h = vmpy($Vu32.ub,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001001;
@@ -33017,7 +33163,7 @@ def V6_vmpybus_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vxx32.h += vmpy($Vu32.ub,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001001;
@@ -33055,7 +33201,7 @@ def V6_vmpybusv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.h = vmpy($Vu32.ub,$Vv32.b)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -33067,7 +33213,7 @@ def V6_vmpybusv_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.h += vmpy($Vu32.ub,$Vv32.b)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -33105,7 +33251,7 @@ def V6_vmpybv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.h = vmpy($Vu32.b,$Vv32.b)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -33117,7 +33263,7 @@ def V6_vmpybv_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.h += vmpy($Vu32.b,$Vv32.b)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -33155,7 +33301,7 @@ def V6_vmpyewuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmpye($Vu32.w,$Vv32.uh)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -33167,7 +33313,7 @@ def V6_vmpyewuh_64 : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32 = vmpye($Vu32.w,$Vv32.uh)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV62]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110101;
@@ -33190,7 +33336,7 @@ def V6_vmpyh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vdd32.w = vmpy($Vu32.h,$Rt32.h)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001010;
@@ -33202,7 +33348,7 @@ def V6_vmpyh_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vxx32.w += vmpy($Vu32.h,$Rt32.h)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV65]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001101;
@@ -33240,7 +33386,7 @@ def V6_vmpyhsat_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vxx32.w += vmpy($Vu32.h,$Rt32.h):sat",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001010;
@@ -33267,7 +33413,7 @@ def V6_vmpyhsrs : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.h = vmpy($Vu32.h,$Rt32.h):<<1:rnd:sat",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001010;
@@ -33290,7 +33436,7 @@ def V6_vmpyhss : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.h = vmpy($Vu32.h,$Rt32.h):<<1:sat",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001010;
@@ -33313,7 +33459,7 @@ def V6_vmpyhus : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.w = vmpy($Vu32.h,$Vv32.uh)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -33325,7 +33471,7 @@ def V6_vmpyhus_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.w += vmpy($Vu32.h,$Vv32.uh)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -33363,7 +33509,7 @@ def V6_vmpyhv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.w = vmpy($Vu32.h,$Vv32.h)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -33375,7 +33521,7 @@ def V6_vmpyhv_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.w += vmpy($Vu32.h,$Vv32.h)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -33413,7 +33559,7 @@ def V6_vmpyhvsrs : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vmpy($Vu32.h,$Vv32.h):<<1:rnd:sat",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -33436,7 +33582,7 @@ def V6_vmpyieoh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmpyieo($Vu32.h,$Vv32.h)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -33448,7 +33594,7 @@ def V6_vmpyiewh_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.w += vmpyie($Vu32.w,$Vv32.h)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100010;
@@ -33475,7 +33621,7 @@ def V6_vmpyiewuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmpyie($Vu32.w,$Vv32.uh)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -33487,7 +33633,7 @@ def V6_vmpyiewuh_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.w += vmpyie($Vu32.w,$Vv32.uh)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -33525,7 +33671,7 @@ def V6_vmpyih : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vmpyi($Vu32.h,$Vv32.h)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -33537,7 +33683,7 @@ def V6_vmpyih_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.h += vmpyi($Vu32.h,$Vv32.h)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -33575,7 +33721,7 @@ def V6_vmpyihb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.h = vmpyi($Vu32.h,$Rt32.b)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -33587,7 +33733,7 @@ def V6_vmpyihb_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.h += vmpyi($Vu32.h,$Rt32.b)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001011;
@@ -33625,7 +33771,7 @@ def V6_vmpyiowh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmpyio($Vu32.w,$Vv32.h)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -33648,7 +33794,7 @@ def V6_vmpyiwb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vmpyi($Vu32.w,$Rt32.b)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001101;
@@ -33660,7 +33806,7 @@ def V6_vmpyiwb_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vmpyi($Vu32.w,$Rt32.b)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001010;
@@ -33698,7 +33844,7 @@ def V6_vmpyiwh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vmpyi($Vu32.w,$Rt32.h)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001100;
@@ -33710,7 +33856,7 @@ def V6_vmpyiwh_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vmpyi($Vu32.w,$Rt32.h)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001010;
@@ -33748,7 +33894,7 @@ def V6_vmpyiwub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vmpyi($Vu32.w,$Rt32.ub)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV62]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001100;
@@ -33760,7 +33906,7 @@ def V6_vmpyiwub_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vmpyi($Vu32.w,$Rt32.ub)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV62]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -33798,7 +33944,7 @@ def V6_vmpyowh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmpyo($Vu32.w,$Vv32.h):<<1:sat",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -33810,7 +33956,7 @@ def V6_vmpyowh_64_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32 += vmpyo($Vu32.w,$Vv32.h)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -33835,7 +33981,7 @@ def V6_vmpyowh_rnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vmpyo($Vu32.w,$Vv32.h):<<1:rnd:sat",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -33858,7 +34004,7 @@ def V6_vmpyowh_rnd_sacc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.w += vmpyo($Vu32.w,$Vv32.h):<<1:rnd:sat:shift",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -33884,7 +34030,7 @@ def V6_vmpyowh_sacc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.w += vmpyo($Vu32.w,$Vv32.h):<<1:sat:shift",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -33910,7 +34056,7 @@ def V6_vmpyub : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vdd32.uh = vmpy($Vu32.ub,$Rt32.ub)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001110;
@@ -33922,7 +34068,7 @@ def V6_vmpyub_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vxx32.uh += vmpy($Vu32.ub,$Rt32.ub)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -33960,7 +34106,7 @@ def V6_vmpyubv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.uh = vmpy($Vu32.ub,$Vv32.ub)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -33972,7 +34118,7 @@ def V6_vmpyubv_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.uh += vmpy($Vu32.ub,$Vv32.ub)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -34010,7 +34156,7 @@ def V6_vmpyuh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vdd32.uw = vmpy($Vu32.uh,$Rt32.uh)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_01d3d0, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001010;
@@ -34022,7 +34168,7 @@ def V6_vmpyuh_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vxx32.uw += vmpy($Vu32.uh,$Rt32.uh)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_5e8512, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001010;
@@ -34060,7 +34206,7 @@ def V6_vmpyuhe : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.uw = vmpye($Vu32.uh,$Rt32.uh)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV65]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -34072,7 +34218,7 @@ def V6_vmpyuhe_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.uw += vmpye($Vu32.uh,$Rt32.uh)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV65]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001100;
@@ -34086,7 +34232,7 @@ def V6_vmpyuhv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.uw = vmpy($Vu32.uh,$Vv32.uh)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -34098,7 +34244,7 @@ def V6_vmpyuhv_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vxx32.uw += vmpy($Vu32.uh,$Vv32.uh)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_3fc427, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100001;
@@ -34136,7 +34282,7 @@ def V6_vmux : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qt4, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32 = vmux($Qt4,$Vu32,$Vv32)",
-tc_a3127e12, TypeCVI_VA>, Enc_31db33, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_31db33, Requires<[UseHVXV60]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011110111;
@@ -34148,7 +34294,7 @@ def V6_vnavgb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vnavg($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -34171,7 +34317,7 @@ def V6_vnavgh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vnavg($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -34194,7 +34340,7 @@ def V6_vnavgub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vnavg($Vu32.ub,$Vv32.ub)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -34217,7 +34363,7 @@ def V6_vnavgw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vnavg($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100111;
@@ -34240,7 +34386,7 @@ def V6_vnccombine : HInst<
 (outs HvxWR:$Vdd32),
 (ins PredRegs:$Ps4, HvxVR:$Vu32, HvxVR:$Vv32),
 "if (!$Ps4) $Vdd32 = vcombine($Vu32,$Vv32)",
-tc_2171ebae, TypeCVI_VA_DV>, Enc_8c2412, Requires<[UseHVXV60]> {
+tc_af25efd9, TypeCVI_VA_DV>, Enc_8c2412, Requires<[UseHVXV60]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011010010;
@@ -34254,7 +34400,7 @@ def V6_vncmov : HInst<
 (outs HvxVR:$Vd32),
 (ins PredRegs:$Ps4, HvxVR:$Vu32),
 "if (!$Ps4) $Vd32 = $Vu32",
-tc_b06ab583, TypeCVI_VA>, Enc_770858, Requires<[UseHVXV60]> {
+tc_3aacf4a8, TypeCVI_VA>, Enc_770858, Requires<[UseHVXV60]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001101000100000;
@@ -34268,7 +34414,7 @@ def V6_vnormamth : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vnormamt($Vu32.h)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000011;
@@ -34291,7 +34437,7 @@ def V6_vnormamtw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vnormamt($Vu32.w)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000011;
@@ -34314,7 +34460,7 @@ def V6_vnot : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32 = vnot($Vu32)",
-tc_71337255, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_0ec46cf9, TypeCVI_VA>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000000;
@@ -34326,7 +34472,7 @@ def V6_vor : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32 = vor($Vu32,$Vv32)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -34338,7 +34484,7 @@ def V6_vpackeb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vpacke($Vu32.h,$Vv32.h)",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -34361,7 +34507,7 @@ def V6_vpackeh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vpacke($Vu32.w,$Vv32.w)",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -34384,7 +34530,7 @@ def V6_vpackhb_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vpack($Vu32.h,$Vv32.h):sat",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -34407,7 +34553,7 @@ def V6_vpackhub_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vpack($Vu32.h,$Vv32.h):sat",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -34430,7 +34576,7 @@ def V6_vpackob : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vpacko($Vu32.h,$Vv32.h)",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -34453,7 +34599,7 @@ def V6_vpackoh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vpacko($Vu32.w,$Vv32.w)",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -34476,7 +34622,7 @@ def V6_vpackwh_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vpack($Vu32.w,$Vv32.w):sat",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -34499,7 +34645,7 @@ def V6_vpackwuh_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vpack($Vu32.w,$Vv32.w):sat",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -34522,7 +34668,7 @@ def V6_vpopcounth : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vpopcount($Vu32.h)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -34545,7 +34691,7 @@ def V6_vprefixqb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qv4),
 "$Vd32.b = prefixsum($Qv4)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_6f83e7, Requires<[UseHVXV65]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_6f83e7, Requires<[UseHVXV65]> {
 let Inst{13-5} = 0b100000010;
 let Inst{21-16} = 0b000011;
 let Inst{31-24} = 0b00011110;
@@ -34557,7 +34703,7 @@ def V6_vprefixqh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qv4),
 "$Vd32.h = prefixsum($Qv4)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_6f83e7, Requires<[UseHVXV65]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_6f83e7, Requires<[UseHVXV65]> {
 let Inst{13-5} = 0b100001010;
 let Inst{21-16} = 0b000011;
 let Inst{31-24} = 0b00011110;
@@ -34569,7 +34715,7 @@ def V6_vprefixqw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxQR:$Qv4),
 "$Vd32.w = prefixsum($Qv4)",
-tc_d2cb81ea, TypeCVI_VS>, Enc_6f83e7, Requires<[UseHVXV65]> {
+tc_51d0ecc3, TypeCVI_VS>, Enc_6f83e7, Requires<[UseHVXV65]> {
 let Inst{13-5} = 0b100010010;
 let Inst{21-16} = 0b000011;
 let Inst{31-24} = 0b00011110;
@@ -34581,7 +34727,7 @@ def V6_vrdelta : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32 = vrdelta($Vu32,$Vv32)",
-tc_f3fc3f83, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_46d6c3e0, TypeCVI_VP>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -34593,7 +34739,7 @@ def V6_vrmpybub_rtt : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vdd32.w = vrmpy($Vu32.b,$Rtt32.ub)",
-tc_a807365d, TypeCVI_VS_VX>, Enc_cb785b, Requires<[UseHVXV65]> {
+tc_cd94bfe0, TypeCVI_VS_VX>, Enc_cb785b, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001110;
@@ -34605,7 +34751,7 @@ def V6_vrmpybub_rtt_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vxx32.w += vrmpy($Vu32.b,$Rtt32.ub)",
-tc_ee927c0e, TypeCVI_VS_VX>, Enc_ad9bef, Requires<[UseHVXV65]> {
+tc_15fdf750, TypeCVI_VS_VX>, Enc_ad9bef, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001101;
@@ -34643,7 +34789,7 @@ def V6_vrmpybus : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.w = vrmpy($Vu32.ub,$Rt32.b)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -34655,7 +34801,7 @@ def V6_vrmpybus_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.w += vrmpy($Vu32.ub,$Rt32.b)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -34693,7 +34839,7 @@ def V6_vrmpybusi : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32, u1_0Imm:$Ii),
 "$Vdd32.w = vrmpy($Vuu32.ub,$Rt32.b,#$Ii)",
-tc_7e9f581b, TypeCVI_VX_DV>, Enc_2f2f04, Requires<[UseHVXV60]> {
+tc_1ad8a370, TypeCVI_VX_DV>, Enc_2f2f04, Requires<[UseHVXV60]> {
 let Inst{7-6} = 0b10;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001010;
@@ -34705,7 +34851,7 @@ def V6_vrmpybusi_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32, u1_0Imm:$Ii),
 "$Vxx32.w += vrmpy($Vuu32.ub,$Rt32.b,#$Ii)",
-tc_41f99e1c, TypeCVI_VX_DV>, Enc_d483b9, Requires<[UseHVXV60]> {
+tc_e675c45a, TypeCVI_VX_DV>, Enc_d483b9, Requires<[UseHVXV60]> {
 let Inst{7-6} = 0b10;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001010;
@@ -34743,7 +34889,7 @@ def V6_vrmpybusv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vrmpy($Vu32.ub,$Vv32.b)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -34755,7 +34901,7 @@ def V6_vrmpybusv_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.w += vrmpy($Vu32.ub,$Vv32.b)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -34793,7 +34939,7 @@ def V6_vrmpybv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vrmpy($Vu32.b,$Vv32.b)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -34805,7 +34951,7 @@ def V6_vrmpybv_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.w += vrmpy($Vu32.b,$Vv32.b)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -34843,7 +34989,7 @@ def V6_vrmpyub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32.uw = vrmpy($Vu32.ub,$Rt32.ub)",
-tc_69b6dd20, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_649072c2, TypeCVI_VX>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -34855,7 +35001,7 @@ def V6_vrmpyub_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vx32.uw += vrmpy($Vu32.ub,$Rt32.ub)",
-tc_d725e5b0, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
+tc_b091f1c6, TypeCVI_VX>, Enc_5138b3, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -34893,7 +35039,7 @@ def V6_vrmpyub_rtt : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vdd32.uw = vrmpy($Vu32.ub,$Rtt32.ub)",
-tc_a807365d, TypeCVI_VS_VX>, Enc_cb785b, Requires<[UseHVXV65]> {
+tc_cd94bfe0, TypeCVI_VS_VX>, Enc_cb785b, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001110;
@@ -34905,7 +35051,7 @@ def V6_vrmpyub_rtt_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32, DoubleRegs:$Rtt32),
 "$Vxx32.uw += vrmpy($Vu32.ub,$Rtt32.ub)",
-tc_ee927c0e, TypeCVI_VS_VX>, Enc_ad9bef, Requires<[UseHVXV65]> {
+tc_15fdf750, TypeCVI_VS_VX>, Enc_ad9bef, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001101;
@@ -34943,7 +35089,7 @@ def V6_vrmpyubi : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32, u1_0Imm:$Ii),
 "$Vdd32.uw = vrmpy($Vuu32.ub,$Rt32.ub,#$Ii)",
-tc_7e9f581b, TypeCVI_VX_DV>, Enc_2f2f04, Requires<[UseHVXV60]> {
+tc_1ad8a370, TypeCVI_VX_DV>, Enc_2f2f04, Requires<[UseHVXV60]> {
 let Inst{7-6} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001101;
@@ -34955,7 +35101,7 @@ def V6_vrmpyubi_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32, u1_0Imm:$Ii),
 "$Vxx32.uw += vrmpy($Vuu32.ub,$Rt32.ub,#$Ii)",
-tc_41f99e1c, TypeCVI_VX_DV>, Enc_d483b9, Requires<[UseHVXV60]> {
+tc_e675c45a, TypeCVI_VX_DV>, Enc_d483b9, Requires<[UseHVXV60]> {
 let Inst{7-6} = 0b11;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001011;
@@ -34993,7 +35139,7 @@ def V6_vrmpyubv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uw = vrmpy($Vu32.ub,$Vv32.ub)",
-tc_908a4c8c, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_c127de3a, TypeCVI_VX>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100000;
@@ -35005,7 +35151,7 @@ def V6_vrmpyubv_acc : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxVR:$Vx32in, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vx32.uw += vrmpy($Vu32.ub,$Vv32.ub)",
-tc_e172d86a, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
+tc_08a4f1b6, TypeCVI_VX_DV>, Enc_a7341a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100000;
@@ -35039,11 +35185,276 @@ let isPseudo = 1;
 let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
+def V6_vrmpyzbb_rt : HInst<
+(outs HvxVQR:$Vdddd32),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vdddd32.w = vrmpyz($Vu32.b,$Rt8.b)",
+tc_61bf7c03, TypeCVI_4SLOT_MPY>, Enc_1bd127, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrmpyzbb_rt_acc : HInst<
+(outs HvxVQR:$Vyyyy32),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vyyyy32.w += vrmpyz($Vu32.b,$Rt8.b)",
+tc_933f2b39, TypeCVI_4SLOT_MPY>, Enc_d7bc34, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in";
+}
+def V6_vrmpyzbb_rx : HInst<
+(outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
+(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vdddd32.w = vrmpyz($Vu32.b,$Rx8.b++)",
+tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx8 = $Rx8in";
+}
+def V6_vrmpyzbb_rx_acc : HInst<
+(outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vyyyy32.w += vrmpyz($Vu32.b,$Rx8.b++)",
+tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in, $Rx8 = $Rx8in";
+}
+def V6_vrmpyzbub_rt : HInst<
+(outs HvxVQR:$Vdddd32),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vdddd32.w = vrmpyz($Vu32.b,$Rt8.ub)",
+tc_61bf7c03, TypeCVI_4SLOT_MPY>, Enc_1bd127, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrmpyzbub_rt_acc : HInst<
+(outs HvxVQR:$Vyyyy32),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vyyyy32.w += vrmpyz($Vu32.b,$Rt8.ub)",
+tc_933f2b39, TypeCVI_4SLOT_MPY>, Enc_d7bc34, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in";
+}
+def V6_vrmpyzbub_rx : HInst<
+(outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
+(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vdddd32.w = vrmpyz($Vu32.b,$Rx8.ub++)",
+tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx8 = $Rx8in";
+}
+def V6_vrmpyzbub_rx_acc : HInst<
+(outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vyyyy32.w += vrmpyz($Vu32.b,$Rx8.ub++)",
+tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in, $Rx8 = $Rx8in";
+}
+def V6_vrmpyzcb_rt : HInst<
+(outs HvxVQR:$Vdddd32),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vdddd32.w = vr16mpyz($Vu32.c,$Rt8.b)",
+tc_61bf7c03, TypeCVI_4SLOT_MPY>, Enc_1bd127, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrmpyzcb_rt_acc : HInst<
+(outs HvxVQR:$Vyyyy32),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vyyyy32.w += vr16mpyz($Vu32.c,$Rt8.b)",
+tc_933f2b39, TypeCVI_4SLOT_MPY>, Enc_d7bc34, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in";
+}
+def V6_vrmpyzcb_rx : HInst<
+(outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
+(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vdddd32.w = vr16mpyz($Vu32.c,$Rx8.b++)",
+tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx8 = $Rx8in";
+}
+def V6_vrmpyzcb_rx_acc : HInst<
+(outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vyyyy32.w += vr16mpyz($Vu32.c,$Rx8.b++)",
+tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b011;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in, $Rx8 = $Rx8in";
+}
+def V6_vrmpyzcbs_rt : HInst<
+(outs HvxVQR:$Vdddd32),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vdddd32.w = vr16mpyzs($Vu32.c,$Rt8.b)",
+tc_61bf7c03, TypeCVI_4SLOT_MPY>, Enc_1bd127, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrmpyzcbs_rt_acc : HInst<
+(outs HvxVQR:$Vyyyy32),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vyyyy32.w += vr16mpyzs($Vu32.c,$Rt8.b)",
+tc_933f2b39, TypeCVI_4SLOT_MPY>, Enc_d7bc34, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in";
+}
+def V6_vrmpyzcbs_rx : HInst<
+(outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
+(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vdddd32.w = vr16mpyzs($Vu32.c,$Rx8.b++)",
+tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx8 = $Rx8in";
+}
+def V6_vrmpyzcbs_rx_acc : HInst<
+(outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vyyyy32.w += vr16mpyzs($Vu32.c,$Rx8.b++)",
+tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b001;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in, $Rx8 = $Rx8in";
+}
+def V6_vrmpyznb_rt : HInst<
+(outs HvxVQR:$Vdddd32),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vdddd32.w = vr8mpyz($Vu32.n,$Rt8.b)",
+tc_61bf7c03, TypeCVI_4SLOT_MPY>, Enc_1bd127, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrmpyznb_rt_acc : HInst<
+(outs HvxVQR:$Vyyyy32),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rt8),
+"$Vyyyy32.w += vr8mpyz($Vu32.n,$Rt8.b)",
+tc_933f2b39, TypeCVI_4SLOT_MPY>, Enc_d7bc34, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in";
+}
+def V6_vrmpyznb_rx : HInst<
+(outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
+(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vdddd32.w = vr8mpyz($Vu32.n,$Rx8.b++)",
+tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-19} = 0b0001100111110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx8 = $Rx8in";
+}
+def V6_vrmpyznb_rx_acc : HInst<
+(outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+"$Vyyyy32.w += vr8mpyz($Vu32.n,$Rx8.b++)",
+tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-5} = 0b010;
+let Inst{13-13} = 0b1;
+let Inst{31-19} = 0b0001100111011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vyyyy32 = $Vyyyy32in, $Rx8 = $Rx8in";
+}
 def V6_vror : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, IntRegs:$Rt32),
 "$Vd32 = vror($Vu32,$Rt32)",
-tc_bf142ae2, TypeCVI_VP>, Enc_b087ac, Requires<[UseHVXV60]> {
+tc_6e7fa133, TypeCVI_VP>, Enc_b087ac, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001011;
@@ -35051,11 +35462,34 @@ let hasNewValue = 1;
 let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 }
+def V6_vrotr : HInst<
+(outs HvxVR:$Vd32),
+(ins HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vd32.uw = vrotr($Vu32.uw,$Vv32.uw)",
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV66]> {
+let Inst{7-5} = 0b111;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011010100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vrotr_alt : HInst<
+(outs HvxVR:$Vd32),
+(ins HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vd32 = vrotr($Vu32,$Vv32)",
+PSEUDO, TypeMAPPING>, Requires<[UseHVXV66]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
 def V6_vroundhb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vround($Vu32.h,$Vv32.h):sat",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -35078,7 +35512,7 @@ def V6_vroundhub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vround($Vu32.h,$Vv32.h):sat",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -35101,7 +35535,7 @@ def V6_vrounduhub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vround($Vu32.uh,$Vv32.uh):sat",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -35124,7 +35558,7 @@ def V6_vrounduwuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vround($Vu32.uw,$Vv32.uw):sat",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -35147,7 +35581,7 @@ def V6_vroundwh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vround($Vu32.w,$Vv32.w):sat",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -35170,7 +35604,7 @@ def V6_vroundwuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vround($Vu32.w,$Vv32.w):sat",
-tc_45453b98, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -35193,7 +35627,7 @@ def V6_vrsadubi : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32, u1_0Imm:$Ii),
 "$Vdd32.uw = vrsad($Vuu32.ub,$Rt32.ub,#$Ii)",
-tc_7e9f581b, TypeCVI_VX_DV>, Enc_2f2f04, Requires<[UseHVXV60]> {
+tc_1ad8a370, TypeCVI_VX_DV>, Enc_2f2f04, Requires<[UseHVXV60]> {
 let Inst{7-6} = 0b11;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001010;
@@ -35205,7 +35639,7 @@ def V6_vrsadubi_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32, u1_0Imm:$Ii),
 "$Vxx32.uw += vrsad($Vuu32.ub,$Rt32.ub,#$Ii)",
-tc_41f99e1c, TypeCVI_VX_DV>, Enc_d483b9, Requires<[UseHVXV60]> {
+tc_e675c45a, TypeCVI_VX_DV>, Enc_d483b9, Requires<[UseHVXV60]> {
 let Inst{7-6} = 0b11;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001010;
@@ -35239,11 +35673,23 @@ let isPseudo = 1;
 let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
+def V6_vsatdw : HInst<
+(outs HvxVR:$Vd32),
+(ins HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vd32.w = vsatdw($Vu32.w,$Vv32.w)",
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV66]> {
+let Inst{7-5} = 0b111;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011101100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
 def V6_vsathub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vsat($Vu32.h,$Vv32.h)",
-tc_9b9642a1, TypeCVI_VINLANESAT>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_8772086c, TypeCVI_VINLANESAT>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -35266,7 +35712,7 @@ def V6_vsatuwuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vsat($Vu32.uw,$Vv32.uw)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -35289,7 +35735,7 @@ def V6_vsatwh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vsat($Vu32.w,$Vv32.w)",
-tc_9b9642a1, TypeCVI_VINLANESAT>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_8772086c, TypeCVI_VINLANESAT>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -35312,7 +35758,7 @@ def V6_vsb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.h = vsxt($Vu32.b)",
-tc_644584f8, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_b4416217, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -35335,7 +35781,7 @@ def V6_vscattermh : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32, HvxVR:$Vw32),
 "vscatter($Rt32,$Mu2,$Vv32.h).h = $Vw32",
-tc_4f190ba3, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
+tc_9f363d21, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b001;
 let Inst{31-21} = 0b00101111001;
 let accessSize = HalfWordAccess;
@@ -35346,7 +35792,7 @@ def V6_vscattermh_add : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32, HvxVR:$Vw32),
 "vscatter($Rt32,$Mu2,$Vv32.h).h += $Vw32",
-tc_4f190ba3, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
+tc_9f363d21, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b101;
 let Inst{31-21} = 0b00101111001;
 let accessSize = HalfWordAccess;
@@ -35377,7 +35823,7 @@ def V6_vscattermhq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32, HvxVR:$Vw32),
 "if ($Qs4) vscatter($Rt32,$Mu2,$Vv32.h).h = $Vw32",
-tc_df54ad52, TypeCVI_SCATTER>, Enc_9be1de, Requires<[UseHVXV65]> {
+tc_8e420e4d, TypeCVI_SCATTER>, Enc_9be1de, Requires<[UseHVXV65]> {
 let Inst{7-7} = 0b1;
 let Inst{31-21} = 0b00101111100;
 let accessSize = HalfWordAccess;
@@ -35397,7 +35843,7 @@ def V6_vscattermhw : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxWR:$Vvv32, HvxVR:$Vw32),
 "vscatter($Rt32,$Mu2,$Vvv32.w).h = $Vw32",
-tc_ec58f88a, TypeCVI_SCATTER_DV>, Enc_a641d0, Requires<[UseHVXV65]> {
+tc_7273323b, TypeCVI_SCATTER_DV>, Enc_a641d0, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b010;
 let Inst{31-21} = 0b00101111001;
 let accessSize = HalfWordAccess;
@@ -35408,7 +35854,7 @@ def V6_vscattermhw_add : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxWR:$Vvv32, HvxVR:$Vw32),
 "vscatter($Rt32,$Mu2,$Vvv32.w).h += $Vw32",
-tc_ec58f88a, TypeCVI_SCATTER_DV>, Enc_a641d0, Requires<[UseHVXV65]> {
+tc_7273323b, TypeCVI_SCATTER_DV>, Enc_a641d0, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b110;
 let Inst{31-21} = 0b00101111001;
 let accessSize = HalfWordAccess;
@@ -35420,7 +35866,7 @@ def V6_vscattermhwq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxWR:$Vvv32, HvxVR:$Vw32),
 "if ($Qs4) vscatter($Rt32,$Mu2,$Vvv32.w).h = $Vw32",
-tc_94f43c04, TypeCVI_SCATTER_DV>, Enc_3d6d37, Requires<[UseHVXV65]> {
+tc_58d21193, TypeCVI_SCATTER_DV>, Enc_3d6d37, Requires<[UseHVXV65]> {
 let Inst{7-7} = 0b0;
 let Inst{31-21} = 0b00101111101;
 let accessSize = HalfWordAccess;
@@ -35431,7 +35877,7 @@ def V6_vscattermw : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32, HvxVR:$Vw32),
 "vscatter($Rt32,$Mu2,$Vv32.w).w = $Vw32",
-tc_4f190ba3, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
+tc_9f363d21, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b000;
 let Inst{31-21} = 0b00101111001;
 let accessSize = WordAccess;
@@ -35442,7 +35888,7 @@ def V6_vscattermw_add : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32, HvxVR:$Vw32),
 "vscatter($Rt32,$Mu2,$Vv32.w).w += $Vw32",
-tc_4f190ba3, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
+tc_9f363d21, TypeCVI_SCATTER>, Enc_16c48b, Requires<[UseHVXV65]> {
 let Inst{7-5} = 0b100;
 let Inst{31-21} = 0b00101111001;
 let accessSize = WordAccess;
@@ -35501,7 +35947,7 @@ def V6_vscattermwq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32, HvxVR:$Vw32),
 "if ($Qs4) vscatter($Rt32,$Mu2,$Vv32.w).w = $Vw32",
-tc_df54ad52, TypeCVI_SCATTER>, Enc_9be1de, Requires<[UseHVXV65]> {
+tc_8e420e4d, TypeCVI_SCATTER>, Enc_9be1de, Requires<[UseHVXV65]> {
 let Inst{7-7} = 0b0;
 let Inst{31-21} = 0b00101111100;
 let accessSize = WordAccess;
@@ -35521,7 +35967,7 @@ def V6_vsh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.w = vsxt($Vu32.h)",
-tc_644584f8, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_b4416217, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -35544,7 +35990,7 @@ def V6_vshufeh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vshuffe($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -35567,7 +36013,7 @@ def V6_vshuff : HInst<
 (outs HvxVR:$Vy32, HvxVR:$Vx32),
 (ins HvxVR:$Vy32in, HvxVR:$Vx32in, IntRegs:$Rt32),
 "vshuff($Vy32,$Vx32,$Rt32)",
-tc_5c120602, TypeCVI_VP_VS>, Enc_989021, Requires<[UseHVXV60]> {
+tc_561aaa58, TypeCVI_VP_VS>, Enc_989021, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001111;
@@ -35582,7 +36028,7 @@ def V6_vshuffb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.b = vshuff($Vu32.b)",
-tc_e6299d16, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_946013d8, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -35605,7 +36051,7 @@ def V6_vshuffeb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vshuffe($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -35628,7 +36074,7 @@ def V6_vshuffh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vshuff($Vu32.h)",
-tc_e6299d16, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_946013d8, TypeCVI_VP>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000001;
@@ -35651,7 +36097,7 @@ def V6_vshuffob : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vshuffo($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -35674,7 +36120,7 @@ def V6_vshuffvdd : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8),
 "$Vdd32 = vshuff($Vu32,$Vv32,$Rt8)",
-tc_4e2a5159, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV60]> {
+tc_87adc037, TypeCVI_VP_VS>, Enc_24a7dc, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-24} = 0b00011011;
@@ -35686,7 +36132,7 @@ def V6_vshufoeb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.b = vshuffoe($Vu32.b,$Vv32.b)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -35709,7 +36155,7 @@ def V6_vshufoeh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.h = vshuffoe($Vu32.h,$Vv32.h)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -35732,7 +36178,7 @@ def V6_vshufoh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vshuffo($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111010;
@@ -35755,7 +36201,7 @@ def V6_vsubb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vsub($Vu32.b,$Vv32.b)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -35778,7 +36224,7 @@ def V6_vsubb_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.b = vsub($Vuu32.b,$Vvv32.b)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -35801,7 +36247,7 @@ def V6_vsubbnq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if (!$Qv4) $Vx32.b -= $Vu32.b",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000010;
@@ -35827,7 +36273,7 @@ def V6_vsubbq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if ($Qv4) $Vx32.b -= $Vu32.b",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -35853,7 +36299,7 @@ def V6_vsubbsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vsub($Vu32.b,$Vv32.b):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111001;
@@ -35876,7 +36322,7 @@ def V6_vsubbsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.b = vsub($Vuu32.b,$Vvv32.b):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110101;
@@ -35899,7 +36345,7 @@ def V6_vsubcarry : HInst<
 (outs HvxVR:$Vd32, HvxQR:$Qx4),
 (ins HvxVR:$Vu32, HvxVR:$Vv32, HvxQR:$Qx4in),
 "$Vd32.w = vsub($Vu32.w,$Vv32.w,$Qx4):carry",
-tc_5a9fc4ec, TypeCVI_VA>, Enc_b43b67, Requires<[UseHVXV62]> {
+tc_7e6a3e89, TypeCVI_VA>, Enc_b43b67, Requires<[UseHVXV62]> {
 let Inst{7-7} = 0b1;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011100101;
@@ -35908,11 +36354,25 @@ let opNewValue = 0;
 let DecoderNamespace = "EXT_mmvec";
 let Constraints = "$Qx4 = $Qx4in";
 }
+def V6_vsubcarryo : HInst<
+(outs HvxVR:$Vd32, HvxQR:$Qe4),
+(ins HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vd32.w,$Qe4 = vsub($Vu32.w,$Vv32.w):carry",
+tc_e35c1e93, TypeCOPROC_VX>, Enc_c1d806, Requires<[UseHVXV66]> {
+let Inst{7-7} = 0b1;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011101101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasNewValue2 = 1;
+let opNewValue2 = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
 def V6_vsubh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vsub($Vu32.h,$Vv32.h)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -35935,7 +36395,7 @@ def V6_vsubh_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.h = vsub($Vuu32.h,$Vvv32.h)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -35958,7 +36418,7 @@ def V6_vsubhnq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if (!$Qv4) $Vx32.h -= $Vu32.h",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000010;
@@ -35984,7 +36444,7 @@ def V6_vsubhq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if ($Qv4) $Vx32.h -= $Vu32.h",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000001;
@@ -36010,7 +36470,7 @@ def V6_vsubhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vsub($Vu32.h,$Vv32.h):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -36033,7 +36493,7 @@ def V6_vsubhsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.h = vsub($Vuu32.h,$Vvv32.h):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -36056,7 +36516,7 @@ def V6_vsubhw : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.w = vsub($Vu32.h,$Vv32.h)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -36079,7 +36539,7 @@ def V6_vsububh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.h = vsub($Vu32.ub,$Vv32.ub)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -36102,7 +36562,7 @@ def V6_vsububsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vsub($Vu32.ub,$Vv32.ub):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -36125,7 +36585,7 @@ def V6_vsububsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.ub = vsub($Vuu32.ub,$Vvv32.ub):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -36148,7 +36608,7 @@ def V6_vsubububb_sat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vsub($Vu32.ub,$Vv32.b):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110101;
@@ -36160,7 +36620,7 @@ def V6_vsubuhsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vsub($Vu32.uh,$Vv32.uh):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -36183,7 +36643,7 @@ def V6_vsubuhsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.uh = vsub($Vuu32.uh,$Vvv32.uh):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -36206,7 +36666,7 @@ def V6_vsubuhw : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32.w = vsub($Vu32.uh,$Vv32.uh)",
-tc_eda67dcd, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
+tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -36229,7 +36689,7 @@ def V6_vsubuwsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uw = vsub($Vu32.uw,$Vv32.uw):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111110;
@@ -36252,7 +36712,7 @@ def V6_vsubuwsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.uw = vsub($Vuu32.uw,$Vvv32.uw):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011110101;
@@ -36275,7 +36735,7 @@ def V6_vsubw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vsub($Vu32.w,$Vv32.w)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100010;
@@ -36298,7 +36758,7 @@ def V6_vsubw_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.w = vsub($Vuu32.w,$Vvv32.w)",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100100;
@@ -36321,7 +36781,7 @@ def V6_vsubwnq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if (!$Qv4) $Vx32.w -= $Vu32.w",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000010;
@@ -36347,7 +36807,7 @@ def V6_vsubwq : HInst<
 (outs HvxVR:$Vx32),
 (ins HvxQR:$Qv4, HvxVR:$Vx32in, HvxVR:$Vu32),
 "if ($Qv4) $Vx32.w -= $Vu32.w",
-tc_a3127e12, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
+tc_257f6f7c, TypeCVI_VA>, Enc_a90628, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{21-16} = 0b000010;
@@ -36373,7 +36833,7 @@ def V6_vsubwsat : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vsub($Vu32.w,$Vv32.w):sat",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100011;
@@ -36396,7 +36856,7 @@ def V6_vsubwsat_dv : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, HvxWR:$Vvv32),
 "$Vdd32.w = vsub($Vuu32.w,$Vvv32.w):sat",
-tc_97c165b9, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
+tc_db5555f3, TypeCVI_VA_DV>, Enc_f8ecf9, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100101;
@@ -36419,7 +36879,7 @@ def V6_vswap : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxQR:$Qt4, HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vdd32 = vswap($Qt4,$Vu32,$Vv32)",
-tc_316c637c, TypeCVI_VA_DV>, Enc_3dac0b, Requires<[UseHVXV60]> {
+tc_71646d06, TypeCVI_VA_DV>, Enc_3dac0b, Requires<[UseHVXV60]> {
 let Inst{7-7} = 0b0;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011110101;
@@ -36431,7 +36891,7 @@ def V6_vtmpyb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.h = vtmpy($Vuu32.b,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -36443,7 +36903,7 @@ def V6_vtmpyb_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.h += vtmpy($Vuu32.b,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -36481,7 +36941,7 @@ def V6_vtmpybus : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.h = vtmpy($Vuu32.ub,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001000;
@@ -36493,7 +36953,7 @@ def V6_vtmpybus_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.h += vtmpy($Vuu32.ub,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -36531,7 +36991,7 @@ def V6_vtmpyhb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vdd32.w = vtmpy($Vuu32.h,$Rt32.b)",
-tc_7c3f55c4, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
+tc_0b04c6c7, TypeCVI_VX_DV>, Enc_aad80c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011001101;
@@ -36543,7 +37003,7 @@ def V6_vtmpyhb_acc : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxWR:$Vuu32, IntRegs:$Rt32),
 "$Vxx32.w += vtmpy($Vuu32.h,$Rt32.b)",
-tc_d98f4d63, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
+tc_660769f1, TypeCVI_VX_DV>, Enc_d6990d, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011001000;
@@ -36595,7 +37055,7 @@ def V6_vunpackb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.h = vunpack($Vu32.b)",
-tc_d7bea0ec, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_04da405a, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000001;
@@ -36618,7 +37078,7 @@ def V6_vunpackh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.w = vunpack($Vu32.h)",
-tc_d7bea0ec, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_04da405a, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000001;
@@ -36641,7 +37101,7 @@ def V6_vunpackob : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32),
 "$Vxx32.h |= vunpacko($Vu32.b)",
-tc_72ad7b54, TypeCVI_VP_VS>, Enc_500cb0, Requires<[UseHVXV60]> {
+tc_2c745bb8, TypeCVI_VP_VS>, Enc_500cb0, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000000;
@@ -36667,7 +37127,7 @@ def V6_vunpackoh : HInst<
 (outs HvxWR:$Vxx32),
 (ins HvxWR:$Vxx32in, HvxVR:$Vu32),
 "$Vxx32.w |= vunpacko($Vu32.h)",
-tc_72ad7b54, TypeCVI_VP_VS>, Enc_500cb0, Requires<[UseHVXV60]> {
+tc_2c745bb8, TypeCVI_VP_VS>, Enc_500cb0, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000000;
@@ -36694,7 +37154,7 @@ def V6_vunpackub : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.uh = vunpack($Vu32.ub)",
-tc_d7bea0ec, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_04da405a, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000001;
@@ -36717,7 +37177,7 @@ def V6_vunpackuh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.uw = vunpack($Vu32.uh)",
-tc_d7bea0ec, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_04da405a, TypeCVI_VP_VS>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000001;
@@ -36740,7 +37200,7 @@ def V6_vwhist128 : HInst<
 (outs),
 (ins),
 "vwhist128",
-tc_e5053c8f, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV62]> {
+tc_1381a97c, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV62]> {
 let Inst{13-0} = 0b10010010000000;
 let Inst{31-16} = 0b0001111000000000;
 let DecoderNamespace = "EXT_mmvec";
@@ -36749,7 +37209,7 @@ def V6_vwhist128m : HInst<
 (outs),
 (ins u1_0Imm:$Ii),
 "vwhist128(#$Ii)",
-tc_b77635b4, TypeCVI_HIST>, Enc_efaed8, Requires<[UseHVXV62]> {
+tc_b28e51aa, TypeCVI_HIST>, Enc_efaed8, Requires<[UseHVXV62]> {
 let Inst{7-0} = 0b10000000;
 let Inst{13-9} = 0b10011;
 let Inst{31-16} = 0b0001111000000000;
@@ -36759,7 +37219,7 @@ def V6_vwhist128q : HInst<
 (outs),
 (ins HvxQR:$Qv4),
 "vwhist128($Qv4)",
-tc_cedf314b, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV62]> {
+tc_e3f68a46, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV62]> {
 let Inst{13-0} = 0b10010010000000;
 let Inst{21-16} = 0b000010;
 let Inst{31-24} = 0b00011110;
@@ -36769,7 +37229,7 @@ def V6_vwhist128qm : HInst<
 (outs),
 (ins HvxQR:$Qv4, u1_0Imm:$Ii),
 "vwhist128($Qv4,#$Ii)",
-tc_28978789, TypeCVI_HIST>, Enc_802dc0, Requires<[UseHVXV62]> {
+tc_767c4e9d, TypeCVI_HIST>, Enc_802dc0, Requires<[UseHVXV62]> {
 let Inst{7-0} = 0b10000000;
 let Inst{13-9} = 0b10011;
 let Inst{21-16} = 0b000010;
@@ -36780,7 +37240,7 @@ def V6_vwhist256 : HInst<
 (outs),
 (ins),
 "vwhist256",
-tc_e5053c8f, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV62]> {
+tc_1381a97c, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV62]> {
 let Inst{13-0} = 0b10001010000000;
 let Inst{31-16} = 0b0001111000000000;
 let DecoderNamespace = "EXT_mmvec";
@@ -36789,7 +37249,7 @@ def V6_vwhist256_sat : HInst<
 (outs),
 (ins),
 "vwhist256:sat",
-tc_e5053c8f, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV62]> {
+tc_1381a97c, TypeCVI_HIST>, Enc_e3b0c4, Requires<[UseHVXV62]> {
 let Inst{13-0} = 0b10001110000000;
 let Inst{31-16} = 0b0001111000000000;
 let DecoderNamespace = "EXT_mmvec";
@@ -36798,7 +37258,7 @@ def V6_vwhist256q : HInst<
 (outs),
 (ins HvxQR:$Qv4),
 "vwhist256($Qv4)",
-tc_cedf314b, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV62]> {
+tc_e3f68a46, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV62]> {
 let Inst{13-0} = 0b10001010000000;
 let Inst{21-16} = 0b000010;
 let Inst{31-24} = 0b00011110;
@@ -36808,7 +37268,7 @@ def V6_vwhist256q_sat : HInst<
 (outs),
 (ins HvxQR:$Qv4),
 "vwhist256($Qv4):sat",
-tc_cedf314b, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV62]> {
+tc_e3f68a46, TypeCVI_HIST>, Enc_217147, Requires<[UseHVXV62]> {
 let Inst{13-0} = 0b10001110000000;
 let Inst{21-16} = 0b000010;
 let Inst{31-24} = 0b00011110;
@@ -36818,7 +37278,7 @@ def V6_vxor : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32 = vxor($Vu32,$Vv32)",
-tc_bbaf280e, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_56c4f9fe, TypeCVI_VA>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011100001;
@@ -36830,7 +37290,7 @@ def V6_vzb : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.uh = vzxt($Vu32.ub)",
-tc_644584f8, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_b4416217, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -36853,7 +37313,7 @@ def V6_vzh : HInst<
 (outs HvxWR:$Vdd32),
 (ins HvxVR:$Vu32),
 "$Vdd32.uw = vzxt($Vu32.uh)",
-tc_644584f8, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
+tc_b4416217, TypeCVI_VA_DV>, Enc_dd766a, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -36872,11 +37332,122 @@ let isPseudo = 1;
 let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
+def V6_zLd_ai : HInst<
+(outs),
+(ins IntRegs:$Rt32, s4_0Imm:$Ii),
+"z = vmem($Rt32+#$Ii)",
+tc_e699ae41, TypeCVI_ZW>, Enc_ff3442, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-0} = 0b00000000;
+let Inst{12-11} = 0b00;
+let Inst{31-21} = 0b00101100000;
+let addrMode = BaseImmOffset;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_zLd_pi : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, s3_0Imm:$Ii),
+"z = vmem($Rx32++#$Ii)",
+tc_a0dbea28, TypeCVI_ZW>, Enc_6c9ee0, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-0} = 0b00000000;
+let Inst{13-11} = 0b000;
+let Inst{31-21} = 0b00101101000;
+let addrMode = PostInc;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_zLd_ppu : HInst<
+(outs IntRegs:$Rx32),
+(ins IntRegs:$Rx32in, ModRegs:$Mu2),
+"z = vmem($Rx32++$Mu2)",
+tc_a0dbea28, TypeCVI_ZW>, Enc_44661f, Requires<[UseHVXV66,UseZReg]> {
+let Inst{12-0} = 0b0000000000001;
+let Inst{31-21} = 0b00101101000;
+let addrMode = PostInc;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_zLd_pred_ai : HInst<
+(outs),
+(ins PredRegs:$Pv4, IntRegs:$Rt32, s4_0Imm:$Ii),
+"if ($Pv4) z = vmem($Rt32+#$Ii)",
+tc_dd5b0695, TypeCVI_ZW>, Enc_ef601b, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-0} = 0b00000000;
+let Inst{31-21} = 0b00101100100;
+let isPredicated = 1;
+let addrMode = BaseImmOffset;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_zLd_pred_pi : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, s3_0Imm:$Ii),
+"if ($Pv4) z = vmem($Rx32++#$Ii)",
+tc_3ad719fb, TypeCVI_ZW>, Enc_6baed4, Requires<[UseHVXV66,UseZReg]> {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b00101101100;
+let isPredicated = 1;
+let addrMode = PostInc;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_zLd_pred_ppu : HInst<
+(outs IntRegs:$Rx32),
+(ins PredRegs:$Pv4, IntRegs:$Rx32in, ModRegs:$Mu2),
+"if ($Pv4) z = vmem($Rx32++$Mu2)",
+tc_3ad719fb, TypeCVI_ZW>, Enc_691712, Requires<[UseHVXV66,UseZReg]> {
+let Inst{10-0} = 0b00000000001;
+let Inst{31-21} = 0b00101101100;
+let isPredicated = 1;
+let addrMode = PostInc;
+let mayLoad = 1;
+let isRestrictNoSlot1Store = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Rx32 = $Rx32in";
+}
+def V6_zextract : HInst<
+(outs HvxVR:$Vd32),
+(ins IntRegs:$Rt32),
+"$Vd32 = zextract($Rt32)",
+tc_5bf8afbb, TypeCVI_VP>, Enc_a5ed8a, Requires<[UseHVXV66,UseZReg]> {
+let Inst{13-5} = 0b000001001;
+let Inst{31-21} = 0b00011001101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_zld0 : HInst<
+(outs),
+(ins IntRegs:$Rt32),
+"z = vmem($Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[UseHVXV66]> {
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_zldp0 : HInst<
+(outs),
+(ins PredRegs:$Pv4, IntRegs:$Rt32),
+"if ($Pv4) z = vmem($Rt32)",
+PSEUDO, TypeMAPPING>, Requires<[UseHVXV66]> {
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
 def Y2_barrier : HInst<
 (outs),
 (ins),
 "barrier",
-tc_367f7f3d, TypeST>, Enc_e3b0c4 {
+tc_8c99de45, TypeST>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-16} = 0b1010100000000000;
 let isSoloAX = 1;
@@ -36886,7 +37457,7 @@ def Y2_break : HInst<
 (outs),
 (ins),
 "brkpt",
-tc_4ca572d4, TypeCR>, Enc_e3b0c4 {
+tc_9ad9998f, TypeCR>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-16} = 0b0110110000100000;
 let isSolo = 1;
@@ -36895,7 +37466,7 @@ def Y2_dccleana : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "dccleana($Rs32)",
-tc_00e7c26e, TypeST>, Enc_ecbcc8 {
+tc_b857bf4e, TypeST>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b10100000000;
 let isRestrictSlot1AOK = 1;
@@ -36905,7 +37476,7 @@ def Y2_dccleaninva : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "dccleaninva($Rs32)",
-tc_00e7c26e, TypeST>, Enc_ecbcc8 {
+tc_b857bf4e, TypeST>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b10100000010;
 let isRestrictSlot1AOK = 1;
@@ -36915,7 +37486,7 @@ def Y2_dcfetch : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "dcfetch($Rs32)",
-tc_3da80ba5, TypeMAPPING> {
+tc_d63f638c, TypeMAPPING> {
 let hasSideEffects = 1;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
@@ -36924,7 +37495,7 @@ def Y2_dcfetchbo : HInst<
 (outs),
 (ins IntRegs:$Rs32, u11_3Imm:$Ii),
 "dcfetch($Rs32+#$Ii)",
-tc_4d9914c9, TypeLD>, Enc_2d829e {
+tc_9ca930f7, TypeLD>, Enc_2d829e {
 let Inst{13-11} = 0b000;
 let Inst{31-21} = 0b10010100000;
 let addrMode = BaseImmOffset;
@@ -36935,7 +37506,7 @@ def Y2_dcinva : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "dcinva($Rs32)",
-tc_00e7c26e, TypeST>, Enc_ecbcc8 {
+tc_b857bf4e, TypeST>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b10100000001;
 let isRestrictSlot1AOK = 1;
@@ -36945,7 +37516,7 @@ def Y2_dczeroa : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "dczeroa($Rs32)",
-tc_00e7c26e, TypeST>, Enc_ecbcc8 {
+tc_b857bf4e, TypeST>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b10100000110;
 let isRestrictSlot1AOK = 1;
@@ -36956,7 +37527,7 @@ def Y2_icinva : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "icinva($Rs32)",
-tc_999d32db, TypeJ>, Enc_ecbcc8 {
+tc_5d7f5414, TypeJ>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01010110110;
 let isSolo = 1;
@@ -36965,7 +37536,7 @@ def Y2_isync : HInst<
 (outs),
 (ins),
 "isync",
-tc_b13761ae, TypeJ>, Enc_e3b0c4 {
+tc_8b121f4a, TypeJ>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000010;
 let Inst{31-16} = 0b0101011111000000;
 let isSolo = 1;
@@ -36974,16 +37545,25 @@ def Y2_syncht : HInst<
 (outs),
 (ins),
 "syncht",
-tc_367f7f3d, TypeST>, Enc_e3b0c4 {
+tc_8c99de45, TypeST>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-16} = 0b1010100001000000;
+let isSolo = 1;
+}
+def Y2_wait : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"wait($Rs32)",
+tc_174516e8, TypeCR>, Enc_ecbcc8, Requires<[HasV65]> {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b01100100010;
 let isSolo = 1;
 }
 def Y4_l2fetch : HInst<
 (outs),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "l2fetch($Rs32,$Rt32)",
-tc_daa058fa, TypeST>, Enc_ca3887 {
+tc_fe211424, TypeST>, Enc_ca3887 {
 let Inst{7-0} = 0b00000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10100110000;
@@ -36995,7 +37575,7 @@ def Y4_trace : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "trace($Rs32)",
-tc_c82dc1ff, TypeCR>, Enc_ecbcc8 {
+tc_6b25e783, TypeCR>, Enc_ecbcc8 {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01100010010;
 let isSoloAX = 1;
@@ -37004,7 +37584,7 @@ def Y5_l2fetch : HInst<
 (outs),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
 "l2fetch($Rs32,$Rtt32)",
-tc_daa058fa, TypeST>, Enc_e6abcf, Requires<[HasV5]> {
+tc_fe211424, TypeST>, Enc_e6abcf {
 let Inst{7-0} = 0b00000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10100110100;
@@ -37016,7 +37596,7 @@ def dep_A2_addsat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = add($Rs32,$Rt32):sat:deprecated",
-tc_b44c6e2a, TypeALU64>, Enc_5ab2be {
+tc_779080bf, TypeALU64>, Enc_5ab2be {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101100;
@@ -37029,7 +37609,7 @@ def dep_A2_subsat : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rt32, IntRegs:$Rs32),
 "$Rd32 = sub($Rt32,$Rs32):sat:deprecated",
-tc_b44c6e2a, TypeALU64>, Enc_bd6011 {
+tc_779080bf, TypeALU64>, Enc_bd6011 {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010101100;
@@ -37042,7 +37622,7 @@ def dep_S2_packhl : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rdd32 = packhl($Rs32,$Rt32):deprecated",
-tc_540fdfbc, TypeALU64>, Enc_be32a5 {
+tc_946df596, TypeALU64>, Enc_be32a5 {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010100000;

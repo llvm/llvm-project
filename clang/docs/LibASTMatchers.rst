@@ -81,7 +81,7 @@ To that end, matchers that match specific AST nodes (so called node matchers)
 are bindable; for example, ``recordDecl(hasName("MyClass")).bind("id")`` will
 bind the matched ``recordDecl`` node to the string "``id``", to be later
 retrieved in the `match callback
-<http://clang.llvm.org/doxygen/classclang_1_1ast__matchers_1_1MatchFinder_1_1MatchCallback.html>`_.
+<https://clang.llvm.org/doxygen/classclang_1_1ast__matchers_1_1MatchFinder_1_1MatchCallback.html>`_.
 
 ..  FIXME: Introduce link to ASTMatchersTutorial.html
 ..  FIXME: Introduce link to ASTMatchersCookbook.html
@@ -116,7 +116,7 @@ corresponding matcher.
 
 There are multiple matcher definition macros that deal with polymorphic return
 values and different parameter counts.  See `ASTMatchersMacros.h
-<http://clang.llvm.org/doxygen/ASTMatchersMacros_8h.html>`_.
+<https://clang.llvm.org/doxygen/ASTMatchersMacros_8h.html>`_.
 
 .. _astmatchers-writing:
 

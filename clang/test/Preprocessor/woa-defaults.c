@@ -27,7 +27,7 @@
 // CHECK: #define __SIZEOF_SHORT__ 2
 // CHECK: #define __SIZEOF_SIZE_T__ 4
 // CHECK: #define __SIZEOF_WCHAR_T__ 2
-// CHECK: #define __SIZEOF_WINT_T__ 4
+// CHECK: #define __SIZEOF_WINT_T__ 2
 // CHECK: #define __SIZE_TYPE__ unsigned int
 // CHECK: #define __UINTPTR_TYPE__ unsigned int
 

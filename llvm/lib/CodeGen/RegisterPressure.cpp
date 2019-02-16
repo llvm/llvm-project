@@ -681,8 +681,7 @@ void PressureDiff::addPressureChange(unsigned RegUnit, bool IsDec,
       PressureDiff::iterator J;
       for (J = std::next(I); J != E && J->isValid(); ++J, ++I)
         *I = *J;
-      if (J != E)
-        *I = *J;
+      *I = PressureChange();
     }
   }
 }

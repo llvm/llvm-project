@@ -1,0 +1,92 @@
+# RUN: llc -mtriple powerpc64-unknown-linux-gnu -run-pass livevars -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
+
+# This test case was originally known as
+#   test/CodeGen/PowerPC/2013-07-01-PHIElimBug.ll
+#
+# It was discovered that the original test case no longer reproduced the bug
+# from PR16508 (solved in rL185363). That could have been resolved by adding
+# -O1 (or possibly -O0) to the run line, but instead the test case was
+# converted into this .mir test case. Having it as a .mir test should make it
+# less sensitive to changes in earlier passes.
+
+--- |
+  target datalayout = "E-m:e-i64:64-n32:64"
+  target triple = "powerpc64-unknown-linux-gnu"
+
+  @g_51 = external global [8 x i32], align 4
+  define void @func_7() {
+    bb.0:
+      ret void
+  }
+...
+---
+name:            func_7
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x2
+
+    %0:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @g_51
+    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit $x2 :: (load 8)
+    %2:gprc = LI 0
+    %3:crrc = CMPLWI killed %2, 0
+    BCC 76, killed %3, %bb.2
+
+  bb.1:
+    %4:g8rc = ADDI8 killed %1, 24
+    B %bb.4
+
+  bb.2:
+    %5:g8rc = ADDI8 killed %1, 24
+    %6:g8rc = LI8 0
+    %7:crrc = CMPLWI undef %8:gprc, 20
+
+  bb.3:
+    %9:g8rc = PHI %5, %bb.2, %10, %bb.3
+    %10:g8rc = PHI %6, %bb.2, undef %11:g8rc, %bb.3
+    BCC 68, %7, %bb.3
+    B %bb.4
+
+  bb.4:
+    %12:g8rc_and_g8rc_nox0 = PHI %4, %bb.1, %9, %bb.3
+    %13:g8rc = LI8 0
+    STW8 killed %13, 0, killed %12 :: (store 4)
+    BLR8 implicit $lr8, implicit $rm
+
+...
+
+# Original TR (and 2013-07-01-PHIElimBug.ll) was about verifier errors for bb.3.
+#
+# I got a feeling that we also need to have some checks to see that # the code
+# is correct in some way. Hopefully this test case is stable enough to verify
+# the full MIR like this.
+#
+# CHECK:       bb.0:
+# CHECK:         %0:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @g_51
+# CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit killed $x2 :: (load 8)
+# CHECK-NEXT:    %2:gprc = LI 0
+# CHECK-NEXT:    %3:crrc = CMPLWI killed %2, 0
+# CHECK-NEXT:    BCC 76, killed %3, %bb.2
+# CHECK:       bb.1:
+# CHECK:         %4:g8rc = ADDI8 killed %1, 24
+# CHECK-NEXT:    %16:g8rc_and_g8rc_nox0 = COPY killed %4
+# CHECK-NEXT:    B %bb.4
+# CHECK:       bb.2:
+# CHECK:         %5:g8rc = ADDI8 killed %1, 24
+# CHECK-NEXT:    %6:g8rc = LI8 0
+# CHECK-NEXT:    %7:crrc = CMPLWI undef %8:gprc, 20
+# CHECK-NEXT:    %14:g8rc = COPY killed %5
+# CHECK-NEXT:    %15:g8rc = COPY killed %6
+# CHECK:       bb.3:
+# CHECK:         %10:g8rc = COPY killed %15
+# CHECK-NEXT:    %9:g8rc = COPY killed %14
+# CHECK-NEXT:    %14:g8rc = COPY killed %10
+# CHECK-NEXT:    %15:g8rc = IMPLICIT_DEF
+# CHECK-NEXT:    %16:g8rc_and_g8rc_nox0 = COPY killed %9
+# CHECK-NEXT:    BCC 68, %7, %bb.3
+# CHECK-NEXT:    B %bb.4
+# CHECK:       bb.4:
+# CHECK:         %12:g8rc_and_g8rc_nox0 = COPY killed %16
+# CHECK-NEXT:    %13:g8rc = LI8 0
+# CHECK-NEXT:    STW8 killed %13, 0, killed %12 :: (store 4)
+# CHECK-NEXT:    BLR8 implicit $lr8, implicit $rm

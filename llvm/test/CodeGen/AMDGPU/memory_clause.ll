@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}vector_clause:
 ; GCN:      global_load_dwordx4
@@ -105,7 +105,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}vector_clause_indirect:
-; GCN: global_load_dwordx2 [[ADDR:v\[[0-9:]+\]]], v[{{[0-9:]+}}], off
+; GCN: global_load_dwordx2 [[ADDR:v\[[0-9:]+\]]], v[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN-NEXT: s_nop 0
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_nop 0

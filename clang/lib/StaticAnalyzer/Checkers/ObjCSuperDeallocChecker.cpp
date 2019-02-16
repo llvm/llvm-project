@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -282,8 +282,9 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
 //===----------------------------------------------------------------------===//
 
 void ento::registerObjCSuperDeallocChecker(CheckerManager &Mgr) {
-  const LangOptions &LangOpts = Mgr.getLangOpts();
-  if (LangOpts.getGC() == LangOptions::GCOnly || LangOpts.ObjCAutoRefCount)
-    return;
   Mgr.registerChecker<ObjCSuperDeallocChecker>();
+}
+
+bool ento::shouldRegisterObjCSuperDeallocChecker(const LangOptions &LO) {
+  return true;
 }

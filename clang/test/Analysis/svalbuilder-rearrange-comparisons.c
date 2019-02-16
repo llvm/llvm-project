@@ -979,3 +979,20 @@ int mixed_integer_types(int x, int y) {
   short a = x - 1U;
   return a - y;
 }
+
+unsigned gu();
+unsigned fu() {
+  unsigned x = gu();
+  // Assert that no overflows occur in this test file.
+  // Assuming that concrete integers are also within that range.
+  assert(x <= ((unsigned)UINT_MAX / 4));
+  return x;
+}
+
+void unsigned_concrete_int_no_crash() {
+  unsigned x = fu() + 1U, y = fu() + 1U;
+  clang_analyzer_denote(x - 1U, "$x");
+  clang_analyzer_denote(y - 1U, "$y");
+  clang_analyzer_express(y); // expected-warning {{$y}}
+  clang_analyzer_express(x == y); // expected-warning {{$x + 1U == $y + 1U}}
+}

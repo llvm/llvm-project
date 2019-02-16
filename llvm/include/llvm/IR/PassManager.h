@@ -44,6 +44,7 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TypeName.h"
@@ -402,6 +403,43 @@ struct AnalysisInfoMixin : PassInfoMixin<DerivedT> {
   }
 };
 
+namespace detail {
+
+/// Actual unpacker of extra arguments in getAnalysisResult,
+/// passes only those tuple arguments that are mentioned in index_sequence.
+template <typename PassT, typename IRUnitT, typename AnalysisManagerT,
+          typename... ArgTs, size_t... Ns>
+typename PassT::Result
+getAnalysisResultUnpackTuple(AnalysisManagerT &AM, IRUnitT &IR,
+                             std::tuple<ArgTs...> Args,
+                             llvm::index_sequence<Ns...>) {
+  (void)Args;
+  return AM.template getResult<PassT>(IR, std::get<Ns>(Args)...);
+}
+
+/// Helper for *partial* unpacking of extra arguments in getAnalysisResult.
+///
+/// Arguments passed in tuple come from PassManager, so they might have extra
+/// arguments after those AnalysisManager's ExtraArgTs ones that we need to
+/// pass to getResult.
+template <typename PassT, typename IRUnitT, typename... AnalysisArgTs,
+          typename... MainArgTs>
+typename PassT::Result
+getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
+                  std::tuple<MainArgTs...> Args) {
+  return (getAnalysisResultUnpackTuple<
+          PassT, IRUnitT>)(AM, IR, Args,
+                           llvm::index_sequence_for<AnalysisArgTs...>{});
+}
+
+} // namespace detail
+
+// Forward declare the pass instrumentation analysis explicitly queried in
+// generic PassManager code.
+// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
+// header.
+class PassInstrumentationAnalysis;
+
 /// Manages a sequence of passes over a particular unit of IR.
 ///
 /// A pass manager contains a sequence of passes to run over a particular unit
@@ -445,15 +483,34 @@ public:
                         ExtraArgTs... ExtraArgs) {
     PreservedAnalyses PA = PreservedAnalyses::all();
 
+    // Request PassInstrumentation from analysis manager, will use it to run
+    // instrumenting callbacks for the passes later.
+    // Here we use std::tuple wrapper over getResult which helps to extract
+    // AnalysisManager's arguments out of the whole ExtraArgs set.
+    PassInstrumentation PI =
+        detail::getAnalysisResult<PassInstrumentationAnalysis>(
+            AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
+
     if (DebugLogging)
       dbgs() << "Starting " << getTypeName<IRUnitT>() << " pass manager run.\n";
 
     for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
+      auto *P = Passes[Idx].get();
       if (DebugLogging)
-        dbgs() << "Running pass: " << Passes[Idx]->name() << " on "
-               << IR.getName() << "\n";
+        dbgs() << "Running pass: " << P->name() << " on " << IR.getName()
+               << "\n";
 
-      PreservedAnalyses PassPA = Passes[Idx]->run(IR, AM, ExtraArgs...);
+      // Check the PassInstrumentation's BeforePass callbacks before running the
+      // pass, skip its execution completely if asked to (callback returns
+      // false).
+      if (!PI.runBeforePass<IRUnitT>(*P, IR))
+        continue;
+
+      PreservedAnalyses PassPA = P->run(IR, AM, ExtraArgs...);
+
+      // Call onto PassInstrumentation's AfterPass callbacks immediately after
+      // running the pass.
+      PI.runAfterPass<IRUnitT>(*P, IR);
 
       // Update the analysis manager as each pass runs and potentially
       // invalidates analyses.
@@ -509,6 +566,32 @@ extern template class PassManager<Function>;
 
 /// Convenience typedef for a pass manager over functions.
 using FunctionPassManager = PassManager<Function>;
+
+/// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
+/// managers. Goes before AnalysisManager definition to provide its
+/// internals (e.g PassInstrumentationAnalysis::ID) for use there if needed.
+/// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
+/// header.
+class PassInstrumentationAnalysis
+    : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
+  friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
+  static AnalysisKey Key;
+
+  PassInstrumentationCallbacks *Callbacks;
+
+public:
+  /// PassInstrumentationCallbacks object is shared, owned by something else,
+  /// not this analysis.
+  PassInstrumentationAnalysis(PassInstrumentationCallbacks *Callbacks = nullptr)
+      : Callbacks(Callbacks) {}
+
+  using Result = PassInstrumentation;
+
+  template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
+  Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {
+    return PassInstrumentation(Callbacks);
+  }
+};
 
 /// A container for analyses that lazily runs them and caches their
 /// results.
@@ -860,8 +943,17 @@ private:
       if (DebugLogging)
         dbgs() << "Running analysis: " << P.name() << " on " << IR.getName()
                << "\n";
+
+      PassInstrumentation PI;
+      if (ID != PassInstrumentationAnalysis::ID()) {
+        PI = getResult<PassInstrumentationAnalysis>(IR, ExtraArgs...);
+        PI.runBeforeAnalysis(P, IR);
+      }
+
       AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
       ResultList.emplace_back(ID, P.run(IR, *this, ExtraArgs...));
+
+      PI.runAfterAnalysis(P, IR);
 
       // P.run may have inserted elements into AnalysisResults and invalidated
       // RI.
@@ -930,7 +1022,7 @@ using FunctionAnalysisManager = AnalysisManager<Function>;
 /// analysis manager over an "inner" IR unit.  The inner unit must be contained
 /// in the outer unit.
 ///
-/// Fore example, InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> is
+/// For example, InnerAnalysisManagerProxy<FunctionAnalysisManager, Module> is
 /// an analysis over Modules (the "outer" unit) that provides access to a
 /// Function analysis manager.  The FunctionAnalysisManager is the "inner"
 /// manager being proxied, and Functions are the "inner" unit.  The inner/outer
@@ -1192,12 +1284,23 @@ public:
     FunctionAnalysisManager &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
+    // Request PassInstrumentation from analysis manager, will use it to run
+    // instrumenting callbacks for the passes later.
+    PassInstrumentation PI = AM.getResult<PassInstrumentationAnalysis>(M);
+
     PreservedAnalyses PA = PreservedAnalyses::all();
     for (Function &F : M) {
       if (F.isDeclaration())
         continue;
 
+      // Check the PassInstrumentation's BeforePass callbacks before running the
+      // pass, skip its execution completely if asked to (callback returns
+      // false).
+      if (!PI.runBeforePass<Function>(Pass, F))
+        continue;
       PreservedAnalyses PassPA = Pass.run(F, FAM);
+
+      PI.runAfterPass(Pass, F);
 
       // We know that the function pass couldn't have invalidated any other
       // function's analyses (that's the contract of a function pass), so
@@ -1302,10 +1405,26 @@ public:
   RepeatedPass(int Count, PassT P) : Count(Count), P(std::move(P)) {}
 
   template <typename IRUnitT, typename AnalysisManagerT, typename... Ts>
-  PreservedAnalyses run(IRUnitT &Arg, AnalysisManagerT &AM, Ts &&... Args) {
+  PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM, Ts &&... Args) {
+
+    // Request PassInstrumentation from analysis manager, will use it to run
+    // instrumenting callbacks for the passes later.
+    // Here we use std::tuple wrapper over getResult which helps to extract
+    // AnalysisManager's arguments out of the whole Args set.
+    PassInstrumentation PI =
+        detail::getAnalysisResult<PassInstrumentationAnalysis>(
+            AM, IR, std::tuple<Ts...>(Args...));
+
     auto PA = PreservedAnalyses::all();
-    for (int i = 0; i < Count; ++i)
-      PA.intersect(P.run(Arg, AM, std::forward<Ts>(Args)...));
+    for (int i = 0; i < Count; ++i) {
+      // Check the PassInstrumentation's BeforePass callbacks before running the
+      // pass, skip its execution completely if asked to (callback returns
+      // false).
+      if (!PI.runBeforePass<IRUnitT>(P, IR))
+        continue;
+      PA.intersect(P.run(IR, AM, std::forward<Ts>(Args)...));
+      PI.runAfterPass(P, IR);
+    }
     return PA;
   }
 

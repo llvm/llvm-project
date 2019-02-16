@@ -48,6 +48,7 @@ INTERCEPT_WRAP_W_WWW(_recalloc)
 INTERCEPT_WRAP_W_WWW(_recalloc_base)
 
 INTERCEPT_WRAP_W_W(_msize)
+INTERCEPT_WRAP_W_W(_msize_base)
 INTERCEPT_WRAP_W_W(_expand)
 INTERCEPT_WRAP_W_W(_expand_dbg)
 

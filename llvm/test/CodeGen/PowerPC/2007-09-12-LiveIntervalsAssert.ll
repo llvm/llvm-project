@@ -1,6 +1,10 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
 
 declare void @cxa_atexit_check_1(i8*)
+
+; TODO: KB: ORiginal test case was just checking it compiles; is this worth keeping?
+; CHECK: check_cxa_atexit:
+; CHECK: blr
 
 define i32 @check_cxa_atexit(i32 (void (i8*)*, i8*, i8*)* %cxa_atexit, void (i8*)* %cxa_finalize) {
 entry:

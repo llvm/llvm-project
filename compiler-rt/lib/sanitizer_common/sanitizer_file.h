@@ -66,9 +66,6 @@ bool ReadFromFile(fd_t fd, void *buff, uptr buff_size,
 bool WriteToFile(fd_t fd, const void *buff, uptr buff_size,
                  uptr *bytes_written = nullptr, error_t *error_p = nullptr);
 
-bool RenameFile(const char *oldpath, const char *newpath,
-                error_t *error_p = nullptr);
-
 // Scoped file handle closer.
 struct FileCloser {
   explicit FileCloser(fd_t fd) : fd(fd) {}

@@ -657,7 +657,7 @@ bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
                                DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
-  TerminatorInst *TI = BB.getTerminator();
+  Instruction *TI = BB.getTerminator();
 
   if (AllowUnreachable && isa<UnreachableInst>(TI))
     return true;
@@ -717,7 +717,9 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
       // Implicitly disable delinearization since we have an unknown
       // accesses with an unknown access function.
       Context.HasUnknownAccess = true;
-      Context.AST.add(&CI);
+      // Explicitly use addUnknown so we don't put a loop-variant
+      // pointer into the alias set.
+      Context.AST.addUnknown(&CI);
       return true;
     case FMRB_OnlyReadsArgumentPointees:
     case FMRB_OnlyAccessesArgumentPointees:
@@ -740,7 +742,9 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
         Context.HasUnknownAccess = true;
       }
 
-      Context.AST.add(&CI);
+      // Explicitly use addUnknown so we don't put a loop-variant
+      // pointer into the alias set.
+      Context.AST.addUnknown(&CI);
       return true;
     case FMRB_DoesNotReadMemory:
     case FMRB_OnlyAccessesInaccessibleMem:
@@ -775,7 +779,7 @@ bool ScopDetection::isValidIntrinsicInst(IntrinsicInst &II,
       if (!isValidAccess(&II, AF, BP, Context))
         return false;
     }
-  // Fall through
+    LLVM_FALLTHROUGH;
   case Intrinsic::memset:
     AF = SE.getSCEVAtScope(cast<MemIntrinsic>(II).getDest(), L);
     if (!AF->isZero()) {
@@ -1136,8 +1140,8 @@ bool ScopDetection::isValidAccess(Instruction *Inst, const SCEV *AF,
   // any other pointer. This cannot be handled at the moment.
   AAMDNodes AATags;
   Inst->getAAMetadata(AATags);
-  AliasSet &AS = Context.AST.getAliasSetForPointer(
-      BP->getValue(), MemoryLocation::UnknownSize, AATags);
+  AliasSet &AS = Context.AST.getAliasSetFor(
+      MemoryLocation(BP->getValue(), MemoryLocation::UnknownSize, AATags));
 
   if (!AS.isMustAlias()) {
     if (PollyUseRuntimeAliasChecks) {
@@ -1214,7 +1218,8 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
       auto *PHI = dyn_cast<PHINode>(OpInst);
       if (PHI) {
         for (User *U : PHI->users()) {
-          if (!isa<TerminatorInst>(U))
+          auto *UI = dyn_cast<Instruction>(U);
+          if (!UI || !UI->isTerminator())
             return false;
         }
       } else {
@@ -1751,7 +1756,7 @@ bool ScopDetection::isReducibleRegion(Region &R, DebugLoc &DbgLoc) const {
     DFSStack.pop();
 
     // Loop to iterate over the successors of current BB.
-    const TerminatorInst *TInst = CurrBB->getTerminator();
+    const Instruction *TInst = CurrBB->getTerminator();
     unsigned NSucc = TInst->getNumSuccessors();
     for (unsigned I = AdjacentBlockIndex; I < NSucc;
          ++I, ++AdjacentBlockIndex) {

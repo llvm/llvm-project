@@ -12,7 +12,7 @@
 
 #if defined(_WIN32)
 
-#include <BaseTsd.h>
+#include <basetsd.h>
 #include <io.h>
 #include <sys/types.h>
 
@@ -44,6 +44,14 @@
 #define   LOCK_EX   2    /* exclusive lock */
 #define   LOCK_NB   4    /* don't block when locking */
 #define   LOCK_UN   8    /* unlock */
+
+#ifdef __USE_FILE_OFFSET64
+# define DWORD_HI(x) (x >> 32)
+# define DWORD_LO(x) ((x) & 0xffffffff)
+#else
+# define DWORD_HI(x) (0)
+# define DWORD_LO(x) (x)
+#endif
 
 void *mmap(void *start, size_t length, int prot, int flags, int fd,
            off_t offset);

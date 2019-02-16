@@ -158,8 +158,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 5                                // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 1                                // DW_CHILDREN_yes
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -281,8 +280,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 12                               // DW_FORM_flag
 ; CHECK: // .b8 63                               // DW_AT_external
 ; CHECK: // .b8 12                               // DW_FORM_flag
-; CHECK: // .b8 135                              // DW_AT_noreturn
-; CHECK: // .b8 1
+; CHECK: // .b8 135,1                            // DW_AT_noreturn
 ; CHECK: // .b8 12                               // DW_FORM_flag
 ; CHECK: // .b8 0                                // EOM(1)
 ; CHECK: // .b8 0                                // EOM(2)
@@ -351,8 +349,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 12                               // DW_FORM_flag
 ; CHECK: // .b8 63                               // DW_AT_external
 ; CHECK: // .b8 12                               // DW_FORM_flag
-; CHECK: // .b8 135                              // DW_AT_noreturn
-; CHECK: // .b8 1
+; CHECK: // .b8 135,1                            // DW_AT_noreturn
 ; CHECK: // .b8 12                               // DW_FORM_flag
 ; CHECK: // .b8 0                                // EOM(1)
 ; CHECK: // .b8 0                                // EOM(2)
@@ -391,8 +388,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 25                               // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 1                                // DW_CHILDREN_yes
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -411,8 +407,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 26                               // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 1                                // DW_CHILDREN_yes
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -442,8 +437,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 28                               // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 0                                // DW_CHILDREN_no
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -488,8 +482,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 31                               // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 1                                // DW_CHILDREN_yes
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -508,8 +501,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 32                               // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 1                                // DW_CHILDREN_yes
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -574,8 +566,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 37                               // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 1                                // DW_CHILDREN_yes
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -594,8 +585,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 38                               // Abbreviation Code
 ; CHECK: // .b8 46                               // DW_TAG_subprogram
 ; CHECK: // .b8 1                                // DW_CHILDREN_yes
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -631,8 +621,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_FORM_addr
 ; CHECK: // .b8 64                               // DW_AT_frame_base
 ; CHECK: // .b8 10                               // DW_FORM_block1
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -695,55 +684,27 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 0                                // EOM(1)
 ; CHECK: // .b8 0                                // EOM(2)
 ; CHECK: // .b8 0                                // EOM(3)
-; CHECK: //	}
-; CHECK: //	.section	.debug_info
-; CHECK: //	{
-; CHECK: // .b32 10025                           // Length of Unit
+; CHECK: // }
+; CHECK: // .section .debug_info
+; CHECK: // {
+; CHECK: // .b32 10030                           // Length of Unit
 ; CHECK: // .b8 2                                // DWARF version number
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK: // .b8 8                                // Address Size (in bytes)
-; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x2722 DW_TAG_compile_unit
+; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x2727 DW_TAG_compile_unit
 ; CHECK: // .b8 0                                // DW_AT_producer
 ; CHECK: // .b8 4                                // DW_AT_language
 ; CHECK: // .b8 0
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 103
-; CHECK: // .b8 45
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 111
-; CHECK: // .b8 46
-; CHECK: // .b8 99
-; CHECK: // .b8 117
+; CHECK: // .b8 100,101,98,117,103,45,105,110,102,111,46,99,117 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK: // .b8 47                               // DW_AT_comp_dir
-; CHECK: // .b8 115
-; CHECK: // .b8 111
-; CHECK: // .b8 109
-; CHECK: // .b8 101
-; CHECK: // .b8 47
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 99
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 121
+; CHECK: // .b8 47,115,111,109,101,47,100,105,114,101,99,116,111,114,121 // DW_AT_comp_dir
 ; CHECK: // .b8 0
 ; CHECK: // .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end0                      // DW_AT_high_pc
 ; CHECK: // .b8 2                                // Abbrev [2] 0x41:0x588 DW_TAG_namespace
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 100
+; CHECK: // .b8 115,116,100                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 3                                // Abbrev [3] 0x46:0x7 DW_TAG_imported_declaration
 ; CHECK: // .b8 1                                // DW_AT_decl_file
@@ -1432,7 +1393,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 172                              // DW_AT_decl_line
 ; CHECK: // .b8 1
-; CHECK:  / .b32 6628                            // DW_AT_import
+; CHECK: // .b32 6628                            // DW_AT_import
 ; CHECK: // .b8 4                                // Abbrev [4] 0x4d0:0x8 DW_TAG_imported_declaration
 ; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 173                              // DW_AT_decl_line
@@ -1472,7 +1433,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 180                              // DW_AT_decl_line
 ; CHECK: // .b8 1
-; CHECK:  / .b32 6931                            // DW_AT_import
+; CHECK: // .b32 6931                            // DW_AT_import
 ; CHECK: // .b8 4                                // Abbrev [4] 0x510:0x8 DW_TAG_imported_declaration
 ; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 181                              // DW_AT_decl_line
@@ -1506,7 +1467,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 4                                // Abbrev [4] 0x540:0x8 DW_TAG_imported_declaration
 ; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 187                              // DW_AT_decl_line
-; CHECK:  / .b8 1
+; CHECK: // .b8 1
 ; CHECK: // .b32 7163                            // DW_AT_import
 ; CHECK: // .b8 4                                // Abbrev [4] 0x548:0x8 DW_TAG_imported_declaration
 ; CHECK: // .b8 10                               // DW_AT_decl_file
@@ -1529,7 +1490,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1
 ; CHECK: // .b32 7330                            // DW_AT_import
 ; CHECK: // .b8 4                                // Abbrev [4] 0x568:0x8 DW_TAG_imported_declaration
-; CHECK:  / .b8 10                               // DW_AT_decl_file
+; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 192                              // DW_AT_decl_line
 ; CHECK: // .b8 1
 ; CHECK: // .b32 7379                            // DW_AT_import
@@ -1554,7 +1515,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1
 ; CHECK: // .b32 7538                            // DW_AT_import
 ; CHECK: // .b8 4                                // Abbrev [4] 0x590:0x8 DW_TAG_imported_declaration
-; CHECK:  / .b8 10                               // DW_AT_decl_file
+; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 197                              // DW_AT_decl_line
 ; CHECK: // .b8 1
 ; CHECK: // .b32 7580                            // DW_AT_import
@@ -1577,7 +1538,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 201                              // DW_AT_decl_line
 ; CHECK: // .b8 1
-; CHECK:  / .b32 7704                            // DW_AT_import
+; CHECK: // .b32 7704                            // DW_AT_import
 ; CHECK: // .b8 4                                // Abbrev [4] 0x5b8:0x8 DW_TAG_imported_declaration
 ; CHECK: // .b8 10                               // DW_AT_decl_file
 ; CHECK: // .b8 202                              // DW_AT_decl_line
@@ -1590,20 +1551,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 7772                            // DW_AT_import
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x5c9:0x1b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
-; CHECK: // .b8 120
+; CHECK: // .b8 95,90,76,51,97,98,115,120        // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 98
-; CHECK: // .b8 115
+; CHECK: // .b8 97,98,115                        // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 1                                // DW_AT_decl_file
+; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 44                               // DW_AT_decl_line
 ; CHECK: // .b32 1508                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
@@ -1611,37 +1563,14 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1508                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x5e4:0x11 DW_TAG_base_type
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 108,111,110,103,32,108,111,110,103,32,105,110,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_encoding
 ; CHECK: // .b8 8                                // DW_AT_byte_size
 ; CHECK: // .b8 5                                // Abbrev [5] 0x5f5:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK:  / .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 97
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,97,99,111,115,102    // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
+; CHECK: // .b8 97,99,111,115                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 46                               // DW_AT_decl_line
@@ -1651,32 +1580,15 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x612:0x9 DW_TAG_base_type
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK:  / .b8 111
-; CHECK: // .b8 97
-; CHECK: // .b8 116
+; CHECK: // .b8 102,108,111,97,116               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_encoding
 ; CHECK: // .b8 4                                // DW_AT_byte_size
 ; CHECK: // .b8 5                                // Abbrev [5] 0x61b:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 97
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,97,99,111,115,104,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
-; CHECK:  / .b8 0
+; CHECK: // .b8 97,99,111,115,104                // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 48                               // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
@@ -1685,20 +1597,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x63a:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 97
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,97,115,105,110,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
+; CHECK: // .b8 97,115,105,110                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 50                               // DW_AT_decl_line
@@ -1708,22 +1609,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x657:0x1f DW_TAG_subprogram
-; CHECK:  / .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 97
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,97,115,105,110,104,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
+; CHECK: // .b8 97,115,105,110,104               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 52                               // DW_AT_decl_line
@@ -1731,22 +1619,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x670:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x676:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,97,116,97,110,102    // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
+; CHECK: // .b8 97,116,97,110                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 56                               // DW_AT_decl_line
@@ -1754,28 +1631,14 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x68d:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x693:0x25 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 50
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,97,116,97,110,50,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 50
+; CHECK: // .b8 97,116,97,110,50                 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
-; CHECK:  / .b8 54                               // DW_AT_decl_line
+; CHECK: // .b8 54                               // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x6ad:0x5 DW_TAG_formal_parameter
@@ -1784,22 +1647,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x6b8:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,97,116,97,110,104,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK:  / .b8 110
-; CHECK: // .b8 104
+; CHECK: // .b8 97,116,97,110,104                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 58                               // DW_AT_decl_line
@@ -1809,20 +1659,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x6d7:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 99
-; CHECK: // .b8 98
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,99,98,114,116,102    // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 99                               // DW_AT_name
-; CHECK: // .b8 98
-; CHECK: // .b8 114
-; CHECK: // .b8 116
+; CHECK: // .b8 99,98,114,116                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 60                               // DW_AT_decl_line
@@ -1832,20 +1671,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x6f4:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 99
-; CHECK: // .b8 101
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,99,101,105,108,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 99                               // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 105
-; CHECK: // .b8 108
+; CHECK: // .b8 99,101,105,108                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 62                               // DW_AT_decl_line
@@ -1855,29 +1683,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x711:0x2b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 56
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 112
-; CHECK: // .b8 121
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK:  / .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,56,99,111,112,121,115,105,103,110,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 112
-; CHECK: // .b8 121
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
+; CHECK: // .b8 99,111,112,121,115,105,103,110   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 64                               // DW_AT_decl_line
@@ -1889,18 +1697,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x73c:0x1b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,51,99,111,115,102       // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 115
+; CHECK: // .b8 99,111,115                       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 66                               // DW_AT_decl_line
@@ -1910,20 +1709,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x757:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK:  / .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,99,111,115,104,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
+; CHECK: // .b8 99,111,115,104                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 68                               // DW_AT_decl_line
@@ -1933,18 +1721,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x774:0x1b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK:  / .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,51,101,114,102,102      // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 0
+; CHECK: // .b8 101,114,102                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 72                               // DW_AT_decl_line
@@ -1954,20 +1733,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x78f:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 99
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,101,114,102,99,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 101                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 99
+; CHECK: // .b8 101,114,102,99                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 70                               // DW_AT_decl_line
@@ -1977,66 +1745,33 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x7ac:0x1b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,51,101,120,112,102      // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 120
-; CHECK: // .b8 112
+; CHECK: // .b8 101,120,112                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 76                               // DW_AT_decl_line
-; CHECK:  / .b32 1554                            // DW_AT_type
+; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x7c1:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x7c7:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 50
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,101,120,112,50,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 50
+; CHECK: // .b8 101,120,112,50                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 74                               // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x7de:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 1554                            // DW_AT_type
+; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x7e4:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 109
-; CHECK: // .b8 49
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,101,120,112,109,49,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 109
-; CHECK: // .b8 49
+; CHECK: // .b8 101,120,112,109,49               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 78                               // DW_AT_decl_line
@@ -2044,22 +1779,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x7fd:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x803:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 102
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,102,97,98,115,102    // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
+; CHECK: // .b8 102,97,98,115                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 80                               // DW_AT_decl_line
@@ -2069,21 +1793,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x820:0x23 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 102
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,102,100,105,109,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 100
-; CHECK:  / .b8 105
-; CHECK: // .b8 109
+; CHECK: // .b8 102,100,105,109                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 82                               // DW_AT_decl_line
@@ -2095,45 +1807,21 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x843:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 102
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,102,108,111,111,114,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 111
-; CHECK: // .b8 114
+; CHECK: // .b8 102,108,111,111,114              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 84                               // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 6                                // Abbrev [6] 0x85c:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 6                                // Abbrev [6] 0x85c:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x862:0x27 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 102
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,51,102,109,97,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 97
+; CHECK: // .b8 102,109,97                       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 86                               // DW_AT_decl_line
@@ -2146,22 +1834,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x883:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 5                                // Abbrev [5] 0x889:0x23 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 102
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 120
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 5                                // Abbrev [5] 0x889:0x23 DW_TAG_subprogram
+; CHECK: // .b8 95,90,76,52,102,109,97,120,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 120
+; CHECK: // .b8 102,109,97,120                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 88                               // DW_AT_decl_line
@@ -2173,21 +1849,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x8ac:0x23 DW_TAG_subprogram
-; CHECK:  / .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 102
-; CHECK: // .b8 109
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,102,109,105,110,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 105
-; CHECK: // .b8 110
+; CHECK: // .b8 102,109,105,110                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 90                               // DW_AT_decl_line
@@ -2199,21 +1863,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x8cf:0x23 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 102
-; CHECK:  / .b8 109
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,102,109,111,100,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 111
-; CHECK: // .b8 100
+; CHECK: // .b8 102,109,111,100                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 92                               // DW_AT_decl_line
@@ -2225,33 +1877,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x8f2:0x2a DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 102
-; CHECK: // .b8 112
-; CHECK: // .b8 99
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 115
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 102
-; CHECK: // .b8 121
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,48,102,112,99,108,97,115,115,105,102,121,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 99
-; CHECK: // .b8 108
-; CHECK:  / .b8 97
-; CHECK: // .b8 115
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 102
-; CHECK: // .b8 121
+; CHECK: // .b8 102,112,99,108,97,115,115,105,102,121 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 94                               // DW_AT_decl_line
@@ -2261,31 +1889,14 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x91c:0x7 DW_TAG_base_type
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 105,110,116                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_encoding
 ; CHECK: // .b8 4                                // DW_AT_byte_size
 ; CHECK: // .b8 5                                // Abbrev [5] 0x923:0x26 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 102
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,76,53,102,114,101,120,112,102,80,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
+; CHECK: // .b8 102,114,101,120,112              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 96                               // DW_AT_decl_line
@@ -2293,87 +1904,41 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x93e:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 6                                // Abbrev [6] 0x943:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 6                                // Abbrev [6] 0x943:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 2377                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 8                                // Abbrev [8] 0x949:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 5                                // Abbrev [5] 0x94e:0x25 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 104
-; CHECK: // .b8 121
-; CHECK: // .b8 112
-; CHECK: // .b8 111
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,104,121,112,111,116,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 104                              // DW_AT_name
-; CHECK: // .b8 121
-; CHECK: // .b8 112
-; CHECK: // .b8 111
-; CHECK: // .b8 116
+; CHECK: // .b8 104,121,112,111,116              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 98                               // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x968:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x96d:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x973:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,105,108,111,103,98,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
+; CHECK: // .b8 105,108,111,103,98               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 100                              // DW_AT_decl_line
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 6                                // Abbrev [6] 0x98c:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 6                                // Abbrev [6] 0x98c:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x992:0x25 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 56
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 105
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,56,105,115,102,105,110,105,116,101,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 105
-; CHECK: // .b8 116
-; CHECK: // .b8 101
+; CHECK: // .b8 105,115,102,105,110,105,116,101  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 102                              // DW_AT_decl_line
@@ -2383,39 +1948,14 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x9b7:0x8 DW_TAG_base_type
-; CHECK: // .b8 98                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 111
-; CHECK: // .b8 108
+; CHECK: // .b8 98,111,111,108                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_encoding
-; CHECK:  / .b8 1                                // DW_AT_byte_size
+; CHECK: // .b8 1                                // DW_AT_byte_size
 ; CHECK: // .b8 5                                // Abbrev [5] 0x9bf:0x2d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 57
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 103
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,57,105,115,103,114,101,97,116,101,114,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 103
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
+; CHECK: // .b8 105,115,103,114,101,97,116,101,114 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 106                              // DW_AT_decl_line
@@ -2427,42 +1967,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0x9ec:0x38 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 49
-; CHECK: // .b8 52
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK:  / .b8 103
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 113
-; CHECK: // .b8 117
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,52,105,115,103,114,101,97,116,101,114,101,113,117,97,108,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 103
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 113
-; CHECK: // .b8 117
-; CHECK:  / .b8 97
-; CHECK: // .b8 108
+; CHECK: // .b8 105,115,103,114,101,97,116,101,114,101,113,117,97,108 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 105                              // DW_AT_decl_line
@@ -2474,50 +1981,21 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xa24:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,105,115,105,110,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 105,115,105,110,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
-; CHECK:  / .b8 108                              // DW_AT_decl_line
+; CHECK: // .b8 108                              // DW_AT_decl_line
 ; CHECK: // .b32 2487                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xa3d:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xa43:0x27 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 108
-; CHECK: // .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,105,115,108,101,115,115,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 108
-; CHECK: // .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 115
+; CHECK: // .b8 105,115,108,101,115,115          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 112                              // DW_AT_decl_line
@@ -2529,36 +2007,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xa6a:0x32 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK:  / .b8 76
-; CHECK: // .b8 49
-; CHECK: // .b8 49
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 108
-; CHECK: // .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 115
-; CHECK: // .b8 101
-; CHECK: // .b8 113
-; CHECK: // .b8 117
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,49,105,115,108,101,115,115,101,113,117,97,108,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 108
-; CHECK: // .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 115
-; CHECK: // .b8 101
-; CHECK: // .b8 113
-; CHECK:  / .b8 117
-; CHECK: // .b8 97
-; CHECK: // .b8 108
+; CHECK: // .b8 105,115,108,101,115,115,101,113,117,97,108 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 111                              // DW_AT_decl_line
@@ -2570,40 +2021,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xa9c:0x36 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 49
-; CHECK: // .b8 51
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 108
-; CHECK: // .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 115
-; CHECK: // .b8 103
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,51,105,115,108,101,115,115,103,114,101,97,116,101,114,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 108
-; CHECK:  / .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 115
-; CHECK: // .b8 103
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
+; CHECK: // .b8 105,115,108,101,115,115,103,114,101,97,116,101,114 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 114                              // DW_AT_decl_line
@@ -2615,22 +2035,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xad2:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 110
-; CHECK: // .b8 97
-; CHECK:  / .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,105,115,110,97,110,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 110
-; CHECK: // .b8 97
-; CHECK: // .b8 110
+; CHECK: // .b8 105,115,110,97,110               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 116                              // DW_AT_decl_line
@@ -2640,28 +2047,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xaf1:0x25 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 56
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 110
-; CHECK: // .b8 111
-; CHECK:  / .b8 114
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,56,105,115,110,111,114,109,97,108,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 110
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 108
+; CHECK: // .b8 105,115,110,111,114,109,97,108   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 118                              // DW_AT_decl_line
@@ -2671,36 +2059,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xb16:0x32 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 49
-; CHECK:  / .b8 49
-; CHECK: // .b8 105
-; CHECK: // .b8 115
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,49,105,115,117,110,111,114,100,101,114,101,100,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK:  / .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 100
+; CHECK: // .b8 105,115,117,110,111,114,100,101,114,101,100 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 120                              // DW_AT_decl_line
@@ -2712,20 +2073,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xb48:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
-; CHECK: // .b8 108
-; CHECK:  / .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
+; CHECK: // .b8 95,90,76,52,108,97,98,115,108    // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 0
+; CHECK: // .b8 108,97,98,115                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 121                              // DW_AT_decl_line
@@ -2735,64 +2085,28 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2917                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0xb65:0xc DW_TAG_base_type
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 108,111,110,103,32,105,110,116   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_encoding
 ; CHECK: // .b8 8                                // DW_AT_byte_size
-; CHECK:  / .b8 5                                // Abbrev [5] 0xb71:0x25 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 108
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
-; CHECK: // .b8 105
+; CHECK: // .b8 5                                // Abbrev [5] 0xb71:0x25 DW_TAG_subprogram
+; CHECK: // .b8 95,90,76,53,108,100,101,120,112,102,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
+; CHECK: // .b8 108,100,101,120,112              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 123                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 6                                // Abbrev [6] 0xb8b:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 6                                // Abbrev [6] 0xb8b:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0xb90:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xb96:0x21 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 108
-; CHECK: // .b8 103
-; CHECK: // .b8 97
-; CHECK: // .b8 109
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,108,103,97,109,109,97,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 103
-; CHECK: // .b8 97
-; CHECK: // .b8 109
-; CHECK: // .b8 109
-; CHECK:  / .b8 97
+; CHECK: // .b8 108,103,97,109,109,97            // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 125                              // DW_AT_decl_line
@@ -2802,22 +2116,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xbb7:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
-; CHECK: // .b8 120
+; CHECK: // .b8 95,90,76,53,108,108,97,98,115,120 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK:  / .b8 115
+; CHECK: // .b8 108,108,97,98,115                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 126                              // DW_AT_decl_line
@@ -2827,24 +2128,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1508                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xbd6:0x21 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,108,108,114,105,110,116,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK:  / .b8 116
+; CHECK: // .b8 108,108,114,105,110,116          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 128                              // DW_AT_decl_line
@@ -2854,18 +2140,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xbf7:0x1b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,51,108,111,103,102      // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
+; CHECK: // .b8 108,111,103                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 138                              // DW_AT_decl_line
@@ -2873,24 +2150,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xc0c:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xc12:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,108,111,103,49,48,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 48
+; CHECK: // .b8 108,111,103,49,48                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 130                              // DW_AT_decl_line
@@ -2898,24 +2162,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xc2b:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xc31:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 112
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,108,111,103,49,112,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 112
+; CHECK: // .b8 108,111,103,49,112               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 132                              // DW_AT_decl_line
@@ -2925,20 +2176,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xc50:0x1d DW_TAG_subprogram
-; CHECK:  / .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 50
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,108,111,103,50,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 50
+; CHECK: // .b8 108,111,103,50                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 134                              // DW_AT_decl_line
@@ -2948,20 +2188,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xc6d:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,108,111,103,98,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
+; CHECK: // .b8 108,111,103,98                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 136                              // DW_AT_decl_line
@@ -2971,22 +2200,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xc8a:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,108,114,105,110,116,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 108,114,105,110,116              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 140                              // DW_AT_decl_line
@@ -2996,24 +2212,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xca9:0x21 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK:  / .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,108,114,111,117,110,100,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
+; CHECK: // .b8 108,114,111,117,110,100          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 142                              // DW_AT_decl_line
@@ -3023,26 +2224,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xcca:0x23 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,55,108,108,114,111,117,110,100,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK:  / .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
+; CHECK: // .b8 108,108,114,111,117,110,100      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 143                              // DW_AT_decl_line
@@ -3052,22 +2236,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xced:0x24 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 109
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 102
-; CHECK:  / .b8 0
-; CHECK: // .b8 109                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,109,111,100,102,102,80,102 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 0
+; CHECK: // .b8 109,111,100,102                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 145                              // DW_AT_decl_line
@@ -3081,35 +2252,19 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 8                                // Abbrev [8] 0xd11:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 5                                // Abbrev [5] 0xd16:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 110
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 80
-; CHECK: // .b8 75
-; CHECK: // .b8 99
+; CHECK: // .b8 95,90,76,51,110,97,110,80,75,99  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 110                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
+; CHECK: // .b8 110,97,110                       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 146                              // DW_AT_decl_line
 ; CHECK: // .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xd2d:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0xd33:0xa DW_TAG_base_type
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 101
+; CHECK: // .b8 100,111,117,98,108,101           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_encoding
 ; CHECK: // .b8 8                                // DW_AT_byte_size
@@ -3118,30 +2273,14 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 9                                // Abbrev [9] 0xd42:0x5 DW_TAG_const_type
 ; CHECK: // .b32 3399                            // DW_AT_type
 ; CHECK: // .b8 7                                // Abbrev [7] 0xd47:0x8 DW_TAG_base_type
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 104
-; CHECK: // .b8 97
-; CHECK: // .b8 114
+; CHECK: // .b8 99,104,97,114                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 8                                // DW_AT_encoding
 ; CHECK: // .b8 1                                // DW_AT_byte_size
 ; CHECK: // .b8 5                                // Abbrev [5] 0xd4f:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 110
-; CHECK:  / .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 75
-; CHECK: // .b8 99
+; CHECK: // .b8 95,90,76,52,110,97,110,102,80,75,99 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 110                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 110,97,110,102                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 147                              // DW_AT_decl_line
@@ -3151,30 +2290,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xd6e:0x27 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 57
-; CHECK: // .b8 110
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK:  / .b8 114
-; CHECK: // .b8 98
-; CHECK: // .b8 121
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,57,110,101,97,114,98,121,105,110,116,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 110                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 114
-; CHECK: // .b8 98
-; CHECK: // .b8 121
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 110,101,97,114,98,121,105,110,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 149                              // DW_AT_decl_line
@@ -3183,56 +2301,24 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0xd8f:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 5                                // Abbrev [5] 0xd95:0x2d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 57
-; CHECK: // .b8 110
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 5                                // Abbrev [5] 0xd95:0x2d DW_TAG_subprogram
+; CHECK: // .b8 95,90,76,57,110,101,120,116,97,102,116,101,114,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 110                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
+; CHECK: // .b8 110,101,120,116,97,102,116,101,114 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 151                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xdb7:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0xdbc:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xdc2:0x21 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 112
-; CHECK: // .b8 111
-; CHECK: // .b8 119
-; CHECK: // .b8 102
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,76,51,112,111,119,102,105  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 112                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 119
+; CHECK: // .b8 112,111,119                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 155                              // DW_AT_decl_line
@@ -3243,64 +2329,24 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0xddd:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 5                                // Abbrev [5] 0xde3:0x2d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 57
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 5                                // Abbrev [5] 0xde3:0x2d DW_TAG_subprogram
+; CHECK: // .b8 95,90,76,57,114,101,109,97,105,110,100,101,114,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 114
+; CHECK: // .b8 114,101,109,97,105,110,100,101,114 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 157                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 6                                // Abbrev [6] 0xe05:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 6                                // Abbrev [6] 0xe05:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0xe0a:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xe10:0x2e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 109
-; CHECK: // .b8 113
-; CHECK: // .b8 117
-; CHECK: // .b8 111
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,76,54,114,101,109,113,117,111,102,102,80,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 109
-; CHECK: // .b8 113
-; CHECK: // .b8 117
-; CHECK: // .b8 111
+; CHECK: // .b8 114,101,109,113,117,111          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 159                              // DW_AT_decl_line
@@ -3314,20 +2360,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2377                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xe3e:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK:  / .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,114,105,110,116,102  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 114,105,110,116                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 161                              // DW_AT_decl_line
@@ -3337,22 +2372,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xe5b:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK:  / .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,114,111,117,110,100,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
+; CHECK: // .b8 114,111,117,110,100              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 163                              // DW_AT_decl_line
@@ -3362,30 +2384,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xe7a:0x29 DW_TAG_subprogram
-; CHECK:  / .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 115
-; CHECK: // .b8 99
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 108
+; CHECK: // .b8 95,90,76,55,115,99,97,108,98,108,110,102,108 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 110
+; CHECK: // .b8 115,99,97,108,98,108,110         // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
-; CHECK:  / .b8 165                              // DW_AT_decl_line
+; CHECK: // .b8 165                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xe98:0x5 DW_TAG_formal_parameter
@@ -3394,25 +2398,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2917                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xea3:0x27 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 115
-; CHECK: // .b8 99
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,76,54,115,99,97,108,98,110,102,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK:  / .b8 110
+; CHECK: // .b8 115,99,97,108,98,110             // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 167                              // DW_AT_decl_line
@@ -3424,48 +2412,22 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xeca:0x23 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 98
-; CHECK: // .b8 105
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,55,115,105,103,110,98,105,116,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 98
-; CHECK: // .b8 105
-; CHECK: // .b8 116
+; CHECK: // .b8 115,105,103,110,98,105,116       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 169                              // DW_AT_decl_line
 ; CHECK: // .b32 2487                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xee7:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b32 1554                            // DW_AT_type
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xeed:0x1b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 51
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,51,115,105,110,102      // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK:  / .b8 110
-; CHECK:  / .b8 0
+; CHECK: // .b8 115,105,110                      // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 171                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
@@ -3474,43 +2436,21 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xf08:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK:  / .b8 115
-; CHECK:  / .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,115,105,110,104,102  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
+; CHECK: // .b8 115,105,110,104                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 173                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 6                                // Abbrev [6] 0xf1f:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 1554                            // DW_AT_type
+; CHECK: // .b8 6                                // Abbrev [6] 0xf1f:0x5 DW_TAG_formal_parameter
+; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xf25:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 115
-; CHECK: // .b8 113
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,115,113,114,116,102  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 113
-; CHECK:  / .b8 114
-; CHECK:  / .b8 116
+; CHECK: // .b8 115,113,114,116                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 175                              // DW_AT_decl_line
@@ -3520,41 +2460,21 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xf42:0x1b DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK:  / .b8 76
-; CHECK:  / .b8 51
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,51,116,97,110,102       // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
+; CHECK: // .b8 116,97,110                       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 177                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 6                                // Abbrev [6] 0xf57:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 6                                // Abbrev [6] 0xf57:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xf5d:0x1d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK:  / .b8 102
-; CHECK:  / .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 104
+; CHECK: // .b8 95,90,76,52,116,97,110,104,102   // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 0
+; CHECK: // .b8 116,97,110,104                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 179                              // DW_AT_decl_line
@@ -3563,25 +2483,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0xf74:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 5                                // Abbrev [5] 0xf7a:0x21 DW_TAG_subprogram
-; CHECK:  / .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 116
-; CHECK: // .b8 103
-; CHECK: // .b8 97
-; CHECK: // .b8 109
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
+; CHECK: // .b8 5                                // Abbrev [5] 0xf7a:0x21 DW_TAG_subprogram
+; CHECK: // .b8 95,90,76,54,116,103,97,109,109,97,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 103
-; CHECK:  / .b8 97
-; CHECK:  / .b8 109
-; CHECK: // .b8 109
-; CHECK: // .b8 97
+; CHECK: // .b8 116,103,97,109,109,97            // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 181                              // DW_AT_decl_line
@@ -3591,49 +2496,30 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 5                                // Abbrev [5] 0xf9b:0x1f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK:  / .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 99
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,116,114,117,110,99,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 99
+; CHECK: // .b8 116,114,117,110,99               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
-; CHECK:  / .b8 183                              // DW_AT_decl_line
-; CHECK:  / .b32 1554                            // DW_AT_type
+; CHECK: // .b8 183                              // DW_AT_decl_line
+; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0xfb4:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0xfba:0x14 DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
+; CHECK: // .b8 97,99,111,115                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 54                               // DW_AT_decl_line
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
-; CHECK:  / .b8 6                                // Abbrev [6] 0xfc8:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 3379                            // DW_AT_type
+; CHECK: // .b8 6                                // Abbrev [6] 0xfc8:0x5 DW_TAG_formal_parameter
+; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0xfce:0x14 DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
+; CHECK: // .b8 97,115,105,110                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 56                               // DW_AT_decl_line
@@ -3641,13 +2527,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0xfdc:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b32 3379                            // DW_AT_type
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0xfe2:0x14 DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
+; CHECK: // .b8 97,116,97,110                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 58                               // DW_AT_decl_line
@@ -3656,13 +2539,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0xff0:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 10                               // Abbrev [10] 0xff6:0x1a DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 50
+; CHECK: // .b8 0                                // End Of Children Mark
+; CHECK: // .b8 10                               // Abbrev [10] 0xff6:0x1a DW_TAG_subprogram
+; CHECK: // .b8 97,116,97,110,50                 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 60                               // DW_AT_decl_line
@@ -3670,15 +2549,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1005:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 6                                // Abbrev [6] 0x100a:0x5 DW_TAG_formal_parameter
+; CHECK: // .b32 3379                            // DW_AT_type
+; CHECK: // .b8 6                                // Abbrev [6] 0x100a:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1010:0x14 DW_TAG_subprogram
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 105
-; CHECK: // .b8 108
+; CHECK: // .b8 99,101,105,108                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 178                              // DW_AT_decl_line
@@ -3687,11 +2563,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x101e:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 10                               // Abbrev [10] 0x1024:0x13 DW_TAG_subprogram
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 115
+; CHECK: // .b8 0                                // End Of Children Mark
+; CHECK: // .b8 10                               // Abbrev [10] 0x1024:0x13 DW_TAG_subprogram
+; CHECK: // .b8 99,111,115                       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 63                               // DW_AT_decl_line
@@ -3702,10 +2576,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1037:0x14 DW_TAG_subprogram
-; CHECK:  / .b8 99                               // DW_AT_name
-; CHECK:  / .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
+; CHECK: // .b8 99,111,115,104                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 72                               // DW_AT_decl_line
@@ -3716,9 +2587,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x104b:0x13 DW_TAG_subprogram
-; CHECK:  / .b8 101                              // DW_AT_name
-; CHECK:  / .b8 120
-; CHECK: // .b8 112
+; CHECK: // .b8 101,120,112                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 100                              // DW_AT_decl_line
@@ -3729,10 +2598,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x105e:0x14 DW_TAG_subprogram
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK:  / .b8 97
-; CHECK:  / .b8 98
-; CHECK: // .b8 115
+; CHECK: // .b8 102,97,98,115                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 181                              // DW_AT_decl_line
@@ -3743,11 +2609,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1072:0x15 DW_TAG_subprogram
-; CHECK:  / .b8 102                              // DW_AT_name
-; CHECK:  / .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 111
-; CHECK: // .b8 114
+; CHECK: // .b8 102,108,111,111,114              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 184                              // DW_AT_decl_line
@@ -3757,11 +2619,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1081:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 10                               // Abbrev [10] 0x1087:0x19 DW_TAG_subprogram
-; CHECK:  / .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 111
-; CHECK: // .b8 100
+; CHECK: // .b8 10                               // Abbrev [10] 0x1087:0x19 DW_TAG_subprogram
+; CHECK: // .b8 102,109,111,100                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 187                              // DW_AT_decl_line
@@ -3773,12 +2632,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x109a:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 10                               // Abbrev [10] 0x10a0:0x1a DW_TAG_subprogram
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
+; CHECK: // .b8 10                               // Abbrev [10] 0x10a0:0x1a DW_TAG_subprogram
+; CHECK: // .b8 102,114,101,120,112              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 103                              // DW_AT_decl_line
@@ -3791,11 +2646,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2377                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x10ba:0x1a DW_TAG_subprogram
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
+; CHECK: // .b8 108,100,101,120,112              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 106                              // DW_AT_decl_line
@@ -3808,9 +2659,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x10d4:0x13 DW_TAG_subprogram
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
+; CHECK: // .b8 108,111,103                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 109                              // DW_AT_decl_line
@@ -3819,27 +2668,20 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x10e1:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 10                               // Abbrev [10] 0x10e7:0x15 DW_TAG_subprogram
-; CHECK:  / .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 48
+; CHECK: // .b8 0                                // End Of Children Mark
+; CHECK: // .b8 10                               // Abbrev [10] 0x10e7:0x15 DW_TAG_subprogram
+; CHECK: // .b8 108,111,103,49,48                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 112                              // DW_AT_decl_line
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 1                                // DW_AT_external
-; CHECK:  / .b8 6                                // Abbrev [6] 0x10f6:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 1                                // DW_AT_external
+; CHECK: // .b8 6                                // Abbrev [6] 0x10f6:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x10fc:0x19 DW_TAG_subprogram
-; CHECK: // .b8 109                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 109,111,100,102                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 115                              // DW_AT_decl_line
@@ -3848,15 +2690,13 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x110a:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 6                                // Abbrev [6] 0x110f:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 4373                            // DW_AT_type
+; CHECK: // .b8 6                                // Abbrev [6] 0x110f:0x5 DW_TAG_formal_parameter
+; CHECK: // .b32 4373                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 8                                // Abbrev [8] 0x1115:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 10                               // Abbrev [10] 0x111a:0x18 DW_TAG_subprogram
-; CHECK: // .b8 112                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 119
+; CHECK: // .b8 112,111,119                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 153                              // DW_AT_decl_line
@@ -3865,13 +2705,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1127:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 6                                // Abbrev [6] 0x112c:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 3379                            // DW_AT_type
+; CHECK: // .b8 6                                // Abbrev [6] 0x112c:0x5 DW_TAG_formal_parameter
+; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1132:0x13 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
+; CHECK: // .b8 115,105,110                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 65                               // DW_AT_decl_line
@@ -3880,12 +2718,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x113f:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 10                               // Abbrev [10] 0x1145:0x14 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
+; CHECK: // .b8 0                                // End Of Children Mark
+; CHECK: // .b8 10                               // Abbrev [10] 0x1145:0x14 DW_TAG_subprogram
+; CHECK: // .b8 115,105,110,104                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 74                               // DW_AT_decl_line
@@ -3895,11 +2730,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1153:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 10                               // Abbrev [10] 0x1159:0x14 DW_TAG_subprogram
-; CHECK:  / .b8 115                              // DW_AT_name
-; CHECK: // .b8 113
-; CHECK: // .b8 114
-; CHECK: // .b8 116
+; CHECK: // .b8 10                               // Abbrev [10] 0x1159:0x14 DW_TAG_subprogram
+; CHECK: // .b8 115,113,114,116                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 156                              // DW_AT_decl_line
@@ -3910,10 +2742,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x116d:0x13 DW_TAG_subprogram
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK:  / .b8 110
-; CHECK:  / .b8 0
+; CHECK: // .b8 116,97,110                       // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 67                               // DW_AT_decl_line
 ; CHECK: // .b32 3379                            // DW_AT_type
@@ -3923,10 +2753,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3379                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1180:0x14 DW_TAG_subprogram
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 104
+; CHECK: // .b8 116,97,110,104                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 76                               // DW_AT_decl_line
@@ -3938,11 +2765,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 11                               // Abbrev [11] 0x1194:0xd DW_TAG_typedef
 ; CHECK: // .b32 4513                            // DW_AT_type
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 118
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 100,105,118,95,116               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 101                              // DW_AT_decl_line
@@ -3950,12 +2773,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 11                               // Abbrev [11] 0x11a3:0xe DW_TAG_typedef
 ; CHECK: // .b32 4529                            // DW_AT_type
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 118
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 108,100,105,118,95,116           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 109                              // DW_AT_decl_line
@@ -3964,10 +2782,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 105                              // DW_AT_decl_line
 ; CHECK: // .b8 14                               // Abbrev [14] 0x11b5:0xf DW_TAG_member
-; CHECK: // .b8 113                              // DW_AT_name
-; CHECK: // .b8 117
-; CHECK: // .b8 111
-; CHECK: // .b8 116
+; CHECK: // .b8 113,117,111,116                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 2917                            // DW_AT_type
 ; CHECK: // .b8 4                                // DW_AT_decl_file
@@ -3976,9 +2791,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 35
 ; CHECK: // .b8 0
 ; CHECK: // .b8 14                               // Abbrev [14] 0x11c4:0xe DW_TAG_member
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 109
+; CHECK: // .b8 114,101,109                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 2917                            // DW_AT_type
 ; CHECK: // .b8 4                                // DW_AT_decl_file
@@ -3988,11 +2801,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 8
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 15                               // Abbrev [15] 0x11d3:0xd DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 98
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 116
+; CHECK: // .b8 97,98,111,114,116                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 3                                // DW_AT_decl_line
@@ -4001,9 +2810,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 1                                // DW_AT_noreturn
 ; CHECK: // .b8 16                               // Abbrev [16] 0x11e0:0x14 DW_TAG_subprogram
-; CHECK:  / .b8 97                               // DW_AT_name
-; CHECK:  / .b8 98
-; CHECK: // .b8 115
+; CHECK: // .b8 97,98,115                        // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 7                                // DW_AT_decl_line
@@ -4015,12 +2822,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x11f4:0x17 DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK:  / .b8 101
-; CHECK:  / .b8 120
-; CHECK: // .b8 105
-; CHECK: // .b8 116
+; CHECK: // .b8 97,116,101,120,105,116           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 7                                // DW_AT_decl_line
@@ -4033,12 +2835,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 8                                // Abbrev [8] 0x120b:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 4624                            // DW_AT_type
-; CHECK:  / .b8 17                               // Abbrev [17] 0x1210:0x1 DW_TAG_subroutine_type
-; CHECK:  / .b8 10                               // Abbrev [10] 0x1211:0x14 DW_TAG_subprogram
-; CHECK:  / .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 102
+; CHECK: // .b8 17                               // Abbrev [17] 0x1210:0x1 DW_TAG_subroutine_type
+; CHECK: // .b8 10                               // Abbrev [10] 0x1211:0x14 DW_TAG_subprogram
+; CHECK: // .b8 97,116,111,102                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 6                                // DW_AT_decl_file
 ; CHECK: // .b8 26                               // DW_AT_decl_line
@@ -4048,11 +2847,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x121f:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 16                               // Abbrev [16] 0x1225:0x15 DW_TAG_subprogram
-; CHECK:  / .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 105
+; CHECK: // .b8 16                               // Abbrev [16] 0x1225:0x15 DW_TAG_subprogram
+; CHECK: // .b8 97,116,111,105                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 22                               // DW_AT_decl_line
@@ -4064,10 +2860,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x123a:0x15 DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK:  / .b8 116
-; CHECK:  / .b8 111
-; CHECK: // .b8 108
+; CHECK: // .b8 97,116,111,108                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 27                               // DW_AT_decl_line
@@ -4079,13 +2872,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x124f:0x2b DW_TAG_subprogram
-; CHECK: // .b8 98                               // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 101
-; CHECK:  / .b8 97
-; CHECK:  / .b8 114
-; CHECK: // .b8 99
-; CHECK: // .b8 104
+; CHECK: // .b8 98,115,101,97,114,99,104         // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 7                                // DW_AT_decl_file
 ; CHECK: // .b8 20                               // DW_AT_decl_line
@@ -4097,8 +2884,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1265:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 4731                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x126a:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 4737                            // DW_AT_type
-; CHECK:  / .b8 6                                // Abbrev [6] 0x126f:0x5 DW_TAG_formal_parameter
+; CHECK: // .b32 4737                            // DW_AT_type
+; CHECK: // .b8 6                                // Abbrev [6] 0x126f:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 4737                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1274:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 4772                            // DW_AT_type
@@ -4109,52 +2896,19 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 19                               // Abbrev [19] 0x1280:0x1 DW_TAG_const_type
 ; CHECK: // .b8 11                               // Abbrev [11] 0x1281:0xe DW_TAG_typedef
 ; CHECK: // .b32 4751                            // DW_AT_type
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 122
-; CHECK: // .b8 101
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 115,105,122,101,95,116           // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 8                                // DW_AT_decl_file
-; CHECK:  / .b8 62                               // DW_AT_decl_line
+; CHECK: // .b8 8                                // DW_AT_decl_file
+; CHECK: // .b8 62                               // DW_AT_decl_line
 ; CHECK: // .b8 7                                // Abbrev [7] 0x128f:0x15 DW_TAG_base_type
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 101
-; CHECK: // .b8 100
-; CHECK:  / .b8 32
-; CHECK:  / .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 108,111,110,103,32,117,110,115,105,103,110,101,100,32,105,110,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 7                                // DW_AT_encoding
 ; CHECK: // .b8 8                                // DW_AT_byte_size
 ; CHECK: // .b8 20                               // Abbrev [20] 0x12a4:0x16 DW_TAG_typedef
 ; CHECK: // .b32 4794                            // DW_AT_type
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 109
-; CHECK: // .b8 112
-; CHECK: // .b8 97
-; CHECK: // .b8 114
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK:  / .b8 116
-; CHECK:  / .b8 0
+; CHECK: // .b8 95,95,99,111,109,112,97,114,95,102,110,95,116 // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 230                              // DW_AT_decl_line
 ; CHECK: // .b8 2
@@ -4168,12 +2922,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 4731                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x12cf:0x1c DW_TAG_subprogram
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
+; CHECK: // .b8 99,97,108,108,111,99             // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 212                              // DW_AT_decl_line
@@ -4187,12 +2936,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 4737                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x12eb:0x19 DW_TAG_subprogram
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 118
+; CHECK: // .b8 100,105,118                      // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 4                                // DW_AT_decl_file
-; CHECK:  / .b8 21                               // DW_AT_decl_line
+; CHECK: // .b8 4                                // DW_AT_decl_file
+; CHECK: // .b8 21                               // DW_AT_decl_line
 ; CHECK: // .b8 3
 ; CHECK: // .b32 4500                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
@@ -4203,25 +2950,19 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 22                               // Abbrev [22] 0x1304:0x12 DW_TAG_subprogram
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 120
-; CHECK: // .b8 105
-; CHECK: // .b8 116
+; CHECK: // .b8 101,120,105,116                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 31                               // DW_AT_decl_line
-; CHECK:  / .b8 2
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 2
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 1                                // DW_AT_noreturn
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1310:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 23                               // Abbrev [23] 0x1316:0x11 DW_TAG_subprogram
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 101
+; CHECK: // .b8 102,114,101,101                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 227                              // DW_AT_decl_line
@@ -4231,13 +2972,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1321:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 4730                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 16                               // Abbrev [16] 0x1327:0x17 DW_TAG_subprogram
-; CHECK:  / .b8 103                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 110
-; CHECK: // .b8 118
+; CHECK: // .b8 16                               // Abbrev [16] 0x1327:0x17 DW_TAG_subprogram
+; CHECK: // .b8 103,101,116,101,110,118          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 52                               // DW_AT_decl_line
@@ -4246,15 +2982,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1338:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 3389                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b32 3389                            // DW_AT_type
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 8                                // Abbrev [8] 0x133e:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 3399                            // DW_AT_type
 ; CHECK: // .b8 16                               // Abbrev [16] 0x1343:0x15 DW_TAG_subprogram
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
+; CHECK: // .b8 108,97,98,115                    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 8                                // DW_AT_decl_line
@@ -4263,13 +2996,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1352:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 2917                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b32 2917                            // DW_AT_type
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x1358:0x1a DW_TAG_subprogram
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 118
+; CHECK: // .b8 108,100,105,118                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 23                               // DW_AT_decl_line
@@ -4283,28 +3013,19 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2917                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x1372:0x17 DW_TAG_subprogram
-; CHECK: // .b8 109                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
+; CHECK: // .b8 109,97,108,108,111,99            // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 210                              // DW_AT_decl_line
 ; CHECK: // .b8 1
 ; CHECK: // .b32 4730                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 1                                // DW_AT_external
-; CHECK:  / .b8 6                                // Abbrev [6] 0x1383:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 1                                // DW_AT_external
+; CHECK: // .b8 6                                // Abbrev [6] 0x1383:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 4737                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x1389:0x1b DW_TAG_subprogram
-; CHECK: // .b8 109                              // DW_AT_name
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 101
-; CHECK: // .b8 110
+; CHECK: // .b8 109,98,108,101,110               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 95                               // DW_AT_decl_line
@@ -4317,15 +3038,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x139e:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 4737                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK:  / .b8 16                               // Abbrev [16] 0x13a4:0x23 DW_TAG_subprogram
-; CHECK:  / .b8 109                              // DW_AT_name
-; CHECK: // .b8 98
-; CHECK: // .b8 115
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 119
-; CHECK: // .b8 99
-; CHECK: // .b8 115
+; CHECK: // .b8 16                               // Abbrev [16] 0x13a4:0x23 DW_TAG_subprogram
+; CHECK: // .b8 109,98,115,116,111,119,99,115    // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 106                              // DW_AT_decl_line
@@ -4338,29 +3052,18 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x13bc:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x13c1:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 4737                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b32 4737                            // DW_AT_type
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 8                                // Abbrev [8] 0x13c7:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 5068                            // DW_AT_type
 ; CHECK: // .b8 7                                // Abbrev [7] 0x13cc:0xb DW_TAG_base_type
-; CHECK: // .b8 119                              // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 97
-; CHECK: // .b8 114
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 119,99,104,97,114,95,116         // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_encoding
 ; CHECK: // .b8 4                                // DW_AT_byte_size
 ; CHECK: // .b8 16                               // Abbrev [16] 0x13d7:0x21 DW_TAG_subprogram
-; CHECK: // .b8 109                              // DW_AT_name
-; CHECK: // .b8 98
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 119
-; CHECK:  / .b8 99
-; CHECK:  / .b8 0
+; CHECK: // .b8 109,98,116,111,119,99            // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 98                               // DW_AT_decl_line
 ; CHECK: // .b8 3
@@ -4375,11 +3078,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 4737                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 23                               // Abbrev [23] 0x13f8:0x21 DW_TAG_subprogram
-; CHECK: // .b8 113                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 111
-; CHECK:  / .b8 114
-; CHECK:  / .b8 116
+; CHECK: // .b8 113,115,111,114,116              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 253                              // DW_AT_decl_line
@@ -4396,10 +3095,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 4772                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 24                               // Abbrev [24] 0x1419:0xf DW_TAG_subprogram
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 100
+; CHECK: // .b8 114,97,110,100                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 118                              // DW_AT_decl_line
@@ -4407,14 +3103,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
-; CHECK:  / .b8 16                               // Abbrev [16] 0x1428:0x1d DW_TAG_subprogram
-; CHECK:  / .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
+; CHECK: // .b8 16                               // Abbrev [16] 0x1428:0x1d DW_TAG_subprogram
+; CHECK: // .b8 114,101,97,108,108,111,99        // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 224                              // DW_AT_decl_line
@@ -4428,11 +3118,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 4737                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 23                               // Abbrev [23] 0x1445:0x12 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 100
+; CHECK: // .b8 115,114,97,110,100               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 120                              // DW_AT_decl_line
@@ -4443,28 +3129,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 5207                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x1457:0x10 DW_TAG_base_type
-; CHECK: // .b8 117                              // DW_AT_name
-; CHECK: // .b8 110
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 101
-; CHECK: // .b8 100
-; CHECK: // .b8 32
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 117,110,115,105,103,110,101,100,32,105,110,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 7                                // DW_AT_encoding
 ; CHECK: // .b8 4                                // DW_AT_byte_size
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1467:0x1b DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 100
+; CHECK: // .b8 115,116,114,116,111,100          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 164                              // DW_AT_decl_line
@@ -4479,19 +3149,14 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 8                                // Abbrev [8] 0x1482:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 4926                            // DW_AT_type
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1487:0x20 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 108
+; CHECK: // .b8 115,116,114,116,111,108          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 183                              // DW_AT_decl_line
 ; CHECK: // .b32 2917                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 1                                // DW_AT_external
-; CHECK:  / .b8 6                                // Abbrev [6] 0x1497:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 1                                // DW_AT_external
+; CHECK: // .b8 6                                // Abbrev [6] 0x1497:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x149c:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 5250                            // DW_AT_type
@@ -4499,13 +3164,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x14a7:0x21 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 108
+; CHECK: // .b8 115,116,114,116,111,117,108      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 187                              // DW_AT_decl_line
@@ -4520,12 +3179,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x14c8:0x17 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 121
-; CHECK: // .b8 115
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 109
+; CHECK: // .b8 115,121,115,116,101,109          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 205                              // DW_AT_decl_line
@@ -4537,16 +3191,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x14df:0x23 DW_TAG_subprogram
-; CHECK: // .b8 119                              // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 115
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 109
-; CHECK: // .b8 98
-; CHECK:  / .b8 115
-; CHECK:  / .b8 0
-; CHECK:  / .b8 4                                // DW_AT_decl_file
+; CHECK: // .b8 119,99,115,116,111,109,98,115    // DW_AT_name
+; CHECK: // .b8 0
+; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 109                              // DW_AT_decl_line
 ; CHECK: // .b8 3
 ; CHECK: // .b32 4737                            // DW_AT_type
@@ -4561,15 +3208,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 8                                // Abbrev [8] 0x1502:0x5 DW_TAG_pointer_type
 ; CHECK: // .b32 5383                            // DW_AT_type
-; CHECK:  / .b8 9                                // Abbrev [9] 0x1507:0x5 DW_TAG_const_type
-; CHECK:  / .b32 5068                            // DW_AT_type
+; CHECK: // .b8 9                                // Abbrev [9] 0x1507:0x5 DW_TAG_const_type
+; CHECK: // .b32 5068                            // DW_AT_type
 ; CHECK: // .b8 16                               // Abbrev [16] 0x150c:0x1c DW_TAG_subprogram
-; CHECK: // .b8 119                              // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 109
-; CHECK: // .b8 98
+; CHECK: // .b8 119,99,116,111,109,98            // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 102                              // DW_AT_decl_line
@@ -4577,26 +3219,18 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
-; CHECK:  / .b8 6                                // Abbrev [6] 0x151d:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 4926                            // DW_AT_type
+; CHECK: // .b8 6                                // Abbrev [6] 0x151d:0x5 DW_TAG_formal_parameter
+; CHECK: // .b32 4926                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1522:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 5068                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 2                                // Abbrev [2] 0x1528:0x78 DW_TAG_namespace
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 117
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 120
-; CHECK: // .b8 120
+; CHECK: // .b8 95,95,103,110,117,95,99,120,120  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 3                                // Abbrev [3] 0x1533:0x7 DW_TAG_imported_declaration
 ; CHECK: // .b8 5                                // DW_AT_decl_file
-; CHECK:  / .b8 201                              // DW_AT_decl_line
-; CHECK:  / .b32 5536                            // DW_AT_import
+; CHECK: // .b8 201                              // DW_AT_decl_line
+; CHECK: // .b32 5536                            // DW_AT_import
 ; CHECK: // .b8 3                                // Abbrev [3] 0x153a:0x7 DW_TAG_imported_declaration
 ; CHECK: // .b8 5                                // DW_AT_decl_file
 ; CHECK: // .b8 207                              // DW_AT_decl_line
@@ -4612,8 +3246,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 3                                // Abbrev [3] 0x154f:0x7 DW_TAG_imported_declaration
 ; CHECK: // .b8 5                                // DW_AT_decl_file
 ; CHECK: // .b8 228                              // DW_AT_decl_line
-; CHECK:  / .b32 5653                            // DW_AT_import
-; CHECK:  / .b8 3                                // Abbrev [3] 0x1556:0x7 DW_TAG_imported_declaration
+; CHECK: // .b32 5653                            // DW_AT_import
+; CHECK: // .b8 3                                // Abbrev [3] 0x1556:0x7 DW_TAG_imported_declaration
 ; CHECK: // .b8 5                                // DW_AT_decl_file
 ; CHECK: // .b8 229                              // DW_AT_decl_line
 ; CHECK: // .b32 5675                            // DW_AT_import
@@ -4630,30 +3264,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 233                              // DW_AT_decl_line
 ; CHECK: // .b32 5795                            // DW_AT_import
 ; CHECK: // .b8 25                               // Abbrev [25] 0x1572:0x2d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 57
-; CHECK:  / .b8 95
-; CHECK:  / .b8 95
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 117
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 120
-; CHECK: // .b8 120
-; CHECK: // .b8 51
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 118
-; CHECK: // .b8 69
-; CHECK: // .b8 120
-; CHECK: // .b8 120
+; CHECK: // .b8 95,90,78,57,95,95,103,110,117,95,99,120,120,51,100,105,118,69,120,120 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 118
+; CHECK: // .b8 100,105,118                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_decl_file
 ; CHECK: // .b8 214                              // DW_AT_decl_line
@@ -4668,25 +3281,16 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 11                               // Abbrev [11] 0x15a0:0xf DW_TAG_typedef
 ; CHECK: // .b32 5551                            // DW_AT_type
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 118
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 108,108,100,105,118,95,116       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 121                              // DW_AT_decl_line
 ; CHECK: // .b8 13                               // Abbrev [13] 0x15af:0x22 DW_TAG_structure_type
 ; CHECK: // .b8 16                               // DW_AT_byte_size
-; CHECK:  / .b8 4                                // DW_AT_decl_file
-; CHECK:  / .b8 117                              // DW_AT_decl_line
+; CHECK: // .b8 4                                // DW_AT_decl_file
+; CHECK: // .b8 117                              // DW_AT_decl_line
 ; CHECK: // .b8 14                               // Abbrev [14] 0x15b3:0xf DW_TAG_member
-; CHECK: // .b8 113                              // DW_AT_name
-; CHECK: // .b8 117
-; CHECK: // .b8 111
-; CHECK: // .b8 116
+; CHECK: // .b8 113,117,111,116                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 1508                            // DW_AT_type
 ; CHECK: // .b8 4                                // DW_AT_decl_file
@@ -4695,23 +3299,17 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 35
 ; CHECK: // .b8 0
 ; CHECK: // .b8 14                               // Abbrev [14] 0x15c2:0xe DW_TAG_member
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 109
+; CHECK: // .b8 114,101,109                      // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b32 1508                            // DW_AT_type
-; CHECK:  / .b8 4                                // DW_AT_decl_file
+; CHECK: // .b32 1508                            // DW_AT_type
+; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 120                              // DW_AT_decl_line
 ; CHECK: // .b8 2                                // DW_AT_data_member_location
 ; CHECK: // .b8 35
 ; CHECK: // .b8 8
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 22                               // Abbrev [22] 0x15d1:0x13 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 69
-; CHECK: // .b8 120
-; CHECK: // .b8 105
-; CHECK: // .b8 116
+; CHECK: // .b8 95,69,120,105,116                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 45                               // DW_AT_decl_line
@@ -4723,11 +3321,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x15e4:0x16 DW_TAG_subprogram
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
+; CHECK: // .b8 108,108,97,98,115                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 12                               // DW_AT_decl_line
@@ -4739,11 +3333,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1508                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x15fa:0x1b DW_TAG_subprogram
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK:  / .b8 118
+; CHECK: // .b8 108,108,100,105,118              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 29                               // DW_AT_decl_line
@@ -4757,11 +3347,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1508                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 16                               // Abbrev [16] 0x1615:0x16 DW_TAG_subprogram
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 108
-; CHECK: // .b8 108
+; CHECK: // .b8 97,116,111,108,108               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 36                               // DW_AT_decl_line
@@ -4771,15 +3357,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1625:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3389                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x162b:0x21 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 108
-; CHECK: // .b8 108
+; CHECK: // .b8 115,116,114,116,111,108,108      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 209                              // DW_AT_decl_line
@@ -4794,14 +3374,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x164c:0x22 DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK:  / .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 108
-; CHECK: // .b8 108
+; CHECK: // .b8 115,116,114,116,111,117,108,108  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 214                              // DW_AT_decl_line
@@ -4816,57 +3389,25 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x166e:0x1a DW_TAG_base_type
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK:  / .b8 32
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 101
-; CHECK: // .b8 100
-; CHECK: // .b8 32
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 108,111,110,103,32,108,111,110,103,32,117,110,115,105,103,110,101,100,32,105,110,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 7                                // DW_AT_encoding
 ; CHECK: // .b8 8                                // DW_AT_byte_size
 ; CHECK: // .b8 10                               // Abbrev [10] 0x1688:0x1b DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 102
+; CHECK: // .b8 115,116,114,116,111,102          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 172                              // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
-; CHECK:  / .b8 6                                // Abbrev [6] 0x1698:0x5 DW_TAG_formal_parameter
+; CHECK: // .b8 6                                // Abbrev [6] 0x1698:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 3389                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x169d:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 5250                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 10                               // Abbrev [10] 0x16a3:0x1c DW_TAG_subprogram
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 108
-; CHECK: // .b8 100
+; CHECK: // .b8 115,116,114,116,111,108,100      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_decl_file
 ; CHECK: // .b8 175                              // DW_AT_decl_line
@@ -4879,38 +3420,15 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 5250                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x16bf:0xf DW_TAG_base_type
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK:  / .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 100
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 101
+; CHECK: // .b8 108,111,110,103,32,100,111,117,98,108,101 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_encoding
 ; CHECK: // .b8 8                                // DW_AT_byte_size
 ; CHECK: // .b8 26                               // Abbrev [26] 0x16ce:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 97
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,97,99,111,115,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK:  / .b8 0
+; CHECK: // .b8 97,99,111,115,102                // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 62                               // DW_AT_decl_line
 ; CHECK: // .b8 5
@@ -4920,24 +3438,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x16ee:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 97
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,97,99,111,115,104,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK:  / .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 97,99,111,115,104,102            // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 90                               // DW_AT_decl_line
@@ -4948,22 +3451,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1710:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 97
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,97,115,105,110,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK:  / .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 97,115,105,110,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 57                               // DW_AT_decl_line
@@ -4974,56 +3464,25 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1730:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 97
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,97,115,105,110,104,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 97,115,105,110,104,102           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 95                               // DW_AT_decl_line
 ; CHECK: // .b8 5
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x174c:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1752:0x28 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 50
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,97,116,97,110,50,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 50
-; CHECK: // .b8 102
+; CHECK: // .b8 97,116,97,110,50,102             // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
-; CHECK:  / .b8 47                               // DW_AT_decl_line
+; CHECK: // .b8 47                               // DW_AT_decl_line
 ; CHECK: // .b8 5
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
@@ -5033,23 +3492,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x177a:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,97,116,97,110,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK:  / .b8 0
+; CHECK: // .b8 97,116,97,110,102                // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 52                               // DW_AT_decl_line
 ; CHECK: // .b8 5
@@ -5059,24 +3505,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x179a:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,97,116,97,110,104,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 97                               // DW_AT_name
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK:  / .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 97,116,97,110,104,102            // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 100                              // DW_AT_decl_line
@@ -5087,22 +3518,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x17bc:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 99
-; CHECK: // .b8 98
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,99,98,114,116,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK:  / .b8 98
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 99,98,114,116,102                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 150                              // DW_AT_decl_line
@@ -5113,22 +3531,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x17dc:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 99
-; CHECK: // .b8 101
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,99,101,105,108,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK:  / .b8 101
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 102
+; CHECK: // .b8 99,101,105,108,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 155                              // DW_AT_decl_line
@@ -5139,31 +3544,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x17fc:0x2e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 57
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 112
-; CHECK: // .b8 121
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK:  / .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,57,99,111,112,121,115,105,103,110,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 112
-; CHECK: // .b8 121
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 103
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 99,111,112,121,115,105,103,110,102 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 165                              // DW_AT_decl_line
@@ -5176,20 +3559,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x182a:0x1e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,99,111,115,102,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 102
+; CHECK: // .b8 99,111,115,102                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 219                              // DW_AT_decl_line
@@ -5200,22 +3572,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1848:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK:  / .b8 53
-; CHECK: // .b8 99
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,99,111,115,104,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 99                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 115
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 99,111,115,104,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 32                               // DW_AT_decl_line
@@ -5226,22 +3585,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1868:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK:  / .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 99
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,101,114,102,99,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 99
-; CHECK: // .b8 102
+; CHECK: // .b8 101,114,102,99,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 210                              // DW_AT_decl_line
@@ -5252,20 +3598,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1888:0x1e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK:  / .b8 102
+; CHECK: // .b8 95,90,76,52,101,114,102,102,102  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 101,114,102,102                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 200                              // DW_AT_decl_line
@@ -5276,22 +3611,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x18a6:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 50
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK:  / .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 50
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,101,120,112,50,102,102 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 0
+; CHECK: // .b8 101,120,112,50,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 145                              // DW_AT_decl_line
@@ -5302,22 +3624,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x18c6:0x1e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,101,120,112,102,102  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
+; CHECK: // .b8 101,120,112,102                  // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 9                                // DW_AT_decl_file
+; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 14                               // DW_AT_decl_line
 ; CHECK: // .b8 5
 ; CHECK: // .b32 1554                            // DW_AT_type
@@ -5326,27 +3637,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x18e4:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 109
-; CHECK: // .b8 49
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,101,120,112,109,49,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 101                              // DW_AT_name
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 109
-; CHECK: // .b8 49
-; CHECK: // .b8 102
+; CHECK: // .b8 101,120,112,109,49,102           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
-; CHECK:  / .b8 105                              // DW_AT_decl_line
+; CHECK: // .b8 105                              // DW_AT_decl_line
 ; CHECK: // .b8 5
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
@@ -5354,49 +3650,22 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1906:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 102
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,102,97,98,115,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 98
-; CHECK: // .b8 115
-; CHECK: // .b8 102
+; CHECK: // .b8 102,97,98,115,102                // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 95                               // DW_AT_decl_line
 ; CHECK: // .b8 2
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1920:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1926:0x26 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 102
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,102,100,105,109,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 102
+; CHECK: // .b8 102,100,105,109,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 80                               // DW_AT_decl_line
@@ -5407,26 +3676,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1946:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x194c:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 102
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,102,108,111,111,114,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 102
+; CHECK: // .b8 102,108,111,111,114,102          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 85                               // DW_AT_decl_line
@@ -5437,22 +3691,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x196e:0x2a DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 102
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,102,109,97,102,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
+; CHECK: // .b8 102,109,97,102                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 32                               // DW_AT_decl_line
@@ -5467,23 +3708,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1998:0x26 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 102
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 120
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,102,109,97,120,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 120
-; CHECK: // .b8 102
+; CHECK: // .b8 102,109,97,120,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 110                              // DW_AT_decl_line
@@ -5496,23 +3723,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x19be:0x26 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 102
-; CHECK: // .b8 109
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,102,109,105,110,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 102,109,105,110,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 105                              // DW_AT_decl_line
@@ -5525,23 +3738,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x19e4:0x26 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK:  / .b8 102
-; CHECK: // .b8 109
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,102,109,111,100,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 109
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 102,109,111,100,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 17                               // DW_AT_decl_line
@@ -5554,26 +3753,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1a0a:0x29 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 102
-; CHECK:  / .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,76,54,102,114,101,120,112,102,102,80,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 102                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
+; CHECK: // .b8 102,114,101,120,112,102          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 7                                // DW_AT_decl_line
@@ -5586,25 +3768,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2377                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1a33:0x28 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 104
-; CHECK:  / .b8 121
-; CHECK: // .b8 112
-; CHECK: // .b8 111
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,104,121,112,111,116,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 104                              // DW_AT_name
-; CHECK: // .b8 121
-; CHECK: // .b8 112
-; CHECK: // .b8 111
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 104,121,112,111,116,102          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 110                              // DW_AT_decl_line
@@ -5617,24 +3783,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1a5b:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK:  / .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,105,108,111,103,98,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
-; CHECK: // .b8 102
+; CHECK: // .b8 105,108,111,103,98,102           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 85                               // DW_AT_decl_line
@@ -5645,25 +3796,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1a7d:0x28 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK:  / .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 108
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,76,54,108,100,101,120,112,102,102,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 102
+; CHECK: // .b8 108,100,101,120,112,102          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 240                              // DW_AT_decl_line
@@ -5673,59 +3808,25 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1a9a:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1a9f:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 2332                            // DW_AT_type
+; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1aa5:0x24 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 108
-; CHECK: // .b8 103
-; CHECK: // .b8 97
-; CHECK: // .b8 109
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,55,108,103,97,109,109,97,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 103
-; CHECK: // .b8 97
-; CHECK: // .b8 109
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
+; CHECK: // .b8 108,103,97,109,109,97,102        // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 235                              // DW_AT_decl_line
-; CHECK:  / .b8 5
+; CHECK: // .b8 5
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1ac3:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1ac9:0x24 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,55,108,108,114,105,110,116,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK:  / .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 108,108,114,105,110,116,102      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 125                              // DW_AT_decl_line
@@ -5736,28 +3837,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1aed:0x26 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 56
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,56,108,108,114,111,117,110,100,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK:  / .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 108,108,114,111,117,110,100,102  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 66                               // DW_AT_decl_line
@@ -5768,24 +3850,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1b13:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,108,111,103,49,48,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK:  / .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 102
+; CHECK: // .b8 108,111,103,49,48,102            // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 76                               // DW_AT_decl_line
@@ -5796,24 +3863,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1b35:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 112
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,108,111,103,49,112,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK:  / .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 49
-; CHECK: // .b8 112
-; CHECK: // .b8 102
+; CHECK: // .b8 108,111,103,49,112,102           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 85                               // DW_AT_decl_line
@@ -5824,22 +3876,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1b57:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 50
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,108,111,103,50,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 50
-; CHECK: // .b8 102
+; CHECK: // .b8 108,111,103,50,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 5                                // DW_AT_decl_line
@@ -5848,24 +3887,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1b71:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 0                                // End Of Children Mark
+; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1b77:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,108,111,103,98,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 98
-; CHECK: // .b8 102
+; CHECK: // .b8 108,111,103,98,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 90                               // DW_AT_decl_line
@@ -5876,20 +3902,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1b97:0x1e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,108,111,103,102,102  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 108                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 103
-; CHECK: // .b8 102
+; CHECK: // .b8 108,111,103,102                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 67                               // DW_AT_decl_line
@@ -5900,24 +3915,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1bb5:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,108,114,105,110,116,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK:  / .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 108,114,105,110,116,102          // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 116                              // DW_AT_decl_line
@@ -5928,54 +3928,22 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1bd7:0x24 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 108
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,55,108,114,111,117,110,100,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 108                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 108,114,111,117,110,100,102      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 71                               // DW_AT_decl_line
 ; CHECK: // .b8 6
 ; CHECK: // .b32 2917                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1bf5:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1bfb:0x27 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 109
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,109,111,100,102,102,102,80,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 109                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 109,111,100,102,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 12                               // DW_AT_decl_line
@@ -5988,71 +3956,22 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 3345                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1c22:0x2b DW_TAG_subprogram
-; CHECK:  / .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 110
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 114
-; CHECK: // .b8 98
-; CHECK: // .b8 121
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,48,110,101,97,114,98,121,105,110,116,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 110                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 114
-; CHECK: // .b8 98
-; CHECK: // .b8 121
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 110,101,97,114,98,121,105,110,116,102 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 130                              // DW_AT_decl_line
-; CHECK:  / .b8 4
+; CHECK: // .b8 4
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1c47:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1c4d:0x31 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 110
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,48,110,101,120,116,97,102,116,101,114,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 110                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 120
-; CHECK:  / .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 116
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
+; CHECK: // .b8 110,101,120,116,97,102,116,101,114,102 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 194                              // DW_AT_decl_line
@@ -6065,21 +3984,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1c7e:0x24 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 112
-; CHECK: // .b8 111
-; CHECK: // .b8 119
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,112,111,119,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 112                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 119
-; CHECK:  / .b8 102
+; CHECK: // .b8 112,111,119,102                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 47                               // DW_AT_decl_line
@@ -6092,34 +3999,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1ca2:0x31 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,49,48,114,101,109,97,105,110,100,101,114,102,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK:  / .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 102
+; CHECK: // .b8 114,101,109,97,105,110,100,101,114,102 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 22                               // DW_AT_decl_line
@@ -6132,29 +4014,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1cd3:0x31 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK:  / .b8 109
-; CHECK: // .b8 113
-; CHECK: // .b8 117
-; CHECK: // .b8 111
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,76,55,114,101,109,113,117,111,102,102,102,80,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 109
-; CHECK: // .b8 113
-; CHECK: // .b8 117
-; CHECK: // .b8 111
-; CHECK: // .b8 102
+; CHECK: // .b8 114,101,109,113,117,111,102      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 27                               // DW_AT_decl_line
@@ -6164,57 +4026,29 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1cf4:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1cf9:0x5 DW_TAG_formal_parameter
-; CHECK:  / .b32 1554                            // DW_AT_type
+; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1cfe:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 2377                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1d04:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 114
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,114,105,110,116,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 114,105,110,116,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 111                              // DW_AT_decl_line
 ; CHECK: // .b8 4
 ; CHECK: // .b32 1554                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_declaration
+; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 6                                // Abbrev [6] 0x1d1e:0x5 DW_TAG_formal_parameter
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1d24:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 114
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,114,111,117,110,100,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 100
-; CHECK: // .b8 102
+; CHECK: // .b8 114,111,117,110,100,102          // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 9                                // DW_AT_decl_file
+; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 61                               // DW_AT_decl_line
 ; CHECK: // .b8 6
 ; CHECK: // .b32 1554                            // DW_AT_type
@@ -6223,29 +4057,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1d46:0x2c DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 56
-; CHECK: // .b8 115
-; CHECK: // .b8 99
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 108
+; CHECK: // .b8 95,90,76,56,115,99,97,108,98,108,110,102,102,108 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 99
-; CHECK:  / .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 115,99,97,108,98,108,110,102     // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 250                              // DW_AT_decl_line
@@ -6258,27 +4072,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2917                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1d72:0x2a DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 115
-; CHECK: // .b8 99
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK:  / .b8 105
+; CHECK: // .b8 95,90,76,55,115,99,97,108,98,110,102,102,105 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 99
-; CHECK: // .b8 97
-; CHECK: // .b8 108
-; CHECK: // .b8 98
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 115,99,97,108,98,110,102         // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 245                              // DW_AT_decl_line
@@ -6291,20 +4087,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 2332                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1d9c:0x1e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK:  / .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,115,105,110,102,102  // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 115,105,110,102                  // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 210                              // DW_AT_decl_line
@@ -6315,22 +4100,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1dba:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,115,105,110,104,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 115,105,110,104,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 37                               // DW_AT_decl_line
@@ -6341,22 +4113,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1dda:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 115
-; CHECK: // .b8 113
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,115,113,114,116,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 113
-; CHECK: // .b8 114
-; CHECK: // .b8 116
-; CHECK: // .b8 102
+; CHECK: // .b8 115,113,114,116,102              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 139                              // DW_AT_decl_line
@@ -6367,20 +4126,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1dfa:0x1e DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 52
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,52,116,97,110,102,102   // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 102
+; CHECK: // .b8 116,97,110,102                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 252                              // DW_AT_decl_line
@@ -6391,22 +4139,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1e18:0x20 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 53
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,53,116,97,110,104,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 104
-; CHECK: // .b8 102
+; CHECK: // .b8 116,97,110,104,102               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 42                               // DW_AT_decl_line
@@ -6417,26 +4152,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1e38:0x24 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 55
-; CHECK: // .b8 116
-; CHECK: // .b8 103
-; CHECK: // .b8 97
-; CHECK: // .b8 109
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,55,116,103,97,109,109,97,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 103
-; CHECK: // .b8 97
-; CHECK: // .b8 109
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 102
+; CHECK: // .b8 116,103,97,109,109,97,102        // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 9                                // DW_AT_decl_file
 ; CHECK: // .b8 56                               // DW_AT_decl_line
@@ -6447,24 +4165,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 26                               // Abbrev [26] 0x1e5c:0x22 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 76
-; CHECK: // .b8 54
-; CHECK: // .b8 116
-; CHECK: // .b8 114
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 99
-; CHECK: // .b8 102
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,76,54,116,114,117,110,99,102,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 114
-; CHECK: // .b8 117
-; CHECK: // .b8 110
-; CHECK: // .b8 99
-; CHECK: // .b8 102
+; CHECK: // .b8 116,114,117,110,99,102           // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 11                               // DW_AT_decl_file
 ; CHECK: // .b8 150                              // DW_AT_decl_line
@@ -6475,181 +4178,27 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 27                               // Abbrev [27] 0x1e7e:0x22a DW_TAG_structure_type
-; CHECK:  / .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_byte_size
-; CHECK:  / .b8 13                               // DW_AT_decl_file
+; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 77                               // DW_AT_decl_line
 ; CHECK: // .b8 28                               // Abbrev [28] 0x1e9c:0x4f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK:  / .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 120
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116,49,55,95,95,102,101,116,99,104,95 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 98,117,105,108,116,105,110,95,120,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 120
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,120 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 78                               // DW_AT_decl_line
-; CHECK:  / .b32 5207                            // DW_AT_type
+; CHECK: // .b32 5207                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 28                               // Abbrev [28] 0x1eeb:0x4f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK:  / .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 121
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116,49,55,95,95,102,101,116,99,104,95 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 98,117,105,108,116,105,110,95,121,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK:  / .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 121
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,121 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 79                               // DW_AT_decl_line
@@ -6657,138 +4206,21 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 28                               // Abbrev [28] 0x1f3a:0x4f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK:  / .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK:  / .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 122
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116,49,55,95,95,102,101,116,99,104,95 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 98,117,105,108,116,105,110,95,122,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 122
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,122 // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 13                               // DW_AT_decl_file
+; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 80                               // DW_AT_decl_line
 ; CHECK: // .b32 5207                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 25                               // Abbrev [25] 0x1f89:0x49 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK:  / .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 118
-; CHECK: // .b8 53
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
-; CHECK: // .b8 69
+; CHECK: // .b8 95,90,78,75,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116,99,118,53,117,105,110,116,51,69 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 118
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK:  / .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 32
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
+; CHECK: // .b8 111,112,101,114,97,116,111,114,32,117,105,110,116,51 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 83                               // DW_AT_decl_line
@@ -6800,36 +4232,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_artificial
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 30                               // Abbrev [30] 0x1fd2:0x27 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK:  / .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 85                               // DW_AT_decl_line
 ; CHECK: // .b8 1                                // DW_AT_declaration
-; CHECK:  / .b8 1                                // DW_AT_external
+; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 3                                // DW_AT_accessibility
 ; CHECK:                                         // DW_ACCESS_private
 ; CHECK: // .b8 29                               // Abbrev [29] 0x1ff2:0x6 DW_TAG_formal_parameter
@@ -6837,31 +4245,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_artificial
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 30                               // Abbrev [30] 0x1ff9:0x2c DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK:  / .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 85                               // DW_AT_decl_line
@@ -6876,54 +4260,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 8422                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 31                               // Abbrev [31] 0x2025:0x43 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK:  / .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 83
-; CHECK: // .b8 69
-; CHECK: // .b8 82
-; CHECK: // .b8 75
-; CHECK: // .b8 83
-; CHECK: // .b8 95
+; CHECK: // .b8 95,90,78,75,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116,97,83,69,82,75,83,95 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 61
+; CHECK: // .b8 111,112,101,114,97,116,111,114,61 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 85                               // DW_AT_decl_line
@@ -6938,51 +4277,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 8422                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 32                               // Abbrev [32] 0x2068:0x3f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,75,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,73,100,120,95,116,97,100,69,118 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 38
+; CHECK: // .b8 111,112,101,114,97,116,111,114,38 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 85                               // DW_AT_decl_line
@@ -6997,11 +4294,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 27                               // Abbrev [27] 0x20a8:0x2f DW_TAG_structure_type
-; CHECK: // .b8 117                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
+; CHECK: // .b8 117,105,110,116,51               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 12                               // DW_AT_byte_size
 ; CHECK: // .b8 14                               // DW_AT_decl_file
@@ -7048,105 +4341,16 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 7836                            // DW_AT_specification
 ; CHECK: // .b8 1                                // DW_AT_inline
 ; CHECK: // .b8 27                               // Abbrev [27] 0x20f6:0x228 DW_TAG_structure_type
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK:  / .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_byte_size
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 88                               // DW_AT_decl_line
 ; CHECK: // .b8 28                               // Abbrev [28] 0x2114:0x4f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK:  / .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 120
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116,49,55,95,95,102,101,116,99,104,95 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 98,117,105,108,116,105,110,95,120,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK:  / .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 120
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,120 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 89                               // DW_AT_decl_line
@@ -7154,151 +4358,21 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 28                               // Abbrev [28] 0x2163:0x4f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK:  / .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK:  / .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 121
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116,49,55,95,95,102,101,116,99,104,95 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 98,117,105,108,116,105,110,95,121,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 121
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,121 // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 13                               // DW_AT_decl_file
+; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 90                               // DW_AT_decl_line
 ; CHECK: // .b32 5207                            // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 28                               // Abbrev [28] 0x21b2:0x4f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK:  / .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 122
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116,49,55,95,95,102,101,116,99,104,95 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 98,117,105,108,116,105,110,95,122,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK:  / .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 122
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,122 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 91                               // DW_AT_decl_line
@@ -7306,60 +4380,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 25                               // Abbrev [25] 0x2201:0x47 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK:  / .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 118
-; CHECK: // .b8 52
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK:  / .b8 109
-; CHECK: // .b8 51
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,75,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116,99,118,52,100,105,109,51,69,118 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 32
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 51
+; CHECK: // .b8 111,112,101,114,97,116,111,114,32,100,105,109,51 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 94                               // DW_AT_decl_line
@@ -7368,34 +4391,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 29                               // Abbrev [29] 0x2241:0x6 DW_TAG_formal_parameter
 ; CHECK: // .b32 9166                            // DW_AT_type
-; CHECK:  / .b8 1                                // DW_AT_artificial
+; CHECK: // .b8 1                                // DW_AT_artificial
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 30                               // Abbrev [30] 0x2248:0x27 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK:  / .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 96                               // DW_AT_decl_line
@@ -7408,31 +4407,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_artificial
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 30                               // Abbrev [30] 0x226f:0x2c DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK:  / .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 96                               // DW_AT_decl_line
@@ -7447,54 +4422,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 9181                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 31                               // Abbrev [31] 0x229b:0x43 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK:  / .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 83
-; CHECK: // .b8 69
-; CHECK: // .b8 82
-; CHECK: // .b8 75
-; CHECK: // .b8 83
-; CHECK: // .b8 95
+; CHECK: // .b8 95,90,78,75,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116,97,83,69,82,75,83,95 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 61
+; CHECK: // .b8 111,112,101,114,97,116,111,114,61 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 96                               // DW_AT_decl_line
@@ -7509,51 +4439,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 9181                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 32                               // Abbrev [32] 0x22de:0x3f DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 53
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 107
-; CHECK: // .b8 68
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,75,50,53,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,98,108,111,99,107,68,105,109,95,116,97,100,69,118 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 38
+; CHECK: // .b8 111,112,101,114,97,116,111,114,38 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 96                               // DW_AT_decl_line
@@ -7568,10 +4456,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 35                               // Abbrev [35] 0x231e:0x9d DW_TAG_structure_type
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 51
+; CHECK: // .b8 100,105,109,51                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 12                               // DW_AT_byte_size
 ; CHECK: // .b8 14                               // DW_AT_decl_file
@@ -7608,10 +4493,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 35
 ; CHECK: // .b8 8
 ; CHECK: // .b8 23                               // Abbrev [23] 0x234f:0x21 DW_TAG_subprogram
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 51
+; CHECK: // .b8 100,105,109,51                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 14                               // DW_AT_decl_file
 ; CHECK: // .b8 165                              // DW_AT_decl_line
@@ -7629,10 +4511,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 5207                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 23                               // Abbrev [23] 0x2370:0x17 DW_TAG_subprogram
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK: // .b8 51
+; CHECK: // .b8 100,105,109,51                   // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 14                               // DW_AT_decl_file
 ; CHECK: // .b8 166                              // DW_AT_decl_line
@@ -7646,41 +4525,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 9152                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 37                               // Abbrev [37] 0x2387:0x33 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 52
-; CHECK: // .b8 100
-; CHECK: // .b8 105
-; CHECK: // .b8 109
-; CHECK:  / .b8 51
-; CHECK: // .b8 99
-; CHECK: // .b8 118
-; CHECK: // .b8 53
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,52,100,105,109,51,99,118,53,117,105,110,116,51,69,118 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 32
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
+; CHECK: // .b8 111,112,101,114,97,116,111,114,32,117,105,110,116,51 // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK:  / .b8 14                               // DW_AT_decl_file
+; CHECK: // .b8 14                               // DW_AT_decl_file
 ; CHECK: // .b8 167                              // DW_AT_decl_line
 ; CHECK: // .b8 1
 ; CHECK: // .b32 9152                            // DW_AT_type
@@ -7695,11 +4544,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 8990                            // DW_AT_type
 ; CHECK: // .b8 20                               // Abbrev [20] 0x23c0:0xe DW_TAG_typedef
 ; CHECK: // .b32 8360                            // DW_AT_type
-; CHECK: // .b8 117                              // DW_AT_name
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
+; CHECK: // .b8 117,105,110,116,51               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 14                               // DW_AT_decl_file
 ; CHECK: // .b8 127                              // DW_AT_decl_line
@@ -7718,107 +4563,16 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 8468                            // DW_AT_specification
 ; CHECK: // .b8 1                                // DW_AT_inline
 ; CHECK: // .b8 27                               // Abbrev [27] 0x23ed:0x233 DW_TAG_structure_type
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK:  / .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_byte_size
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 66                               // DW_AT_decl_line
 ; CHECK: // .b8 28                               // Abbrev [28] 0x240c:0x50 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 54
-; CHECK: // .b8 95
-; CHECK:  / .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK:  / .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 120
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,54,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116,49,55,95,95,102,101,116,99,104 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 95,98,117,105,108,116,105,110,95,120,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK:  / .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 120
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,120 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 67                               // DW_AT_decl_line
@@ -7826,76 +4580,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 28                               // Abbrev [28] 0x245c:0x50 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 54
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK:  / .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 121
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,54,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116,49,55,95,95,102,101,116,99,104 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 95,98,117,105,108,116,105,110,95,121,69,118
 ; CHECK: // .b8 0
-; CHECK:  / .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 121
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,121 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 68                               // DW_AT_decl_line
@@ -7903,76 +4591,10 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 28                               // Abbrev [28] 0x24ac:0x50 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK:  / .b8 78
-; CHECK: // .b8 50
-; CHECK: // .b8 54
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK:  / .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 55
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 122
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,50,54,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116,49,55,95,95,102,101,116,99,104 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 95,98,117,105,108,116,105,110,95,122,69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK:  / .b8 95
-; CHECK: // .b8 102
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 104
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 122
+; CHECK: // .b8 95,95,102,101,116,99,104,95,98,117,105,108,116,105,110,95,122 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 69                               // DW_AT_decl_line
@@ -7980,64 +4602,11 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_declaration
 ; CHECK: // .b8 1                                // DW_AT_external
 ; CHECK: // .b8 25                               // Abbrev [25] 0x24fc:0x4a DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK:  / .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 54
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK:  / .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 99
-; CHECK: // .b8 118
-; CHECK: // .b8 53
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,75,50,54,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116,99,118,53,117,105,110,116,51 // DW_AT_MIPS_linkage_name
+; CHECK: // .b8 69,118
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 32
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 116
-; CHECK: // .b8 51
-; CHECK:  / .b8 0
+; CHECK: // .b8 111,112,101,114,97,116,111,114,32,117,105,110,116,51 // DW_AT_name
+; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 72                               // DW_AT_decl_line
 ; CHECK: // .b32 8360                            // DW_AT_type
@@ -8048,32 +4617,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_artificial
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 30                               // Abbrev [30] 0x2546:0x28 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK:  / .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 74                               // DW_AT_decl_line
@@ -8086,32 +4630,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 1                                // DW_AT_artificial
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 30                               // Abbrev [30] 0x256e:0x2d DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_name
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
+; CHECK: // .b8 95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 74                               // DW_AT_decl_line
@@ -8126,55 +4645,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 9775                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 31                               // Abbrev [31] 0x259b:0x44 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 54
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 83
-; CHECK: // .b8 69
-; CHECK: // .b8 82
-; CHECK: // .b8 75
-; CHECK: // .b8 83
-; CHECK: // .b8 95
+; CHECK: // .b8 95,90,78,75,50,54,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116,97,83,69,82,75,83,95 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 61
+; CHECK: // .b8 111,112,101,114,97,116,111,114,61 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 74                               // DW_AT_decl_line
@@ -8189,52 +4662,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 9775                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 32                               // Abbrev [32] 0x25df:0x40 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 78
-; CHECK: // .b8 75
-; CHECK: // .b8 50
-; CHECK: // .b8 54
-; CHECK: // .b8 95
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 117
-; CHECK: // .b8 100
-; CHECK: // .b8 97
-; CHECK: // .b8 95
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 105
-; CHECK: // .b8 108
-; CHECK: // .b8 116
-; CHECK: // .b8 105
-; CHECK: // .b8 110
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 104
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 73
-; CHECK: // .b8 100
-; CHECK: // .b8 120
-; CHECK: // .b8 95
-; CHECK: // .b8 116
-; CHECK: // .b8 97
-; CHECK: // .b8 100
-; CHECK: // .b8 69
-; CHECK: // .b8 118
+; CHECK: // .b8 95,90,78,75,50,54,95,95,99,117,100,97,95,98,117,105,108,116,105,110,95,116,104,114,101,97,100,73,100,120,95,116,97,100,69,118 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 111                              // DW_AT_name
-; CHECK: // .b8 112
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 97
-; CHECK: // .b8 116
-; CHECK: // .b8 111
-; CHECK: // .b8 114
-; CHECK: // .b8 38
+; CHECK: // .b8 111,112,101,114,97,116,111,114,38 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 13                               // DW_AT_decl_file
 ; CHECK: // .b8 74                               // DW_AT_decl_line
@@ -8262,20 +4692,9 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b32 9228                            // DW_AT_specification
 ; CHECK: // .b8 1                                // DW_AT_inline
 ; CHECK: // .b8 38                               // Abbrev [38] 0x263f:0x32 DW_TAG_subprogram
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 51
-; CHECK: // .b8 114
-; CHECK: // .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 102
+; CHECK: // .b8 95,90,51,114,101,115,102,102,80,102 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 115
+; CHECK: // .b8 114,101,115                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 12                               // DW_AT_decl_file
 ; CHECK: // .b8 3                                // DW_AT_decl_line
@@ -8294,39 +4713,20 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b8 3                                // DW_AT_decl_line
 ; CHECK: // .b32 1554                            // DW_AT_type
 ; CHECK: // .b8 39                               // Abbrev [39] 0x2665:0xb DW_TAG_formal_parameter
-; CHECK: // .b8 114                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 115
+; CHECK: // .b8 114,101,115                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 12                               // DW_AT_decl_file
 ; CHECK: // .b8 3                                // DW_AT_decl_line
 ; CHECK: // .b32 3345                            // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK: // .b8 40                               // Abbrev [40] 0x2671:0xbb DW_TAG_subprogram
+; CHECK: // .b8 40                               // Abbrev [40] 0x2671:0xc0 DW_TAG_subprogram
 ; CHECK: // .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end0                      // DW_AT_high_pc
 ; CHECK: // .b8 1                                // DW_AT_frame_base
 ; CHECK: // .b8 156
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 53
-; CHECK: // .b8 115
-; CHECK: // .b8 97
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 121
-; CHECK: // .b8 105
-; CHECK: // .b8 102
-; CHECK: // .b8 80
-; CHECK: // .b8 102
-; CHECK: // .b8 83
-; CHECK: // .b8 95
+; CHECK: // .b8 95,90,53,115,97,120,112,121,105,102,80,102,83,95 // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 115                              // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 120
-; CHECK: // .b8 112
-; CHECK: // .b8 121
+; CHECK: // .b8 115,97,120,112,121               // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 12                               // DW_AT_decl_file
 ; CHECK: // .b8 5                                // DW_AT_decl_line
@@ -8379,7 +4779,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: // .b64 Ltmp3                           // DW_AT_high_pc
 ; CHECK: // .b8 12                               // DW_AT_call_file
 ; CHECK: // .b8 6                                // DW_AT_call_line
-; CHECK: // .b8 43                               // Abbrev [43] 0x270e:0x1d DW_TAG_inlined_subroutine
+; CHECK: // .b8 43                               // Abbrev [43] 0x270e:0x22 DW_TAG_inlined_subroutine
 ; CHECK: // .b32 9791                            // DW_AT_abstract_origin
 ; CHECK: // .b64 Ltmp8                           // DW_AT_low_pc
 ; CHECK: // .b64 Ltmp9                           // DW_AT_high_pc
@@ -8420,7 +4820,7 @@ attributes #3 = { nounwind }
 !nvvm.internalize.after.link = !{}
 !nvvmir.version = !{!565}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, imports: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, imports: !3, nameTableKind: None)
 !1 = !DIFile(filename: "debug-info.cu", directory: "/some/directory")
 !2 = !{}
 !3 = !{!4, !11, !16, !18, !20, !22, !24, !28, !30, !32, !34, !36, !38, !40, !42, !44, !46, !48, !50, !52, !54, !56, !60, !62, !64, !66, !71, !76, !78, !80, !85, !89, !91, !93, !95, !97, !99, !101, !103, !105, !110, !114, !116, !118, !122, !124, !126, !128, !130, !132, !136, !138, !140, !145, !153, !157, !159, !161, !163, !165, !169, !171, !173, !177, !179, !181, !183, !185, !187, !189, !191, !193, !195, !201, !203, !205, !209, !211, !213, !215, !217, !219, !221, !223, !227, !231, !233, !235, !240, !242, !244, !246, !248, !250, !252, !257, !263, !267, !271, !276, !279, !283, !287, !302, !306, !310, !314, !318, !323, !325, !329, !333, !337, !345, !349, !353, !357, !361, !366, !372, !376, !380, !382, !390, !394, !401, !403, !405, !409, !413, !417, !422, !426, !431, !432, !433, !434, !436, !437, !438, !439, !440, !441, !442, !446, !448, !450, !452, !454, !456, !458, !460, !463, !465, !467, !469, !471, !473, !475, !477, !479, !481, !483, !485, !487, !489, !491, !493, !495, !497, !499, !501, !503, !505, !507, !509, !511, !513, !515, !517, !519, !521, !523, !525, !527, !529, !531, !533, !535, !537, !539, !541, !543, !545, !547, !549, !551, !553}

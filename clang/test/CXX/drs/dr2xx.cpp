@@ -718,7 +718,7 @@ namespace dr261 { // dr261: no
     A() {}
   };
 
-  // FIXME: These are ill-formed, with a required diagnostic, for the same
+  // FIXME: This is ill-formed, with a required diagnostic, for the same
   // reason.
   struct B {
     inline void operator delete(void*) __attribute__((unused));
@@ -726,7 +726,7 @@ namespace dr261 { // dr261: no
   };
   struct C {
     inline void operator delete(void*) __attribute__((unused));
-    virtual ~C() {}
+    virtual ~C() {} // expected-warning {{'operator delete' was marked unused but was used}}
   };
 
   struct D {

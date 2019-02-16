@@ -1535,7 +1535,7 @@ multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm> {
   def _S : sve_fp_2op_p_zd<{ 0b10, opc }, asm, ZPR32, ZPR32, ElementSizeS>;
   def _D : sve_fp_2op_p_zd<{ 0b11, opc }, asm, ZPR64, ZPR64, ElementSizeD>;
 }
- 
+
 //===----------------------------------------------------------------------===//
 // SVE Floating Point Unary Operations - Unpredicated Group
 //===----------------------------------------------------------------------===//

@@ -65,9 +65,9 @@ long long test_i64(char *fmt, ...) {
 // CHECK: }
 
 struct S {
-    int x;
-    int y;
-    int z;
+  int x;
+  int y;
+  int z;
 };
 
 struct S test_struct(char *fmt, ...) {

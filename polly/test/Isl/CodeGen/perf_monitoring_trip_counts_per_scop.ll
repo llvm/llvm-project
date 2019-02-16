@@ -65,11 +65,11 @@ return:
 ; CHECK: @"__polly_perf_in_g_from__%next__to__%polly.merge_new_and_old_trip_count" = weak thread_local(initialexec) constant i64 0
 
 ; Bumping up number of cycles in f
-; CHECK:        %12 = load volatile i64, i64* @"__polly_perf_in_f_from__%next__to__%polly.merge_new_and_old_trip_count"
-; CHECK-NEXT:   %13 = add i64 %12, 1
-; CHECK-NEXT:   store volatile i64 %13, i64* @"__polly_perf_in_f_from__%next__to__%polly.merge_new_and_old_trip_count"
+; CHECK:        %14 = load volatile i64, i64* @"__polly_perf_in_f_from__%next__to__%polly.merge_new_and_old_trip_count"
+; CHECK-NEXT:   %15 = add i64 %14, 1
+; CHECK-NEXT:   store volatile i64 %15, i64* @"__polly_perf_in_f_from__%next__to__%polly.merge_new_and_old_trip_count"
 
 ; Bumping up number of cycles in g
-; CHECK:       %12 = load volatile i64, i64* @"__polly_perf_in_g_from__%next__to__%polly.merge_new_and_old_trip_count"
-; CHECK-NEXT:  %13 = add i64 %12, 1
-; CHECK-NEXT:  store volatile i64 %13, i64* @"__polly_perf_in_g_from__%next__to__%polly.merge_new_and_old_trip_count"
+; CHECK:       %14 = load volatile i64, i64* @"__polly_perf_in_g_from__%next__to__%polly.merge_new_and_old_trip_count"
+; CHECK-NEXT:  %15 = add i64 %14, 1
+; CHECK-NEXT:  store volatile i64 %15, i64* @"__polly_perf_in_g_from__%next__to__%polly.merge_new_and_old_trip_count"

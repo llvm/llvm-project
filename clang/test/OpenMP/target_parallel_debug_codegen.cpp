@@ -2,6 +2,17 @@
 // RUN: %clang_cc1 -DCK1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-cuda-mode -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -debug-info-kind=limited -fopenmp-version=45 | FileCheck %s
 // expected-no-diagnostics
 
+template <unsigned *ddd>
+struct S {
+  static int a;
+};
+
+extern unsigned aaa;
+template<> int S<&aaa>::a;
+
+template struct S<&aaa>;
+// CHECK-NOT: @aaa
+
 int main() {
   /* int(*b)[a]; */
   /* int *(**c)[a]; */
@@ -116,11 +127,11 @@ int main() {
 // CHECK: !DILocalVariable(name: ".bound_tid.",
 // CHECK-SAME: DIFlagArtificial
 // CHECK: !DILocalVariable(name: "c",
-// CHECK-SAME: line: 11
+// CHECK-SAME: line: 22
 // CHECK: !DILocalVariable(name: "a",
-// CHECK-SAME: line: 9
+// CHECK-SAME: line: 20
 // CHECK: !DILocalVariable(name: "b",
-// CHECK-SAME: line: 10
+// CHECK-SAME: line: 21
 
 // CHECK-DAG: distinct !DISubprogram(name: "[[NONDEBUG_WRAPPER]]",
 // CHECK-DAG: distinct !DISubprogram(name: "[[DEBUG_PARALLEL]]",

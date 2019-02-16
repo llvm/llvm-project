@@ -6,10 +6,10 @@ define void @t1(i128* nocapture %p) nounwind ssp {
 ; CHECK-LABEL: t1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq

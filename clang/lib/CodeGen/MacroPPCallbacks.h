@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_LIB_CODEGEN_MACROPPCALLBACKS_H
+#define LLVM_CLANG_LIB_CODEGEN_MACROPPCALLBACKS_H
+
 #include "clang/Lex/PPCallbacks.h"
 
 namespace llvm {
@@ -116,3 +119,5 @@ public:
 };
 
 } // end namespace clang
+
+#endif

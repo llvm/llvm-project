@@ -42,6 +42,7 @@ set(LIBS
   clangIndex
   clangLex
   clangSema
+  clangSerialization
   clangTooling
   clangToolingRefactor
 )
@@ -154,3 +155,22 @@ if (NOT CMAKE_CONFIGURATION_TYPES) # don't add this for IDE's.
   add_llvm_install_targets(install-libclang-headers
                            COMPONENT libclang-headers)
 endif()
+
+# Create a target to install the python bindings to make them easier to
+# distribute.  Since the bindings are over libclang, which is installed
+# unbundled to the clang version, follow suit.
+foreach(PythonVersion ${CLANG_PYTHON_BINDINGS_VERSIONS})
+  install(DIRECTORY
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../bindings/python/clang
+          COMPONENT
+            libclang-python-bindings
+          DESTINATION
+            "lib${LLVM_LIBDIR_SUFFIX}/python${PythonVersion}/site-packages")
+endforeach()
+if(NOT CMAKE_CONFIGURATION_TYPES)
+  add_custom_target(libclang-python-bindings)
+  add_llvm_install_targets(install-libclang-python-bindings
+                           COMPONENT
+                             libclang-python-bindings)
+endif()
+

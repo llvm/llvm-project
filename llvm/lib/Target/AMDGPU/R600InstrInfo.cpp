@@ -229,11 +229,11 @@ bool R600InstrInfo::mustBeLastInClause(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterUseOperandIdx(R600::AR_X) != -1;
+  return MI.findRegisterUseOperandIdx(R600::AR_X, false, &RI) != -1;
 }
 
 bool R600InstrInfo::definesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterDefOperandIdx(R600::AR_X) != -1;
+  return MI.findRegisterDefOperandIdx(R600::AR_X, false, false, &RI) != -1;
 }
 
 bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
@@ -1500,19 +1500,19 @@ void R600InstrInfo::clearFlag(MachineInstr &MI, unsigned Operand,
 }
 
 unsigned R600InstrInfo::getAddressSpaceForPseudoSourceKind(
-    PseudoSourceValue::PSVKind Kind) const {
+    unsigned Kind) const {
   switch (Kind) {
   case PseudoSourceValue::Stack:
   case PseudoSourceValue::FixedStack:
-    return ST.getAMDGPUAS().PRIVATE_ADDRESS;
+    return AMDGPUAS::PRIVATE_ADDRESS;
   case PseudoSourceValue::ConstantPool:
   case PseudoSourceValue::GOT:
   case PseudoSourceValue::JumpTable:
   case PseudoSourceValue::GlobalValueCallEntry:
   case PseudoSourceValue::ExternalSymbolCallEntry:
   case PseudoSourceValue::TargetCustom:
-    return ST.getAMDGPUAS().CONSTANT_ADDRESS;
+    return AMDGPUAS::CONSTANT_ADDRESS;
   }
+
   llvm_unreachable("Invalid pseudo source kind");
-  return ST.getAMDGPUAS().PRIVATE_ADDRESS;
 }

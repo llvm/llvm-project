@@ -1,0 +1,32 @@
+static_library("Parse") {
+  output_name = "clangParse"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/include/clang/Parse:AttrParserStringSwitches",
+    "//clang/include/clang/Parse:AttrSubMatchRulesParserStringSwitches",
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Lex",
+    "//clang/lib/Sema",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "ParseAST.cpp",
+    "ParseCXXInlineMethods.cpp",
+    "ParseDecl.cpp",
+    "ParseDeclCXX.cpp",
+    "ParseExpr.cpp",
+    "ParseExprCXX.cpp",
+    "ParseInit.cpp",
+    "ParseObjc.cpp",
+    "ParseOpenMP.cpp",
+    "ParsePragma.cpp",
+    "ParseStmt.cpp",
+    "ParseStmtAsm.cpp",
+    "ParseTemplate.cpp",
+    "ParseTentative.cpp",
+    "Parser.cpp",
+  ]
+}

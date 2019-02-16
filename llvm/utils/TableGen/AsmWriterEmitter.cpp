@@ -835,15 +835,20 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       for (unsigned i = 0, e = LastOpNo; i != e; ++i) {
         // Skip over tied operands as they're not part of an alias declaration.
         auto &Operands = CGA.ResultInst->Operands;
-        unsigned OpNum = Operands.getSubOperandNumber(MIOpNum).first;
-        if (Operands[OpNum].MINumOperands == 1 &&
-            Operands[OpNum].getTiedRegister() != -1) {
-          // Tied operands of different RegisterClass should be explicit within
-          // an instruction's syntax and so cannot be skipped.
-          int TiedOpNum = Operands[OpNum].getTiedRegister();
-          if (Operands[OpNum].Rec->getName() ==
-              Operands[TiedOpNum].Rec->getName())
-            ++MIOpNum;
+        while (true) {
+          unsigned OpNum = Operands.getSubOperandNumber(MIOpNum).first;
+          if (Operands[OpNum].MINumOperands == 1 &&
+              Operands[OpNum].getTiedRegister() != -1) {
+            // Tied operands of different RegisterClass should be explicit within
+            // an instruction's syntax and so cannot be skipped.
+            int TiedOpNum = Operands[OpNum].getTiedRegister();
+            if (Operands[OpNum].Rec->getName() ==
+                Operands[TiedOpNum].Rec->getName()) {
+              ++MIOpNum;
+              continue;
+            }
+          }
+          break;
         }
 
         std::string Op = "MI->getOperand(" + utostr(MIOpNum) + ")";

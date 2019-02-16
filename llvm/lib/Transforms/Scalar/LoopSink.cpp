@@ -152,6 +152,14 @@ findBBsToSinkInto(const Loop &L, const SmallPtrSetImpl<BasicBlock *> &UseBBs,
     }
   }
 
+  // Can't sink into blocks that have no valid insertion point.
+  for (BasicBlock *BB : BBsToSinkInto) {
+    if (BB->getFirstInsertionPt() == BB->end()) {
+      BBsToSinkInto.clear();
+      break;
+    }
+  }
+
   // If the total frequency of BBsToSinkInto is larger than preheader frequency,
   // do not sink.
   if (adjustedSumFreq(BBsToSinkInto, BFI) >
@@ -194,17 +202,22 @@ static bool sinkInstruction(Loop &L, Instruction &I,
   if (BBsToSinkInto.empty())
     return false;
 
+  // Return if any of the candidate blocks to sink into is non-cold.
+  if (BBsToSinkInto.size() > 1) {
+    for (auto *BB : BBsToSinkInto)
+      if (!LoopBlockNumber.count(BB))
+        return false;
+  }
+
   // Copy the final BBs into a vector and sort them using the total ordering
   // of the loop block numbers as iterating the set doesn't give a useful
   // order. No need to stable sort as the block numbers are a total ordering.
   SmallVector<BasicBlock *, 2> SortedBBsToSinkInto;
   SortedBBsToSinkInto.insert(SortedBBsToSinkInto.begin(), BBsToSinkInto.begin(),
                              BBsToSinkInto.end());
-  llvm::sort(SortedBBsToSinkInto.begin(), SortedBBsToSinkInto.end(),
-             [&](BasicBlock *A, BasicBlock *B) {
-               return LoopBlockNumber.find(A)->second <
-                      LoopBlockNumber.find(B)->second;
-             });
+  llvm::sort(SortedBBsToSinkInto, [&](BasicBlock *A, BasicBlock *B) {
+    return LoopBlockNumber.find(A)->second < LoopBlockNumber.find(B)->second;
+  });
 
   BasicBlock *MoveBB = *SortedBBsToSinkInto.begin();
   // FIXME: Optimize the efficiency for cloned value replacement. The current
@@ -267,6 +280,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
   // Compute alias set.
   for (BasicBlock *BB : L.blocks())
     CurAST.add(*BB);
+  CurAST.add(*Preheader);
 
   // Sort loop's basic blocks by frequency
   SmallVector<BasicBlock *, 10> ColdLoopBBs;
@@ -290,7 +304,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     // No need to check for instruction's operands are loop invariant.
     assert(L.hasLoopInvariantOperands(I) &&
            "Insts in a loop's preheader should have loop invariant operands!");
-    if (!canSinkOrHoistInst(*I, &AA, &DT, &L, &CurAST, nullptr))
+    if (!canSinkOrHoistInst(*I, &AA, &DT, &L, &CurAST, false))
       continue;
     if (sinkInstruction(L, *I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI))
       Changed = true;

@@ -20,7 +20,8 @@ class DIARawSymbol : public IPDBRawSymbol {
 public:
   DIARawSymbol(const DIASession &PDBSession, CComPtr<IDiaSymbol> DiaSymbol);
 
-  void dump(raw_ostream &OS, int Indent) const override;
+  void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
+            PdbSymbolIdField RecurseIdFields) const override;
 
   CComPtr<IDiaSymbol> getDiaSymbol() const { return Symbol; }
 
@@ -63,25 +64,25 @@ public:
   uint32_t getAddressOffset() const override;
   uint32_t getAddressSection() const override;
   uint32_t getAge() const override;
-  uint32_t getArrayIndexTypeId() const override;
+  SymIndexId getArrayIndexTypeId() const override;
   uint32_t getBaseDataOffset() const override;
   uint32_t getBaseDataSlot() const override;
-  uint32_t getBaseSymbolId() const override;
+  SymIndexId getBaseSymbolId() const override;
   PDB_BuiltinType getBuiltinType() const override;
   uint32_t getBitPosition() const override;
   PDB_CallingConv getCallingConvention() const override;
-  uint32_t getClassParentId() const override;
+  SymIndexId getClassParentId() const override;
   std::string getCompilerName() const override;
   uint32_t getCount() const override;
   uint32_t getCountLiveRanges() const override;
   PDB_Lang getLanguage() const override;
-  uint32_t getLexicalParentId() const override;
+  SymIndexId getLexicalParentId() const override;
   std::string getLibraryName() const override;
   uint32_t getLiveRangeStartAddressOffset() const override;
   uint32_t getLiveRangeStartAddressSection() const override;
   uint32_t getLiveRangeStartRelativeVirtualAddress() const override;
   codeview::RegisterId getLocalBasePointerRegisterId() const override;
-  uint32_t getLowerBoundId() const override;
+  SymIndexId getLowerBoundId() const override;
   uint32_t getMemorySpaceKind() const override;
   std::string getName() const override;
   uint32_t getNumberOfAcceleratorPointerTags() const override;
@@ -91,7 +92,7 @@ public:
   uint32_t getNumberOfRows() const override;
   std::string getObjectFileName() const override;
   uint32_t getOemId() const override;
-  uint32_t getOemSymbolId() const override;
+  SymIndexId getOemSymbolId() const override;
   uint32_t getOffsetInUdt() const override;
   PDB_Cpu getPlatform() const override;
   uint32_t getRank() const override;
@@ -105,9 +106,9 @@ public:
   std::string getSourceFileName() const override;
   std::unique_ptr<IPDBLineNumber> getSrcLineOnTypeDefn() const override;
   uint32_t getStride() const override;
-  uint32_t getSubTypeId() const override;
+  SymIndexId getSubTypeId() const override;
   std::string getSymbolsFileName() const override;
-  uint32_t getSymIndexId() const override;
+  SymIndexId getSymIndexId() const override;
   uint32_t getTargetOffset() const override;
   uint32_t getTargetRelativeVirtualAddress() const override;
   uint64_t getTargetVirtualAddress() const override;
@@ -115,16 +116,16 @@ public:
   uint32_t getTextureSlot() const override;
   uint32_t getTimeStamp() const override;
   uint32_t getToken() const override;
-  uint32_t getTypeId() const override;
+  SymIndexId getTypeId() const override;
   uint32_t getUavSlot() const override;
   std::string getUndecoratedName() const override;
   std::string getUndecoratedNameEx(PDB_UndnameFlags Flags) const override;
-  uint32_t getUnmodifiedTypeId() const override;
-  uint32_t getUpperBoundId() const override;
+  SymIndexId getUnmodifiedTypeId() const override;
+  SymIndexId getUpperBoundId() const override;
   Variant getValue() const override;
   uint32_t getVirtualBaseDispIndex() const override;
   uint32_t getVirtualBaseOffset() const override;
-  uint32_t getVirtualTableShapeId() const override;
+  SymIndexId getVirtualTableShapeId() const override;
   std::unique_ptr<PDBSymbolTypeBuiltin>
   getVirtualBaseTableType() const override;
   PDB_DataKind getDataKind() const override;

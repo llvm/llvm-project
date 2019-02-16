@@ -555,8 +555,7 @@ MachineInstr *HexagonCopyToCombine::findPairable(MachineInstr &I1,
     if ((!IsI1LowReg && !IsI2LowReg) || !isEvenReg(FirstRegIndex))
       continue;
 
-    // Check that the two instructions are combinable. V4 allows more
-    // instructions to be merged into a combine.
+    // Check that the two instructions are combinable.
     // The order matters because in a A2_tfrsi we might can encode a int8 as
     // the hi reg operand but only a uint6 as the low reg operand.
     if ((IsI2LowReg && !areCombinableOperations(TRI, I1, *I2, AllowC64)) ||

@@ -22,7 +22,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -43,6 +42,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -53,6 +53,8 @@
 #include <utility>
 
 using namespace clang;
+
+void ModuleMapCallbacks::anchor() {}
 
 void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
   auto PendingLinkAs = PendingLinkAsModule.find(Mod->Name);
@@ -523,7 +525,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // At this point, only non-modular includes remain.
 
-  if (LangOpts.ModulesStrictDeclUse) {
+  if (RequestingModule && LangOpts.ModulesStrictDeclUse) {
     Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
         << RequestingModule->getTopLevelModule()->Name << Filename;
   } else if (RequestingModule && RequestingModuleIsModuleInterface &&
@@ -762,17 +764,8 @@ ModuleMap::isHeaderUnavailableInModule(const FileEntry *Header,
 
 Module *ModuleMap::findModule(StringRef Name) const {
   llvm::StringMap<Module *>::const_iterator Known = Modules.find(Name);
-  if (Known != Modules.end()) {
-    Module *M = Known->getValue();
-    // Notify callbacks that we found a module map for the module.
-    if (!M->DefinitionLoc.isInvalid())
-      for (const auto &Cb : Callbacks)
-        Cb->moduleMapFoundForModule(
-            *getContainingModuleMapFile(M), M,
-            SourceMgr.getFileCharacteristic(M->DefinitionLoc) ==
-                SrcMgr::C_System_ModuleMap);
-    return M;
-  }
+  if (Known != Modules.end())
+    return Known->getValue();
 
   return nullptr;
 }
@@ -815,12 +808,11 @@ std::pair<Module *, bool> ModuleMap::findOrCreateModule(StringRef Name,
 }
 
 Module *ModuleMap::createGlobalModuleForInterfaceUnit(SourceLocation Loc) {
-  assert(!PendingGlobalModule && "created multiple global modules");
-  PendingGlobalModule.reset(
+  PendingSubmodules.emplace_back(
       new Module("<global>", Loc, nullptr, /*IsFramework*/ false,
                  /*IsExplicit*/ true, NumCreatedModules++));
-  PendingGlobalModule->Kind = Module::GlobalModuleFragment;
-  return PendingGlobalModule.get();
+  PendingSubmodules.back()->Kind = Module::GlobalModuleFragment;
+  return PendingSubmodules.back().get();
 }
 
 Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
@@ -836,16 +828,40 @@ Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
   Modules[Name] = SourceModule = Result;
 
   // Reparent the current global module fragment as a submodule of this module.
-  assert(GlobalModule == PendingGlobalModule.get() &&
-         "unexpected global module");
-  GlobalModule->setParent(Result);
-  PendingGlobalModule.release(); // now owned by parent
+  for (auto &Submodule : PendingSubmodules) {
+    Submodule->setParent(Result);
+    Submodule.release(); // now owned by parent
+  }
+  PendingSubmodules.clear();
 
   // Mark the main source file as being within the newly-created module so that
   // declarations and macros are properly visibility-restricted to it.
   auto *MainFile = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
   assert(MainFile && "no input file for module interface");
   Headers[MainFile].push_back(KnownHeader(Result, PrivateHeader));
+
+  return Result;
+}
+
+Module *ModuleMap::createHeaderModule(StringRef Name,
+                                      ArrayRef<Module::Header> Headers) {
+  assert(LangOpts.CurrentModule == Name && "module name mismatch");
+  assert(!Modules[Name] && "redefining existing module");
+
+  auto *Result =
+      new Module(Name, SourceLocation(), nullptr, /*IsFramework*/ false,
+                 /*IsExplicit*/ false, NumCreatedModules++);
+  Result->Kind = Module::ModuleInterfaceUnit;
+  Modules[Name] = SourceModule = Result;
+
+  for (const Module::Header &H : Headers) {
+    auto *M = new Module(H.NameAsWritten, SourceLocation(), Result,
+                         /*IsFramework*/ false,
+                         /*IsExplicit*/ true, NumCreatedModules++);
+    // Header modules are implicitly 'export *'.
+    M->Exports.push_back(Module::ExportDecl(nullptr, true));
+    addHeader(M, H, NormalHeader);
+  }
 
   return Result;
 }
@@ -1006,15 +1022,16 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
     = StringRef(FrameworkDir->getName());
   llvm::sys::path::append(SubframeworksDirName, "Frameworks");
   llvm::sys::path::native(SubframeworksDirName);
-  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
-  for (vfs::directory_iterator Dir = FS.dir_begin(SubframeworksDirName, EC),
-                               DirEnd;
+  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  for (llvm::vfs::directory_iterator
+           Dir = FS.dir_begin(SubframeworksDirName, EC),
+           DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    if (!StringRef(Dir->getName()).endswith(".framework"))
+    if (!StringRef(Dir->path()).endswith(".framework"))
       continue;
 
     if (const DirectoryEntry *SubframeworkDir =
-            FileMgr.getDirectory(Dir->getName())) {
+            FileMgr.getDirectory(Dir->path())) {
       // Note: as an egregious but useful hack, we use the real path here and
       // check whether it is actually a subdirectory of the parent directory.
       // This will not be the case if the 'subframework' is actually a symlink
@@ -2383,13 +2400,13 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     // uncommonly used Tcl module on Darwin platforms.
     std::error_code EC;
     SmallVector<Module::Header, 6> Headers;
-    vfs::FileSystem &FS = *SourceMgr.getFileManager().getVirtualFileSystem();
-    for (vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
+    llvm::vfs::FileSystem &FS =
+        *SourceMgr.getFileManager().getVirtualFileSystem();
+    for (llvm::vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
          I != E && !EC; I.increment(EC)) {
-      if (const FileEntry *FE =
-              SourceMgr.getFileManager().getFile(I->getName())) {
+      if (const FileEntry *FE = SourceMgr.getFileManager().getFile(I->path())) {
 
-        Module::Header Header = {I->getName(), FE};
+        Module::Header Header = {I->path(), FE};
         Headers.push_back(std::move(Header));
       }
     }

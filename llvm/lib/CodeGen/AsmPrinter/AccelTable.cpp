@@ -23,6 +23,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -553,19 +554,31 @@ void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
     const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
   std::vector<MCSymbol *> CompUnits;
+  SmallVector<unsigned, 1> CUIndex(CUs.size());
+  int Count = 0;
   for (const auto &CU : enumerate(CUs)) {
+    if (CU.value()->getCUNode()->getNameTableKind() ==
+        DICompileUnit::DebugNameTableKind::None)
+      continue;
+    CUIndex[CU.index()] = Count++;
     assert(CU.index() == CU.value()->getUniqueID());
     const DwarfCompileUnit *MainCU =
         DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
     CompUnits.push_back(MainCU->getLabelBegin());
   }
 
+  if (CompUnits.empty())
+    return;
+
+  Asm->OutStreamer->SwitchSection(
+      Asm->getObjFileLowering().getDwarfDebugNamesSection());
+
   Contents.finalize(Asm, "names");
   Dwarf5AccelTableWriter<DWARF5AccelTableData>(
       Asm, Contents, CompUnits,
-      [&DD](const DWARF5AccelTableData &Entry) {
+      [&](const DWARF5AccelTableData &Entry) {
         const DIE *CUDie = Entry.getDie().getUnitDie();
-        return DD.lookupCU(CUDie)->getUniqueID();
+        return CUIndex[DD.lookupCU(CUDie)->getUniqueID()];
       })
       .emit();
 }

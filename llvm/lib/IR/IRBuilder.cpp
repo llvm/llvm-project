@@ -50,6 +50,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                 nullptr, GlobalVariable::NotThreadLocal,
                                 AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  GV->setAlignment(1);
   return GV;
 }
 
@@ -730,28 +731,29 @@ CallInst *IRBuilderBase::CreateGCRelocate(Instruction *Statepoint,
  return createCallHelper(FnGCRelocate, Args, this, Name);
 }
 
-CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID,
-                                               Value *LHS, Value *RHS,
+CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
+                                              Instruction *FMFSource,
+                                              const Twine &Name) {
+  Module *M = BB->getModule();
+  Function *Fn = Intrinsic::getDeclaration(M, ID, {V->getType()});
+  return createCallHelper(Fn, {V}, this, Name, FMFSource);
+}
+
+CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
+                                               Value *RHS,
+                                               Instruction *FMFSource,
                                                const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getDeclaration(M, ID, { LHS->getType() });
-  return createCallHelper(Fn, { LHS, RHS }, this, Name);
+  return createCallHelper(Fn, {LHS, RHS}, this, Name, FMFSource);
 }
 
 CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
-                                         Instruction *FMFSource,
-                                         const Twine &Name) {
-  Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getDeclaration(M, ID);
-  return createCallHelper(Fn, {}, this, Name);
-}
-
-CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
+                                         ArrayRef<Type *> Types,
                                          ArrayRef<Value *> Args,
                                          Instruction *FMFSource,
                                          const Twine &Name) {
-  assert(!Args.empty() && "Expected at least one argument to intrinsic");
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getDeclaration(M, ID, { Args.front()->getType() });
+  Function *Fn = Intrinsic::getDeclaration(M, ID, Types);
   return createCallHelper(Fn, Args, this, Name, FMFSource);
 }

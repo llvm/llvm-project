@@ -38,22 +38,25 @@
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      33
 # CHECK-NEXT: Total Cycles:      69
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        66
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.96
 # CHECK-NEXT: IPC:               0.48
 # CHECK-NEXT: Block RThroughput: 64.0
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0
-# CHECK-NEXT: RCU     - Retire tokens unavailable:                 8
+# CHECK-NEXT: RCU     - Retire tokens unavailable:                 8  (11.6%)
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
-# CHECK:      Dispatch Logic - number of cycles where we saw N instructions dispatched:
+# CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
 # CHECK-NEXT:  0,              36  (52.2%)
-# CHECK-NEXT:  1,              33  (47.8%)
+# CHECK-NEXT:  2,              33  (47.8%)
 
 # CHECK:      Register File statistics:
 # CHECK-NEXT: Total number of mappings created:    66

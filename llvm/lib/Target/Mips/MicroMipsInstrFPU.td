@@ -243,6 +243,8 @@ let DecoderNamespace = "MicroMipsFP64" in {
                      MFC1_FM_MM<0xe0>, ISA_MICROMIPS, FGR_64;
   def MFHC1_D64_MM : MFC1_FT<"mfhc1", GPR32Opnd, FGR64Opnd, II_MFHC1>,
                      MFC1_FM_MM<0xc0>, ISA_MICROMIPS, FGR_64;
+  def MTC1_D64_MM : MTC1_FT<"mtc1", FGR64Opnd, GPR32Opnd, II_MTC1>,
+                    MFC1_FM_MM<0xa0>, ISA_MICROMIPS, FGR_64;
 }
 
 let DecoderNamespace = "MicroMips" in {
@@ -404,6 +406,9 @@ let AddedComplexity = 40 in {
   def : LoadRegImmPat<LWC1_MM, f32, load>, ISA_MICROMIPS;
   def : StoreRegImmPat<SWC1_MM, f32>, ISA_MICROMIPS;
 }
+
+def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
+              (MTC1_D64_MM GPR32Opnd:$src)>, ISA_MICROMIPS, FGR_64;
 
 def : MipsPat<(f32 fpimm0), (MTC1_MM ZERO)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def : MipsPat<(f32 fpimm0neg), (FNEG_S_MM (MTC1_MM ZERO))>,

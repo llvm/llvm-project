@@ -53,7 +53,7 @@ bool ConsoleReporter::ReportContext(const Context& context) {
 }
 
 void ConsoleReporter::PrintHeader(const Run& run) {
-  std::string str = FormatString("%-*s %13s %13s %10s", static_cast<int>(name_field_width_),
+  std::string str = FormatString("%-*s %13s %15s %12s", static_cast<int>(name_field_width_),
                                  "Benchmark", "Time", "CPU", "Iterations");
   if(!run.counters.empty()) {
     if(output_options_ & OO_Tabular) {
@@ -98,6 +98,21 @@ static void IgnoreColorPrint(std::ostream& out, LogColor, const char* fmt,
   va_end(args);
 }
 
+
+static std::string FormatTime(double time) {
+  // Align decimal places...
+  if (time < 1.0) {
+    return FormatString("%10.3f", time);
+  }
+  if (time < 10.0) {
+    return FormatString("%10.2f", time);
+  }
+  if (time < 100.0) {
+    return FormatString("%10.1f", time);
+  }
+  return FormatString("%10.0f", time);
+}
+
 void ConsoleReporter::PrintRunData(const Run& result) {
   typedef void(PrinterFn)(std::ostream&, LogColor, const char*, ...);
   auto& Out = GetOutputStream();
@@ -106,7 +121,7 @@ void ConsoleReporter::PrintRunData(const Run& result) {
   auto name_color =
       (result.report_big_o || result.report_rms) ? COLOR_BLUE : COLOR_GREEN;
   printer(Out, name_color, "%-*s ", name_field_width_,
-          result.benchmark_name.c_str());
+          result.benchmark_name().c_str());
 
   if (result.error_occurred) {
     printer(Out, COLOR_RED, "ERROR OCCURRED: \'%s\'",
@@ -114,33 +129,24 @@ void ConsoleReporter::PrintRunData(const Run& result) {
     printer(Out, COLOR_DEFAULT, "\n");
     return;
   }
-  // Format bytes per second
-  std::string rate;
-  if (result.bytes_per_second > 0) {
-    rate = StrCat(" ", HumanReadableNumber(result.bytes_per_second), "B/s");
-  }
-
-  // Format items per second
-  std::string items;
-  if (result.items_per_second > 0) {
-    items =
-        StrCat(" ", HumanReadableNumber(result.items_per_second), " items/s");
-  }
 
   const double real_time = result.GetAdjustedRealTime();
   const double cpu_time = result.GetAdjustedCPUTime();
+  const std::string real_time_str = FormatTime(real_time);
+  const std::string cpu_time_str = FormatTime(cpu_time);
+
 
   if (result.report_big_o) {
     std::string big_o = GetBigOString(result.complexity);
-    printer(Out, COLOR_YELLOW, "%10.2f %s %10.2f %s ", real_time, big_o.c_str(),
+    printer(Out, COLOR_YELLOW, "%10.2f %-4s %10.2f %-4s ", real_time, big_o.c_str(),
             cpu_time, big_o.c_str());
   } else if (result.report_rms) {
-    printer(Out, COLOR_YELLOW, "%10.0f %% %10.0f %% ", real_time * 100,
-            cpu_time * 100);
+    printer(Out, COLOR_YELLOW, "%10.0f %-4s %10.0f %-4s ", real_time * 100, "%",
+            cpu_time * 100, "%");
   } else {
     const char* timeLabel = GetTimeUnitString(result.time_unit);
-    printer(Out, COLOR_YELLOW, "%10.0f %s %10.0f %s ", real_time, timeLabel,
-            cpu_time, timeLabel);
+    printer(Out, COLOR_YELLOW, "%s %-4s %s %-4s ", real_time_str.c_str(), timeLabel,
+            cpu_time_str.c_str(), timeLabel);
   }
 
   if (!result.report_big_o && !result.report_rms) {
@@ -150,7 +156,7 @@ void ConsoleReporter::PrintRunData(const Run& result) {
   for (auto& c : result.counters) {
     const std::size_t cNameLen = std::max(std::string::size_type(10),
                                           c.first.length());
-    auto const& s = HumanReadableNumber(c.second.value, 1000);
+    auto const& s = HumanReadableNumber(c.second.value, c.second.oneK);
     if (output_options_ & OO_Tabular) {
       if (c.second.flags & Counter::kIsRate) {
         printer(Out, COLOR_DEFAULT, " %*s/s", cNameLen - 2, s.c_str());
@@ -162,14 +168,6 @@ void ConsoleReporter::PrintRunData(const Run& result) {
       printer(Out, COLOR_DEFAULT, " %s=%s%s", c.first.c_str(), s.c_str(),
               unit);
     }
-  }
-
-  if (!rate.empty()) {
-    printer(Out, COLOR_DEFAULT, " %*s", 13, rate.c_str());
-  }
-
-  if (!items.empty()) {
-    printer(Out, COLOR_DEFAULT, " %*s", 18, items.c_str());
   }
 
   if (!result.report_label.empty()) {

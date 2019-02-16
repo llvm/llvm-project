@@ -33,8 +33,8 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN-LABEL: {{^}}test_func_call_external_void_func_i32_imm_stack_use:
 ; GCN: s_waitcnt
 ; GCN: s_mov_b32 s5, s32
-; GCN: s_add_u32 s32, s32, 0x1400{{$}}
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset
+; GCN-DAG: s_add_u32 s32, s32, 0x1400{{$}}
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset
 ; GCN: s_swappc_b64
 ; GCN: s_sub_u32 s32, s32, 0x1400{{$}}
 ; GCN: s_setpc_b64

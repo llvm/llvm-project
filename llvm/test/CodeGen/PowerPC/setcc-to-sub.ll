@@ -36,8 +36,8 @@ define zeroext i1 @test2(%class.PB2* %s_a, %class.PB2* %s_b) local_unnamed_addr 
 ; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
 ; CHECK-NEXT:    rlwinm 4, 4, 0, 28, 28
 ; CHECK-NEXT:    sub 3, 4, 3
+; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    rldicl 3, 3, 1, 63
-; CHECK-NEXT:    xori 3, 3, 1
 ; CHECK-NEXT:    blr
 entry:
   %arrayidx.i6 = bitcast %class.PB2* %s_a to i32*
@@ -81,8 +81,8 @@ define zeroext i1 @test4(%class.PB2* %s_a, %class.PB2* %s_b) local_unnamed_addr 
 ; CHECK-NEXT:    rlwinm 3, 3, 0, 28, 28
 ; CHECK-NEXT:    rlwinm 4, 4, 0, 28, 28
 ; CHECK-NEXT:    sub 3, 3, 4
+; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    rldicl 3, 3, 1, 63
-; CHECK-NEXT:    xori 3, 3, 1
 ; CHECK-NEXT:    blr
 entry:
   %arrayidx.i6 = bitcast %class.PB2* %s_a to i32*

@@ -8,34 +8,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "Trigram.h"
-#include "../../FuzzyMatch.h"
+#include "FuzzyMatch.h"
 #include "Token.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
-
 #include <cctype>
 #include <queue>
 #include <string>
 
 using namespace llvm;
-
 namespace clang {
 namespace clangd {
 namespace dex {
 
-// FIXME(kbobyrev): Deal with short symbol symbol names. A viable approach would
-// be generating unigrams and bigrams here, too. This would prevent symbol index
-// from applying fuzzy matching on a tremendous number of symbols and allow
-// supplementary retrieval for short queries.
-//
-// Short names (total segment length <3 characters) are currently ignored.
-std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
+std::vector<Token> generateIdentifierTrigrams(StringRef Identifier) {
   // Apply fuzzy matching text segmentation.
   std::vector<CharRole> Roles(Identifier.size());
   calculateRoles(Identifier,
-                 llvm::makeMutableArrayRef(Roles.data(), Identifier.size()));
+                 makeMutableArrayRef(Roles.data(), Identifier.size()));
 
   std::string LowercaseIdentifier = Identifier.lower();
 
@@ -44,87 +35,80 @@ std::vector<Token> generateIdentifierTrigrams(llvm::StringRef Identifier) {
   //
   // * Next Tail - next character from the same segment
   // * Next Head - front character of the next segment
-  // * Skip-1-Next Head - front character of the skip-1-next segment
   //
   // Next stores tuples of three indices in the presented order, if a variant is
   // not available then 0 is stored.
   std::vector<std::array<unsigned, 3>> Next(LowercaseIdentifier.size());
-  unsigned NextTail = 0, NextHead = 0, NextNextHead = 0;
+  unsigned NextTail = 0, NextHead = 0;
   for (int I = LowercaseIdentifier.size() - 1; I >= 0; --I) {
-    Next[I] = {{NextTail, NextHead, NextNextHead}};
+    Next[I] = {{NextTail, NextHead}};
     NextTail = Roles[I] == Tail ? I : 0;
     if (Roles[I] == Head) {
-      NextNextHead = NextHead;
       NextHead = I;
     }
   }
 
   DenseSet<Token> UniqueTrigrams;
-  std::array<char, 4> Chars;
+
+  auto Add = [&](std::string Chars) {
+    UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
+  };
+
+  // Iterate through valid sequneces of three characters Fuzzy Matcher can
+  // process.
   for (size_t I = 0; I < LowercaseIdentifier.size(); ++I) {
     // Skip delimiters.
     if (Roles[I] != Head && Roles[I] != Tail)
       continue;
     for (const unsigned J : Next[I]) {
-      if (!J)
+      if (J == 0)
         continue;
       for (const unsigned K : Next[J]) {
-        if (!K)
+        if (K == 0)
           continue;
-        Chars = {{LowercaseIdentifier[I], LowercaseIdentifier[J],
-                  LowercaseIdentifier[K], 0}};
-        auto Trigram = Token(Token::Kind::Trigram, Chars.data());
-        // Push unique trigrams to the result.
-        if (!UniqueTrigrams.count(Trigram)) {
-          UniqueTrigrams.insert(Trigram);
-        }
+        Add({{LowercaseIdentifier[I], LowercaseIdentifier[J],
+              LowercaseIdentifier[K]}});
       }
     }
   }
+  // Emit short-query trigrams: FooBar -> f, fo, fb.
+  if (!LowercaseIdentifier.empty())
+    Add({LowercaseIdentifier[0]});
+  if (LowercaseIdentifier.size() >= 2)
+    Add({LowercaseIdentifier[0], LowercaseIdentifier[1]});
+  for (size_t I = 1; I < LowercaseIdentifier.size(); ++I)
+    if (Roles[I] == Head) {
+      Add({LowercaseIdentifier[0], LowercaseIdentifier[I]});
+      break;
+    }
 
-  std::vector<Token> Result;
-  for (const auto &Trigram : UniqueTrigrams)
-    Result.push_back(Trigram);
-
-  return Result;
+  return {UniqueTrigrams.begin(), UniqueTrigrams.end()};
 }
 
-// FIXME(kbobyrev): Similarly, to generateIdentifierTrigrams, this ignores short
-// inputs (total segment length <3 characters).
-std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
+std::vector<Token> generateQueryTrigrams(StringRef Query) {
+  if (Query.empty())
+    return {};
+  std::string LowercaseQuery = Query.lower();
+  if (Query.size() < 3) // short-query trigrams only
+    return {Token(Token::Kind::Trigram, LowercaseQuery)};
+
   // Apply fuzzy matching text segmentation.
   std::vector<CharRole> Roles(Query.size());
-  calculateRoles(Query, llvm::makeMutableArrayRef(Roles.data(), Query.size()));
-
-  std::string LowercaseQuery = Query.lower();
+  calculateRoles(Query, makeMutableArrayRef(Roles.data(), Query.size()));
 
   DenseSet<Token> UniqueTrigrams;
-  std::deque<char> Chars;
-
-  for (size_t I = 0; I < LowercaseQuery.size(); ++I) {
-    // If current symbol is delimiter, just skip it.
+  std::string Chars;
+  for (unsigned I = 0; I < Query.size(); ++I) {
     if (Roles[I] != Head && Roles[I] != Tail)
-      continue;
-
+      continue; // Skip delimiters.
     Chars.push_back(LowercaseQuery[I]);
-
     if (Chars.size() > 3)
-      Chars.pop_front();
-    if (Chars.size() == 3) {
-      auto Trigram =
-          Token(Token::Kind::Trigram, std::string(begin(Chars), end(Chars)));
-      // Push unique trigrams to the result.
-      if (!UniqueTrigrams.count(Trigram)) {
-        UniqueTrigrams.insert(Trigram);
-      }
-    }
+      Chars.erase(Chars.begin());
+    if (Chars.size() == 3)
+      UniqueTrigrams.insert(Token(Token::Kind::Trigram, Chars));
   }
 
-  std::vector<Token> Result;
-  for (const auto &Trigram : UniqueTrigrams)
-    Result.push_back(Trigram);
-
-  return Result;
+  return {UniqueTrigrams.begin(), UniqueTrigrams.end()};
 }
 
 } // namespace dex

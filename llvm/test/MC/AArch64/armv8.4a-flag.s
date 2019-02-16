@@ -1,5 +1,14 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a < %s | FileCheck %s --check-prefix=CHECK
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=-v8.4a < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a %s -o - | \
+// RUN: FileCheck %s
+
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+fmi %s -o - 2>&1 | \
+// RUN: FileCheck %s
+
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=-v8.4a %s -o - 2>&1 | \
+// RUN: FileCheck %s --check-prefix=ERROR
+
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a,-fmi %s -o - 2>&1 | \
+// RUN: FileCheck %s --check-prefix=ERROR
 
 //------------------------------------------------------------------------------
 // Armv8.4-A flag manipulation instructions
@@ -21,24 +30,24 @@
 //CHECK-NEXT: rmif x1, #63, #15            // encoding: [0x2f,0x84,0x1f,0xba]
 //CHECK-NEXT: rmif xzr, #63, #15           // encoding: [0xef,0x87,0x1f,0xba]
 
-//CHECK-ERROR:      error: instruction requires: armv8.4a
-//CHECK-ERROR-NEXT: cfinv
-//CHECK-ERROR-NEXT: ^
-//CHECK-ERROR-NEXT: error: instruction requires: armv8.4a
-//CHECK-ERROR-NEXT: setf8 w1
-//CHECK-ERROR-NEXT: ^
-//CHECK-ERROR-NEXT: error: instruction requires: armv8.4a
-//CHECK-ERROR-NEXT: setf8 wzr
-//CHECK-ERROR-NEXT: ^
-//CHECK-ERROR-NEXT: error: instruction requires: armv8.4a
-//CHECK-ERROR-NEXT: setf16 w1
-//CHECK-ERROR-NEXT: ^
-//CHECK-ERROR-NEXT: error: instruction requires: armv8.4a
-//CHECK-ERROR-NEXT: setf16 wzr
-//CHECK-ERROR-NEXT: ^
-//CHECK-ERROR-NEXT: error: instruction requires: armv8.4a
-//CHECK-ERROR-NEXT: rmif x1, #63, #15
-//CHECK-ERROR-NEXT: ^
-//CHECK-ERROR-NEXT: error: instruction requires: armv8.4a
-//CHECK-ERROR-NEXT: rmif xzr, #63, #15
-//CHECK-ERROR-NEXT: ^
+//ERROR:      error: instruction requires: fmi
+//ERROR-NEXT: cfinv
+//ERROR-NEXT: ^
+//ERROR-NEXT: error: instruction requires: fmi
+//ERROR-NEXT: setf8 w1
+//ERROR-NEXT: ^
+//ERROR-NEXT: error: instruction requires: fmi
+//ERROR-NEXT: setf8 wzr
+//ERROR-NEXT: ^
+//ERROR-NEXT: error: instruction requires: fmi
+//ERROR-NEXT: setf16 w1
+//ERROR-NEXT: ^
+//ERROR-NEXT: error: instruction requires: fmi
+//ERROR-NEXT: setf16 wzr
+//ERROR-NEXT: ^
+//ERROR-NEXT: error: instruction requires: fmi
+//ERROR-NEXT: rmif x1, #63, #15
+//ERROR-NEXT: ^
+//ERROR-NEXT: error: instruction requires: fmi
+//ERROR-NEXT: rmif xzr, #63, #15
+//ERROR-NEXT: ^

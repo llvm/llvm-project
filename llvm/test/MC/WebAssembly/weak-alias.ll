@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj -wasm-keep-registers %s -o %t.o
 ; RUN: obj2yaml %t.o | FileCheck %s
 ; RUN: llvm-objdump -t %t.o | FileCheck --check-prefix=CHECK-SYMS %s
 
@@ -47,10 +47,10 @@ entry:
 }
 
 ; CHECK:        - Type:            TYPE
-; CHECK-NEXT:     Signatures:      
+; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         ReturnType:      I32
-; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:   - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
 ; CHECK-NEXT:       - Module:          env
@@ -68,13 +68,13 @@ entry:
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
 ; CHECK-NEXT:   - Type:            ELEM
-; CHECK-NEXT:     Segments:        
-; CHECK-NEXT:       - Offset:          
+; CHECK-NEXT:     Segments:
+; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 0 ]
 ; CHECK-NEXT:   - Type:            CODE
-; CHECK-NEXT:     Relocations:     
+; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000009
@@ -93,40 +93,40 @@ entry:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TYPE_INDEX_LEB
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x00000037
-; CHECK-NEXT:     Functions:       
+; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41000B
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            410028028880808000118080808000000B
 ; CHECK-NEXT:       - Index:           4
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            410028029080808000118080808000000B
 ; CHECK-NEXT:   - Type:            DATA
-; CHECK-NEXT:     Relocations:     
+; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           0
 ; CHECK-NEXT:         Offset:          0x0000000F
 ; CHECK-NEXT:       - Type:            R_WEBASSEMBLY_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           3
 ; CHECK-NEXT:         Offset:          0x00000018
-; CHECK-NEXT:     Segments:        
+; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
 ; CHECK-NEXT:         MemoryIndex:     0
-; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           0
 ; CHECK-NEXT:         Content:         '07000000'
 ; CHECK-NEXT:       - SectionOffset:   15
 ; CHECK-NEXT:         MemoryIndex:     0
-; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           8
 ; CHECK-NEXT:         Content:         '01000000'
@@ -139,7 +139,7 @@ entry:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
 ; CHECK-NEXT:     Version:         1
-; CHECK-NEXT:     SymbolTable:      
+; CHECK-NEXT:     SymbolTable:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Name:            foo
@@ -194,7 +194,7 @@ entry:
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN ]
 ; CHECK-NEXT:         Segment:         0
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:     SegmentInfo:    
+; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.bar
 ; CHECK-NEXT:         Alignment:       8
@@ -215,8 +215,8 @@ entry:
 ; CHECK-SYMS-NEXT: 00000002 g     F CODE	.hidden call_alias
 ; CHECK-SYMS-NEXT: 00000000 gw    F CODE	.hidden foo_alias
 ; CHECK-SYMS-NEXT: 00000003 g     F CODE	.hidden call_direct_ptr
-; CHECK-SYMS-NEXT: 00000008 g       DATA	direct_address
+; CHECK-SYMS-NEXT: 00000008 g     O DATA	direct_address
 ; CHECK-SYMS-NEXT: 00000004 g     F CODE	.hidden call_alias_ptr
-; CHECK-SYMS-NEXT: 00000010 g       DATA	alias_address
-; CHECK-SYMS-NEXT: 00000000 g       DATA	bar
-; CHECK-SYMS-NEXT: 00000000 gw      DATA	.hidden bar_alias
+; CHECK-SYMS-NEXT: 00000010 g     O DATA	alias_address
+; CHECK-SYMS-NEXT: 00000000 g     O DATA	bar
+; CHECK-SYMS-NEXT: 00000000 gw    O DATA	.hidden bar_alias

@@ -40,6 +40,51 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
 
 // ---------------------- TSD ---------------- {{{1
 
+#if SANITIZER_NETBSD || SANITIZER_FREEBSD
+// Thread Static Data cannot be used in early init on NetBSD and FreeBSD.
+// Reuse the Asan TSD API for compatibility with existing code
+// with an alternative implementation.
+
+static void (*tsd_destructor)(void *tsd) = nullptr;
+
+struct tsd_key {
+  tsd_key() : key(nullptr) {}
+  ~tsd_key() {
+    CHECK(tsd_destructor);
+    if (key)
+      (*tsd_destructor)(key);
+  }
+  void *key;
+};
+
+static thread_local struct tsd_key key;
+
+void AsanTSDInit(void (*destructor)(void *tsd)) {
+  CHECK(!tsd_destructor);
+  tsd_destructor = destructor;
+}
+
+void *AsanTSDGet() {
+  CHECK(tsd_destructor);
+  return key.key;
+}
+
+void AsanTSDSet(void *tsd) {
+  CHECK(tsd_destructor);
+  CHECK(tsd);
+  CHECK(!key.key);
+  key.key = tsd;
+}
+
+void PlatformTSDDtor(void *tsd) {
+  CHECK(tsd_destructor);
+  CHECK_EQ(key.key, tsd);
+  key.key = nullptr;
+  // Make sure that signal handler can not see a stale current thread pointer.
+  atomic_signal_fence(memory_order_seq_cst);
+  AsanThread::TSDDtor(tsd);
+}
+#else
 static pthread_key_t tsd_key;
 static bool tsd_key_inited = false;
 void AsanTSDInit(void (*destructor)(void *tsd)) {
@@ -67,6 +112,7 @@ void PlatformTSDDtor(void *tsd) {
   }
   AsanThread::TSDDtor(tsd);
 }
+#endif
 }  // namespace __asan
 
 #endif  // SANITIZER_POSIX

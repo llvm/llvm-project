@@ -149,6 +149,8 @@ void *allocateDefaultArgStorageChain(const ASTContext &C) {
 // RedeclarableTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
 
+void RedeclarableTemplateDecl::anchor() {}
+
 RedeclarableTemplateDecl::CommonBase *RedeclarableTemplateDecl::getCommonPtr() const {
   if (Common)
     return Common;
@@ -329,8 +331,6 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
 
   // Ensure we don't leak any important state.
   assert(ThisCommon->Specializations.size() == 0 &&
-         !ThisCommon->InstantiatedFromMember.getPointer() &&
-         !ThisCommon->InstantiatedFromMember.getInt() &&
          "Can't merge incompatible declarations!");
 
   Base::Common = PrevCommon;
@@ -509,7 +509,7 @@ SourceLocation TemplateTypeParmDecl::getDefaultArgumentLoc() const {
 
 SourceRange TemplateTypeParmDecl::getSourceRange() const {
   if (hasDefaultArgument() && !defaultArgumentWasInherited())
-    return SourceRange(getLocStart(),
+    return SourceRange(getBeginLoc(),
                        getDefaultArgumentInfo()->getTypeLoc().getEndLoc());
   else
     return TypeDecl::getSourceRange();
@@ -748,7 +748,7 @@ ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
       new (Context, DC) ClassTemplateSpecializationDecl(
           Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
           SpecializedTemplate, Args, PrevDecl);
-  Result->MayHaveOutOfDateDef = false;
+  Result->setMayHaveOutOfDateDef(false);
 
   Context.getTypeDeclType(Result, PrevDecl);
   return Result;
@@ -759,7 +759,7 @@ ClassTemplateSpecializationDecl::CreateDeserialized(ASTContext &C,
                                                     unsigned ID) {
   auto *Result =
     new (C, ID) ClassTemplateSpecializationDecl(C, ClassTemplateSpecialization);
-  Result->MayHaveOutOfDateDef = false;
+  Result->setMayHaveOutOfDateDef(false);
   return Result;
 }
 
@@ -866,7 +866,7 @@ Create(ASTContext &Context, TagKind TK,DeclContext *DC,
                                              Params, SpecializedTemplate, Args,
                                              ASTArgInfos, PrevDecl);
   Result->setSpecializationKind(TSK_ExplicitSpecialization);
-  Result->MayHaveOutOfDateDef = false;
+  Result->setMayHaveOutOfDateDef(false);
 
   Context.getInjectedClassNameType(Result, CanonInjectedType);
   return Result;
@@ -876,7 +876,7 @@ ClassTemplatePartialSpecializationDecl *
 ClassTemplatePartialSpecializationDecl::CreateDeserialized(ASTContext &C,
                                                            unsigned ID) {
   auto *Result = new (C, ID) ClassTemplatePartialSpecializationDecl(C);
-  Result->MayHaveOutOfDateDef = false;
+  Result->setMayHaveOutOfDateDef(false);
   return Result;
 }
 

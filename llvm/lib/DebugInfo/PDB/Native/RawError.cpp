@@ -5,14 +5,12 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-namespace {
 // FIXME: This class is only here to support the transition to llvm::Error. It
 // will be removed once this transition is complete. Clients should prefer to
 // deal with the Error value directly, rather than converting to error_code.
 class RawErrorCategory : public std::error_category {
 public:
   const char *name() const noexcept override { return "llvm.pdb.raw"; }
-
   std::string message(int Condition) const override {
     switch (static_cast<raw_error_code>(Condition)) {
     case raw_error_code::unspecified:
@@ -46,30 +44,8 @@ public:
     llvm_unreachable("Unrecognized raw_error_code");
   }
 };
-} // end anonymous namespace
 
-static ManagedStatic<RawErrorCategory> Category;
+static llvm::ManagedStatic<RawErrorCategory> RawCategory;
+const std::error_category &llvm::pdb::RawErrCategory() { return *RawCategory; }
 
-char RawError::ID = 0;
-
-RawError::RawError(raw_error_code C) : RawError(C, "") {}
-
-RawError::RawError(const std::string &Context)
-    : RawError(raw_error_code::unspecified, Context) {}
-
-RawError::RawError(raw_error_code C, const std::string &Context) : Code(C) {
-  ErrMsg = "Native PDB Error: ";
-  std::error_code EC = convertToErrorCode();
-  if (Code != raw_error_code::unspecified)
-    ErrMsg += EC.message() + "  ";
-  if (!Context.empty())
-    ErrMsg += Context;
-}
-
-void RawError::log(raw_ostream &OS) const { OS << ErrMsg << "\n"; }
-
-const std::string &RawError::getErrorMessage() const { return ErrMsg; }
-
-std::error_code RawError::convertToErrorCode() const {
-  return std::error_code(static_cast<int>(Code), *Category);
-}
+char RawError::ID;

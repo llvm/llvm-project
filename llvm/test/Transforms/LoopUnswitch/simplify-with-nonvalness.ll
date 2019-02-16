@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-unswitch -verify-loop-info -S < %s 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s 2>&1 | FileCheck %s
 
 ; There are 1 case and 1 default case in the switch. after we unswitch, we know the
 ; %a is definitely not 0 in one of the unswitched loop, make sure we take advantage

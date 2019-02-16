@@ -7,7 +7,7 @@ int test_omp_get_wtick()
   double tick;
   tick = -1.;
   tick = omp_get_wtick ();
-  return ((tick > 0.0) && (tick < 0.01));
+  return ((tick > 0.0) && (tick <= 0.01));
 }
 
 int main()

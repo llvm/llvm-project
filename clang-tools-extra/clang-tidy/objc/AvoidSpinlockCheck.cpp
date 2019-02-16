@@ -27,7 +27,7 @@ void AvoidSpinlockCheck::registerMatchers(MatchFinder *Finder) {
 
 void AvoidSpinlockCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("spinlock");
-  diag(MatchedExpr->getLocStart(),
+  diag(MatchedExpr->getBeginLoc(),
        "use os_unfair_lock_lock() or dispatch queue APIs instead of the "
        "deprecated OSSpinLock");
 }

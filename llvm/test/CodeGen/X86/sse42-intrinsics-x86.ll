@@ -99,9 +99,9 @@ define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-SSE-LABEL: test_x86_sse42_pcmpestria128:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X86-SSE-NEXT:    seta %bl ## encoding: [0x0f,0x97,0xc3]
 ; X86-SSE-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -111,9 +111,9 @@ define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-AVX-LABEL: test_x86_sse42_pcmpestria128:
 ; X86-AVX:       ## %bb.0:
 ; X86-AVX-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X86-AVX-NEXT:    seta %bl ## encoding: [0x0f,0x97,0xc3]
 ; X86-AVX-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -122,9 +122,9 @@ define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-SSE-LABEL: test_x86_sse42_pcmpestria128:
 ; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X64-SSE-NEXT:    seta %sil ## encoding: [0x40,0x0f,0x97,0xc6]
 ; X64-SSE-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -132,9 +132,9 @@ define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-AVX-LABEL: test_x86_sse42_pcmpestria128:
 ; X64-AVX:       ## %bb.0:
+; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X64-AVX-NEXT:    seta %sil ## encoding: [0x40,0x0f,0x97,0xc6]
 ; X64-AVX-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -149,9 +149,9 @@ define i32 @test_x86_sse42_pcmpestric128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-SSE-LABEL: test_x86_sse42_pcmpestric128:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X86-SSE-NEXT:    setb %bl ## encoding: [0x0f,0x92,0xc3]
 ; X86-SSE-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -161,9 +161,9 @@ define i32 @test_x86_sse42_pcmpestric128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-AVX-LABEL: test_x86_sse42_pcmpestric128:
 ; X86-AVX:       ## %bb.0:
 ; X86-AVX-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X86-AVX-NEXT:    setb %bl ## encoding: [0x0f,0x92,0xc3]
 ; X86-AVX-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -172,9 +172,9 @@ define i32 @test_x86_sse42_pcmpestric128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-SSE-LABEL: test_x86_sse42_pcmpestric128:
 ; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X64-SSE-NEXT:    setb %sil ## encoding: [0x40,0x0f,0x92,0xc6]
 ; X64-SSE-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -182,9 +182,9 @@ define i32 @test_x86_sse42_pcmpestric128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-AVX-LABEL: test_x86_sse42_pcmpestric128:
 ; X64-AVX:       ## %bb.0:
+; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X64-AVX-NEXT:    setb %sil ## encoding: [0x40,0x0f,0x92,0xc6]
 ; X64-AVX-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -199,9 +199,9 @@ define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-SSE-LABEL: test_x86_sse42_pcmpestrio128:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X86-SSE-NEXT:    seto %bl ## encoding: [0x0f,0x90,0xc3]
 ; X86-SSE-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -211,9 +211,9 @@ define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-AVX-LABEL: test_x86_sse42_pcmpestrio128:
 ; X86-AVX:       ## %bb.0:
 ; X86-AVX-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X86-AVX-NEXT:    seto %bl ## encoding: [0x0f,0x90,0xc3]
 ; X86-AVX-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -222,9 +222,9 @@ define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-SSE-LABEL: test_x86_sse42_pcmpestrio128:
 ; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X64-SSE-NEXT:    seto %sil ## encoding: [0x40,0x0f,0x90,0xc6]
 ; X64-SSE-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -232,9 +232,9 @@ define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-AVX-LABEL: test_x86_sse42_pcmpestrio128:
 ; X64-AVX:       ## %bb.0:
+; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X64-AVX-NEXT:    seto %sil ## encoding: [0x40,0x0f,0x90,0xc6]
 ; X64-AVX-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -249,9 +249,9 @@ define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-SSE-LABEL: test_x86_sse42_pcmpestris128:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X86-SSE-NEXT:    sets %bl ## encoding: [0x0f,0x98,0xc3]
 ; X86-SSE-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -261,9 +261,9 @@ define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-AVX-LABEL: test_x86_sse42_pcmpestris128:
 ; X86-AVX:       ## %bb.0:
 ; X86-AVX-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X86-AVX-NEXT:    sets %bl ## encoding: [0x0f,0x98,0xc3]
 ; X86-AVX-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -272,9 +272,9 @@ define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-SSE-LABEL: test_x86_sse42_pcmpestris128:
 ; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X64-SSE-NEXT:    sets %sil ## encoding: [0x40,0x0f,0x98,0xc6]
 ; X64-SSE-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -282,9 +282,9 @@ define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-AVX-LABEL: test_x86_sse42_pcmpestris128:
 ; X64-AVX:       ## %bb.0:
+; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X64-AVX-NEXT:    sets %sil ## encoding: [0x40,0x0f,0x98,0xc6]
 ; X64-AVX-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -299,9 +299,9 @@ define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-SSE-LABEL: test_x86_sse42_pcmpestriz128:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-SSE-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X86-SSE-NEXT:    sete %bl ## encoding: [0x0f,0x94,0xc3]
 ; X86-SSE-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -311,9 +311,9 @@ define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ; X86-AVX-LABEL: test_x86_sse42_pcmpestriz128:
 ; X86-AVX:       ## %bb.0:
 ; X86-AVX-NEXT:    pushl %ebx ## encoding: [0x53]
+; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X86-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X86-AVX-NEXT:    xorl %ebx, %ebx ## encoding: [0x31,0xdb]
 ; X86-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X86-AVX-NEXT:    sete %bl ## encoding: [0x0f,0x94,0xc3]
 ; X86-AVX-NEXT:    movl %ebx, %eax ## encoding: [0x89,0xd8]
@@ -322,9 +322,9 @@ define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-SSE-LABEL: test_x86_sse42_pcmpestriz128:
 ; X64-SSE:       ## %bb.0:
+; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-SSE-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-SSE-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x61,0xc1,0x07]
 ; X64-SSE-NEXT:    sete %sil ## encoding: [0x40,0x0f,0x94,0xc6]
 ; X64-SSE-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -332,9 +332,9 @@ define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) nounwind 
 ;
 ; X64-AVX-LABEL: test_x86_sse42_pcmpestriz128:
 ; X64-AVX:       ## %bb.0:
+; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    movl $7, %eax ## encoding: [0xb8,0x07,0x00,0x00,0x00]
 ; X64-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
-; X64-AVX-NEXT:    xorl %esi, %esi ## encoding: [0x31,0xf6]
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0xc1,0x07]
 ; X64-AVX-NEXT:    sete %sil ## encoding: [0x40,0x0f,0x94,0xc6]
 ; X64-AVX-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
@@ -626,8 +626,8 @@ define i32 @crc32_32_8(i32 %a, i8 %b) nounwind {
 ;
 ; X64-LABEL: crc32_32_8:
 ; X64:       ## %bb.0:
-; X64-NEXT:    crc32b %sil, %edi ## encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xfe]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    crc32b %sil, %eax ## encoding: [0xf2,0x40,0x0f,0x38,0xf0,0xc6]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i32 @llvm.x86.sse42.crc32.32.8(i32 %a, i8 %b)
   ret i32 %tmp
@@ -643,8 +643,8 @@ define i32 @crc32_32_16(i32 %a, i16 %b) nounwind {
 ;
 ; X64-LABEL: crc32_32_16:
 ; X64:       ## %bb.0:
-; X64-NEXT:    crc32w %si, %edi ## encoding: [0x66,0xf2,0x0f,0x38,0xf1,0xfe]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    crc32w %si, %eax ## encoding: [0x66,0xf2,0x0f,0x38,0xf1,0xc6]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i32 @llvm.x86.sse42.crc32.32.16(i32 %a, i16 %b)
   ret i32 %tmp
@@ -660,8 +660,8 @@ define i32 @crc32_32_32(i32 %a, i32 %b) nounwind {
 ;
 ; X64-LABEL: crc32_32_32:
 ; X64:       ## %bb.0:
-; X64-NEXT:    crc32l %esi, %edi ## encoding: [0xf2,0x0f,0x38,0xf1,0xfe]
 ; X64-NEXT:    movl %edi, %eax ## encoding: [0x89,0xf8]
+; X64-NEXT:    crc32l %esi, %eax ## encoding: [0xf2,0x0f,0x38,0xf1,0xc6]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   %tmp = call i32 @llvm.x86.sse42.crc32.32.32(i32 %a, i32 %b)
   ret i32 %tmp

@@ -29,7 +29,7 @@ static void initNames(std::vector<std::string> &Strings, StringRef Name,
 }
 
 OldSymbolName::OldSymbolName(StringRef Name, const LangOptions &LangOpts) {
-  initNames(Strings, Name, LangOpts.ObjC1);
+  initNames(Strings, Name, LangOpts.ObjC);
 }
 
 OldSymbolName::OldSymbolName(StringRef Name, bool IsObjectiveCSelector) {

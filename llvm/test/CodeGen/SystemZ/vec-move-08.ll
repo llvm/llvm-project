@@ -442,3 +442,35 @@ define <2 x double> @f39(<2 x double> %val, <2 x i64> %index, i64 %base) {
   %ret = insertelement <2 x double> %val, double %element, i32 1
   ret <2 x double> %ret
 }
+
+; Test a v4i32 gather where the load is chained.
+define void @f40(<4 x i32> %val, <4 x i32> %index, i64 %base, <4 x i32> *%res) {
+; CHECK-LABEL: f40:
+; CHECK: vgef %v24, 0(%v26,%r2), 1
+; CHECK: vst %v24, 0(%r3)
+; CHECK: br %r14
+  %elem = extractelement <4 x i32> %index, i32 1
+  %ext = zext i32 %elem to i64
+  %add = add i64 %base, %ext
+  %ptr = inttoptr i64 %add to i32 *
+  %element = load i32, i32 *%ptr
+  %ret = insertelement <4 x i32> %val, i32 %element, i32 1
+  store <4 x i32> %ret, <4 x i32> *%res
+  ret void
+}
+
+; Test a v2i64 gather where the load is chained.
+define void @f41(<2 x i64> %val, <2 x i64> %index, i64 %base, <2 x i64> *%res) {
+; CHECK-LABEL: f41:
+; CHECK: vgeg %v24, 0(%v26,%r2), 1
+; CHECK: vst %v24, 0(%r3)
+; CHECK: br %r14
+  %elem = extractelement <2 x i64> %index, i32 1
+  %add = add i64 %base, %elem
+  %ptr = inttoptr i64 %add to i64 *
+  %element = load i64, i64 *%ptr
+  %ret = insertelement <2 x i64> %val, i64 %element, i32 1
+  store <2 x i64> %ret, <2 x i64> *%res
+  ret void
+}
+

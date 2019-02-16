@@ -57,11 +57,8 @@
 #ifndef CXX_KEYWORD_OPERATOR
 #define CXX_KEYWORD_OPERATOR(X,Y)
 #endif
-#ifndef OBJC1_AT_KEYWORD
-#define OBJC1_AT_KEYWORD(X)
-#endif
-#ifndef OBJC2_AT_KEYWORD
-#define OBJC2_AT_KEYWORD(X)
+#ifndef OBJC_AT_KEYWORD
+#define OBJC_AT_KEYWORD(X)
 #endif
 #ifndef TESTING_KEYWORD
 #define TESTING_KEYWORD(X, L) KEYWORD(X, L)
@@ -579,15 +576,15 @@ ALIAS("__fp16", half                , KEYALL)
 KEYWORD(half                        , HALFSUPPORT)
 
 // Objective-C ARC keywords.
-KEYWORD(__bridge                     , KEYARC)
-KEYWORD(__bridge_transfer            , KEYARC)
-KEYWORD(__bridge_retained            , KEYARC)
-KEYWORD(__bridge_retain              , KEYARC)
+KEYWORD(__bridge                     , KEYOBJC)
+KEYWORD(__bridge_transfer            , KEYOBJC)
+KEYWORD(__bridge_retained            , KEYOBJC)
+KEYWORD(__bridge_retain              , KEYOBJC)
 
 // Objective-C keywords.
-KEYWORD(__covariant                  , KEYOBJC2)
-KEYWORD(__contravariant              , KEYOBJC2)
-KEYWORD(__kindof                     , KEYOBJC2)
+KEYWORD(__covariant                  , KEYOBJC)
+KEYWORD(__contravariant              , KEYOBJC)
+KEYWORD(__kindof                     , KEYOBJC)
 
 // Alternate spelling for various tokens.  There are GCC extensions in all
 // languages, but should not be disabled in strict conformance mode.
@@ -677,34 +674,34 @@ TESTING_KEYWORD(__unknown_anytype , KEYALL)
 // These have meaning after an '@' in Objective-C mode. These define enums in
 // the tok::objc_* namespace.
 
-OBJC1_AT_KEYWORD(not_keyword)
-OBJC1_AT_KEYWORD(class)
-OBJC1_AT_KEYWORD(compatibility_alias)
-OBJC1_AT_KEYWORD(defs)
-OBJC1_AT_KEYWORD(encode)
-OBJC1_AT_KEYWORD(end)
-OBJC1_AT_KEYWORD(implementation)
-OBJC1_AT_KEYWORD(interface)
-OBJC1_AT_KEYWORD(private)
-OBJC1_AT_KEYWORD(protected)
-OBJC1_AT_KEYWORD(protocol)
-OBJC1_AT_KEYWORD(public)
-OBJC1_AT_KEYWORD(selector)
-OBJC1_AT_KEYWORD(throw)
-OBJC1_AT_KEYWORD(try)
-OBJC1_AT_KEYWORD(catch)
-OBJC1_AT_KEYWORD(finally)
-OBJC1_AT_KEYWORD(synchronized)
-OBJC1_AT_KEYWORD(autoreleasepool)
+OBJC_AT_KEYWORD(not_keyword)
+OBJC_AT_KEYWORD(class)
+OBJC_AT_KEYWORD(compatibility_alias)
+OBJC_AT_KEYWORD(defs)
+OBJC_AT_KEYWORD(encode)
+OBJC_AT_KEYWORD(end)
+OBJC_AT_KEYWORD(implementation)
+OBJC_AT_KEYWORD(interface)
+OBJC_AT_KEYWORD(private)
+OBJC_AT_KEYWORD(protected)
+OBJC_AT_KEYWORD(protocol)
+OBJC_AT_KEYWORD(public)
+OBJC_AT_KEYWORD(selector)
+OBJC_AT_KEYWORD(throw)
+OBJC_AT_KEYWORD(try)
+OBJC_AT_KEYWORD(catch)
+OBJC_AT_KEYWORD(finally)
+OBJC_AT_KEYWORD(synchronized)
+OBJC_AT_KEYWORD(autoreleasepool)
 
-OBJC2_AT_KEYWORD(property)
-OBJC2_AT_KEYWORD(package)
-OBJC2_AT_KEYWORD(required)
-OBJC2_AT_KEYWORD(optional)
-OBJC2_AT_KEYWORD(synthesize)
-OBJC2_AT_KEYWORD(dynamic)
-OBJC2_AT_KEYWORD(import)
-OBJC2_AT_KEYWORD(available)
+OBJC_AT_KEYWORD(property)
+OBJC_AT_KEYWORD(package)
+OBJC_AT_KEYWORD(required)
+OBJC_AT_KEYWORD(optional)
+OBJC_AT_KEYWORD(synthesize)
+OBJC_AT_KEYWORD(dynamic)
+OBJC_AT_KEYWORD(import)
+OBJC_AT_KEYWORD(available)
 
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?
@@ -780,6 +777,11 @@ ANNOTATION(pragma_redefine_extname)
 // handles them.
 ANNOTATION(pragma_fp_contract)
 
+// Annotation for #pragma STDC FENV_ACCESS
+// The lexer produces these so that they only take effect when the parser
+// handles them.
+ANNOTATION(pragma_fenv_access)
+
 // Annotation for #pragma pointers_to_members...
 // The lexer produces these so that they only take effect when the parser
 // handles them.
@@ -823,8 +825,7 @@ ANNOTATION(module_end)
 
 #undef ANNOTATION
 #undef TESTING_KEYWORD
-#undef OBJC2_AT_KEYWORD
-#undef OBJC1_AT_KEYWORD
+#undef OBJC_AT_KEYWORD
 #undef CXX_KEYWORD_OPERATOR
 #undef PPKEYWORD
 #undef ALIAS

@@ -159,6 +159,8 @@ public:
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
   bool supportsDebugInfoOption(const llvm::opt::Arg *A) const override;
+  void adjustDebugInfoKind(codegenoptions::DebugInfoKind &DebugInfoKind,
+                           const llvm::opt::ArgList &Args) const override;
   bool IsMathErrnoDefault() const override { return false; }
 
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,

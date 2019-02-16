@@ -68,7 +68,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_team_info_t *team_info = NULL;
   ompt_task_info_t *task_info = NULL;
-  ompt_work_type_t ompt_work_type = ompt_work_loop;
+  ompt_work_t ompt_work_type = ompt_work_loop;
 
   static kmp_int8 warn = 0;
 
@@ -475,7 +475,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   nteams = th->th.th_teams_size.nteams;
 #endif
   team_id = team->t.t_master_tid;
-  KMP_DEBUG_ASSERT(nteams == team->t.t_parent->t.t_nproc);
+  KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
 
   // compute global trip count
   if (incr == 1) {
@@ -717,7 +717,7 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
   nteams = th->th.th_teams_size.nteams;
 #endif
   team_id = team->t.t_master_tid;
-  KMP_DEBUG_ASSERT(nteams == team->t.t_parent->t.t_nproc);
+  KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
 
   // compute trip count
   if (incr == 1) {

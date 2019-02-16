@@ -88,7 +88,6 @@ enum RuntimeLibcallSignature {
   unsupported
 };
 
-
 struct RuntimeLibcallSignatureTable {
   std::vector<RuntimeLibcallSignature> Table;
 
@@ -486,18 +485,17 @@ struct StaticLibcallNameMap {
 
 } // end anonymous namespace
 
-
-
-void llvm::GetSignature(const WebAssemblySubtarget &Subtarget,
-                        RTLIB::Libcall LC, SmallVectorImpl<wasm::ValType> &Rets,
-                        SmallVectorImpl<wasm::ValType> &Params) {
+void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
+                               RTLIB::Libcall LC,
+                               SmallVectorImpl<wasm::ValType> &Rets,
+                               SmallVectorImpl<wasm::ValType> &Params) {
   assert(Rets.empty());
   assert(Params.empty());
 
   wasm::ValType iPTR =
       Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
 
-  auto& Table = RuntimeLibcallSignatures->Table;
+  auto &Table = RuntimeLibcallSignatures->Table;
   switch (Table[LC]) {
   case func:
     break;
@@ -834,11 +832,12 @@ void llvm::GetSignature(const WebAssemblySubtarget &Subtarget,
 static ManagedStatic<StaticLibcallNameMap> LibcallNameMap;
 // TODO: If the RTLIB::Libcall-taking flavor of GetSignature remains unsed
 // other than here, just roll its logic into this version.
-void llvm::GetSignature(const WebAssemblySubtarget &Subtarget, const char *Name,
-                        SmallVectorImpl<wasm::ValType> &Rets,
-                        SmallVectorImpl<wasm::ValType> &Params) {
-  auto& Map = LibcallNameMap->Map;
+void llvm::GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
+                               const char *Name,
+                               SmallVectorImpl<wasm::ValType> &Rets,
+                               SmallVectorImpl<wasm::ValType> &Params) {
+  auto &Map = LibcallNameMap->Map;
   auto val = Map.find(Name);
   assert(val != Map.end() && "unexpected runtime library name");
-  return GetSignature(Subtarget, val->second, Rets, Params);
+  return GetLibcallSignature(Subtarget, val->second, Rets, Params);
 }

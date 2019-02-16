@@ -59,11 +59,35 @@ void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
   PendingLabels.clear();
 }
 
+// When fixup's offset is a forward declared label, e.g.:
+//
+//   .reloc 1f, R_MIPS_JALR, foo
+// 1: nop
+//
+// postpone adding it to Fixups vector until the label is defined and its offset
+// is known.
+void MCObjectStreamer::resolvePendingFixups() {
+  for (PendingMCFixup &PendingFixup : PendingFixups) {
+    if (!PendingFixup.Sym || PendingFixup.Sym->isUndefined ()) {
+      getContext().reportError(PendingFixup.Fixup.getLoc(),
+                               "unresolved relocation offset");
+      continue;
+    }
+    flushPendingLabels(PendingFixup.DF, PendingFixup.DF->getContents().size());
+    PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset());
+    PendingFixup.DF->getFixups().push_back(PendingFixup.Fixup);
+  }
+  PendingFixups.clear();
+}
+
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
 // tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment.
-static Optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
-                                             const MCSymbol *Lo) {
+static Optional<uint64_t>
+absoluteSymbolDiff(MCAssembler &Asm, const MCSymbol *Hi, const MCSymbol *Lo) {
   assert(Hi && Lo);
+  if (Asm.getBackendPtr()->requiresDiffExpressionRelocations())
+    return None;
+
   if (!Hi->getFragment() || Hi->getFragment() != Lo->getFragment() ||
       Hi->isVariable() || Lo->isVariable())
     return None;
@@ -74,7 +98,7 @@ static Optional<uint64_t> absoluteSymbolDiff(const MCSymbol *Hi,
 void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
                                               const MCSymbol *Lo,
                                               unsigned Size) {
-  if (Optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo)) {
+  if (Optional<uint64_t> Diff = absoluteSymbolDiff(getAssembler(), Hi, Lo)) {
     EmitIntValue(*Diff, Size);
     return;
   }
@@ -83,7 +107,7 @@ void MCObjectStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi,
 
 void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
                                                        const MCSymbol *Lo) {
-  if (Optional<uint64_t> Diff = absoluteSymbolDiff(Hi, Lo)) {
+  if (Optional<uint64_t> Diff = absoluteSymbolDiff(getAssembler(), Hi, Lo)) {
     EmitULEB128IntValue(*Diff);
     return;
   }
@@ -170,7 +194,6 @@ void MCObjectStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
 
-  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
 
   // Avoid fixups when possible.
@@ -267,7 +290,6 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
                                          const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
   flushPendingLabels(nullptr);
-  getContext().clearCVLocSeen();
   getContext().clearDwarfLocSeen();
 
   bool Created = getAssembler().registerSection(*Section);
@@ -308,7 +330,6 @@ void MCObjectStreamer::EmitInstructionImpl(const MCInst &Inst,
 
   // Now that a machine instruction has been assembled into this section, make
   // a line entry for any .loc directive that has been seen.
-  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
 
   // If this instruction doesn't need relaxation, just emit it as data.
@@ -443,12 +464,16 @@ void MCObjectStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           unsigned Line, unsigned Column,
                                           bool PrologueEnd, bool IsStmt,
                                           StringRef FileName, SMLoc Loc) {
-  // In case we see two .cv_loc directives in a row, make sure the
-  // first one gets a line entry.
-  MCCVLineEntry::Make(this);
+  // Validate the directive.
+  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+    return;
 
-  this->MCStreamer::EmitCVLocDirective(FunctionId, FileNo, Line, Column,
-                                       PrologueEnd, IsStmt, FileName, Loc);
+  // Emit a label at the current position and record it in the CodeViewContext.
+  MCSymbol *LineSym = getContext().createTempSymbol();
+  EmitLabel(LineSym);
+  getContext().getCVContext().recordCVLoc(getContext(), LineSym, FunctionId,
+                                          FileNo, Line, Column, PrologueEnd,
+                                          IsStmt);
 }
 
 void MCObjectStreamer::EmitCVLinetableDirective(unsigned FunctionId,
@@ -472,7 +497,11 @@ void MCObjectStreamer::EmitCVInlineLinetableDirective(
 void MCObjectStreamer::EmitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {
-  getContext().getCVContext().emitDefRange(*this, Ranges, FixedSizePortion);
+  MCFragment *Frag =
+      getContext().getCVContext().emitDefRange(*this, Ranges, FixedSizePortion);
+  // Attach labels that were pending before we created the defrange fragment to
+  // the beginning of the new fragment.
+  flushPendingLabels(Frag, 0);
   this->MCStreamer::EmitCVDefRangeDirective(Ranges, FixedSizePortion);
 }
 
@@ -488,11 +517,16 @@ void MCObjectStreamer::EmitCVFileChecksumOffsetDirective(unsigned FileNo) {
 }
 
 void MCObjectStreamer::EmitBytes(StringRef Data) {
-  MCCVLineEntry::Make(this);
   MCDwarfLineEntry::Make(this, getCurrentSectionOnly());
   MCDataFragment *DF = getOrCreateDataFragment();
   flushPendingLabels(DF, DF->getContents().size());
   DF->getContents().append(Data.begin(), Data.end());
+
+  // EmitBytes might not cover all possible ways we emit data (or could be used
+  // to emit executable code in some cases), but is the best method we have
+  // right now for checking this.
+  MCSection *Sec = getCurrentSectionOnly();
+  Sec->setHasData(true);
 }
 
 void MCObjectStreamer::EmitValueToAlignment(unsigned ByteAlignment,
@@ -594,16 +628,6 @@ void MCObjectStreamer::EmitGPRel64Value(const MCExpr *Value) {
 bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
                                           const MCExpr *Expr, SMLoc Loc,
                                           const MCSubtargetInfo &STI) {
-  int64_t OffsetValue;
-  if (!Offset.evaluateAsAbsolute(OffsetValue))
-    llvm_unreachable("Offset is not absolute");
-
-  if (OffsetValue < 0)
-    llvm_unreachable("Offset is negative");
-
-  MCDataFragment *DF = getOrCreateDataFragment(&STI);
-  flushPendingLabels(DF, DF->getContents().size());
-
   Optional<MCFixupKind> MaybeKind = Assembler->getBackend().getFixupKind(Name);
   if (!MaybeKind.hasValue())
     return true;
@@ -613,7 +637,30 @@ bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
   if (Expr == nullptr)
     Expr =
         MCSymbolRefExpr::create(getContext().createTempSymbol(), getContext());
-  DF->getFixups().push_back(MCFixup::create(OffsetValue, Expr, Kind, Loc));
+
+  MCDataFragment *DF = getOrCreateDataFragment(&STI);
+  flushPendingLabels(DF, DF->getContents().size());
+
+  int64_t OffsetValue;
+  if (Offset.evaluateAsAbsolute(OffsetValue)) {
+    if (OffsetValue < 0)
+      llvm_unreachable(".reloc offset is negative");
+    DF->getFixups().push_back(MCFixup::create(OffsetValue, Expr, Kind, Loc));
+    return false;
+  }
+
+  if (Offset.getKind() != llvm::MCExpr::SymbolRef)
+    llvm_unreachable(".reloc offset is not absolute nor a label");
+
+  const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(Offset);
+  if (SRE.getSymbol().isDefined()) {
+    DF->getFixups().push_back(MCFixup::create(SRE.getSymbol().getOffset(),
+                                              Expr, Kind, Loc));
+    return false;
+  }
+
+  PendingFixups.emplace_back(&SRE.getSymbol(), DF,
+                                         MCFixup::create(-1, Expr, Kind, Loc));
   return false;
 }
 
@@ -680,5 +727,6 @@ void MCObjectStreamer::FinishImpl() {
   MCDwarfLineTable::Emit(this, getAssembler().getDWARFLinetableParams());
 
   flushPendingLabels();
+  resolvePendingFixups();
   getAssembler().Finish();
 }

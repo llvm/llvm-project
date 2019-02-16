@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s| FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -cl-std=CL1.1| FileCheck %s
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify | FileCheck %s
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.1| FileCheck %s
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.2| FileCheck %s
 
 // Test including the default header as a module.
 // The module should be compiled only once and loaded from cache afterwards.
@@ -45,6 +46,7 @@
 
 // Verify that called builtins occur in the generated IR.
 
+// CHECK-NOT: intel_sub_group_avc_mce_get_default_inter_base_multi_reference_penalty
 // CHECK-NOT: ndrange_t
 // CHECK20: ndrange_t
 // CHECK: _Z16convert_char_rtec
@@ -70,5 +72,17 @@ void test_image3dwo(write_only image3d_t img) {
   write_imagef(img, (0), (0.0f));
 }
 #endif //__OPENCL_C_VERSION__
+
+// Verify that non-builtin cl_intel_planar_yuv extension is defined from
+// OpenCL 1.2 onwards.
+#if (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
+// expected-no-diagnostics
+#ifndef cl_intel_planar_yuv
+#error "Missing cl_intel_planar_yuv define"
+#endif
+#else //__OPENCL_C_VERSION__
+// expected-warning@+2{{unknown OpenCL extension 'cl_intel_planar_yuv' - ignoring}}
+#endif //__OPENCL_C_VERSION__
+#pragma OPENCL EXTENSION cl_intel_planar_yuv : enable
 
 // CHECK-MOD: Reading modules

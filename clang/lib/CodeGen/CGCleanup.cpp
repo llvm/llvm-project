@@ -366,7 +366,7 @@ static llvm::SwitchInst *TransitionToCleanupSwitch(CodeGenFunction &CGF,
                                                    llvm::BasicBlock *Block) {
   // If it's a branch, turn it into a switch whose default
   // destination is its original target.
-  llvm::TerminatorInst *Term = Block->getTerminator();
+  llvm::Instruction *Term = Block->getTerminator();
   assert(Term && "can't transition block without terminator");
 
   if (llvm::BranchInst *Br = dyn_cast<llvm::BranchInst>(Term)) {
@@ -589,7 +589,7 @@ static void ForwardPrebranchedFallthrough(llvm::BasicBlock *Exit,
                                           llvm::BasicBlock *To) {
   // Exit is the exit block of a cleanup, so it always terminates in
   // an unconditional branch or a switch.
-  llvm::TerminatorInst *Term = Exit->getTerminator();
+  llvm::Instruction *Term = Exit->getTerminator();
 
   if (llvm::BranchInst *Br = dyn_cast<llvm::BranchInst>(Term)) {
     assert(Br->isUnconditional() && Br->getSuccessor(0) == From);

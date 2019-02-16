@@ -1750,6 +1750,11 @@ static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
 bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   SDValue R = SDValue();
 
+  if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
+    LLVM_DEBUG(dbgs() << "Node has been custom lowered, done\n");
+    return false;
+  }
+
   // Nodes that use a promotion-requiring floating point operand, but doesn't
   // produce a promotion-requiring floating point result, need to be legalized
   // to use the promoted float operand.  Nodes that produce at least one
@@ -1778,15 +1783,16 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo) {
   SDValue Op = N->getOperand(0);
   EVT OpVT = Op->getValueType(0);
 
-  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
-  assert (IVT == N->getValueType(0) && "Bitcast to type of different size");
-
   SDValue Promoted = GetPromotedFloat(N->getOperand(0));
   EVT PromotedVT = Promoted->getValueType(0);
 
   // Convert the promoted float value to the desired IVT.
-  return DAG.getNode(GetPromotionOpcode(PromotedVT, OpVT), SDLoc(N), IVT,
-                     Promoted);
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
+  SDValue Convert = DAG.getNode(GetPromotionOpcode(PromotedVT, OpVT), SDLoc(N),
+                                IVT, Promoted);
+  // The final result type might not be an scalar so we need a bitcast. The
+  // bitcast will be further legalized if needed.
+  return DAG.getBitcast(N->getValueType(0), Convert);
 }
 
 // Promote Operand 1 of FCOPYSIGN.  Operand 0 ought to be handled by
@@ -1904,8 +1910,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     // Binary FP Operations
     case ISD::FADD:
     case ISD::FDIV:
-    case ISD::FMAXNAN:
-    case ISD::FMINNAN:
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMUL:
@@ -1941,8 +1947,12 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 SDValue DAGTypeLegalizer::PromoteFloatRes_BITCAST(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT,
-                     N->getOperand(0));
+  // Input type isn't guaranteed to be a scalar int so bitcast if not. The
+  // bitcast will be legalized further if necessary.
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(),
+                              N->getOperand(0).getValueType().getSizeInBits());
+  SDValue Cast = DAG.getBitcast(IVT, N->getOperand(0));
+  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT, Cast);
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_ConstantFP(SDNode *N) {

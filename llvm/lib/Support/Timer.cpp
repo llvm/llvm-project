@@ -295,7 +295,7 @@ void TimerGroup::addTimer(Timer &T) {
 
 void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   // Sort the timers in descending order by amount of time taken.
-  llvm::sort(TimersToPrint.begin(), TimersToPrint.end());
+  llvm::sort(TimersToPrint);
 
   TimeRecord Total;
   for (const PrintRecord &Record : TimersToPrint)

@@ -115,8 +115,9 @@ elimination and inlining), but you might lose the ability to modify the program
 and call functions which were optimized out of the program, or inlined away
 completely.
 
-The :ref:`LLVM test suite <test-suite-quickstart>` provides a framework to test
-optimizer's handling of debugging information.  It can be run like this:
+The :doc:`LLVM test-suite <TestSuiteMakefileGuide>` provides a framework to
+test the optimizer's handling of debugging information.  It can be run like
+this:
 
 .. code-block:: bash
 
@@ -384,7 +385,7 @@ scope information for the variable ``Z``.
   !19 = !DILocation(line: 5, column: 11, scope: !18)
 
 Here ``!19`` indicates that ``Z`` is declared at line number 5 and column
-number 0 inside of lexical scope ``!18``.  The lexical scope itself resides
+number 11 inside of lexical scope ``!18``.  The lexical scope itself resides
 inside of subprogram ``!4`` described above.
 
 The scope information attached with each instruction provides a straightforward
@@ -428,7 +429,22 @@ instruction.  One can extract line number information encoded in LLVM IR using
     unsigned Line = Loc->getLine();
     StringRef File = Loc->getFilename();
     StringRef Dir = Loc->getDirectory();
+    bool ImplicitCode = Loc->isImplicitCode();
   }
+
+When the flag ImplicitCode is true then it means that the Instruction has been
+added by the front-end but doesn't correspond to source code written by the user. For example
+
+.. code-block:: c++
+
+  if (MyBoolean) {
+    MyObject MO;
+    ...
+  }
+
+At the end of the scope the MyObject's destructor is called but it isn't written
+explicitly. This information is useful to avoid to have counters on brackets when
+making code coverage.
 
 C/C++ global variable information
 ---------------------------------
@@ -1495,7 +1511,7 @@ For example, here is a module before:
 
 .. code-block:: llvm
 
-   define dso_local void @f(i32* %x) {
+   define void @f(i32* %x) {
    entry:
      %x.addr = alloca i32*, align 8
      store i32* %x, i32** %x.addr, align 8
@@ -1506,9 +1522,9 @@ For example, here is a module before:
 
 and after running ``opt -debugify``  on it we get:
 
-.. code-block:: llvm
+.. code-block:: text
 
-   define dso_local void @f(i32* %x) !dbg !6 {
+   define void @f(i32* %x) !dbg !6 {
    entry:
      %x.addr = alloca i32*, align 8, !dbg !12
      call void @llvm.dbg.value(metadata i32** %x.addr, metadata !9, metadata !DIExpression()), !dbg !12
@@ -1645,4 +1661,4 @@ are correctly pointing to the ``[[C]]`` and ``[[D]]`` variables.
    for a ``DILocation`` to have a specific line number, and someone later adds
    an instruction before the one we check the test will fail. In the cases this
    can't be avoided (say, if a test wouldn't be precise enough), moving the
-   test to it's own file is preferred.
+   test to its own file is preferred.

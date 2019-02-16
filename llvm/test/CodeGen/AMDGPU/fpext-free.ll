@@ -171,7 +171,7 @@ entry:
 
 ; GCN-LABEL: {{^}}fadd_fpext_fmuladd_f16_to_f32:
 ; GFX9: v_mul_f16
-; GFX9: v_fma_legacy_f16
+; GFX9: v_fma_f16
 ; GFX9: v_cvt_f32_f16
 ; GFX9: v_add_f32_e32
 define float @fadd_fpext_fmuladd_f16_to_f32(float %x, half %y, half %z, half %u, half %v) #0 {
@@ -185,7 +185,7 @@ entry:
 
 ; GCN-LABEL: {{^}}fadd_fpext_fma_f16_to_f32:
 ; GFX9: v_mul_f16
-; GFX9: v_fma_legacy_f16
+; GFX9: v_fma_f16
 ; GFX9: v_cvt_f32_f16
 ; GFX9: v_add_f32_e32
 define float @fadd_fpext_fma_f16_to_f32(float %x, half %y, half %z, half %u, half %v) #0 {
@@ -199,7 +199,7 @@ entry:
 
 ; GCN-LABEL: {{^}}fadd_fpext_fma_f16_to_f32_commute:
 ; GFX9: v_mul_f16
-; GFX9: v_fma_legacy_f16
+; GFX9: v_fma_f16
 ; GFX9: v_cvt_f32_f16
 ; GFX9: v_add_f32_e32
 define float @fadd_fpext_fma_f16_to_f32_commute(float %x, half %y, half %z, half %u, half %v) #0 {
@@ -322,7 +322,7 @@ entry:
 
 ; GCN-LABEL: {{^}}fsub_fpext_muladd_mul_f16_to_f32:
 ; GFX9: v_mul_f16
-; GFX9: v_fma_legacy_f16
+; GFX9: v_fma_f16
 ; GFX9: v_cvt_f32_f16
 ; GFX9: v_sub_f32
 ; GCN: s_setpc_b64
@@ -363,7 +363,7 @@ entry:
 ; GCN-LABEL: {{^}}fsub_fpext_muladd_mul_f16_to_f32_commute:
 ; GCN: s_waitcnt
 ; GFX9-NEXT: v_mul_f16_e32 v3, v3, v4
-; GFX9-NEXT: v_fma_legacy_f16 v1, v1, v2, v3
+; GFX9-NEXT: v_fma_f16 v1, v1, v2, v3
 ; GFX9-NEXT: v_cvt_f32_f16_e32 v1, v1
 ; GFX9-NEXT: v_sub_f32_e32 v0, v0, v1
 ; GFX9-NEXT: s_setpc_b64

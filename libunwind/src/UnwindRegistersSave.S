@@ -168,7 +168,7 @@ DEFINE_LIBUNWIND_FUNCTION(unw_getcontext)
   mflo  $8
   sw    $8,  (4 * 34)($4)
 #ifdef __mips_hard_float
-#if __mips_fpr == 32
+#if __mips_fpr != 64
   sdc1  $f0, (4 * 36 + 8 * 0)($4)
   sdc1  $f2, (4 * 36 + 8 * 2)($4)
   sdc1  $f4, (4 * 36 + 8 * 4)($4)

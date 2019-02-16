@@ -1465,10 +1465,10 @@ entry:
 define void @merge_zr32_3vec(<3 x i32>* %p) {
 ; CHECK-LABEL: merge_zr32_3vec:
 ; CHECK: // %entry
-; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
 ; NOSTRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #8]
-; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
-; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #8]
+; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #4]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <3 x i32> zeroinitializer, <3 x i32>* %p
@@ -1480,8 +1480,8 @@ define void @merge_zr32_4vec(<4 x i32>* %p) {
 ; CHECK-LABEL: merge_zr32_4vec:
 ; CHECK: // %entry
 ; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
-; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <4 x i32> zeroinitializer, <4 x i32>* %p
@@ -1505,8 +1505,8 @@ define void @merge_zr32_4vecf(<4 x float>* %p) {
 ; CHECK-LABEL: merge_zr32_4vecf:
 ; CHECK: // %entry
 ; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
-; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <4 x float> zeroinitializer, <4 x float>* %p
@@ -1589,8 +1589,8 @@ entry:
 define void @merge_zr64_3vec(<3 x i64>* %p) {
 ; CHECK-LABEL: merge_zr64_3vec:
 ; CHECK: // %entry
-; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
-; CHECK-NEXT: str xzr, [x{{[0-9]+}}, #16]
+; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}, #8]
+; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <3 x i64> zeroinitializer, <3 x i64>* %p
@@ -1680,4 +1680,20 @@ entry:
   %ld = load i64, i64* %p2
   %add = add i64 %ld, 1
   ret i64 %add
+}
+
+; CHECK-LABEL: trunc_splat_zero:
+; CHECK-DAG: strh wzr, [x0]
+define void @trunc_splat_zero(<2 x i8>* %ptr) {
+  store <2 x i8> zeroinitializer, <2 x i8>* %ptr, align 2
+  ret void
+}
+
+; CHECK-LABEL: trunc_splat:
+; CHECK: mov [[VAL:w[0-9]+]], #42
+; CHECK: movk [[VAL]], #42, lsl #16
+; CHECK: str [[VAL]], [x0]
+define void @trunc_splat(<2 x i16>* %ptr) {
+  store <2 x i16> <i16 42, i16 42>, <2 x i16>* %ptr, align 4
+  ret void
 }

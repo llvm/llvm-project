@@ -11,30 +11,17 @@
 define i16 @test__tzcnt_u16(i16 %a0) {
 ; X32-LABEL: test__tzcnt_u16:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movzwl %ax, %ecx
-; X32-NEXT:    cmpl $0, %ecx
-; X32-NEXT:    jne .LBB0_1
-; X32-NEXT:  # %bb.2:
-; X32-NEXT:    movw $16, %ax
-; X32-NEXT:    retl
-; X32-NEXT:  .LBB0_1:
-; X32-NEXT:    tzcntw %ax, %ax
+; X32-NEXT:    tzcntw {{[0-9]+}}(%esp), %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__tzcnt_u16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    tzcntw %ax, %cx
-; X64-NEXT:    cmpl $0, %eax
-; X64-NEXT:    movw $16, %ax
-; X64-NEXT:    cmovnew %cx, %ax
+; X64-NEXT:    tzcntw %di, %ax
 ; X64-NEXT:    retq
   %zext = zext i16 %a0 to i32
   %cmp = icmp ne i32 %zext, 0
-  %cttz = call i16 @llvm.cttz.i16(i16 %a0, i1 true)
-  %res = select i1 %cmp, i16 %cttz, i16 16
-  ret i16 %res
+  %cttz = call i16 @llvm.cttz.i16(i16 %a0, i1 false)
+  ret i16 %cttz
 }
 
 define i32 @test__andn_u32(i32 %a0, i32 %a1) {
@@ -47,9 +34,9 @@ define i32 @test__andn_u32(i32 %a0, i32 %a1) {
 ;
 ; X64-LABEL: test__andn_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl $-1, %edi
-; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl $-1, %eax
+; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %xor = xor i32 %a0, -1
   %res = and i32 %xor, %a1
@@ -134,26 +121,16 @@ define i32 @test__blsr_u32(i32 %a0) {
 define i32 @test__tzcnt_u32(i32 %a0) {
 ; X32-LABEL: test__tzcnt_u32:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    cmpl $0, %eax
-; X32-NEXT:    jne .LBB6_1
-; X32-NEXT:  # %bb.2:
-; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    retl
-; X32-NEXT:  .LBB6_1:
-; X32-NEXT:    tzcntl %eax, %eax
+; X32-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test__tzcnt_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    tzcntl %edi, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    tzcntl %edi, %eax
 ; X64-NEXT:    retq
   %cmp = icmp ne i32 %a0, 0
-  %cttz = call i32 @llvm.cttz.i32(i32 %a0, i1 true)
-  %res = select i1 %cmp, i32 %cttz, i32 32
-  ret i32 %res
+  %cttz = call i32 @llvm.cttz.i32(i32 %a0, i1 false)
+  ret i32 %cttz
 }
 
 ;
@@ -163,30 +140,17 @@ define i32 @test__tzcnt_u32(i32 %a0) {
 define i16 @test_tzcnt_u16(i16 %a0) {
 ; X32-LABEL: test_tzcnt_u16:
 ; X32:       # %bb.0:
-; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movzwl %ax, %ecx
-; X32-NEXT:    cmpl $0, %ecx
-; X32-NEXT:    jne .LBB7_1
-; X32-NEXT:  # %bb.2:
-; X32-NEXT:    movw $16, %ax
-; X32-NEXT:    retl
-; X32-NEXT:  .LBB7_1:
-; X32-NEXT:    tzcntw %ax, %ax
+; X32-NEXT:    tzcntw {{[0-9]+}}(%esp), %ax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_tzcnt_u16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    tzcntw %ax, %cx
-; X64-NEXT:    cmpl $0, %eax
-; X64-NEXT:    movw $16, %ax
-; X64-NEXT:    cmovnew %cx, %ax
+; X64-NEXT:    tzcntw %di, %ax
 ; X64-NEXT:    retq
   %zext = zext i16 %a0 to i32
   %cmp = icmp ne i32 %zext, 0
-  %cttz = call i16 @llvm.cttz.i16(i16 %a0, i1 true)
-  %res = select i1 %cmp, i16 %cttz, i16 16
-  ret i16 %res
+  %cttz = call i16 @llvm.cttz.i16(i16 %a0, i1 false)
+  ret i16 %cttz
 }
 
 define i32 @test_andn_u32(i32 %a0, i32 %a1) {
@@ -199,9 +163,9 @@ define i32 @test_andn_u32(i32 %a0, i32 %a1) {
 ;
 ; X64-LABEL: test_andn_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl $-1, %edi
-; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl $-1, %eax
+; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %xor = xor i32 %a0, -1
   %res = and i32 %xor, %a1
@@ -299,26 +263,16 @@ define i32 @test_blsr_u32(i32 %a0) {
 define i32 @test_tzcnt_u32(i32 %a0) {
 ; X32-LABEL: test_tzcnt_u32:
 ; X32:       # %bb.0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    cmpl $0, %eax
-; X32-NEXT:    jne .LBB13_1
-; X32-NEXT:  # %bb.2:
-; X32-NEXT:    movl $32, %eax
-; X32-NEXT:    retl
-; X32-NEXT:  .LBB13_1:
-; X32-NEXT:    tzcntl %eax, %eax
+; X32-NEXT:    tzcntl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_tzcnt_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    tzcntl %edi, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    tzcntl %edi, %eax
 ; X64-NEXT:    retq
   %cmp = icmp ne i32 %a0, 0
-  %cttz = call i32 @llvm.cttz.i32(i32 %a0, i1 true)
-  %res = select i1 %cmp, i32 %cttz, i32 32
-  ret i32 %res
+  %cttz = call i32 @llvm.cttz.i32(i32 %a0, i1 false)
+  ret i32 %cttz
 }
 
 declare i16 @llvm.cttz.i16(i16, i1)

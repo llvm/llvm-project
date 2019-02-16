@@ -203,7 +203,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
           FullSourceLoc L(
               SMgr.getExpansionLoc(path.back()->getLocation().asLocation()),
               SMgr);
-          FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getLocStart()), SMgr);
+          FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getBeginLoc()), SMgr);
           offsetDecl = L.getExpansionLineNumber() - FunL.getExpansionLineNumber();
       }
   }
@@ -218,7 +218,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   int FD;
   SmallString<128> Model, ResultPath;
 
-  if (!AnalyzerOpts.shouldWriteStableReportFilename()) {
+  if (!AnalyzerOpts.ShouldWriteStableReportFilename) {
       llvm::sys::path::append(Model, Directory, "report-%%%%%%.html");
       if (std::error_code EC =
           llvm::sys::fs::make_absolute(Model)) {

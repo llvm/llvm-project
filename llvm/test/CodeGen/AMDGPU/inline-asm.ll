@@ -186,8 +186,8 @@ entry:
 
 ; FIXME: Should not have intermediate sgprs
 ; CHECK-LABEL: {{^}}i64_imm_input_phys_vgpr:
-; CHECK: s_mov_b32 s1, 0
-; CHECK: s_mov_b32 s0, 0x1e240
+; CHECK-DAG: s_mov_b32 s1, 0
+; CHECK-DAG: s_mov_b32 s0, 0x1e240
 ; CHECK: v_mov_b32_e32 v0, s0
 ; CHECK: v_mov_b32_e32 v1, s1
 ; CHECK: use v[0:1]
@@ -198,7 +198,8 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}i1_imm_input_phys_vgpr:
-; CHECK: v_mov_b32_e32 v0, -1{{$}}
+; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], -1
+; CHECK-NEXT: v_cndmask_b32_e64 v0, 0, -1, [[MASK]]
 ; CHECK: ; use v0
 define amdgpu_kernel void @i1_imm_input_phys_vgpr() {
 entry:
@@ -212,10 +213,14 @@ entry:
 ; CHECK-NEXT: v_cmp_eq_u32_e32 vcc, 1, [[LOAD]]
 ; CHECK-NEXT: v_cndmask_b32_e64 v0, 0, -1, vcc
 ; CHECK: ; use v0
+; CHECK: v_cmp_ne_u32_e32 vcc, 0, v1
+; CHECK: v_cndmask_b32_e64 [[STORE:v[0-9]+]], 0, 1, vcc
+; CHECK: {{buffer|flat}}_store_byte [[STORE]],
 define amdgpu_kernel void @i1_input_phys_vgpr() {
 entry:
   %val = load i1, i1 addrspace(1)* undef
-  call void asm sideeffect "; use $0 ", "{v0}"(i1 %val)
+  %cc = call i1 asm sideeffect "; use $1, def $0 ", "={v1}, {v0}"(i1 %val)
+  store i1 %cc, i1 addrspace(1)* undef
   ret void
 }
 

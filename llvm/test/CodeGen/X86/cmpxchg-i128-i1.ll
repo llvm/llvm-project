@@ -7,10 +7,9 @@ define i1 @try_cmpxchg(i128* %addr, i128 %desired, i128 %new) {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rcx, %r9
+; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    movq %r9, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    popq %rbx
@@ -27,10 +26,9 @@ define void @cmpxchg_flow(i128* %addr, i128 %desired, i128 %new) {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rcx, %r9
+; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    movq %r9, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %true
@@ -64,14 +62,13 @@ define i1 @cmpxchg_arithcmp(i128* %addr, i128 %desired, i128 %new) {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rcx, %r9
-; CHECK-NEXT:    movq %rdx, %r10
+; CHECK-NEXT:    movq %rcx, %rbx
+; CHECK-NEXT:    movq %rdx, %r9
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    movq %r9, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    cmpq %rsi, %rax
-; CHECK-NEXT:    sbbq %r10, %rdx
+; CHECK-NEXT:    sbbq %r9, %rdx
 ; CHECK-NEXT:    setge %al
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -88,15 +85,14 @@ define i128 @cmpxchg_zext(i128* %addr, i128 %desired, i128 %new) {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq %rcx, %r9
-; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    movq %r9, %rbx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    sete %r10b
+; CHECK-NEXT:    sete %sil
+; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    movq %r10, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

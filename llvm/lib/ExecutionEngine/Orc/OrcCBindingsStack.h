@@ -77,9 +77,9 @@ public:
   };
 
   template <>
-  class GenericLayerImpl<orc::RTDyldObjectLinkingLayer> : public GenericLayer {
+  class GenericLayerImpl<orc::LegacyRTDyldObjectLinkingLayer> : public GenericLayer {
   private:
-    using LayerT = orc::RTDyldObjectLinkingLayer;
+    using LayerT = orc::LegacyRTDyldObjectLinkingLayer;
   public:
     GenericLayerImpl(LayerT &Layer) : Layer(Layer) {}
 
@@ -107,10 +107,10 @@ class OrcCBindingsStack {
 public:
 
   using CompileCallbackMgr = orc::JITCompileCallbackManager;
-  using ObjLayerT = orc::RTDyldObjectLinkingLayer;
-  using CompileLayerT = orc::IRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
+  using ObjLayerT = orc::LegacyRTDyldObjectLinkingLayer;
+  using CompileLayerT = orc::LegacyIRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
   using CODLayerT =
-        orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>;
+        orc::LegacyCompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>;
 
   using CallbackManagerBuilder =
       std::function<std::unique_ptr<CompileCallbackMgr>()>;
@@ -129,20 +129,21 @@ private:
         : Stack(Stack), ExternalResolver(std::move(ExternalResolver)),
           ExternalResolverCtx(std::move(ExternalResolverCtx)) {}
 
-    orc::SymbolFlagsMap
-    lookupFlags(const orc::SymbolNameSet &Symbols) override {
-      orc::SymbolFlagsMap SymbolFlags;
+    orc::SymbolNameSet
+    getResponsibilitySet(const orc::SymbolNameSet &Symbols) override {
+      orc::SymbolNameSet Result;
 
       for (auto &S : Symbols) {
-        if (auto Sym = findSymbol(*S))
-          SymbolFlags[S] = Sym.getFlags();
-        else if (auto Err = Sym.takeError()) {
+        if (auto Sym = findSymbol(*S)) {
+          if (!Sym.getFlags().isStrong())
+            Result.insert(S);
+        } else if (auto Err = Sym.takeError()) {
           Stack.reportError(std::move(Err));
-          return orc::SymbolFlagsMap();
+          return orc::SymbolNameSet();
         }
       }
 
-      return SymbolFlags;
+      return Result;
     }
 
     orc::SymbolNameSet
@@ -182,10 +183,17 @@ private:
       // 2. Runtime overrides.
       // 3. External resolver (if present).
 
-      if (auto Sym = Stack.CODLayer.findSymbol(Name, true))
-        return Sym;
-      else if (auto Err = Sym.takeError())
-        return Sym.takeError();
+      if (Stack.CODLayer) {
+        if (auto Sym = Stack.CODLayer->findSymbol(Name, true))
+          return Sym;
+        else if (auto Err = Sym.takeError())
+          return Sym.takeError();
+      } else {
+        if (auto Sym = Stack.CompileLayer.findSymbol(Name, true))
+          return Sym;
+        else if (auto Err = Sym.takeError())
+          return Sym.takeError();
+      }
 
       if (auto Sym = Stack.CXXRuntimeOverrides.searchOverrides(Name))
         return Sym;
@@ -205,8 +213,8 @@ private:
 public:
   OrcCBindingsStack(TargetMachine &TM,
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)
-      : CCMgr(createLocalCompileCallbackManager(TM.getTargetTriple(), ES, 0)),
-        DL(TM.createDataLayout()), IndirectStubsMgr(IndirectStubsMgrBuilder()),
+      : CCMgr(createCompileCallbackManager(TM, ES)), DL(TM.createDataLayout()),
+        IndirectStubsMgr(IndirectStubsMgrBuilder()),
         ObjectLayer(ES,
                     [this](orc::VModuleKey K) {
                       auto ResolverI = Resolvers.find(K);
@@ -226,31 +234,19 @@ public:
 		      this->notifyFreed(K, Obj);
                     }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
-        CODLayer(ES, CompileLayer,
-                 [this](orc::VModuleKey K) {
-                   auto ResolverI = Resolvers.find(K);
-                   assert(ResolverI != Resolvers.end() &&
-                          "No resolver for module K");
-                   return ResolverI->second;
-                 },
-                 [this](orc::VModuleKey K,
-                        std::shared_ptr<orc::SymbolResolver> Resolver) {
-                   assert(!Resolvers.count(K) && "Resolver already present");
-                   Resolvers[K] = std::move(Resolver);
-                 },
-                 [](Function &F) { return std::set<Function *>({&F}); },
-                 *this->CCMgr, std::move(IndirectStubsMgrBuilder), false),
+        CODLayer(createCODLayer(ES, CompileLayer, CCMgr.get(),
+                                std::move(IndirectStubsMgrBuilder), Resolvers)),
         CXXRuntimeOverrides(
             [this](const std::string &S) { return mangle(S); }) {}
 
-  LLVMOrcErrorCode shutdown() {
+  Error shutdown() {
     // Run any destructors registered with __cxa_atexit.
     CXXRuntimeOverrides.runDestructors();
     // Run any IR destructors.
     for (auto &DtorRunner : IRStaticDestructorRunners)
       if (auto Err = DtorRunner.runViaLayer(*this))
-        return mapError(std::move(Err));
-    return LLVMOrcErrSuccess;
+        return Err;
+    return Error::success();
   }
 
   std::string mangle(StringRef Name) {
@@ -267,35 +263,28 @@ public:
     return reinterpret_cast<PtrTy>(static_cast<uintptr_t>(Addr));
   }
 
-
-  LLVMOrcErrorCode
-  createLazyCompileCallback(JITTargetAddress &RetAddr,
-                            LLVMOrcLazyCompileCallbackFn Callback,
+  Expected<JITTargetAddress>
+  createLazyCompileCallback(LLVMOrcLazyCompileCallbackFn Callback,
                             void *CallbackCtx) {
     auto WrappedCallback = [=]() -> JITTargetAddress {
       return Callback(wrap(this), CallbackCtx);
     };
 
-    if (auto CCAddr = CCMgr->getCompileCallback(std::move(WrappedCallback))) {
-      RetAddr = *CCAddr;
-      return LLVMOrcErrSuccess;
-    } else
-      return mapError(CCAddr.takeError());
+    return CCMgr->getCompileCallback(std::move(WrappedCallback));
   }
 
-  LLVMOrcErrorCode createIndirectStub(StringRef StubName,
-                                      JITTargetAddress Addr) {
-    return mapError(
-        IndirectStubsMgr->createStub(StubName, Addr, JITSymbolFlags::Exported));
+  Error createIndirectStub(StringRef StubName, JITTargetAddress Addr) {
+    return IndirectStubsMgr->createStub(StubName, Addr,
+                                        JITSymbolFlags::Exported);
   }
 
-  LLVMOrcErrorCode setIndirectStubPointer(StringRef Name,
-                                          JITTargetAddress Addr) {
-    return mapError(IndirectStubsMgr->updatePointer(Name, Addr));
+  Error setIndirectStubPointer(StringRef Name, JITTargetAddress Addr) {
+    return IndirectStubsMgr->updatePointer(Name, Addr);
   }
+
   template <typename LayerT>
-  LLVMOrcErrorCode
-  addIRModule(orc::VModuleKey &RetKey, LayerT &Layer, std::unique_ptr<Module> M,
+  Expected<orc::VModuleKey>
+  addIRModule(LayerT &Layer, std::unique_ptr<Module> M,
               std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
               LLVMOrcSymbolResolverFn ExternalResolver,
               void *ExternalResolverCtx) {
@@ -313,79 +302,84 @@ public:
       DtorNames.push_back(mangle(Dtor.Func->getName()));
 
     // Add the module to the JIT.
-    RetKey = ES.allocateVModule();
-    Resolvers[RetKey] = std::make_shared<CBindingsResolver>(
-        *this, ExternalResolver, ExternalResolverCtx);
-    if (auto Err = Layer.addModule(RetKey, std::move(M)))
-      return mapError(std::move(Err));
+    auto K = ES.allocateVModule();
+    Resolvers[K] = std::make_shared<CBindingsResolver>(*this, ExternalResolver,
+                                                       ExternalResolverCtx);
+    if (auto Err = Layer.addModule(K, std::move(M)))
+      return std::move(Err);
 
-    KeyLayers[RetKey] = detail::createGenericLayer(Layer);
+    KeyLayers[K] = detail::createGenericLayer(Layer);
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.
-    orc::CtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames),
-                                                      RetKey);
+    orc::LegacyCtorDtorRunner<OrcCBindingsStack> CtorRunner(std::move(CtorNames), K);
     if (auto Err = CtorRunner.runViaLayer(*this))
-      return mapError(std::move(Err));
+      return std::move(Err);
 
-    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), RetKey);
+    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), K);
 
-    return LLVMOrcErrSuccess;
+    return K;
   }
 
-  LLVMOrcErrorCode addIRModuleEager(orc::VModuleKey &RetKey,
-                                    std::unique_ptr<Module> M,
-                                    LLVMOrcSymbolResolverFn ExternalResolver,
-                                    void *ExternalResolverCtx) {
-    return addIRModule(RetKey, CompileLayer, std::move(M),
+  Expected<orc::VModuleKey>
+  addIRModuleEager(std::unique_ptr<Module> M,
+                   LLVMOrcSymbolResolverFn ExternalResolver,
+                   void *ExternalResolverCtx) {
+    return addIRModule(CompileLayer, std::move(M),
                        llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
-  LLVMOrcErrorCode addIRModuleLazy(orc::VModuleKey &RetKey,
-                                   std::unique_ptr<Module> M,
-                                   LLVMOrcSymbolResolverFn ExternalResolver,
-                                   void *ExternalResolverCtx) {
-    return addIRModule(RetKey, CODLayer, std::move(M),
+  Expected<orc::VModuleKey>
+  addIRModuleLazy(std::unique_ptr<Module> M,
+                  LLVMOrcSymbolResolverFn ExternalResolver,
+                  void *ExternalResolverCtx) {
+    if (!CODLayer)
+      return make_error<StringError>("Can not add lazy module: No compile "
+                                     "callback manager available",
+                                     inconvertibleErrorCode());
+
+    return addIRModule(*CODLayer, std::move(M),
                        llvm::make_unique<SectionMemoryManager>(),
                        std::move(ExternalResolver), ExternalResolverCtx);
   }
 
-  LLVMOrcErrorCode removeModule(orc::VModuleKey K) {
+  Error removeModule(orc::VModuleKey K) {
     // FIXME: Should error release the module key?
     if (auto Err = KeyLayers[K]->removeModule(K))
-      return mapError(std::move(Err));
+      return Err;
     ES.releaseVModule(K);
     KeyLayers.erase(K);
-    return LLVMOrcErrSuccess;
+    return Error::success();
   }
 
-  LLVMOrcErrorCode addObject(orc::VModuleKey &RetKey,
-                             std::unique_ptr<MemoryBuffer> ObjBuffer,
-                             LLVMOrcSymbolResolverFn ExternalResolver,
-                             void *ExternalResolverCtx) {
+  Expected<orc::VModuleKey> addObject(std::unique_ptr<MemoryBuffer> ObjBuffer,
+                                      LLVMOrcSymbolResolverFn ExternalResolver,
+                                      void *ExternalResolverCtx) {
     if (auto Obj = object::ObjectFile::createObjectFile(
             ObjBuffer->getMemBufferRef())) {
 
-      RetKey = ES.allocateVModule();
-      Resolvers[RetKey] = std::make_shared<CBindingsResolver>(
+      auto K = ES.allocateVModule();
+      Resolvers[K] = std::make_shared<CBindingsResolver>(
           *this, ExternalResolver, ExternalResolverCtx);
 
-      if (auto Err = ObjectLayer.addObject(RetKey, std::move(ObjBuffer)))
-        return mapError(std::move(Err));
+      if (auto Err = ObjectLayer.addObject(K, std::move(ObjBuffer)))
+        return std::move(Err);
 
-      KeyLayers[RetKey] = detail::createGenericLayer(ObjectLayer);
+      KeyLayers[K] = detail::createGenericLayer(ObjectLayer);
 
-      return LLVMOrcErrSuccess;
+      return K;
     } else
-      return mapError(Obj.takeError());
+      return Obj.takeError();
   }
 
   JITSymbol findSymbol(const std::string &Name,
                                  bool ExportedSymbolsOnly) {
     if (auto Sym = IndirectStubsMgr->findStub(Name, ExportedSymbolsOnly))
       return Sym;
-    return CODLayer.findSymbol(mangle(Name), ExportedSymbolsOnly);
+    if (CODLayer)
+      return CODLayer->findSymbol(mangle(Name), ExportedSymbolsOnly);
+    return CompileLayer.findSymbol(mangle(Name), ExportedSymbolsOnly);
   }
 
   JITSymbol findSymbolIn(orc::VModuleKey K, const std::string &Name,
@@ -394,45 +388,39 @@ public:
     return KeyLayers[K]->findSymbolIn(K, mangle(Name), ExportedSymbolsOnly);
   }
 
-  LLVMOrcErrorCode findSymbolAddress(JITTargetAddress &RetAddr,
-                                     const std::string &Name,
-                                     bool ExportedSymbolsOnly) {
-    RetAddr = 0;
+  Expected<JITTargetAddress> findSymbolAddress(const std::string &Name,
+                                               bool ExportedSymbolsOnly) {
     if (auto Sym = findSymbol(Name, ExportedSymbolsOnly)) {
       // Successful lookup, non-null symbol:
-      if (auto AddrOrErr = Sym.getAddress()) {
-        RetAddr = *AddrOrErr;
-        return LLVMOrcErrSuccess;
-      } else
-        return mapError(AddrOrErr.takeError());
+      if (auto AddrOrErr = Sym.getAddress())
+        return *AddrOrErr;
+      else
+        return AddrOrErr.takeError();
     } else if (auto Err = Sym.takeError()) {
       // Lookup failure - report error.
-      return mapError(std::move(Err));
+      return std::move(Err);
     }
-    // Otherwise we had a successful lookup but got a null result. We already
-    // set RetAddr to '0' above, so just return success.
-    return LLVMOrcErrSuccess;
+
+    // No symbol not found. Return 0.
+    return 0;
   }
 
-  LLVMOrcErrorCode findSymbolAddressIn(JITTargetAddress &RetAddr,
-                                       orc::VModuleKey K,
-                                       const std::string &Name,
-                                       bool ExportedSymbolsOnly) {
-    RetAddr = 0;
+  Expected<JITTargetAddress> findSymbolAddressIn(orc::VModuleKey K,
+                                                 const std::string &Name,
+                                                 bool ExportedSymbolsOnly) {
     if (auto Sym = findSymbolIn(K, Name, ExportedSymbolsOnly)) {
       // Successful lookup, non-null symbol:
-      if (auto AddrOrErr = Sym.getAddress()) {
-        RetAddr = *AddrOrErr;
-        return LLVMOrcErrSuccess;
-      } else
-        return mapError(AddrOrErr.takeError());
+      if (auto AddrOrErr = Sym.getAddress())
+        return *AddrOrErr;
+      else
+        return AddrOrErr.takeError();
     } else if (auto Err = Sym.takeError()) {
       // Lookup failure - report error.
-      return mapError(std::move(Err));
+      return std::move(Err);
     }
-    // Otherwise we had a successful lookup but got a null result. We already
-    // set RetAddr to '0' above, so just return success.
-    return LLVMOrcErrSuccess;
+
+    // Symbol not found. Return 0.
+    return 0;
   }
 
   const std::string &getErrorMessage() const { return ErrMsg; }
@@ -455,17 +443,45 @@ public:
   }
 
 private:
+  using ResolverMap =
+      std::map<orc::VModuleKey, std::shared_ptr<orc::SymbolResolver>>;
 
-  LLVMOrcErrorCode mapError(Error Err) {
-    LLVMOrcErrorCode Result = LLVMOrcErrSuccess;
-    handleAllErrors(std::move(Err), [&](ErrorInfoBase &EIB) {
-      // Handler of last resort.
-      Result = LLVMOrcErrGeneric;
-      ErrMsg = "";
-      raw_string_ostream ErrStream(ErrMsg);
-      EIB.log(ErrStream);
-    });
-    return Result;
+  static std::unique_ptr<CompileCallbackMgr>
+  createCompileCallbackManager(TargetMachine &TM, orc::ExecutionSession &ES) {
+    auto CCMgr = createLocalCompileCallbackManager(TM.getTargetTriple(), ES, 0);
+    if (!CCMgr) {
+      // FIXME: It would be good if we could report this somewhere, but we do
+      //        have an instance yet.
+      logAllUnhandledErrors(CCMgr.takeError(), errs(), "ORC error: ");
+      return nullptr;
+    }
+    return std::move(*CCMgr);
+  }
+
+  static std::unique_ptr<CODLayerT>
+  createCODLayer(orc::ExecutionSession &ES, CompileLayerT &CompileLayer,
+                 CompileCallbackMgr *CCMgr,
+                 IndirectStubsManagerBuilder IndirectStubsMgrBuilder,
+                 ResolverMap &Resolvers) {
+    // If there is no compile callback manager available we can not create a
+    // compile on demand layer.
+    if (!CCMgr)
+      return nullptr;
+
+    return llvm::make_unique<CODLayerT>(
+        ES, CompileLayer,
+        [&Resolvers](orc::VModuleKey K) {
+          auto ResolverI = Resolvers.find(K);
+          assert(ResolverI != Resolvers.end() && "No resolver for module K");
+          return ResolverI->second;
+        },
+        [&Resolvers](orc::VModuleKey K,
+                     std::shared_ptr<orc::SymbolResolver> Resolver) {
+          assert(!Resolvers.count(K) && "Resolver already present");
+          Resolvers[K] = std::move(Resolver);
+        },
+        [](Function &F) { return std::set<Function *>({&F}); }, *CCMgr,
+        std::move(IndirectStubsMgrBuilder), false);
   }
 
   void reportError(Error Err) {
@@ -476,13 +492,17 @@ private:
   void notifyFinalized(orc::VModuleKey K,
 		       const object::ObjectFile &Obj,
 		       const RuntimeDyld::LoadedObjectInfo &LoadedObjInfo) {
+    uint64_t Key = static_cast<uint64_t>(
+        reinterpret_cast<uintptr_t>(Obj.getData().data()));
     for (auto &Listener : EventListeners)
-      Listener->NotifyObjectEmitted(Obj, LoadedObjInfo);
+      Listener->notifyObjectLoaded(Key, Obj, LoadedObjInfo);
   }
 
   void notifyFreed(orc::VModuleKey K, const object::ObjectFile &Obj) {
+    uint64_t Key = static_cast<uint64_t>(
+        reinterpret_cast<uintptr_t>(Obj.getData().data()));
     for (auto &Listener : EventListeners)
-      Listener->NotifyFreeingObject(Obj);
+      Listener->notifyFreeingObject(Key);
   }
 
   orc::ExecutionSession ES;
@@ -497,15 +517,15 @@ private:
 
   ObjLayerT ObjectLayer;
   CompileLayerT CompileLayer;
-  CODLayerT CODLayer;
+  std::unique_ptr<CODLayerT> CODLayer;
 
   std::map<orc::VModuleKey, std::unique_ptr<detail::GenericLayer>> KeyLayers;
 
-  orc::LocalCXXRuntimeOverrides CXXRuntimeOverrides;
-  std::vector<orc::CtorDtorRunner<OrcCBindingsStack>> IRStaticDestructorRunners;
+  orc::LegacyLocalCXXRuntimeOverrides CXXRuntimeOverrides;
+  std::vector<orc::LegacyCtorDtorRunner<OrcCBindingsStack>> IRStaticDestructorRunners;
   std::string ErrMsg;
 
-  std::map<orc::VModuleKey, std::shared_ptr<orc::SymbolResolver>> Resolvers;
+  ResolverMap Resolvers;
 };
 
 } // end namespace llvm

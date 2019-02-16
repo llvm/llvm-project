@@ -22,6 +22,7 @@ public:
     MEK_None,
     MEK_CALL_HI16,
     MEK_CALL_LO16,
+    MEK_DTPREL,
     MEK_DTPREL_HI,
     MEK_DTPREL_LO,
     MEK_GOT,

@@ -41,9 +41,9 @@ body: |
 # CHECK-LABEL: name: test
 
 # CHECK: BUNDLE
-# CHECK-SAME: debug-location [[DL1:[0-9x<>]+]]
+# CHECK-SAME: debug-location [[DL1:!DILocation([^)]+)]]
 # CHECK-NEXT: L2_loadri_io $r1, 0, debug-location [[DL1]]
-# CHECK-NEXT: L2_loadri_io $r1, 0, debug-location [[DL2:[0-9x<>]+]]
+# CHECK-NEXT: L2_loadri_io $r1, 0, debug-location [[DL2:!DILocation([^)]+)]]
 
 # CHECK: BUNDLE
 # CHECK-SAME: debug-location [[DL1]]

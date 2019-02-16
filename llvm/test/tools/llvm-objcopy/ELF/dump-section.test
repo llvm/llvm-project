@@ -1,0 +1,44 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy -O binary -j .text %t %t2
+# RUN: llvm-objcopy -O binary -only-section .text %t %t3
+# RUN: llvm-objcopy --dump-section .text=%t4 %t %t5
+# RUN: llvm-objcopy --dump-section .foo=%t6 %t %t7
+# RUN: not llvm-objcopy --dump-section .bar=%t8 %t %t9 2>&1 | FileCheck %s --check-prefix=NOBITS
+# RUN: od -t x1 %t2 | FileCheck %s
+# RUN: od -t x1 %t6 | FileCheck %s --check-prefix=NON-ALLOC
+# RUN: wc -c %t2 | FileCheck %s --check-prefix=SIZE
+# RUN: diff %t2 %t3
+# RUN: diff %t4 %t3
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000001000
+    Content:         "DEADBEEF"
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE ]
+    Content:         "CAFE"
+  - Name:            .bar
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE ]
+ProgramHeaders:
+- Type: PT_LOAD
+  Flags: [ PF_X, PF_R ]
+  Sections:
+    - Section: .text
+
+#CHECK: 0000000 de ad be ef
+
+#NON-ALLOC: 0000000 ca fe
+
+#SIZE: 4
+
+#NOBITS: Can't dump section ".bar": it has no contents

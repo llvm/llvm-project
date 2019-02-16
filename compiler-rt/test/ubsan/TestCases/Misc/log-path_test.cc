@@ -23,7 +23,7 @@
 // RUN: not cat %t.log.*
 
 // FIXME: log_path is not supported on Windows yet.
-// XFAIL: win32
+// XFAIL: windows-msvc
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -17,10 +17,4 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-PDBSymbolTypeEnum::PDBSymbolTypeEnum(const IPDBSession &PDBSession,
-                                     std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {
-  assert(RawSymbol->getSymTag() == PDB_SymType::Enum);
-}
-
 void PDBSymbolTypeEnum::dump(PDBSymDumper &Dumper) const { Dumper.dump(*this); }

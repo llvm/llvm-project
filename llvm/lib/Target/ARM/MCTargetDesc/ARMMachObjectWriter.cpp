@@ -22,6 +22,8 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ScopedPrinter.h"
+
 using namespace llvm;
 
 namespace {
@@ -144,6 +146,15 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
                                  MCValue Target,
                                  uint64_t &FixedValue) {
   uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+
+  if (FixupOffset & 0xff000000) {
+    Asm.getContext().reportError(Fixup.getLoc(),
+                                 "can not encode offset '0x" +
+                                     to_hexString(FixupOffset) +
+                                     "' in resulting scattered relocation.");
+    return;
+  }
+
   unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
   unsigned Type = MachO::ARM_RELOC_HALF;
 
@@ -250,6 +261,15 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
                                                     unsigned Log2Size,
                                                     uint64_t &FixedValue) {
   uint32_t FixupOffset = Layout.getFragmentOffset(Fragment)+Fixup.getOffset();
+
+  if (FixupOffset & 0xff000000) {
+    Asm.getContext().reportError(Fixup.getLoc(),
+                                 "can not encode offset '0x" +
+                                     to_hexString(FixupOffset) +
+                                     "' in resulting scattered relocation.");
+    return;
+  }
+
   unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
 
   // See <reloc.h>.

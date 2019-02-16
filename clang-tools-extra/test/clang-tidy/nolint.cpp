@@ -1,3 +1,4 @@
+// REQUIRES: static-analyzer
 // RUN: %check_clang_tidy %s google-explicit-constructor,clang-diagnostic-unused-variable,clang-analyzer-core.UndefinedBinaryOperatorResult %t -- -extra-arg=-Wunused-variable -- -I%S/Inputs/nolint
 
 #include "trigger_warning.h"

@@ -39,7 +39,7 @@ def display():
     ordered_table  = sorted(table.items(), key=operator.itemgetter(0))
     ordered_models = ["itinerary", "default"]
     ordered_models.extend(sorted(models))
-    ordered_models = filter(filter_model, ordered_models)
+    ordered_models = [m for m in ordered_models if filter_model(m)]
 
     # print header
     sys.stdout.write("instruction")

@@ -1,0 +1,25 @@
+// -*- C++ -*-
+//===-- memory ------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef __PSTL_memory
+#define __PSTL_memory
+
+#include "internal/pstl_config.h"
+
+#if __PSTL_EXECUTION_POLICIES_DEFINED
+// If <execution> has already been included, pull in implementations
+#include "internal/glue_memory_impl.h"
+#else
+// Otherwise just pull in forward declarations
+#include "internal/glue_memory_defs.h"
+#define __PSTL_MEMORY_FORWARD_DECLARED 1
+#endif
+
+#endif /* __PSTL_memory */

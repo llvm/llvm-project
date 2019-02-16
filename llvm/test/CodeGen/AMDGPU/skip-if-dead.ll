@@ -2,9 +2,10 @@
 
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_pos:
 ; CHECK-NEXT: ; %bb.0:
+; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
-  call void @llvm.AMDGPU.kill(float 0.0)
+  call void @llvm.amdgcn.kill(i1 true)
   ret void
 }
 
@@ -14,7 +15,7 @@ define amdgpu_ps void @test_kill_depth_0_imm_pos() #0 {
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
-  call void @llvm.AMDGPU.kill(float -0.0)
+  call void @llvm.amdgcn.kill(i1 false)
   ret void
 }
 
@@ -27,58 +28,62 @@ define amdgpu_ps void @test_kill_depth_0_imm_neg() #0 {
 ; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_0_imm_neg_x2() #0 {
-  call void @llvm.AMDGPU.kill(float -0.0)
-  call void @llvm.AMDGPU.kill(float -1.0)
+  call void @llvm.amdgcn.kill(i1 false)
+  call void @llvm.amdgcn.kill(i1 false)
   ret void
 }
 
 ; CHECK-LABEL: {{^}}test_kill_depth_var:
 ; CHECK-NEXT: ; %bb.0:
-; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
+; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var(float %x) #0 {
-  call void @llvm.AMDGPU.kill(float %x)
+  %cmp = fcmp olt float %x, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp)
   ret void
 }
 
 ; FIXME: Ideally only one would be emitted
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_same:
 ; CHECK-NEXT: ; %bb.0:
-; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
+; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
 ; CHECK-NEXT: ; %bb.1:
-; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
+; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
 ; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_same(float %x) #0 {
-  call void @llvm.AMDGPU.kill(float %x)
-  call void @llvm.AMDGPU.kill(float %x)
+  %cmp = fcmp olt float %x, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp)
+  call void @llvm.amdgcn.kill(i1 %cmp)
   ret void
 }
 
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2:
 ; CHECK-NEXT: ; %bb.0:
-; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
+; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
 ; CHECK-NEXT: ; %bb.1:
-; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v1
+; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v1
 ; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
-  call void @llvm.AMDGPU.kill(float %x)
-  call void @llvm.AMDGPU.kill(float %y)
+  %cmp.x = fcmp olt float %x, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.x)
+  %cmp.y = fcmp olt float %y, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.y)
   ret void
 }
 
 ; CHECK-LABEL: {{^}}test_kill_depth_var_x2_instructions:
 ; CHECK-NEXT: ; %bb.0:
-; CHECK-NEXT: v_cmpx_le_f32_e32 vcc, 0, v0
+; CHECK-NEXT: v_cmpx_gt_f32_e32 vcc, 0, v0
 ; CHECK-NEXT: s_cbranch_execnz BB6_2
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT: exp
 ; CHECK-NEXT: s_endpgm
 ; CHECK-NEXT: BB6_2:
 ; CHECK: v_mov_b32_e64 v7, -1
-; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
+; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
 ; CHECK-NEXT: s_cbranch_execnz BB6_4
 ; CHECK-NEXT: ; %bb.3:
 ; CHECK-NEXT: exp
@@ -86,9 +91,11 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
 ; CHECK-NEXT: BB6_4:
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
-  call void @llvm.AMDGPU.kill(float %x)
+  %cmp.x = fcmp olt float %x, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.x)
   %y = call float asm sideeffect "v_mov_b32_e64 v7, -1", "={v7}"()
-  call void @llvm.AMDGPU.kill(float %y)
+  %cmp.y = fcmp olt float %y, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.y)
   ret void
 }
 
@@ -111,7 +118,7 @@ define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
 ; CHECK: v_nop_e64
 ; CHECK: v_nop_e64
 
-; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
+; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
 ; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
 ; CHECK-NEXT: ; %bb.2:
 ; CHECK-NEXT: exp null off, off, off, off done vm
@@ -137,7 +144,8 @@ bb:
     v_nop_e64
     v_nop_e64
     v_nop_e64", "={v7}"()
-  call void @llvm.AMDGPU.kill(float %var)
+  %cmp.var = fcmp olt float %var, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.var)
   br label %exit
 
 exit:
@@ -162,7 +170,7 @@ exit:
 ; CHECK: ;;#ASMEND
 ; CHECK: v_mov_b32_e64 v8, -1
 ; CHECK: ;;#ASMEND
-; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
+; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
 ; CHECK-NEXT: s_cbranch_execnz [[SPLIT_BB:BB[0-9]+_[0-9]+]]
 
 ; CHECK-NEXT: ; %bb.2:
@@ -196,7 +204,8 @@ bb:
     v_nop_e64
     v_nop_e64", "={v7}"()
   %live.across = call float asm sideeffect "v_mov_b32_e64 v8, -1", "={v8}"()
-  call void @llvm.AMDGPU.kill(float %var)
+  %cmp.var = fcmp olt float %var, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.var)
   store volatile float %live.across, float addrspace(1)* undef
   %live.out = call float asm sideeffect "v_mov_b32_e64 v9, -2", "={v9}"()
   br label %exit
@@ -221,7 +230,7 @@ exit:
 
 ; CHECK: v_mov_b32_e64 v7, -1
 ; CHECK: v_nop_e64
-; CHECK: v_cmpx_le_f32_e32 vcc, 0, v7
+; CHECK: v_cmpx_gt_f32_e32 vcc, 0, v7
 
 ; CHECK-NEXT: ; %bb.3:
 ; CHECK: buffer_load_dword [[LOAD:v[0-9]+]]
@@ -251,7 +260,8 @@ bb:
     v_nop_e64
     v_nop_e64
     v_nop_e64", "={v7}"()
-  call void @llvm.AMDGPU.kill(float %var)
+  %cmp.var = fcmp olt float %var, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.var)
   %vgpr = load volatile i32, i32 addrspace(1)* undef
   %loop.cond = icmp eq i32 %vgpr, 0
   br i1 %loop.cond, label %bb, label %exit
@@ -264,7 +274,7 @@ exit:
 ; bug 28550
 ; CHECK-LABEL: {{^}}phi_use_def_before_kill:
 ; CHECK: v_cndmask_b32_e64 [[PHIREG:v[0-9]+]], 0, -1.0,
-; CHECK: v_cmpx_le_f32_e32 vcc, 0,
+; CHECK: v_cmpx_lt_f32_e32 vcc, 0,
 ; CHECK-NEXT: s_cbranch_execnz [[BB4:BB[0-9]+_[0-9]+]]
 
 ; CHECK: exp
@@ -288,7 +298,8 @@ bb:
   %tmp = fadd float %x, 1.000000e+00
   %tmp1 = fcmp olt float 0.000000e+00, %tmp
   %tmp2 = select i1 %tmp1, float -1.000000e+00, float 0.000000e+00
-  call void @llvm.AMDGPU.kill(float %tmp2)
+  %cmp.tmp2 = fcmp olt float %tmp2, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.tmp2)
   br i1 undef, label %phibb, label %bb8
 
 phibb:
@@ -335,7 +346,7 @@ bb5:                                              ; preds = %bb4, %bb3
   unreachable
 
 bb6:                                              ; preds = %bb
-  call void @llvm.AMDGPU.kill(float -1.000000e+00)
+  call void @llvm.amdgcn.kill(i1 false)
   unreachable
 
 bb7:                                              ; preds = %bb4
@@ -348,7 +359,7 @@ bb7:                                              ; preds = %bb4
 ; CHECK: s_xor_b64
 ; CHECK-NEXT: mask branch [[BB4:BB[0-9]+_[0-9]+]]
 
-; CHECK: v_cmpx_le_f32_e32 vcc, 0,
+; CHECK: v_cmpx_gt_f32_e32 vcc, 0,
 ; CHECK: [[BB4]]:
 ; CHECK: s_or_b64 exec, exec
 ; CHECK: image_sample_c
@@ -369,7 +380,8 @@ bb:
   br i1 %tmp, label %bb3, label %bb4
 
 bb3:                                              ; preds = %bb
-  call void @llvm.AMDGPU.kill(float %arg)
+  %cmp.arg = fcmp olt float %arg, 0.0
+  call void @llvm.amdgcn.kill(i1 %cmp.arg)
   br label %bb4
 
 bb4:                                              ; preds = %bb3, %bb
@@ -387,7 +399,7 @@ bb9:                                              ; preds = %bb4
 }
 
 declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare void @llvm.AMDGPU.kill(float) #0
+declare void @llvm.amdgcn.kill(i1) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }

@@ -56,19 +56,28 @@ for.body:                                         ; preds = %for.body, %entry
   
   %add52 = add nsw i32 %add38, %add45
  ; CHECK: add nsw <{{[0-9]+}} x i32>
- ; CHECK-NOT: add nsw <{{[0-9]+}} x i32>
+ ; CHECK: add nsw <{{[0-9]+}} x i32>
  
- ; YAML:      --- !Missed
+ ; YAML:      --- !Passed
  ; YAML-NEXT: Pass:            slp-vectorizer
- ; YAML-NEXT: Name:            HorSLPNotBeneficial
+ ; YAML-NEXT: Name:            StoresVectorized
  ; YAML-NEXT: Function:        foo
  ; YAML-NEXT: Args:
- ; YAML-NEXT:   - String:          Vectorizing horizontal reduction is possible
- ; YAML-NEXT:   - String:          'but not beneficial with cost ' 
- ; YAML-NEXT:   - Cost:            '1'
- ; YAML-NEXT:   - String:          ' and threshold '
- ; YAML-NEXT:   - Threshold:       '0'
+ ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
+ ; YAML-NEXT:   - Cost:            '-8'
+ ; YAML-NEXT:   - String:          ' and with tree size '
+ ; YAML-NEXT:   - TreeSize:        '4'
 
+ ; YAML:      --- !Passed
+ ; YAML-NEXT: Pass:            slp-vectorizer
+ ; YAML-NEXT: Name:            VectorizedHorizontalReduction
+ ; YAML-NEXT: Function:        foo
+ ; YAML-NEXT: Args:
+ ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
+ ; YAML-NEXT:   - Cost:            '-2'
+ ; YAML-NEXT:   - String:          ' and with tree size '
+ ; YAML-NEXT:   - TreeSize:        '1'
+ 
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 8
   br i1 %exitcond, label %for.end, label %for.body

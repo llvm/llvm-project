@@ -143,8 +143,8 @@ class TracePC {
   bool ObservedFocusFunction();
 
   void InitializeUnstableCounters();
-  void UpdateUnstableCounters(int UnstableMode);
-  void ApplyUnstableCounters();
+  bool UpdateUnstableCounters(int UnstableMode);
+  void UpdateAndApplyUnstableCounters(int UnstableMode);
 
 private:
   struct UnstableEdge {

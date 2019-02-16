@@ -1,0 +1,185 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
+# RUN:    -filetype=obj | llvm-readobj -unwind | FileCheck %s
+# Test that the pre/post increment save of a flating point register is correct.
+
+# CHECK:        ExceptionData {
+# CHECK-NEXT:      FunctionLength: 136
+# CHECK-NEXT:      Version: 0
+# CHECK-NEXT:      ExceptionData: No
+# CHECK-NEXT:      EpiloguePacked: No
+# CHECK-NEXT:      EpilogueScopes: 1
+# CHECK-NEXT:      ByteCodeLength: 40
+# CHECK-NEXT:      Prologue [
+# CHECK-NEXT:        0xc80e              ; stp x19, x20, [sp, #112]
+# CHECK-NEXT:        0xc88c              ; stp x21, x22, [sp, #96]
+# CHECK-NEXT:        0xc90a              ; stp x23, x24, [sp, #80]
+# CHECK-NEXT:        0xc988              ; stp x25, x26, [sp, #64]
+# CHECK-NEXT:        0xca06              ; stp x27, x28, [sp, #48]
+# CHECK-NEXT:        0xdc45              ; str d9, [sp, #40]
+# CHECK-NEXT:        0xdc04              ; str d8, [sp, #32]
+# CHECK-NEXT:        0xd882              ; stp d10, d11, [sp, #16]
+# CHECK-NEXT:        0xde8f              ; str d12, [sp, #-128]!
+# CHECK-NEXT:        0xe4                ; end
+# CHECK-NEXT:      ]
+# CHECK-NEXT:      EpilogueScopes [
+# CHECK-NEXT:        EpilogueScope {
+# CHECK-NEXT:          StartOffset: 25
+# CHECK-NEXT:          EpilogueStartIndex: 19
+# CHECK-NEXT:          Opcodes [
+# CHECK-NEXT:            0xc80e              ; ldp x19, x20, [sp, #112]
+# CHECK-NEXT:            0xc88c              ; ldp x21, x22, [sp, #96]
+# CHECK-NEXT:            0xc90a              ; ldp x23, x24, [sp, #80]
+# CHECK-NEXT:            0xc988              ; ldp x25, x26, [sp, #64]
+# CHECK-NEXT:            0xca06              ; ldp x27, x28, [sp, #48]
+# CHECK-NEXT:            0xdc04              ; ldr d8, [sp, #32]
+# CHECK-NEXT:            0xdc45              ; ldr d9, [sp, #40]
+# CHECK-NEXT:            0xd882              ; ldp d10, d11, [sp, #16]
+# CHECK-NEXT:            0xde8f              ; ldr d12, [sp], #128
+# CHECK-NEXT:            0xe4                ; end
+# CHECK-NEXT:          ]
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+...
+---
+name:            test
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+registers:
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       128
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: true
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x19', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x20', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x21', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x22', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 4, name: '', type: spill-slot, offset: -40, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x23', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 5, name: '', type: spill-slot, offset: -48, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x24', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 6, name: '', type: spill-slot, offset: -56, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x25', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 7, name: '', type: spill-slot, offset: -64, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x26', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 8, name: '', type: spill-slot, offset: -72, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x27', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 9, name: '', type: spill-slot, offset: -80, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$x28', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 10, name: '', type: spill-slot, offset: -88, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$d8', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 11, name: '', type: spill-slot, offset: -96, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$d9', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 12, name: '', type: spill-slot, offset: -104, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$d10', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 13, name: '', type: spill-slot, offset: -112, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$d11', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 14, name: '', type: spill-slot, offset: -128, size: 8, alignment: 16,
+      stack-id: 0, callee-saved-register: '$d12', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $d0, $d1, $d8, $d9, $d10, $d11, $d12, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28
+
+    early-clobber $sp = frame-setup STRDpre killed $d12, $sp, -128 :: (store 8 into %stack.14)
+    frame-setup SEH_SaveFReg_X 12, -128
+    frame-setup STPDi killed $d10, killed $d11, $sp, 2 :: (store 8 into %stack.12), (store 8 into %stack.13)
+    frame-setup SEH_SaveFRegP 10, 11, 16
+    frame-setup STRDui killed $d8, $sp, 4 :: (store 8 into %stack.10)
+    frame-setup SEH_SaveFReg 8, 32
+    frame-setup STRDui killed $d9, $sp, 5 :: (store 8 into %stack.11)
+    frame-setup SEH_SaveFReg 9, 40
+    frame-setup STPXi killed $x27, killed $x28, $sp, 6 :: (store 8 into %stack.8), (store 8 into %stack.9)
+    frame-setup SEH_SaveRegP 27, 28, 48
+    frame-setup STPXi killed $x25, killed $x26, $sp, 8 :: (store 8 into %stack.6), (store 8 into %stack.7)
+    frame-setup SEH_SaveRegP 25, 26, 64
+    frame-setup STPXi killed $x23, killed $x24, $sp, 10 :: (store 8 into %stack.4), (store 8 into %stack.5)
+    frame-setup SEH_SaveRegP 23, 24, 80
+    frame-setup STPXi killed $x21, killed $x22, $sp, 12 :: (store 8 into %stack.2), (store 8 into %stack.3)
+    frame-setup SEH_SaveRegP 21, 22, 96
+    frame-setup STPXi killed $x19, killed $x20, $sp, 14 :: (store 8 into %stack.0), (store 8 into %stack.1)
+    frame-setup SEH_SaveRegP 19, 20, 112
+    frame-setup SEH_PrologEnd
+    $x19 = ADDXrr $x0, killed $x1
+    $d8 = FADDDrr killed $d0, $d1
+    $d9 = FADDDrr $d8, $d1
+    $d10 = FADDDrr $d9, $d8
+    $d11 = FADDDrr killed $d9, $d10
+    $d12 = FADDDrr killed $d10, killed $d11
+    $x20 = ADDXrr $x19, killed $x0
+    $x21 = ADDXrr $x20, killed $x19
+    $x22 = ADDXrr $x21, killed $x20
+    $x23 = ADDXrr $x22, killed $x21
+    $x24 = ADDXrr $x23, killed $x22
+    $x25 = ADDXrr $x24, killed $x23
+    $x26 = ADDXrr $x25, killed $x24
+    $x27 = ADDXrr $x26, killed $x25
+    $x28 = ADDXrr $x27, killed $x26
+    $x0 = COPY $d12
+    $x0 = ADDXrr $x0, killed $x28
+    frame-destroy SEH_EpilogStart
+    $x19, $x20 = frame-destroy LDPXi $sp, 14 :: (load 8 from %stack.0), (load 8 from %stack.1)
+    frame-destroy SEH_SaveRegP 19, 20, 112
+    $x21, $x22 = frame-destroy LDPXi $sp, 12 :: (load 8 from %stack.2), (load 8 from %stack.3)
+    frame-destroy SEH_SaveRegP 21, 22, 96
+    $x23, $x24 = frame-destroy LDPXi $sp, 10 :: (load 8 from %stack.4), (load 8 from %stack.5)
+    frame-destroy SEH_SaveRegP 23, 24, 80
+    $x25, $x26 = frame-destroy LDPXi $sp, 8 :: (load 8 from %stack.6), (load 8 from %stack.7)
+    frame-destroy SEH_SaveRegP 25, 26, 64
+    $x27, $x28 = frame-destroy LDPXi $sp, 6 :: (load 8 from %stack.8), (load 8 from %stack.9)
+    frame-destroy SEH_SaveRegP 27, 28, 48
+    $d8 = frame-destroy LDRDui $sp, 4 :: (load 8 from %stack.10)
+    frame-destroy SEH_SaveFReg 8, 32
+    $d9 = frame-destroy LDRDui $sp, 5 :: (load 8 from %stack.11)
+    frame-destroy SEH_SaveFReg 9, 40
+    $d10, $d11 = frame-destroy LDPDi $sp, 2 :: (load 8 from %stack.12), (load 8 from %stack.13)
+    frame-destroy SEH_SaveFRegP 10, 11, 16
+    early-clobber $sp, $d12 = frame-destroy LDRDpost $sp, 128 :: (load 8 from %stack.14)
+    frame-destroy SEH_SaveFReg_X 12, -128
+    frame-destroy SEH_EpilogEnd
+    RET_ReallyLR implicit $x0
+
+...

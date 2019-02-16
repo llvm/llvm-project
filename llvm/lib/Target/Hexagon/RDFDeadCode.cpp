@@ -214,7 +214,7 @@ bool DeadCodeElimination::erase(const SetVector<NodeId> &Nodes) {
       return false;
     return A.Id < B.Id;
   };
-  llvm::sort(DRNs.begin(), DRNs.end(), UsesFirst);
+  llvm::sort(DRNs, UsesFirst);
 
   if (trace())
     dbgs() << "Removing dead ref nodes:\n";

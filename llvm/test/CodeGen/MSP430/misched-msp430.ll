@@ -10,7 +10,7 @@ target datalayout = "e-p:16:16:16-i8:8:8-i16:16:16-i32:16:32-n8:16"
 ; only verifies that the code generator ran successfully.
 ;
 ; CHECK-LABEL: @f
-; CHECK: mov.w &y, &x
+; CHECK: mov &y, &x
 ; CHECK: ret
 define void @f() {
 entry:

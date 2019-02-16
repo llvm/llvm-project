@@ -15,7 +15,7 @@
 #ifndef LLVM_CODEGEN_LINKALLASMWRITERCOMPONENTS_H
 #define LLVM_CODEGEN_LINKALLASMWRITERCOMPONENTS_H
 
-#include "llvm/CodeGen/GCs.h"
+#include "llvm/CodeGen/BuiltinGCs.h"
 #include <cstdlib>
 
 namespace {

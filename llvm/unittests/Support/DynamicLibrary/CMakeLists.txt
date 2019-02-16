@@ -8,6 +8,13 @@ add_library(DynamicLibraryLib STATIC
   )
 set_target_properties(DynamicLibraryLib PROPERTIES FOLDER "Tests")
 
+# extract_symbols.py relies on all its library arguments being in the same
+# directory, so we must set the output directory in the same way as if
+# add_llvm_library was used.
+set_output_directory(DynamicLibraryLib
+  LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}
+  )
+
 add_llvm_unittest(DynamicLibraryTests
   DynamicLibraryTest.cpp
   )

@@ -14,8 +14,17 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+// Intentionally not including windows.h here, to avoid the risk of
+// pulling in conflicting declarations of these functions. (With mingw-w64,
+// there's a risk of windows.h pulling in stdint.h.)
+typedef int BOOL;
+typedef void *HANDLE;
+typedef const void *LPCVOID;
+typedef void *LPVOID;
+
+#define HEAP_ZERO_MEMORY           0x00000008
+#define HEAP_REALLOC_IN_PLACE_ONLY 0x00000010
+
 
 #include "asan_allocator.h"
 #include "asan_interceptors.h"
@@ -125,10 +134,15 @@ void *_recalloc_base(void *p, size_t n, size_t elem_size) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
-size_t _msize(const void *ptr) {
+size_t _msize(void *ptr) {
   GET_CURRENT_PC_BP_SP;
   (void)sp;
   return asan_malloc_usable_size(ptr, pc, bp);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
+size_t _msize_base(void *ptr) {
+  return _msize(ptr);
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
@@ -226,6 +240,7 @@ void ReplaceSystemMalloc() {
   TryToOverrideFunction("_recalloc_base", (uptr)_recalloc);
   TryToOverrideFunction("_recalloc_crt", (uptr)_recalloc);
   TryToOverrideFunction("_msize", (uptr)_msize);
+  TryToOverrideFunction("_msize_base", (uptr)_msize);
   TryToOverrideFunction("_expand", (uptr)_expand);
   TryToOverrideFunction("_expand_base", (uptr)_expand);
 

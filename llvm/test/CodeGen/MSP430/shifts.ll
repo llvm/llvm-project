@@ -5,6 +5,7 @@ target triple = "msp430-elf"
 define zeroext i8 @lshr8(i8 zeroext %a, i8 zeroext %cnt) nounwind readnone {
 entry:
 ; CHECK-LABEL: lshr8:
+; CHECK: clrc
 ; CHECK: rrc.b
   %shr = lshr i8 %a, %cnt
   ret i8 %shr
@@ -21,7 +22,7 @@ entry:
 define zeroext i8 @shl8(i8 zeroext %a, i8 zeroext %cnt) nounwind readnone {
 entry:
 ; CHECK: shl8
-; CHECK: rla.b
+; CHECK: add.b
   %shl = shl i8 %a, %cnt
   ret i8 %shl
 }
@@ -29,7 +30,8 @@ entry:
 define zeroext i16 @lshr16(i16 zeroext %a, i16 zeroext %cnt) nounwind readnone {
 entry:
 ; CHECK-LABEL: lshr16:
-; CHECK: rrc.w
+; CHECK: clrc
+; CHECK: rrc
   %shr = lshr i16 %a, %cnt
   ret i16 %shr
 }
@@ -37,7 +39,7 @@ entry:
 define signext i16 @ashr16(i16 signext %a, i16 zeroext %cnt) nounwind readnone {
 entry:
 ; CHECK-LABEL: ashr16:
-; CHECK: rra.w
+; CHECK: rra
   %shr = ashr i16 %a, %cnt
   ret i16 %shr
 }
@@ -45,7 +47,30 @@ entry:
 define zeroext i16 @shl16(i16 zeroext %a, i16 zeroext %cnt) nounwind readnone {
 entry:
 ; CHECK-LABEL: shl16:
-; CHECK: rla.w
+; CHECK: add
   %shl = shl i16 %a, %cnt
   ret i16 %shl
+}
+
+define i16 @ashr10_i16(i16 %a) #0 {
+entry:
+; CHECK-LABEL: ashr10_i16:
+; CHECK:      swpb	r12
+; CHECK-NEXT: sxt	r12
+; CHECK-NEXT: rra	r12
+; CHECK-NEXT: rra	r12
+  %shr = ashr i16 %a, 10
+  ret i16 %shr
+}
+
+define i16 @lshr10_i16(i16 %a) #0 {
+entry:
+; CHECK-LABEL: lshr10_i16:
+; CHECK:      swpb	r12
+; CHECK-NEXT: mov.b	r12, r12
+; CHECK-NEXT: clrc
+; CHECK-NEXT: rrc	r12
+; CHECK-NEXT: rra	r12
+  %shr = lshr i16 %a, 10
+  ret i16 %shr
 }

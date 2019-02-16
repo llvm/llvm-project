@@ -182,7 +182,7 @@ public:
 
 /// SmallVectorTemplateBase<isPodLike = false> - This is where we put method
 /// implementations that are designed to work with non-POD-like T's.
-template <typename T, bool isPodLike>
+template <typename T, bool = isPodLike<T>::value>
 class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
 protected:
   SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
@@ -299,7 +299,7 @@ protected:
     // use memcpy here. Note that I and E are iterators and thus might be
     // invalid for memcpy if they are equal.
     if (I != E)
-      memcpy(Dest, I, (E - I) * sizeof(T));
+      memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
@@ -310,7 +310,7 @@ public:
   void push_back(const T &Elt) {
     if (LLVM_UNLIKELY(this->size() >= this->capacity()))
       this->grow();
-    memcpy(this->end(), &Elt, sizeof(T));
+    memcpy(reinterpret_cast<void *>(this->end()), &Elt, sizeof(T));
     this->set_size(this->size() + 1);
   }
 
@@ -320,8 +320,8 @@ public:
 /// This class consists of common code factored out of the SmallVector class to
 /// reduce code duplication based on the SmallVector 'N' template parameter.
 template <typename T>
-class SmallVectorImpl : public SmallVectorTemplateBase<T, isPodLike<T>::value> {
-  using SuperClass = SmallVectorTemplateBase<T, isPodLike<T>::value>;
+class SmallVectorImpl : public SmallVectorTemplateBase<T> {
+  using SuperClass = SmallVectorTemplateBase<T>;
 
 public:
   using iterator = typename SuperClass::iterator;

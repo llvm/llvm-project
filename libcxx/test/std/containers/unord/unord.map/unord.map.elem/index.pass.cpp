@@ -119,7 +119,6 @@ int main()
         using Container = TCT::unordered_map<>;
         using Key = Container::key_type;
         using MappedType = Container::mapped_type;
-        using ValueTp = Container::value_type;
         ConstructController* cc = getConstructController();
         cc->reset();
         {

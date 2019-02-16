@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-save-restore-long < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-save-restore-long -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; Check that the -long-calls feature is supported by the backend.
 
@@ -7,7 +7,7 @@
 define i64 @test_longcall(i32 %x, i32 %y) #0 {
 entry:
   %add = add nsw i32 %x, 5
-  %call = tail call i64 @foo(i32 %add) #6
+  %call = tail call i64 @foo(i32 %add) #1
   %conv = sext i32 %y to i64
   %add1 = add nsw i64 %call, %conv
   ret i64 %add1
@@ -17,7 +17,7 @@ entry:
 define i64 @test_longtailcall(i32 %x, i32 %y) #1 {
 entry:
   %add = add nsw i32 %x, 5
-  %call = tail call i64 @foo(i32 %add) #6
+  %call = tail call i64 @foo(i32 %add) #1
   ret i64 %call
 }
 
@@ -25,7 +25,7 @@ entry:
 define i64 @test_longnoret(i32 %x, i32 %y) #2 {
 entry:
   %add = add nsw i32 %x, 5
-  %0 = tail call i64 @bar(i32 %add) #7
+  %0 = tail call i64 @bar(i32 %add) #6
   unreachable
 }
 
@@ -36,7 +36,7 @@ entry:
 define i64 @test_shortcall(i32 %x, i32 %y) #3 {
 entry:
   %add = add nsw i32 %x, 5
-  %call = tail call i64 @foo(i32 %add) #6
+  %call = tail call i64 @foo(i32 %add) #1
   %conv = sext i32 %y to i64
   %add1 = add nsw i64 %call, %conv
   ret i64 %add1
@@ -46,7 +46,7 @@ entry:
 define i64 @test_shorttailcall(i32 %x, i32 %y) #4 {
 entry:
   %add = add nsw i32 %x, 5
-  %call = tail call i64 @foo(i32 %add) #6
+  %call = tail call i64 @foo(i32 %add) #1
   ret i64 %call
 }
 
@@ -54,12 +54,12 @@ entry:
 define i64 @test_shortnoret(i32 %x, i32 %y) #5 {
 entry:
   %add = add nsw i32 %x, 5
-  %0 = tail call i64 @bar(i32 %add) #7
+  %0 = tail call i64 @bar(i32 %add) #6
   unreachable
 }
 
-declare i64 @foo(i32) #6
-declare i64 @bar(i32) #7
+declare i64 @foo(i32) #1
+declare i64 @bar(i32) #6
 
 attributes #0 = { minsize nounwind "target-cpu"="hexagonv60" "target-features"="+long-calls" }
 attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+long-calls" }
@@ -69,5 +69,4 @@ attributes #3 = { minsize nounwind "target-cpu"="hexagonv60" "target-features"="
 attributes #4 = { nounwind "target-cpu"="hexagonv60" "target-features"="-long-calls" }
 attributes #5 = { noreturn nounwind "target-cpu"="hexagonv60" "target-features"="-long-calls" }
 
-attributes #6 = { noreturn "target-cpu"="hexagonv60" }
-attributes #7 = { noreturn nounwind "target-cpu"="hexagonv60" }
+attributes #6 = { noreturn nounwind "target-cpu"="hexagonv60" }

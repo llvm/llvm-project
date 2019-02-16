@@ -37,16 +37,16 @@ int main()
       typedef std::unordered_multiset<int, std::hash<int>, std::equal_to<int>,
                                       A>
           C;
-      const C::difference_type max_dist =
-          std::numeric_limits<C::difference_type>::max();
+      const C::size_type max_dist =
+          static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
       C c;
       assert(c.max_size() <= max_dist);
       LIBCPP_ASSERT(c.max_size() == max_dist);
     }
     {
       typedef std::unordered_multiset<char> C;
-      const C::difference_type max_dist =
-          std::numeric_limits<C::difference_type>::max();
+      const C::size_type max_dist =
+          static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
       C c;
       assert(c.max_size() <= max_dist);
       assert(c.max_size() <= alloc_max_size(c.get_allocator()));

@@ -74,6 +74,7 @@ private:
   int InfoColumn = -1;
   std::unique_ptr<DWARFSectionKind[]> ColumnKinds;
   std::unique_ptr<Entry[]> Rows;
+  mutable std::vector<Entry *> OffsetLookup;
 
   static StringRef getColumnHeader(DWARFSectionKind DS);
 

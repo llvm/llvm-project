@@ -16,7 +16,7 @@ namespace {
 class VarDeclVisitor : public ExpectedLocationVisitor<VarDeclVisitor> {
 public:
  bool VisitVarDecl(VarDecl *Variable) {
-   Match(Variable->getNameAsString(), Variable->getLocStart());
+   Match(Variable->getNameAsString(), Variable->getBeginLoc());
    return true;
  }
 };
@@ -36,7 +36,7 @@ public:
   bool shouldVisitImplicitCode() const { return true; }
 
   bool VisitParmVarDecl(ParmVarDecl *ParamVar) {
-    Match(ParamVar->getNameAsString(), ParamVar->getLocStart());
+    Match(ParamVar->getNameAsString(), ParamVar->getBeginLoc());
     return true;
   }
 };

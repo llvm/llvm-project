@@ -22,11 +22,13 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManagers.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -123,24 +125,34 @@ bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
   Module &M = CG.getModule();
 
   if (!PM) {
-    CallGraphSCCPass *CGSP = (CallGraphSCCPass*)P;
+    CallGraphSCCPass *CGSP = (CallGraphSCCPass *)P;
     if (!CallGraphUpToDate) {
       DevirtualizedCall |= RefreshCallGraph(CurSCC, CG, false);
       CallGraphUpToDate = true;
     }
 
     {
-      unsigned InstrCount = 0;
+      unsigned InstrCount, SCCCount = 0;
+      StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
       bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
       TimeRegion PassTimer(getPassTimer(CGSP));
       if (EmitICRemark)
-        InstrCount = initSizeRemarkInfo(M);
+        InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
       Changed = CGSP->runOnSCC(CurSCC);
 
-      // If the pass modified the module, it may have modified the instruction
-      // count of the module. Try emitting a remark.
-      if (EmitICRemark)
-        emitInstrCountChangedRemark(P, M, InstrCount);
+      if (EmitICRemark) {
+        // FIXME: Add getInstructionCount to CallGraphSCC.
+        SCCCount = M.getInstructionCount();
+        // Is there a difference in the number of instructions in the module?
+        if (SCCCount != InstrCount) {
+          // Yep. Emit a remark and update InstrCount.
+          int64_t Delta =
+              static_cast<int64_t>(SCCCount) - static_cast<int64_t>(InstrCount);
+          emitInstrCountChangedRemark(P, M, Delta, InstrCount,
+                                      FunctionToInstrCount);
+          InstrCount = SCCCount;
+        }
+      }
     }
 
     // After the CGSCCPass is done, when assertions are enabled, use
@@ -621,22 +633,39 @@ namespace {
 
     bool runOnSCC(CallGraphSCC &SCC) override {
       bool BannerPrinted = false;
-      auto PrintBannerOnce = [&] () {
+      auto PrintBannerOnce = [&]() {
         if (BannerPrinted)
           return;
         OS << Banner;
         BannerPrinted = true;
-        };
+      };
+
+      bool NeedModule = llvm::forcePrintModuleIR();
+      if (isFunctionInPrintList("*") && NeedModule) {
+        PrintBannerOnce();
+        OS << "\n";
+        SCC.getCallGraph().getModule().print(OS, nullptr);
+        return false;
+      }
+      bool FoundFunction = false;
       for (CallGraphNode *CGN : SCC) {
         if (Function *F = CGN->getFunction()) {
           if (!F->isDeclaration() && isFunctionInPrintList(F->getName())) {
-            PrintBannerOnce();
-            F->print(OS);
+            FoundFunction = true;
+            if (!NeedModule) {
+              PrintBannerOnce();
+              F->print(OS);
+            }
           }
         } else if (isFunctionInPrintList("*")) {
           PrintBannerOnce();
           OS << "\nPrinting <null> Function\n";
         }
+      }
+      if (NeedModule && FoundFunction) {
+        PrintBannerOnce();
+        OS << "\n";
+        SCC.getCallGraph().getModule().print(OS, nullptr);
       }
       return false;
     }

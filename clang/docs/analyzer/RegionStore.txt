@@ -118,7 +118,7 @@ sometimes zero, for static data, or "uninitialized", for stack variables).
   int manyInts[10];
   manyInts[1] = 42;   // Creates a Direct binding for manyInts[1].
   print(manyInts[1]); // Retrieves the Direct binding for manyInts[1];
-  print(manyInts[0]); // There is no Direct binding for manyInts[1].
+  print(manyInts[0]); // There is no Direct binding for manyInts[0].
                       // Is there a Default binding for the entire array?
                       // There is not, but it is a stack variable, so we use
                       // "uninitialized" as the default value (and emit a
@@ -166,6 +166,6 @@ Here's a concrete example:
     return p2.x;    // The binding for FieldRegion 'p2.x' is requested.
                     // There is no Direct binding, so we look for a Default
                     // binding to 'p2' and find the LCV.
-                    // Because it's an LCV, we look at our requested region
+                    // Because it's a LCV, we look at our requested region
                     // and see that it's the '.x' field. We ask for the value
                     // of 'p.x' within the snapshot, and get back 42.

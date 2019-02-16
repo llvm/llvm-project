@@ -70,7 +70,7 @@ branch  1 taken 67%
 branch  2 taken 33%
         8:   34-block  2
 unconditional  3 taken 100%
-        8:   35:      assign(ii, jj);
+       12:   35:      assign(ii, jj);
         8:   35-block  0
 unconditional  0 taken 100%
         4:   35-block  1

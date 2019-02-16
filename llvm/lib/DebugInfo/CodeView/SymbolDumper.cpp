@@ -32,8 +32,8 @@ namespace {
 class CVSymbolDumperImpl : public SymbolVisitorCallbacks {
 public:
   CVSymbolDumperImpl(TypeCollection &Types, SymbolDumpDelegate *ObjDelegate,
-                     ScopedPrinter &W, bool PrintRecordBytes)
-      : Types(Types), ObjDelegate(ObjDelegate), W(W),
+                     ScopedPrinter &W, CPUType CPU, bool PrintRecordBytes)
+      : Types(Types), ObjDelegate(ObjDelegate), W(W), CompilationCPUType(CPU),
         PrintRecordBytes(PrintRecordBytes), InFunctionScope(false) {}
 
 /// CVSymbolVisitor overrides.
@@ -46,6 +46,8 @@ public:
   Error visitSymbolEnd(CVSymbol &Record) override;
   Error visitUnknownSymbol(CVSymbol &Record) override;
 
+  CPUType getCompilationCPUType() const { return CompilationCPUType; }
+
 private:
   void printLocalVariableAddrRange(const LocalVariableAddrRange &Range,
                                    uint32_t RelocationOffset);
@@ -55,6 +57,9 @@ private:
   TypeCollection &Types;
   SymbolDumpDelegate *ObjDelegate;
   ScopedPrinter &W;
+
+  /// Save the machine or CPU type when dumping a compile symbols.
+  CPUType CompilationCPUType = CPUType::X64;
 
   bool PrintRecordBytes;
   bool InFunctionScope;
@@ -235,6 +240,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   W.printEnum("Language", Compile2.getLanguage(), getSourceLanguageNames());
   W.printFlags("Flags", Compile2.getFlags(), getCompileSym2FlagNames());
   W.printEnum("Machine", unsigned(Compile2.Machine), getCPUTypeNames());
+  CompilationCPUType = Compile2.Machine;
   std::string FrontendVersion;
   {
     raw_string_ostream Out(FrontendVersion);
@@ -255,9 +261,11 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                            Compile3Sym &Compile3) {
-  W.printEnum("Language", Compile3.getLanguage(), getSourceLanguageNames());
-  W.printFlags("Flags", Compile3.getFlags(), getCompileSym3FlagNames());
+  W.printEnum("Language", uint8_t(Compile3.getLanguage()), getSourceLanguageNames());
+  W.printFlags("Flags", uint32_t(Compile3.getFlags()),
+               getCompileSym3FlagNames());
   W.printEnum("Machine", unsigned(Compile3.Machine), getCPUTypeNames());
+  CompilationCPUType = Compile3.Machine;
   std::string FrontendVersion;
   {
     raw_string_ostream Out(FrontendVersion);
@@ -415,6 +423,12 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
              FrameProc.SectionIdOfExceptionHandler);
   W.printFlags("Flags", static_cast<uint32_t>(FrameProc.Flags),
                getFrameProcSymFlagNames());
+  W.printEnum("LocalFramePtrReg",
+              uint16_t(FrameProc.getLocalFramePtrReg(CompilationCPUType)),
+              getRegisterNames());
+  W.printEnum("ParamFramePtrReg",
+              uint16_t(FrameProc.getParamFramePtrReg(CompilationCPUType)),
+              getRegisterNames());
   return Error::success();
 }
 
@@ -625,21 +639,27 @@ Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
 Error CVSymbolDumper::dump(CVRecord<SymbolKind> &Record) {
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(ObjDelegate.get(), Container);
-  CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, PrintRecordBytes);
+  CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, CompilationCPUType,
+                            PrintRecordBytes);
 
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);
   CVSymbolVisitor Visitor(Pipeline);
-  return Visitor.visitSymbolRecord(Record);
+  auto Err = Visitor.visitSymbolRecord(Record);
+  CompilationCPUType = Dumper.getCompilationCPUType();
+  return Err;
 }
 
 Error CVSymbolDumper::dump(const CVSymbolArray &Symbols) {
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(ObjDelegate.get(), Container);
-  CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, PrintRecordBytes);
+  CVSymbolDumperImpl Dumper(Types, ObjDelegate.get(), W, CompilationCPUType,
+                            PrintRecordBytes);
 
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);
   CVSymbolVisitor Visitor(Pipeline);
-  return Visitor.visitSymbolStream(Symbols);
+  auto Err = Visitor.visitSymbolStream(Symbols);
+  CompilationCPUType = Dumper.getCompilationCPUType();
+  return Err;
 }

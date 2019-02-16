@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple thumbv7-windows -fms-compatibility -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple aarch64-windows -fms-compatibility -fsyntax-only %s -verify
 // expected-no-diagnostics
 
 extern "C" {

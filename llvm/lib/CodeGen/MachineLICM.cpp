@@ -463,8 +463,12 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI,
     for (MCRegAliasIterator AS(Reg, TRI, true); AS.isValid(); ++AS) {
       if (PhysRegDefs.test(*AS))
         PhysRegClobbers.set(*AS);
-      PhysRegDefs.set(*AS);
     }
+    // Need a second loop because MCRegAliasIterator can visit the same
+    // register twice.
+    for (MCRegAliasIterator AS(Reg, TRI, true); AS.isValid(); ++AS)
+      PhysRegDefs.set(*AS);
+
     if (PhysRegClobbers.test(Reg))
       // MI defined register is seen defined by another instruction in
       // the loop, it cannot be a LICM candidate.
@@ -497,8 +501,7 @@ void MachineLICMBase::HoistRegionPostRA() {
 
   // Walk the entire region, count number of defs for each register, and
   // collect potential LICM candidates.
-  const std::vector<MachineBasicBlock *> &Blocks = CurLoop->getBlocks();
-  for (MachineBasicBlock *BB : Blocks) {
+  for (MachineBasicBlock *BB : CurLoop->getBlocks()) {
     // If the header of the loop containing this basic block is a landing pad,
     // then don't try to hoist instructions out of this loop.
     const MachineLoop *ML = MLI->getLoopFor(BB);
@@ -570,8 +573,7 @@ void MachineLICMBase::HoistRegionPostRA() {
 /// Add register 'Reg' to the livein sets of BBs in the current loop, and make
 /// sure it is not killed by any instructions in the loop.
 void MachineLICMBase::AddToLiveIns(unsigned Reg) {
-  const std::vector<MachineBasicBlock *> &Blocks = CurLoop->getBlocks();
-  for (MachineBasicBlock *BB : Blocks) {
+  for (MachineBasicBlock *BB : CurLoop->getBlocks()) {
     if (!BB->isLiveIn(Reg))
       BB->addLiveIn(Reg);
     for (MachineInstr &MI : *BB) {

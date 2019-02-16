@@ -74,7 +74,8 @@ static cl::opt<ThreadModel::Model> TMModel(
 
 static cl::opt<llvm::CodeModel::Model> CMModel(
     "code-model", cl::desc("Choose code model"),
-    cl::values(clEnumValN(CodeModel::Small, "small", "Small code model"),
+    cl::values(clEnumValN(CodeModel::Tiny, "tiny", "Tiny code model"),
+               clEnumValN(CodeModel::Small, "small", "Small code model"),
                clEnumValN(CodeModel::Kernel, "kernel", "Kernel code model"),
                clEnumValN(CodeModel::Medium, "medium", "Medium code model"),
                clEnumValN(CodeModel::Large, "large", "Large code model")));

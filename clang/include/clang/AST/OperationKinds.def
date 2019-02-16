@@ -197,6 +197,14 @@ CAST_OPERATION(IntegralToBoolean)
 ///    float f = i;
 CAST_OPERATION(IntegralToFloating)
 
+/// CK_FixedPointCast - Fixed point to fixed point.
+///    (_Accum) 0.5r
+CAST_OPERATION(FixedPointCast)
+
+/// CK_FixedPointToBoolean - Fixed point to boolean.
+///    (bool) 0.5r
+CAST_OPERATION(FixedPointToBoolean)
+
 /// CK_FloatingToIntegral - Floating point to integral.  Rounds
 /// towards zero, discarding any fractional component.
 ///    (int) f
@@ -318,11 +326,9 @@ CAST_OPERATION(CopyAndAutoreleaseBlockObject)
 // callee of a call expression.
 CAST_OPERATION(BuiltinFnToFnPtr)
 
-// Convert a zero value for OpenCL event_t initialization.
-CAST_OPERATION(ZeroToOCLEvent)
-
-// Convert a zero value for OpenCL queue_t initialization.
-CAST_OPERATION(ZeroToOCLQueue)
+// Convert a zero value for OpenCL opaque types initialization (event_t,
+// queue_t, etc.)
+CAST_OPERATION(ZeroToOCLOpaqueType)
 
 // Convert a pointer to a different address space.
 CAST_OPERATION(AddressSpaceConversion)

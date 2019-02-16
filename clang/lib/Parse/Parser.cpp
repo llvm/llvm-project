@@ -346,7 +346,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::semi:
       if (HasFlagsSet(Flags, StopAtSemi))
         return false;
-      // FALL THROUGH.
+      LLVM_FALLTHROUGH;
     default:
       // Skip this token.
       ConsumeAnyToken();
@@ -451,7 +451,7 @@ void Parser::Initialize() {
 
   // Initialization for Objective-C context sensitive keywords recognition.
   // Referenced in Parser::ParseObjCTypeQualifierList.
-  if (getLangOpts().ObjC1) {
+  if (getLangOpts().ObjC) {
     ObjCTypeQuals[objc_in] = &PP.getIdentifierTable().get("in");
     ObjCTypeQuals[objc_out] = &PP.getIdentifierTable().get("out");
     ObjCTypeQuals[objc_inout] = &PP.getIdentifierTable().get("inout");
@@ -682,6 +682,9 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_pragma_fp_contract:
     HandlePragmaFPContract();
     return nullptr;
+  case tok::annot_pragma_fenv_access:
+    HandlePragmaFEnvAccess();
+    return nullptr;
   case tok::annot_pragma_fp:
     HandlePragmaFP();
     break;
@@ -752,7 +755,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     return ParseObjCAtDirectives(attrs);
   case tok::minus:
   case tok::plus:
-    if (!getLangOpts().ObjC1) {
+    if (!getLangOpts().ObjC) {
       Diag(Tok, diag::err_expected_external_declaration);
       ConsumeToken();
       return nullptr;
@@ -983,7 +986,7 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   // ObjC2 allows prefix attributes on class interfaces and protocols.
   // FIXME: This still needs better diagnostics. We should only accept
   // attributes here, no types, etc.
-  if (getLangOpts().ObjC2 && Tok.is(tok::at)) {
+  if (getLangOpts().ObjC && Tok.is(tok::at)) {
     SourceLocation AtLoc = ConsumeToken(); // the "@"
     if (!Tok.isObjCAtKeyword(tok::objc_interface) &&
         !Tok.isObjCAtKeyword(tok::objc_protocol)) {
@@ -1527,7 +1530,7 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
 
   // Look up and classify the identifier. We don't perform any typo-correction
   // after a scope specifier, because in general we can't recover from typos
-  // there (eg, after correcting 'A::tempalte B<X>::C' [sic], we would need to
+  // there (eg, after correcting 'A::template B<X>::C' [sic], we would need to
   // jump back into scope specifier parsing).
   Sema::NameClassification Classification = Actions.ClassifyName(
       getCurScope(), SS, Name, NameLoc, Next, IsAddressOfOperand,
@@ -1559,7 +1562,7 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
     /// An Objective-C object type followed by '<' is a specialization of
     /// a parameterized class type or a protocol-qualified type.
     ParsedType Ty = Classification.getType();
-    if (getLangOpts().ObjC1 && NextToken().is(tok::less) &&
+    if (getLangOpts().ObjC && NextToken().is(tok::less) &&
         (Ty.get()->isObjCObjectType() ||
          Ty.get()->isObjCObjectPointerType())) {
       // Consume the name.
@@ -1599,7 +1602,7 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
         AnnotateScopeToken(SS, !WasScopeAnnotation);
       return ANK_TemplateName;
     }
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case Sema::NC_VarTemplate:
   case Sema::NC_FunctionTemplate: {
     // We have a type, variable or function template followed by '<'.
@@ -1786,7 +1789,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
 
       /// An Objective-C object type followed by '<' is a specialization of
       /// a parameterized class type or a protocol-qualified type.
-      if (getLangOpts().ObjC1 && NextToken().is(tok::less) &&
+      if (getLangOpts().ObjC && NextToken().is(tok::less) &&
           (Ty.get()->isObjCObjectType() ||
            Ty.get()->isObjCObjectPointerType())) {
         // Consume the name.
@@ -1970,6 +1973,10 @@ void Parser::CodeCompleteMacroArgument(IdentifierInfo *Macro,
                                        unsigned ArgumentIndex) {
   Actions.CodeCompletePreprocessorMacroArgument(getCurScope(), Macro, MacroInfo,
                                                 ArgumentIndex);
+}
+
+void Parser::CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) {
+  Actions.CodeCompleteIncludedFile(Dir, IsAngled);
 }
 
 void Parser::CodeCompleteNaturalLanguage() {

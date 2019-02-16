@@ -4,6 +4,8 @@
 // global, the bit grab, and the icmp correct.
 extern void a(const char *);
 
+// CHECK: @__cpu_model = external dso_local global { i32, i32, i32, [1 x i32] }
+
 void intel() {
   if (__builtin_cpu_is("intel"))
     a("intel");

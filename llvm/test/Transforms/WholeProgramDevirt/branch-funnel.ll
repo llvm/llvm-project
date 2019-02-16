@@ -8,7 +8,7 @@
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 ; SUMMARY:      TypeIdMap:       
-; SUMMARY-NEXT:   typeid1:         
+; SUMMARY-NEXT:   typeid3:
 ; SUMMARY-NEXT:     TTRes:           
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
@@ -21,7 +21,20 @@
 ; SUMMARY-NEXT:         Kind:            BranchFunnel
 ; SUMMARY-NEXT:         SingleImplName:  ''
 ; SUMMARY-NEXT:         ResByArg:        
-; SUMMARY-NEXT:   typeid2:         
+; SUMMARY-NEXT:   typeid1:
+; SUMMARY-NEXT:     TTRes:           
+; SUMMARY-NEXT:       Kind:            Unsat
+; SUMMARY-NEXT:       SizeM1BitWidth:  0
+; SUMMARY-NEXT:       AlignLog2:       0
+; SUMMARY-NEXT:       SizeM1:          0
+; SUMMARY-NEXT:       BitMask:         0
+; SUMMARY-NEXT:       InlineBits:      0
+; SUMMARY-NEXT:     WPDRes:          
+; SUMMARY-NEXT:       0:               
+; SUMMARY-NEXT:         Kind:            BranchFunnel
+; SUMMARY-NEXT:         SingleImplName:  ''
+; SUMMARY-NEXT:         ResByArg:        
+; SUMMARY-NEXT:   typeid2:
 ; SUMMARY-NEXT:     TTRes:           
 ; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
@@ -32,19 +45,6 @@
 ; SUMMARY-NEXT:     WPDRes:          
 ; SUMMARY-NEXT:       0:               
 ; SUMMARY-NEXT:         Kind:            Indir
-; SUMMARY-NEXT:         SingleImplName:  ''
-; SUMMARY-NEXT:         ResByArg:        
-; SUMMARY-NEXT:   typeid3:         
-; SUMMARY-NEXT:     TTRes:           
-; SUMMARY-NEXT:       Kind:            Unsat
-; SUMMARY-NEXT:       SizeM1BitWidth:  0
-; SUMMARY-NEXT:       AlignLog2:       0
-; SUMMARY-NEXT:       SizeM1:          0
-; SUMMARY-NEXT:       BitMask:         0
-; SUMMARY-NEXT:       InlineBits:      0
-; SUMMARY-NEXT:     WPDRes:          
-; SUMMARY-NEXT:       0:               
-; SUMMARY-NEXT:         Kind:            BranchFunnel
 ; SUMMARY-NEXT:         SingleImplName:  ''
 ; SUMMARY-NEXT:         ResByArg:        
 

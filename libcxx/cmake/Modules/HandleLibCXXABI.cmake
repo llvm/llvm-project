@@ -41,7 +41,7 @@ macro(setup_abi_lib abidefines abilib abifiles abidirs)
         get_filename_component(ifile ${fpath} NAME)
         set(src ${incpath}/${fpath})
 
-        set(dst ${LIBCXX_BINARY_INCLUDE_DIR}/${dstdir}/${fpath})
+        set(dst ${LIBCXX_BINARY_INCLUDE_DIR}/${dstdir}/${ifile})
         add_custom_command(OUTPUT ${dst}
             DEPENDS ${src}
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}

@@ -13,6 +13,7 @@
 #include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -397,6 +398,6 @@ bool index::aggregateDataAsJSON(StringRef StorePath, raw_ostream &OS) {
   if (err)
     return true;
   aggregator->dumpJSON(OS);
-  BuryPointer(aggregator);
+  llvm::BuryPointer(aggregator);
   return false;
 }

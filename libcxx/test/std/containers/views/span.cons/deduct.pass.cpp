@@ -7,22 +7,22 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
 //   template<class T, size_t N>
 //     span(T (&)[N]) -> span<T, N>;
-// 
+//
 //   template<class T, size_t N>
 //     span(array<T, N>&) -> span<T, N>;
-// 
+//
 //   template<class T, size_t N>
 //     span(const array<T, N>&) -> span<const T, N>;
-// 
+//
 //   template<class Container>
 //     span(Container&) -> span<typename Container::value_type>;
-// 
+//
 //   template<class Container>
 //     span(const Container&) -> span<const typename Container::value_type>;
 
@@ -66,7 +66,7 @@ int main ()
     ASSERT_SAME_TYPE(S, std::span<const long, 5>);
     assert((std::equal(std::begin(arr), std::end(arr), s.begin(), s.end())));
     }
-    
+
     {
     std::string str{"ABCDE"};
     std::span s{str};

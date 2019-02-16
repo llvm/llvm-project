@@ -333,6 +333,7 @@ TopologyExtraNode            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d cores/
 TopologyExtraNoTi            "%1$s: %2$d packages x %3$d nodes/pkg x %4$d tiles/node x %5$d cores/tile x %6$d threads/core (%7$d total cores)"
 OmptOutdatedWorkshare        "OMPT: Cannot determine workshare type; using the default (loop) instead. "
                              "This issue is fixed in an up-to-date compiler."
+OmpNoAllocator               "Allocator %1$s is not available, will use default allocator."
 
 # --- OpenMP errors detected at runtime ---
 #
@@ -424,6 +425,7 @@ AffHWSubsetManyNodes         "KMP_HW_SUBSET ignored: too many NUMA Nodes request
 AffHWSubsetManyTiles         "KMP_HW_SUBSET ignored: too many L2 Caches requested."
 AffHWSubsetManyProcs         "KMP_HW_SUBSET ignored: too many Procs requested."
 HierSchedInvalid             "Hierarchy ignored: unsupported level: %1$s."
+AffFormatDefault             "OMP: pid %1$s tid %2$s thread %3$s bound to OS proc set {%4$s}"
 
 
 # --------------------------------------------------------------------------------------------------

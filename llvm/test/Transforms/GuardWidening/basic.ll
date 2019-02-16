@@ -379,3 +379,29 @@ left:
 right:
   ret void
 }
+
+; Make sure we do not widen guard by trivial true conditions into something.
+define void @f_15(i1 %cond_0, i1 %cond_1) {
+; CHECK-LABEL: @f_15(
+entry:
+; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
+; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
+; CHECK:  ret void
+
+  call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
+  call void(i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
+  ret void
+}
+
+; Make sure we do not widen guard by trivial false conditions into something.
+define void @f_16(i1 %cond_0, i1 %cond_1) {
+; CHECK-LABEL: @f_16(
+entry:
+; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
+; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 false) [ "deopt"() ]
+; CHECK:  ret void
+
+  call void(i1, ...) @llvm.experimental.guard(i1 %cond_0) [ "deopt"() ]
+  call void(i1, ...) @llvm.experimental.guard(i1 false) [ "deopt"() ]
+  ret void
+}

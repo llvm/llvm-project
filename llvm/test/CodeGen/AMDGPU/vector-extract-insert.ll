@@ -27,8 +27,13 @@ define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(i32 addrspace(1)* %o
 
 ; GCN-LABEL: {{^}}extract_insert_different_dynelt_v4i32:
 ; GCN: buffer_load_dwordx4
-; GCN: v_movreld_b32
-; GCN: v_movrels_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
 ; GCN: buffer_store_dword v
 define amdgpu_kernel void @extract_insert_different_dynelt_v4i32(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %val, i32 %idx0, i32 %idx1) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()

@@ -198,10 +198,12 @@ struct S implicit_load(_Atomic(struct S) *a) {
 struct S fd1(struct S *a) {
   // CHECK-LABEL: @fd1
   // CHECK: [[RETVAL:%.*]] = alloca %struct.S, align 4
-  // CHECK: bitcast %struct.S* {{.*}} to i64*
+  // CHECK: [[A:%.*]]   = bitcast %struct.S* {{.*}} to i64*
   // CHECK: [[CAST:%.*]]  = bitcast %struct.S* [[RETVAL]] to i64*
-  // CHECK: [[CALL:%.*]]   = call i64 @__atomic_load_8(
-  // CHECK: store i64 [[CALL]], i64* [[CAST]], align 4
+  // CHECK: [[SRC:%.*]]  = bitcast i64* [[A]] to i8*
+  // CHECK: [[DEST:%.*]]  = bitcast i64* [[CAST]] to i8*
+  // CHECK: call void @__atomic_load(i32 8, i8* [[SRC]], i8* [[DEST]], i32 5)
+  // CHECK: ret
   struct S ret;
   __atomic_load(a, &ret, memory_order_seq_cst);
   return ret;
@@ -218,8 +220,8 @@ void fd2(struct S *a, struct S *b) {
   // CHECK-NEXT: [[COERCED_A_TMP:%.*]] = bitcast %struct.S* [[LOAD_A_PTR]] to i64*
   // CHECK-NEXT: [[COERCED_B:%.*]] = bitcast %struct.S* [[LOAD_B_PTR]] to i64*
   // CHECK-NEXT: [[COERCED_A:%.*]] = bitcast i64* [[COERCED_A_TMP]] to i8*
-  // CHECK-NEXT: [[LOAD_B:%.*]] = load i64, i64* [[COERCED_B]], align 4
-  // CHECK-NEXT: call void @__atomic_store_8(i8* [[COERCED_A]], i64 [[LOAD_B]],
+  // CHECK-NEXT: [[CAST_B:%.*]] = bitcast i64* [[COERCED_B]] to i8*
+  // CHECK-NEXT: call void @__atomic_store(i32 8, i8* [[COERCED_A]], i8* [[CAST_B]],
   // CHECK-NEXT: ret void
   __atomic_store(a, b, memory_order_seq_cst);
 }
@@ -239,9 +241,9 @@ void fd3(struct S *a, struct S *b, struct S *c) {
   // CHECK-NEXT: [[COERCED_B:%.*]] = bitcast %struct.S* [[LOAD_B_PTR]] to i64*
   // CHECK-NEXT: [[COERCED_C:%.*]] = bitcast %struct.S* [[LOAD_C_PTR]] to i64*
   // CHECK-NEXT: [[COERCED_A:%.*]] = bitcast i64* [[COERCED_A_TMP]] to i8*
-  // CHECK-NEXT: [[LOAD_B:%.*]] = load i64, i64* [[COERCED_B]], align 4
-  // CHECK-NEXT: [[CALL:%.*]] = call i64 @__atomic_exchange_8(i8* [[COERCED_A]], i64 [[LOAD_B]],
-  // CHECK-NEXT: store i64 [[CALL]], i64* [[COERCED_C]], align 4
+  // CHECK-NEXT: [[CAST_B:%.*]] = bitcast i64* [[COERCED_B]] to i8*
+  // CHECK-NEXT: [[CAST_C:%.*]] = bitcast i64* [[COERCED_C]] to i8*
+  // CHECK-NEXT: call void @__atomic_exchange(i32 8, i8* [[COERCED_A]], i8* [[CAST_B]], i8* [[CAST_C]],
 
   __atomic_exchange(a, b, c, memory_order_seq_cst);
 }
@@ -262,8 +264,8 @@ _Bool fd4(struct S *a, struct S *b, struct S *c) {
   // CHECK-NEXT: [[COERCED_C:%.*]] = bitcast %struct.S* [[LOAD_C_PTR]] to i64*
   // CHECK-NEXT: [[COERCED_A:%.*]] = bitcast i64* [[COERCED_A_TMP]] to i8*
   // CHECK-NEXT: [[COERCED_B:%.*]] = bitcast i64* [[COERCED_B_TMP]] to i8*
-  // CHECK-NEXT: [[LOAD_C:%.*]] = load i64, i64* [[COERCED_C]], align 4
-  // CHECK-NEXT: [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange_8(i8* [[COERCED_A]], i8* [[COERCED_B]], i64 [[LOAD_C]]
+  // CHECK-NEXT: [[CAST_C:%.*]] = bitcast i64* [[COERCED_C]] to i8*
+  // CHECK-NEXT: [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 8, i8* [[COERCED_A]], i8* [[COERCED_B]], i8* [[CAST_C]],
   // CHECK-NEXT: ret i1 [[CALL]]
   return __atomic_compare_exchange(a, b, c, 1, 5, 5);
 }
@@ -632,6 +634,31 @@ int PR17306_2(volatile int *i, int value) {
   // CHECK-NEXT: %[[retval:.*]] = load i32, i32* %[[atomicdst]]
   // CHECK-NEXT: ret i32 %[[retval]]
   return __atomic_add_fetch(i, value, memory_order_seq_cst);
+}
+
+void test_underaligned() {
+  // CHECK-LABEL: @test_underaligned
+  struct Underaligned { char c[8]; } underaligned_a, underaligned_b, underaligned_c;
+
+  // CHECK: call void @__atomic_load(i32 8,
+  __atomic_load(&underaligned_a, &underaligned_b, memory_order_seq_cst);
+  // CHECK: call void @__atomic_store(i32 8,
+  __atomic_store(&underaligned_a, &underaligned_b, memory_order_seq_cst);
+  // CHECK: call void @__atomic_exchange(i32 8,
+  __atomic_exchange(&underaligned_a, &underaligned_b, &underaligned_c, memory_order_seq_cst);
+  // CHECK: call {{.*}} @__atomic_compare_exchange(i32 8,
+  __atomic_compare_exchange(&underaligned_a, &underaligned_b, &underaligned_c, 1, memory_order_seq_cst, memory_order_seq_cst);
+
+  __attribute__((aligned)) struct Underaligned aligned_a, aligned_b, aligned_c;
+
+  // CHECK: load atomic
+  __atomic_load(&aligned_a, &aligned_b, memory_order_seq_cst);
+  // CHECK: store atomic
+  __atomic_store(&aligned_a, &aligned_b, memory_order_seq_cst);
+  // CHECK: atomicrmw xchg
+  __atomic_exchange(&aligned_a, &aligned_b, &aligned_c, memory_order_seq_cst);
+  // CHECK: cmpxchg weak
+  __atomic_compare_exchange(&aligned_a, &aligned_b, &aligned_c, 1, memory_order_seq_cst, memory_order_seq_cst);
 }
 
 #endif

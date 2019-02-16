@@ -8,40 +8,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.h"
+#include "Logger.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/SHA1.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
+
+constexpr uint32_t SymbolLocation::Position::MaxLine;
+constexpr uint32_t SymbolLocation::Position::MaxColumn;
+void SymbolLocation::Position::setLine(uint32_t L) {
+  if (L > MaxLine) {
+    Line = MaxLine;
+    return;
+  }
+  Line = L;
+}
+void SymbolLocation::Position::setColumn(uint32_t Col) {
+  if (Col > MaxColumn) {
+    Column = MaxColumn;
+    return;
+  }
+  Column = Col;
+}
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolLocation &L) {
   if (!L)
     return OS << "(none)";
-  return OS << L.FileURI << "[" << L.Start.Line << ":" << L.Start.Column << "-"
-            << L.End.Line << ":" << L.End.Column << ")";
-}
-
-SymbolID::SymbolID(StringRef USR)
-    : HashValue(SHA1::hash(arrayRefFromStringRef(USR))) {}
-
-raw_ostream &operator<<(raw_ostream &OS, const SymbolID &ID) {
-  OS << toHex(toStringRef(ID.HashValue));
-  return OS;
-}
-
-std::string SymbolID::str() const {
-  std::string ID;
-  llvm::raw_string_ostream OS(ID);
-  OS << *this;
-  return OS.str();
-}
-
-void operator>>(StringRef Str, SymbolID &ID) {
-  std::string HexString = fromHex(Str);
-  assert(HexString.size() == ID.HashValue.size());
-  std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
+  return OS << L.FileURI << "[" << L.Start.line() << ":" << L.Start.column()
+            << "-" << L.End.line() << ":" << L.End.column() << ")";
 }
 
 raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {
@@ -54,11 +52,22 @@ raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {
   return OS;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, Symbol::SymbolFlag F) {
+  if (F == Symbol::None)
+    return OS << "None";
+  std::string s;
+  if (F & Symbol::Deprecated)
+    s += "deprecated|";
+  if (F & Symbol::IndexedForCodeCompletion)
+    s += "completion|";
+  return OS << StringRef(s).rtrim('|');
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const Symbol &S) {
   return OS << S.Scope << S.Name;
 }
 
-double quality(const Symbol &S) {
+float quality(const Symbol &S) {
   // This avoids a sharp gradient for tail symbols, and also neatly avoids the
   // question of whether 0 references means a bad symbol or missing data.
   if (S.References < 3)
@@ -67,71 +76,142 @@ double quality(const Symbol &S) {
 }
 
 SymbolSlab::const_iterator SymbolSlab::find(const SymbolID &ID) const {
-  auto It = std::lower_bound(Symbols.begin(), Symbols.end(), ID,
-                             [](const Symbol &S, const SymbolID &I) {
-                               return S.ID < I;
-                             });
+  auto It = std::lower_bound(
+      Symbols.begin(), Symbols.end(), ID,
+      [](const Symbol &S, const SymbolID &I) { return S.ID < I; });
   if (It != Symbols.end() && It->ID == ID)
     return It;
   return Symbols.end();
 }
 
 // Copy the underlying data of the symbol into the owned arena.
-static void own(Symbol &S, DenseSet<StringRef> &Strings,
-                BumpPtrAllocator &Arena) {
-  // Intern replaces V with a reference to the same string owned by the arena.
-  auto Intern = [&](StringRef &V) {
-    auto R = Strings.insert(V);
-    if (R.second) { // New entry added to the table, copy the string.
-      *R.first = V.copy(Arena);
-    }
-    V = *R.first;
-  };
-
-  // We need to copy every StringRef field onto the arena.
-  Intern(S.Name);
-  Intern(S.Scope);
-  Intern(S.CanonicalDeclaration.FileURI);
-  Intern(S.Definition.FileURI);
-
-  Intern(S.Signature);
-  Intern(S.CompletionSnippetSuffix);
-
-  if (S.Detail) {
-    // Copy values of StringRefs into arena.
-    auto *Detail = Arena.Allocate<Symbol::Details>();
-    *Detail = *S.Detail;
-    // Intern the actual strings.
-    Intern(Detail->Documentation);
-    Intern(Detail->ReturnType);
-    Intern(Detail->IncludeHeader);
-    // Replace the detail pointer with our copy.
-    S.Detail = Detail;
-  }
+static void own(Symbol &S, UniqueStringSaver &Strings) {
+  visitStrings(S, [&](StringRef &V) { V = Strings.save(V); });
 }
 
 void SymbolSlab::Builder::insert(const Symbol &S) {
   auto R = SymbolIndex.try_emplace(S.ID, Symbols.size());
   if (R.second) {
     Symbols.push_back(S);
-    own(Symbols.back(), Strings, Arena);
+    own(Symbols.back(), UniqueStrings);
   } else {
     auto &Copy = Symbols[R.first->second] = S;
-    own(Copy, Strings, Arena);
+    own(Copy, UniqueStrings);
   }
 }
 
 SymbolSlab SymbolSlab::Builder::build() && {
   Symbols = {Symbols.begin(), Symbols.end()}; // Force shrink-to-fit.
   // Sort symbols so the slab can binary search over them.
-  std::sort(Symbols.begin(), Symbols.end(),
-            [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
+  llvm::sort(Symbols,
+             [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
   // We may have unused strings from overwritten symbols. Build a new arena.
   BumpPtrAllocator NewArena;
-  DenseSet<StringRef> Strings;
+  UniqueStringSaver Strings(NewArena);
   for (auto &S : Symbols)
-    own(S, Strings, NewArena);
+    own(S, Strings);
   return SymbolSlab(std::move(NewArena), std::move(Symbols));
+}
+
+raw_ostream &operator<<(raw_ostream &OS, RefKind K) {
+  if (K == RefKind::Unknown)
+    return OS << "Unknown";
+  static const std::vector<const char *> Messages = {"Decl", "Def", "Ref"};
+  bool VisitedOnce = false;
+  for (unsigned I = 0; I < Messages.size(); ++I) {
+    if (static_cast<uint8_t>(K) & 1u << I) {
+      if (VisitedOnce)
+        OS << ", ";
+      OS << Messages[I];
+      VisitedOnce = true;
+    }
+  }
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const Ref &R) {
+  return OS << R.Location << ":" << R.Kind;
+}
+
+void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
+  auto &M = Refs[ID];
+  M.push_back(S);
+  M.back().Location.FileURI =
+      UniqueStrings.save(M.back().Location.FileURI).data();
+}
+
+RefSlab RefSlab::Builder::build() && {
+  // We can reuse the arena, as it only has unique strings and we need them all.
+  // Reallocate refs on the arena to reduce waste and indirections when reading.
+  std::vector<std::pair<SymbolID, ArrayRef<Ref>>> Result;
+  Result.reserve(Refs.size());
+  size_t NumRefs = 0;
+  for (auto &Sym : Refs) {
+    auto &SymRefs = Sym.second;
+    llvm::sort(SymRefs);
+    // FIXME: do we really need to dedup?
+    SymRefs.erase(std::unique(SymRefs.begin(), SymRefs.end()), SymRefs.end());
+
+    NumRefs += SymRefs.size();
+    auto *Array = Arena.Allocate<Ref>(SymRefs.size());
+    std::uninitialized_copy(SymRefs.begin(), SymRefs.end(), Array);
+    Result.emplace_back(Sym.first, ArrayRef<Ref>(Array, SymRefs.size()));
+  }
+  return RefSlab(std::move(Result), std::move(Arena), NumRefs);
+}
+
+void SwapIndex::reset(std::unique_ptr<SymbolIndex> Index) {
+  // Keep the old index alive, so we don't destroy it under lock (may be slow).
+  std::shared_ptr<SymbolIndex> Pin;
+  {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    Pin = std::move(this->Index);
+    this->Index = std::move(Index);
+  }
+}
+std::shared_ptr<SymbolIndex> SwapIndex::snapshot() const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return Index;
+}
+
+bool fromJSON(const json::Value &Parameters, FuzzyFindRequest &Request) {
+  json::ObjectMapper O(Parameters);
+  int64_t Limit;
+  bool OK =
+      O && O.map("Query", Request.Query) && O.map("Scopes", Request.Scopes) &&
+      O.map("AnyScope", Request.AnyScope) && O.map("Limit", Limit) &&
+      O.map("RestrictForCodeCompletion", Request.RestrictForCodeCompletion) &&
+      O.map("ProximityPaths", Request.ProximityPaths);
+  if (OK && Limit <= std::numeric_limits<uint32_t>::max())
+    Request.Limit = Limit;
+  return OK;
+}
+
+json::Value toJSON(const FuzzyFindRequest &Request) {
+  return json::Object{
+      {"Query", Request.Query},
+      {"Scopes", json::Array{Request.Scopes}},
+      {"AnyScope", Request.AnyScope},
+      {"Limit", Request.Limit},
+      {"RestrictForCodeCompletion", Request.RestrictForCodeCompletion},
+      {"ProximityPaths", json::Array{Request.ProximityPaths}},
+  };
+}
+
+bool SwapIndex::fuzzyFind(const FuzzyFindRequest &R,
+                          function_ref<void(const Symbol &)> CB) const {
+  return snapshot()->fuzzyFind(R, CB);
+}
+void SwapIndex::lookup(const LookupRequest &R,
+                       function_ref<void(const Symbol &)> CB) const {
+  return snapshot()->lookup(R, CB);
+}
+void SwapIndex::refs(const RefsRequest &R,
+                     function_ref<void(const Ref &)> CB) const {
+  return snapshot()->refs(R, CB);
+}
+size_t SwapIndex::estimateMemoryUsage() const {
+  return snapshot()->estimateMemoryUsage();
 }
 
 } // namespace clangd

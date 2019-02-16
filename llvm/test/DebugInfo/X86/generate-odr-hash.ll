@@ -80,7 +80,7 @@
 ; CHECK-NOT: type_signature
 ; CHECK-LABEL: type_signature = 0x1d02f3be30cc5688
 ; CHECK: DW_TAG_structure_type
-; FISSION-NEXT: DW_AT_name {{.*}} ( indexed {{.*}} "bar"
+; FISSION-NEXT: DW_AT_name {{.*}} (indexed {{.*}} "bar"
 ; SINGLE-NEXT: DW_AT_name {{.*}} "bar"
 
 ; Check that we generate a hash for fluffy and the value.

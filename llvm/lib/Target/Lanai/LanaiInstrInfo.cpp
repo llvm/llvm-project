@@ -101,12 +101,12 @@ bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(
   // the width doesn't overlap the offset of a higher memory access,
   // then the memory accesses are different.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  unsigned BaseRegA = 0, BaseRegB = 0;
+  MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   unsigned int WidthA = 0, WidthB = 0;
-  if (getMemOpBaseRegImmOfsWidth(MIa, BaseRegA, OffsetA, WidthA, TRI) &&
-      getMemOpBaseRegImmOfsWidth(MIb, BaseRegB, OffsetB, WidthB, TRI)) {
-    if (BaseRegA == BaseRegB) {
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
+    if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = std::min(OffsetA, OffsetB);
       int HighOffset = std::max(OffsetA, OffsetB);
       int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
@@ -733,8 +733,13 @@ unsigned LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
     if ((Reg = isLoadFromStackSlot(MI, FrameIndex)))
       return Reg;
     // Check for post-frame index elimination operations
-    const MachineMemOperand *Dummy;
-    return hasLoadFromStackSlot(MI, Dummy, FrameIndex);
+    SmallVector<const MachineMemOperand *, 1> Accesses;
+    if (hasLoadFromStackSlot(MI, Accesses)){
+      FrameIndex =
+          cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+              ->getFrameIndex();
+      return 1;
+    }
   }
   return 0;
 }
@@ -750,9 +755,9 @@ unsigned LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-bool LanaiInstrInfo::getMemOpBaseRegImmOfsWidth(
-    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
-    const TargetRegisterInfo * /*TRI*/) const {
+bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
+    MachineInstr &LdSt, MachineOperand *&BaseOp, int64_t &Offset,
+    unsigned &Width, const TargetRegisterInfo * /*TRI*/) const {
   // Handle only loads/stores with base register followed by immediate offset
   // and with add as ALU op.
   if (LdSt.getNumOperands() != 4)
@@ -782,14 +787,17 @@ bool LanaiInstrInfo::getMemOpBaseRegImmOfsWidth(
     break;
   }
 
-  BaseReg = LdSt.getOperand(1).getReg();
+  BaseOp = &LdSt.getOperand(1);
   Offset = LdSt.getOperand(2).getImm();
+  assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
+                            "operands of type register.");
   return true;
 }
 
-bool LanaiInstrInfo::getMemOpBaseRegImmOfs(
-    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset,
-    const TargetRegisterInfo *TRI) const {
+bool LanaiInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
+                                        MachineOperand *&BaseOp,
+                                        int64_t &Offset,
+                                        const TargetRegisterInfo *TRI) const {
   switch (LdSt.getOpcode()) {
   default:
     return false;
@@ -803,6 +811,6 @@ bool LanaiInstrInfo::getMemOpBaseRegImmOfs(
   case Lanai::LDBs_RI:
   case Lanai::LDBz_RI:
     unsigned Width;
-    return getMemOpBaseRegImmOfsWidth(LdSt, BaseReg, Offset, Width, TRI);
+    return getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI);
   }
 }

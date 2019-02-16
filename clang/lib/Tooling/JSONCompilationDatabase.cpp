@@ -157,13 +157,16 @@ std::vector<std::string> unescapeCommandLine(JSONCommandLineSyntax Syntax,
   return parser.parse();
 }
 
+// This plugin locates a nearby compile_command.json file, and also infers
+// compile commands for files not present in the database.
 class JSONCompilationDatabasePlugin : public CompilationDatabasePlugin {
   std::unique_ptr<CompilationDatabase>
   loadFromDirectory(StringRef Directory, std::string &ErrorMessage) override {
     SmallString<1024> JSONDatabasePath(Directory);
     llvm::sys::path::append(JSONDatabasePath, "compile_commands.json");
-    return JSONCompilationDatabase::loadFromFile(
+    auto Base = JSONCompilationDatabase::loadFromFile(
         JSONDatabasePath, ErrorMessage, JSONCommandLineSyntax::AutoDetect);
+    return Base ? inferMissingCompileCommands(std::move(Base)) : nullptr;
   }
 };
 

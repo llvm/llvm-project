@@ -1,0 +1,3 @@
+# RUN: echo -e "z\0\x80\0a\0" | llvm-strings --bytes 1 - | FileCheck %s
+# CHECK: z{{$}}
+# CHECK-NEXT: {{^}}a

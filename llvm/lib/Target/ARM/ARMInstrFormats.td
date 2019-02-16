@@ -2580,6 +2580,37 @@ class N3VLaneCP8<bit op23, bits<2> op21_20, bit op6, bit op4,
   let Inst{3-0}   = Vm{3-0};
 }
 
+// In Armv8.2-A, some NEON instructions are added that encode Vn and Vm
+// differently:
+//    if Q == ‘1’ then UInt(N:Vn) else UInt(Vn:N);
+//    if Q == ‘1’ then UInt(M:Vm) else UInt(Vm:M);
+// Class N3VCP8 above describes the Q=1 case, and this class the Q=0 case.
+class N3VCP8Q0<bits<2> op24_23, bits<2> op21_20, bit op6, bit op4,
+             dag oops, dag iops, InstrItinClass itin,
+             string opc, string dt, string asm, string cstr, list<dag> pattern>
+  : NeonInp<oops, iops, AddrModeNone, IndexModeNone, N3RegCplxFrm, itin, opc, dt, asm, cstr, pattern> {
+  bits<5> Vd;
+  bits<5> Vn;
+  bits<5> Vm;
+
+  let DecoderNamespace = "VFPV8";
+  // These have the same encodings in ARM and Thumb2
+  let PostEncoderMethod = "";
+
+  let Inst{31-25} = 0b1111110;
+  let Inst{24-23} = op24_23;
+  let Inst{22}    = Vd{4};
+  let Inst{21-20} = op21_20;
+  let Inst{19-16} = Vn{4-1};
+  let Inst{15-12} = Vd{3-0};
+  let Inst{11-8}  = 0b1000;
+  let Inst{7}     = Vn{0};
+  let Inst{6}     = op6;
+  let Inst{5}     = Vm{0};
+  let Inst{4}     = op4;
+  let Inst{3-0}   = Vm{4-1};
+}
+
 // Operand types for complex instructions
 class ComplexRotationOperand<int Angle, int Remainder, string Type, string Diag>
   : AsmOperandClass {

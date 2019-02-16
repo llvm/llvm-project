@@ -3,7 +3,7 @@
 
 define <2 x i32> @umin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @umin_of_nots(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> [[Y]]
 ; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP2]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i32> [[MIN]]
@@ -17,7 +17,7 @@ define <2 x i32> @umin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @smin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @smin_of_nots(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[X]], <2 x i32> [[Y]]
 ; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP2]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i32> [[MIN]]
@@ -31,7 +31,7 @@ define <2 x i32> @smin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 
 define i32 @compute_min_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @compute_min_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 [[Y]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -47,8 +47,8 @@ declare void @extra_use(i8)
 define i8 @umin_not_1_extra_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_1_extra_use(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[Y]], i8 [[X]]
 ; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP2]], -1
 ; CHECK-NEXT:    call void @extra_use(i8 [[NX]])
 ; CHECK-NEXT:    ret i8 [[MINXY]]
@@ -84,7 +84,7 @@ define i8 @umin_not_2_extra_use(i8 %x, i8 %y) {
 
 define i8 @umin3_not(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @umin3_not(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[Z:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Z]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[Y]]
@@ -109,8 +109,8 @@ define i8 @umin3_not_more_uses(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @umin3_not_more_uses(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 [[Z]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[Z]], i8 [[X]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i8 [[TMP2]], i8 [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP4]], -1
@@ -161,44 +161,9 @@ define i8 @umin3_not_all_ops_extra_uses(i8 %x, i8 %y, i8 %z) {
   ret i8 %minxyz
 }
 
-define void @umin3_not_all_ops_extra_uses_invert_subs(i8 %x, i8 %y, i8 %z) {
-; CHECK-LABEL: @umin3_not_all_ops_extra_uses_invert_subs(
-; CHECK-NEXT:    [[XN:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YN:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[ZN:%.*]] = xor i8 [[Z:%.*]], -1
-; CHECK-NEXT:    [[CMPXZ:%.*]] = icmp ult i8 [[XN]], [[ZN]]
-; CHECK-NEXT:    [[MINXZ:%.*]] = select i1 [[CMPXZ]], i8 [[XN]], i8 [[ZN]]
-; CHECK-NEXT:    [[CMPXYZ:%.*]] = icmp ult i8 [[MINXZ]], [[YN]]
-; CHECK-NEXT:    [[MINXYZ:%.*]] = select i1 [[CMPXYZ]], i8 [[MINXZ]], i8 [[YN]]
-; CHECK-NEXT:    [[XMIN:%.*]] = sub i8 [[XN]], [[MINXYZ]]
-; CHECK-NEXT:    [[YMIN:%.*]] = sub i8 [[YN]], [[MINXYZ]]
-; CHECK-NEXT:    [[ZMIN:%.*]] = sub i8 [[ZN]], [[MINXYZ]]
-; CHECK-NEXT:    call void @use8(i8 [[MINXYZ]])
-; CHECK-NEXT:    call void @use8(i8 [[XMIN]])
-; CHECK-NEXT:    call void @use8(i8 [[YMIN]])
-; CHECK-NEXT:    call void @use8(i8 [[ZMIN]])
-; CHECK-NEXT:    ret void
-;
-  %xn = xor i8 %x, -1
-  %yn = xor i8 %y, -1
-  %zn = xor i8 %z, -1
-  %cmpxz = icmp ult i8 %xn, %zn
-  %minxz = select i1 %cmpxz, i8 %xn, i8 %zn
-  %cmpxyz = icmp ult i8 %minxz, %yn
-  %minxyz = select i1 %cmpxyz, i8 %minxz, i8 %yn
-  %xmin = sub i8 %xn, %minxyz
-  %ymin = sub i8 %yn, %minxyz
-  %zmin = sub i8 %zn, %minxyz
-  call void @use8(i8 %minxyz)
-  call void @use8(i8 %xmin)
-  call void @use8(i8 %ymin)
-  call void @use8(i8 %zmin)
-  ret void
-}
-
 define i32 @compute_min_3(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @compute_min_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 [[Y]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 [[Z]]
@@ -239,8 +204,8 @@ define i32 @compute_min_pessimization(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[NOT_VALUE:%.*]] = sub i32 3, [[X:%.*]]
 ; CHECK-NEXT:    call void @fake_use(i32 [[NOT_VALUE]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], [[Y:%.*]]
-; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[TMP2]], i32 [[Y]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 [[Y]]
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %not_value = sub i32 3, %x

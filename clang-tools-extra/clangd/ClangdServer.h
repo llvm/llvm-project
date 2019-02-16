@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDSERVER_H
 
+#include "Cancellation.h"
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
 #include "FSProvider.h"
@@ -17,7 +18,9 @@
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
 #include "TUScheduler.h"
+#include "index/Background.h"
 #include "index/FileIndex.h"
+#include "index/Index.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -34,6 +37,7 @@ class PCHContainerOperations;
 
 namespace clangd {
 
+// FIXME: find a better name.
 class DiagnosticsConsumer {
 public:
   virtual ~DiagnosticsConsumer() = default;
@@ -41,17 +45,29 @@ public:
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
   virtual void onDiagnosticsReady(PathRef File,
                                   std::vector<Diag> Diagnostics) = 0;
+  /// Called whenever the file status is updated.
+  virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
 };
 
-/// Provides API to manage ASTs for a collection of C++ files and request
-/// various language features.
-/// Currently supports async diagnostics, code completion, formatting and goto
-/// definition.
+/// Manages a collection of source files and derived data (ASTs, indexes),
+/// and provides language-aware features such as code completion.
+///
+/// The primary client is ClangdLSPServer which exposes these features via
+/// the Language Server protocol. ClangdServer may also be embedded directly,
+/// though its API is not stable over time.
+///
+/// ClangdServer should be used from a single thread. Many potentially-slow
+/// operations have asynchronous APIs and deliver their results on another
+/// thread.
+/// Such operations support cancellation: if the caller sets up a cancelable
+/// context, many operations will notice cancellation and fail early.
+/// (ClangdLSPServer uses this to implement $/cancelRequest).
 class ClangdServer {
 public:
   struct Options {
     /// To process requests asynchronously, ClangdServer spawns worker threads.
-    /// If 0, all requests are processed on the calling thread.
+    /// If this is zero, no threads are spawned. All work is done on the calling
+    /// thread, and callbacks are invoked before "async" functions return.
     unsigned AsyncThreadsCount = getDefaultAsyncThreadsCount();
 
     /// AST caching policy. The default is to keep up to 3 ASTs in memory.
@@ -63,19 +79,30 @@ public:
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.
     bool BuildDynamicSymbolIndex = false;
-
-    /// URI schemes to use when building the dynamic index.
-    /// If empty, the default schemes in SymbolCollector will be used.
-    std::vector<std::string> URISchemes;
+    /// Use a heavier and faster in-memory index implementation.
+    /// FIXME: we should make this true if it isn't too slow to build!.
+    bool HeavyweightDynamicSymbolIndex = false;
+    /// If true, ClangdServer automatically indexes files in the current project
+    /// on background threads. The index is stored in the project root.
+    bool BackgroundIndex = false;
+    /// If set to non-zero, the background index rebuilds the symbol index
+    /// periodically every BuildIndexPeriodMs milliseconds; otherwise, the
+    /// symbol index will be updated for each indexed file.
+    size_t BackgroundIndexRebuildPeriodMs = 0;
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
+
+    /// Clangd's workspace root. Relevant for "workspace" operations not bound
+    /// to a particular file.
+    /// FIXME: If not set, should use the current working directory.
+    llvm::Optional<std::string> WorkspaceRoot;
 
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).
     /// If None, ClangdServer calls CompilerInvocation::GetResourcePath() to
     /// obtain the standard resource directory.
-    llvm::Optional<StringRef> ResourceDir = llvm::None;
+    llvm::Optional<std::string> ResourceDir = llvm::None;
 
     /// Time to wait after a new file version before computing diagnostics.
     std::chrono::steady_clock::duration UpdateDebounce =
@@ -97,11 +124,9 @@ public:
   /// \p DiagConsumer. Note that a callback to \p DiagConsumer happens on a
   /// worker thread. Therefore, instances of \p DiagConsumer must properly
   /// synchronize access to shared state.
-  ClangdServer(GlobalCompilationDatabase &CDB, FileSystemProvider &FSProvider,
+  ClangdServer(const GlobalCompilationDatabase &CDB,
+               const FileSystemProvider &FSProvider,
                DiagnosticsConsumer &DiagConsumer, const Options &Opts);
-
-  /// Set the root path of the workspace.
-  void setRootPath(PathRef RootPath);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -111,7 +136,8 @@ public:
                    WantDiagnostics WD = WantDiagnostics::Auto);
 
   /// Remove \p File from list of tracked files, schedule a request to free
-  /// resources associated with it.
+  /// resources associated with it. Pending diagnostics for closed files may not
+  /// be delivered, even if requested with WantDiags::Auto or WantDiags::Yes.
   void removeDocument(PathRef File);
 
   /// Run code completion for \p File at \p Pos.
@@ -152,7 +178,11 @@ public:
 
   /// Retrieve the symbols within the specified file.
   void documentSymbols(StringRef File,
-                       Callback<std::vector<SymbolInformation>> CB);
+                       Callback<std::vector<DocumentSymbol>> CB);
+
+  /// Retrieve locations for symbol references.
+  void findReferences(PathRef File, Position Pos,
+                      Callback<std::vector<Location>> CB);
 
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
@@ -179,6 +209,11 @@ public:
   /// Called when an event occurs for a watched file in the workspace.
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
+  /// Get symbol info for given position.
+  /// Clangd extension - not part of official LSP.
+  void symbolInfo(PathRef File, Position Pos,
+                  Callback<std::vector<SymbolDetails>> CB);
+
   /// Returns estimated memory usage for each of the currently open files.
   /// The order of results is unspecified.
   /// Overall memory usage of clangd may be significantly more than reported
@@ -187,6 +222,10 @@ public:
   ///   - memory required for in-flight requests,
   /// FIXME: those metrics might be useful too, we should add them.
   std::vector<std::pair<Path, std::size_t>> getUsedBytesPerFile() const;
+
+  /// Returns the active dynamic index if one was built.
+  /// This can be useful for testing, debugging, or observing memory usage.
+  const SymbolIndex *dynamicIndex() const { return DynamicIdx.get(); }
 
   // Blocks the main thread until the server is idle. Only for use in tests.
   // Returns false if the timeout expires.
@@ -200,40 +239,32 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  typedef uint64_t DocVersion;
-
-  void consumeDiagnostics(PathRef File, DocVersion Version,
-                          std::vector<Diag> Diags);
-
   tooling::CompileCommand getCompileCommand(PathRef File);
 
-  GlobalCompilationDatabase &CDB;
-  DiagnosticsConsumer &DiagConsumer;
-  FileSystemProvider &FSProvider;
-
-  /// Used to synchronize diagnostic responses for added and removed files.
-  llvm::StringMap<DocVersion> InternalVersion;
+  const GlobalCompilationDatabase &CDB;
+  const FileSystemProvider &FSProvider;
 
   Path ResourceDir;
   // The index used to look up symbols. This could be:
   //   - null (all index functionality is optional)
-  //   - the dynamic index owned by ClangdServer (FileIdx)
+  //   - the dynamic index owned by ClangdServer (DynamicIdx)
   //   - the static index passed to the constructor
   //   - a merged view of a static and dynamic index (MergedIndex)
-  SymbolIndex *Index;
-  // If present, an up-to-date of symbols in open files. Read via Index.
-  std::unique_ptr<FileIndex> FileIdx;
-  // If present, a merged view of FileIdx and an external index. Read via Index.
-  std::unique_ptr<SymbolIndex> MergedIndex;
-  // If set, this represents the workspace path.
-  llvm::Optional<std::string> RootPath;
+  const SymbolIndex *Index = nullptr;
+  // If present, an index of symbols in open files. Read via *Index.
+  std::unique_ptr<FileIndex> DynamicIdx;
+  // If present, the new "auto-index" maintained in background threads.
+  std::unique_ptr<BackgroundIndex> BackgroundIdx;
+  // Storage for merged views of the various indexes.
+  std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
+
+  // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
+  llvm::StringMap<llvm::Optional<FuzzyFindRequest>>
+      CachedCompletionFuzzyFindRequestByFile;
+  mutable std::mutex CachedCompletionFuzzyFindRequestMutex;
+
+  llvm::Optional<std::string> WorkspaceRoot;
   std::shared_ptr<PCHContainerOperations> PCHs;
-  /// Used to serialize diagnostic callbacks.
-  /// FIXME(ibiryukov): get rid of an extra map and put all version counters
-  /// into CppFile.
-  std::mutex DiagnosticsMutex;
-  /// Maps from a filename to the latest version of reported diagnostics.
-  llvm::StringMap<DocVersion> ReportedDiagnosticVersions;
   // WorkScheduler has to be the last member, because its destructor has to be
   // called before all other members to stop the worker thread that references
   // ClangdServer.

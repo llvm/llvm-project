@@ -40,6 +40,9 @@ def strip_debug: F<"strip-debug">,
 def whole_archive: F<"whole-archive">,
     HelpText<"Include all object files for following archives">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
+def require_defined: S<"require-defined">,
+    HelpText<"Force symbol to be added to symbol table as an undefined one">;
+def require_defined_eq: J<"require-defined=">, Alias<require_defined>;
 
 // LLD specific options
 def _HASH_HASH_HASH : Flag<["-"], "###">,

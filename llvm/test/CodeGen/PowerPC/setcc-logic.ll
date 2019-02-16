@@ -435,9 +435,9 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) {
 define zeroext i1 @and_eq(i16 zeroext  %a, i16 zeroext %b, i16 zeroext %c, i16 zeroext %d) {
 ; CHECK-LABEL: and_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xor 5, 5, 6
 ; CHECK-NEXT:    xor 3, 3, 4
-; CHECK-NEXT:    or 3, 3, 5
+; CHECK-NEXT:    xor 4, 5, 6
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    blr
@@ -450,9 +450,9 @@ define zeroext i1 @and_eq(i16 zeroext  %a, i16 zeroext %b, i16 zeroext %c, i16 z
 define zeroext i1 @or_ne(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: or_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xor 5, 5, 6
 ; CHECK-NEXT:    xor 3, 3, 4
-; CHECK-NEXT:    or 3, 3, 5
+; CHECK-NEXT:    xor 4, 5, 6
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    xori 3, 3, 1

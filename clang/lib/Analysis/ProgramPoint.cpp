@@ -146,7 +146,7 @@ void ProgramPoint::print(StringRef CR, llvm::raw_ostream &Out) const {
         << E.getDst()->getBlockID() << ')';
 
     if (const Stmt *T = E.getSrc()->getTerminator()) {
-      SourceLocation SLoc = T->getLocStart();
+      SourceLocation SLoc = T->getBeginLoc();
 
       Out << "\\|Terminator: ";
       E.getSrc()->printTerminator(Out, Context.getLangOpts());
@@ -200,7 +200,7 @@ void ProgramPoint::print(StringRef CR, llvm::raw_ostream &Out) const {
         << (const void *)S << "> ";
     S->printPretty(Out, /*helper=*/nullptr, Context.getPrintingPolicy(),
                    /*Indentation=*/2, /*NewlineSymbol=*/CR);
-    printLocation(Out, S->getLocStart(), SM, CR, /*Postfix=*/"");
+    printLocation(Out, S->getBeginLoc(), SM, CR, /*Postfix=*/"");
 
     if (getAs<PreStmt>())
       Out << CR << "PreStmt" << CR;

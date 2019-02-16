@@ -1,0 +1,84 @@
+# RUN: not llc -run-pass=machineverifier %s -o - 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @valid(i8* %addr) {
+  entry:
+    br i1 0, label %if, label %else
+  if:
+    br label %exit
+  else:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @broken(i8* %addr) {
+  entry:
+    br i1 0, label %if, label %exit
+  if:
+    br label %exit
+  exit:
+    ret void
+  }
+...
+
+---
+name:            valid
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $w1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
+    %1:_(s32) = COPY $w1
+    %2:_(s32) = G_CONSTANT i32 1
+    %3:_(s1) = G_ICMP intpred(ne), %1:_(s32), %2:_
+    G_BRCOND %3:_(s1), %bb.1
+    G_BR %bb.2.else
+  bb.1.if:
+    successors: %bb.3(0x80000000)
+    %4:_(s32) = G_CONSTANT i32 1
+    %5:_(s8) = G_TRUNC %4
+    G_BR %bb.3.exit
+  bb.2.else:
+    successors: %bb.3(0x80000000)
+    %6:_(s32) = G_CONSTANT i8 1
+    %7:_(s8) = G_TRUNC %6
+    G_BR %bb.3.exit
+  bb.3.exit:
+    %8:_(s8) = G_PHI %5:_(s8), %bb.1, %7:_(s8), %bb.2
+    %9:_(s32) = G_ZEXT %8
+    $w1 = COPY %9
+...
+
+---
+name:            broken
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $w1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
+    %1:_(s32) = COPY $w1
+    %2:_(s32) = G_CONSTANT i32 1
+    %3:_(s1) = G_ICMP intpred(ne), %1:_(s32), %2:_
+    %4:_(s32) = G_CONSTANT i32 1
+    %6:_(s8) = G_CONSTANT i8 2
+    G_BRCOND %3:_(s1), %bb.1
+    G_BR %bb.2.exit
+  bb.1.if:
+    successors: %bb.2(0x80000000)
+    G_BR %bb.2.exit
+  bb.2.exit:
+    %5:_(s8) = G_TRUNC %4
+    %8:_(s8) = G_PHI %5:_(s8), %bb.0, %6:_(s8), %bb.1
+    %9:_(s32) = G_ZEXT %8
+    $w1 = COPY %9
+...
+# CHECK-NOT: Bad machine code
+# CHECK-LABEL: Bad machine code: Found PHI instruction after non-PHI
+# CHECK-NEXT:  - function:    broken
+# CHECK-NEXT:  - basic block: %bb.2 exit
+# CHECK-NEXT:  - instruction: %6:_(s8) = G_PHI %5:_(s8), %bb.0, %4:_(s8), %bb.1
+# CHECK-NOT: Bad machine code

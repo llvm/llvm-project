@@ -27,7 +27,6 @@ public:
   ChildTypePtr getChildAtIndex(uint32_t Index) const override;
   ChildTypePtr getNext() override;
   void reset() override;
-  DIAEnumDebugStreams *clone() const override;
 
 private:
   CComPtr<IDiaEnumDebugStreams> Enumerator;

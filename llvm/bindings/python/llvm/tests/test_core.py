@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from .base import TestBase
 from ..core import MemoryBuffer
 from ..core import PassRegistry
@@ -127,7 +129,7 @@ class TestCore(TestBase):
             self.assertEqual(inst.opcode, inst_list[i][1])
             for op in range(len(inst)):
                 o = inst.get_operand(op)
-                print o.name
+                print(o.name)
                 o.dump()
             inst.dump()
             i += 1

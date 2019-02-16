@@ -35,7 +35,7 @@ void use(id);
 // CHECK-LABEL: define void @_ZN18CaptureByReference5test0Ev(
 // CHECK-LABEL: define internal void @"_ZZN18CaptureByReference5test0EvENK3$_1clEv"(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8** }>* %{{.*}}, i32 0, i32 4
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i64 }* @"__block_descriptor_40_e5_v8@?0ls32l8" to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i64 }* @"__block_descriptor_40_e5_v8\01?0ls32l8" to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 
 void test0() {
   id a = getObj();
@@ -48,30 +48,30 @@ void test0() {
 // CHECK-LABEL: define void @_ZN18CaptureByReference5test1Ev(
 // CHECK-LABEL: define internal void @"_ZZN18CaptureByReference5test1EvENK3$_2clEv"(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 4
-// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i64 }* @"__block_descriptor_56_8_32s40s_e5_v8@?0l" to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i64 }* @"__block_descriptor_56_8_32s40s_e5_v8\01?0l" to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
 
 // CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block_8_32s40s(
-// CHECK-NOT: call void @objc_storeStrong(
+// CHECK-NOT: call void @llvm.objc.storeStrong(
 // CHECK: %[[V4:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 5
 // CHECK: %[[V5:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 5
 // CHECK: %[[BLOCKCOPY_SRC:.*]] = load i8*, i8** %[[V4]], align 8
 // CHECK: store i8* null, i8** %[[V5]], align 8
-// CHECK: call void @objc_storeStrong(i8** %[[V5]], i8* %[[BLOCKCOPY_SRC]])
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V5]], i8* %[[BLOCKCOPY_SRC]])
 // CHECK: %[[V6:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 6
 // CHECK: %[[V7:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 6
 // CHECK: %[[BLOCKCOPY_SRC2:.*]] = load i8*, i8** %[[V6]], align 8
 // CHECK: store i8* null, i8** %[[V7]], align 8
-// CHECK: call void @objc_storeStrong(i8** %[[V7]], i8* %[[BLOCKCOPY_SRC2]])
-// CHECK-NOT: call void @objc_storeStrong(
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V7]], i8* %[[BLOCKCOPY_SRC2]])
+// CHECK-NOT: call void @llvm.objc.storeStrong(
 // CHECK: ret void
 
 // CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_8_32s40s(
 // CHECK: %[[V2:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 5
 // CHECK: %[[V3:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 6
-// CHECK-NOT: call void @objc_storeStrong(
-// CHECK: call void @objc_storeStrong(i8** %[[V3]], i8* null)
-// CHECK: call void @objc_storeStrong(i8** %[[V2]], i8* null)
-// CHECK-NOT: call void @objc_storeStrong(
+// CHECK-NOT: call void @llvm.objc.storeStrong(
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V3]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V2]], i8* null)
+// CHECK-NOT: call void @llvm.objc.storeStrong(
 // CHECK: ret void
 
 void test1() {

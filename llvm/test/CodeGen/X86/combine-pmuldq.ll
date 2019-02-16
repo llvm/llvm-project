@@ -41,39 +41,16 @@ define <2 x i64> @combine_shuffle_zext_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
   ret <2 x i64> %5
 }
 
-; TODO - blends are superfluous
 define <2 x i64> @combine_shuffle_zero_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_zero_pmuludq:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; SSE-NEXT:    pmuludq %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: combine_shuffle_zero_pmuludq:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: combine_shuffle_zero_pmuludq:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    retq
-;
-; AVX512DQVL-LABEL: combine_shuffle_zero_pmuludq:
-; AVX512DQVL:       # %bb.0:
-; AVX512DQVL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
-; AVX512DQVL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; AVX512DQVL-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX512DQVL-NEXT:    retq
+; AVX-LABEL: combine_shuffle_zero_pmuludq:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %1 = shufflevector <4 x i32> %a0, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   %2 = shufflevector <4 x i32> %a1, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   %3 = bitcast <4 x i32> %1 to <2 x i64>
@@ -82,40 +59,25 @@ define <2 x i64> @combine_shuffle_zero_pmuludq(<4 x i32> %a0, <4 x i32> %a1) {
   ret <2 x i64> %5
 }
 
-; TODO - blends are superfluous
 define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; SSE-LABEL: combine_shuffle_zero_pmuludq_256:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm4[2,3],xmm1[4,5],xmm4[6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm4[2,3],xmm0[4,5],xmm4[6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm4[2,3],xmm3[4,5],xmm4[6,7]
-; SSE-NEXT:    pmuludq %xmm3, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm4[2,3],xmm2[4,5],xmm4[6,7]
 ; SSE-NEXT:    pmuludq %xmm2, %xmm0
+; SSE-NEXT:    pmuludq %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_shuffle_zero_pmuludq_256:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: combine_shuffle_zero_pmuludq_256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
-; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; AVX512VL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQVL-LABEL: combine_shuffle_zero_pmuludq_256:
 ; AVX512DQVL:       # %bb.0:
-; AVX512DQVL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512DQVL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7]
-; AVX512DQVL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2],ymm2[3],ymm1[4],ymm2[5],ymm1[6],ymm2[7]
 ; AVX512DQVL-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    retq
   %1 = shufflevector <8 x i32> %a0, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -167,4 +129,49 @@ define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
   %1 = zext <8 x i32> %a to <8 x i64>
   %2 = mul nuw nsw <8 x i64> %1, <i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883>
   ret <8 x i64> %2
+}
+
+define void @PR39398() {
+; SSE-LABEL: PR39398:
+; SSE:       # %bb.0: # %bb
+; SSE-NEXT:    .p2align 4, 0x90
+; SSE-NEXT:  .LBB5_1: # %bb10
+; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE-NEXT:    cmpl $232, %eax
+; SSE-NEXT:    jne .LBB5_1
+; SSE-NEXT:  # %bb.2: # %bb34
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR39398:
+; AVX:       # %bb.0: # %bb
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB5_1: # %bb10
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    cmpl $232, %eax
+; AVX-NEXT:    jne .LBB5_1
+; AVX-NEXT:  # %bb.2: # %bb34
+; AVX-NEXT:    retq
+bb:
+  %tmp9 = shufflevector <4 x i64> undef, <4 x i64> undef, <4 x i32> zeroinitializer
+  br label %bb10
+
+bb10:                                             ; preds = %bb10, %bb
+  %tmp12 = phi <4 x i32> [ <i32 9, i32 8, i32 7, i32 6>, %bb ], [ zeroinitializer, %bb10 ]
+  %tmp16 = add <4 x i32> %tmp12, <i32 -4, i32 -4, i32 -4, i32 -4>
+  %tmp18 = zext <4 x i32> %tmp12 to <4 x i64>
+  %tmp19 = zext <4 x i32> %tmp16 to <4 x i64>
+  %tmp20 = xor <4 x i64> %tmp18, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %tmp21 = xor <4 x i64> %tmp19, <i64 -1, i64 -1, i64 -1, i64 -1>
+  %tmp24 = mul <4 x i64> %tmp9, %tmp20
+  %tmp25 = mul <4 x i64> %tmp9, %tmp21
+  %tmp26 = select <4 x i1> undef, <4 x i64> zeroinitializer, <4 x i64> %tmp24
+  %tmp27 = select <4 x i1> undef, <4 x i64> zeroinitializer, <4 x i64> %tmp25
+  %tmp28 = add <4 x i64> zeroinitializer, %tmp26
+  %tmp29 = add <4 x i64> zeroinitializer, %tmp27
+  %tmp33 = icmp eq i32 undef, 232
+  br i1 %tmp33, label %bb34, label %bb10
+
+bb34:                                             ; preds = %bb10
+  %tmp35 = add <4 x i64> %tmp29, %tmp28
+  ret void
 }

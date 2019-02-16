@@ -15,7 +15,7 @@
 #include "kmp_affinity.h"
 
 #if KMP_OS_WINDOWS
-#if defined KMP_WIN_CDECL || !defined KMP_DYNAMIC_LIB
+#if defined KMP_WIN_CDECL || !KMP_DYNAMIC_LIB
 #define KMP_FTN_ENTRIES KMP_FTN_UPPER
 #endif
 #elif KMP_OS_UNIX

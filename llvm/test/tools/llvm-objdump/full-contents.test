@@ -1,0 +1,48 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump --full-contents %t > %t.out1
+# RUN: llvm-objdump -s %t > %t.out2
+# RUN: cmp %t.out1 %t.out2
+# RUN: FileCheck %s --input-file=%t.out1
+
+# CHECK:      .bss
+# CHECK-NEXT: <skipping contents of bss section at [0000, 0040)>
+# CHECK:      .text
+# CHECK-NEXT:  0000 01234567                             .#Eg
+# CHECK:      .user-defined
+# CHECK-NEXT:  0000 76543210                             vT2.
+# CHECK:      .empty-section
+# CHECK-NEXT: <skipping contents of bss section at [0000, 0020)>
+# CHECK:      .symtab
+# CHECK:      .strtab
+# CHECK:      .shstrtab
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000010
+    Size:            64
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         "01234567"
+    Size:            4
+  - Name:            .user-defined
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000010
+    Content:         "76543210"
+    Size:            4
+  - Name:            .empty-section
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000010
+    Size:            32
+

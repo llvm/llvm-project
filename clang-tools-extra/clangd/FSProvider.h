@@ -10,8 +10,8 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FSPROVIDER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FSPROVIDER_H
 
-#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace clangd {
@@ -25,15 +25,15 @@ public:
   /// Context::current() will be the context passed to the clang entrypoint,
   /// such as addDocument(), and will also be propagated to result callbacks.
   /// Embedders may use this to isolate filesystem accesses.
-  virtual IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() = 0;
+  virtual llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getFileSystem() const = 0;
 };
 
 class RealFileSystemProvider : public FileSystemProvider {
 public:
   // FIXME: returns the single real FS instance, which is not threadsafe.
-  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override {
-    return vfs::getRealFileSystem();
-  }
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getFileSystem() const override;
 };
 
 } // namespace clangd

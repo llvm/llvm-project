@@ -5,41 +5,45 @@
 
 ; OPT-LABEL: @break_loop(
 ; OPT: bb1:
-; OPT: call i64 @llvm.amdgcn.break(i64
+; OPT: icmp slt i32
 ; OPT-NEXT: br i1 %cmp0, label %bb4, label %Flow
 
 ; OPT: bb4:
 ; OPT: load volatile
+; OPT: icmp slt i32
 ; OPT: xor i1 %cmp1
-; OPT: call i64 @llvm.amdgcn.if.break(
 ; OPT: br label %Flow
 
 ; OPT: Flow:
+; OPT: call i64 @llvm.amdgcn.if.break(
 ; OPT: call i1 @llvm.amdgcn.loop(i64
 ; OPT: br i1 %{{[0-9]+}}, label %bb9, label %bb1
 
 ; OPT: bb9:
 ; OPT: call void @llvm.amdgcn.end.cf(i64
 
-; TODO: Can remove exec fixes in return block
 ; GCN-LABEL: {{^}}break_loop:
-; GCN: s_mov_b64 [[INITMASK:s\[[0-9]+:[0-9]+\]]], 0{{$}}
+; GCN:      s_mov_b64         [[OUTER_MASK:s\[[0-9]+:[0-9]+\]]], 0{{$}}
 
 ; GCN: [[LOOP_ENTRY:BB[0-9]+_[0-9]+]]: ; %bb1
-; GCN: s_or_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[INITMASK]]
-; GCN: v_cmp_lt_i32_e32 vcc, -1
-; GCN: s_and_b64 vcc, exec, vcc
-; GCN-NEXT: s_cbranch_vccnz [[FLOW:BB[0-9]+_[0-9]+]]
+; GCN:      v_cmp_lt_i32_e32  vcc, -1
+; GCN:      s_and_b64         vcc, exec, vcc
+; GCN:      s_or_b64          [[INNER_MASK:s\[[0-9]+:[0-9]+\]]], [[INNER_MASK]], exec
+; GCN:      s_cbranch_vccnz   [[FLOW:BB[0-9]+_[0-9]+]]
 
-; GCN: ; %bb.2: ; %bb4
-; GCN: buffer_load_dword
-; GCN: v_cmp_ge_i32_e32 vcc,
-; GCN: s_or_b64 [[MASK]], vcc, [[INITMASK]]
+; GCN: ; %bb4
+; GCN:      buffer_load_dword
+; GCN:      v_cmp_ge_i32_e32  vcc,
+; GCN:      s_andn2_b64       [[INNER_MASK]], [[INNER_MASK]], exec
+; GCN:      s_and_b64         [[TMP0:s\[[0-9]+:[0-9]+\]]], vcc, exec
+; GCN:      s_or_b64          [[INNER_MASK]], [[INNER_MASK]], [[TMP0]]
 
-; GCN: [[FLOW]]:
-; GCN: s_mov_b64 [[INITMASK]], [[MASK]]
-; GCN: s_andn2_b64 exec, exec, [[MASK]]
-; GCN-NEXT: s_cbranch_execnz [[LOOP_ENTRY]]
+; GCN: [[FLOW]]: ; %Flow
+; GCN:      s_and_b64         [[TMP1:s\[[0-9]+:[0-9]+\]]], exec, [[INNER_MASK]]
+; GCN:      s_or_b64          [[TMP1]], [[TMP1]], [[OUTER_MASK]]
+; GCN:      s_mov_b64         [[OUTER_MASK]], [[TMP1]]
+; GCN:      s_andn2_b64       exec, exec, [[TMP1]]
+; GCN-NEXT: s_cbranch_execnz  [[LOOP_ENTRY]]
 
 ; GCN: ; %bb.4: ; %bb9
 ; GCN-NEXT: s_endpgm
@@ -66,25 +70,26 @@ bb9:
 
 ; OPT-LABEL: @undef_phi_cond_break_loop(
 ; OPT: bb1:
-; OPT-NEXT: %phi.broken = phi i64 [ %loop.phi, %Flow ], [ 0, %bb ]
+; OPT-NEXT: %phi.broken = phi i64 [ %0, %Flow ], [ 0, %bb ]
 ; OPT-NEXT: %lsr.iv = phi i32 [ undef, %bb ], [ %tmp2, %Flow ]
-; OPT: %0 = call i64 @llvm.amdgcn.if.break(i1 undef, i64 %phi.broken)
+; OPT-NEXT: %lsr.iv.next = add i32 %lsr.iv, 1
+; OPT-NEXT: %cmp0 = icmp slt i32 %lsr.iv.next, 0
 ; OPT-NEXT: br i1 %cmp0, label %bb4, label %Flow
 
 ; OPT: bb4:
 ; OPT-NEXT: %load = load volatile i32, i32 addrspace(1)* undef, align 4
 ; OPT-NEXT: %cmp1 = icmp sge i32 %tmp, %load
-; OPT-NEXT: %1 = call i64 @llvm.amdgcn.if.break(i1 %cmp1, i64 %phi.broken)
 ; OPT-NEXT: br label %Flow
 
 ; OPT: Flow:
-; OPT-NEXT: %loop.phi = phi i64 [ %1, %bb4 ], [ %0, %bb1 ]
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
-; OPT-NEXT: %2 = call i1 @llvm.amdgcn.loop(i64 %loop.phi)
-; OPT-NEXT: br i1 %2, label %bb9, label %bb1
+; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ undef, %bb1 ]
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop(i64 %0)
+; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
 ; OPT: bb9:                                              ; preds = %Flow
-; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
+; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %0)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
 define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
@@ -119,25 +124,26 @@ bb9:                                              ; preds = %Flow
 
 ; OPT-LABEL: @constexpr_phi_cond_break_loop(
 ; OPT: bb1:
-; OPT-NEXT: %phi.broken = phi i64 [ %loop.phi, %Flow ], [ 0, %bb ]
+; OPT-NEXT: %phi.broken = phi i64 [ %0, %Flow ], [ 0, %bb ]
 ; OPT-NEXT: %lsr.iv = phi i32 [ undef, %bb ], [ %tmp2, %Flow ]
-; OPT: %0 = call i64 @llvm.amdgcn.if.break(i1 icmp ne (i32 addrspace(3)* inttoptr (i32 4 to i32 addrspace(3)*), i32 addrspace(3)* @lds), i64 %phi.broken)
+; OPT-NEXT: %lsr.iv.next = add i32 %lsr.iv, 1
+; OPT-NEXT: %cmp0 = icmp slt i32 %lsr.iv.next, 0
 ; OPT-NEXT: br i1 %cmp0, label %bb4, label %Flow
 
 ; OPT: bb4:
 ; OPT-NEXT: %load = load volatile i32, i32 addrspace(1)* undef, align 4
 ; OPT-NEXT: %cmp1 = icmp sge i32 %tmp, %load
-; OPT-NEXT: %1 = call i64 @llvm.amdgcn.if.break(i1 %cmp1, i64 %phi.broken)
 ; OPT-NEXT: br label %Flow
 
 ; OPT: Flow:
-; OPT-NEXT: %loop.phi = phi i64 [ %1, %bb4 ], [ %0, %bb1 ]
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
-; OPT-NEXT: %2 = call i1 @llvm.amdgcn.loop(i64 %loop.phi)
-; OPT-NEXT: br i1 %2, label %bb9, label %bb1
+; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ icmp ne (i32 addrspace(3)* inttoptr (i32 4 to i32 addrspace(3)*), i32 addrspace(3)* @lds), %bb1 ]
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop(i64 %0)
+; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
 ; OPT: bb9:                                              ; preds = %Flow
-; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
+; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %0)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
 define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
@@ -169,25 +175,26 @@ bb9:                                              ; preds = %Flow
 
 ; OPT-LABEL: @true_phi_cond_break_loop(
 ; OPT: bb1:
-; OPT-NEXT: %phi.broken = phi i64 [ %loop.phi, %Flow ], [ 0, %bb ]
+; OPT-NEXT: %phi.broken = phi i64 [ %0, %Flow ], [ 0, %bb ]
 ; OPT-NEXT: %lsr.iv = phi i32 [ undef, %bb ], [ %tmp2, %Flow ]
-; OPT: %0 = call i64 @llvm.amdgcn.break(i64 %phi.broken)
-; OPT: br i1 %cmp0, label %bb4, label %Flow
+; OPT-NEXT: %lsr.iv.next = add i32 %lsr.iv, 1
+; OPT-NEXT: %cmp0 = icmp slt i32 %lsr.iv.next, 0
+; OPT-NEXT: br i1 %cmp0, label %bb4, label %Flow
 
 ; OPT: bb4:
 ; OPT-NEXT: %load = load volatile i32, i32 addrspace(1)* undef, align 4
 ; OPT-NEXT: %cmp1 = icmp sge i32 %tmp, %load
-; OPT-NEXT: %1 = call i64 @llvm.amdgcn.if.break(i1 %cmp1, i64 %phi.broken)
 ; OPT-NEXT: br label %Flow
 
 ; OPT: Flow:
-; OPT-NEXT: %loop.phi = phi i64 [ %1, %bb4 ], [ %0, %bb1 ]
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
-; OPT-NEXT: %2 = call i1 @llvm.amdgcn.loop(i64 %loop.phi)
-; OPT-NEXT: br i1 %2, label %bb9, label %bb1
+; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ true, %bb1 ]
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop(i64 %0)
+; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
 ; OPT: bb9:                                              ; preds = %Flow
-; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
+; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %0)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
 define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
@@ -219,7 +226,7 @@ bb9:                                              ; preds = %Flow
 
 ; OPT-LABEL: @false_phi_cond_break_loop(
 ; OPT: bb1:
-; OPT-NEXT: %phi.broken = phi i64 [ %loop.phi, %Flow ], [ 0, %bb ]
+; OPT-NEXT: %phi.broken = phi i64 [ %0, %Flow ], [ 0, %bb ]
 ; OPT-NEXT: %lsr.iv = phi i32 [ undef, %bb ], [ %tmp2, %Flow ]
 ; OPT-NOT: call
 ; OPT: br i1 %cmp0, label %bb4, label %Flow
@@ -227,17 +234,17 @@ bb9:                                              ; preds = %Flow
 ; OPT: bb4:
 ; OPT-NEXT: %load = load volatile i32, i32 addrspace(1)* undef, align 4
 ; OPT-NEXT: %cmp1 = icmp sge i32 %tmp, %load
-; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break(i1 %cmp1, i64 %phi.broken)
 ; OPT-NEXT: br label %Flow
 
 ; OPT: Flow:
-; OPT-NEXT: %loop.phi = phi i64 [ %0, %bb4 ], [ %phi.broken, %bb1 ]
 ; OPT-NEXT: %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
-; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop(i64 %loop.phi)
+; OPT-NEXT: %tmp3 = phi i1 [ %cmp1, %bb4 ], [ false, %bb1 ]
+; OPT-NEXT: %0 = call i64 @llvm.amdgcn.if.break(i1 %tmp3, i64 %phi.broken)
+; OPT-NEXT: %1 = call i1 @llvm.amdgcn.loop(i64 %0)
 ; OPT-NEXT: br i1 %1, label %bb9, label %bb1
 
 ; OPT: bb9:                                              ; preds = %Flow
-; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %loop.phi)
+; OPT-NEXT: call void @llvm.amdgcn.end.cf(i64 %0)
 ; OPT-NEXT: store volatile i32 7
 ; OPT-NEXT: ret void
 define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {

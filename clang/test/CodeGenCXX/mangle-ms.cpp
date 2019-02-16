@@ -15,7 +15,7 @@ namespace N {
 
   namespace {
     int anonymous;
-// CHECK-DAG: @"?anonymous@?A@N@@3HA"
+// CHECK-DAG: @"?anonymous@?A0x{{[^@]*}}@N@@3HA"
   }
 }
 

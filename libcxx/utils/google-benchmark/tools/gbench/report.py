@@ -1,3 +1,4 @@
+import unittest
 """report.py - Utilities for reporting statistics about benchmark results
 """
 import os
@@ -36,6 +37,7 @@ BC_UNDERLINE = BenchmarkColor('UNDERLINE', '\033[4m')
 
 UTEST_MIN_REPETITIONS = 2
 UTEST_OPTIMAL_REPETITIONS = 9  # Lowest reasonable number, More is better.
+UTEST_COL_NAME = "_pvalue"
 
 
 def color_format(use_color, fmt_str, *args, **kwargs):
@@ -93,9 +95,103 @@ def filter_benchmark(json_orig, family, replacement=""):
     return filtered
 
 
+def get_unique_benchmark_names(json):
+    """
+    While *keeping* the order, give all the unique 'names' used for benchmarks.
+    """
+    seen = set()
+    uniqued = [x['name'] for x in json['benchmarks']
+               if x['name'] not in seen and
+               (seen.add(x['name']) or True)]
+    return uniqued
+
+
+def intersect(list1, list2):
+    """
+    Given two lists, get a new list consisting of the elements only contained
+    in *both of the input lists*, while preserving the ordering.
+    """
+    return [x for x in list1 if x in list2]
+
+
+def partition_benchmarks(json1, json2):
+    """
+    While preserving the ordering, find benchmarks with the same names in
+    both of the inputs, and group them.
+    (i.e. partition/filter into groups with common name)
+    """
+    json1_unique_names = get_unique_benchmark_names(json1)
+    json2_unique_names = get_unique_benchmark_names(json2)
+    names = intersect(json1_unique_names, json2_unique_names)
+    partitions = []
+    for name in names:
+        # Pick the time unit from the first entry of the lhs benchmark.
+        time_unit = (x['time_unit']
+                     for x in json1['benchmarks'] if x['name'] == name).next()
+        # Filter by name and time unit.
+        lhs = [x for x in json1['benchmarks'] if x['name'] == name and
+               x['time_unit'] == time_unit]
+        rhs = [x for x in json2['benchmarks'] if x['name'] == name and
+               x['time_unit'] == time_unit]
+        partitions.append([lhs, rhs])
+    return partitions
+
+
+def extract_field(partition, field_name):
+    # The count of elements may be different. We want *all* of them.
+    lhs = [x[field_name] for x in partition[0]]
+    rhs = [x[field_name] for x in partition[1]]
+    return [lhs, rhs]
+
+
+def print_utest(partition, utest_alpha, first_col_width, use_color=True):
+    timings_time = extract_field(partition, 'real_time')
+    timings_cpu = extract_field(partition, 'cpu_time')
+
+    min_rep_cnt = min(len(timings_time[0]),
+                      len(timings_time[1]),
+                      len(timings_cpu[0]),
+                      len(timings_cpu[1]))
+
+    # Does *everything* has at least UTEST_MIN_REPETITIONS repetitions?
+    if min_rep_cnt < UTEST_MIN_REPETITIONS:
+        return []
+
+    def get_utest_color(pval):
+        return BC_FAIL if pval >= utest_alpha else BC_OKGREEN
+
+    time_pvalue = mannwhitneyu(
+        timings_time[0], timings_time[1], alternative='two-sided').pvalue
+    cpu_pvalue = mannwhitneyu(
+        timings_cpu[0], timings_cpu[1], alternative='two-sided').pvalue
+
+    dsc = "U Test, Repetitions: {} vs {}".format(
+        len(timings_cpu[0]), len(timings_cpu[1]))
+    dsc_color = BC_OKGREEN
+
+    if min_rep_cnt < UTEST_OPTIMAL_REPETITIONS:
+        dsc_color = BC_WARNING
+        dsc += ". WARNING: Results unreliable! {}+ repetitions recommended.".format(
+            UTEST_OPTIMAL_REPETITIONS)
+
+    special_str = "{}{:<{}s}{endc}{}{:16.4f}{endc}{}{:16.4f}{endc}{}      {}"
+
+    last_name = partition[0][0]['name']
+    return [color_format(use_color,
+                         special_str,
+                         BC_HEADER,
+                         "{}{}".format(last_name, UTEST_COL_NAME),
+                         first_col_width,
+                         get_utest_color(time_pvalue), time_pvalue,
+                         get_utest_color(cpu_pvalue), cpu_pvalue,
+                         dsc_color, dsc,
+                         endc=BC_ENDC)]
+
+
 def generate_difference_report(
         json1,
         json2,
+        display_aggregates_only=False,
         utest=False,
         utest_alpha=0.05,
         use_color=True):
@@ -112,108 +208,95 @@ def generate_difference_report(
                 return b
         return None
 
-    utest_col_name = "_pvalue"
     first_col_width = max(
         first_col_width,
         len('Benchmark'))
-    first_col_width += len(utest_col_name)
+    first_col_width += len(UTEST_COL_NAME)
     first_line = "{:<{}s}Time             CPU      Time Old      Time New       CPU Old       CPU New".format(
         'Benchmark', 12 + first_col_width)
     output_strs = [first_line, '-' * len(first_line)]
 
-    last_name = None
-    timings_time = [[], []]
-    timings_cpu = [[], []]
+    partitions = partition_benchmarks(json1, json2)
+    for partition in partitions:
+        # Careful, we may have different repetition count.
+        for i in range(min(len(partition[0]), len(partition[1]))):
+            bn = partition[0][i]
+            other_bench = partition[1][i]
 
-    gen = (bn for bn in json1['benchmarks']
-           if 'real_time' in bn and 'cpu_time' in bn)
-    for bn in gen:
-        fmt_str = "{}{:<{}s}{endc}{}{:+16.4f}{endc}{}{:+16.4f}{endc}{:14.0f}{:14.0f}{endc}{:14.0f}{:14.0f}"
-        special_str = "{}{:<{}s}{endc}{}{:16.4f}{endc}{}{:16.4f}{endc}{}      {}"
+            # *If* we were asked to only display aggregates,
+            # and if it is non-aggregate, then skip it.
+            if display_aggregates_only and 'run_type' in bn and 'run_type' in other_bench:
+                assert bn['run_type'] == other_bench['run_type']
+                if bn['run_type'] != 'aggregate':
+                    continue
 
-        if last_name is None:
-            last_name = bn['name']
-        if last_name != bn['name']:
-            if ((len(timings_time[0]) >= UTEST_MIN_REPETITIONS) and
-                (len(timings_time[1]) >= UTEST_MIN_REPETITIONS) and
-                (len(timings_cpu[0]) >= UTEST_MIN_REPETITIONS) and
-                    (len(timings_cpu[1]) >= UTEST_MIN_REPETITIONS)):
-                if utest:
-                    def get_utest_color(pval):
-                        if pval >= utest_alpha:
-                            return BC_FAIL
-                        else:
-                            return BC_OKGREEN
-                    time_pvalue = mannwhitneyu(
-                        timings_time[0], timings_time[1], alternative='two-sided').pvalue
-                    cpu_pvalue = mannwhitneyu(
-                        timings_cpu[0], timings_cpu[1], alternative='two-sided').pvalue
-                    dsc = "U Test, Repetitions: {}".format(len(timings_cpu[0]))
-                    dsc_color = BC_OKGREEN
-                    if len(timings_cpu[0]) < UTEST_OPTIMAL_REPETITIONS:
-                        dsc_color = BC_WARNING
-                        dsc += ". WARNING: Results unreliable! {}+ repetitions recommended.".format(
-                            UTEST_OPTIMAL_REPETITIONS)
-                    output_strs += [color_format(use_color,
-                                                 special_str,
-                                                 BC_HEADER,
-                                                 "{}{}".format(last_name,
-                                                               utest_col_name),
-                                                 first_col_width,
-                                                 get_utest_color(time_pvalue),
-                                                 time_pvalue,
-                                                 get_utest_color(cpu_pvalue),
-                                                 cpu_pvalue,
-                                                 dsc_color,
-                                                 dsc,
-                                                 endc=BC_ENDC)]
-            last_name = bn['name']
-            timings_time = [[], []]
-            timings_cpu = [[], []]
+            fmt_str = "{}{:<{}s}{endc}{}{:+16.4f}{endc}{}{:+16.4f}{endc}{:14.0f}{:14.0f}{endc}{:14.0f}{:14.0f}"
 
-        other_bench = find_test(bn['name'])
-        if not other_bench:
-            continue
+            def get_color(res):
+                if res > 0.05:
+                    return BC_FAIL
+                elif res > -0.07:
+                    return BC_WHITE
+                else:
+                    return BC_CYAN
 
-        if bn['time_unit'] != other_bench['time_unit']:
-            continue
+            tres = calculate_change(bn['real_time'], other_bench['real_time'])
+            cpures = calculate_change(bn['cpu_time'], other_bench['cpu_time'])
+            output_strs += [color_format(use_color,
+                                         fmt_str,
+                                         BC_HEADER,
+                                         bn['name'],
+                                         first_col_width,
+                                         get_color(tres),
+                                         tres,
+                                         get_color(cpures),
+                                         cpures,
+                                         bn['real_time'],
+                                         other_bench['real_time'],
+                                         bn['cpu_time'],
+                                         other_bench['cpu_time'],
+                                         endc=BC_ENDC)]
 
-        def get_color(res):
-            if res > 0.05:
-                return BC_FAIL
-            elif res > -0.07:
-                return BC_WHITE
-            else:
-                return BC_CYAN
+        # After processing the whole partition, if requested, do the U test.
+        if utest:
+            output_strs += print_utest(partition,
+                                       utest_alpha=utest_alpha,
+                                       first_col_width=first_col_width,
+                                       use_color=use_color)
 
-        timings_time[0].append(bn['real_time'])
-        timings_time[1].append(other_bench['real_time'])
-        timings_cpu[0].append(bn['cpu_time'])
-        timings_cpu[1].append(other_bench['cpu_time'])
-
-        tres = calculate_change(timings_time[0][-1], timings_time[1][-1])
-        cpures = calculate_change(timings_cpu[0][-1], timings_cpu[1][-1])
-        output_strs += [color_format(use_color,
-                                     fmt_str,
-                                     BC_HEADER,
-                                     bn['name'],
-                                     first_col_width,
-                                     get_color(tres),
-                                     tres,
-                                     get_color(cpures),
-                                     cpures,
-                                     timings_time[0][-1],
-                                     timings_time[1][-1],
-                                     timings_cpu[0][-1],
-                                     timings_cpu[1][-1],
-                                     endc=BC_ENDC)]
     return output_strs
+
 
 ###############################################################################
 # Unit tests
 
 
-import unittest
+class TestGetUniqueBenchmarkNames(unittest.TestCase):
+    def load_results(self):
+        import json
+        testInputs = os.path.join(
+            os.path.dirname(
+                os.path.realpath(__file__)),
+            'Inputs')
+        testOutput = os.path.join(testInputs, 'test3_run0.json')
+        with open(testOutput, 'r') as f:
+            json = json.load(f)
+        return json
+
+    def test_basic(self):
+        expect_lines = [
+            'BM_One',
+            'BM_Two',
+            'short',  # These two are not sorted
+            'medium',  # These two are not sorted
+        ]
+        json = self.load_results()
+        output_lines = get_unique_benchmark_names(json)
+        print("\n")
+        print("\n".join(output_lines))
+        self.assertEqual(len(output_lines), len(expect_lines))
+        for i in range(0, len(output_lines)):
+            self.assertEqual(expect_lines[i], output_lines[i])
 
 
 class TestReportDifference(unittest.TestCase):
@@ -259,7 +342,7 @@ class TestReportDifference(unittest.TestCase):
         for i in range(0, len(output_lines)):
             parts = [x for x in output_lines[i].split(' ') if x]
             self.assertEqual(len(parts), 7)
-            self.assertEqual(parts, expect_lines[i])
+            self.assertEqual(expect_lines[i], parts)
 
 
 class TestReportDifferenceBetweenFamilies(unittest.TestCase):
@@ -293,7 +376,7 @@ class TestReportDifferenceBetweenFamilies(unittest.TestCase):
         for i in range(0, len(output_lines)):
             parts = [x for x in output_lines[i].split(' ') if x]
             self.assertEqual(len(parts), 7)
-            self.assertEqual(parts, expect_lines[i])
+            self.assertEqual(expect_lines[i], parts)
 
 
 class TestReportDifferenceWithUTest(unittest.TestCase):
@@ -316,13 +399,15 @@ class TestReportDifferenceWithUTest(unittest.TestCase):
         expect_lines = [
             ['BM_One', '-0.1000', '+0.1000', '10', '9', '100', '110'],
             ['BM_Two', '+0.1111', '-0.0111', '9', '10', '90', '89'],
-            ['BM_Two', '+0.2500', '+0.1125', '8', '10', '80', '89'],
+            ['BM_Two', '-0.1250', '-0.1628', '8', '7', '86', '72'],
             ['BM_Two_pvalue',
-             '0.2207',
-             '0.6831',
+             '0.6985',
+             '0.6985',
              'U',
              'Test,',
              'Repetitions:',
+             '2',
+             'vs',
              '2.',
              'WARNING:',
              'Results',
@@ -330,18 +415,103 @@ class TestReportDifferenceWithUTest(unittest.TestCase):
              '9+',
              'repetitions',
              'recommended.'],
-            ['short', '+0.0000', '+0.0000', '8', '8', '80', '80'],
+            ['short', '-0.1250', '-0.0625', '8', '7', '80', '75'],
+            ['short', '-0.4325', '-0.1351', '8', '5', '77', '67'],
+            ['short_pvalue',
+             '0.7671',
+             '0.1489',
+             'U',
+             'Test,',
+             'Repetitions:',
+             '2',
+             'vs',
+             '3.',
+             'WARNING:',
+             'Results',
+             'unreliable!',
+             '9+',
+             'repetitions',
+             'recommended.'],
+            ['medium', '-0.3750', '-0.3375', '8', '5', '80', '53'],
         ]
         json1, json2 = self.load_results()
         output_lines_with_header = generate_difference_report(
-            json1, json2, True, 0.05, use_color=False)
+            json1, json2, utest=True, utest_alpha=0.05, use_color=False)
         output_lines = output_lines_with_header[2:]
         print("\n")
         print("\n".join(output_lines_with_header))
         self.assertEqual(len(output_lines), len(expect_lines))
         for i in range(0, len(output_lines)):
             parts = [x for x in output_lines[i].split(' ') if x]
-            self.assertEqual(parts, expect_lines[i])
+            self.assertEqual(expect_lines[i], parts)
+
+
+class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly(
+        unittest.TestCase):
+    def load_results(self):
+        import json
+        testInputs = os.path.join(
+            os.path.dirname(
+                os.path.realpath(__file__)),
+            'Inputs')
+        testOutput1 = os.path.join(testInputs, 'test3_run0.json')
+        testOutput2 = os.path.join(testInputs, 'test3_run1.json')
+        with open(testOutput1, 'r') as f:
+            json1 = json.load(f)
+        with open(testOutput2, 'r') as f:
+            json2 = json.load(f)
+        return json1, json2
+
+    def test_utest(self):
+        expect_lines = []
+        expect_lines = [
+            ['BM_One', '-0.1000', '+0.1000', '10', '9', '100', '110'],
+            ['BM_Two', '+0.1111', '-0.0111', '9', '10', '90', '89'],
+            ['BM_Two', '-0.1250', '-0.1628', '8', '7', '86', '72'],
+            ['BM_Two_pvalue',
+             '0.6985',
+             '0.6985',
+             'U',
+             'Test,',
+             'Repetitions:',
+             '2',
+             'vs',
+             '2.',
+             'WARNING:',
+             'Results',
+             'unreliable!',
+             '9+',
+             'repetitions',
+             'recommended.'],
+            ['short', '-0.1250', '-0.0625', '8', '7', '80', '75'],
+            ['short', '-0.4325', '-0.1351', '8', '5', '77', '67'],
+            ['short_pvalue',
+             '0.7671',
+             '0.1489',
+             'U',
+             'Test,',
+             'Repetitions:',
+             '2',
+             'vs',
+             '3.',
+             'WARNING:',
+             'Results',
+             'unreliable!',
+             '9+',
+             'repetitions',
+             'recommended.'],
+        ]
+        json1, json2 = self.load_results()
+        output_lines_with_header = generate_difference_report(
+            json1, json2, display_aggregates_only=True,
+            utest=True, utest_alpha=0.05, use_color=False)
+        output_lines = output_lines_with_header[2:]
+        print("\n")
+        print("\n".join(output_lines_with_header))
+        self.assertEqual(len(output_lines), len(expect_lines))
+        for i in range(0, len(output_lines)):
+            parts = [x for x in output_lines[i].split(' ') if x]
+            self.assertEqual(expect_lines[i], parts)
 
 
 if __name__ == '__main__':

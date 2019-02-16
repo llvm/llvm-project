@@ -121,7 +121,7 @@ entry:
 ; FUNC-LABEL: {{^}}v_add_i32:
 ; GCN: {{buffer|flat|global}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat|global}}_load_dword [[B:v[0-9]+]]
-; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc, [[B]], [[A]]
+; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc, [[A]], [[B]]
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @v_add_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x()

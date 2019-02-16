@@ -29,3 +29,13 @@ MCSection *AMDGPUTargetObjectFile::SelectSectionForGlobal(
 
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }
+
+MCSection *AMDGPUTargetObjectFile::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind SK, const TargetMachine &TM) const {
+  // Set metadata access for the explicit section
+  StringRef SectionName = GO->getSection();
+  if (SectionName.startswith(".AMDGPU.comment."))
+    SK = SectionKind::getMetadata();
+
+  return TargetLoweringObjectFileELF::getExplicitSectionGlobal(GO, SK, TM);
+}

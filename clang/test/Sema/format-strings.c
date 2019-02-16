@@ -401,7 +401,11 @@ void bug7377_bad_length_mod_usage() {
 void pr7981(wint_t c, wchar_t c2) {
   printf("%lc", c); // no-warning
   printf("%lc", 1.0); // expected-warning{{the argument has type 'double'}}
+#if __WINT_WIDTH__ == 32
   printf("%lc", (char) 1); // no-warning
+#else
+  printf("%lc", (char) 1); // expected-warning{{the argument has type 'char'}}
+#endif
   printf("%lc", &c); // expected-warning{{the argument has type 'wint_t *'}}
   // If wint_t and wchar_t are the same width and wint_t is signed where
   // wchar_t is unsigned, an implicit conversion isn't possible.
@@ -609,6 +613,11 @@ void pr12761(char c) {
   printf("%hhx", c);
 }
 
+void test_opencl_vector_format(int x) {
+  printf("%v4d", x); // expected-warning{{invalid conversion specifier 'v'}}
+  printf("%vd", x); // expected-warning{{invalid conversion specifier 'v'}}
+  printf("%0vd", x); // expected-warning{{invalid conversion specifier 'v'}}
+}
 
 // Test that we correctly merge the format in both orders.
 extern void test14_foo(const char *, const char *, ...)

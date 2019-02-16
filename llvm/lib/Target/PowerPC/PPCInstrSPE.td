@@ -831,22 +831,20 @@ def : Pat<(f64 (fpextend f32:$src)),
 }
 
 let Predicates = [HasSPE] in {
-  let usesCustomInserter = 1 in {
-def SELECT_CC_SPE4 : Pseudo<(outs spe4rc:$dst),
+def SELECT_CC_SPE4 : PPCCustomInserterPseudo<(outs spe4rc:$dst),
                             (ins crrc:$cond, spe4rc:$T, spe4rc:$F,
                             i32imm:$BROPC), "#SELECT_CC_SPE4",
                             []>;
-def SELECT_CC_SPE  : Pseudo<(outs sperc:$dst),
+def SELECT_CC_SPE  : PPCCustomInserterPseudo<(outs sperc:$dst),
                             (ins crrc:$cond, sperc:$T, sperc:$F, i32imm:$BROPC),
                             "#SELECT_CC_SPE",
                             []>;
-def SELECT_SPE4  : Pseudo<(outs spe4rc:$dst), (ins crbitrc:$cond,
+def SELECT_SPE4  : PPCCustomInserterPseudo<(outs spe4rc:$dst), (ins crbitrc:$cond,
                           spe4rc:$T, spe4rc:$F), "#SELECT_SPE4",
                           [(set f32:$dst, (select i1:$cond, f32:$T, f32:$F))]>;
-def SELECT_SPE   : Pseudo<(outs sperc:$dst), (ins crbitrc:$cond,
+def SELECT_SPE   : PPCCustomInserterPseudo<(outs sperc:$dst), (ins crbitrc:$cond,
                           sperc:$T, sperc:$F), "#SELECT_SPE",
                           [(set f64:$dst, (select i1:$cond, f64:$T, f64:$F))]>;
-  }
 
 def : Pat<(f32 (selectcc i1:$lhs, i1:$rhs, f32:$tval, f32:$fval, SETLT)),
           (SELECT_SPE4 (CRANDC $lhs, $rhs), $tval, $fval)>;

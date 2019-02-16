@@ -27,7 +27,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
-#include "clang/Analysis/Analyses/PseudoConstantAnalysis.h"
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -137,7 +136,7 @@ bool AnalysisDeclContext::isBodyAutosynthesized() const {
 bool AnalysisDeclContext::isBodyAutosynthesizedFromModelFile() const {
   bool Tmp;
   Stmt *Body = getBody(Tmp);
-  return Tmp && Body->getLocStart().isValid();
+  return Tmp && Body->getBeginLoc().isValid();
 }
 
 /// Returns true if \param VD is an Objective-C implicit 'self' parameter.
@@ -290,12 +289,6 @@ ParentMap &AnalysisDeclContext::getParentMap() {
       addParentsForSyntheticStmts(getUnoptimizedCFG(), *PM);
   }
   return *PM;
-}
-
-PseudoConstantAnalysis *AnalysisDeclContext::getPseudoConstantAnalysis() {
-  if (!PCA)
-    PCA.reset(new PseudoConstantAnalysis(getBody()));
-  return PCA.get();
 }
 
 AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
@@ -500,7 +493,7 @@ void LocationContext::dumpStack(
         OS << "Calling anonymous code";
       if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
         OS << " at ";
-        printLocation(OS, SM, S->getLocStart());
+        printLocation(OS, SM, S->getBeginLoc());
       }
       break;
     case Scope:
@@ -510,7 +503,7 @@ void LocationContext::dumpStack(
       OS << "Invoking block";
       if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
         OS << " defined at ";
-        printLocation(OS, SM, D->getLocStart());
+        printLocation(OS, SM, D->getBeginLoc());
       }
       break;
     }

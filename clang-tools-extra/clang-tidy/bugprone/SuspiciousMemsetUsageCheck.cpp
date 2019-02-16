@@ -61,7 +61,7 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
 
     SourceRange CharRange = CharZeroFill->getSourceRange();
     auto Diag =
-        diag(CharZeroFill->getLocStart(), "memset fill value is char '0', "
+        diag(CharZeroFill->getBeginLoc(), "memset fill value is char '0', "
                                           "potentially mistaken for int 0");
 
     // Only suggest a fix if no macros are involved.
@@ -76,13 +76,16 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     // Case 2: fill_char of memset() is larger in size than an unsigned char
     // so it gets truncated during conversion.
 
-    llvm::APSInt NumValue;
     const auto UCharMax = (1 << Result.Context->getCharWidth()) - 1;
-    if (!NumFill->EvaluateAsInt(NumValue, *Result.Context) ||
-        (NumValue >= 0 && NumValue <= UCharMax))
+    Expr::EvalResult EVResult;
+    if (!NumFill->EvaluateAsInt(EVResult, *Result.Context))
       return;
 
-    diag(NumFill->getLocStart(), "memset fill value is out of unsigned "
+    llvm::APSInt NumValue = EVResult.Val.getInt();
+    if (NumValue >= 0 && NumValue <= UCharMax)
+      return;
+
+    diag(NumFill->getBeginLoc(), "memset fill value is out of unsigned "
                                  "character range, gets truncated");
   }
 
@@ -94,23 +97,27 @@ void SuspiciousMemsetUsageCheck::check(const MatchFinder::MatchResult &Result) {
     const Expr *ByteCount = Call->getArg(2);
 
     // Return if `byte_count` is not zero at compile time.
-    llvm::APSInt Value1, Value2;
+    Expr::EvalResult Value2;
     if (ByteCount->isValueDependent() ||
-        !ByteCount->EvaluateAsInt(Value2, *Result.Context) || Value2 != 0)
+        !ByteCount->EvaluateAsInt(Value2, *Result.Context) ||
+        Value2.Val.getInt() != 0)
       return;
 
     // Return if `fill_char` is known to be zero or negative at compile
     // time. In these cases, swapping the args would be a nop, or
     // introduce a definite bug. The code is likely correct.
+    Expr::EvalResult EVResult;
     if (!FillChar->isValueDependent() &&
-        FillChar->EvaluateAsInt(Value1, *Result.Context) &&
-        (Value1 == 0 || Value1.isNegative()))
-      return;
+        FillChar->EvaluateAsInt(EVResult, *Result.Context)) {
+      llvm::APSInt Value1 = EVResult.Val.getInt();
+      if (Value1 == 0 || Value1.isNegative())
+        return;
+    }
 
     // `byte_count` is known to be zero at compile time, and `fill_char` is
     // either not known or known to be a positive integer. Emit a warning
     // and fix-its to swap the arguments.
-    auto D = diag(Call->getLocStart(),
+    auto D = diag(Call->getBeginLoc(),
                   "memset of size zero, potentially swapped arguments");
     StringRef RHSString = tooling::fixit::getText(*ByteCount, *Result.Context);
     StringRef LHSString = tooling::fixit::getText(*FillChar, *Result.Context);

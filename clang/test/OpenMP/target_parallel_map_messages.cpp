@@ -163,7 +163,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target parallel map(always: x) // expected-error {{missing map type}}
   foo();
-#pragma omp target parallel map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+#pragma omp target parallel map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
   foo();
 #pragma omp target parallel map(always, tofrom: always, tofrom, x)
   foo();
@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target parallel map(always: x) // expected-error {{missing map type}}
   foo();
-#pragma omp target parallel map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+#pragma omp target parallel map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
   foo();
 #pragma omp target parallel map(always, tofrom: always, tofrom, x)
   foo();

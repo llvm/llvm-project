@@ -108,7 +108,6 @@ struct Times {
 };
 
 Times GetTimes(path const& p) {
-    using Clock = file_time_type::clock;
     StatT st;
     if (::stat(p.c_str(), &st) == -1) {
         std::error_code ec(errno, std::generic_category());
@@ -127,7 +126,6 @@ TimeSpec LastAccessTime(path const& p) { return GetTimes(p).access; }
 TimeSpec LastWriteTime(path const& p) { return GetTimes(p).write; }
 
 std::pair<TimeSpec, TimeSpec> GetSymlinkTimes(path const& p) {
-  using Clock = file_time_type::clock;
   StatT st;
   if (::lstat(p.c_str(), &st) == -1) {
     std::error_code ec(errno, std::generic_category());
@@ -429,7 +427,7 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         epoch_time - Minutes(3) - Sec(42) - SubSec(17);
     // FreeBSD has a bug in their utimes implementation where the time is not update
     // when the number of seconds is '-1'.
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__NetBSD__)
     const file_time_type just_before_epoch_time =
         epoch_time - Sec(2) - SubSec(17);
 #else
@@ -510,7 +508,6 @@ TEST_CASE(last_write_time_symlink_test)
 
 TEST_CASE(test_write_min_time)
 {
-    using Clock = file_time_type::clock;
     scoped_test_env env;
     const path p = env.create_file("file", 42);
     const file_time_type old_time = last_write_time(p);
@@ -545,10 +542,6 @@ TEST_CASE(test_write_min_time)
 }
 
 TEST_CASE(test_write_max_time) {
-  using Clock = file_time_type::clock;
-  using Sec = std::chrono::seconds;
-  using Hours = std::chrono::hours;
-
   scoped_test_env env;
   const path p = env.create_file("file", 42);
   const file_time_type old_time = last_write_time(p);

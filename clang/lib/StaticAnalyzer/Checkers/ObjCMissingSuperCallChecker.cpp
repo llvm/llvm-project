@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
@@ -222,6 +222,9 @@ void ento::registerObjCSuperCallChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCSuperCallChecker>();
 }
 
+bool ento::shouldRegisterObjCSuperCallChecker(const LangOptions &LO) {
+  return true;
+}
 
 /*
  ToDo list for expanding this check in the future, the list is not exhaustive.

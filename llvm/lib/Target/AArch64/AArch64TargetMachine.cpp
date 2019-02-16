@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -123,6 +124,10 @@ static cl::opt<bool>
     BranchRelaxation("aarch64-enable-branch-relax", cl::Hidden, cl::init(true),
                      cl::desc("Relax out of range conditional branches"));
 
+static cl::opt<bool> EnableCompressJumpTables(
+    "aarch64-enable-compress-jump-tables", cl::Hidden, cl::init(true),
+    cl::desc("Use smallest entry possible for jump tables"));
+
 // FIXME: Unify control over GlobalMerge.
 static cl::opt<cl::boolOrDefault>
     EnableGlobalMerge("aarch64-enable-global-merge", cl::Hidden,
@@ -136,10 +141,15 @@ static cl::opt<bool>
 static cl::opt<int> EnableGlobalISelAtO(
     "aarch64-enable-global-isel-at-O", cl::Hidden,
     cl::desc("Enable GlobalISel at or below an opt level (-1 to disable)"),
-    cl::init(0));
+    cl::init(-1));
 
 static cl::opt<bool> EnableFalkorHWPFFix("aarch64-enable-falkor-hwpf-fix",
                                          cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
+    EnableBranchTargets("aarch64-enable-branch-targets", cl::Hidden,
+                        cl::desc("Enable the AAcrh64 branch target pass"),
+                        cl::init(true));
 
 extern "C" void LLVMInitializeAArch64Target() {
   // Register the target.
@@ -151,19 +161,23 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeAArch64A53Fix835769Pass(*PR);
   initializeAArch64A57FPLoadBalancingPass(*PR);
   initializeAArch64AdvSIMDScalarPass(*PR);
+  initializeAArch64BranchTargetsPass(*PR);
   initializeAArch64CollectLOHPass(*PR);
+  initializeAArch64CompressJumpTablesPass(*PR);
   initializeAArch64ConditionalComparesPass(*PR);
   initializeAArch64ConditionOptimizerPass(*PR);
   initializeAArch64DeadRegisterDefinitionsPass(*PR);
   initializeAArch64ExpandPseudoPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
   initializeAArch64SIMDInstrOptPass(*PR);
+  initializeAArch64PreLegalizerCombinerPass(*PR);
   initializeAArch64PromoteConstantPass(*PR);
   initializeAArch64RedundantCopyEliminationPass(*PR);
   initializeAArch64StorePairSuppressPass(*PR);
   initializeFalkorHWPFFixPass(*PR);
   initializeFalkorMarkStridedAccessesLegacyPass(*PR);
   initializeLDTLSCleanupPass(*PR);
+  initializeAArch64SpeculationHardeningPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -206,18 +220,20 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
-static CodeModel::Model getEffectiveCodeModel(const Triple &TT,
-                                              Optional<CodeModel::Model> CM,
-                                              bool JIT) {
+static CodeModel::Model
+getEffectiveAArch64CodeModel(const Triple &TT, Optional<CodeModel::Model> CM,
+                             bool JIT) {
   if (CM) {
-    if (*CM != CodeModel::Small && *CM != CodeModel::Large) {
+    if (*CM != CodeModel::Small && *CM != CodeModel::Tiny &&
+        *CM != CodeModel::Large) {
       if (!TT.isOSFuchsia())
         report_fatal_error(
-            "Only small and large code models are allowed on AArch64");
-      else if (CM != CodeModel::Kernel)
-        report_fatal_error(
-            "Only small, kernel, and large code models are allowed on AArch64");
-    }
+            "Only small, tiny and large code models are allowed on AArch64");
+      else if (*CM != CodeModel::Kernel)
+        report_fatal_error("Only small, tiny, kernel, and large code models "
+                           "are allowed on AArch64");
+    } else if (*CM == CodeModel::Tiny && !TT.isOSBinFormatELF())
+      report_fatal_error("tiny code model is only supported on ELF");
     return *CM;
   }
   // The default MCJIT memory managers make no guarantees about where they can
@@ -240,7 +256,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T,
                         computeDataLayout(TT, Options.MCOptions, LittleEndian),
                         TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(TT, CM, JIT), OL),
+                        getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
@@ -249,9 +265,21 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
+  if (getMCAsmInfo()->usesWindowsCFI()) {
+    // Unwinding can get confused if the last instruction in an
+    // exception-handling region (function, funclet, try block, etc.)
+    // is a call.
+    //
+    // FIXME: We could elide the trap if the next instruction would be in
+    // the same region anyway.
+    this->Options.TrapUnreachable = true;
+  }
+
   // Enable GlobalISel at or below EnableGlobalISelAt0.
-  if (getOptLevel() <= EnableGlobalISelAtO)
+  if (getOptLevel() <= EnableGlobalISelAtO) {
     setGlobalISel(true);
+    setGlobalISelAbort(GlobalISelAbortMode::Disable);
+  }
 
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
@@ -346,6 +374,7 @@ public:
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   void addPreGlobalInstructionSelect() override;
@@ -393,8 +422,10 @@ void AArch64PassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   // Match interleaved memory accesses to ldN/stN intrinsics.
-  if (TM->getOptLevel() != CodeGenOpt::None)
+  if (TM->getOptLevel() != CodeGenOpt::None) {
+    addPass(createInterleavedLoadCombinePass());
     addPass(createInterleavedAccessPass());
+  }
 
   if (TM->getOptLevel() == CodeGenOpt::Aggressive && EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
@@ -445,6 +476,10 @@ bool AArch64PassConfig::addInstSelector() {
 bool AArch64PassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
+}
+
+void AArch64PassConfig::addPreLegalizeMachineIR() {
+  addPass(createAArch64PreLegalizeCombiner());
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
@@ -516,18 +551,40 @@ void AArch64PassConfig::addPreSched2() {
   if (TM->getOptLevel() != CodeGenOpt::None) {
     if (EnableLoadStoreOpt)
       addPass(createAArch64LoadStoreOptimizationPass());
+  }
+
+  // The AArch64SpeculationHardeningPass destroys dominator tree and natural
+  // loop info, which is needed for the FalkorHWPFFixPass and also later on.
+  // Therefore, run the AArch64SpeculationHardeningPass before the
+  // FalkorHWPFFixPass to avoid recomputing dominator tree and natural loop
+  // info.
+  addPass(createAArch64SpeculationHardeningPass());
+
+  if (TM->getOptLevel() != CodeGenOpt::None) {
     if (EnableFalkorHWPFFix)
       addPass(createFalkorHWPFFixPass());
   }
 }
 
 void AArch64PassConfig::addPreEmitPass() {
+  // Machine Block Placement might have created new opportunities when run
+  // at O3, where the Tail Duplication Threshold is set to 4 instructions.
+  // Run the load/store optimizer once more.
+  if (TM->getOptLevel() >= CodeGenOpt::Aggressive && EnableLoadStoreOpt)
+    addPass(createAArch64LoadStoreOptimizationPass());
+
   if (EnableA53Fix835769)
     addPass(createAArch64A53Fix835769());
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (BranchRelaxation)
     addPass(&BranchRelaxationPassID);
+
+  if (EnableBranchTargets)
+    addPass(createAArch64BranchTargetsPass());
+
+  if (TM->getOptLevel() != CodeGenOpt::None && EnableCompressJumpTables)
+    addPass(createAArch64CompressJumpTablesPass());
 
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())

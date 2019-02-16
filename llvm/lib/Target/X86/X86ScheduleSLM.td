@@ -49,6 +49,9 @@ def SLMFPDivider    : ProcResource<1>;
 // Loads are 3 cycles, so ReadAfterLd registers needn't be available until 3
 // cycles after the memory operand.
 def : ReadAdvance<ReadAfterLd, 3>;
+def : ReadAdvance<ReadAfterVecLd, 3>;
+def : ReadAdvance<ReadAfterVecXLd, 3>;
+def : ReadAdvance<ReadAfterVecYLd, 3>;
 
 // Many SchedWrites are defined in pairs with and without a folded load.
 // Instructions with folded loads are usually micro-fused, so they only appear
@@ -95,13 +98,28 @@ def : InstRW<[WriteMove], (instrs COPY)>;
 
 defm : SLMWriteResPair<WriteALU,    [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteADC,    [SLM_IEC_RSV01], 1>;
-defm : SLMWriteResPair<WriteIMul,   [SLM_IEC_RSV1],  3>;
-defm : SLMWriteResPair<WriteIMul64, [SLM_IEC_RSV1],  3>;
+
+defm : SLMWriteResPair<WriteIMul8,     [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul16,    [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul16Imm, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul16Reg, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul32,    [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul32Imm, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul32Reg, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul64,    [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul64Imm, [SLM_IEC_RSV1],  3>;
+defm : SLMWriteResPair<WriteIMul64Reg, [SLM_IEC_RSV1],  3>;
 
 defm : X86WriteRes<WriteBSWAP32, [SLM_IEC_RSV01], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [SLM_IEC_RSV01], 1, [1], 1>;
+defm : X86WriteRes<WriteCMPXCHG, [SLM_IEC_RSV01], 1, [1], 1>;
+defm : X86WriteRes<WriteCMPXCHGRMW, [SLM_IEC_RSV01, SLM_MEC_RSV], 4, [1, 2], 2>;
+defm : X86WriteRes<WriteXCHG,      [SLM_IEC_RSV01], 1, [1], 1>;
 
-defm : SLMWriteResPair<WriteShift,  [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShift,    [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShiftCL,  [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteRotate,   [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteRotateCL, [SLM_IEC_RSV0],  1>;
 
 defm : X86WriteRes<WriteSHDrri, [SLM_IEC_RSV0],  1, [1], 1>;
 defm : X86WriteRes<WriteSHDrrcl,[SLM_IEC_RSV0],  1, [1], 1>;
@@ -119,8 +137,13 @@ def  : WriteRes<WriteSETCCStore, [SLM_IEC_RSV01, SLM_MEC_RSV]> {
   // FIXME Latency and NumMicrOps?
   let ResourceCycles = [2,1];
 }
-def  : WriteRes<WriteLAHFSAHF, [SLM_IEC_RSV01]>;
-def  : WriteRes<WriteBitTest,[SLM_IEC_RSV01]>;
+defm : X86WriteRes<WriteLAHFSAHF,        [SLM_IEC_RSV01], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTest,         [SLM_IEC_RSV01], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestImmLd,    [SLM_IEC_RSV01, SLM_MEC_RSV], 4, [1,1], 1>;
+defm : X86WriteRes<WriteBitTestRegLd,    [SLM_IEC_RSV01, SLM_MEC_RSV], 4, [1,1], 1>;
+defm : X86WriteRes<WriteBitTestSet,      [SLM_IEC_RSV01], 1, [1], 1>;
+defm : X86WriteRes<WriteBitTestSetImmLd, [SLM_IEC_RSV01, SLM_MEC_RSV], 3, [1,1], 1>;
+defm : X86WriteRes<WriteBitTestSetRegLd, [SLM_IEC_RSV01, SLM_MEC_RSV], 3, [1,1], 1>;
 
 // This is for simple LEAs with one or two input operands.
 // The complex ones can only execute on port 1, and they require two cycles on
@@ -134,8 +157,9 @@ defm : SLMWriteResPair<WriteLZCNT,          [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WriteTZCNT,          [SLM_IEC_RSV0], 3>;
 defm : SLMWriteResPair<WritePOPCNT,         [SLM_IEC_RSV0], 3>;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm : X86WriteResPairUnsupported<WriteBEXTR>;
+defm : X86WriteResPairUnsupported<WriteBLS>;
 defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 defm : SLMWriteResPair<WriteDiv8,   [SLM_IEC_RSV01, SLMDivider], 25, [1,25], 1, 4>;

@@ -3,6 +3,7 @@
 """
 Update reference results for static analyzer.
 """
+from __future__ import absolute_import, division, print_function
 
 import SATestBuild
 
@@ -10,12 +11,12 @@ from subprocess import check_call
 import os
 import sys
 
-Verbose = 1
+Verbose = 0
 
 
 def runCmd(Command, **kwargs):
     if Verbose:
-        print "Executing %s" % Command
+        print("Executing %s" % Command)
     check_call(Command, shell=True, **kwargs)
 
 
@@ -30,8 +31,8 @@ def updateReferenceResults(ProjName, ProjBuildMode):
         SATestBuild.getSBOutputDirName(IsReferenceBuild=False))
 
     if not os.path.exists(CreatedResultsPath):
-        print >> sys.stderr, "New results not found, was SATestBuild.py "\
-                             "previously run?"
+        print("New results not found, was SATestBuild.py "\
+                             "previously run?", file=sys.stderr)
         sys.exit(1)
 
     BuildLogPath = SATestBuild.getBuildLogPath(RefResultsPath)
@@ -62,9 +63,9 @@ def updateReferenceResults(ProjName, ProjBuildMode):
 
 def main(argv):
     if len(argv) == 2 and argv[1] in ('-h', '--help'):
-        print >> sys.stderr, "Update static analyzer reference results based "\
+        print("Update static analyzer reference results based "\
                              "\non the previous run of SATestBuild.py.\n"\
-                             "\nN.B.: Assumes that SATestBuild.py was just run"
+                             "\nN.B.: Assumes that SATestBuild.py was just run", file=sys.stderr)
         sys.exit(1)
 
     with SATestBuild.projectFileHandler() as f:

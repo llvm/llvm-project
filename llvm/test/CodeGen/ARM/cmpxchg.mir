@@ -1,0 +1,24 @@
+# RUN: llc -o - %s -mtriple=armv7-unknown-linux-gnu -verify-machineinstrs -run-pass=arm-pseudo | FileCheck %s
+---
+# CHECK-LABEL: name: func
+name: func
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0_r1, $r4_r5, $r3, $lr
+    dead early-clobber renamable $r0_r1, dead early-clobber renamable $r2 = CMP_SWAP_64 killed renamable $r3, killed renamable $r4_r5, renamable $r4_r5 :: (volatile load store monotonic monotonic 8)
+    ; CHECK: bb.0:
+    ; CHECK:   liveins: $r0_r1, $r4_r5, $r3, $lr
+    ; CHECK: bb.1:
+    ; CHEKC:   liveins: $r4_r5, $r3
+    ; CHECK:   $r0_r1 = LDREXD $r3, 14, $noreg
+    ; CHECK:   CMPrr killed $r0, $r4, 14, $noreg, implicit-def $cpsr
+    ; CHECK:   CMPrr killed $r1, $r5, 0, killed $cpsr, implicit-def $cpsr
+    ; CHECK:   Bcc %bb.3, 1, killed $cpsr
+    ; CHECK: bb.2:
+    ; CHECK:   liveins: $r4_r5, $r3
+    ; CHECK:   early-clobber $r2 = STREXD $r4_r5, $r3, 14, $noreg
+    ; CHECK:   CMPri killed $r2, 0, 14, $noreg, implicit-def $cpsr
+    ; CHECK:   Bcc %bb.1, 1, killed $cpsr
+    ; CHECK: bb.3:
+...

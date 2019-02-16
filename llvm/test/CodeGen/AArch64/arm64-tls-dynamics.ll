@@ -2,6 +2,12 @@
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOLD %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-NOLD-RELOC %s
+; FIXME: We currently produce "small" code for the tiny model
+; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=tiny -verify-machineinstrs < %s | FileCheck %s
+; FIXME: We currently error for the large code model
+; RUN: not llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=large -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LARGE
+
+; CHECK-LARGE: ELF TLS only supported in small memory model
 
 @general_dynamic_var = external thread_local global i32
 

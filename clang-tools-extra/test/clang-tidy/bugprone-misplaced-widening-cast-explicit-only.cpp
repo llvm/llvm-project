@@ -62,3 +62,21 @@ template <class> class A {
   enum Type {};
   static char *m_fn1() { char p = (Type)(&p - m_fn1()); }
 };
+
+enum DaysEnum {
+  MON,
+  TUE,
+  WED,
+  THR,
+  FRI,
+  SAT,
+  SUN
+};
+
+// Do not warn for int to enum casts.
+void nextDay(DaysEnum day) {
+  if (day < SUN)
+    day = (DaysEnum)(day + 1);
+  if (day < SUN)
+    day = static_cast<DaysEnum>(day + 1);
+}

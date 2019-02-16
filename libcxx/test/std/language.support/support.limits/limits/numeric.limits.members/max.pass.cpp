@@ -17,6 +17,8 @@
 #include <cfloat>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 void
 test(T expected)
@@ -38,6 +40,9 @@ int main()
     test<signed char>(SCHAR_MAX);
     test<unsigned char>(UCHAR_MAX);
     test<wchar_t>(WCHAR_MAX);
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    test<char8_t>(UCHAR_MAX); // ??
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t>(USHRT_MAX);
     test<char32_t>(UINT_MAX);

@@ -4,7 +4,7 @@
 
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 
-int a, b; // expected-warning {{declaration is not declared in any declare target region}}
+int a, b;
 __thread int t; // expected-note {{defined as threadprivate or thread local}}
 
 #pragma omp declare target . // expected-error {{expected '(' after 'declare target'}}
@@ -59,8 +59,19 @@ void t2() {
   }
 }
 
+#pragma omp declare target
+  void abc();
+#pragma omp end declare target
+void cba();
+#pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 
-#pragma omp declare target // expected-note {{to match this '#pragma omp declare target'}}
+#pragma omp declare target  
+  #pragma omp declare target
+    void def();
+  #pragma omp end declare target
+  void fed();
+
+#pragma omp declare target
 #pragma omp threadprivate(a) // expected-note {{defined as threadprivate or thread local}}
 extern int b;
 int g;
@@ -90,7 +101,7 @@ int C::method1() {
 
 void foo(int p) {
   a = 0; // expected-error {{threadprivate variables cannot be used in target constructs}}
-  b = 0; // expected-note {{used here}}
+  b = 0;
   t = 1; // expected-error {{threadprivate variables cannot be used in target constructs}}
   C object;
   VC object1;
@@ -100,8 +111,11 @@ void foo(int p) {
   f();
   c();
 }
-#pragma omp declare target // expected-error {{expected '#pragma omp end declare target'}}
+#pragma omp declare target
 void foo1() {}
+#pragma omp end declare target
+
+#pragma omp end declare target
 #pragma omp end declare target
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 

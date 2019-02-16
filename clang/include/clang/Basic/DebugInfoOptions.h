@@ -13,6 +13,11 @@
 namespace clang {
 namespace codegenoptions {
 
+enum DebugInfoFormat {
+  DIF_DWARF,
+  DIF_CodeView,
+};
+
 enum DebugInfoKind {
   NoDebugInfo,         /// Don't generate debug info.
   LocTrackingOnly,     /// Emit location information but do not generate
@@ -21,6 +26,7 @@ enum DebugInfoKind {
                        /// locations for instructions without actually
                        /// emitting debug info for them (e.g., when -Rpass
                        /// is used).
+  DebugDirectivesOnly, /// Emit only debug directives with the line numbers data
   DebugLineTablesOnly, /// Emit only debug info necessary for generating
                        /// line number tables (-gline-tables-only).
   LimitedDebugInfo,    /// Limit generated debug info to reduce size

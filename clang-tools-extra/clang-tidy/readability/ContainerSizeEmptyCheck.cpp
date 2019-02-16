@@ -201,18 +201,26 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (MemberCall) {
-    diag(MemberCall->getLocStart(),
+    diag(MemberCall->getBeginLoc(),
          "the 'empty' method should be used to check "
          "for emptiness instead of 'size'")
         << Hint;
   } else {
-    diag(BinCmp->getLocStart(),
+    diag(BinCmp->getBeginLoc(),
          "the 'empty' method should be used to check "
          "for emptiness instead of comparing to an empty object")
         << Hint;
   }
 
   const auto *Container = Result.Nodes.getNodeAs<NamedDecl>("container");
+  if (const auto *CTS = dyn_cast<ClassTemplateSpecializationDecl>(Container)) {
+    // The definition of the empty() method is the same for all implicit
+    // instantiations. In order to avoid duplicate or inconsistent warnings
+    // (depending on how deduplication is done), we use the same class name
+    // for all implicit instantiations of a template.
+    if (CTS->getSpecializationKind() == TSK_ImplicitInstantiation)
+      Container = CTS->getSpecializedTemplate();
+  }
   const auto *Empty = Result.Nodes.getNodeAs<FunctionDecl>("empty");
 
   diag(Empty->getLocation(), "method %0::empty() defined here",

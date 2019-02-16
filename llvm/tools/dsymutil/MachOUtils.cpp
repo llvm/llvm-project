@@ -333,8 +333,8 @@ static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
 // Stream a dSYM companion binary file corresponding to the binary referenced
 // by \a DM to \a OutFile. The passed \a MS MCStreamer is setup to write to
 // \a OutFile and it must be using a MachObjectWriter object to do so.
-bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
-                           raw_fd_ostream &OutFile) {
+bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
+                           MCStreamer &MS, raw_fd_ostream &OutFile) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
@@ -368,25 +368,37 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   bool Is64Bit = Writer.is64Bit();
   MachO::symtab_command SymtabCmd = InputBinary.getSymtabLoadCommand();
 
-  // Get UUID.
-  MachO::uuid_command UUIDCmd;
-  memset(&UUIDCmd, 0, sizeof(UUIDCmd));
-  UUIDCmd.cmd = MachO::LC_UUID;
-  UUIDCmd.cmdsize = sizeof(MachO::uuid_command);
-  for (auto &LCI : InputBinary.load_commands()) {
-    if (LCI.C.cmd == MachO::LC_UUID) {
-      UUIDCmd = InputBinary.getUuidCommand(LCI);
-      break;
-    }
-  }
-
   // Compute the number of load commands we will need.
   unsigned LoadCommandSize = 0;
   unsigned NumLoadCommands = 0;
-  // We will copy the UUID if there is one.
-  if (UUIDCmd.cmd != 0) {
-    ++NumLoadCommands;
-    LoadCommandSize += sizeof(MachO::uuid_command);
+
+  // Get LC_UUID and LC_BUILD_VERSION.
+  MachO::uuid_command UUIDCmd;
+  SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
+  memset(&UUIDCmd, 0, sizeof(UUIDCmd));
+  for (auto &LCI : InputBinary.load_commands()) {
+    switch (LCI.C.cmd) {
+    case MachO::LC_UUID:
+      if (UUIDCmd.cmd)
+        return error("Binary contains more than one UUID");
+      UUIDCmd = InputBinary.getUuidCommand(LCI);
+      ++NumLoadCommands;
+      LoadCommandSize += sizeof(UUIDCmd);
+      break;
+   case MachO::LC_BUILD_VERSION: {
+      MachO::build_version_command Cmd;
+      memset(&Cmd, 0, sizeof(Cmd));
+      Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
+      ++NumLoadCommands;
+      LoadCommandSize += sizeof(Cmd);
+      // LLDB doesn't care about the build tools for now.
+      Cmd.ntools = 0;
+      BuildVersionCmd.push_back(Cmd);
+      break;
+    }
+    default:
+      break;
+    }
   }
 
   // If we have a valid symtab to copy, do it.
@@ -431,7 +443,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   }
 
   SmallString<0> NewSymtab;
-  NonRelocatableStringpool NewStrings;
+  NonRelocatableStringpool NewStrings(Translator);
   unsigned NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   unsigned NumSyms = 0;
   uint64_t NewStringsSize = 0;
@@ -452,9 +464,17 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   assert(OutFile.tell() == HeaderSize);
   if (UUIDCmd.cmd != 0) {
     Writer.W.write<uint32_t>(UUIDCmd.cmd);
-    Writer.W.write<uint32_t>(UUIDCmd.cmdsize);
+    Writer.W.write<uint32_t>(sizeof(UUIDCmd));
     OutFile.write(reinterpret_cast<const char *>(UUIDCmd.uuid), 16);
     assert(OutFile.tell() == HeaderSize + sizeof(UUIDCmd));
+  }
+  for (auto Cmd : BuildVersionCmd) {
+    Writer.W.write<uint32_t>(Cmd.cmd);
+    Writer.W.write<uint32_t>(sizeof(Cmd));
+    Writer.W.write<uint32_t>(Cmd.platform);
+    Writer.W.write<uint32_t>(Cmd.minos);
+    Writer.W.write<uint32_t>(Cmd.sdk);
+    Writer.W.write<uint32_t>(Cmd.ntools);
   }
 
   assert(SymtabCmd.cmd && "No symbol table.");
@@ -514,10 +534,9 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
     // Reproduce that behavior for now (there is corresponding code in
     // transferSymbol).
     OutFile << '\0';
-    std::vector<DwarfStringPoolEntryRef> Strings = NewStrings.getEntries();
+    std::vector<DwarfStringPoolEntryRef> Strings =
+        NewStrings.getEntriesForEmission();
     for (auto EntryRef : Strings) {
-      if (EntryRef.getIndex() == -1U)
-        break;
       OutFile.write(EntryRef.getString().data(),
                     EntryRef.getString().size() + 1);
     }

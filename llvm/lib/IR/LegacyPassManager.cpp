@@ -20,6 +20,7 @@
 #include "llvm/IR/LegacyPassManagers.h"
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -99,27 +100,31 @@ static cl::list<std::string>
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
-static bool ShouldPrintBeforeOrAfterPass(const PassInfo *PI,
+bool llvm::shouldPrintBeforePass() {
+  return PrintBeforeAll || !PrintBefore.empty();
+}
+
+bool llvm::shouldPrintAfterPass() {
+  return PrintAfterAll || !PrintAfter.empty();
+}
+
+static bool ShouldPrintBeforeOrAfterPass(StringRef PassID,
                                          PassOptionList &PassesToPrint) {
   for (auto *PassInf : PassesToPrint) {
     if (PassInf)
-      if (PassInf->getPassArgument() == PI->getPassArgument()) {
+      if (PassInf->getPassArgument() == PassID) {
         return true;
       }
   }
   return false;
 }
 
-/// This is a utility to check whether a pass should have IR dumped
-/// before it.
-static bool ShouldPrintBeforePass(const PassInfo *PI) {
-  return PrintBeforeAll || ShouldPrintBeforeOrAfterPass(PI, PrintBefore);
+bool llvm::shouldPrintBeforePass(StringRef PassID) {
+  return PrintBeforeAll || ShouldPrintBeforeOrAfterPass(PassID, PrintBefore);
 }
 
-/// This is a utility to check whether a pass should have IR dumped
-/// after it.
-static bool ShouldPrintAfterPass(const PassInfo *PI) {
-  return PrintAfterAll || ShouldPrintBeforeOrAfterPass(PI, PrintAfter);
+bool llvm::shouldPrintAfterPass(StringRef PassID) {
+  return PrintAfterAll || ShouldPrintBeforeOrAfterPass(PassID, PrintAfter);
 }
 
 bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
@@ -135,34 +140,32 @@ bool PMDataManager::isPassDebuggingExecutionsOrMore() const {
   return PassDebugging >= Executions;
 }
 
-unsigned PMDataManager::initSizeRemarkInfo(Module &M) {
+unsigned PMDataManager::initSizeRemarkInfo(
+    Module &M, StringMap<std::pair<unsigned, unsigned>> &FunctionToInstrCount) {
   // Only calculate getInstructionCount if the size-info remark is requested.
-  return M.getInstructionCount();
+  unsigned InstrCount = 0;
+
+  // Collect instruction counts for every function. We'll use this to emit
+  // per-function size remarks later.
+  for (Function &F : M) {
+    unsigned FCount = F.getInstructionCount();
+
+    // Insert a record into FunctionToInstrCount keeping track of the current
+    // size of the function as the first member of a pair. Set the second
+    // member to 0; if the function is deleted by the pass, then when we get
+    // here, we'll be able to let the user know that F no longer contributes to
+    // the module.
+    FunctionToInstrCount[F.getName().str()] =
+        std::pair<unsigned, unsigned>(FCount, 0);
+    InstrCount += FCount;
+  }
+  return InstrCount;
 }
 
-void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
-                                                unsigned CountBefore) {
-  // We need a function containing at least one basic block in order to output
-  // remarks. Since it's possible that the first function in the module doesn't
-  // actually contain a basic block, we have to go and find one that's suitable
-  // for emitting remarks.
-  auto It = std::find_if(M.begin(), M.end(),
-                         [](const Function &Fn) { return !Fn.empty(); });
-
-  // Didn't find a function. Quit.
-  if (It == M.end())
-    return;
-
-  // We found a function containing at least one basic block.
-  Function *F = &*It;
-
-  // How many instructions are in the module now?
-  unsigned CountAfter = M.getInstructionCount();
-
-  // If there was no change, don't emit a remark.
-  if (CountBefore == CountAfter)
-    return;
-
+void PMDataManager::emitInstrCountChangedRemark(
+    Pass *P, Module &M, int64_t Delta, unsigned CountBefore,
+    StringMap<std::pair<unsigned, unsigned>> &FunctionToInstrCount,
+    Function *F) {
   // If it's a pass manager, don't emit a remark. (This hinges on the assumption
   // that the only passes that return non-null with getAsPMDataManager are pass
   // managers.) The reason we have to do this is to avoid emitting remarks for
@@ -170,11 +173,53 @@ void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
   if (P->getAsPMDataManager())
     return;
 
-  // Compute a possibly negative delta between the instruction count before
-  // running P, and after running P.
-  int64_t Delta =
-      static_cast<int64_t>(CountAfter) - static_cast<int64_t>(CountBefore);
+  // Set to true if this isn't a module pass or CGSCC pass.
+  bool CouldOnlyImpactOneFunction = (F != nullptr);
 
+  // Helper lambda that updates the changes to the size of some function.
+  auto UpdateFunctionChanges =
+      [&FunctionToInstrCount](Function &MaybeChangedFn) {
+        // Update the total module count.
+        unsigned FnSize = MaybeChangedFn.getInstructionCount();
+        auto It = FunctionToInstrCount.find(MaybeChangedFn.getName());
+
+        // If we created a new function, then we need to add it to the map and
+        // say that it changed from 0 instructions to FnSize.
+        if (It == FunctionToInstrCount.end()) {
+          FunctionToInstrCount[MaybeChangedFn.getName()] =
+              std::pair<unsigned, unsigned>(0, FnSize);
+          return;
+        }
+        // Insert the new function size into the second member of the pair. This
+        // tells us whether or not this function changed in size.
+        It->second.second = FnSize;
+      };
+
+  // We need to initially update all of the function sizes.
+  // If no function was passed in, then we're either a module pass or an
+  // CGSCC pass.
+  if (!CouldOnlyImpactOneFunction)
+    std::for_each(M.begin(), M.end(), UpdateFunctionChanges);
+  else
+    UpdateFunctionChanges(*F);
+
+  // Do we have a function we can use to emit a remark?
+  if (!CouldOnlyImpactOneFunction) {
+    // We need a function containing at least one basic block in order to output
+    // remarks. Since it's possible that the first function in the module
+    // doesn't actually contain a basic block, we have to go and find one that's
+    // suitable for emitting remarks.
+    auto It = std::find_if(M.begin(), M.end(),
+                          [](const Function &Fn) { return !Fn.empty(); });
+
+    // Didn't find a function. Quit.
+    if (It == M.end())
+      return;
+
+    // We found a function containing at least one basic block.
+    F = &*It;
+  }
+  int64_t CountAfter = static_cast<int64_t>(CountBefore) + Delta;
   BasicBlock &BB = *F->begin();
   OptimizationRemarkAnalysis R("size-info", "IRSizeChange",
                                DiagnosticLocation(), &BB);
@@ -188,6 +233,55 @@ void PMDataManager::emitInstrCountChangedRemark(Pass *P, Module &M,
     << "; Delta: "
     << DiagnosticInfoOptimizationBase::Argument("DeltaInstrCount", Delta);
   F->getContext().diagnose(R); // Not using ORE for layering reasons.
+
+  // Emit per-function size change remarks separately.
+  std::string PassName = P->getPassName().str();
+
+  // Helper lambda that emits a remark when the size of a function has changed.
+  auto EmitFunctionSizeChangedRemark = [&FunctionToInstrCount, &F, &BB,
+                                        &PassName](const std::string &Fname) {
+    unsigned FnCountBefore, FnCountAfter;
+    std::pair<unsigned, unsigned> &Change = FunctionToInstrCount[Fname];
+    std::tie(FnCountBefore, FnCountAfter) = Change;
+    int64_t FnDelta = static_cast<int64_t>(FnCountAfter) -
+                      static_cast<int64_t>(FnCountBefore);
+
+    if (FnDelta == 0)
+      return;
+
+    // FIXME: We shouldn't use BB for the location here. Unfortunately, because
+    // the function that we're looking at could have been deleted, we can't use
+    // it for the source location. We *want* remarks when a function is deleted
+    // though, so we're kind of stuck here as is. (This remark, along with the
+    // whole-module size change remarks really ought not to have source
+    // locations at all.)
+    OptimizationRemarkAnalysis FR("size-info", "FunctionIRSizeChange",
+                                  DiagnosticLocation(), &BB);
+    FR << DiagnosticInfoOptimizationBase::Argument("Pass", PassName)
+       << ": Function: "
+       << DiagnosticInfoOptimizationBase::Argument("Function", Fname)
+       << ": IR instruction count changed from "
+       << DiagnosticInfoOptimizationBase::Argument("IRInstrsBefore",
+                                                   FnCountBefore)
+       << " to "
+       << DiagnosticInfoOptimizationBase::Argument("IRInstrsAfter",
+                                                   FnCountAfter)
+       << "; Delta: "
+       << DiagnosticInfoOptimizationBase::Argument("DeltaInstrCount", FnDelta);
+    F->getContext().diagnose(FR);
+
+    // Update the function size.
+    Change.first = FnCountAfter;
+  };
+
+  // Are we looking at more than one function? If so, emit remarks for all of
+  // the functions in the module. Otherwise, only emit one remark.
+  if (!CouldOnlyImpactOneFunction)
+    std::for_each(FunctionToInstrCount.keys().begin(),
+                  FunctionToInstrCount.keys().end(),
+                  EmitFunctionSizeChangedRemark);
+  else
+    EmitFunctionSizeChangedRemark(F->getName().str());
 }
 
 void PassManagerPrettyStackEntry::print(raw_ostream &OS) const {
@@ -494,65 +588,6 @@ char PassManagerImpl::ID = 0;
 } // End of legacy namespace
 } // End of llvm namespace
 
-namespace {
-
-//===----------------------------------------------------------------------===//
-/// TimingInfo Class - This class is used to calculate information about the
-/// amount of time each pass takes to execute.  This only happens when
-/// -time-passes is enabled on the command line.
-///
-
-static ManagedStatic<sys::SmartMutex<true> > TimingInfoMutex;
-
-class TimingInfo {
-  DenseMap<Pass*, Timer*> TimingData;
-  TimerGroup TG;
-public:
-  // Use 'create' member to get this.
-  TimingInfo() : TG("pass", "... Pass execution timing report ...") {}
-
-  // TimingDtor - Print out information about timing information
-  ~TimingInfo() {
-    // Delete all of the timers, which accumulate their info into the
-    // TimerGroup.
-    for (auto &I : TimingData)
-      delete I.second;
-    // TimerGroup is deleted next, printing the report.
-  }
-
-  // createTheTimeInfo - This method either initializes the TheTimeInfo pointer
-  // to a non-null value (if the -time-passes option is enabled) or it leaves it
-  // null.  It may be called multiple times.
-  static void createTheTimeInfo();
-
-  // print - Prints out timing information and then resets the timers.
-  void print() {
-    TG.print(*CreateInfoOutputFile());
-  }
-
-  /// getPassTimer - Return the timer for the specified pass if it exists.
-  Timer *getPassTimer(Pass *P) {
-    if (P->getAsPMDataManager())
-      return nullptr;
-
-    sys::SmartScopedLock<true> Lock(*TimingInfoMutex);
-    Timer *&T = TimingData[P];
-    if (!T) {
-      StringRef PassName = P->getPassName();
-      StringRef PassArgument;
-      if (const PassInfo *PI = Pass::lookupPassInfo(P->getPassID()))
-        PassArgument = PI->getPassArgument();
-      T = new Timer(PassArgument.empty() ? PassName : PassArgument, PassName,
-                    TG);
-    }
-    return T;
-  }
-};
-
-} // End of anon namespace
-
-static TimingInfo *TheTimeInfo;
-
 //===----------------------------------------------------------------------===//
 // PMTopLevelManager implementation
 
@@ -677,6 +712,8 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   // available at this point.
   const PassInfo *PI = findAnalysisPassInfo(P->getPassID());
   if (PI && PI->isAnalysis() && findAnalysisPass(P->getPassID())) {
+    // Remove any cached AnalysisUsage information.
+    AnUsageMap.erase(P);
     delete P;
     return;
   }
@@ -747,7 +784,7 @@ void PMTopLevelManager::schedulePass(Pass *P) {
     return;
   }
 
-  if (PI && !PI->isAnalysis() && ShouldPrintBeforePass(PI)) {
+  if (PI && !PI->isAnalysis() && shouldPrintBeforePass(PI->getPassArgument())) {
     Pass *PP = P->createPrinterPass(
         dbgs(), ("*** IR Dump Before " + P->getPassName() + " ***").str());
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());
@@ -756,7 +793,7 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   // Add the requested pass to the best available pass manager.
   P->assignPassManager(activeStack, getTopLevelPassManagerType());
 
-  if (PI && !PI->isAnalysis() && ShouldPrintAfterPass(PI)) {
+  if (PI && !PI->isAnalysis() && shouldPrintAfterPass(PI->getPassArgument())) {
     Pass *PP = P->createPrinterPass(
         dbgs(), ("*** IR Dump After " + P->getPassName() + " ***").str());
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());
@@ -1343,9 +1380,16 @@ bool BBPassManager::runOnFunction(Function &F) {
   bool Changed = doInitialization(F);
   Module &M = *F.getParent();
 
-  unsigned InstrCount = 0;
+  unsigned InstrCount, BBSize = 0;
+  StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
   bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
-  for (BasicBlock &BB : F)
+  if (EmitICRemark)
+    InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
+
+  for (BasicBlock &BB : F) {
+    // Collect the initial size of the basic block.
+    if (EmitICRemark)
+      BBSize = BB.size();
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
       BasicBlockPass *BP = getContainedPass(Index);
       bool LocalChanged = false;
@@ -1359,11 +1403,20 @@ bool BBPassManager::runOnFunction(Function &F) {
         // If the pass crashes, remember this.
         PassManagerPrettyStackEntry X(BP, BB);
         TimeRegion PassTimer(getPassTimer(BP));
-        if (EmitICRemark)
-          InstrCount = initSizeRemarkInfo(M);
         LocalChanged |= BP->runOnBasicBlock(BB);
-        if (EmitICRemark)
-          emitInstrCountChangedRemark(BP, M, InstrCount);
+        if (EmitICRemark) {
+          unsigned NewSize = BB.size();
+          // Update the size of the basic block, emit a remark, and update the
+          // size of the module.
+          if (NewSize != BBSize) {
+            int64_t Delta =
+                static_cast<int64_t>(NewSize) - static_cast<int64_t>(BBSize);
+            emitInstrCountChangedRemark(BP, M, Delta, InstrCount,
+                                        FunctionToInstrCount, &F);
+            InstrCount = static_cast<int64_t>(InstrCount) + Delta;
+            BBSize = NewSize;
+          }
+        }
       }
 
       Changed |= LocalChanged;
@@ -1378,6 +1431,7 @@ bool BBPassManager::runOnFunction(Function &F) {
       recordAvailableAnalysis(BP);
       removeDeadPasses(BP, BB.getName(), ON_BASICBLOCK_MSG);
     }
+  }
 
   return doFinalization(F) || Changed;
 }
@@ -1525,7 +1579,6 @@ void FunctionPassManagerImpl::releaseMemoryOnTheFly() {
 // Return true if any function is modified by a pass.
 bool FunctionPassManagerImpl::run(Function &F) {
   bool Changed = false;
-  TimingInfo::createTheTimeInfo();
 
   initializeAllAnalysisInfo();
   for (unsigned Index = 0; Index < getNumContainedManagers(); ++Index) {
@@ -1567,8 +1620,15 @@ bool FPPassManager::runOnFunction(Function &F) {
   // Collect inherited analysis from Module level pass manager.
   populateInheritedAnalysis(TPM->activeStack);
 
-  unsigned InstrCount = 0;
+  unsigned InstrCount, FunctionSize = 0;
+  StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
   bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
+  // Collect the initial size of the module.
+  if (EmitICRemark) {
+    InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
+    FunctionSize = F.getInstructionCount();
+  }
+
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     FunctionPass *FP = getContainedPass(Index);
     bool LocalChanged = false;
@@ -1581,11 +1641,21 @@ bool FPPassManager::runOnFunction(Function &F) {
     {
       PassManagerPrettyStackEntry X(FP, F);
       TimeRegion PassTimer(getPassTimer(FP));
-      if (EmitICRemark)
-        InstrCount = initSizeRemarkInfo(M);
       LocalChanged |= FP->runOnFunction(F);
-      if (EmitICRemark)
-        emitInstrCountChangedRemark(FP, M, InstrCount);
+      if (EmitICRemark) {
+        unsigned NewSize = F.getInstructionCount();
+
+        // Update the size of the function, emit a remark, and update the size
+        // of the module.
+        if (NewSize != FunctionSize) {
+          int64_t Delta = static_cast<int64_t>(NewSize) -
+                          static_cast<int64_t>(FunctionSize);
+          emitInstrCountChangedRemark(FP, M, Delta, InstrCount,
+                                      FunctionToInstrCount, &F);
+          InstrCount = static_cast<int64_t>(InstrCount) + Delta;
+          FunctionSize = NewSize;
+        }
+      }
     }
 
     Changed |= LocalChanged;
@@ -1649,8 +1719,15 @@ MPPassManager::runOnModule(Module &M) {
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index)
     Changed |= getContainedPass(Index)->doInitialization(M);
 
-  unsigned InstrCount = 0;
+  unsigned InstrCount, ModuleCount = 0;
+  StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
   bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
+  // Collect the initial size of the module.
+  if (EmitICRemark) {
+    InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
+    ModuleCount = InstrCount;
+  }
+
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     ModulePass *MP = getContainedPass(Index);
     bool LocalChanged = false;
@@ -1664,11 +1741,18 @@ MPPassManager::runOnModule(Module &M) {
       PassManagerPrettyStackEntry X(MP, M);
       TimeRegion PassTimer(getPassTimer(MP));
 
-      if (EmitICRemark)
-        InstrCount = initSizeRemarkInfo(M);
       LocalChanged |= MP->runOnModule(M);
-      if (EmitICRemark)
-        emitInstrCountChangedRemark(MP, M, InstrCount);
+      if (EmitICRemark) {
+        // Update the size of the module.
+        ModuleCount = M.getInstructionCount();
+        if (ModuleCount != InstrCount) {
+          int64_t Delta = static_cast<int64_t>(ModuleCount) -
+                          static_cast<int64_t>(InstrCount);
+          emitInstrCountChangedRemark(MP, M, Delta, InstrCount,
+                                      FunctionToInstrCount);
+          InstrCount = ModuleCount;
+        }
+      }
     }
 
     Changed |= LocalChanged;
@@ -1761,7 +1845,6 @@ Pass* MPPassManager::getOnTheFlyPass(Pass *MP, AnalysisID PI, Function &F){
 /// whether any of the passes modifies the module, and if so, return true.
 bool PassManagerImpl::run(Module &M) {
   bool Changed = false;
-  TimingInfo::createTheTimeInfo();
 
   dumpArguments();
   dumpPasses();
@@ -1803,41 +1886,6 @@ void PassManager::add(Pass *P) {
 /// whether any of the passes modifies the module, and if so, return true.
 bool PassManager::run(Module &M) {
   return PM->run(M);
-}
-
-//===----------------------------------------------------------------------===//
-// TimingInfo implementation
-
-bool llvm::TimePassesIsEnabled = false;
-static cl::opt<bool, true> EnableTiming(
-    "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
-    cl::desc("Time each pass, printing elapsed time for each on exit"));
-
-// createTheTimeInfo - This method either initializes the TheTimeInfo pointer to
-// a non-null value (if the -time-passes option is enabled) or it leaves it
-// null.  It may be called multiple times.
-void TimingInfo::createTheTimeInfo() {
-  if (!TimePassesIsEnabled || TheTimeInfo) return;
-
-  // Constructed the first time this is called, iff -time-passes is enabled.
-  // This guarantees that the object will be constructed before static globals,
-  // thus it will be destroyed before them.
-  static ManagedStatic<TimingInfo> TTI;
-  TheTimeInfo = &*TTI;
-}
-
-/// If TimingInfo is enabled then start pass timer.
-Timer *llvm::getPassTimer(Pass *P) {
-  if (TheTimeInfo)
-    return TheTimeInfo->getPassTimer(P);
-  return nullptr;
-}
-
-/// If timing is enabled, report the times collected up to now and then reset
-/// them.
-void llvm::reportAndResetTimings() {
-  if (TheTimeInfo)
-    TheTimeInfo->print();
 }
 
 //===----------------------------------------------------------------------===//

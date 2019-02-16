@@ -1,5 +1,10 @@
 # RUN: llc -start-after=prologepilog -filetype=obj -O0 %s -o - | llvm-readobj -codeview | FileCheck %s
-#
+
+# Offsets are now CFA, or VFRAME, relative. Both the NRVO sret pointer and the
+# string* parameter are on the stack, NRVO at offset 4 (after RA), and Str at
+# offset 8 (next slot). The stack size is 4, so the DW_OP_plus_uconst math
+# works out.
+
 # (DW_OP_plus_uconst 12)
 # CHECK: LocalSym {
 # CHECK-NEXT:   Kind: S_LOCAL (0x113E)
@@ -8,12 +13,9 @@
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   VarName: Str
 # CHECK-NEXT: }
-# CHECK-NEXT: DefRangeRegisterRelSym {
-# CHECK-NEXT:   Kind: S_DEFRANGE_REGISTER_REL (0x1145)
-# CHECK-NEXT:   BaseRegister:
-# CHECK-NEXT:   HasSpilledUDTMember: No
-# CHECK-NEXT:   OffsetInParent: 0
-# CHECK-NEXT:   BasePointerOffset: 12
+# CHECK-NEXT: DefRangeFramePointerRelSym {
+# CHECK-NEXT:   Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
+# CHECK-NEXT:   Offset: 12
 # CHECK-NEXT:   LocalVariableAddrRange {
 # CHECK-NEXT:     OffsetStart:
 # CHECK-NEXT:     ISectStart:
@@ -28,16 +30,13 @@
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   VarName: Result
 # CHECK-NEXT: }
-# CHECK-NEXT: DefRangeRegisterRelSym {
-# CHECK-NEXT:   Kind: S_DEFRANGE_REGISTER_REL (0x1145)
-# CHECK-NEXT:   BaseRegister:
-# CHECK-NEXT:   HasSpilledUDTMember: No
-# CHECK-NEXT:   OffsetInParent: 0
-# CHECK-NEXT:   BasePointerOffset: 8
+# CHECK-NEXT: DefRangeFramePointerRelSym {
+# CHECK-NEXT:   Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
+# CHECK-NEXT:   Offset: 8
 # CHECK-NEXT:   LocalVariableAddrRange {
-# CHECK-NEXT:     OffsetStart:
-# CHECK-NEXT:     ISectStart:
-# CHECK-NEXT:     Range:
+# CHECK-NEXT:     OffsetStart: .text+0x5
+# CHECK-NEXT:     ISectStart: 0x0
+# CHECK-NEXT:     Range: 0x18
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
 # (DW_OP_constu, 4, DW_OP_minus)
@@ -194,8 +193,8 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 8
     CFI_INSTRUCTION offset $esi, -8
     $esi = MOV32rm $esp, 1, _, 8, _ :: (load 4 from %fixed-stack.2)
-    DBG_VALUE debug-use $esp, 0, !26, !10, debug-location !25
-    DBG_VALUE debug-use $esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
+    DBG_VALUE $esp, 0, !26, !10, debug-location !25
+    DBG_VALUE $esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
     CALLpcrel32 @getString, csr_32, implicit $esp, implicit-def $esp, implicit-def $eax, debug-location !29
     $ecx = MOV32rm $eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load 4 from %ir.1)
     $edx = MOV32rm $eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 4)
@@ -246,7 +245,7 @@ body:             |
   bb.0.entry:
     $eax = MOV32rm $esp, 1, _, 4, _ :: (load 4 from %fixed-stack.1)
     $eax = MOV32rm killed $eax, 1, _, 0, _, debug-location !34 :: (load 4 from %ir.0)
-    DBG_VALUE debug-use $eax, 0, !35, !DIExpression(DW_OP_constu, 4, DW_OP_minus), debug-location !34
+    DBG_VALUE $eax, 0, !35, !DIExpression(DW_OP_constu, 4, DW_OP_minus), debug-location !34
     $eax = ADD32rm killed $eax, $esp, 1, _, 8, _, implicit-def dead $eflags, debug-location !36 :: (load 4 from %fixed-stack.0)
     RET 0, $eax, debug-location !36
 

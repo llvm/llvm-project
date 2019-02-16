@@ -52,8 +52,8 @@
 
 typedef struct {
   const char *state_name;
-  omp_state_t state_id;
-} omp_state_info_t;
+  ompt_state_t state_id;
+} ompt_state_info_t;
 
 typedef struct {
   const char *name;
@@ -73,10 +73,10 @@ enum tool_setting_e {
 
 ompt_callbacks_active_t ompt_enabled;
 
-omp_state_info_t omp_state_info[] = {
-#define omp_state_macro(state, code) {#state, state},
-    FOREACH_OMP_STATE(omp_state_macro)
-#undef omp_state_macro
+ompt_state_info_t ompt_state_info[] = {
+#define ompt_state_macro(state, code) {#state, state},
+    FOREACH_OMPT_STATE(ompt_state_macro)
+#undef ompt_state_macro
 };
 
 kmp_mutex_impl_info_t kmp_mutex_impl_info[] = {
@@ -351,9 +351,9 @@ void ompt_post_init() {
       return;
     }
 
-    ompt_thread_t *root_thread = ompt_get_thread();
+    kmp_info_t *root_thread = ompt_get_thread();
 
-    ompt_set_thread_state(root_thread, omp_state_overhead);
+    ompt_set_thread_state(root_thread, ompt_state_overhead);
 
     if (ompt_enabled.ompt_callback_thread_begin) {
       ompt_callbacks.ompt_callback(ompt_callback_thread_begin)(
@@ -366,7 +366,7 @@ void ompt_post_init() {
           NULL, NULL, task_data, ompt_task_initial, 0, NULL);
     }
 
-    ompt_set_thread_state(root_thread, omp_state_work_serial);
+    ompt_set_thread_state(root_thread, ompt_state_work_serial);
   }
 }
 
@@ -388,13 +388,13 @@ void ompt_fini() {
 
 OMPT_API_ROUTINE int ompt_enumerate_states(int current_state, int *next_state,
                                            const char **next_state_name) {
-  const static int len = sizeof(omp_state_info) / sizeof(omp_state_info_t);
+  const static int len = sizeof(ompt_state_info) / sizeof(ompt_state_info_t);
   int i = 0;
 
   for (i = 0; i < len - 1; i++) {
-    if (omp_state_info[i].state_id == current_state) {
-      *next_state = omp_state_info[i + 1].state_id;
-      *next_state_name = omp_state_info[i + 1].state_name;
+    if (ompt_state_info[i].state_id == current_state) {
+      *next_state = ompt_state_info[i + 1].state_id;
+      *next_state_name = ompt_state_info[i + 1].state_name;
       return 1;
     }
   }
@@ -482,11 +482,11 @@ OMPT_API_ROUTINE int ompt_get_parallel_info(int ancestor_level,
                                            team_size);
 }
 
-OMPT_API_ROUTINE omp_state_t ompt_get_state(omp_wait_id_t *wait_id) {
-  omp_state_t thread_state = __ompt_get_state_internal(wait_id);
+OMPT_API_ROUTINE ompt_state_t ompt_get_state(ompt_wait_id_t *wait_id) {
+  ompt_state_t thread_state = __ompt_get_state_internal(wait_id);
 
-  if (thread_state == omp_state_undefined) {
-    thread_state = omp_state_work_serial;
+  if (thread_state == ompt_state_undefined) {
+    thread_state = ompt_state_work_serial;
   }
 
   return thread_state;
@@ -502,11 +502,17 @@ OMPT_API_ROUTINE ompt_data_t *ompt_get_thread_data(void) {
 
 OMPT_API_ROUTINE int ompt_get_task_info(int ancestor_level, int *type,
                                         ompt_data_t **task_data,
-                                        omp_frame_t **task_frame,
+                                        ompt_frame_t **task_frame,
                                         ompt_data_t **parallel_data,
                                         int *thread_num) {
   return __ompt_get_task_info_internal(ancestor_level, type, task_data,
                                        task_frame, parallel_data, thread_num);
+}
+
+OMPT_API_ROUTINE int ompt_get_task_memory(void **addr, size_t *size,
+                                          int block) {
+  // stub
+  return 0;
 }
 
 /*****************************************************************************
@@ -629,11 +635,14 @@ OMPT_API_ROUTINE int ompt_get_partition_place_nums(int place_nums_size,
  ****************************************************************************/
 
 OMPT_API_ROUTINE int ompt_get_proc_id(void) {
-#if KMP_OS_LINUX
   if (__kmp_get_gtid() < 0)
     return -1;
-
+#if KMP_OS_LINUX
   return sched_getcpu();
+#elif KMP_OS_WINDOWS
+  PROCESSOR_NUMBER pn;
+  GetCurrentProcessorNumberEx(&pn);
+  return 64 * pn.Group + pn.Number;
 #else
   return -1;
 #endif
@@ -643,7 +652,10 @@ OMPT_API_ROUTINE int ompt_get_proc_id(void) {
  * compatability
  ****************************************************************************/
 
+/*
+ * Currently unused function
 OMPT_API_ROUTINE int ompt_get_ompt_version() { return OMPT_VERSION; }
+*/
 
 /*****************************************************************************
 * application-facing API
@@ -673,6 +685,10 @@ int __kmp_control_tool(uint64_t command, uint64_t modifier, void *arg) {
 
 OMPT_API_ROUTINE uint64_t ompt_get_unique_id(void) {
   return __ompt_get_unique_id_internal();
+}
+
+OMPT_API_ROUTINE void ompt_finalize_tool(void) {
+  // stub
 }
 
 /*****************************************************************************

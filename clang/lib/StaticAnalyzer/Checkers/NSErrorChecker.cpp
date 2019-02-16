@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -308,16 +308,30 @@ static bool IsCFError(QualType T, IdentifierInfo *II) {
   return TT->getDecl()->getIdentifier() == II;
 }
 
+void ento::registerNSOrCFErrorDerefChecker(CheckerManager &mgr) {
+  mgr.registerChecker<NSOrCFErrorDerefChecker>();
+}
+
+bool ento::shouldRegisterNSOrCFErrorDerefChecker(const LangOptions &LO) {
+  return true;
+}
+
 void ento::registerNSErrorChecker(CheckerManager &mgr) {
   mgr.registerChecker<NSErrorMethodChecker>();
-  NSOrCFErrorDerefChecker *checker =
-      mgr.registerChecker<NSOrCFErrorDerefChecker>();
+  NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
   checker->ShouldCheckNSError = true;
+}
+
+bool ento::shouldRegisterNSErrorChecker(const LangOptions &LO) {
+  return true;
 }
 
 void ento::registerCFErrorChecker(CheckerManager &mgr) {
   mgr.registerChecker<CFErrorFunctionChecker>();
-  NSOrCFErrorDerefChecker *checker =
-      mgr.registerChecker<NSOrCFErrorDerefChecker>();
+  NSOrCFErrorDerefChecker *checker = mgr.getChecker<NSOrCFErrorDerefChecker>();
   checker->ShouldCheckCFError = true;
+}
+
+bool ento::shouldRegisterCFErrorChecker(const LangOptions &LO) {
+  return true;
 }

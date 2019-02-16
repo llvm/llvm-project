@@ -1098,13 +1098,11 @@
 {'name': '_ZNSt3__119__shared_weak_countD0Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119__shared_weak_countD1Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119__shared_weak_countD2Ev', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__119__start_std_streamsE', 'is_defined': True, 'type': 'OBJECT', 'size': 1}
 {'name': '_ZNSt3__119__thread_local_dataEv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119declare_no_pointersEPcm', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119piecewise_constructE', 'is_defined': True, 'type': 'OBJECT', 'size': 1}
 {'name': '_ZNSt3__120__get_collation_nameEPKc', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__120__throw_system_errorEiPKc', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__121__throw_runtime_errorEPKc', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__121__undeclare_reachableEPv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__121recursive_timed_mutex4lockEv', 'is_defined': True, 'type': 'FUNC'}
@@ -1125,8 +1123,6 @@
 {'name': '_ZNSt3__124__libcpp_debug_exceptionD0Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__124__libcpp_debug_exceptionD1Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__124__libcpp_debug_exceptionD2Ev', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__125__num_get_signed_integralIlEET_PKcS3_Rji', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__125__num_get_signed_integralIxEET_PKcS3_Rji', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_', 'is_defined': True, 'type': 'FUNC'}
@@ -1144,10 +1140,6 @@
 {'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIxxEEPxEEbT0_S5_T_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIyyEEPyEEbT0_S5_T_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__127__libcpp_set_debug_functionEPFvRKNS_19__libcpp_debug_infoEE', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__127__num_get_unsigned_integralIjEET_PKcS3_Rji', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__127__num_get_unsigned_integralImEET_PKcS3_Rji', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__127__num_get_unsigned_integralItEET_PKcS3_Rji', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__127__num_get_unsigned_integralIyEET_PKcS3_Rji', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__129__libcpp_abort_debug_functionERKNS_19__libcpp_debug_infoE', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__129__libcpp_throw_debug_functionERKNS_19__libcpp_debug_infoE', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__13cinE', 'is_defined': True, 'type': 'OBJECT', 'size': 168}
@@ -1264,21 +1256,7 @@
 {'name': '_ZNSt3__16thread6detachEv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__16threadD1Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__16threadD2Ev', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIaaEEPaEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIccEEPcEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIddEEPdEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__17__sort5IRNS_6__lessIeeEEPeEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIffEEPfEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIhhEEPhEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIiiEEPiEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIjjEEPjEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIllEEPlEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessImmEEPmEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIssEEPsEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIttEEPtEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIwwEEPwEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIxxEEPxEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__17__sort5IRNS_6__lessIyyEEPyEEjT0_S5_S5_S5_S5_T_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__17codecvtIDic11__mbstate_tE2idE', 'is_defined': True, 'type': 'OBJECT', 'size': 16}
 {'name': '_ZNSt3__17codecvtIDic11__mbstate_tED0Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__17codecvtIDic11__mbstate_tED1Ev', 'is_defined': True, 'type': 'FUNC'}
@@ -1449,7 +1427,6 @@
 {'name': '_ZNSt3__19to_stringEx', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__19to_stringEy', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__1plIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EEPKS6_RKS9_', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__1plIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EERKS9_PKS6_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt8bad_castC1Ev', 'is_defined': False, 'type': 'FUNC'}
 {'name': '_ZNSt8bad_castD1Ev', 'is_defined': False, 'type': 'FUNC'}
 {'name': '_ZNSt8bad_castD2Ev', 'is_defined': False, 'type': 'FUNC'}
@@ -1460,7 +1437,6 @@
 {'name': '_ZSt17__throw_bad_allocv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZSt17current_exceptionv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZSt17rethrow_exceptionSt13exception_ptr', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZSt18make_exception_ptrINSt3__112future_errorEESt13exception_ptrT_', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZSt18uncaught_exceptionv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZSt19uncaught_exceptionsv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZSt7nothrow', 'is_defined': True, 'type': 'OBJECT', 'size': 1}

@@ -209,10 +209,18 @@ static bool addDiscriminators(Function &F) {
       // Only the lowest 7 bits are used to represent a discriminator to fit
       // it in 1 byte ULEB128 representation.
       unsigned Discriminator = R.second ? ++LDM[L] : LDM[L];
-      I.setDebugLoc(DIL->setBaseDiscriminator(Discriminator));
-      LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
-                        << DIL->getColumn() << ":" << Discriminator << " " << I
-                        << "\n");
+      auto NewDIL = DIL->setBaseDiscriminator(Discriminator);
+      if (!NewDIL) {
+        LLVM_DEBUG(dbgs() << "Could not encode discriminator: "
+                          << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                          << DIL->getColumn() << ":" << Discriminator << " "
+                          << I << "\n");
+      } else {
+        I.setDebugLoc(NewDIL.getValue());
+        LLVM_DEBUG(dbgs() << DIL->getFilename() << ":" << DIL->getLine() << ":"
+                   << DIL->getColumn() << ":" << Discriminator << " " << I
+                   << "\n");
+      }
       Changed = true;
     }
   }
@@ -239,8 +247,17 @@ static bool addDiscriminators(Function &F) {
           std::make_pair(CurrentDIL->getFilename(), CurrentDIL->getLine());
       if (!CallLocations.insert(L).second) {
         unsigned Discriminator = ++LDM[L];
-        Current->setDebugLoc(CurrentDIL->setBaseDiscriminator(Discriminator));
-        Changed = true;
+        auto NewDIL = CurrentDIL->setBaseDiscriminator(Discriminator);
+        if (!NewDIL) {
+          LLVM_DEBUG(dbgs()
+                     << "Could not encode discriminator: "
+                     << CurrentDIL->getFilename() << ":"
+                     << CurrentDIL->getLine() << ":" << CurrentDIL->getColumn()
+                     << ":" << Discriminator << " " << I << "\n");
+        } else {
+          Current->setDebugLoc(NewDIL.getValue());
+          Changed = true;
+        }
       }
     }
   }

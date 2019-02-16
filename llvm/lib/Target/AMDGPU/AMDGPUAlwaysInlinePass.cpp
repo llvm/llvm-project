@@ -86,8 +86,6 @@ void AMDGPUAlwaysInline::recursivelyVisitUsers(
 }
 
 bool AMDGPUAlwaysInline::runOnModule(Module &M) {
-  AMDGPUAS AMDGPUAS = AMDGPU::getAMDGPUAS(M);
-
   std::vector<GlobalAlias*> AliasesToRemove;
 
   SmallPtrSet<Function *, 8> FuncsToAlwaysInline;
@@ -122,7 +120,7 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     // TODO: Region address
     unsigned AS = GV.getType()->getAddressSpace();
-    if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS.REGION_ADDRESS)
+    if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS)
       continue;
 
     recursivelyVisitUsers(GV, FuncsToAlwaysInline);

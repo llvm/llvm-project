@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa-amdgiz -mcpu=fiji -mattr=+amdgpu-debugger-emit-prologue -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa-amdgiz -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s --check-prefix=NOATTR
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-code-object-v3,+amdgpu-debugger-emit-prologue -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-code-object-v3 -verify-machineinstrs < %s | FileCheck %s --check-prefix=NOATTR
 target datalayout = "A5"
 
 ; CHECK: debug_wavefront_private_segment_offset_sgpr = [[SOFF:[0-9]+]]

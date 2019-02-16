@@ -38,7 +38,7 @@ multiclass I3DNow_binop_rm_int<bits<8> opc, string Mn,
     [(set VR64:$dst, (!cast<Intrinsic>(
       !strconcat("int_x86_3dnow", Ver, "_", Mn)) VR64:$src1,
         (bitconvert (load_mmx addr:$src2))))]>,
-        Sched<[sched.Folded, ReadAfterLd]>;
+        Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 multiclass I3DNow_conv_rm_int<bits<8> opc, string Mn,
@@ -51,7 +51,7 @@ multiclass I3DNow_conv_rm_int<bits<8> opc, string Mn,
     [(set VR64:$dst, (!cast<Intrinsic>(
       !strconcat("int_x86_3dnow", Ver, "_", Mn))
         (bitconvert (load_mmx addr:$src))))]>,
-        Sched<[sched.Folded, ReadAfterLd]>;
+        Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 defm PAVGUSB  : I3DNow_binop_rm_int<0xBF, "pavgusb", SchedWriteVecALU.MMX, 1>;

@@ -90,6 +90,19 @@ private:
   AnalysisID StartAfter = nullptr;
   AnalysisID StopBefore = nullptr;
   AnalysisID StopAfter = nullptr;
+
+  unsigned StartBeforeInstanceNum = 0;
+  unsigned StartBeforeCount = 0;
+
+  unsigned StartAfterInstanceNum = 0;
+  unsigned StartAfterCount = 0;
+
+  unsigned StopBeforeInstanceNum = 0;
+  unsigned StopBeforeCount = 0;
+
+  unsigned StopAfterInstanceNum = 0;
+  unsigned StopAfterCount = 0;
+
   bool Started = true;
   bool Stopped = false;
   bool AddingMachinePasses = false;
@@ -145,26 +158,19 @@ public:
 
   CodeGenOpt::Level getOptLevel() const;
 
-  /// Describe the status of the codegen
-  /// pipeline set by this target pass config.
-  /// Having a limited codegen pipeline means that options
-  /// have been used to restrict what codegen is doing.
-  /// In particular, that means that codegen won't emit
-  /// assembly code.
-  bool hasLimitedCodeGenPipeline() const;
+  /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
+  /// or `-stop-before` options is set.
+  static bool hasLimitedCodeGenPipeline();
+
+  /// Returns true if none of the `-stop-before` and `-stop-after` options is
+  /// set.
+  static bool willCompleteCodeGenPipeline();
 
   /// If hasLimitedCodeGenPipeline is true, this method
   /// returns a string with the name of the options, separated
   /// by \p Separator that caused this pipeline to be limited.
   std::string
   getLimitedCodeGenPipelineReason(const char *Separator = "/") const;
-
-  /// Check if the codegen pipeline is limited in such a way that it
-  /// won't be complete. When the codegen pipeline is not complete,
-  /// this means it may not be possible to generate assembly from it.
-  bool willCompleteCodeGenPipeline() const {
-    return !hasLimitedCodeGenPipeline() || (!StopAfter && !StopBefore);
-  }
 
   void setDisableVerify(bool Disable) { setOpt(DisableVerify, Disable); }
 

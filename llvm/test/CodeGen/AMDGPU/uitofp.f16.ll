@@ -92,4 +92,23 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}s_uint_to_fp_i1_to_f16:
+; GCN-DAG: v_cmp_le_f32_e32 [[CMP0:vcc]], 1.0, {{v[0-9]+}}
+; GCN-DAG: v_cmp_le_f32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]], 0, {{v[0-9]+}}
+; GCN: s_xor_b64 [[R_CMP:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP0]]
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1.0, [[R_CMP]]
+; GCN-NEXT: v_cvt_f16_f32_e32 [[R_F16:v[0-9]+]], [[RESULT]]
+; GCN: buffer_store_short
+; GCN: s_endpgm
+define amdgpu_kernel void @s_uint_to_fp_i1_to_f16(half addrspace(1)* %out, float addrspace(1)* %in0, float addrspace(1)* %in1) {
+  %a = load float, float addrspace(1) * %in0
+  %b = load float, float addrspace(1) * %in1
+  %acmp = fcmp oge float %a, 0.000000e+00
+  %bcmp = fcmp oge float %b, 1.000000e+00
+  %result = xor i1 %acmp, %bcmp
+  %fp = uitofp i1 %result to half
+  store half %fp, half addrspace(1)* %out
+  ret void
+}
+
 ; f16 = uitofp i64 is in uint_to_fp.i64.ll

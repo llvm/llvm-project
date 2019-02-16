@@ -32,7 +32,6 @@ TEST_SUITE(recursive_directory_iterator_begin_end_tests)
 
 TEST_CASE(test_function_signatures)
 {
-    using D = recursive_directory_iterator;
     recursive_directory_iterator d; ((void)d);
 
     ASSERT_SAME_TYPE(decltype(begin(d)), recursive_directory_iterator);

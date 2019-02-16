@@ -11,7 +11,10 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidBindCheck.h"
+#include "AvoidCArraysCheck.h"
+#include "ConcatNestedNamespacesCheck.h"
 #include "DeprecatedHeadersCheck.h"
+#include "DeprecatedIosBaseAliasesCheck.h"
 #include "LoopConvertCheck.h"
 #include "MakeSharedCheck.h"
 #include "MakeUniqueCheck.h"
@@ -46,8 +49,13 @@ class ModernizeModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidBindCheck>("modernize-avoid-bind");
+    CheckFactories.registerCheck<AvoidCArraysCheck>("modernize-avoid-c-arrays");
+    CheckFactories.registerCheck<ConcatNestedNamespacesCheck>(
+        "modernize-concat-nested-namespaces");
     CheckFactories.registerCheck<DeprecatedHeadersCheck>(
         "modernize-deprecated-headers");
+    CheckFactories.registerCheck<DeprecatedIosBaseAliasesCheck>(
+        "modernize-deprecated-ios-base-aliases");
     CheckFactories.registerCheck<LoopConvertCheck>("modernize-loop-convert");
     CheckFactories.registerCheck<MakeSharedCheck>("modernize-make-shared");
     CheckFactories.registerCheck<MakeUniqueCheck>("modernize-make-unique");

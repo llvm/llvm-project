@@ -41,14 +41,14 @@ add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
 if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
                LIBCXX_CXX_ABI_LIBNAME STREQUAL "default"))
-  set(LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY ON)
+  set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
 endif()
 
 if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
   add_library_flags("-Wl,--whole-archive" "-Wl,-Bstatic")
   add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
   add_library_flags("-Wl,-Bdynamic" "-Wl,--no-whole-archive")
-elseif (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
+elseif (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
   add_library_flags("${LIBCXX_CXX_ABI_LIBRARY}")
 else ()
  add_interface_library("${LIBCXX_CXX_ABI_LIBRARY}")
@@ -129,7 +129,7 @@ if (LIBCXX_TARGETING_MSVC)
   add_library_flags(iso_stdio_wide_specifiers)
 endif()
 
-if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
+if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
   if (NOT DEFINED LIBCXX_LIBCPPABI_VERSION)
     set(LIBCXX_LIBCPPABI_VERSION "2") # Default value
     execute_process(
@@ -149,38 +149,26 @@ if (LIBCXX_OSX_REEXPORT_SYSTEM_ABI_LIBRARY)
   endif()
 
   if ( CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6" )
-    add_definitions(-D__STRICT_ANSI__)
-    add_link_flags(
-      "-compatibility_version 1"
-      "-current_version 1"
-      "-install_name /usr/lib/libc++.1.dylib"
-      "-Wl,-reexport_library,/usr/lib/libc++abi.dylib"
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
-      "/usr/lib/libSystem.B.dylib")
+    message(FATAL_ERROR "Mac OSX 10.6 is not supported anymore as a deployment "
+                        "target. If you need support for this, please contact "
+                        "the libc++ maintainers.")
   else()
-	  if (DEFINED CMAKE_OSX_SYSROOT AND NOT CMAKE_OSX_SYSROOT STREQUAL "")
-      list(FIND CMAKE_OSX_ARCHITECTURES "armv7" OSX_HAS_ARMV7)
-      if (NOT OSX_HAS_ARMV7 EQUAL -1)
-        set(OSX_RE_EXPORT_LINE
-          "${CMAKE_OSX_SYSROOT}/usr/lib/libc++abi.dylib"
-          "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.exp")
-      else()
-        set(OSX_RE_EXPORT_LINE
-          "-Wl,-reexport_library,${CMAKE_OSX_SYSROOT}/usr/lib/libc++abi.dylib")
-      endif()
+    if ("armv7" IN_LIST CMAKE_OSX_ARCHITECTURES)
+      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.exp")
     else()
-      set(OSX_RE_EXPORT_LINE "/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
-      if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-        add_link_flags("/usr/lib/libc++abi.dylib -Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp")
-      endif()
+      set(RE_EXPORT_LIST "${CMAKE_CURRENT_SOURCE_DIR}/libc++abi${LIBCXX_LIBCPPABI_VERSION}.exp")
     endif()
     add_link_flags(
       "-compatibility_version 1"
       "-install_name /usr/lib/libc++.1.dylib"
-      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
-      "${OSX_RE_EXPORT_LINE}"
-      "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp"
-      "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/weak.exp")
+      "-Wl,-unexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp\""
+      "-Wl,-reexported_symbols_list,\"${RE_EXPORT_LIST}\""
+      "-Wl,-force_symbols_not_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/notweak.exp\""
+      "-Wl,-force_symbols_weak_list,\"${CMAKE_CURRENT_SOURCE_DIR}/weak.exp\"")
+
+    if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+      add_link_flags("-Wl,-reexported_symbols_list,\"${CMAKE_CURRENT_SOURCE_DIR}/libc++abi-new-delete.exp\"")
+    endif()
   endif()
 endif()
 

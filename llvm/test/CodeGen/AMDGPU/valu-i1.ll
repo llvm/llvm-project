@@ -8,22 +8,22 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 
 ; waitcnt should be inserted after exec modification
-; SI: v_cmp_lt_i32_e32 vcc, 0,
+; SI:      v_cmp_lt_i32_e32 vcc, 0,
+; SI-NEXT: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, 0
+; SI-NEXT: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, 0
 ; SI-NEXT: s_and_saveexec_b64 [[SAVE1:s\[[0-9]+:[0-9]+\]]], vcc
 ; SI-NEXT: s_xor_b64 [[SAVE2:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE1]]
 ; SI-NEXT: ; mask branch [[FLOW_BB:BB[0-9]+_[0-9]+]]
 ; SI-NEXT: s_cbranch_execz [[FLOW_BB]]
 
 ; SI-NEXT: BB{{[0-9]+}}_1: ; %LeafBlock3
-; SI-NOT: s_mov_b64 s[{{[0-9]:[0-9]}}], -1
-; SI: v_mov_b32_e32 v{{[0-9]}}, -1
-; SI: s_and_saveexec_b64
+; SI:      s_mov_b64 s[{{[0-9]:[0-9]}}], -1
+; SI:      s_and_saveexec_b64
 ; SI-NEXT: ; mask branch
 
 ; v_mov should be after exec modification
 ; SI: [[FLOW_BB]]:
 ; SI-NEXT: s_or_saveexec_b64 [[SAVE3:s\[[0-9]+:[0-9]+\]]], [[SAVE2]]
-; SI-NEXT: v_mov_b32_e32 v{{[0-9]+}}
 ; SI-NEXT: s_xor_b64 exec, exec, [[SAVE3]]
 ; SI-NEXT: ; mask branch
 ;
@@ -201,8 +201,7 @@ exit:
 
 ; Initialize inner condition to false
 ; SI: BB{{[0-9]+_[0-9]+}}: ; %bb10.preheader
-; SI: s_mov_b64 [[ZERO:s\[[0-9]+:[0-9]+\]]], 0{{$}}
-; SI: s_mov_b64 [[COND_STATE:s\[[0-9]+:[0-9]+\]]], [[ZERO]]
+; SI: s_mov_b64 [[COND_STATE:s\[[0-9]+:[0-9]+\]]], 0{{$}}
 
 ; Clear exec bits for workitems that load -1s
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
@@ -212,21 +211,18 @@ exit:
 ; SI-DAG: v_cmp_ne_u32_e32 [[NEG1_CHECK_1:vcc]], -1, [[B]]
 ; SI: s_and_b64 [[ORNEG1:s\[[0-9]+:[0-9]+\]]], [[NEG1_CHECK_1]], [[NEG1_CHECK_0]]
 ; SI: s_and_saveexec_b64 [[ORNEG2:s\[[0-9]+:[0-9]+\]]], [[ORNEG1]]
-; SI: s_xor_b64 [[ORNEG3:s\[[0-9]+:[0-9]+\]]], exec, [[ORNEG2]]
 ; SI: s_cbranch_execz [[LABEL_FLOW:BB[0-9]+_[0-9]+]]
 
 ; SI: BB{{[0-9]+_[0-9]+}}: ; %bb20
 ; SI: buffer_store_dword
-; SI: v_cmp_ge_i64_e{{32|64}} [[CMP:s\[[0-9]+:[0-9]+\]|vcc]]
-; SI: s_or_b64 [[TMP:s\[[0-9]+:[0-9]+\]]], [[CMP]], [[COND_STATE]]
 
 ; SI: [[LABEL_FLOW]]:
 ; SI-NEXT: ; in Loop: Header=[[LABEL_LOOP]]
-; SI-NEXT: s_or_b64 exec, exec, [[ORNEG3]]
-; SI-NEXT: s_mov_b64 [[MOVED_TMP:s\[[0-9]+:[0-9]+\]]], [[TMP]]
-; SI-NEXT: s_and_b64 [[MASKED_ORNEG3:s\[[0-9]+:[0-9]+\]]], exec, [[ORNEG3]]
-; SI-NEXT: s_or_b64 [[COND_STATE]], [[MASKED_ORNEG3]], [[MOVED_TMP]]
-; SI-NEXT: s_andn2_b64 exec, exec, [[COND_STATE]]
+; SI-NEXT: s_or_b64 exec, exec, [[ORNEG2]]
+; SI-NEXT: s_and_b64 [[TMP1:s\[[0-9]+:[0-9]+\]]],
+; SI-NEXT: s_or_b64 [[TMP2:s\[[0-9]+:[0-9]+\]]], [[TMP1]], [[COND_STATE]]
+; SI-NEXT: s_mov_b64 [[COND_STATE]], [[TMP2]]
+; SI-NEXT: s_andn2_b64 exec, exec, [[TMP2]]
 ; SI-NEXT: s_cbranch_execnz [[LABEL_LOOP]]
 
 ; SI: [[LABEL_EXIT]]:

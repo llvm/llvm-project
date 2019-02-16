@@ -1,5 +1,14 @@
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=1 -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-ORIGINS1 %s
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=2 -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-ORIGINS2 %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S          \
+; RUN: -passes=msan 2>&1 | FileCheck                                           \
+; RUN: "-check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS1" %s
+; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=1 -S | FileCheck -check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS1 %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S          \
+; RUN: -passes=msan 2>&1 | FileCheck                                           \
+; RUN: "-check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS2" %s
+; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=2 -S | FileCheck -check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS2 %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0 -S -passes=msan    \
+; RUN: 2>&1 | FileCheck "-check-prefixes=CHECK,CHECK-KMSAN,CHECK-ORIGINS2" %s
+; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -S | FileCheck -check-prefixes=CHECK,CHECK-KMSAN,CHECK-ORIGINS2 %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -52,9 +61,17 @@ attributes #1 = { nounwind readnone }
 
 
 ; CHECK-LABEL: @Store
-; CHECK: load {{.*}} @__msan_param_tls
-; CHECK: [[ORIGIN:%[01-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
-; CHECK: store {{.*}}!dbg ![[DBG:[01-9]+]]
+
+; CHECK-MSAN: load {{.*}} @__msan_param_tls
+; CHECK-MSAN: [[ORIGIN:%[0-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
+
+; CHECK-KMSAN-LABEL: entry.split:
+; CHECK-KMSAN: %param_shadow
+; CHECK-KMSAN: load i32, i32*
+; CHECK-KMSAN: %param_origin
+; CHECK-KMSAN: [[ORIGIN:%[0-9a-z]+]] = load i32, i32*
+
+; CHECK: store {{.*}}!dbg ![[DBG:[0-9]+]]
 ; CHECK: icmp
 ; CHECK: br i1
 ; CHECK: <label>
@@ -63,7 +80,7 @@ attributes #1 = { nounwind readnone }
 ; CHECK-ORIGINS1: store i32 {{.*}}[[ORIGIN]],{{.*}}!dbg !{{.*}}[[DBG]]
 
 ; Origin tracking level 2: pass origin value through __msan_chain_origin and store the result.
-; CHECK-ORIGINS2: [[ORIGIN2:%[01-9a-z]+]] = call i32 @__msan_chain_origin(i32 {{.*}}[[ORIGIN]])
+; CHECK-ORIGINS2: [[ORIGIN2:%[0-9a-z]+]] = call i32 @__msan_chain_origin(i32 {{.*}}[[ORIGIN]])
 ; CHECK-ORIGINS2: store i32 {{.*}}[[ORIGIN2]],{{.*}}!dbg !{{.*}}[[DBG]]
 
 ; CHECK: br label{{.*}}!dbg !{{.*}}[[DBG]]

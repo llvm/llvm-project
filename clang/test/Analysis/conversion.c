@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-conversion -Wno-tautological-constant-compare -analyzer-checker=core,alpha.core.Conversion -verify %s
+// RUN: %clang_analyze_cc1 -Wno-conversion -Wno-tautological-constant-compare -analyzer-checker=core,apiModeling,alpha.core.Conversion -verify %s
 
 unsigned char U8;
 signed char S8;
@@ -137,16 +137,21 @@ void dontwarn5() {
   U8 = S + 10;
 }
 
+char dontwarn6(long long x) {
+  long long y = 42;
+  y += x;
+  return y == 42;
+}
 
-// false positives..
+
+// C library functions, handled via apiModeling.StdCLibraryFunctions
 
 int isascii(int c);
-void falsePositive1() {
+void libraryFunction1() {
   char kb2[5];
   int X = 1000;
   if (isascii(X)) {
-    // FIXME: should not warn here:
-    kb2[0] = X; // expected-warning {{Loss of precision}}
+    kb2[0] = X; // no-warning
   }
 }
 
@@ -155,8 +160,8 @@ typedef struct FILE {} FILE; int getc(FILE *stream);
 # define EOF (-1)
 char reply_string[8192];
 FILE *cin;
-extern int dostuff (void);
-int falsePositive2() {
+extern int dostuff(void);
+int libraryFunction2() {
   int c, n;
   int dig;
   char *cp = reply_string;
@@ -175,9 +180,31 @@ int falsePositive2() {
       if (c == EOF)
         return(4);
       if (cp < &reply_string[sizeof(reply_string) - 1])
-        // FIXME: should not warn here:
-        *cp++ = c; // expected-warning {{Loss of precision}}
+        *cp++ = c; // no-warning
     }
   }
 }
 
+double floating_point(long long a, int b) {
+  if (a > 1LL << 55) {
+    double r = a; // expected-warning {{Loss of precision}}
+    return r;
+  } else if (b > 1 << 25) {
+    float f = b; // expected-warning {{Loss of precision}}
+    return f;
+  }
+  return 137;
+}
+
+double floating_point2() {
+  int a = 1 << 24;
+  long long b = 1LL << 53;
+  float f = a; // no-warning
+  double d = b; // no-warning
+  return d - f;
+}
+
+int floating_point_3(unsigned long long a) {
+  double b = a; // no-warning
+  return 42;
+}

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/SValExplainer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -299,7 +299,7 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
                                              CheckerContext &C) const {
   const LangOptions &Opts = C.getLangOpts();
   const SourceManager &SM = C.getSourceManager();
-  FullSourceLoc FL(CE->getArg(0)->getLocStart(), SM);
+  FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
   std::string HashContent =
       GetIssueString(SM, FL, getCheckName().getName(), "Category",
                      C.getLocationContext()->getDecl(), Opts);
@@ -321,11 +321,6 @@ void ExprInspectionChecker::analyzerDenote(const CallExpr *CE,
     return;
   }
 
-  if (!isa<SymbolData>(Sym)) {
-    reportBug("Not an atomic symbol", C);
-    return;
-  }
-
   const auto *E = dyn_cast<StringLiteral>(CE->getArg(1)->IgnoreParenCasts());
   if (!E) {
     reportBug("Not a string literal", C);
@@ -337,6 +332,7 @@ void ExprInspectionChecker::analyzerDenote(const CallExpr *CE,
   C.addTransition(C.getState()->set<DenotedSymbols>(Sym, E));
 }
 
+namespace {
 class SymbolExpressor
     : public SymExprVisitor<SymbolExpressor, Optional<std::string>> {
   ProgramStateRef State;
@@ -344,7 +340,7 @@ class SymbolExpressor
 public:
   SymbolExpressor(ProgramStateRef State) : State(State) {}
 
-  Optional<std::string> VisitSymExpr(const SymExpr *S) {
+  Optional<std::string> lookup(const SymExpr *S) {
     if (const StringLiteral *const *SLPtr = State->get<DenotedSymbols>(S)) {
       const StringLiteral *SL = *SLPtr;
       return std::string(SL->getBytes());
@@ -352,8 +348,14 @@ public:
     return None;
   }
 
+  Optional<std::string> VisitSymExpr(const SymExpr *S) {
+    return lookup(S);
+  }
+
   Optional<std::string> VisitSymIntExpr(const SymIntExpr *S) {
-    if (auto Str = Visit(S->getLHS()))
+    if (Optional<std::string> Str = lookup(S))
+      return Str;
+    if (Optional<std::string> Str = Visit(S->getLHS()))
       return (*Str + " " + BinaryOperator::getOpcodeStr(S->getOpcode()) + " " +
               std::to_string(S->getRHS().getLimitedValue()) +
               (S->getRHS().isUnsigned() ? "U" : ""))
@@ -362,13 +364,24 @@ public:
   }
 
   Optional<std::string> VisitSymSymExpr(const SymSymExpr *S) {
-    if (auto Str1 = Visit(S->getLHS()))
-      if (auto Str2 = Visit(S->getRHS()))
+    if (Optional<std::string> Str = lookup(S))
+      return Str;
+    if (Optional<std::string> Str1 = Visit(S->getLHS()))
+      if (Optional<std::string> Str2 = Visit(S->getRHS()))
         return (*Str1 + " " + BinaryOperator::getOpcodeStr(S->getOpcode()) +
                 " " + *Str2).str();
     return None;
   }
+
+  Optional<std::string> VisitSymbolCast(const SymbolCast *S) {
+    if (Optional<std::string> Str = lookup(S))
+      return Str;
+    if (Optional<std::string> Str = Visit(S->getOperand()))
+      return (Twine("(") + S->getType().getAsString() + ")" + *Str).str();
+    return None;
+  }
 };
+} // namespace
 
 void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
                                             CheckerContext &C) const {
@@ -395,4 +408,8 @@ void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
 
 void ento::registerExprInspectionChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ExprInspectionChecker>();
+}
+
+bool ento::shouldRegisterExprInspectionChecker(const LangOptions &LO) {
+  return true;
 }

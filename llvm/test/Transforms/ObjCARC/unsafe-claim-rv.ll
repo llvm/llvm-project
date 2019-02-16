@@ -15,33 +15,33 @@
 ;
 ; And then hand-reduced further. 
 
-declare i8* @objc_autoreleaseReturnValue(i8*)
-declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
-declare i8* @objc_retain(i8*)
-declare void @objc_release(i8*)
+declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
+declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
+declare i8* @llvm.objc.retain(i8*)
+declare void @llvm.objc.release(i8*)
 
 define void @foo(i8* %X) {
 entry:
-  %0 = tail call i8* @objc_retain(i8* %X) 
+  %0 = tail call i8* @llvm.objc.retain(i8* %X) 
   %tobool = icmp eq i8* %0, null
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %1 = tail call i8* @objc_retain(i8* nonnull %0)
+  %1 = tail call i8* @llvm.objc.retain(i8* nonnull %0)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
   %Y.0 = phi i8* [ %1, %if.then ], [ null, %entry ]
-  %2 = tail call i8* @objc_autoreleaseReturnValue(i8* %Y.0)
-  %3 = tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %2)
-  tail call void @objc_release(i8* %0) 
+  %2 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %Y.0)
+  %3 = tail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %2)
+  tail call void @llvm.objc.release(i8* %0) 
   ret void
 }
 
 ; CHECK: if.then
-; CHECK: tail call i8* @objc_retain
-; CHECK-NEXT: call i8* @objc_autorelease
+; CHECK: tail call i8* @llvm.objc.retain
+; CHECK-NEXT: call i8* @llvm.objc.autorelease
 ; CHECK: %Y.0 = phi
-; CHECK-NEXT: tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %Y.0)
-; CHECK-NEXT: tail call void @objc_release
+; CHECK-NEXT: tail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %Y.0)
+; CHECK-NEXT: tail call void @llvm.objc.release
 

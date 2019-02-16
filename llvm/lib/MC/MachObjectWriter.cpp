@@ -597,8 +597,8 @@ void MachObjectWriter::computeSymbolTable(
   }
 
   // External and undefined symbols are required to be in lexicographic order.
-  llvm::sort(ExternalSymbolData.begin(), ExternalSymbolData.end());
-  llvm::sort(UndefinedSymbolData.begin(), UndefinedSymbolData.end());
+  llvm::sort(ExternalSymbolData);
+  llvm::sort(UndefinedSymbolData);
 
   // Set the symbol indices.
   Index = 0;
@@ -846,18 +846,27 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
 
   // Write out the deployment target information, if it's available.
   if (VersionInfo.Major != 0) {
-    assert(VersionInfo.Update < 256 && "unencodable update target version");
-    assert(VersionInfo.Minor < 256 && "unencodable minor target version");
-    assert(VersionInfo.Major < 65536 && "unencodable major target version");
-    uint32_t EncodedVersion = VersionInfo.Update | (VersionInfo.Minor << 8) |
-      (VersionInfo.Major << 16);
+    auto EncodeVersion = [](VersionTuple V) -> uint32_t {
+      assert(!V.empty() && "empty version");
+      unsigned Update = V.getSubminor() ? *V.getSubminor() : 0;
+      unsigned Minor = V.getMinor() ? *V.getMinor() : 0;
+      assert(Update < 256 && "unencodable update target version");
+      assert(Minor < 256 && "unencodable minor target version");
+      assert(V.getMajor() < 65536 && "unencodable major target version");
+      return Update | (Minor << 8) | (V.getMajor() << 16);
+    };
+    uint32_t EncodedVersion = EncodeVersion(
+        VersionTuple(VersionInfo.Major, VersionInfo.Minor, VersionInfo.Update));
+    uint32_t SDKVersion = !VersionInfo.SDKVersion.empty()
+                              ? EncodeVersion(VersionInfo.SDKVersion)
+                              : 0;
     if (VersionInfo.EmitBuildVersion) {
       // FIXME: Currently empty tools. Add clang version in the future.
       W.write<uint32_t>(MachO::LC_BUILD_VERSION);
       W.write<uint32_t>(sizeof(MachO::build_version_command));
       W.write<uint32_t>(VersionInfo.TypeOrPlatform.Platform);
       W.write<uint32_t>(EncodedVersion);
-      W.write<uint32_t>(0);         // SDK version.
+      W.write<uint32_t>(SDKVersion);
       W.write<uint32_t>(0);         // Empty tools list.
     } else {
       MachO::LoadCommandType LCType
@@ -865,7 +874,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
       W.write<uint32_t>(LCType);
       W.write<uint32_t>(sizeof(MachO::version_min_command));
       W.write<uint32_t>(EncodedVersion);
-      W.write<uint32_t>(0);         // reserved.
+      W.write<uint32_t>(SDKVersion);
     }
   }
 

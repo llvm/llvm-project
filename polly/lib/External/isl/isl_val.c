@@ -528,7 +528,7 @@ __isl_give isl_val *isl_val_trunc(__isl_take isl_val *v)
 
 /* Return 2^v, where v is an integer (that is not too large).
  */
-__isl_give isl_val *isl_val_2exp(__isl_take isl_val *v)
+__isl_give isl_val *isl_val_pow2(__isl_take isl_val *v)
 {
 	unsigned long exp;
 	int neg;
@@ -555,6 +555,13 @@ __isl_give isl_val *isl_val_2exp(__isl_take isl_val *v)
 	}
 
 	return v;
+}
+
+/* This is an alternative name for the function above.
+ */
+__isl_give isl_val *isl_val_2exp(__isl_take isl_val *v)
+{
+	return isl_val_pow2(v);
 }
 
 /* Return the minimum of "v1" and "v2".

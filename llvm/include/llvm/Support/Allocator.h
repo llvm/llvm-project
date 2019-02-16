@@ -311,6 +311,33 @@ public:
     return None;
   }
 
+  /// A wrapper around identifyObject that additionally asserts that
+  /// the object is indeed within the allocator.
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator.
+  int64_t identifyKnownObject(const void *Ptr) {
+    Optional<int64_t> Out = identifyObject(Ptr);
+    assert(Out && "Wrong allocator used");
+    return *Out;
+  }
+
+  /// A wrapper around identifyKnownObject. Accepts type information
+  /// about the object and produces a smaller identifier by relying on
+  /// the alignment information. Note that sub-classes may have different
+  /// alignment, so the most base class should be passed as template parameter
+  /// in order to obtain correct results. For that reason automatic template
+  /// parameter deduction is disabled.
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator. This identifier is
+  /// different from the ones produced by identifyObject and
+  /// identifyAlignedObject.
+  template <typename T>
+  int64_t identifyKnownAlignedObject(const void *Ptr) {
+    int64_t Out = identifyKnownObject(Ptr);
+    assert(Out % alignof(T) == 0 && "Wrong alignment information");
+    return Out / alignof(T);
+  }
+
   size_t getTotalMemory() const {
     size_t TotalMemory = 0;
     for (auto I = Slabs.begin(), E = Slabs.end(); I != E; ++I)

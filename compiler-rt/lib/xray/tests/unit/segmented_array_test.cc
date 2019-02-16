@@ -1,8 +1,15 @@
+#include "test_helpers.h"
 #include "xray_segmented_array.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <numeric>
+#include <vector>
 
 namespace __xray {
 namespace {
+
+using ::testing::SizeIs;
 
 struct TestData {
   s64 First;
@@ -11,6 +18,10 @@ struct TestData {
   // Need a constructor for emplace operations.
   TestData(s64 F, s64 S) : First(F), Second(S) {}
 };
+
+void PrintTo(const TestData &D, std::ostream *OS) {
+  *OS << "{ " << D.First << ", " << D.Second << " }";
+}
 
 TEST(SegmentedArrayTest, ConstructWithAllocators) {
   using AllocatorType = typename Array<TestData>::AllocatorType;
@@ -161,6 +172,23 @@ TEST(SegmentedArrayTest, IteratorTrimBehaviour) {
   EXPECT_EQ(Data.size(), SegmentX2);
 }
 
+TEST(SegmentedArrayTest, HandleExhaustedAllocator) {
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  constexpr auto Segment = Array<TestData>::SegmentSize;
+  constexpr auto MaxElements = Array<TestData>::ElementsPerSegment;
+  AllocatorType A(Segment);
+  Array<TestData> Data(A);
+  for (auto i = MaxElements; i > 0u; --i)
+    EXPECT_NE(Data.AppendEmplace(static_cast<s64>(i), static_cast<s64>(i)),
+              nullptr);
+  EXPECT_EQ(Data.AppendEmplace(0, 0), nullptr);
+  EXPECT_THAT(Data, SizeIs(MaxElements));
+
+  // Trimming more elements than there are in the container should be fine.
+  Data.trim(MaxElements + 1);
+  EXPECT_THAT(Data, SizeIs(0u));
+}
+
 struct ShadowStackEntry {
   uint64_t EntryTSC = 0;
   uint64_t *NodePtr = nullptr;
@@ -193,6 +221,127 @@ TEST(SegmentedArrayTest, SimulateStackBehaviour) {
     Data.trim(1);
     --Counter;
     ASSERT_EQ(Data.size(), size_t(Counter));
+  }
+}
+
+TEST(SegmentedArrayTest, PlacementNewOnAlignedStorage) {
+  using AllocatorType = typename Array<ShadowStackEntry>::AllocatorType;
+  typename std::aligned_storage<sizeof(AllocatorType),
+                                alignof(AllocatorType)>::type AllocatorStorage;
+  new (&AllocatorStorage) AllocatorType(1 << 10);
+  auto *A = reinterpret_cast<AllocatorType *>(&AllocatorStorage);
+  typename std::aligned_storage<sizeof(Array<ShadowStackEntry>),
+                                alignof(Array<ShadowStackEntry>)>::type
+      ArrayStorage;
+  new (&ArrayStorage) Array<ShadowStackEntry>(*A);
+  auto *Data = reinterpret_cast<Array<ShadowStackEntry> *>(&ArrayStorage);
+
+  static uint64_t Dummy = 0;
+  constexpr uint64_t Max = 9;
+
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+
+  // Simulate a stack by checking the data from the end as we're trimming.
+  auto Counter = Max;
+  ASSERT_EQ(Data->size(), size_t(Max));
+  while (!Data->empty()) {
+    const auto &Top = Data->back();
+    uint64_t *TopNode = Top.NodePtr;
+    EXPECT_EQ(TopNode, &Dummy) << "Counter = " << Counter;
+    Data->trim(1);
+    --Counter;
+    ASSERT_EQ(Data->size(), size_t(Counter));
+  }
+
+  // Once the stack is exhausted, we re-use the storage.
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+
+  // We re-initialize the storage, by calling the destructor and
+  // placement-new'ing again.
+  Data->~Array();
+  A->~AllocatorType();
+  new (A) AllocatorType(1 << 10);
+  new (Data) Array<ShadowStackEntry>(*A);
+
+  // Then re-do the test.
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+
+  // Simulate a stack by checking the data from the end as we're trimming.
+  Counter = Max;
+  ASSERT_EQ(Data->size(), size_t(Max));
+  while (!Data->empty()) {
+    const auto &Top = Data->back();
+    uint64_t *TopNode = Top.NodePtr;
+    EXPECT_EQ(TopNode, &Dummy) << "Counter = " << Counter;
+    Data->trim(1);
+    --Counter;
+    ASSERT_EQ(Data->size(), size_t(Counter));
+  }
+
+  // Once the stack is exhausted, we re-use the storage.
+  for (uint64_t i = 0; i < Max; ++i) {
+    auto P = Data->Append({i, &Dummy});
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(P->NodePtr, &Dummy);
+    auto &Back = Data->back();
+    ASSERT_EQ(Back.NodePtr, &Dummy);
+    ASSERT_EQ(Back.EntryTSC, i);
+  }
+}
+
+TEST(SegmentedArrayTest, ArrayOfPointersIteratorAccess) {
+  using PtrArray = Array<int *>;
+  PtrArray::AllocatorType Alloc(16384);
+  Array<int *> A(Alloc);
+  static constexpr size_t Count = 100;
+  std::vector<int> Integers(Count);
+  std::iota(Integers.begin(), Integers.end(), 0);
+  for (auto &I : Integers)
+    ASSERT_NE(A.Append(&I), nullptr);
+  int V = 0;
+  ASSERT_EQ(A.size(), Count);
+  for (auto P : A) {
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(*P, V++);
+  }
+}
+
+TEST(SegmentedArrayTest, ArrayOfPointersIteratorAccessExhaustion) {
+  using PtrArray = Array<int *>;
+  PtrArray::AllocatorType Alloc(4096);
+  Array<int *> A(Alloc);
+  static constexpr size_t Count = 1000;
+  std::vector<int> Integers(Count);
+  std::iota(Integers.begin(), Integers.end(), 0);
+  for (auto &I : Integers)
+    if (A.Append(&I) == nullptr)
+      break;
+  int V = 0;
+  ASSERT_LT(A.size(), Count);
+  for (auto P : A) {
+    ASSERT_NE(P, nullptr);
+    ASSERT_EQ(*P, V++);
   }
 }
 

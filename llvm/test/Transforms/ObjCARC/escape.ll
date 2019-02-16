@@ -10,8 +10,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; with the objc_storeWeak call.
 
 ; CHECK-LABEL: define void @test0(
-; CHECK: %tmp7 = call i8* @objc_retainBlock(i8* %tmp6) [[NUW:#[0-9]+]], !clang.arc.copy_on_escape !0
-; CHECK: call void @objc_release(i8* %tmp7) [[NUW]], !clang.imprecise_release !0
+; CHECK: %tmp7 = call i8* @llvm.objc.retainBlock(i8* %tmp6) [[NUW:#[0-9]+]], !clang.arc.copy_on_escape !0
+; CHECK: call void @llvm.objc.release(i8* %tmp7) [[NUW]], !clang.imprecise_release !0
 ; CHECK: }
 define void @test0() nounwind {
 entry:
@@ -31,7 +31,7 @@ entry:
   store i8* bitcast (void (i8*)* @__Block_byref_object_dispose_ to i8*), i8** %tmp2, align 8
   %weakLogNTimes1 = getelementptr inbounds %struct.__block_byref_weakLogNTimes, %struct.__block_byref_weakLogNTimes* %weakLogNTimes, i64 0, i32 6
   %tmp3 = bitcast void (...)** %weakLogNTimes1 to i8**
-  %tmp4 = call i8* @objc_initWeak(i8** %tmp3, i8* null) nounwind
+  %tmp4 = call i8* @llvm.objc.initWeak(i8** %tmp3, i8* null) nounwind
   %block.isa = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>* %block, i64 0, i32 0
   store i8* null, i8** %block.isa, align 8
   %block.flags = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>* %block, i64 0, i32 1
@@ -46,19 +46,19 @@ entry:
   %tmp5 = bitcast %struct.__block_byref_weakLogNTimes* %weakLogNTimes to i8*
   store i8* %tmp5, i8** %block.captured, align 8
   %tmp6 = bitcast <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>* %block to i8*
-  %tmp7 = call i8* @objc_retainBlock(i8* %tmp6) nounwind, !clang.arc.copy_on_escape !0
+  %tmp7 = call i8* @llvm.objc.retainBlock(i8* %tmp6) nounwind, !clang.arc.copy_on_escape !0
   %tmp8 = load %struct.__block_byref_weakLogNTimes*, %struct.__block_byref_weakLogNTimes** %byref.forwarding, align 8
   %weakLogNTimes3 = getelementptr inbounds %struct.__block_byref_weakLogNTimes, %struct.__block_byref_weakLogNTimes* %tmp8, i64 0, i32 6
   %tmp9 = bitcast void (...)** %weakLogNTimes3 to i8**
-  %tmp10 = call i8* @objc_storeWeak(i8** %tmp9, i8* %tmp7) nounwind
+  %tmp10 = call i8* @llvm.objc.storeWeak(i8** %tmp9, i8* %tmp7) nounwind
   %tmp11 = getelementptr inbounds i8, i8* %tmp7, i64 16
   %tmp12 = bitcast i8* %tmp11 to i8**
   %tmp13 = load i8*, i8** %tmp12, align 8
   %tmp14 = bitcast i8* %tmp13 to void (i8*, i32)*
   call void %tmp14(i8* %tmp7, i32 10) nounwind, !clang.arc.no_objc_arc_exceptions !0
-  call void @objc_release(i8* %tmp7) nounwind, !clang.imprecise_release !0
+  call void @llvm.objc.release(i8* %tmp7) nounwind, !clang.imprecise_release !0
   call void @_Block_object_dispose(i8* %tmp5, i32 8) nounwind
-  call void @objc_destroyWeak(i8** %tmp3) nounwind
+  call void @llvm.objc.destroyWeak(i8** %tmp3) nounwind
   ret void
 }
 
@@ -66,7 +66,7 @@ entry:
 ; so the optimization is valid.
 
 ; CHECK-LABEL: define void @test1(
-; CHECK-NOT: @objc_retainBlock
+; CHECK-NOT: @llvm.objc.retainBlock
 ; CHECK: }
 define void @test1() nounwind {
 entry:
@@ -86,7 +86,7 @@ entry:
   store i8* bitcast (void (i8*)* @__Block_byref_object_dispose_ to i8*), i8** %tmp2, align 8
   %weakLogNTimes1 = getelementptr inbounds %struct.__block_byref_weakLogNTimes, %struct.__block_byref_weakLogNTimes* %weakLogNTimes, i64 0, i32 6
   %tmp3 = bitcast void (...)** %weakLogNTimes1 to i8**
-  %tmp4 = call i8* @objc_initWeak(i8** %tmp3, i8* null) nounwind
+  %tmp4 = call i8* @llvm.objc.initWeak(i8** %tmp3, i8* null) nounwind
   %block.isa = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>* %block, i64 0, i32 0
   store i8* null, i8** %block.isa, align 8
   %block.flags = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>* %block, i64 0, i32 1
@@ -101,7 +101,7 @@ entry:
   %tmp5 = bitcast %struct.__block_byref_weakLogNTimes* %weakLogNTimes to i8*
   store i8* %tmp5, i8** %block.captured, align 8
   %tmp6 = bitcast <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i8* }>* %block to i8*
-  %tmp7 = call i8* @objc_retainBlock(i8* %tmp6) nounwind, !clang.arc.copy_on_escape !0
+  %tmp7 = call i8* @llvm.objc.retainBlock(i8* %tmp6) nounwind, !clang.arc.copy_on_escape !0
   %tmp8 = load %struct.__block_byref_weakLogNTimes*, %struct.__block_byref_weakLogNTimes** %byref.forwarding, align 8
   %weakLogNTimes3 = getelementptr inbounds %struct.__block_byref_weakLogNTimes, %struct.__block_byref_weakLogNTimes* %tmp8, i64 0, i32 6
   %tmp9 = bitcast void (...)** %weakLogNTimes3 to i8**
@@ -111,22 +111,22 @@ entry:
   %tmp13 = load i8*, i8** %tmp12, align 8
   %tmp14 = bitcast i8* %tmp13 to void (i8*, i32)*
   call void %tmp14(i8* %tmp7, i32 10) nounwind, !clang.arc.no_objc_arc_exceptions !0
-  call void @objc_release(i8* %tmp7) nounwind, !clang.imprecise_release !0
+  call void @llvm.objc.release(i8* %tmp7) nounwind, !clang.imprecise_release !0
   call void @_Block_object_dispose(i8* %tmp5, i32 8) nounwind
-  call void @objc_destroyWeak(i8** %tmp3) nounwind
+  call void @llvm.objc.destroyWeak(i8** %tmp3) nounwind
   ret void
 }
 
 declare void @__Block_byref_object_copy_(i8*, i8*) nounwind
 declare void @__Block_byref_object_dispose_(i8*) nounwind
-declare void @objc_destroyWeak(i8**)
-declare i8* @objc_initWeak(i8**, i8*)
+declare void @llvm.objc.destroyWeak(i8**)
+declare i8* @llvm.objc.initWeak(i8**, i8*)
 declare void @__main_block_invoke_0(i8* nocapture, i32) nounwind ssp
 declare void @_Block_object_dispose(i8*, i32)
-declare i8* @objc_retainBlock(i8*)
-declare i8* @objc_storeWeak(i8**, i8*)
+declare i8* @llvm.objc.retainBlock(i8*)
+declare i8* @llvm.objc.storeWeak(i8**, i8*)
 declare i8* @not_really_objc_storeWeak(i8**, i8*)
-declare void @objc_release(i8*)
+declare void @llvm.objc.release(i8*)
 
 !0 = !{}
 

@@ -49,6 +49,9 @@ public:
     bool      isSignalFrame;
     bool      fdesHaveAugmentationData;
     uint8_t   returnAddressRegister;
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+    bool      addressesSignedWithBKey;
+#endif
   };
 
   /// Information about an FDE (Frame Description Entry)
@@ -263,6 +266,9 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
   cieInfo->dataAlignFactor = 0;
   cieInfo->isSignalFrame = false;
   cieInfo->fdesHaveAugmentationData = false;
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+  cieInfo->addressesSignedWithBKey = false;
+#endif
   cieInfo->cieStart = cie;
   pint_t p = cie;
   pint_t cieLength = (pint_t)addressSpace.get32(p);
@@ -326,6 +332,11 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
       case 'S':
         cieInfo->isSignalFrame = true;
         break;
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+      case 'B':
+        cieInfo->addressesSignedWithBKey = true;
+        break;
+#endif
       default:
         // ignore unknown letters
         break;
@@ -666,6 +677,14 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       _LIBUNWIND_TRACE_DWARF(
           "DW_CFA_GNU_negative_offset_extended(%" PRId64 ")\n", offset);
       break;
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+    case DW_CFA_AARCH64_negate_ra_state:
+      results->savedRegisters[UNW_ARM64_RA_SIGN_STATE].value ^= 0x1;
+      _LIBUNWIND_TRACE_DWARF("DW_CFA_AARCH64_negate_ra_state\n");
+      break;
+#endif
+
     default:
       operand = opcode & 0x3F;
       switch (opcode & 0xC0) {

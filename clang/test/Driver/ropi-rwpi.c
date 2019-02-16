@@ -30,8 +30,8 @@
 
 // ROPI-RWPI: "-mrelocation-model" "ropi-rwpi"
 
-// ROPI-NON-ARM: error: unsupported option '-fropi' for target 'x86_64--linux-gnu'
-// RWPI-NON-ARM: error: unsupported option '-frwpi' for target 'x86_64--linux-gnu'
+// ROPI-NON-ARM: error: unsupported option '-fropi' for target 'x86_64-unknown-linux-gnu'
+// RWPI-NON-ARM: error: unsupported option '-frwpi' for target 'x86_64-unknown-linux-gnu'
 
 // PIC: error: embedded and GOT-based position independence are incompatible
 

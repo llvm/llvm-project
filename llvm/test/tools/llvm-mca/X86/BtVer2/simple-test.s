@@ -6,7 +6,10 @@ add %edi, %eax
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
 # CHECK-NEXT: Total Cycles:      103
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        100
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.97
 # CHECK-NEXT: IPC:               0.97
 # CHECK-NEXT: Block RThroughput: 0.5
 

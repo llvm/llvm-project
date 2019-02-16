@@ -576,10 +576,13 @@ auto S =
 auto S = R"pb(item_1:1 item_2:2)pb"+rest;)test",
                    getRawStringPbStyleWithColumns(40)));
 
+  // `rest` fits on the line after )pb", but forced on newline since the raw
+  // string literal is multiline.
   expect_eq(R"test(
 auto S = R"pb(item_1: 1,
               item_2: 2,
-              item_3: 3)pb" + rest;)test",
+              item_3: 3)pb" +
+         rest;)test",
             format(R"test(
 auto S = R"pb(item_1:1,item_2:2,item_3:3)pb"+rest;)test",
                    getRawStringPbStyleWithColumns(40)));
@@ -615,7 +618,8 @@ auto S = first+R"pb(item_1:1 item_2:2)pb";)test",
   expect_eq(R"test(
 auto S = R"pb(item_1: 1,
               item_2: 2,
-              item_3: 3)pb" + rest;)test",
+              item_3: 3)pb" +
+         rest;)test",
             format(R"test(
 auto S = R"pb(item_1:1,item_2:2,item_3:3)pb"+rest;)test",
                    getRawStringPbStyleWithColumns(40)));
@@ -887,6 +891,95 @@ item {
 )Raw"));
 })test",
                    Style));
+}
+
+TEST_F(FormatTestRawStrings,
+       BreaksBeforeNextParamAfterMultilineRawStringParam) {
+  FormatStyle Style = getRawStringPbStyleWithColumns(60);
+  expect_eq(R"test(
+int f() {
+  int a = g(x, R"pb(
+              key: 1  #
+              key: 2
+            )pb",
+            3, 4);
+}
+)test",
+            format(R"test(
+int f() {
+  int a = g(x, R"pb(
+              key: 1 #
+              key: 2
+            )pb", 3, 4);
+}
+)test",
+                   Style));
+
+  // Breaks after a parent of a multiline param.
+  expect_eq(R"test(
+int f() {
+  int a = g(x, h(R"pb(
+              key: 1  #
+              key: 2
+            )pb"),
+            3, 4);
+}
+)test",
+            format(R"test(
+int f() {
+  int a = g(x, h(R"pb(
+              key: 1 #
+              key: 2
+            )pb"), 3, 4);
+}
+)test",
+                   Style));
+  
+  expect_eq(R"test(
+int f() {
+  int a = g(x,
+            h(R"pb(
+                key: 1  #
+                key: 2
+              )pb",
+              2),
+            3, 4);
+}
+)test",
+            format(R"test(
+int f() {
+  int a = g(x, h(R"pb(
+              key: 1 #
+              key: 2
+            )pb", 2), 3, 4);
+}
+)test",
+                   Style));
+  // Breaks if formatting introduces a multiline raw string.
+  expect_eq(R"test(
+int f() {
+  int a = g(x, R"pb(key1: value111111111
+                    key2: value2222222222)pb",
+            3, 4);
+}
+)test",
+            format(R"test(
+int f() {
+  int a = g(x, R"pb(key1: value111111111 key2: value2222222222)pb", 3, 4);
+}
+)test",
+                   Style));
+  // Does not force a break after an original multiline param that is
+  // reformatterd as on single line.
+  expect_eq(R"test(
+int f() {
+  int a = g(R"pb(key: 1)pb", 2);
+})test",
+            format(R"test(
+int f() {
+  int a = g(R"pb(key:
+                 1)pb", 2);
+})test", Style));
 }
 
 } // end namespace

@@ -1,5 +1,4 @@
 // RUN: %clang -ffixed-point -S -emit-llvm %s -o - --target=x86_64-linux | FileCheck %s
-// RUN: %clang -ffixed-point -S -emit-llvm %s -o - --target=x86_64-scei-ps4-ubuntu-fast | FileCheck %s
 
 // Primary fixed point types
 signed short _Accum   s_short_accum;  // CHECK-DAG: @s_short_accum  = {{.*}}global i16 0, align 2
@@ -111,3 +110,18 @@ long _Fract           long_fract_eps    = 0x1p-31lr;        // CHECK-DAG: @long_
 unsigned short _Fract u_short_fract_eps = 0x1p-8uhr;        // CHECK-DAG: @u_short_fract_eps = {{.*}}global i8  1, align 1
 unsigned _Fract       u_fract_eps       = 0x1p-16ur;        // CHECK-DAG: @u_fract_eps       = {{.*}}global i16 1, align 2
 unsigned long _Fract  u_long_fract_eps  = 0x1p-32ulr;       // CHECK-DAG: @u_long_fract_eps  = {{.*}}global i32 1, align 4
+
+// Zero
+short _Accum          short_accum_zero    = 0.0hk;    // CHECK-DAG: @short_accum_zero     = {{.*}}global i16 0, align 2
+ _Accum               accum_zero          = 0.0k;     // CHECK-DAG: @accum_zero           = {{.*}}global i32 0, align 4
+long _Accum           long_accum_zero     = 0.0lk;    // CHECK-DAG: @long_accum_zero      = {{.*}}global i64 0, align 8
+unsigned short _Accum u_short_accum_zero  = 0.0uhk;   // CHECK-DAG: @u_short_accum_zero   = {{.*}}global i16 0, align 2
+unsigned  _Accum      u_accum_zero        = 0.0uk;    // CHECK-DAG: @u_accum_zero         = {{.*}}global i32 0, align 4
+unsigned long _Accum  u_long_accum_zero   = 0.0ulk;   // CHECK-DAG: @u_long_accum_zero    = {{.*}}global i64 0, align 8
+
+short _Fract          short_fract_zero    = 0.0hr;    // CHECK-DAG: @short_fract_zero     = {{.*}}global i8  0, align 1
+ _Fract               fract_zero          = 0.0r;     // CHECK-DAG: @fract_zero           = {{.*}}global i16 0, align 2
+long _Fract           long_fract_zero     = 0.0lr;    // CHECK-DAG: @long_fract_zero      = {{.*}}global i32 0, align 4
+unsigned short _Fract u_short_fract_zero  = 0.0uhr;   // CHECK-DAG: @u_short_fract_zero   = {{.*}}global i8  0, align 1
+unsigned  _Fract      u_fract_zero        = 0.0ur;    // CHECK-DAG: @u_fract_zero         = {{.*}}global i16 0, align 2
+unsigned long _Fract  u_long_fract_zero   = 0.0ulr;   // CHECK-DAG: @u_long_fract_zero    = {{.*}}global i32 0, align 4

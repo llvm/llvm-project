@@ -1,0 +1,55 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-size -B %t.o | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Size:            1
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:            2
+  - Name:            .unusual_name_for_code
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:            64
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Size:            4
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Size:            8
+  - Name:            .moar_stuff
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Size:            128
+  - Name:            .text.but_not_really
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Size:            256
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Size:            16
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Size:            32
+
+# text is .text, .eh_frame, .unusual_name_for_code: 2 + 4 + 64 = 70
+# data is .data, .init_array, .moar_stuff: 8 + 32 + 128 = 168
+# bss is .bss: 1
+# total: 239
+# unaccounted for (not affecting total) is .debug_info, .text.but_not_really
+
+# CHECK: text data bss dec
+# CHECK: 70   168  1   239

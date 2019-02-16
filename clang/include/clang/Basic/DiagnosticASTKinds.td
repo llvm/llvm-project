@@ -121,6 +121,8 @@ def note_constexpr_ltor_non_const_int : Note<
   "read of non-const variable %0 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
   "read of non-constexpr variable %0 is not allowed in a constant expression">;
+def note_constexpr_ltor_incomplete_type : Note<
+  "read of incomplete type %0 is not allowed in a constant expression">;
 def note_constexpr_access_null : Note<
   "%select{read of|assignment to|increment of|decrement of}0 "
   "dereferenced null pointer is not allowed in a constant expression">;
@@ -163,12 +165,19 @@ def note_constexpr_unsupported_unsized_array : Note<
 def note_constexpr_unsized_array_indexed : Note<
   "indexing of array without known bound is not allowed "
   "in a constant expression">;
+def note_constexpr_memcpy_null : Note<
+  "%select{source|destination}2 of "
+  "'%select{%select{memcpy|wmemcpy}1|%select{memmove|wmemmove}1}0' "
+  "is %3">;
 def note_constexpr_memcpy_type_pun : Note<
   "cannot constant evaluate '%select{memcpy|memmove}0' from object of "
   "type %1 to object of type %2">;
 def note_constexpr_memcpy_nontrivial : Note<
   "cannot constant evaluate '%select{memcpy|memmove}0' between objects of "
   "non-trivially-copyable type %1">;
+def note_constexpr_memcpy_incomplete_type : Note<
+  "cannot constant evaluate '%select{memcpy|memmove}0' between objects of "
+  "incomplete type %1">;
 def note_constexpr_memcpy_overlap : Note<
   "'%select{memcpy|wmemcpy}0' between overlapping memory regions">;
 def note_constexpr_memcpy_unsupported : Note<
@@ -305,4 +314,34 @@ def err_odr_non_type_parameter_type_inconsistent : Error<
   "non-type template parameter declared with incompatible types in different "
   "translation units (%0 vs. %1)">;
 def err_unsupported_ast_node: Error<"cannot import unsupported AST node %0">;
+
+def remark_sanitize_address_insert_extra_padding_accepted : Remark<
+    "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,
+    InGroup<SanitizeAddressRemarks>;
+def remark_sanitize_address_insert_extra_padding_rejected : Remark<
+    "-fsanitize-address-field-padding ignored for %0 because it "
+    "%select{is not C++|is packed|is a union|is trivially copyable|"
+    "has trivial destructor|is standard layout|is in a blacklisted file|"
+    "is blacklisted}1">, ShowInSystemHeader,
+    InGroup<SanitizeAddressRemarks>;
+
+def warn_npot_ms_struct : Warning<
+  "ms_struct may not produce Microsoft-compatible layouts with fundamental "
+  "data types with sizes that aren't a power of two">,
+  DefaultError, InGroup<IncompatibleMSStruct>;
+
+// -Wpadded, -Wpacked
+def warn_padded_struct_field : Warning<
+  "padding %select{struct|interface|class}0 %1 with %2 "
+  "%select{byte|bit}3%s2 to align %4">,
+  InGroup<Padded>, DefaultIgnore;
+def warn_padded_struct_anon_field : Warning<
+  "padding %select{struct|interface|class}0 %1 with %2 "
+  "%select{byte|bit}3%s2 to align anonymous bit-field">,
+  InGroup<Padded>, DefaultIgnore;
+def warn_padded_struct_size : Warning<
+  "padding size of %0 with %1 %select{byte|bit}2%s1 to alignment boundary">,
+  InGroup<Padded>, DefaultIgnore;
+def warn_unnecessary_packed : Warning<
+  "packed attribute is unnecessary for %0">, InGroup<Packed>, DefaultIgnore;
 }

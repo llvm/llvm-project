@@ -211,6 +211,7 @@ PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
 
   auto *NewPN = PHINode::Create(Opd1->getType(), 2, Opd2->getName() + ".sink",
                                 &BB->front());
+  NewPN->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   NewPN->addIncoming(Opd1, S0->getParent());
   NewPN->addIncoming(Opd2, S1->getParent());
   return NewPN;

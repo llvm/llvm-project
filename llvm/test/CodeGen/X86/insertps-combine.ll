@@ -276,6 +276,22 @@ define float @extract_lane_insertps_5123(<4 x float> %a0, <4 x float> *%p1) {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
   %a1 = load <4 x float>, <4 x float> *%p1
+  %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 64)
+  %ext = extractelement <4 x float> %res, i32 0
+  ret float %ext
+}
+
+define float @extract_lane_insertps_6123(<4 x float> %a0, <4 x float> *%p1) {
+; SSE-LABEL: extract_lane_insertps_6123:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract_lane_insertps_6123:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    retq
+  %a1 = load <4 x float>, <4 x float> *%p1
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 128)
   %ext = extractelement <4 x float> %res, i32 0
   ret float %ext

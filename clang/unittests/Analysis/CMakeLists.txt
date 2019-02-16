@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_unittest(ClangAnalysisTests
   CFGTest.cpp
   CloneDetectionTest.cpp
+  ExprMutationAnalyzerTest.cpp
   )
 
 target_link_libraries(ClangAnalysisTests
@@ -14,5 +15,6 @@ target_link_libraries(ClangAnalysisTests
   clangASTMatchers
   clangBasic
   clangFrontend
+  clangSerialization
   clangTooling
   )

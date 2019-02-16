@@ -1,11 +1,11 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 -disable-fp-elim | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -disable-fp-elim | FileCheck %s
 
 define i32 @_Z4funci(i32 %a) ssp {
-; CHECK:       mflr r0
-; CHECK-NEXT:  stw r31, -4(r1)
-; CHECK-NEXT:  stw r0, 8(r1)
-; CHECK-NEXT:  stwu r1, -80(r1)
-; CHECK:  mr r31, r1
+; CHECK:       mflr 0
+; CHECK-NEXT:  stw 0, 4(1)
+; CHECK-NEXT:  stwu 1, -32(1)
+; CHECK-NEXT:  stw 31, 28(1)
+; CHECK:  mr 31, 1
 entry:
   %a_addr = alloca i32                            ; <i32*> [#uses=2]
   %retval = alloca i32                            ; <i32*> [#uses=2]

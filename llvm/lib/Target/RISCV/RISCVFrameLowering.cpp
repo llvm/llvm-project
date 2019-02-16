@@ -148,8 +148,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // Skip to before the restores of callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
-  MachineBasicBlock::iterator LastFrameDestroy = MBBI;
-  std::advance(LastFrameDestroy, -MFI.getCalleeSavedInfo().size());
+  auto LastFrameDestroy = std::prev(MBBI, MFI.getCalleeSavedInfo().size());
 
   uint64_t StackSize = MFI.getStackSize();
 

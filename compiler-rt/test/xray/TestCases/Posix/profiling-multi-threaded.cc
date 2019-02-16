@@ -41,7 +41,7 @@ volatile int buffer_counter = 0;
   std::string current_mode = __xray_log_get_current_mode();
   assert(current_mode == "xray-profiling");
   assert(__xray_patch() == XRayPatchingStatus::SUCCESS);
-  assert(__xray_log_init(0, 0, nullptr, 0) ==
+  assert(__xray_log_init_mode("xray-profiling", "") ==
          XRayLogInitStatus::XRAY_LOG_INITIALIZED);
   std::thread t0([] { f0(); });
   std::thread t1([] { f0(); });

@@ -53,7 +53,9 @@ public:
   PDBStringTableBuilder &getStringTableBuilder();
   GSIStreamBuilder &getGsiBuilder();
 
-  Error commit(StringRef Filename);
+  // If HashPDBContentsToGUID is true on the InfoStreamBuilder, Guid is filled
+  // with the computed PDB GUID on return.
+  Error commit(StringRef Filename, codeview::GUID *Guid);
 
   Expected<uint32_t> getNamedStreamIndex(StringRef Name) const;
   Error addNamedStream(StringRef Name, StringRef Data);

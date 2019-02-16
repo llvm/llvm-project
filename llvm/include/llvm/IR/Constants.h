@@ -290,7 +290,11 @@ public:
 
   static Constant *get(Type* Ty, StringRef Str);
   static ConstantFP *get(LLVMContext &Context, const APFloat &V);
-  static Constant *getNaN(Type *Ty, bool Negative = false, unsigned type = 0);
+  static Constant *getNaN(Type *Ty, bool Negative = false, uint64_t Payload = 0);
+  static Constant *getQNaN(Type *Ty, bool Negative = false,
+                           APInt *Payload = nullptr);
+  static Constant *getSNaN(Type *Ty, bool Negative = false,
+                           APInt *Payload = nullptr);
   static Constant *getNegativeZero(Type *Ty);
   static Constant *getInfinity(Type *Ty, bool Negative = false);
 
@@ -1113,6 +1117,13 @@ public:
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
                              Type *OnlyIfReducedTy = nullptr);
+
+  /// get - Return a unary operator constant expression,
+  /// folding if possible.
+  ///
+  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
+  static Constant *get(unsigned Opcode, Constant *C1, unsigned Flags = 0, 
+                       Type *OnlyIfReducedTy = nullptr);
 
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.

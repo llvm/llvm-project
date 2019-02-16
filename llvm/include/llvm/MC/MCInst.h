@@ -208,6 +208,8 @@ public:
   /// string.
   void dump_pretty(raw_ostream &OS, const MCInstPrinter *Printer = nullptr,
                    StringRef Separator = " ") const;
+  void dump_pretty(raw_ostream &OS, StringRef Name,
+                   StringRef Separator = " ") const;
 };
 
 inline raw_ostream& operator<<(raw_ostream &OS, const MCOperand &MO) {

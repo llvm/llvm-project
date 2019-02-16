@@ -19,12 +19,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolTypeVTable : public PDBSymbol {
-public:
-  PDBSymbolTypeVTable(const IPDBSession &PDBSession,
-                      std::unique_ptr<IPDBRawSymbol> VtblSymbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::VTable)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_ID_METHOD(getClassParent)

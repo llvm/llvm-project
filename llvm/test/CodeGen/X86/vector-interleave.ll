@@ -10,6 +10,7 @@
 define <64 x i16> @interleave8x8(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e, <8 x i16> %f, <8 x i16> %h, <8 x i16> %g) {
 ; SSE-LABEL: interleave8x8:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    movdqa %xmm0, %xmm8
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm1[0],xmm8[1],xmm1[1],xmm8[2],xmm1[2],xmm8[3],xmm1[3]
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
@@ -54,7 +55,6 @@ define <64 x i16> @interleave8x8(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x 
 ; SSE-NEXT:    movdqa %xmm1, 32(%rdi)
 ; SSE-NEXT:    movdqa %xmm8, 16(%rdi)
 ; SSE-NEXT:    movdqa %xmm5, (%rdi)
-; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: interleave8x8:

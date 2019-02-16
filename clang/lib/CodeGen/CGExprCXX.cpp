@@ -17,8 +17,8 @@
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "ConstantEmitter.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Intrinsics.h"
 
@@ -177,7 +177,8 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
 
   if (MD->isStatic()) {
     // The method is static, emit it as we would a regular call.
-    CGCallee callee = CGCallee::forDirect(CGM.GetAddrOfFunction(MD), MD);
+    CGCallee callee =
+        CGCallee::forDirect(CGM.GetAddrOfFunction(MD), GlobalDecl(MD));
     return EmitCall(getContext().getPointerType(MD->getType()), callee, CE,
                     ReturnValue);
   }
@@ -353,13 +354,13 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       else if (!DevirtualizedMethod)
         Callee = CGCallee::forDirect(
             CGM.getAddrOfCXXStructor(Dtor, StructorType::Complete, FInfo, Ty),
-                                     Dtor);
+            GlobalDecl(Dtor, Dtor_Complete));
       else {
         const CXXDestructorDecl *DDtor =
           cast<CXXDestructorDecl>(DevirtualizedMethod);
         Callee = CGCallee::forDirect(
-                  CGM.GetAddrOfFunction(GlobalDecl(DDtor, Dtor_Complete), Ty),
-                                     DDtor);
+            CGM.GetAddrOfFunction(GlobalDecl(DDtor, Dtor_Complete), Ty),
+            GlobalDecl(DDtor, Dtor_Complete));
       }
       EmitCXXMemberOrOperatorCall(
           CalleeDecl, Callee, ReturnValue, This.getPointer(),
@@ -371,8 +372,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   CGCallee Callee;
   if (const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(MD)) {
     Callee = CGCallee::forDirect(
-                  CGM.GetAddrOfFunction(GlobalDecl(Ctor, Ctor_Complete), Ty),
-                                 Ctor);
+        CGM.GetAddrOfFunction(GlobalDecl(Ctor, Ctor_Complete), Ty),
+        GlobalDecl(Ctor, Ctor_Complete));
   } else if (UseVirtualCall) {
     Callee = CGCallee::forVirtual(CE, MD, This.getAddress(), Ty);
   } else {
@@ -383,17 +384,18 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       std::tie(VTable, RD) =
           CGM.getCXXABI().LoadVTablePtr(*this, This.getAddress(),
                                         MD->getParent());
-      EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getLocStart());
+      EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getBeginLoc());
     }
 
     if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)
       Callee = BuildAppleKextVirtualCall(MD, Qualifier, Ty);
     else if (!DevirtualizedMethod)
-      Callee = CGCallee::forDirect(CGM.GetAddrOfFunction(MD, Ty), MD);
+      Callee =
+          CGCallee::forDirect(CGM.GetAddrOfFunction(MD, Ty), GlobalDecl(MD));
     else {
-      Callee = CGCallee::forDirect(
-                                CGM.GetAddrOfFunction(DevirtualizedMethod, Ty),
-                                   DevirtualizedMethod);
+      Callee =
+          CGCallee::forDirect(CGM.GetAddrOfFunction(DevirtualizedMethod, Ty),
+                              GlobalDecl(DevirtualizedMethod));
     }
   }
 
@@ -1293,7 +1295,7 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
                                 const CallArgList &Args) {
   llvm::Instruction *CallOrInvoke;
   llvm::Constant *CalleePtr = CGF.CGM.GetAddrOfFunction(CalleeDecl);
-  CGCallee Callee = CGCallee::forDirect(CalleePtr, CalleeDecl);
+  CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
   RValue RV =
       CGF.EmitCall(CGF.CGM.getTypes().arrangeFreeFunctionCall(
                        Args, CalleeType, /*chainCall=*/false),
@@ -2252,7 +2254,6 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
 }
 
 void CodeGenFunction::EmitLambdaExpr(const LambdaExpr *E, AggValueSlot Slot) {
-  RunCleanupsScope Scope(*this);
   LValue SlotLV = MakeAddrLValue(Slot.getAddress(), E->getType());
 
   CXXRecordDecl::field_iterator CurField = E->getLambdaClass()->field_begin();

@@ -6,6 +6,9 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// NetBSD does not support LC_COLLATE at the moment
+// XFAIL: netbsd
 
 // <locale>
 

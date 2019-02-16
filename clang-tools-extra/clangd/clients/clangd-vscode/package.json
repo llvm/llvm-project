@@ -2,11 +2,11 @@
     "name": "vscode-clangd",
     "displayName": "vscode-clangd",
     "description": "Clang Language Server",
-    "version": "0.0.6",
+    "version": "0.0.9",
     "publisher": "llvm-vs-code-extensions",
     "homepage": "https://clang.llvm.org/extra/clangd.html",
     "engines": {
-        "vscode": "^1.18.0"
+        "vscode": "^1.27.0"
     },
     "categories": [
         "Programming Languages",
@@ -32,8 +32,8 @@
         "test": "node ./node_modules/vscode/bin/test"
     },
     "dependencies": {
-        "vscode-languageclient": "^4.0.0",
-        "vscode-languageserver": "^4.0.0"
+        "vscode-languageclient": "^5.1.0",
+        "vscode-languageserver": "^5.1.0"
     },
     "devDependencies": {
         "typescript": "^2.0.3",
@@ -74,6 +74,20 @@
                     "description": "Names a file that clangd should log a performance trace to, in chrome trace-viewer JSON format."
                 }
             }
-        }
+        },
+        "commands": [
+            {
+                "command": "clangd-vscode.switchheadersource",
+                "title": "Switch between Source/Header"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "clangd-vscode.switchheadersource",
+                "key": "Alt+o",
+                "mac": "Alt+cmd+o",
+                "when": "editorTextFocus"
+            }
+        ]
     }
 }

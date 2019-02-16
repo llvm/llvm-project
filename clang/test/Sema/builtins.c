@@ -122,6 +122,14 @@ int test16() {
          __builtin_constant_p(1, 2); // expected-error {{too many arguments}}
 }
 
+// __builtin_constant_p cannot resolve non-constants as a file scoped array.
+int expr;
+char y[__builtin_constant_p(expr) ? -1 : 1]; // no warning, the builtin is false.
+
+// no warning, the builtin is false.
+struct foo { int a; };
+struct foo x = (struct foo) { __builtin_constant_p(42) ? 37 : 927 };
+
 const int test17_n = 0;
 const char test17_c[] = {1, 2, 3, 0};
 const char test17_d[] = {1, 2, 3, 4};
@@ -161,6 +169,7 @@ void test17() {
   F(&test17_d);
   F((struct Aggregate){0, 1});
   F((IntVector){0, 1, 2, 3});
+  F(test17);
 
   // Ensure that a technique used in glibc is handled correctly.
 #define OPT(...) (__builtin_constant_p(__VA_ARGS__) && strlen(__VA_ARGS__) < 4)
@@ -221,14 +230,14 @@ void Test19(void)
                                     // expected-note {{change size argument to be the size of the destination}}
         __builtin___strlcpy_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcpy_chk' call appears to be size of the source; expected the size of the destination}} \
                                     // expected-note {{change size argument to be the size of the destination}} \
-				    // expected-warning {{'__builtin___strlcpy_chk' will always overflow destination buffer}}
+				    // expected-warning {{'__builtin___strlcpy_chk' will always overflow; destination buffer has size 20, but size argument is 40}}
 
         strlcat(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcat' call appears to be size of the source; expected the size of the destination}} \
                                     // expected-note {{change size argument to be the size of the destination}}
 				    
         __builtin___strlcat_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcat_chk' call appears to be size of the source; expected the size of the destination}} \
                                                                                    // expected-note {{change size argument to be the size of the destination}} \
-				                                                   // expected-warning {{'__builtin___strlcat_chk' will always overflow destination buffer}}
+				                                                   // expected-warning {{'__builtin___strlcat_chk' will always overflow; destination buffer has size 20, but size argument is 40}}
 }
 
 // rdar://11076881
@@ -236,7 +245,7 @@ char * Test20(char *p, const char *in, unsigned n)
 {
     static char buf[10];
 
-    __builtin___memcpy_chk (&buf[6], in, 5, __builtin_object_size (&buf[6], 0)); // expected-warning {{'__builtin___memcpy_chk' will always overflow destination buffer}}
+    __builtin___memcpy_chk (&buf[6], in, 5, __builtin_object_size (&buf[6], 0)); // expected-warning {{'__builtin___memcpy_chk' will always overflow; destination buffer has size 4, but size argument is 5}}
 
     __builtin___memcpy_chk (p, "abcde", n, __builtin_object_size (p, 0));
 
@@ -244,9 +253,27 @@ char * Test20(char *p, const char *in, unsigned n)
 
     __builtin___memcpy_chk (&buf[5], "abcde", n, __builtin_object_size (&buf[5], 0));
 
-    __builtin___memcpy_chk (&buf[6], "abcde", 5, __builtin_object_size (&buf[6], 0)); // expected-warning {{'__builtin___memcpy_chk' will always overflow destination buffer}}
+    __builtin___memcpy_chk (&buf[6], "abcde", 5, __builtin_object_size (&buf[6], 0)); // expected-warning {{'__builtin___memcpy_chk' will always overflow; destination buffer has size 4, but size argument is 5}}
 
     return buf;
+}
+
+typedef void (fn_t)(int);
+
+void test_builtin_launder(char *p, void *vp, const void *cvp,
+                          const volatile int *ip, float *restrict fp,
+                          fn_t *fn) {
+  __builtin_launder(); // expected-error {{too few arguments to function call, expected 1, have 0}}
+  __builtin_launder(p, p); // expected-error {{too many arguments to function call, expected 1, have 2}}
+  int x;
+  __builtin_launder(x); // expected-error {{non-pointer argument to '__builtin_launder' is not allowed}}
+  char *d = __builtin_launder(p);
+  __builtin_launder(vp);  // expected-error {{void pointer argument to '__builtin_launder' is not allowed}}
+  __builtin_launder(cvp); // expected-error {{void pointer argument to '__builtin_launder' is not allowed}}
+  const volatile int *id = __builtin_launder(ip);
+  int *id2 = __builtin_launder(ip); // expected-warning {{discards qualifiers}}
+  float *fd = __builtin_launder(fp);
+  __builtin_launder(fn); // expected-error {{function pointer argument to '__builtin_launder' is not allowed}}
 }
 
 void test21(const int *ptr) {
@@ -275,4 +302,15 @@ void test22(void) {
   (void)__builtin_signbitl(1.0);
   (void)__builtin_signbitl(1.0f);
   (void)__builtin_signbitl(1.0L);
+}
+
+// rdar://43909200
+#define memcpy(x,y,z) __builtin___memcpy_chk(x,y,z, __builtin_object_size(x,0))
+#define my_memcpy(x,y,z) __builtin___memcpy_chk(x,y,z, __builtin_object_size(x,0))
+
+void test23() {
+  char src[1024];
+  char buf[10];
+  memcpy(buf, src, 11); // expected-warning{{'memcpy' will always overflow; destination buffer has size 10, but size argument is 11}}
+  my_memcpy(buf, src, 11); // expected-warning{{'__builtin___memcpy_chk' will always overflow; destination buffer has size 10, but size argument is 11}}
 }

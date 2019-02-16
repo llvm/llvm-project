@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
+#define LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
+
 #include "CompileUnit.h"
 #include "NonRelocatableStringpool.h"
 #include "llvm/ADT/DenseMap.h"
@@ -15,9 +18,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/Support/Path.h"
-
-#ifndef LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
-#define LLVM_TOOLS_DSYMUTIL_DECLCONTEXT_H
 
 namespace llvm {
 namespace dsymutil {

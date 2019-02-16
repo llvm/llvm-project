@@ -52,12 +52,12 @@ bb:
 ; CHECK: br i1
 ; CHECK: br i1
 ; CHECK: br i1
-; CHECK: call void @bar.1_
+; CHECK: call void @bar.1.
 ; LIMIT3-LABEL: @dummy_caller
 ; LIMIT3: br i1
 ; LIMIT3: br i1
 ; LIMIT3-NOT: br i1
-; LIMIT3: call void @bar.1_
+; LIMIT3: call void @bar.1.
 ; LIMIT2-LABEL: @dummy_caller
 ; LIMIT2-NOT: br i1
 ; LIMIT2: call i32 @bar(

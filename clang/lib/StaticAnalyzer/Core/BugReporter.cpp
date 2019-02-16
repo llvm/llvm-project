@@ -546,7 +546,8 @@ static void updateStackPiecesWithMessage(PathDiagnosticPiece &P,
   }
 }
 
-static void CompactPathDiagnostic(PathPieces &path, const SourceManager& SM);
+static void CompactMacroExpandedPieces(PathPieces &path,
+                                       const SourceManager& SM);
 
 
 std::shared_ptr<PathDiagnosticControlFlowPiece> generateDiagForSwitchOP(
@@ -819,7 +820,7 @@ void generateMinimalDiagForBlockEdge(const ExplodedNode *N, BlockEdge BE,
 // and values by tracing interesting calculations backwards through evaluated
 // expressions along a path.  This is probably overly complicated, but the idea
 // is that if an expression computed an "interesting" value, the child
-// expressions are are also likely to be "interesting" as well (which then
+// expressions are also likely to be "interesting" as well (which then
 // propagates to the values they in turn compute).  This reverse propagation
 // is needed to track interesting correlations across function call boundaries,
 // where formal arguments bind to actual arguments, etc.  This is also needed
@@ -841,7 +842,7 @@ static void reversePropagateIntererstingSymbols(BugReport &R,
     default:
       if (!isa<CastExpr>(Ex))
         break;
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case Stmt::BinaryOperatorClass:
     case Stmt::UnaryOperatorClass: {
       for (const Stmt *SubStmt : Ex->children()) {
@@ -1246,7 +1247,7 @@ static void generatePathDiagnosticsForNode(const ExplodedNode *N,
 
 static std::unique_ptr<PathDiagnostic>
 generateEmptyDiagnosticForReport(BugReport *R, SourceManager &SM) {
-  BugType &BT = R->getBugType();
+  const BugType &BT = R->getBugType();
   return llvm::make_unique<PathDiagnostic>(
       R->getBugType().getCheckName(), R->getDeclWithIssue(),
       R->getBugType().getName(), R->getDescription(),
@@ -1265,7 +1266,7 @@ static const Stmt *getStmtParent(const Stmt *S, const ParentMap &PM) {
     if (!S)
       break;
 
-    if (isa<ExprWithCleanups>(S) ||
+    if (isa<FullExpr>(S) ||
         isa<CXXBindTemporaryExpr>(S) ||
         isa<SubstNonTypeTemplateParmExpr>(S))
       continue;
@@ -1627,8 +1628,8 @@ static void removePunyEdges(PathPieces &path, SourceManager &SM,
     if (isConditionForTerminator(end, endParent))
       continue;
 
-    SourceLocation FirstLoc = start->getLocStart();
-    SourceLocation SecondLoc = end->getLocStart();
+    SourceLocation FirstLoc = start->getBeginLoc();
+    SourceLocation SecondLoc = end->getBeginLoc();
 
     if (!SM.isWrittenInSameFile(FirstLoc, SecondLoc))
       continue;
@@ -1972,12 +1973,10 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
                   PathDiagnosticLocation::createBegin(D, SM));
   }
 
-  if (!AddPathEdges && GenerateDiagnostics)
-    CompactPathDiagnostic(PD->getMutablePieces(), SM);
 
   // Finally, prune the diagnostic path of uninteresting stuff.
   if (!PD->path.empty()) {
-    if (R->shouldPrunePath() && Opts.shouldPrunePaths()) {
+    if (R->shouldPrunePath() && Opts.ShouldPrunePaths) {
       bool stillHasNotes =
           removeUnneededCalls(PD->getMutablePieces(), R, LCM);
       assert(stillHasNotes);
@@ -2007,6 +2006,10 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
     removeRedundantMsgs(PD->getMutablePieces());
     removeEdgesToDefaultInitializers(PD->getMutablePieces());
   }
+
+  if (GenerateDiagnostics && Opts.ShouldDisplayMacroExpansions)
+    CompactMacroExpandedPieces(PD->getMutablePieces(), SM);
+
   return PD;
 }
 
@@ -2380,8 +2383,7 @@ TrimmedGraph::TrimmedGraph(const ExplodedGraph *OriginalGraph,
   }
 
   // Sort the error paths from longest to shortest.
-  llvm::sort(ReportNodes.begin(), ReportNodes.end(),
-             PriorityCompare<true>(PriorityMap));
+  llvm::sort(ReportNodes, PriorityCompare<true>(PriorityMap));
 }
 
 bool TrimmedGraph::popNextReportGraph(ReportGraph &GraphWrapper) {
@@ -2437,9 +2439,10 @@ bool TrimmedGraph::popNextReportGraph(ReportGraph &GraphWrapper) {
   return true;
 }
 
-/// CompactPathDiagnostic - This function postprocesses a PathDiagnostic object
-///  and collapses PathDiagosticPieces that are expanded by macros.
-static void CompactPathDiagnostic(PathPieces &path, const SourceManager& SM) {
+/// CompactMacroExpandedPieces - This function postprocesses a PathDiagnostic
+/// object and collapses PathDiagosticPieces that are expanded by macros.
+static void CompactMacroExpandedPieces(PathPieces &path,
+                                       const SourceManager& SM) {
   using MacroStackTy =
       std::vector<
           std::pair<std::shared_ptr<PathDiagnosticMacroPiece>, SourceLocation>>;
@@ -2455,7 +2458,7 @@ static void CompactPathDiagnostic(PathPieces &path, const SourceManager& SM) {
 
     // Recursively compact calls.
     if (auto *call = dyn_cast<PathDiagnosticCallPiece>(&*piece)) {
-      CompactPathDiagnostic(call->path, SM);
+      CompactMacroExpandedPieces(call->path, SM);
     }
 
     // Get the location of the PathDiagnosticPiece.
@@ -2618,7 +2621,7 @@ std::pair<BugReport*, std::unique_ptr<VisitorsDiagnosticsTy>> findValidReport(
         generateVisitorsDiagnostics(R, ErrorNode, BRC);
 
     if (R->isValid()) {
-      if (Opts.shouldCrosscheckWithZ3()) {
+      if (Opts.ShouldCrosscheckWithZ3) {
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
@@ -2681,7 +2684,7 @@ GRBugReporter::generatePathDiagnostics(
   return Out;
 }
 
-void BugReporter::Register(BugType *BT) {
+void BugReporter::Register(const BugType *BT) {
   BugTypes = F.add(BugTypes, BT);
 }
 
@@ -2715,7 +2718,7 @@ void BugReporter::emitReport(std::unique_ptr<BugReport> R) {
   R->Profile(ID);
 
   // Lookup the equivance class.  If there isn't one, create it.
-  BugType& BT = R->getBugType();
+  const BugType& BT = R->getBugType();
   Register(&BT);
   void *InsertPos;
   BugReportEquivClass* EQ = EQClasses.FindNodeOrInsertPos(ID, InsertPos);
@@ -2833,7 +2836,7 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
                              SmallVectorImpl<BugReport*> &bugReports) {
   BugReportEquivClass::iterator I = EQ.begin(), E = EQ.end();
   assert(I != E);
-  BugType& BT = I->getBugType();
+  const BugType& BT = I->getBugType();
 
   // If we don't need to suppress any of the nodes because they are
   // post-dominated by a sink, simply add all the nodes in the equivalence class
@@ -2960,7 +2963,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
     }
 
     PathPieces &Pieces = PD->getMutablePieces();
-    if (getAnalyzerOptions().shouldDisplayNotesAsEvents()) {
+    if (getAnalyzerOptions().ShouldDisplayNotesAsEvents) {
       // For path diagnostic consumers that don't support extra notes,
       // we may optionally convert those to path notes.
       for (auto I = report->getNotes().rbegin(),
@@ -3097,7 +3100,7 @@ BugReporter::generateDiagnosticForConsumerMap(
   // report location to the last piece in the main source file.
   AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
-    if (Opts.shouldReportIssuesInMainSourceFile() && !Opts.AnalyzeAll)
+    if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
       P.second->resetDiagnosticLocationToMainFile();
 
   return Out;

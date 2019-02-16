@@ -413,8 +413,14 @@ class raw_ostream;
     /// Returns the base index for the given instruction.
     SlotIndex getInstructionIndex(const MachineInstr &MI) const {
       // Instructions inside a bundle have the same number as the bundle itself.
-      const MachineInstr &BundleStart = *getBundleStart(MI.getIterator());
-      Mi2IndexMap::const_iterator itr = mi2iMap.find(&BundleStart);
+      auto BundleStart = getBundleStart(MI.getIterator());
+      auto BundleEnd = getBundleEnd(MI.getIterator());
+      // Use the first non-debug instruction in the bundle to get SlotIndex.
+      const MachineInstr &BundleNonDebug =
+          *skipDebugInstructionsForward(BundleStart, BundleEnd);
+      assert(!BundleNonDebug.isDebugInstr() &&
+             "Could not use a debug instruction to query mi2iMap.");
+      Mi2IndexMap::const_iterator itr = mi2iMap.find(&BundleNonDebug);
       assert(itr != mi2iMap.end() && "Instruction not found in maps.");
       return itr->second;
     }
@@ -442,7 +448,7 @@ class raw_ostream;
     /// MI is not required to have an index.
     SlotIndex getIndexBefore(const MachineInstr &MI) const {
       const MachineBasicBlock *MBB = MI.getParent();
-      assert(MBB && "MI must be inserted inna basic block");
+      assert(MBB && "MI must be inserted in a basic block");
       MachineBasicBlock::const_iterator I = MI, B = MBB->begin();
       while (true) {
         if (I == B)
@@ -459,7 +465,7 @@ class raw_ostream;
     /// MI is not required to have an index.
     SlotIndex getIndexAfter(const MachineInstr &MI) const {
       const MachineBasicBlock *MBB = MI.getParent();
-      assert(MBB && "MI must be inserted inna basic block");
+      assert(MBB && "MI must be inserted in a basic block");
       MachineBasicBlock::const_iterator I = MI, E = MBB->end();
       while (true) {
         ++I;
@@ -674,7 +680,7 @@ class raw_ostream;
       idx2MBBMap.push_back(IdxMBBPair(startIdx, mbb));
 
       renumberIndexes(newItr);
-      llvm::sort(idx2MBBMap.begin(), idx2MBBMap.end(), Idx2MBBCompare());
+      llvm::sort(idx2MBBMap, Idx2MBBCompare());
     }
 
     /// Free the resources that were required to maintain a SlotIndex.

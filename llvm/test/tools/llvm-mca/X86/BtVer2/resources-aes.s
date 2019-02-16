@@ -59,18 +59,18 @@ aeskeygenassist $22, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -      -     12.00   -     6.00    -      -      -      -      -     12.00
+# CHECK-NEXT:  -      -      -      -      -     16.00  4.00   6.00    -      -      -     4.00   4.00   12.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   aesdec	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   aesdec	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   aesdeclast	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   aesdeclast	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   aesenc	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   aesenc	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   aesenclast	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   aesenclast	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -      -      -      -     0.50   0.50   1.00   aesdec	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50   1.00    -      -      -     0.50   0.50   1.00   aesdec	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -      -      -      -     0.50   0.50   1.00   aesdeclast	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50   1.00    -      -      -     0.50   0.50   1.00   aesdeclast	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -      -      -      -     0.50   0.50   1.00   aesenc	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50   1.00    -      -      -     0.50   0.50   1.00   aesenc	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -      -      -      -     0.50   0.50   1.00   aesenclast	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50   1.00    -      -      -     0.50   0.50   1.00   aesenclast	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   aesimc	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     1.00    -      -      -      -      -     1.00   aesimc	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -      -      -     1.00   aeskeygenassist	$22, %xmm0, %xmm2

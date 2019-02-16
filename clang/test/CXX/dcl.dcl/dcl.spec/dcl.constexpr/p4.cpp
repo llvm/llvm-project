@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -verify -std=c++11 -fcxx-exceptions -Werror=c++1y-extensions %s
-// RUN: %clang_cc1 -verify -std=c++1y -fcxx-exceptions -DCXX1Y %s
+// RUN: %clang_cc1 -verify -std=c++11 -fcxx-exceptions -Werror=c++1y-extensions -Werror=c++2a-extensions %s
+// RUN: %clang_cc1 -verify -std=c++1y -fcxx-exceptions -DCXX1Y -Werror=c++2a-extensions %s
+// RUN: %clang_cc1 -verify -std=c++2a -fcxx-exceptions -DCXX1Y -DCXX2A %s
 
 namespace N {
   typedef char C;
@@ -49,8 +50,14 @@ namespace IndirectVBase {
 // - its function-body shall not be a function-try-block;
 struct U {
   constexpr U()
-    try // expected-error {{function try block not allowed in constexpr constructor}}
+    try
+#ifndef CXX2A
+  // expected-error@-2 {{function try block in constexpr constructor is a C++2a extension}}
+#endif
     : u() {
+#ifndef CXX1Y
+  // expected-error@-2 {{use of this statement in a constexpr constructor is a C++14 extension}}
+#endif
   } catch (...) {
     throw;
   }

@@ -27,7 +27,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
-  set(PACKAGE_VERSION 7.0.0)
+  set(PACKAGE_VERSION 8.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -50,9 +50,14 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  "${PROJECT_NAME} requires an out of source build. Please create a separate
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+  message(STATUS "Configuring for clang-cl")
+  set(LIBCXX_TARGETING_CLANG_CL ON)
+endif()
 
 if (MSVC)
   set(LIBCXX_TARGETING_MSVC ON)
+  message(STATUS "Configuring for MSVC")
 else()
   set(LIBCXX_TARGETING_MSVC OFF)
 endif()
@@ -77,7 +82,12 @@ option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of libc++fs.a"
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 
 # Benchmark options -----------------------------------------------------------
-option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependancies" ON)
+option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
+
+set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
+set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
+    "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
+
 set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
         "Build the benchmarks against the specified native STL.
          The value must be one of libc++/libstdc++")
@@ -111,12 +121,8 @@ cmake_dependent_option(LIBCXX_INSTALL_FILESYSTEM_LIBRARY
         "Install libc++fs.a" ON
         "LIBCXX_ENABLE_FILESYSTEM;LIBCXX_INSTALL_LIBRARY" OFF)
 
-if (FUCHSIA)
-  set(DEFAULT_ABI_VERSION 2)
-else()
-  set(DEFAULT_ABI_VERSION 1)
-endif()
-set(LIBCXX_ABI_VERSION ${DEFAULT_ABI_VERSION} CACHE STRING "ABI version of libc++.")
+set(LIBCXX_ABI_VERSION "1" CACHE STRING "ABI version of libc++. Can be either 1 or 2, where 2 is currently not stable. Defaults to 1.")
+set(LIBCXX_ABI_NAMESPACE "" CACHE STRING "The inline ABI namespace used by libc++. It defaults to __n where `n` is the current ABI version.")
 option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
 option(LIBCXX_ABI_FORCE_ITANIUM "Ignore auto-detection and force use of the Itanium ABI.")
 option(LIBCXX_ABI_FORCE_MICROSOFT "Ignore auto-detection and force use of the Microsoft ABI.")
@@ -503,14 +509,16 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
 # Required flags ==============================================================
 set(LIBCXX_STANDARD_VER c++11 CACHE INTERNAL "internal option to change build dialect")
-if (LIBCXX_HAS_MUSL_LIBC)
+if (LIBCXX_HAS_MUSL_LIBC OR LIBCXX_TARGETING_CLANG_CL)
   # musl's pthread implementations uses volatile types in their structs which is
   # not a constexpr in C++11 but is in C++14, so we use C++14 with musl.
   set(LIBCXX_STANDARD_VER c++14 CACHE INTERNAL "internal option to change build dialect")
 endif()
 add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})
+add_compile_flags_if_supported("/std:${LIBCXX_STANDARD_VER}")
 mangle_name("LIBCXX_SUPPORTS_STD_EQ_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME)
-if(NOT ${SUPPORTS_DIALECT_NAME})
+mangle_name("LIBCXX_SUPPORTS_STD_COLON_${LIBCXX_STANDARD_VER}_FLAG" SUPPORTS_DIALECT_NAME_MSVC)
+if(NOT ${SUPPORTS_DIALECT_NAME} AND NOT ${SUPPORTS_DIALECT_NAME_MSVC})
   if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND NOT "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
     message(FATAL_ERROR "C++11 or greater is required but the compiler does not support ${LIBCXX_STANDARD_VER}")
   endif()
@@ -545,11 +553,29 @@ add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 add_compile_flags_if_supported(
     -Wall -Wextra -W -Wwrite-strings
     -Wno-unused-parameter -Wno-long-long
-    -Werror=return-type)
+    -Werror=return-type -Wextra-semi)
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_compile_flags_if_supported(
         -Wno-user-defined-literals
         -Wno-covered-switch-default)
+    if (LIBCXX_TARGETING_CLANG_CL)
+      add_compile_flags_if_supported(
+        -Wno-c++98-compat
+        -Wno-c++98-compat-pedantic
+        -Wno-c++11-compat
+        -Wno-undef
+        -Wno-reserved-id-macro
+        -Wno-gnu-include-next
+        -Wno-gcc-compat # For ignoring "'diagnose_if' is a clang extension" warnings
+        -Wno-zero-as-null-pointer-constant # FIXME: Remove this and fix all occurrences.
+        -Wno-deprecated-dynamic-exception-spec # For auto_ptr
+        -Wno-sign-conversion
+        -Wno-old-style-cast
+        -Wno-deprecated # FIXME: Remove this and fix all occurrences.
+        -Wno-shift-sign-overflow # FIXME: Why do we need this with clang-cl but not clang?
+        -Wno-double-promotion # FIXME: remove me
+      )
+    endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     add_compile_flags_if_supported(
         -Wno-literal-suffix
@@ -622,43 +648,62 @@ endif()
 
 # Sanitizer flags =============================================================
 
+function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
+  set(SANITIZER_FLAGS)
+  set(USE_SANITIZER "${USE_SANITIZER}")
+  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
+  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
+  if (USE_SANITIZER AND NOT MSVC)
+    append_flags_if_supported(SANITIZER_FLAGS "-fno-omit-frame-pointer")
+    append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+
+    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
+            NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
+      append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+    endif()
+    if (USE_SANITIZER STREQUAL "Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address")
+    elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
+      append_flags(SANITIZER_FLAGS -fsanitize=memory)
+      if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
+        append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
+      endif()
+    elseif (USE_SANITIZER STREQUAL "Undefined")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Thread")
+      append_flags(SANITIZER_FLAGS -fsanitize=thread)
+    else()
+      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
+    endif()
+  elseif(USE_SANITIZER AND MSVC)
+    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
+  endif()
+  set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
+endfunction()
+
 # Configure for sanitizers. If LIBCXX_STANDALONE_BUILD then we have to do
 # the flag translation ourselves. Othewise LLVM's CMakeList.txt will handle it.
 if (LIBCXX_STANDALONE_BUILD)
   set(LLVM_USE_SANITIZER "" CACHE STRING
       "Define the sanitizer used to build the library and tests")
-  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
-  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
-  if (LLVM_USE_SANITIZER AND NOT MSVC)
-    add_flags_if_supported("-fno-omit-frame-pointer")
-    add_flags_if_supported("-gline-tables-only")
-
-    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
-        NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
-        add_flags_if_supported("-gline-tables-only")
-    endif()
-    if (LLVM_USE_SANITIZER STREQUAL "Address")
-      add_flags("-fsanitize=address")
-    elseif (LLVM_USE_SANITIZER MATCHES "Memory(WithOrigins)?")
-      add_flags(-fsanitize=memory)
-      if (LLVM_USE_SANITIZER STREQUAL "MemoryWithOrigins")
-        add_flags("-fsanitize-memory-track-origins")
-      endif()
-    elseif (LLVM_USE_SANITIZER STREQUAL "Undefined")
-      add_flags("-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
-    elseif (LLVM_USE_SANITIZER STREQUAL "Thread")
-      add_flags(-fsanitize=thread)
-    else()
-      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${LLVM_USE_SANITIZER}")
-    endif()
-  elseif(LLVM_USE_SANITIZER AND MSVC)
-    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
-  endif()
+endif()
+get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+if (LIBCXX_STANDALONE_BUILD AND SANITIZER_FLAGS)
+  add_flags(${SANITIZER_FLAGS})
 endif()
 
 # Configuration file flags =====================================================
-if (NOT LIBCXX_ABI_VERSION EQUAL DEFAULT_ABI_VERSION)
+if (NOT LIBCXX_ABI_VERSION EQUAL 1)
   config_define(${LIBCXX_ABI_VERSION} _LIBCPP_ABI_VERSION)
+endif()
+if (NOT LIBCXX_ABI_NAMESPACE STREQUAL "")
+  if (NOT LIBCXX_ABI_NAMESPACE MATCHES "__.*")
+    message(WARNING "LIBCXX_ABI_NAMESPACE must be a reserved identifier.")
+  endif()
+  if (LIBCXX_ABI_NAMESPACE MATCHES "__[0-9]+$")
+    message(FATAL_ERROR "LIBCXX_ABI_NAMESPACE '${LIBCXX_ABI_NAMESPACE}' is reserved for use by libc++.")
+  endif()
+  config_define(${LIBCXX_ABI_NAMESPACE} _LIBCPP_ABI_NAMESPACE)
 endif()
 config_define_if(LIBCXX_ABI_UNSTABLE _LIBCPP_ABI_UNSTABLE)
 config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
@@ -726,6 +771,18 @@ include_directories(include)
 add_subdirectory(include)
 add_subdirectory(lib)
 
+set(LIBCXX_TEST_DEPS "")
+
+if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
+  list(APPEND LIBCXX_TEST_DEPS cxx_experimental)
+endif()
+if (LIBCXX_ENABLE_FILESYSTEM)
+  list(APPEND LIBCXX_TEST_DEPS cxx_filesystem)
+endif()
+
+if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
+  list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)
+endif()
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

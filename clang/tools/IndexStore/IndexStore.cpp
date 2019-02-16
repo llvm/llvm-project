@@ -589,8 +589,10 @@ indexstore_store_get_unit_name_from_output_path(indexstore_t store,
   SmallString<256> unitName;
   IndexUnitWriter::getUnitNameForAbsoluteOutputFile(output_path, unitName);
   size_t nameLen = unitName.size();
-  strncpy(name_buf, unitName.c_str(), buf_size-1);
-  name_buf[buf_size-1] = '\0';
+  if (buf_size != 0) {
+    strncpy(name_buf, unitName.c_str(), buf_size-1);
+    name_buf[buf_size-1] = '\0';
+  }
   return nameLen;
 }
 

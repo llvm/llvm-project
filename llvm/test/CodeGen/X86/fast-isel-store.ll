@@ -11,8 +11,8 @@
 define i32 @test_store_32(i32* nocapture %addr, i32 %value) {
 ; ALL32-LABEL: test_store_32:
 ; ALL32:       # %bb.0: # %entry
-; ALL32-NEXT:    movl %esi, (%rdi)
 ; ALL32-NEXT:    movl %esi, %eax
+; ALL32-NEXT:    movl %esi, (%rdi)
 ; ALL32-NEXT:    retq
 ;
 ; ALL64-LABEL: test_store_32:
@@ -29,8 +29,9 @@ entry:
 define i16 @test_store_16(i16* nocapture %addr, i16 %value) {
 ; ALL32-LABEL: test_store_16:
 ; ALL32:       # %bb.0: # %entry
-; ALL32-NEXT:    movw %si, (%rdi)
 ; ALL32-NEXT:    movl %esi, %eax
+; ALL32-NEXT:    movw %ax, (%rdi)
+; ALL32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ALL32-NEXT:    retq
 ;
 ; ALL64-LABEL: test_store_16:

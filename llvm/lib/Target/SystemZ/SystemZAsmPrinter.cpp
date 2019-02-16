@@ -647,7 +647,7 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 }
 
 void SystemZAsmPrinter::EmitEndOfAsmFile(Module &M) {
-  SM.serializeToStackMapSection();
+  emitStackMaps(SM);
 }
 
 // Force static initialization.

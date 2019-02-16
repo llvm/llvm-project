@@ -12,6 +12,13 @@ typedef __typeof__((char*)0-(char*)0) ptrdiff_t;
 void *memmove(void *s1, const void *s2, size_t n);
 
 namespace std {
+  typedef size_t size_type;
+#if __cplusplus >= 201103L
+  using nullptr_t = decltype(nullptr);
+#endif
+}
+
+namespace std {
   struct input_iterator_tag { };
   struct output_iterator_tag { };
   struct forward_iterator_tag : public input_iterator_tag { };
@@ -228,6 +235,13 @@ namespace std {
   typename remove_reference<T>::type&& move(T&& a) {
     typedef typename remove_reference<T>::type&& RvalRef;
     return static_cast<RvalRef>(a);
+  }
+
+  template <class T>
+  void swap(T &a, T &b) {
+    T c(std::move(a));
+    a = std::move(b);
+    b = std::move(c);
   }
 
   template<typename T>
@@ -517,6 +531,42 @@ namespace std {
     const T& front() const { return *begin(); }
   };
 
+  template <typename CharT>
+  class basic_string {
+  public:
+    basic_string();
+    basic_string(const CharT *s);
+
+    ~basic_string();
+    void clear();
+
+    basic_string &operator=(const basic_string &str);
+    basic_string &operator+=(const basic_string &str);
+
+    const CharT *c_str() const;
+    const CharT *data() const;
+    CharT *data();
+
+    basic_string &append(size_type count, CharT ch);
+    basic_string &assign(size_type count, CharT ch);
+    basic_string &erase(size_type index, size_type count);
+    basic_string &insert(size_type index, size_type count, CharT ch);
+    basic_string &replace(size_type pos, size_type count, const basic_string &str);
+    void pop_back();
+    void push_back(CharT ch);
+    void reserve(size_type new_cap);
+    void resize(size_type count);
+    void shrink_to_fit();
+    void swap(basic_string &other);
+  };
+
+  typedef basic_string<char> string;
+  typedef basic_string<wchar_t> wstring;
+#if __cplusplus >= 201103L
+  typedef basic_string<char16_t> u16string;
+  typedef basic_string<char32_t> u32string;
+#endif
+
   class exception {
   public:
     exception() throw();
@@ -726,6 +776,22 @@ namespace std {
                       OutputIterator result);
 
 }
+
+#if __cplusplus >= 201103L
+namespace std {
+  template <typename T> // TODO: Implement the stub for deleter.
+  class unique_ptr {
+  public:
+    unique_ptr(const unique_ptr &) = delete;
+    unique_ptr(unique_ptr &&);
+
+    T *get() const;
+
+    typename std::add_lvalue_reference<T>::type operator*() const;
+    T *operator->() const;
+  };
+}
+#endif
 
 #ifdef TEST_INLINABLE_ALLOCATORS
 namespace std {

@@ -250,6 +250,12 @@ LLVM-specific variables
   this option to disable the generation of build targets for the LLVM unit
   tests.
 
+**LLVM_BUILD_BENCHMARKS**:BOOL
+  Adds benchmarks to the list of default targets. Defaults to OFF.
+
+**LLVM_INCLUDE_BENCHMARKS**:BOOL
+  Generate build targets for the LLVM benchmarks. Defaults to ON.
+
 **LLVM_APPEND_VC_REV**:BOOL
   Embed version control revision info (svn revision number or Git revision id).
   The version info is provided by the ``LLVM_REVISION`` macro in
@@ -602,8 +608,8 @@ A few notes about CMake Caches:
 For more information about some of the advanced build configurations supported
 via Cache files see :doc:`AdvancedBuilds`.
 
-Executing the test suite
-========================
+Executing the Tests
+===================
 
 Testing is performed when the *check-all* target is built. For instance, if you are
 using Makefiles, execute this command in the root of your build directory:
@@ -768,7 +774,7 @@ Contents of ``<project dir>/<pass name>/CMakeLists.txt``:
 
 Note if you intend for this pass to be merged into the LLVM source tree at some
 point in the future it might make more sense to use LLVM's internal
-``add_llvm_loadable_module`` function instead by...
+``add_llvm_library`` function with he MODULE argument instead by...
 
 
 Adding the following to ``<project dir>/CMakeLists.txt`` (after
@@ -783,7 +789,7 @@ And then changing ``<project dir>/<pass name>/CMakeLists.txt`` to
 
 .. code-block:: cmake
 
-  add_llvm_loadable_module(LLVMPassname
+  add_llvm_library(LLVMPassname MODULE
     Pass.cpp
     )
 

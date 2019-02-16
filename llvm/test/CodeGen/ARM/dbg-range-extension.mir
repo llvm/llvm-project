@@ -23,37 +23,37 @@
 # CHECK: [[VAR_I:![0-9]+]] = !DILocalVariable(name: "i",
 
 # CHECK: bb.0.entry
-# CHECK: DBG_VALUE debug-use $r0, debug-use $noreg, [[VAR_A]]
-# CHECK: DBG_VALUE debug-use [[REG_A:\$r[0-9]+]], debug-use $noreg, [[VAR_A]]
-# CHECK: DBG_VALUE debug-use [[REG_B:\$r[0-9]+]], debug-use $noreg, [[VAR_B]]
+# CHECK: DBG_VALUE $r0, $noreg, [[VAR_A]]
+# CHECK: DBG_VALUE [[REG_A:\$r[0-9]+]], $noreg, [[VAR_A]]
+# CHECK: DBG_VALUE [[REG_B:\$r[0-9]+]], $noreg, [[VAR_B]]
 
 # CHECK: bb.1.if.then
-# CHECK: DBG_VALUE debug-use [[REG_B]], debug-use $noreg, [[VAR_B]]
-# CHECK: DBG_VALUE debug-use [[REG_A]], debug-use $noreg, [[VAR_A]]
-# CHECK: DBG_VALUE debug-use [[REG_C:\$r[0-9]+]], debug-use $noreg, [[VAR_C]]
+# CHECK: DBG_VALUE [[REG_B]], $noreg, [[VAR_B]]
+# CHECK: DBG_VALUE [[REG_A]], $noreg, [[VAR_A]]
+# CHECK: DBG_VALUE [[REG_C:\$r[0-9]+]], $noreg, [[VAR_C]]
 # CHECK: DBG_VALUE 1, 0, [[VAR_I]]
 
 # CHECK: bb.2.for.body
-# CHECK: DBG_VALUE debug-use [[REG_I:\$r[0-9]+]], debug-use $noreg, [[VAR_I]]
-# CHECK: DBG_VALUE debug-use [[REG_C]], debug-use $noreg, [[VAR_C]]
-# CHECK: DBG_VALUE debug-use [[REG_B]], debug-use $noreg, [[VAR_B]]
-# CHECK: DBG_VALUE debug-use [[REG_A]], debug-use $noreg, [[VAR_A]]
-# CHECK: DBG_VALUE debug-use [[REG_I]], debug-use $noreg, [[VAR_I]]
+# CHECK: DBG_VALUE [[REG_I:\$r[0-9]+]], $noreg, [[VAR_I]]
+# CHECK: DBG_VALUE [[REG_C]], $noreg, [[VAR_C]]
+# CHECK: DBG_VALUE [[REG_B]], $noreg, [[VAR_B]]
+# CHECK: DBG_VALUE [[REG_A]], $noreg, [[VAR_A]]
+# CHECK: DBG_VALUE [[REG_I]], $noreg, [[VAR_I]]
 
 # CHECK: bb.3.for.cond
-# CHECK: DBG_VALUE debug-use [[REG_C]], debug-use $noreg, [[VAR_C]]
-# CHECK: DBG_VALUE debug-use [[REG_B]], debug-use $noreg, [[VAR_B]]
-# CHECK: DBG_VALUE debug-use [[REG_A]], debug-use $noreg, [[VAR_A]]
-# CHECK: DBG_VALUE debug-use [[REG_I]], debug-use $noreg, [[VAR_I]]
+# CHECK: DBG_VALUE [[REG_C]], $noreg, [[VAR_C]]
+# CHECK: DBG_VALUE [[REG_B]], $noreg, [[VAR_B]]
+# CHECK: DBG_VALUE [[REG_A]], $noreg, [[VAR_A]]
+# CHECK: DBG_VALUE [[REG_I]], $noreg, [[VAR_I]]
 
 # CHECK: bb.4.for.cond.cleanup
-# CHECK: DBG_VALUE debug-use [[REG_C]], debug-use $noreg, [[VAR_C]]
-# CHECK: DBG_VALUE debug-use [[REG_B]], debug-use $noreg, [[VAR_B]]
-# CHECK: DBG_VALUE debug-use [[REG_A]], debug-use $noreg, [[VAR_A]]
+# CHECK: DBG_VALUE [[REG_C]], $noreg, [[VAR_C]]
+# CHECK: DBG_VALUE [[REG_B]], $noreg, [[VAR_B]]
+# CHECK: DBG_VALUE [[REG_A]], $noreg, [[VAR_A]]
 
 # CHECK: bb.5.if.end
-# CHECK: DBG_VALUE debug-use [[REG_B]], debug-use $noreg, [[VAR_B]]
-# CHECK: DBG_VALUE debug-use [[REG_A]], debug-use $noreg, [[VAR_A]]
+# CHECK: DBG_VALUE [[REG_B]], $noreg, [[VAR_B]]
+# CHECK: DBG_VALUE [[REG_A]], $noreg, [[VAR_A]]
 --- |
   ; ModuleID = '/data/kwalker/work/OpenSource-llvm/llvm/test/CodeGen/ARM/dbg-range-extension.ll'
   source_filename = "/data/kwalker/work/OpenSource-llvm/llvm/test/CodeGen/ARM/dbg-range-extension.ll"
@@ -219,14 +219,14 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r6, -16
     frame-setup CFI_INSTRUCTION offset $r5, -20
     frame-setup CFI_INSTRUCTION offset $r4, -24
-    DBG_VALUE debug-use $r0, debug-use $noreg, !13, !20, debug-location !21
+    DBG_VALUE $r0, $noreg, !13, !20, debug-location !21
     $r4 = MOVr killed $r0, 14, $noreg, $noreg
-    DBG_VALUE debug-use $r4, debug-use $noreg, !13, !20, debug-location !21
+    DBG_VALUE $r4, $noreg, !13, !20, debug-location !21
     $r0 = MOVi 10, 14, $noreg, _, debug-location !22
     $r1 = MOVi 11, 14, $noreg, _, debug-location !22
     BL @func2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def $r0, debug-location !22
     $r5 = MOVr killed $r0, 14, $noreg, _, debug-location !22
-    DBG_VALUE debug-use $r5, debug-use $noreg, !14, !20, debug-location !23
+    DBG_VALUE $r5, $noreg, !14, !20, debug-location !23
     CMPri $r4, 0, 14, $noreg, implicit-def $cpsr, debug-location !25
     Bcc %bb.5.if.end, 0, killed $cpsr
   
@@ -237,7 +237,7 @@ body:             |
     $r1 = MOVi 13, 14, $noreg, _, debug-location !26
     BL @func2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def $r0, debug-location !26
     $r6 = MOVr killed $r0, 14, $noreg, _, debug-location !26
-    DBG_VALUE debug-use $r6, debug-use $noreg, !15, !20, debug-location !27
+    DBG_VALUE $r6, $noreg, !15, !20, debug-location !27
     $r7 = MOVi 1, 14, $noreg, $noreg
     DBG_VALUE 1, 0, !18, !20, debug-location !28
     B %bb.3.for.cond
@@ -249,12 +249,12 @@ body:             |
     $r0 = MOVr $r7, 14, $noreg, _, debug-location !36
     BL @func2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def dead $r0, debug-location !36
     $r7 = ADDri killed $r7, 1, 14, $noreg, _, debug-location !38
-    DBG_VALUE debug-use $r7, debug-use $noreg, !18, !20, debug-location !28
+    DBG_VALUE $r7, $noreg, !18, !20, debug-location !28
   
   bb.3.for.cond:
     liveins: $r4, $r5, $r6, $r7
   
-    DBG_VALUE debug-use $r7, debug-use $noreg, !18, !20, debug-location !28
+    DBG_VALUE $r7, $noreg, !18, !20, debug-location !28
     CMPrr $r7, $r4, 14, $noreg, implicit-def $cpsr, debug-location !33
     Bcc %bb.2.for.body, 11, killed $cpsr, debug-location !33
   

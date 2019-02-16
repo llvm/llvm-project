@@ -16,7 +16,7 @@ Typical slowdown introduced by MemorySanitizer is **3x**.
 How to build
 ============
 
-Build LLVM/Clang with `CMake <http://llvm.org/docs/CMake.html>`_.
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_.
 
 Usage
 =====

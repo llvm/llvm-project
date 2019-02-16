@@ -15,6 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENSCHEDULE_H
 #define LLVM_UTILS_TABLEGEN_CODEGENSCHEDULE_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -166,8 +167,9 @@ struct CodeGenSchedClass {
 struct CodeGenRegisterCost {
   Record *RCDef;
   unsigned Cost;
-  CodeGenRegisterCost(Record *RC, unsigned RegisterCost)
-      : RCDef(RC), Cost(RegisterCost) {}
+  bool AllowMoveElimination;
+  CodeGenRegisterCost(Record *RC, unsigned RegisterCost, bool AllowMoveElim = false)
+      : RCDef(RC), Cost(RegisterCost), AllowMoveElimination(AllowMoveElim) {}
   CodeGenRegisterCost(const CodeGenRegisterCost &) = default;
   CodeGenRegisterCost &operator=(const CodeGenRegisterCost &) = delete;
 };
@@ -180,12 +182,18 @@ struct CodeGenRegisterCost {
 struct CodeGenRegisterFile {
   std::string Name;
   Record *RegisterFileDef;
+  unsigned MaxMovesEliminatedPerCycle;
+  bool AllowZeroMoveEliminationOnly;
 
   unsigned NumPhysRegs;
   std::vector<CodeGenRegisterCost> Costs;
 
-  CodeGenRegisterFile(StringRef name, Record *def)
-      : Name(name), RegisterFileDef(def), NumPhysRegs(0) {}
+  CodeGenRegisterFile(StringRef name, Record *def, unsigned MaxMoveElimPerCy = 0,
+                      bool AllowZeroMoveElimOnly = false)
+      : Name(name), RegisterFileDef(def),
+        MaxMovesEliminatedPerCycle(MaxMoveElimPerCy),
+        AllowZeroMoveEliminationOnly(AllowZeroMoveElimOnly),
+        NumPhysRegs(0) {}
 
   bool hasDefaultCosts() const { return Costs.empty(); }
 };
@@ -238,14 +246,14 @@ struct CodeGenProcModel {
   // Optional Retire Control Unit definition.
   Record *RetireControlUnit;
 
-  // List of PfmCounters.
-  RecVec PfmIssueCounterDefs;
-  Record *PfmCycleCounterDef = nullptr;
+  // Load/Store queue descriptors.
+  Record *LoadQueue;
+  Record *StoreQueue;
 
   CodeGenProcModel(unsigned Idx, std::string Name, Record *MDef,
                    Record *IDef) :
     Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef),
-    RetireControlUnit(nullptr) {}
+    RetireControlUnit(nullptr), LoadQueue(nullptr), StoreQueue(nullptr) {}
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();
@@ -256,9 +264,8 @@ struct CodeGenProcModel {
   }
 
   bool hasExtraProcessorInfo() const {
-    return RetireControlUnit || !RegisterFiles.empty() ||
-        !PfmIssueCounterDefs.empty() ||
-        PfmCycleCounterDef != nullptr;
+    return RetireControlUnit || LoadQueue || StoreQueue ||
+           !RegisterFiles.empty();
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;
@@ -268,6 +275,137 @@ struct CodeGenProcModel {
 #ifndef NDEBUG
   void dump() const;
 #endif
+};
+
+/// Used to correlate instructions to MCInstPredicates specified by
+/// InstructionEquivalentClass tablegen definitions.
+///
+/// Example: a XOR of a register with self, is a known zero-idiom for most
+/// X86 processors.
+///
+/// Each processor can use a (potentially different) InstructionEquivalenceClass
+///  definition to classify zero-idioms. That means, XORrr is likely to appear
+/// in more than one equivalence class (where each class definition is
+/// contributed by a different processor).
+///
+/// There is no guarantee that the same MCInstPredicate will be used to describe
+/// equivalence classes that identify XORrr as a zero-idiom.
+///
+/// To be more specific, the requirements for being a zero-idiom XORrr may be
+/// different for different processors.
+///
+/// Class PredicateInfo identifies a subset of processors that specify the same
+/// requirements (i.e. same MCInstPredicate and OperandMask) for an instruction
+/// opcode.
+///
+/// Back to the example. Field `ProcModelMask` will have one bit set for every
+/// processor model that sees XORrr as a zero-idiom, and that specifies the same
+/// set of constraints.
+///
+/// By construction, there can be multiple instances of PredicateInfo associated
+/// with a same instruction opcode. For example, different processors may define
+/// different constraints on the same opcode.
+///
+/// Field OperandMask can be used as an extra constraint.
+/// It may be used to describe conditions that appy only to a subset of the
+/// operands of a machine instruction, and the operands subset may not be the
+/// same for all processor models.
+struct PredicateInfo {
+  llvm::APInt ProcModelMask; // A set of processor model indices.
+  llvm::APInt OperandMask;   // An operand mask.
+  const Record *Predicate;   // MCInstrPredicate definition.
+  PredicateInfo(llvm::APInt CpuMask, llvm::APInt Operands, const Record *Pred)
+      : ProcModelMask(CpuMask), OperandMask(Operands), Predicate(Pred) {}
+
+  bool operator==(const PredicateInfo &Other) const {
+    return ProcModelMask == Other.ProcModelMask &&
+           OperandMask == Other.OperandMask && Predicate == Other.Predicate;
+  }
+};
+
+/// A collection of PredicateInfo objects.
+///
+/// There is at least one OpcodeInfo object for every opcode specified by a
+/// TIPredicate definition.
+class OpcodeInfo {
+  std::vector<PredicateInfo> Predicates;
+
+  OpcodeInfo(const OpcodeInfo &Other) = delete;
+  OpcodeInfo &operator=(const OpcodeInfo &Other) = delete;
+
+public:
+  OpcodeInfo() = default;
+  OpcodeInfo &operator=(OpcodeInfo &&Other) = default;
+  OpcodeInfo(OpcodeInfo &&Other) = default;
+
+  ArrayRef<PredicateInfo> getPredicates() const { return Predicates; }
+
+  void addPredicateForProcModel(const llvm::APInt &CpuMask,
+                                const llvm::APInt &OperandMask,
+                                const Record *Predicate);
+};
+
+/// Used to group together tablegen instruction definitions that are subject
+/// to a same set of constraints (identified by an instance of OpcodeInfo).
+class OpcodeGroup {
+  OpcodeInfo Info;
+  std::vector<const Record *> Opcodes;
+
+  OpcodeGroup(const OpcodeGroup &Other) = delete;
+  OpcodeGroup &operator=(const OpcodeGroup &Other) = delete;
+
+public:
+  OpcodeGroup(OpcodeInfo &&OpInfo) : Info(std::move(OpInfo)) {}
+  OpcodeGroup(OpcodeGroup &&Other) = default;
+
+  void addOpcode(const Record *Opcode) {
+    assert(std::find(Opcodes.begin(), Opcodes.end(), Opcode) == Opcodes.end() &&
+           "Opcode already in set!");
+    Opcodes.push_back(Opcode);
+  }
+
+  ArrayRef<const Record *> getOpcodes() const { return Opcodes; }
+  const OpcodeInfo &getOpcodeInfo() const { return Info; }
+};
+
+/// An STIPredicateFunction descriptor used by tablegen backends to
+/// auto-generate the body of a predicate function as a member of tablegen'd
+/// class XXXGenSubtargetInfo.
+class STIPredicateFunction {
+  const Record *FunctionDeclaration;
+
+  std::vector<const Record *> Definitions;
+  std::vector<OpcodeGroup> Groups;
+
+  STIPredicateFunction(const STIPredicateFunction &Other) = delete;
+  STIPredicateFunction &operator=(const STIPredicateFunction &Other) = delete;
+
+public:
+  STIPredicateFunction(const Record *Rec) : FunctionDeclaration(Rec) {}
+  STIPredicateFunction(STIPredicateFunction &&Other) = default;
+
+  bool isCompatibleWith(const STIPredicateFunction &Other) const {
+    return FunctionDeclaration == Other.FunctionDeclaration;
+  }
+
+  void addDefinition(const Record *Def) { Definitions.push_back(Def); }
+  void addOpcode(const Record *OpcodeRec, OpcodeInfo &&Info) {
+    if (Groups.empty() ||
+        Groups.back().getOpcodeInfo().getPredicates() != Info.getPredicates())
+      Groups.emplace_back(std::move(Info));
+    Groups.back().addOpcode(OpcodeRec);
+  }
+
+  StringRef getName() const {
+    return FunctionDeclaration->getValueAsString("Name");
+  }
+  const Record *getDefaultReturnPredicate() const {
+    return FunctionDeclaration->getValueAsDef("DefaultReturnValue");
+  }
+
+  const Record *getDeclaration() const { return FunctionDeclaration; }
+  ArrayRef<const Record *> getDefinitions() const { return Definitions; }
+  ArrayRef<OpcodeGroup> getGroups() const { return Groups; }
 };
 
 /// Top level container for machine model data.
@@ -302,6 +440,8 @@ class CodeGenSchedModels {
   // combination of it's itinerary class, SchedRW list, and InstRW records.
   using InstClassMapTy = DenseMap<Record*, unsigned>;
   InstClassMapTy InstrClassMap;
+
+  std::vector<STIPredicateFunction> STIPredicates;
 
 public:
   CodeGenSchedModels(RecordKeeper& RK, const CodeGenTarget &TGT);
@@ -430,6 +570,9 @@ public:
   Record *findProcResUnits(Record *ProcResKind, const CodeGenProcModel &PM,
                            ArrayRef<SMLoc> Loc) const;
 
+  ArrayRef<STIPredicateFunction> getSTIPredicates() const {
+    return STIPredicates;
+  }
 private:
   void collectProcModels();
 
@@ -447,8 +590,6 @@ private:
 
   void collectRegisterFiles();
 
-  void collectPfmCounters();
-
   void collectOptionalProcessorInfo();
 
   std::string createSchedClassName(Record *ItinClassDef,
@@ -464,6 +605,14 @@ private:
   void collectProcUnsupportedFeatures();
 
   void inferSchedClasses();
+
+  void checkMCInstPredicates() const;
+
+  void checkSTIPredicates() const;
+
+  void collectSTIPredicates();
+
+  void collectLoadStoreQueueInfo();
 
   void checkCompleteness();
 

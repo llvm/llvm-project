@@ -1,6 +1,6 @@
 # This file sets up a CMakeCache for a Fuchsia toolchain build.
 
-set(LLVM_TARGETS_TO_BUILD Native CACHE STRING "")
+set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64 CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
@@ -22,6 +22,10 @@ if(NOT APPLE)
   set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 endif()
 
+if(NOT APPLE)
+  set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
+  set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
+endif()
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB compiler-rt CACHE STRING "")
 
@@ -43,18 +47,52 @@ elseif(UNIX)
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
 endif()
 
+if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
+  set(target "${BOOTSTRAP_CMAKE_CXX_COMPILER_TARGET}")
+  if(STAGE2_LINUX_${target}_SYSROOT)
+    set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Linux CACHE STRING "")
+    set(BUILTINS_${target}_CMAKE_BUILD_TYPE Release CACHE STRING "")
+    set(BUILTINS_${target}_CMAKE_SYSROOT ${STAGE2_LINUX_${target}_SYSROOT} CACHE STRING "")
+    set(LLVM_BUILTIN_TARGETS "${target}" CACHE STRING "")
+
+    set(RUNTIMES_${target}_CMAKE_SYSTEM_NAME Linux CACHE STRING "")
+    set(RUNTIMES_${target}_CMAKE_BUILD_TYPE Release CACHE STRING "")
+    set(RUNTIMES_${target}_CMAKE_SYSROOT ${STAGE2_LINUX_${target}_SYSROOT} CACHE STRING "")
+    set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBUNWIND_INSTALL_LIBRARY OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXXABI_USE_LLVM_UNWINDER ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXXABI_ENABLE_STATIC_UNWINDER ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXXABI_INSTALL_LIBRARY OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
+    set(RUNTIMES_${target}_LIBCXX_ABI_VERSION 2 CACHE STRING "")
+    set(RUNTIMES_${target}_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
+    set(RUNTIMES_${target}_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
+    set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
+    set(LLVM_RUNTIME_TARGETS "${target}" CACHE STRING "")
+  endif()
+endif()
+
 set(CLANG_BOOTSTRAP_TARGETS
   check-all
   check-llvm
   check-clang
+  check-lld
   llvm-config
   test-suite
   test-depends
   llvm-test-depends
   clang-test-depends
+  lld-test-depends
   distribution
   install-distribution
   install-distribution-stripped
+  install-distribution-toolchain
   clang CACHE STRING "")
 
 get_cmake_property(variableNames VARIABLES)

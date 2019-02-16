@@ -231,27 +231,14 @@ class StoreLeftRightMM<string opstr, SDNode OpNode, RegisterOperand RO,
   bit mayStore = 1;
 }
 
-/// A register pair used by movep instruction.
-def MovePRegPairAsmOperand : AsmOperandClass {
-  let Name = "MovePRegPair";
-  let ParserMethod = "parseMovePRegPair";
-  let PredicateMethod = "isMovePRegPair";
-}
-
-def movep_regpair : Operand<i32> {
-  let EncoderMethod = "getMovePRegPairOpValue";
-  let ParserMatchClass = MovePRegPairAsmOperand;
-  let PrintMethod = "printRegisterList";
-  let DecoderMethod = "DecodeMovePRegPair";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc);
-}
-
-class MovePMM16<string opstr, RegisterOperand RO> :
-MicroMipsInst16<(outs movep_regpair:$dst_regs), (ins RO:$rs, RO:$rt),
-                 !strconcat(opstr, "\t$dst_regs, $rs, $rt"), [],
+class MovePMM16<string opstr, RegisterOperand RO1, RegisterOperand RO2,
+                RegisterOperand RO3> :
+MicroMipsInst16<(outs RO1:$rd1, RO2:$rd2), (ins RO3:$rs, RO3:$rt),
+                 !strconcat(opstr, "\t$rd1, $rd2, $rs, $rt"), [],
                  NoItinerary, FrmR> {
   let isReMaterializable = 1;
   let isMoveReg = 1;
+  let DecoderMethod = "DecodeMovePOperands";
 }
 
 class StorePairMM<string opstr, ComplexPattern Addr = addr>
@@ -682,8 +669,9 @@ def MFLO16_MM : MoveFromHILOMM<"mflo16", GPR32Opnd, AC0>,
                 MFHILO_FM_MM16<0x12>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def MOVE16_MM : MoveMM16<"move", GPR32Opnd>, MOVE_FM_MM16<0x03>,
                 ISA_MICROMIPS32_NOT_MIPS32R6;
-def MOVEP_MM : MovePMM16<"movep", GPRMM16OpndMoveP>, MOVEP_FM_MM16,
-               ISA_MICROMIPS32_NOT_MIPS32R6;
+def MOVEP_MM : MovePMM16<"movep", GPRMM16OpndMovePPairFirst,
+                         GPRMM16OpndMovePPairSecond, GPRMM16OpndMoveP>,
+               MOVEP_FM_MM16, ISA_MICROMIPS32_NOT_MIPS32R6;
 def LI16_MM : LoadImmMM16<"li16", li16_imm, GPRMM16Opnd>, LI_FM_MM16,
               IsAsCheapAsAMove, ISA_MICROMIPS32_NOT_MIPS32R6;
 def JALR16_MM : JumpLinkRegMM16<"jalr", GPR32Opnd>, JALR_FM_MM16<0x0e>,
@@ -1116,6 +1104,27 @@ let DecoderNamespace = "MicroMips" in {
                  ISA_MICROMIPS32_NOT_MIPS32R6;
 }
 
+let AdditionalPredicates = [NotDSP] in {
+  def PseudoMULT_MM : MultDivPseudo<MULT, ACC64, GPR32Opnd, MipsMult, II_MULT>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMULTu_MM : MultDivPseudo<MULTu, ACC64, GPR32Opnd, MipsMultu, II_MULTU>,
+                       ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMFHI_MM : PseudoMFLOHI<GPR32, ACC64, MipsMFHI>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMFLO_MM : PseudoMFLOHI<GPR32, ACC64, MipsMFLO>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMTLOHI_MM : PseudoMTLOHI<ACC64, GPR32>,
+                        ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMADD_MM : MAddSubPseudo<MADD, MipsMAdd, II_MADD>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMADDU_MM : MAddSubPseudo<MADDU, MipsMAddu, II_MADDU>,
+                       ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMSUB_MM : MAddSubPseudo<MSUB, MipsMSub, II_MSUB>,
+                      ISA_MICROMIPS32_NOT_MIPS32R6;
+  def PseudoMSUBU_MM : MAddSubPseudo<MSUBU, MipsMSubu, II_MSUBU>,
+                       ISA_MICROMIPS32_NOT_MIPS32R6;
+}
+
 def TAILCALL_MM : TailCall<J_MM, jmptarget_mm>, ISA_MIPS1_NOT_32R6_64R6;
 
 def TAILCALLREG_MM  : TailCallReg<JRC16_MM, GPR32Opnd>,
@@ -1262,6 +1271,8 @@ let AddedComplexity = 40 in
 def : MipsPat<(bswap GPR32:$rt), (ROTR_MM (WSBH_MM GPR32:$rt), 16)>,
       ISA_MICROMIPS;
 
+def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
+              (JAL_MM texternalsym:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
               (TAILCALL_MM tglobaladdr:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),

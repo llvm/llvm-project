@@ -727,28 +727,29 @@ if.end:                                           ; preds = %if.then, %entry
 define void @test_stack(%struct.S6* noalias nocapture sret %agg.result, %struct.S6* byval nocapture readnone align 8 %s1, %struct.S6* byval nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_stack:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    movups %xmm0, (%rdi)
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, 16(%rdi)
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movl %eax, 24(%rdi)
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movl %eax, 28(%rdi)
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq %rcx, 16(%rdi)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    movl %ecx, 24(%rdi)
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    movl %ecx, 28(%rdi)
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    retq
 ;
 ; DISABLED-LABEL: test_stack:
 ; DISABLED:       # %bb.0: # %entry
+; DISABLED-NEXT:    movq %rdi, %rax
 ; DISABLED-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
 ; DISABLED-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; DISABLED-NEXT:    movups %xmm0, (%rdi)
@@ -758,51 +759,50 @@ define void @test_stack(%struct.S6* noalias nocapture sret %agg.result, %struct.
 ; DISABLED-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
 ; DISABLED-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; DISABLED-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; DISABLED-NEXT:    movq %rdi, %rax
 ; DISABLED-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: test_stack:
 ; CHECK-AVX2:       # %bb.0: # %entry
+; CHECK-AVX2-NEXT:    movq %rdi, %rax
 ; CHECK-AVX2-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
 ; CHECK-AVX2-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-AVX2-NEXT:    vmovups %xmm0, (%rdi)
-; CHECK-AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-AVX2-NEXT:    movq %rax, 16(%rdi)
-; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX2-NEXT:    movl %eax, 24(%rdi)
-; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX2-NEXT:    movl %eax, 28(%rdi)
+; CHECK-AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-AVX2-NEXT:    movq %rcx, 16(%rdi)
+; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX2-NEXT:    movl %ecx, 24(%rdi)
+; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX2-NEXT:    movl %ecx, 28(%rdi)
 ; CHECK-AVX2-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-AVX2-NEXT:    vmovups %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-AVX2-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX2-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX2-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-NEXT:    movq %rdi, %rax
+; CHECK-AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-AVX2-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX2-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
+; CHECK-AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX2-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: test_stack:
 ; CHECK-AVX512:       # %bb.0: # %entry
+; CHECK-AVX512-NEXT:    movq %rdi, %rax
 ; CHECK-AVX512-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
 ; CHECK-AVX512-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-AVX512-NEXT:    vmovups %xmm0, (%rdi)
-; CHECK-AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-AVX512-NEXT:    movq %rax, 16(%rdi)
-; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX512-NEXT:    movl %eax, 24(%rdi)
-; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX512-NEXT:    movl %eax, 28(%rdi)
+; CHECK-AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-AVX512-NEXT:    movq %rcx, 16(%rdi)
+; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX512-NEXT:    movl %ecx, 24(%rdi)
+; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX512-NEXT:    movl %ecx, 28(%rdi)
 ; CHECK-AVX512-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-AVX512-NEXT:    vmovups %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-AVX512-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX512-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-AVX512-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; CHECK-AVX512-NEXT:    movq %rdi, %rax
+; CHECK-AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-AVX512-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX512-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
+; CHECK-AVX512-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
+; CHECK-AVX512-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
 ; CHECK-AVX512-NEXT:    retq
 entry:
   %s6.sroa.0.0..sroa_cast1 = bitcast %struct.S6* %s2 to i8*

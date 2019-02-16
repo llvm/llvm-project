@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -249,4 +249,8 @@ public:
 
 void ento::registerMallocSizeofChecker(CheckerManager &mgr) {
   mgr.registerChecker<MallocSizeofChecker>();
+}
+
+bool ento::shouldRegisterMallocSizeofChecker(const LangOptions &LO) {
+  return true;
 }

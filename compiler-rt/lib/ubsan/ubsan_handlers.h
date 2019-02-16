@@ -125,7 +125,11 @@ RECOVERABLE(load_invalid_value, InvalidValueData *Data, ValueHandle Val)
 /// Known implicit conversion check kinds.
 /// Keep in sync with the enum of the same name in CGExprScalar.cpp
 enum ImplicitConversionCheckKind : unsigned char {
-  ICCK_IntegerTruncation = 0,
+  ICCK_IntegerTruncation = 0, // Legacy, was only used by clang 7.
+  ICCK_UnsignedIntegerTruncation = 1,
+  ICCK_SignedIntegerTruncation = 2,
+  ICCK_IntegerSignChange = 3,
+  ICCK_SignedIntegerTruncationOrSignChange = 4,
 };
 
 struct ImplicitConversionData {

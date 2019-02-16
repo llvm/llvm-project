@@ -22,6 +22,17 @@
     ret i32 %0, !dbg !14
   }
 
+  define i32 @test_mir_created(i32 %x) #0 !dbg !15 {
+  entry:
+    %x.addr = alloca i32, align 4
+    store i32 %x, i32* %x.addr, align 4
+    %0 = load i32, i32* %x.addr, align 4
+    %1 = load i32, i32* %x.addr, align 4
+    %2 = load i32, i32* %x.addr, align 4
+    %3 = load i32, i32* %x.addr, align 4
+    ret i32 %0, !dbg !16
+  }
+
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
   attributes #0 = { nounwind "no-frame-pointer-elim"="false" }
@@ -45,6 +56,8 @@
   !12 = !DILocalVariable(name: "x", arg: 1, scope: !4, file: !5, line: 4, type: !8)
   !13 = !DILocation(line: 4, scope: !4)
   !14 = !DILocation(line: 8, scope: !4)
+  !15 = distinct !DISubprogram(name: "test_mir_created", scope: !5, file: !5, line: 10, type: !6, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+  !16 = !DILocation(line: 20, scope: !15)
 
 ...
 ---
@@ -59,10 +72,14 @@ stack:
 body: |
   bb.0.entry:
     liveins: $edi
-    ; CHECK: DBG_VALUE debug-use $noreg, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
     ; CHECK: $eax = COPY %0, debug-location !13
     ; CHECK: RETQ $eax, debug-location !13
     %0 = COPY $edi
+    DBG_VALUE _, 0, !12, !DIExpression(), debug-location !13
+    ; Test whether debug-use is still recognized for compatibility with old
+    ; files.
     DBG_VALUE debug-use _, 0, !12, !DIExpression(), debug-location !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0, debug-location !14
@@ -89,6 +106,34 @@ body: |
     DBG_VALUE _, i64 -22, !DIExpression(), !13
     DBG_VALUE _, i128 123492148938512984928424384934328985928, !DIExpression(), !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
+    $eax = COPY %0
+    RETQ $eax
+...
+---
+name:            test_mir_created
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+frameInfo:
+  maxAlignment:  4
+stack:
+  - { id: 0, name: x.addr, size: 4, alignment: 4 }
+body: |
+  bb.0.entry:
+    liveins: $edi
+
+    %0 = COPY $edi
+  ; CHECK-LABEL: name: test_mir_created
+  ; CHECK:       MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0, debug-location !DILocation(line: 1, scope: !14)
+  ; CHECK:       MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0, debug-location !DILocation(line: 2, column: 2, scope: !14)
+  ; CHECK:       MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0, debug-location !DILocation(line: 3, column: 2, scope: !14, isImplicitCode: true)
+  ; CHECK:       MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0, debug-location !DILocation(line: 4, scope: !14, inlinedAt: !15)
+  ; CHECK:       MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0, debug-location !DILocation(line: 5, scope: !14, inlinedAt: !DILocation(line: 4, scope: !14))
+    MOV32mr %stack.0.x.addr, 1, _, 0, _, %0, debug-location !DILocation(line: 1, scope: !15)
+    MOV32mr %stack.0.x.addr, 1, _, 0, _, %0, debug-location !DILocation(line: 2, column: 2, scope: !15)
+    MOV32mr %stack.0.x.addr, 1, _, 0, _, %0, debug-location !DILocation(line: 3, column: 2, scope: !15, isImplicitCode: true)
+    MOV32mr %stack.0.x.addr, 1, _, 0, _, %0, debug-location !DILocation(line: 4, scope: !15, inlinedAt: !16)
+    MOV32mr %stack.0.x.addr, 1, _, 0, _, %0, debug-location !DILocation(line: 5, scope: !15, inlinedAt: !DILocation(line: 4, scope: !15))
     $eax = COPY %0
     RETQ $eax
 ...

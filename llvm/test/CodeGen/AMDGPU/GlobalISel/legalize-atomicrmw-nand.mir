@@ -1,0 +1,22 @@
+# RUN: not llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -O0 -run-pass=legalizer -o - %s 2>&1| FileCheck -check-prefix=ERROR %s
+
+# This needs to be expanded into a cmpxchg loop.
+# TODO: Will AtomicExpand still do this?
+
+# ERROR: LLVM ERROR: unable to legalize instruction: %2:_(s32) = G_ATOMICRMW_NAND %0:_(p1), %1:_ :: (load store seq_cst 4, addrspace 1) (in function: atomicrmw_nand_global_i32)
+
+---
+name: atomicrmw_nand_global_i32
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK-LABEL: name: atomicrmw_nand_global_i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
+    ; CHECK: [[ATOMICRMW_NAND:%[0-9]+]]:_(s32) = G_ATOMICRMW_NAND [[COPY]](p1), [[COPY1]] :: (load store seq_cst 4, addrspace 1)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(s32) = COPY $sgpr2
+    %2:_(s32) = G_ATOMICRMW_NAND %0, %1 :: (load store seq_cst 4, addrspace 1)
+...
+

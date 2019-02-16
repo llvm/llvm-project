@@ -1294,12 +1294,12 @@ clang_RefactoringAction_getSourceRangeOfInterest(CXRefactoringAction Action) {
       if (const Stmt *S = Operation->getTransformedStmt()) {
         SourceRange Range = S->getSourceRange();
         if (const Stmt *Last = Operation->getLastTransformedStmt())
-          Range.setEnd(Last->getLocEnd());
+          Range.setEnd(Last->getEndLoc());
         return cxloc::translateSourceRange(CXXUnit->getASTContext(), Range);
       } else if (const Decl *D = Operation->getTransformedDecl()) {
         SourceRange Range = D->getSourceRange();
         if (const Decl *Last = Operation->getLastTransformedDecl())
-          Range.setEnd(Last->getLocEnd());
+          Range.setEnd(Last->getEndLoc());
         return cxloc::translateSourceRange(CXXUnit->getASTContext(), Range);
       }
     }

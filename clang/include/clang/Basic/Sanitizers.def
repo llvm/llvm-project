@@ -53,6 +53,9 @@ SANITIZER("kernel-hwaddress", KernelHWAddress)
 // MemorySanitizer
 SANITIZER("memory", Memory)
 
+// Kernel MemorySanitizer (KMSAN)
+SANITIZER("kernel-memory", KernelMemory)
+
 // libFuzzer
 SANITIZER("fuzzer", Fuzzer)
 
@@ -132,12 +135,32 @@ SANITIZER_GROUP("undefined", Undefined,
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)
 
 // ImplicitConversionSanitizer
-SANITIZER("implicit-integer-truncation", ImplicitIntegerTruncation)
+SANITIZER("implicit-unsigned-integer-truncation",
+          ImplicitUnsignedIntegerTruncation)
+SANITIZER("implicit-signed-integer-truncation", ImplicitSignedIntegerTruncation)
+SANITIZER_GROUP("implicit-integer-truncation", ImplicitIntegerTruncation,
+                ImplicitUnsignedIntegerTruncation |
+                    ImplicitSignedIntegerTruncation)
+
+SANITIZER("implicit-integer-sign-change", ImplicitIntegerSignChange)
+
+SANITIZER_GROUP("implicit-integer-arithmetic-value-change",
+                ImplicitIntegerArithmeticValueChange,
+                ImplicitIntegerSignChange | ImplicitSignedIntegerTruncation)
+
+// FIXME:
+//SANITIZER_GROUP("implicit-integer-conversion", ImplicitIntegerConversion,
+//                ImplicitIntegerArithmeticValueChange |
+//                    ImplicitUnsignedIntegerTruncation)
+//SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
+//                ImplicitIntegerConversion)
+
 SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
-                ImplicitIntegerTruncation)
+                ImplicitIntegerArithmeticValueChange |
+                    ImplicitUnsignedIntegerTruncation)
 
 SANITIZER_GROUP("integer", Integer,
-                ImplicitIntegerTruncation | IntegerDivideByZero | Shift |
+                ImplicitConversion | IntegerDivideByZero | Shift |
                     SignedIntegerOverflow | UnsignedIntegerOverflow)
 
 SANITIZER("local-bounds", LocalBounds)

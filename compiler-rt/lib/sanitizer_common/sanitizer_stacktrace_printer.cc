@@ -98,6 +98,8 @@ static const char *DemangleFunctionName(const char *function) {
     return "pthread_equal";
   if (!internal_strcmp(function, "__libc_thr_curcpu"))
     return "pthread_curcpu_np";
+  if (!internal_strcmp(function, "__libc_thr_sigsetmask"))
+    return "pthread_sigmask";
 #endif
 
   return function;

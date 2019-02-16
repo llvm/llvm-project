@@ -15,5 +15,8 @@ Compiled to assembly with clang, modified the skeleton CU to remove the
 high/low pc (& update the CU length field and abbrev to match) & then
 compile/objcopy to make the .o and .dwo.
 
-CHECK: _Z2f2v
-CHECK: test.cpp:2:51
+Ensure that the f2 inlined frame is not included - it's inefficient to have to
+go and load all the debug info and search for the address ranges, so assume
+that a lack of ranges on the CU means the CU covers no addresses.
+
+CHECK-NOT: _Z2f2v

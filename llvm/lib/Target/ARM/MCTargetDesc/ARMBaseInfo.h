@@ -248,6 +248,11 @@ namespace ARMII {
     /// just that part of the flag set.
     MO_OPTION_MASK = 0x3,
 
+    /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
+    /// reference is actually to the ".refptrp.FOO" symbol.  This is used for
+    /// stub symbols on windows.
+    MO_COFFSTUB = 0x4,
+
     /// MO_GOT - On a symbol operand, this represents a GOT relative relocation.
     MO_GOT = 0x8,
 

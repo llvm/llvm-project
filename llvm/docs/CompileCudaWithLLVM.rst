@@ -22,21 +22,21 @@ Compiling CUDA Code
 Prerequisites
 -------------
 
-CUDA is supported in llvm 3.9, but it's still in active development, so we
-recommend you `compile clang/LLVM from HEAD
-<http://llvm.org/docs/GettingStarted.html>`_.
+CUDA is supported since llvm 3.9. Current release of clang (7.0.0) supports CUDA
+7.0 through 9.2. If you need support for CUDA 10, you will need to use clang
+built from r342924 or newer.
 
-Before you build CUDA code, you'll need to have installed the appropriate
-driver for your nvidia GPU and the CUDA SDK.  See `NVIDIA's CUDA installation
-guide <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_
-for details.  Note that clang `does not support
-<https://llvm.org/bugs/show_bug.cgi?id=26966>`_ the CUDA toolkit as installed
-by many Linux package managers; you probably need to install nvidia's package.
+Before you build CUDA code, you'll need to have installed the appropriate driver
+for your nvidia GPU and the CUDA SDK.  See `NVIDIA's CUDA installation guide
+<https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_ for
+details.  Note that clang `does not support
+<https://llvm.org/bugs/show_bug.cgi?id=26966>`_ the CUDA toolkit as installed by
+many Linux package managers; you probably need to install CUDA in a single
+directory from NVIDIA's package.
 
-You will need CUDA 7.0, 7.5, or 8.0 to compile with clang.
-
-CUDA compilation is supported on Linux, on MacOS as of 2016-11-18, and on
-Windows as of 2017-01-05.
+CUDA compilation is supported on Linux. Compilation on MacOS and Windows may or
+may not work and currently have no maintainers. Compilation with CUDA-9.x is
+`currently broken on Windows <https://bugs.llvm.org/show_bug.cgi?id=38811>`_.
 
 Invoking clang
 --------------
@@ -73,7 +73,9 @@ run your program.
   Pass e.g. ``-L/usr/local/cuda/lib64`` if compiling in 64-bit mode; otherwise,
   pass e.g. ``-L/usr/local/cuda/lib``.  (In CUDA, the device code and host code
   always have the same pointer widths, so if you're compiling 64-bit code for
-  the host, you're also compiling 64-bit code for the device.)
+  the host, you're also compiling 64-bit code for the device.) Note that as of
+  v10.0 CUDA SDK `no longer supports compilation of 32-bit
+  applications <https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html#deprecated-features>`_.
 
 * ``<GPU arch>`` -- the `compute capability
   <https://developer.nvidia.com/cuda-gpus>`_ of your GPU. For example, if you
@@ -89,8 +91,7 @@ run your program.
 
 The `-L` and `-l` flags only need to be passed when linking.  When compiling,
 you may also need to pass ``--cuda-path=/path/to/cuda`` if you didn't install
-the CUDA SDK into ``/usr/local/cuda``, ``/usr/local/cuda-7.0``, or
-``/usr/local/cuda-7.5``.
+the CUDA SDK into ``/usr/local/cuda`` or ``/usr/local/cuda-X.Y``.
 
 Flags that control numerical code
 ---------------------------------
@@ -548,9 +549,9 @@ The relevant tools are now just vanilla clang/LLVM.
 | Jingyue Wu, Artem Belevich, Eli Bendersky, Mark Heffernan, Chris Leary, Jacques Pienaar, Bjarke Roune, Rob Springer, Xuetian Weng, Robert Hundt
 | *Proceedings of the 2016 International Symposium on Code Generation and Optimization (CGO 2016)*
 |
-| `Slides from the CGO talk <http://wujingyue.com/docs/gpucc-talk.pdf>`_
+| `Slides from the CGO talk <http://wujingyue.github.io/docs/gpucc-talk.pdf>`_
 |
-| `Tutorial given at CGO <http://wujingyue.com/docs/gpucc-tutorial.pdf>`_
+| `Tutorial given at CGO <http://wujingyue.github.io/docs/gpucc-tutorial.pdf>`_
 
 Obtaining Help
 ==============

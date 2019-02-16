@@ -103,7 +103,7 @@ Cls obj;
 
 // CHECK: [[FUNC:[0-9]+]] = distinct !DISubprogram(name: "func", linkageName: "_ZN7pr147634funcENS_3fooE"
 // CHECK-SAME:                                      type: {{![0-9]+}}
-// CHECK-SAME:                                      isDefinition: true
+// CHECK-SAME:                                      DISPFlagDefinition
 
 // CHECK: [[PR14763:![0-9]+]] = !DINamespace(name: "pr14763"
 namespace pr14763 {

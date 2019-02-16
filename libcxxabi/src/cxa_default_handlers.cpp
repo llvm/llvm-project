@@ -37,13 +37,10 @@ static void demangling_terminate_handler()
         {
             _Unwind_Exception* unwind_exception =
                 reinterpret_cast<_Unwind_Exception*>(exception_header + 1) - 1;
-            bool native_exception =
-                (unwind_exception->exception_class   & get_vendor_and_language) == 
-                                 (kOurExceptionClass & get_vendor_and_language);
-            if (native_exception)
+            if (__isOurExceptionClass(unwind_exception))
             {
                 void* thrown_object =
-                    unwind_exception->exception_class == kOurDependentExceptionClass ?
+                    __getExceptionClass(unwind_exception) == kOurDependentExceptionClass ?
                         ((__cxa_dependent_exception*)exception_header)->primaryException :
                         exception_header + 1;
                 const __shim_type_info* thrown_type =

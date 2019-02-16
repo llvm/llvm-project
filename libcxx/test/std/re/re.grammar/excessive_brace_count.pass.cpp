@@ -9,7 +9,7 @@
 
 // <regex>
 // UNSUPPORTED: libcpp-no-exceptions
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++98, c++03
 
 // the "n" in `a{n}` should be within the numeric limits.
 

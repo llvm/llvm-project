@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -89,7 +89,7 @@ int main ()
 //  Not the same type
     {
     std::span<float>    s1{IsAContainer<int>()};   // expected-error {{no matching constructor for initialization of 'std::span<float>'}}
-    std::span<float, 0> s2{IsAContainer<int>()};   // expected-error {{no matching constructor for initialization of 'std::span<float, 0>'}}    
+    std::span<float, 0> s2{IsAContainer<int>()};   // expected-error {{no matching constructor for initialization of 'std::span<float, 0>'}}
     }
 
 //  CV wrong (dynamically sized)

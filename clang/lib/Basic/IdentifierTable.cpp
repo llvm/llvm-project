@@ -34,27 +34,6 @@
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
-// IdentifierInfo Implementation
-//===----------------------------------------------------------------------===//
-
-IdentifierInfo::IdentifierInfo() {
-  TokenID = tok::identifier;
-  ObjCOrBuiltinID = 0;
-  HasMacro = false;
-  HadMacro = false;
-  IsExtension = false;
-  IsFutureCompatKeyword = false;
-  IsPoisoned = false;
-  IsCPPOperatorKeyword = false;
-  NeedsHandleIdentifier = false;
-  IsFromAST = false;
-  ChangedAfterLoad = false;
-  RevertedTokenID = false;
-  OutOfDate = false;
-  IsModulesImport = false;
-}
-
-//===----------------------------------------------------------------------===//
 // IdentifierTable Implementation
 //===----------------------------------------------------------------------===//
 
@@ -98,30 +77,29 @@ IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
 namespace {
 
   enum {
-    KEYC99 = 0x1,
-    KEYCXX = 0x2,
-    KEYCXX11 = 0x4,
-    KEYGNU = 0x8,
-    KEYMS = 0x10,
-    BOOLSUPPORT = 0x20,
-    KEYALTIVEC = 0x40,
-    KEYNOCXX = 0x80,
-    KEYBORLAND = 0x100,
-    KEYOPENCLC = 0x200,
-    KEYC11 = 0x400,
-    KEYARC = 0x800,
-    KEYNOMS18 = 0x01000,
-    KEYNOOPENCL = 0x02000,
-    WCHARSUPPORT = 0x04000,
-    HALFSUPPORT = 0x08000,
-    CHAR8SUPPORT = 0x10000,
-    KEYCONCEPTS = 0x20000,
-    KEYOBJC2    = 0x40000,
-    KEYZVECTOR  = 0x80000,
-    KEYCOROUTINES = 0x100000,
-    KEYMODULES = 0x200000,
-    KEYCXX2A = 0x400000,
-    KEYOPENCLCXX = 0x800000,
+    KEYC99        = 0x1,
+    KEYCXX        = 0x2,
+    KEYCXX11      = 0x4,
+    KEYGNU        = 0x8,
+    KEYMS         = 0x10,
+    BOOLSUPPORT   = 0x20,
+    KEYALTIVEC    = 0x40,
+    KEYNOCXX      = 0x80,
+    KEYBORLAND    = 0x100,
+    KEYOPENCLC    = 0x200,
+    KEYC11        = 0x400,
+    KEYNOMS18     = 0x800,
+    KEYNOOPENCL   = 0x1000,
+    WCHARSUPPORT  = 0x2000,
+    HALFSUPPORT   = 0x4000,
+    CHAR8SUPPORT  = 0x8000,
+    KEYCONCEPTS   = 0x10000,
+    KEYOBJC       = 0x20000,
+    KEYZVECTOR    = 0x40000,
+    KEYCOROUTINES = 0x80000,
+    KEYMODULES    = 0x100000,
+    KEYCXX2A      = 0x200000,
+    KEYOPENCLCXX  = 0x400000,
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX2A,
     KEYALL = (0xffffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
@@ -154,6 +132,7 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.WChar && (Flags & WCHARSUPPORT)) return KS_Enabled;
   if (LangOpts.Char8 && (Flags & CHAR8SUPPORT)) return KS_Enabled;
   if (LangOpts.AltiVec && (Flags & KEYALTIVEC)) return KS_Enabled;
+  if (LangOpts.ZVector && (Flags & KEYZVECTOR)) return KS_Enabled;
   if (LangOpts.OpenCL && !LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLC))
     return KS_Enabled;
   if (LangOpts.OpenCLCPlusPlus && (Flags & KEYOPENCLCXX)) return KS_Enabled;
@@ -161,8 +140,7 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.C11 && (Flags & KEYC11)) return KS_Enabled;
   // We treat bridge casts as objective-C keywords so we can warn on them
   // in non-arc mode.
-  if (LangOpts.ObjC2 && (Flags & KEYARC)) return KS_Enabled;
-  if (LangOpts.ObjC2 && (Flags & KEYOBJC2)) return KS_Enabled;
+  if (LangOpts.ObjC && (Flags & KEYOBJC)) return KS_Enabled;
   if (LangOpts.ConceptsTS && (Flags & KEYCONCEPTS)) return KS_Enabled;
   if (LangOpts.CoroutinesTS && (Flags & KEYCOROUTINES)) return KS_Enabled;
   if (LangOpts.ModulesTS && (Flags & KEYMODULES)) return KS_Enabled;
@@ -226,11 +204,8 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define CXX_KEYWORD_OPERATOR(NAME, ALIAS) \
   if (LangOpts.CXXOperatorNames)          \
     AddCXXOperatorKeyword(StringRef(#NAME), tok::ALIAS, *this);
-#define OBJC1_AT_KEYWORD(NAME) \
-  if (LangOpts.ObjC1)          \
-    AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
-#define OBJC2_AT_KEYWORD(NAME) \
-  if (LangOpts.ObjC2)          \
+#define OBJC_AT_KEYWORD(NAME)  \
+  if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"
@@ -381,24 +356,23 @@ unsigned llvm::DenseMapInfo<clang::Selector>::getHashValue(clang::Selector S) {
 
 namespace clang {
 
-/// MultiKeywordSelector - One of these variable length records is kept for each
+/// One of these variable length records is kept for each
 /// selector containing more than one keyword. We use a folding set
 /// to unique aggregate names (keyword selectors in ObjC parlance). Access to
 /// this class is provided strictly through Selector.
-class MultiKeywordSelector
-  : public DeclarationNameExtra, public llvm::FoldingSetNode {
-  MultiKeywordSelector(unsigned nKeys) {
-    ExtraKindOrNumArgs = NUM_EXTRA_KINDS + nKeys;
-  }
+class alignas(IdentifierInfoAlignment) MultiKeywordSelector
+    : public detail::DeclarationNameExtra,
+      public llvm::FoldingSetNode {
+  MultiKeywordSelector(unsigned nKeys) : DeclarationNameExtra(nKeys) {}
 
 public:
   // Constructor for keyword selectors.
-  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV) {
+  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV)
+      : DeclarationNameExtra(nKeys) {
     assert((nKeys > 1) && "not a multi-keyword selector");
-    ExtraKindOrNumArgs = NUM_EXTRA_KINDS + nKeys;
 
     // Fill in the trailing keyword array.
-    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this+1);
+    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this + 1);
     for (unsigned i = 0; i != nKeys; ++i)
       KeyInfo[i] = IIV[i];
   }
@@ -406,16 +380,16 @@ public:
   // getName - Derive the full selector name and return it.
   std::string getName() const;
 
-  unsigned getNumArgs() const { return ExtraKindOrNumArgs - NUM_EXTRA_KINDS; }
+  using DeclarationNameExtra::getNumArgs;
 
   using keyword_iterator = IdentifierInfo *const *;
 
   keyword_iterator keyword_begin() const {
-    return reinterpret_cast<keyword_iterator>(this+1);
+    return reinterpret_cast<keyword_iterator>(this + 1);
   }
 
   keyword_iterator keyword_end() const {
-    return keyword_begin()+getNumArgs();
+    return keyword_begin() + getNumArgs();
   }
 
   IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
@@ -423,8 +397,8 @@ public:
     return keyword_begin()[i];
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      keyword_iterator ArgTys, unsigned NumArgs) {
+  static void Profile(llvm::FoldingSetNodeID &ID, keyword_iterator ArgTys,
+                      unsigned NumArgs) {
     ID.AddInteger(NumArgs);
     for (unsigned i = 0; i != NumArgs; ++i)
       ID.AddPointer(ArgTys[i]);
@@ -461,7 +435,7 @@ IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
 
 StringRef Selector::getNameForSlot(unsigned int argIndex) const {
   IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
-  return II? II->getName() : StringRef();
+  return II ? II->getName() : StringRef();
 }
 
 std::string MultiKeywordSelector::getName() const {
@@ -583,6 +557,7 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
       break;
     case 'i':
       if (startsWithWord(name, "init")) return OIT_Init;
+      break;
     default:
       break;
   }

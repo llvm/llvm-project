@@ -182,8 +182,7 @@ class ProcResourceKind;
 //
 // SchedModel ties these units to a processor for any stand-alone defs
 // of this class.
-class ProcResourceUnits<ProcResourceKind kind, int num,
-                        list<string> pfmCounters> {
+class ProcResourceUnits<ProcResourceKind kind, int num> {
   ProcResourceKind Kind = kind;
   int NumUnits = num;
   ProcResourceKind Super = ?;
@@ -198,8 +197,8 @@ def EponymousProcResourceKind : ProcResourceKind;
 
 // Subtargets typically define processor resource kind and number of
 // units in one place.
-class ProcResource<int num, list<string> pfmCounters = []> : ProcResourceKind,
-  ProcResourceUnits<EponymousProcResourceKind, num, pfmCounters>;
+class ProcResource<int num> : ProcResourceKind,
+  ProcResourceUnits<EponymousProcResourceKind, num>;
 
 class ProcResGroup<list<ProcResource> resources> : ProcResourceKind {
   list<ProcResource> Resources = resources;
@@ -374,7 +373,11 @@ class SchedPredicate<code pred> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
   code Predicate = pred;
 }
-def NoSchedPred : SchedPredicate<[{true}]>;
+
+// Define a predicate to be typically used as the default case in a
+// SchedVariant.  It the SchedVariant does not use any other predicate based on
+// MCSchedPredicate, this is the default scheduling case used by llvm-mca.
+def NoSchedPred : MCSchedPredicate<TruePred>;
 
 // Associate a predicate with a list of SchedReadWrites. By default,
 // the selected SchedReadWrites are still associated with a single
@@ -461,6 +464,10 @@ class SchedAlias<SchedReadWrite match, SchedReadWrite alias> {
 //  - The number of physical registers which can be used for register renaming
 //    purpose.
 //  - The cost of a register rename.
+//  - The set of registers that allow move elimination.
+//  - The maximum number of moves that can be eliminated every cycle.
+//  - Whether move elimination is limited to register moves whose input
+//    is known to be zero.
 //
 // The cost of a rename is the number of physical registers allocated by the
 // register alias table to map the new definition. By default, register can be
@@ -507,11 +514,35 @@ class SchedAlias<SchedReadWrite match, SchedReadWrite alias> {
 // partial write is combined with the previous super-register definition.  We
 // should add support for these cases, and correctly model merge problems with
 // partial register accesses.
+//
+// Field MaxMovesEliminatedPerCycle specifies how many moves can be eliminated
+// every cycle. A default value of zero for that field means: there is no limit
+// to the number of moves that can be eliminated by this register file.
+//
+// An instruction MI is a candidate for move elimination if a call to
+// method TargetSubtargetInfo::isOptimizableRegisterMove(MI) returns true (see
+// llvm/CodeGen/TargetSubtargetInfo.h, and llvm/MC/MCInstrAnalysis.h).
+//
+// Subtargets can instantiate tablegen class IsOptimizableRegisterMove (see
+// llvm/Target/TargetInstrPredicate.td) to customize the set of move elimination
+// candidates. By default, no instruction is a valid move elimination candidate.
+//
+// A register move MI is eliminated only if:
+//  - MI is a move elimination candidate.
+//  - The destination register is from a register class that allows move
+//    elimination (see field `AllowMoveElimination` below).
+//  - Constraints on the move kind, and the maximum number of moves that can be
+//    eliminated per cycle are all met.
+
 class RegisterFile<int numPhysRegs, list<RegisterClass> Classes = [],
-                   list<int> Costs = []> {
+                   list<int> Costs = [], list<bit> AllowMoveElim = [],
+                   int MaxMoveElimPerCy = 0, bit AllowZeroMoveElimOnly = 0> {
   list<RegisterClass> RegClasses = Classes;
   list<int> RegCosts = Costs;
+  list<bit> AllowMoveElimination = AllowMoveElim;
   int NumPhysRegs = numPhysRegs;
+  int MaxMovesEliminatedPerCycle = MaxMoveElimPerCy;
+  bit AllowZeroMoveEliminationOnly = AllowZeroMoveElimOnly;
   SchedMachineModel SchedModel = ?;
 }
 
@@ -531,23 +562,12 @@ class RetireControlUnit<int bufferSize, int retirePerCycle> {
   SchedMachineModel SchedModel = ?;
 }
 
-// Allow the definition of hardware counters.
-class PfmCounter {
+// Base class for Load/StoreQueue.  It is used to identify processor resources
+// which describe load/store queues in the LS unit.
+class MemoryQueue<ProcResource PR> {
+  ProcResource QueueDescriptor = PR;
   SchedMachineModel SchedModel = ?;
 }
 
-// Each processor can define how to measure cycles by defining a
-// PfmCycleCounter.
-class PfmCycleCounter<string counter> : PfmCounter {
-  string Counter = counter;
-}
-
-// Each ProcResourceUnits can define how to measure issued uops by defining
-// a PfmIssueCounter.
-class PfmIssueCounter<ProcResourceUnits resource, list<string> counters>
-    : PfmCounter{
-  // The resource units on which uops are issued.
-  ProcResourceUnits Resource = resource;
-  // The list of counters that measure issue events.
-  list<string> Counters = counters;
-}
+class LoadQueue<ProcResource LDQueue> : MemoryQueue<LDQueue>;
+class StoreQueue<ProcResource STQueue> : MemoryQueue<STQueue>;

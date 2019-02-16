@@ -9,42 +9,39 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-template <typename... Ts>
-static Error createError(char const *Fmt, const Ts &... Vals) {
-  std::string Buffer;
-  raw_string_ostream Stream(Buffer);
-  Stream << format(Fmt, Vals...);
-  return make_error<StringError>(Stream.str(), inconvertibleErrorCode());
-}
-
 Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
                                     uint32_t *OffsetPtr) {
   HeaderOffset = *OffsetPtr;
   // Read and verify the length field.
   if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, sizeof(uint32_t)))
-    return createError("section is not large enough to contain a "
+    return createStringError(errc::invalid_argument,
+                       "section is not large enough to contain a "
                        "%s table length at offset 0x%" PRIx32,
                        SectionName.data(), *OffsetPtr);
   // TODO: Add support for DWARF64.
   HeaderData.Length = Data.getU32(OffsetPtr);
   if (HeaderData.Length == 0xffffffffu)
-    return createError("DWARF64 is not supported in %s at offset 0x%" PRIx32,
+    return createStringError(errc::not_supported,
+                       "DWARF64 is not supported in %s at offset 0x%" PRIx32,
                        SectionName.data(), HeaderOffset);
   Format = dwarf::DwarfFormat::DWARF32;
   if (HeaderData.Length + sizeof(uint32_t) < sizeof(Header))
-    return createError("%s table at offset 0x%" PRIx32
+    return createStringError(errc::invalid_argument,
+                       "%s table at offset 0x%" PRIx32
                        " has too small length (0x%" PRIx32
                        ") to contain a complete header",
                        SectionName.data(), HeaderOffset, length());
   uint32_t End = HeaderOffset + length();
   if (!Data.isValidOffsetForDataOfSize(HeaderOffset, End - HeaderOffset))
-    return createError("section is not large enough to contain a %s table "
+    return createStringError(errc::invalid_argument,
+                       "section is not large enough to contain a %s table "
                        "of length 0x%" PRIx32 " at offset 0x%" PRIx32,
                        SectionName.data(), length(), HeaderOffset);
 
@@ -55,20 +52,23 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
 
   // Perform basic validation of the remaining header fields.
   if (HeaderData.Version != 5)
-    return createError("unrecognised %s table version %" PRIu16
+    return createStringError(errc::invalid_argument,
+                       "unrecognised %s table version %" PRIu16
                        " in table at offset 0x%" PRIx32,
                        SectionName.data(), HeaderData.Version, HeaderOffset);
   if (HeaderData.AddrSize != 4 && HeaderData.AddrSize != 8)
-    return createError("%s table at offset 0x%" PRIx32
-                       " has unsupported address size %hhu",
+    return createStringError(errc::not_supported,
+                       "%s table at offset 0x%" PRIx32
+                       " has unsupported address size %" PRIu8,
                        SectionName.data(), HeaderOffset, HeaderData.AddrSize);
   if (HeaderData.SegSize != 0)
-    return createError("%s table at offset 0x%" PRIx32
+    return createStringError(errc::not_supported,
+                       "%s table at offset 0x%" PRIx32
                        " has unsupported segment selector size %" PRIu8,
                        SectionName.data(), HeaderOffset, HeaderData.SegSize);
   if (End < HeaderOffset + sizeof(HeaderData) +
                 HeaderData.OffsetEntryCount * sizeof(uint32_t))
-    return createError(
+    return createStringError(errc::invalid_argument,
         "%s table at offset 0x%" PRIx32 " has more offset entries (%" PRIu32
         ") than there is space for",
         SectionName.data(), HeaderOffset, HeaderData.OffsetEntryCount);

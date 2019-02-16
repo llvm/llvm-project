@@ -37,9 +37,23 @@ if (COMPILER_RT_HAS_NODEFAULTLIBS_FLAG)
   elseif (COMPILER_RT_HAS_GCC_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES gcc)
   endif ()
+  if (MINGW)
+    # Mingw64 requires quite a few "C" runtime libraries in order for basic
+    # programs to link successfully with -nodefaultlibs.
+    if (COMPILER_RT_USE_BUILTINS_LIBRARY)
+      set(MINGW_RUNTIME ${COMPILER_RT_BUILTINS_LIBRARY})
+    else ()
+      set(MINGW_RUNTIME gcc_s gcc)
+    endif()
+    set(MINGW_LIBRARIES mingw32 ${MINGW_RUNTIME} moldname mingwex msvcrt advapi32
+                        shell32 user32 kernel32 mingw32 ${MINGW_RUNTIME}
+                        moldname mingwex msvcrt)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${MINGW_LIBRARIES})
+  endif()
 endif ()
 
 # CodeGen options.
+check_c_compiler_flag(-ffreestanding         COMPILER_RT_HAS_FFREESTANDING_FLAG)
 check_cxx_compiler_flag(-fPIC                COMPILER_RT_HAS_FPIC_FLAG)
 check_cxx_compiler_flag(-fPIE                COMPILER_RT_HAS_FPIE_FLAG)
 check_cxx_compiler_flag(-fno-builtin         COMPILER_RT_HAS_FNO_BUILTIN_FLAG)
@@ -51,7 +65,6 @@ check_cxx_compiler_flag(-fno-sanitize=safe-stack COMPILER_RT_HAS_FNO_SANITIZE_SA
 check_cxx_compiler_flag(-fvisibility=hidden  COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
 check_cxx_compiler_flag(-frtti               COMPILER_RT_HAS_FRTTI_FLAG)
 check_cxx_compiler_flag(-fno-rtti            COMPILER_RT_HAS_FNO_RTTI_FLAG)
-check_cxx_compiler_flag(-ffreestanding       COMPILER_RT_HAS_FFREESTANDING_FLAG)
 check_cxx_compiler_flag("-Werror -fno-function-sections" COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG)
 check_cxx_compiler_flag(-std=c++11           COMPILER_RT_HAS_STD_CXX11_FLAG)
 check_cxx_compiler_flag(-ftls-model=initial-exec COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC)
@@ -105,6 +118,21 @@ check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
 check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
+
+# Look for terminfo library, used in unittests that depend on LLVMSupport.
+if(LLVM_ENABLE_TERMINFO)
+  foreach(library terminfo tinfo curses ncurses ncursesw)
+    string(TOUPPER ${library} library_suffix)
+    check_library_exists(
+      ${library} setupterm "" COMPILER_RT_HAS_TERMINFO_${library_suffix})
+    if(COMPILER_RT_HAS_TERMINFO_${library_suffix})
+      set(COMPILER_RT_HAS_TERMINFO TRUE)
+      set(COMPILER_RT_TERMINFO_LIB "${library}")
+      break()
+    endif()
+  endforeach()
+endif()
+
 if (ANDROID AND COMPILER_RT_HAS_LIBDL)
   # Android's libstdc++ has a dependency on libdl.
   list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
@@ -501,7 +529,8 @@ list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
 
 if (SANITIZER_COMMON_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
     (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD|NetBSD|OpenBSD|Fuchsia|SunOS" OR
-    (OS_NAME MATCHES "Windows" AND (NOT MINGW AND NOT CYGWIN))))
+    (OS_NAME MATCHES "Windows" AND NOT CYGWIN AND
+        (NOT MINGW OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"))))
   set(COMPILER_RT_HAS_SANITIZER_COMMON TRUE)
 else()
   set(COMPILER_RT_HAS_SANITIZER_COMMON FALSE)
@@ -557,7 +586,7 @@ else()
 endif()
 
 if (PROFILE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS")
+    OS_NAME MATCHES "Darwin|Linux|FreeBSD|Windows|Android|Fuchsia|SunOS|NetBSD")
   set(COMPILER_RT_HAS_PROFILE TRUE)
 else()
   set(COMPILER_RT_HAS_PROFILE FALSE)
@@ -598,7 +627,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND ESAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Linux")
+    OS_NAME MATCHES "Linux|FreeBSD")
   set(COMPILER_RT_HAS_ESAN TRUE)
 else()
   set(COMPILER_RT_HAS_ESAN FALSE)
@@ -612,14 +641,17 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND XRAY_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|OpenBSD")
+    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|OpenBSD|Fuchsia")
   set(COMPILER_RT_HAS_XRAY TRUE)
 else()
   set(COMPILER_RT_HAS_XRAY FALSE)
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND FUZZER_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Android|Darwin|Linux|NetBSD|FreeBSD|OpenBSD|Fuchsia")
+    OS_NAME MATCHES "Android|Darwin|Linux|NetBSD|FreeBSD|OpenBSD|Fuchsia|Windows" AND
+    # TODO: Support builds with MSVC.
+    NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" AND
+    NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
   set(COMPILER_RT_HAS_FUZZER TRUE)
 else()
   set(COMPILER_RT_HAS_FUZZER FALSE)

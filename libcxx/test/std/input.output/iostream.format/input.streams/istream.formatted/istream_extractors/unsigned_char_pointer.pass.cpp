@@ -61,6 +61,17 @@ int main()
         assert(std::string((char*)s) == "abc");
         assert(is.width() == 0);
     }
+#if TEST_STD_VER > 17
+    {
+        testbuf<char> sb("   abcdefghijk    ");
+        std::istream is(&sb);
+        unsigned char s[4];
+        is >> s;
+        assert(!is.eof());
+        assert(!is.fail());
+        assert(std::string((char*)s) == "abc");
+    }
+#endif
     {
         testbuf<char> sb("   abcdefghijk");
         std::istream is(&sb);
@@ -82,4 +93,15 @@ int main()
         assert(std::string((char*)s) == "");
         assert(is.width() == 0);
     }
+#if TEST_STD_VER > 17
+    {
+        testbuf<char> sb("   abcdefghijk");
+        std::istream is(&sb);
+        unsigned char s[1];
+        is >> s;
+        assert(!is.eof());
+        assert( is.fail());
+        assert(std::string((char*)s) == "");
+    }
+#endif
 }

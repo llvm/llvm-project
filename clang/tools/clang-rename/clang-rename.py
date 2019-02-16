@@ -7,9 +7,13 @@ Before installing make sure one of the following is satisfied:
 * `g:clang_rename_path` in ~/.vimrc points to valid clang-rename executable
 * `binary` in clang-rename.py points to valid to clang-rename executable
 
-To install, simply put this into your ~/.vimrc
+To install, simply put this into your ~/.vimrc for python2 support
 
     noremap <leader>cr :pyf <path-to>/clang-rename.py<cr>
+
+For python3 use the following command (note the change from :pyf to :py3f)
+
+    noremap <leader>cr :py3f <path-to>/clang-rename.py<cr>
 
 IMPORTANT NOTE: Before running the tool, make sure you saved the file.
 
@@ -18,6 +22,7 @@ you would like to rename and press '<leader>cr'. You will be prompted for a new
 name if the cursor points to a valid symbol.
 '''
 
+from __future__ import absolute_import, division, print_function
 import vim
 import subprocess
 import sys
@@ -30,8 +35,8 @@ def main():
     # Get arguments for clang-rename binary.
     offset = int(vim.eval('line2byte(line("."))+col(".")')) - 2
     if offset < 0:
-        print >> sys.stderr, '''Couldn\'t determine cursor position.
-                                Is your file empty?'''
+        print('Couldn\'t determine cursor position. Is your file empty?',
+              file=sys.stderr)
         return
     filename = vim.current.buffer.name
 
@@ -51,7 +56,7 @@ def main():
     stdout, stderr = p.communicate()
 
     if stderr:
-        print stderr
+        print(stderr)
 
     # Reload all buffers in Vim.
     vim.command("checktime")

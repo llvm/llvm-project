@@ -65,25 +65,56 @@ def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
 def FeatureRDM : SubtargetFeature<"rdm", "HasRDM", "true",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions">;
 
+def FeaturePAN : SubtargetFeature<
+    "pan", "HasPAN", "true",
+    "Enables ARM v8.1 Privileged Access-Never extension">;
+
+def FeatureLOR : SubtargetFeature<
+    "lor", "HasLOR", "true",
+    "Enables ARM v8.1 Limited Ordering Regions extension">;
+
+def FeatureVH : SubtargetFeature<
+    "vh", "HasVH", "true",
+    "Enables ARM v8.1 Virtual Host extension">;
+
 def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
   "Enable ARMv8 PMUv3 Performance Monitors extension">;
 
 def FeatureFullFP16 : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
   "Full FP16", [FeatureFPARMv8]>;
 
+def FeatureFP16FML : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
+  "Enable FP16 FML instructions", [FeatureFullFP16]>;
+
 def FeatureSPE : SubtargetFeature<"spe", "HasSPE", "true",
   "Enable Statistical Profiling extension">;
+
+def FeaturePAN_RWV : SubtargetFeature<
+    "pan-rwv", "HasPAN_RWV", "true",
+    "Enable v8.2 PAN s1e1R and s1e1W Variants",
+    [FeaturePAN]>;
+
+// UAO PState
+def FeaturePsUAO : SubtargetFeature< "uaops", "HasPsUAO", "true",
+    "Enable v8.2 UAO PState">;
+
+def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
+    "true", "Enable v8.2 data Cache Clean to Point of Persistence" >;
 
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions">;
 
-/// Cyclone has register move instructions which are "free".
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
+def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
+                                        "Has zero-cycle zeroing instructions for generic registers">;
 
-/// Cyclone has instructions which zero registers for "free".
+def FeatureZCZeroingFP : SubtargetFeature<"zcz-fp", "HasZeroCycleZeroingFP", "true",
+                                        "Has zero-cycle zeroing instructions for FP registers">;
+
 def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
-                                        "Has zero-cycle zeroing instructions">;
+                                        "Has zero-cycle zeroing instructions",
+                                        [FeatureZCZeroingGP, FeatureZCZeroingFP]>;
 
 /// ... but the floating-point version doesn't quite work in rare cases on older
 /// CPUs.
@@ -96,13 +127,14 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
-def FeatureReserveX18 : SubtargetFeature<"reserve-x18", "ReserveX18", "true",
-                                         "Reserve X18, making it unavailable "
-                                         "as a GPR">;
+foreach i = {1-7,18,20} in
+    def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
+                                             "Reserve X"#i#", making it unavailable "
+                                             "as a GPR">;
 
-def FeatureReserveX20 : SubtargetFeature<"reserve-x20", "ReserveX20", "true",
-                                         "Reserve X20, making it unavailable "
-                                         "as a GPR">;
+foreach i = {8-15,18} in
+    def FeatureCallSavedX#i : SubtargetFeature<"call-saved-x"#i,
+         "CustomCallSavedXRegs["#i#"]", "true", "Make X"#i#" callee saved.">;
 
 def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
                                     "Use alias analysis during codegen">;
@@ -117,11 +149,11 @@ def FeaturePredictableSelectIsExpensive : SubtargetFeature<
 
 def FeatureCustomCheapAsMoveHandling : SubtargetFeature<"custom-cheap-as-move",
     "CustomAsCheapAsMove", "true",
-    "Use custom code for TargetInstrInfo::isAsCheapAsAMove()">;
+    "Use custom handling of cheap instructions">;
 
 def FeatureExynosCheapAsMoveHandling : SubtargetFeature<"exynos-cheap-as-move",
     "ExynosAsCheapAsMove", "true",
-    "Use Exynos specific code in TargetInstrInfo::isAsCheapAsAMove()",
+    "Use Exynos specific handling of cheap instructions",
     [FeatureCustomCheapAsMoveHandling]>;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
@@ -172,6 +204,10 @@ def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
     "Disable latency scheduling heuristic">;
 
+def FeatureForce32BitJumpTables
+   : SubtargetFeature<"force-32bit-jump-tables", "Force32BitJumpTables", "true",
+                      "Force jump table entries to be 32-bits wide except at MinSize">;
+
 def FeatureRCPC : SubtargetFeature<"rcpc", "HasRCPC", "true",
                                    "Enable support for RCPC extension">;
 
@@ -182,6 +218,66 @@ def FeatureUseRSqrt : SubtargetFeature<
 def FeatureDotProd : SubtargetFeature<
     "dotprod", "HasDotProd", "true",
     "Enable dot product support">;
+
+def FeaturePA : SubtargetFeature<
+    "pa", "HasPA", "true",
+    "Enable v8.3-A Pointer Authentication enchancement">;
+
+def FeatureJS : SubtargetFeature<
+    "jsconv", "HasJS", "true",
+    "Enable v8.3-A JavaScript FP conversion enchancement",
+    [FeatureFPARMv8]>;
+
+def FeatureCCIDX : SubtargetFeature<
+    "ccidx", "HasCCIDX", "true",
+    "Enable v8.3-A Extend of the CCSIDR number of sets">;
+
+def FeatureComplxNum : SubtargetFeature<
+    "complxnum", "HasComplxNum", "true",
+    "Enable v8.3-A Floating-point complex number support",
+    [FeatureNEON]>;
+
+def FeatureNV : SubtargetFeature<
+    "nv", "HasNV", "true",
+    "Enable v8.4-A Nested Virtualization Enchancement">;
+
+def FeatureRASv8_4 : SubtargetFeature<
+    "rasv8_4", "HasRASv8_4", "true",
+    "Enable v8.4-A Reliability, Availability and Serviceability extension",
+    [FeatureRAS]>;
+
+def FeatureMPAM : SubtargetFeature<
+    "mpam", "HasMPAM", "true",
+    "Enable v8.4-A Memory system Partitioning and Monitoring extension">;
+
+def FeatureDIT : SubtargetFeature<
+    "dit", "HasDIT", "true",
+    "Enable v8.4-A Data Independent Timing instructions">;
+
+def FeatureTRACEV8_4 : SubtargetFeature<
+    "tracev8.4", "HasTRACEV8_4", "true",
+    "Enable v8.4-A Trace extension">;
+
+def FeatureAM : SubtargetFeature<
+    "am", "HasAM", "true",
+    "Enable v8.4-A Activity Monitors extension">;
+
+def FeatureSEL2 : SubtargetFeature<
+    "sel2", "HasSEL2", "true",
+    "Enable v8.4-A Secure Exception Level 2 extension">;
+
+def FeatureTLB_RMI : SubtargetFeature<
+    "tlb-rmi", "HasTLB_RMI", "true",
+    "Enable v8.4-A TLB Range and Maintenance Instructions">;
+
+def FeatureFMI : SubtargetFeature<
+    "fmi", "HasFMI", "true",
+    "Enable v8.4-A Flag Manipulation Instructions">;
+
+// 8.4 RCPC enchancements: LDAPR & STLR instructions with Immediate Offset
+def FeatureRCPC_IMMO : SubtargetFeature<"rcpc-immo", "HasRCPC_IMMO", "true",
+    "Enable v8.4-A RCPC instructions with Immediate Offsets",
+    [FeatureRCPC]>;
 
 def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "NegativeImmediates", "false",
@@ -200,21 +296,65 @@ def FeatureAggressiveFMA :
                    "true",
                    "Enable Aggressive FMA for floating-point.">;
 
+def FeatureAltFPCmp : SubtargetFeature<"altnzcv", "HasAlternativeNZCV", "true",
+  "Enable alternative NZCV format for floating point comparisons">;
+
+def FeatureFRInt3264 : SubtargetFeature<"fptoint", "HasFRInt3264", "true",
+  "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int" >;
+
+def FeatureSpecRestrict : SubtargetFeature<"specrestrict", "HasSpecRestrict",
+  "true", "Enable architectural speculation restriction" >;
+
+def FeatureSB : SubtargetFeature<"sb", "HasSB",
+  "true", "Enable v8.5 Speculation Barrier" >;
+
+def FeatureSSBS : SubtargetFeature<"ssbs", "HasSSBS",
+  "true", "Enable Speculative Store Bypass Safe bit" >;
+
+def FeaturePredCtrl : SubtargetFeature<"predctrl", "HasPredCtrl", "true",
+  "Enable execution and data prediction invalidation instructions" >;
+
+def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
+    "true", "Enable v8.5 Cache Clean to Point of Deep Persistence" >;
+
+def FeatureBranchTargetId : SubtargetFeature<"bti", "HasBTI",
+    "true", "Enable Branch Target Identification" >;
+
+def FeatureRandGen : SubtargetFeature<"rand", "HasRandGen",
+    "true", "Enable Random Number generation instructions" >;
+
+def FeatureMTE : SubtargetFeature<"mte", "HasMTE",
+    "true", "Enable Memory Tagging Extension" >;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
 
 def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
-  "Support ARM v8.1a instructions", [FeatureCRC, FeatureLSE, FeatureRDM]>;
+  "Support ARM v8.1a instructions", [FeatureCRC, FeatureLSE, FeatureRDM,
+  FeaturePAN, FeatureLOR, FeatureVH]>;
 
 def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
-  "Support ARM v8.2a instructions", [HasV8_1aOps, FeatureRAS]>;
+  "Support ARM v8.2a instructions", [HasV8_1aOps, FeaturePsUAO, 
+  FeaturePAN_RWV, FeatureRAS, FeatureCCPP]>;
 
 def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
-  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC]>;
+  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC, FeaturePA,
+  FeatureJS, FeatureCCIDX, FeatureComplxNum]>;
 
 def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
-  "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd]>;
+  "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd,
+  FeatureNV, FeatureRASv8_4, FeatureMPAM, FeatureDIT,
+  FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI,
+  FeatureFMI, FeatureRCPC_IMMO]>;
+
+def HasV8_5aOps : SubtargetFeature<
+  "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
+  [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
+   FeatureSSBS, FeatureSB, FeaturePredCtrl, FeatureCacheDeepPersist,
+   FeatureBranchTargetId]
+>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description
@@ -230,6 +370,8 @@ include "AArch64CallingConvention.td"
 
 include "AArch64Schedule.td"
 include "AArch64InstrInfo.td"
+include "AArch64SchedPredicates.td"
+include "AArch64SchedPredExynos.td"
 
 def AArch64InstrInfo : InstrInfo;
 
@@ -361,14 +503,13 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                      FeatureCRC,
                                      FeatureCrypto,
                                      FeatureExynosCheapAsMoveHandling,
-                                     FeatureFPARMv8,
+                                     FeatureForce32BitJumpTables,
                                      FeatureFuseAES,
-                                     FeatureNEON,
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeatureSlowMisaligned128Store,
                                      FeatureUseRSqrt,
-                                     FeatureZCZeroing]>;
+                                     FeatureZCZeroingFP]>;
 
 def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M2 processors",
@@ -376,30 +517,28 @@ def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                      FeatureCRC,
                                      FeatureCrypto,
                                      FeatureExynosCheapAsMoveHandling,
-                                     FeatureFPARMv8,
+                                     FeatureForce32BitJumpTables,
                                      FeatureFuseAES,
-                                     FeatureNEON,
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeatureSlowMisaligned128Store,
-                                     FeatureZCZeroing]>;
+                                     FeatureZCZeroingFP]>;
 
 def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureCRC,
                                      FeatureCrypto,
                                      FeatureExynosCheapAsMoveHandling,
-                                     FeatureFPARMv8,
+                                     FeatureForce32BitJumpTables,
                                      FeatureFuseAddress,
                                      FeatureFuseAES,
                                      FeatureFuseCCSelect,
                                      FeatureFuseLiterals,
                                      FeatureLSLFast,
-                                     FeatureNEON,
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeaturePredictableSelectIsExpensive,
-                                     FeatureZCZeroing]>;
+                                     FeatureZCZeroingFP]>;
 
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [
@@ -443,7 +582,7 @@ def ProcSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureZCZeroing,
                                    FeatureLSLFast,
-                                   HasV8_3aOps]>;
+                                   HasV8_4aOps]>;
 
 def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",
                                          "ThunderX2T99",
@@ -502,6 +641,21 @@ def ProcThunderXT83 : SubtargetFeature<"thunderxt83", "ARMProcFamily",
                                        FeaturePredictableSelectIsExpensive,
                                        FeatureNEON]>;
 
+def ProcTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
+                                  "HiSilicon TS-V110 processors", [
+                                  HasV8_2aOps,
+                                  FeatureCrypto,
+                                  FeatureCustomCheapAsMoveHandling,
+                                  FeatureFPARMv8,
+                                  FeatureFuseAES,
+                                  FeatureNEON,
+                                  FeaturePerfMon,
+                                  FeaturePostRAScheduler,
+                                  FeatureSPE,
+                                  FeatureFullFP16,
+                                  FeatureFP16FML,
+                                  FeatureDotProd]>;
+
 def : ProcessorModel<"generic", NoSchedModel, [
                      FeatureFPARMv8,
                      FeatureFuseAES,
@@ -534,6 +688,11 @@ def : ProcessorModel<"thunderxt81", ThunderXT8XModel,  [ProcThunderXT81]>;
 def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
 // Cavium ThunderX2T9X  Processors. Formerly Broadcom Vulcan.
 def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
+// FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
+def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
+
+// Alias for the latest Apple processor model supported by LLVM.
+def : ProcessorModel<"apple-latest", CycloneModel, [ProcCyclone]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser
@@ -582,3 +741,9 @@ def AArch64 : Target {
   let AssemblyWriters = [GenericAsmWriter, AppleAsmWriter];
   let AllowRegisterRenaming = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Pfm Counters
+//===----------------------------------------------------------------------===//
+
+include "AArch64PfmCounters.td"

@@ -1,0 +1,320 @@
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-insert-skips -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+
+---
+# GCN-LABEL: name: and_execz_mov_vccz
+# GCN-NOT: S_MOV_
+# GCN-NOT: S_AND_
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_imm_vccz
+# GCN-NOT: S_AND_
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_imm_vccz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execnz_imm_vccnz
+# GCN-NOT: S_AND_
+# GCN: S_CBRANCH_EXECNZ %bb.1, implicit $exec
+name:            and_execnz_imm_vccnz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_imm_vccz_live_scc
+# GCN: $vcc = S_AND_B64 $exec, -1, implicit-def $scc
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_imm_vccz_live_scc
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 $exec, -1, implicit-def $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_live_scc
+# GCN-NOT: S_MOV_
+# GCN: $vcc = S_AND_B64 $exec, -1, implicit-def $scc
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_live_scc
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_live_sreg
+# GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
+# GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_live_sreg
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_live_sreg_commute
+# GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
+# GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_live_sreg_commute
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 $sgpr0_sgpr1, $exec, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_live_scc_commute
+# GCN-NOT: S_MOV_
+# GCN: $vcc = S_AND_B64 $exec, -1, implicit-def $scc
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_live_scc_commute
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 killed $sgpr0_sgpr1, $exec, implicit-def $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_commute
+# GCN-NOT: S_MOV_
+# GCN-NOT: S_AND_
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_commute
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 killed $sgpr0_sgpr1, $exec, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_exec_vccz
+# GCN:      $exec = S_MOV_B64 -1
+# GCN-NEXT: S_ENDPGM
+name:            and_execz_mov_exec_vccz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $exec = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, $exec, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_exec_vccnz
+# GCN:      $exec = S_MOV_B64 -1
+# GCN-NEXT: S_BRANCH %bb.1{{$}}
+name:            and_execz_mov_exec_vccnz
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $exec = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, $exec, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_reads_sreg_early
+# GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
+# GCN-NEXT: $sgpr2 = S_MOV_B32 $sgpr1
+# GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_reads_sreg_early
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $sgpr2 = S_MOV_B32 $sgpr1
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_reads_sreg_late
+# GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
+# GCN-NEXT: $sgpr2 = S_MOV_B32 $sgpr1
+# GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_reads_sreg_late
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, $sgpr0_sgpr1, implicit-def dead $scc
+    $sgpr2 = S_MOV_B32 $sgpr1
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+# GCN-LABEL: name: and_execz_mov_vccz_reads_writes_sreg_early
+# GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
+# GCN-NEXT: $sgpr1 = S_MOV_B32 $sgpr0
+# GCN-NEXT: $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+name:            and_execz_mov_vccz_reads_writes_sreg_early
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $sgpr1 = S_MOV_B32 $sgpr0
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_reads_cond
+# GCN:      $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+# GCN-NEXT: $sgpr2 = S_MOV_B32 $vcc_lo
+# GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            and_execz_mov_vccz_reads_cond
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    $sgpr2 = S_MOV_B32 $vcc_lo
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_mov_vccz_modifies_sreg
+# GCN:      $sgpr0_sgpr1 = S_MOV_B64 -1
+# GCN-NEXT: $sgpr0 = S_MOV_B32 0
+# GCN-NEXT: $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+name:            and_execz_mov_vccz_modifies_sreg
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    $sgpr0 = S_MOV_B32 0
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM
+...
+---
+# GCN-LABEL: name: and_execz_imm_vccz_liveout_scc
+# GCN:      $vcc = S_AND_B64 $exec, -1, implicit-def $scc
+# GCN-NEXT: S_CBRANCH_EXECZ %bb.1, implicit $exec
+# GCN-NEXT  S_ENDPGM implicit $scc
+name:            and_execz_imm_vccz_liveout_scc
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 $exec, -1, implicit-def $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM implicit $scc
+...

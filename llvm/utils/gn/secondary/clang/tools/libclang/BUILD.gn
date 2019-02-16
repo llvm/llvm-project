@@ -1,0 +1,84 @@
+import("//clang/lib/ARCMigrate/enable.gni")
+import("//llvm/version.gni")
+
+# This build file is just enough to get check-clang to pass, it's missing
+# several things from the CMake build:
+# - linking in clangTidyPlugin and clangIncludeFixerPlugin from
+#   clang-tools-extra (which doesn't have any GN build files yet)
+# - using libclang.exports
+# - an build target copying the Python bindings
+# - the GN linux build always builds without -fPIC (as if LLVM_ENABLE_PIC=OFF
+#   in the CMake build), so libclang is always a static library on linux
+# - the GN build doesn't have LIBCLANG_BUILD_STATIC
+
+libclang_target_type = "shared_library"
+if (host_os == "linux") {
+  # Linux needs -fPIC to build shared libs but they aren't on by default.
+  # For now, make libclang a static lib there.
+  libclang_target_type = "static_library"
+}
+
+target(libclang_target_type, "libclang") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/include/clang/Config",
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Headers",
+    "//clang/lib/Index",
+    "//clang/lib/Lex",
+    "//clang/lib/Sema",
+    "//clang/lib/Tooling",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:TargetsToBuild",
+  ]
+  if (clang_enable_arcmt) {
+    deps += [ "//clang/lib/ARCMigrate" ]
+  }
+
+  if (host_os == "win") {
+    defines = [ "_CINDEX_LIB_" ]
+  }
+
+  sources = [
+    "ARCMigrate.cpp",
+    "BuildSystem.cpp",
+    "CIndex.cpp",
+    "CIndexCXX.cpp",
+    "CIndexCodeCompletion.cpp",
+    "CIndexDiagnostic.cpp",
+    "CIndexDiagnostic.h",
+    "CIndexHigh.cpp",
+    "CIndexInclusionStack.cpp",
+    "CIndexUSRs.cpp",
+    "CIndexer.cpp",
+    "CIndexer.h",
+    "CXComment.cpp",
+    "CXCompilationDatabase.cpp",
+    "CXCursor.cpp",
+    "CXCursor.h",
+    "CXIndexDataConsumer.cpp",
+    "CXLoadedDiagnostic.cpp",
+    "CXLoadedDiagnostic.h",
+    "CXSourceLocation.cpp",
+    "CXSourceLocation.h",
+    "CXStoredDiagnostic.cpp",
+    "CXString.cpp",
+    "CXString.h",
+    "CXTranslationUnit.h",
+    "CXType.cpp",
+    "CXType.h",
+    "Index_Internal.h",
+    "Indexing.cpp",
+  ]
+  if (host_os == "mac") {
+    ldflags = [
+      "-Wl,-compatibility_version,1",
+      "-Wl,-current_version,$llvm_version",
+      "-Wl,-install_name,@rpath/libclang.dylib",
+    ]
+  }
+}

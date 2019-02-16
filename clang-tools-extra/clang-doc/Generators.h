@@ -27,7 +27,7 @@ public:
   virtual ~Generator() = default;
 
   // Write out the decl info in the specified format.
-  virtual bool generateDocForInfo(Info *I, llvm::raw_ostream &OS) = 0;
+  virtual llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS) = 0;
 };
 
 typedef llvm::Registry<Generator> GeneratorRegistry;

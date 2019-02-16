@@ -115,7 +115,7 @@
 // CK-TEXTI: // __CLANG_OFFLOAD_BUNDLE____END__ openmp-x86_64-pc-linux-gnu
 
 // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____START__ host-powerpc64le-ibm-linux-gnu
-// CK-TEXTLL: @A = global i32 0
+// CK-TEXTLL: @A = dso_local global i32 0
 // CK-TEXTLL: define {{.*}}@test_func()
 // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____END__ host-powerpc64le-ibm-linux-gnu
 // CK-TEXTLL: ; __CLANG_OFFLOAD_BUNDLE____START__ openmp-powerpc64le-ibm-linux-gnu

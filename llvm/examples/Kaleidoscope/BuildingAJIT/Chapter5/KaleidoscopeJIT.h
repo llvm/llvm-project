@@ -82,13 +82,13 @@ private:
   std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  RTDyldObjectLinkingLayer ObjectLayer;
-  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
+  LegacyRTDyldObjectLinkingLayer ObjectLayer;
+  LegacyIRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
   using OptimizeFunction =
       std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
 
-  IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
+  LegacyIRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
   JITCompileCallbackManager *CompileCallbackMgr;
   std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
@@ -116,7 +116,7 @@ public:
         DL(TM->createDataLayout()),
         ObjectLayer(ES,
                     [this](VModuleKey K) {
-                      return RTDyldObjectLinkingLayer::Resources{
+                      return LegacyRTDyldObjectLinkingLayer::Resources{
                           cantFail(this->Remote.createRemoteMemoryManager()),
                           Resolver};
                     }),

@@ -71,19 +71,19 @@ struct SystemZAddressingMode {
   // True if the address can (and must) include ADJDYNALLOC.
   bool isDynAlloc() { return Form == FormBDXDynAlloc; }
 
-  void dump() {
+  void dump(const llvm::SelectionDAG *DAG) {
     errs() << "SystemZAddressingMode " << this << '\n';
 
     errs() << " Base ";
     if (Base.getNode())
-      Base.getNode()->dump();
+      Base.getNode()->dump(DAG);
     else
       errs() << "null\n";
 
     if (hasIndexField()) {
       errs() << " Index ";
       if (Index.getNode())
-        Index.getNode()->dump();
+        Index.getNode()->dump(DAG);
       else
         errs() << "null\n";
     }
@@ -589,7 +589,7 @@ bool SystemZDAGToDAGISel::selectAddress(SDValue Addr,
   if (AM.isDynAlloc() && !AM.IncludesDynAlloc)
     return false;
 
-  LLVM_DEBUG(AM.dump());
+  LLVM_DEBUG(AM.dump(CurDAG));
   return true;
 }
 
@@ -728,8 +728,7 @@ bool SystemZDAGToDAGISel::detectOrAndInsertion(SDValue &Op,
   // The inner check covers all cases but is more expensive.
   uint64_t Used = allOnes(Op.getValueSizeInBits());
   if (Used != (AndMask | InsertMask)) {
-    KnownBits Known;
-    CurDAG->computeKnownBits(Op.getOperand(0), Known);
+    KnownBits Known = CurDAG->computeKnownBits(Op.getOperand(0));
     if (Used != (AndMask | InsertMask | Known.Zero.getZExtValue()))
       return false;
   }
@@ -787,8 +786,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       // If some bits of Input are already known zeros, those bits will have
       // been removed from the mask.  See if adding them back in makes the
       // mask suitable.
-      KnownBits Known;
-      CurDAG->computeKnownBits(Input, Known);
+      KnownBits Known = CurDAG->computeKnownBits(Input);
       Mask |= Known.Zero.getZExtValue();
       if (!refineRxSBGMask(RxSBG, Mask))
         return false;
@@ -811,8 +809,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       // If some bits of Input are already known ones, those bits will have
       // been removed from the mask.  See if adding them back in makes the
       // mask suitable.
-      KnownBits Known;
-      CurDAG->computeKnownBits(Input, Known);
+      KnownBits Known = CurDAG->computeKnownBits(Input);
       Mask &= ~Known.One.getZExtValue();
       if (!refineRxSBGMask(RxSBG, Mask))
         return false;
@@ -1147,7 +1144,7 @@ bool SystemZDAGToDAGISel::tryGather(SDNode *N, unsigned Opcode) {
     return false;
 
   auto *Load = dyn_cast<LoadSDNode>(N->getOperand(1));
-  if (!Load || !Load->hasOneUse())
+  if (!Load || !Load->hasNUsesOfValue(1, 0))
     return false;
   if (Load->getMemoryVT().getSizeInBits() !=
       Load->getValueType(0).getSizeInBits())
@@ -1308,7 +1305,7 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
     return false;
   case SystemZISD::SSUBO:
     NegateOperand = true;
-    /* fall through */
+    LLVM_FALLTHROUGH;
   case SystemZISD::SADDO:
     if (MemVT == MVT::i32)
       NewOpc = SystemZ::ASI;
@@ -1319,7 +1316,7 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
     break;
   case SystemZISD::USUBO:
     NegateOperand = true;
-    /* fall through */
+    LLVM_FALLTHROUGH;
   case SystemZISD::UADDO:
     if (MemVT == MVT::i32)
       NewOpc = SystemZ::ALSI;
@@ -1354,11 +1351,8 @@ bool SystemZDAGToDAGISel::tryFoldLoadStoreIntoMemOperand(SDNode *Node) {
   SDValue Ops[] = { Base, Disp, Operand, InputChain };
   MachineSDNode *Result =
     CurDAG->getMachineNode(NewOpc, DL, MVT::i32, MVT::Other, Ops);
-
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(2);
-  MemOp[0] = StoreNode->getMemOperand();
-  MemOp[1] = LoadNode->getMemOperand();
-  Result->setMemRefs(MemOp, MemOp + 2);
+  CurDAG->setNodeMemRefs(
+      Result, {StoreNode->getMemOperand(), LoadNode->getMemOperand()});
 
   ReplaceUses(SDValue(StoreNode, 0), SDValue(Result, 1));
   ReplaceUses(SDValue(StoredVal.getNode(), 1), SDValue(Result, 0));

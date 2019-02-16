@@ -3,16 +3,18 @@
 // RUN: %clang_cc1 -O1 -triple wasm64-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck %s
 
-#define concat_(x, y) x ## y
+#define concat_(x, y) x##y
 #define concat(x, y) concat_(x, y)
 
-#define test(T) \
+#define test(T)                \
   T forward(T x) { return x; } \
-  void use(T x); \
-  T concat(def_, T)(void); \
+  void use(T x);               \
+  T concat(def_, T)(void);     \
   void concat(test_, T)(void) { use(concat(def_, T)()); }
 
-struct one_field { double d; };
+struct one_field {
+  double d;
+};
 test(one_field);
 // CHECK: define double @_Z7forward9one_field(double returned %{{.*}})
 //
@@ -24,7 +26,9 @@ test(one_field);
 // CHECK: declare void @_Z3use9one_field(double)
 // CHECK: declare double @_Z13def_one_fieldv()
 
-struct two_fields { double d, e; };
+struct two_fields {
+  double d, e;
+};
 test(two_fields);
 // CHECK: define void @_Z7forward10two_fields(%struct.two_fields* noalias nocapture sret %{{.*}}, %struct.two_fields* byval nocapture readonly align 8 %{{.*}})
 //
@@ -38,8 +42,8 @@ test(two_fields);
 // CHECK: declare void @_Z14def_two_fieldsv(%struct.two_fields* sret)
 
 struct copy_ctor {
-    double d;
-    copy_ctor(copy_ctor const&);
+  double d;
+  copy_ctor(copy_ctor const &);
 };
 test(copy_ctor);
 // CHECK: define void @_Z7forward9copy_ctor(%struct.copy_ctor* noalias sret %{{.*}}, %struct.copy_ctor* %{{.*}})
@@ -56,8 +60,8 @@ test(copy_ctor);
 // CHECK: declare void @_Z13def_copy_ctorv(%struct.copy_ctor* sret)
 
 struct __attribute__((aligned(16))) aligned_copy_ctor {
-    double d, e;
-    aligned_copy_ctor(aligned_copy_ctor const&);
+  double d, e;
+  aligned_copy_ctor(aligned_copy_ctor const &);
 };
 test(aligned_copy_ctor);
 // CHECK: define void @_Z7forward17aligned_copy_ctor(%struct.aligned_copy_ctor* noalias sret %{{.*}}, %struct.aligned_copy_ctor* %{{.*}})
@@ -86,7 +90,7 @@ test(empty);
 // CHECK: declare void @_Z9def_emptyv()
 
 struct one_bitfield {
-    int d:3;
+  int d : 3;
 };
 test(one_bitfield);
 // CHECK: define i32 @_Z7forward12one_bitfield(i32 returned %{{.*}})

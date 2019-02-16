@@ -49,7 +49,7 @@ RandomNumberGenerator::RandomNumberGenerator(StringRef Salt) {
   Data[0] = Seed;
   Data[1] = Seed >> 32;
 
-  std::copy(Salt.begin(), Salt.end(), Data.begin() + 2);
+  llvm::copy(Salt, Data.begin() + 2);
 
   std::seed_seq SeedSeq(Data.begin(), Data.end());
   Generator.seed(SeedSeq);

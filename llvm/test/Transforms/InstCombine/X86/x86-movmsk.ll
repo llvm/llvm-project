@@ -9,7 +9,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i32 @test_upper_x86_mmx_pmovmskb(x86_mmx %a0) {
 ; CHECK-LABEL: @test_upper_x86_mmx_pmovmskb(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %a0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx [[A0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.mmx.pmovmskb(x86_mmx %a0)
@@ -19,7 +19,7 @@ define i32 @test_upper_x86_mmx_pmovmskb(x86_mmx %a0) {
 
 define i32 @test_upper_x86_sse_movmsk_ps(<4 x float> %a0) {
 ; CHECK-LABEL: @test_upper_x86_sse_movmsk_ps(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> [[A0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %a0)
@@ -29,7 +29,7 @@ define i32 @test_upper_x86_sse_movmsk_ps(<4 x float> %a0) {
 
 define i32 @test_upper_x86_sse2_movmsk_pd(<2 x double> %a0) {
 ; CHECK-LABEL: @test_upper_x86_sse2_movmsk_pd(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %a0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> [[A0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %a0)
@@ -39,7 +39,7 @@ define i32 @test_upper_x86_sse2_movmsk_pd(<2 x double> %a0) {
 
 define i32 @test_upper_x86_sse2_pmovmskb_128(<16 x i8> %a0) {
 ; CHECK-LABEL: @test_upper_x86_sse2_pmovmskb_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> [[A0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %a0)
@@ -49,7 +49,7 @@ define i32 @test_upper_x86_sse2_pmovmskb_128(<16 x i8> %a0) {
 
 define i32 @test_upper_x86_avx_movmsk_ps_256(<8 x float> %a0) {
 ; CHECK-LABEL: @test_upper_x86_avx_movmsk_ps_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> [[A0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %a0)
@@ -59,7 +59,7 @@ define i32 @test_upper_x86_avx_movmsk_ps_256(<8 x float> %a0) {
 
 define i32 @test_upper_x86_avx_movmsk_pd_256(<4 x double> %a0) {
 ; CHECK-LABEL: @test_upper_x86_avx_movmsk_pd_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> [[A0:%.*]])
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %a0)
@@ -311,6 +311,121 @@ define i32 @fold_x86_avx2_pmovmskb() {
 ;
   %1 = call i32 @llvm.x86.avx2.pmovmskb(<32 x i8> <i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 255, i8 -1, i8 127, i8 -127, i8 63, i8 64, i8 256, i8 0, i8 255, i8 -1, i8 127, i8 -127, i8 63, i8 64, i8 256, i8 0, i8 255, i8 -1, i8 127, i8 -127, i8 63, i8 64, i8 256>)
   ret i32 %1
+}
+
+define i32 @sext_sse_movmsk_ps(<4 x i1> %x) {
+; CHECK-LABEL: @sext_sse_movmsk_ps(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i4 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sext = sext <4 x i1> %x to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <4 x float>
+  %r = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %bc)
+  ret i32 %r
+}
+
+define i32 @sext_sse2_movmsk_pd(<2 x i1> %x) {
+; CHECK-LABEL: @sext_sse2_movmsk_pd(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[X:%.*]] to i2
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i2 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sext = sext <2 x i1> %x to <2 x i64>
+  %bc = bitcast <2 x i64> %sext to <2 x double>
+  %r = call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %bc)
+  ret i32 %r
+}
+
+define i32 @sext_sse2_pmovmskb_128(<16 x i1> %x) {
+; CHECK-LABEL: @sext_sse2_pmovmskb_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i1> [[X:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sext = sext <16 x i1> %x to <16 x i8>
+  %r = call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %sext)
+  ret i32 %r
+}
+
+define i32 @sext_avx_movmsk_ps_256(<8 x i1> %x) {
+; CHECK-LABEL: @sext_avx_movmsk_ps_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sext = sext <8 x i1> %x to <8 x i32>
+  %bc = bitcast <8 x i32> %sext to <8 x float>
+  %r = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %bc)
+  ret i32 %r
+}
+
+define i32 @sext_avx_movmsk_pd_256(<4 x i1> %x) {
+; CHECK-LABEL: @sext_avx_movmsk_pd_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i4 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %sext = sext <4 x i1> %x to <4 x i64>
+  %bc = bitcast <4 x i64> %sext to <4 x double>
+  %r = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %bc)
+  ret i32 %r
+}
+
+define i32 @sext_avx2_pmovmskb(<32 x i1> %x) {
+; CHECK-LABEL: @sext_avx2_pmovmskb(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <32 x i1> [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %sext = sext <32 x i1> %x to <32 x i8>
+  %r = call i32 @llvm.x86.avx2.pmovmskb(<32 x i8> %sext)
+  ret i32 %r
+}
+
+; Negative test - bitcast from scalar.
+
+define i32 @sext_sse_movmsk_ps_scalar_source(i1 %x) {
+; CHECK-LABEL: @sext_sse_movmsk_ps_scalar_source(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[X:%.*]] to i128
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i128 [[SEXT]] to <4 x float>
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> [[BC]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext i1 %x to i128
+  %bc = bitcast i128 %sext to <4 x float>
+  %r = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %bc)
+  ret i32 %r
+}
+
+; Negative test - bitcast from vector type with more elements.
+
+define i32 @sext_sse_movmsk_ps_too_many_elts(<8 x i1> %x) {
+; CHECK-LABEL: @sext_sse_movmsk_ps_too_many_elts(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[X:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i16> [[SEXT]] to <4 x float>
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> [[BC]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext <8 x i1> %x to <8 x i16>
+  %bc = bitcast <8 x i16> %sext to <4 x float>
+  %r = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %bc)
+  ret i32 %r
+}
+
+; TODO: We could handle this by doing a bitcasted sign-bit test after the sext?
+; But need to make sure the backend handles that correctly.
+
+define i32 @sext_sse_movmsk_ps_must_replicate_bits(<2 x i1> %x) {
+; CHECK-LABEL: @sext_sse_movmsk_ps_must_replicate_bits(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[SEXT]] to <4 x float>
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> [[BC]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sext = sext <2 x i1> %x to <2 x i64>
+  %bc = bitcast <2 x i64> %sext to <4 x float>
+  %r = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %bc)
+  ret i32 %r
 }
 
 declare i32 @llvm.x86.mmx.pmovmskb(x86_mmx)

@@ -162,7 +162,7 @@ StatementMatcher makeIteratorLoopMatcher() {
   // reference then the return type is tagged with DerefByValueResultName.
   internal::Matcher<VarDecl> TestDerefReturnsByValue =
       hasType(hasUnqualifiedDesugaredType(
-          recordType(hasDeclaration(cxxRecordDecl(hasMethod(allOf(
+          recordType(hasDeclaration(cxxRecordDecl(hasMethod(cxxMethodDecl(
               hasOverloadedOperatorName("*"),
               anyOf(
                   // Tag the return type if it's by value.
@@ -899,7 +899,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
   // variable declared inside the loop outside of it.
   // FIXME: Determine when the external dependency isn't an expression converted
   // by another loop.
-  TUInfo->getParentFinder().gatherAncestors(Context->getTranslationUnitDecl());
+  TUInfo->getParentFinder().gatherAncestors(*Context);
   DependencyFinderASTVisitor DependencyFinder(
       &TUInfo->getParentFinder().getStmtToParentStmtMap(),
       &TUInfo->getParentFinder().getDeclToParentStmtMap(),

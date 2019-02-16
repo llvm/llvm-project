@@ -16,7 +16,7 @@ float spscalardiv(float a, float b) {
 
 float4 spvectordiv(float4 a, float4 b) {
   // CHECK: @spvectordiv
-  // CHECK: #[[ATTR]]
+  // CHECK: #[[ATTR2:[0-9]+]]
   // CHECK: fdiv{{.*}},
   // NODIVOPT: !fpmath ![[MD]]
   // DIVOPT-NOT: !fpmath ![[MD]]
@@ -45,7 +45,11 @@ double dpscalardiv(double a, double b) {
 #endif
 
 // CHECK: attributes #[[ATTR]] = {
-// NODIVOPT: "correctly-rounded-divide-sqrt-fp-math"="false"
-// DIVOPT: "correctly-rounded-divide-sqrt-fp-math"="true"
-// CHECK: }
+// NODIVOPT-SAME: "correctly-rounded-divide-sqrt-fp-math"="false"
+// DIVOPT-SAME: "correctly-rounded-divide-sqrt-fp-math"="true"
+// CHECK-SAME: }
+// CHECK: attributes #[[ATTR2]] = {
+// NODIVOPT-SAME: "correctly-rounded-divide-sqrt-fp-math"="false"
+// DIVOPT-SAME: "correctly-rounded-divide-sqrt-fp-math"="true"
+// CHECK-SAME: }
 // NODIVOPT: ![[MD]] = !{float 2.500000e+00}

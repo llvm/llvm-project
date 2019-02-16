@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_unittest(StaticAnalysisTests
   AnalyzerOptionsTest.cpp
   RegisterCustomCheckersTest.cpp
+  SymbolReaperTest.cpp
   )
 
 target_link_libraries(StaticAnalysisTests
@@ -12,6 +13,7 @@ target_link_libraries(StaticAnalysisTests
   clangBasic
   clangAnalysis
   clangFrontend
+  clangSerialization
   clangStaticAnalyzerCore
   clangStaticAnalyzerFrontend
   clangTooling

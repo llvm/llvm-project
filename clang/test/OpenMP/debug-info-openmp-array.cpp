@@ -13,4 +13,4 @@ void f(int m) {
   }
 }
 
-// CHECK: !DILocalVariable(name: "cen", arg: 6
+// CHECK: !DILocalVariable(name: "cen", arg: 5

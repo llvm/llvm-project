@@ -8,59 +8,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "Iterator.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <numeric>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace dex {
-
 namespace {
-
-/// Implements Iterator over a PostingList. DocumentIterator is the most basic
-/// iterator: it doesn't have any children (hence it is the leaf of iterator
-/// tree) and is simply a wrapper around PostingList::const_iterator.
-class DocumentIterator : public Iterator {
-public:
-  DocumentIterator(PostingListRef Documents)
-      : Documents(Documents), Index(std::begin(Documents)) {}
-
-  bool reachedEnd() const override { return Index == std::end(Documents); }
-
-  /// Advances cursor to the next item.
-  void advance() override {
-    assert(!reachedEnd() && "DocumentIterator can't advance at the end.");
-    ++Index;
-  }
-
-  /// Applies binary search to advance cursor to the next item with DocID equal
-  /// or higher than the given one.
-  void advanceTo(DocID ID) override {
-    assert(!reachedEnd() && "DocumentIterator can't advance at the end.");
-    Index = std::lower_bound(Index, std::end(Documents), ID);
-  }
-
-  DocID peek() const override {
-    assert(!reachedEnd() && "DocumentIterator can't call peek() at the end.");
-    return *Index;
-  }
-
-  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
-    OS << '[';
-    auto Separator = "";
-    for (const auto &ID : Documents) {
-      OS << Separator << ID;
-      Separator = ", ";
-    }
-    OS << ']';
-    return OS;
-  }
-
-private:
-  PostingListRef Documents;
-  PostingListRef::const_iterator Index;
-};
 
 /// Implements Iterator over the intersection of other iterators.
 ///
@@ -69,32 +26,58 @@ private:
 /// iterator restores the invariant: all children must point to the same item.
 class AndIterator : public Iterator {
 public:
-  AndIterator(std::vector<std::unique_ptr<Iterator>> AllChildren)
-      : Children(std::move(AllChildren)) {
-    assert(!Children.empty() && "AndIterator should have at least one child.");
+  explicit AndIterator(std::vector<std::unique_ptr<Iterator>> AllChildren)
+      : Iterator(Kind::And), Children(std::move(AllChildren)) {
+    assert(!Children.empty() && "AND iterator should have at least one child.");
     // Establish invariants.
+    for (const auto &Child : Children)
+      ReachedEnd |= Child->reachedEnd();
     sync();
+    // When children are sorted by the estimateSize(), sync() calls are more
+    // effective. Each sync() starts with the first child and makes sure all
+    // children point to the same element. If any child is "above" the previous
+    // ones, the algorithm resets and and advances the children to the next
+    // highest element starting from the front. When child iterators in the
+    // beginning have smaller estimated size, the sync() will have less restarts
+    // and become more effective.
+    llvm::sort(Children, [](const std::unique_ptr<Iterator> &LHS,
+                            const std::unique_ptr<Iterator> &RHS) {
+      return LHS->estimateSize() < RHS->estimateSize();
+    });
   }
 
   bool reachedEnd() const override { return ReachedEnd; }
 
   /// Advances all children to the next common item.
   void advance() override {
-    assert(!reachedEnd() && "AndIterator can't call advance() at the end.");
+    assert(!reachedEnd() && "AND iterator can't advance() at the end.");
     Children.front()->advance();
     sync();
   }
 
   /// Advances all children to the next common item with DocumentID >= ID.
   void advanceTo(DocID ID) override {
-    assert(!reachedEnd() && "AndIterator can't call advanceTo() at the end.");
+    assert(!reachedEnd() && "AND iterator can't advanceTo() at the end.");
     Children.front()->advanceTo(ID);
     sync();
   }
 
   DocID peek() const override { return Children.front()->peek(); }
 
-  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
+  float consume() override {
+    assert(!reachedEnd() && "AND iterator can't consume() at the end.");
+    float Boost = 1;
+    for (const auto &Child : Children)
+      Boost *= Child->consume();
+    return Boost;
+  }
+
+  size_t estimateSize() const override {
+    return Children.front()->estimateSize();
+  }
+
+private:
+  raw_ostream &dump(raw_ostream &OS) const override {
     OS << "(& ";
     auto Separator = "";
     for (const auto &Child : Children) {
@@ -105,7 +88,6 @@ public:
     return OS;
   }
 
-private:
   /// Restores class invariants: each child will point to the same element after
   /// sync.
   void sync() {
@@ -126,9 +108,6 @@ private:
           return;
         // If any child goes beyond given ID (i.e. ID is not the common item),
         // all children should be advanced to the next common item.
-        // FIXME(kbobyrev): This is not a very optimized version; after costs
-        // are introduced, cycle should break whenever ID exceeds current one
-        // and cheapest children should be advanced over again.
         if (Child->peek() > SyncID) {
           SyncID = Child->peek();
           NeedsAdvance = true;
@@ -145,6 +124,7 @@ private:
   /// update the field, rather than traversing the whole subtree in each
   /// reachedEnd() call.
   bool ReachedEnd = false;
+  friend Corpus; // For optimizations.
 };
 
 /// Implements Iterator over the union of other iterators.
@@ -155,23 +135,22 @@ private:
 /// soon as all of its children are exhausted.
 class OrIterator : public Iterator {
 public:
-  OrIterator(std::vector<std::unique_ptr<Iterator>> AllChildren)
-      : Children(std::move(AllChildren)) {
-    assert(Children.size() > 0 && "Or Iterator must have at least one child.");
+  explicit OrIterator(std::vector<std::unique_ptr<Iterator>> AllChildren)
+      : Iterator(Kind::Or), Children(std::move(AllChildren)) {
+    assert(!Children.empty() && "OR iterator should have at least one child.");
   }
 
   /// Returns true if all children are exhausted.
   bool reachedEnd() const override {
-    return std::all_of(begin(Children), end(Children),
-                       [](const std::unique_ptr<Iterator> &Child) {
-                         return Child->reachedEnd();
-                       });
+    for (const auto &Child : Children)
+      if (!Child->reachedEnd())
+        return false;
+    return true;
   }
 
   /// Moves each child pointing to the smallest DocID to the next item.
   void advance() override {
-    assert(!reachedEnd() &&
-           "OrIterator must have at least one child to advance().");
+    assert(!reachedEnd() && "OR iterator can't advance() at the end.");
     const auto SmallestID = peek();
     for (const auto &Child : Children)
       if (!Child->reachedEnd() && Child->peek() == SmallestID)
@@ -180,7 +159,7 @@ public:
 
   /// Advances each child to the next existing element with DocumentID >= ID.
   void advanceTo(DocID ID) override {
-    assert(!reachedEnd() && "Can't advance iterator after it reached the end.");
+    assert(!reachedEnd() && "OR iterator can't advanceTo() at the end.");
     for (const auto &Child : Children)
       if (!Child->reachedEnd())
         Child->advanceTo(ID);
@@ -189,8 +168,7 @@ public:
   /// Returns the element under cursor of the child with smallest Child->peek()
   /// value.
   DocID peek() const override {
-    assert(!reachedEnd() &&
-           "OrIterator must have at least one child to peek().");
+    assert(!reachedEnd() && "OR iterator can't peek() at the end.");
     DocID Result = std::numeric_limits<DocID>::max();
 
     for (const auto &Child : Children)
@@ -200,7 +178,27 @@ public:
     return Result;
   }
 
-  llvm::raw_ostream &dump(llvm::raw_ostream &OS) const override {
+  // Returns the maximum boosting score among all Children when iterator
+  // points to the current ID.
+  float consume() override {
+    assert(!reachedEnd() && "OR iterator can't consume() at the end.");
+    const DocID ID = peek();
+    float Boost = 1;
+    for (const auto &Child : Children)
+      if (!Child->reachedEnd() && Child->peek() == ID)
+        Boost = std::max(Boost, Child->consume());
+    return Boost;
+  }
+
+  size_t estimateSize() const override {
+    size_t Size = 0;
+    for (const auto &Child : Children)
+      Size = std::max(Size, Child->estimateSize());
+    return Size;
+  }
+
+private:
+  raw_ostream &dump(raw_ostream &OS) const override {
     OS << "(| ";
     auto Separator = "";
     for (const auto &Child : Children) {
@@ -211,32 +209,231 @@ public:
     return OS;
   }
 
-private:
   // FIXME(kbobyrev): Would storing Children in min-heap be faster?
   std::vector<std::unique_ptr<Iterator>> Children;
+  friend Corpus; // For optimizations.
+};
+
+/// TrueIterator handles PostingLists which contain all items of the index. It
+/// stores size of the virtual posting list, and all operations are performed
+/// in O(1).
+class TrueIterator : public Iterator {
+public:
+  explicit TrueIterator(DocID Size) : Iterator(Kind::True), Size(Size) {}
+
+  bool reachedEnd() const override { return Index >= Size; }
+
+  void advance() override {
+    assert(!reachedEnd() && "TRUE iterator can't advance() at the end.");
+    ++Index;
+  }
+
+  void advanceTo(DocID ID) override {
+    assert(!reachedEnd() && "TRUE iterator can't advanceTo() at the end.");
+    Index = std::min(ID, Size);
+  }
+
+  DocID peek() const override {
+    assert(!reachedEnd() && "TRUE iterator can't peek() at the end.");
+    return Index;
+  }
+
+  float consume() override {
+    assert(!reachedEnd() && "TRUE iterator can't consume() at the end.");
+    return 1;
+  }
+
+  size_t estimateSize() const override { return Size; }
+
+private:
+  raw_ostream &dump(raw_ostream &OS) const override { return OS << "true"; }
+
+  DocID Index = 0;
+  /// Size of the underlying virtual PostingList.
+  DocID Size;
+};
+
+/// FalseIterator yields no results.
+class FalseIterator : public Iterator {
+public:
+  FalseIterator() : Iterator(Kind::False) {}
+  bool reachedEnd() const override { return true; }
+  void advance() override { assert(false); }
+  void advanceTo(DocID ID) override { assert(false); }
+  DocID peek() const override {
+    assert(false);
+    return 0;
+  }
+  float consume() override {
+    assert(false);
+    return 1;
+  }
+  size_t estimateSize() const override { return 0; }
+
+private:
+  raw_ostream &dump(raw_ostream &OS) const override { return OS << "false"; }
+};
+
+/// Boost iterator is a wrapper around its child which multiplies scores of
+/// each retrieved item by a given factor.
+class BoostIterator : public Iterator {
+public:
+  BoostIterator(std::unique_ptr<Iterator> Child, float Factor)
+      : Child(std::move(Child)), Factor(Factor) {}
+
+  bool reachedEnd() const override { return Child->reachedEnd(); }
+
+  void advance() override { Child->advance(); }
+
+  void advanceTo(DocID ID) override { Child->advanceTo(ID); }
+
+  DocID peek() const override { return Child->peek(); }
+
+  float consume() override { return Child->consume() * Factor; }
+
+  size_t estimateSize() const override { return Child->estimateSize(); }
+
+private:
+  raw_ostream &dump(raw_ostream &OS) const override {
+    return OS << "(* " << Factor << ' ' << *Child << ')';
+  }
+
+  std::unique_ptr<Iterator> Child;
+  float Factor;
+};
+
+/// This iterator limits the number of items retrieved from the child iterator
+/// on top of the query tree. To ensure that query tree with LIMIT iterators
+/// inside works correctly, users have to call Root->consume(Root->peek()) each
+/// time item is retrieved at the root of query tree.
+class LimitIterator : public Iterator {
+public:
+  LimitIterator(std::unique_ptr<Iterator> Child, size_t Limit)
+      : Child(std::move(Child)), Limit(Limit), ItemsLeft(Limit) {}
+
+  bool reachedEnd() const override {
+    return ItemsLeft == 0 || Child->reachedEnd();
+  }
+
+  void advance() override { Child->advance(); }
+
+  void advanceTo(DocID ID) override { Child->advanceTo(ID); }
+
+  DocID peek() const override { return Child->peek(); }
+
+  /// Decreases the limit in case the element consumed at top of the query tree
+  /// comes from the underlying iterator.
+  float consume() override {
+    assert(!reachedEnd() && "LimitIterator can't consume() at the end.");
+    --ItemsLeft;
+    return Child->consume();
+  }
+
+  size_t estimateSize() const override {
+    return std::min(Child->estimateSize(), Limit);
+  }
+
+private:
+  raw_ostream &dump(raw_ostream &OS) const override {
+    return OS << "(LIMIT " << Limit << " " << *Child << ')';
+  }
+
+  std::unique_ptr<Iterator> Child;
+  size_t Limit;
+  size_t ItemsLeft;
 };
 
 } // end namespace
 
-std::vector<DocID> consume(Iterator &It) {
-  std::vector<DocID> Result;
+std::vector<std::pair<DocID, float>> consume(Iterator &It) {
+  std::vector<std::pair<DocID, float>> Result;
   for (; !It.reachedEnd(); It.advance())
-    Result.push_back(It.peek());
+    Result.emplace_back(It.peek(), It.consume());
   return Result;
 }
 
-std::unique_ptr<Iterator> create(PostingListRef Documents) {
-  return llvm::make_unique<DocumentIterator>(Documents);
+std::unique_ptr<Iterator>
+Corpus::intersect(std::vector<std::unique_ptr<Iterator>> Children) const {
+  std::vector<std::unique_ptr<Iterator>> RealChildren;
+  for (auto &Child : Children) {
+    switch (Child->kind()) {
+    case Iterator::Kind::True:
+      break; // No effect, drop the iterator.
+    case Iterator::Kind::False:
+      return std::move(Child); // Intersection is empty.
+    case Iterator::Kind::And: {
+      // Inline nested AND into parent AND.
+      auto &NewChildren = static_cast<AndIterator *>(Child.get())->Children;
+      std::move(NewChildren.begin(), NewChildren.end(),
+                std::back_inserter(RealChildren));
+      break;
+    }
+    default:
+      RealChildren.push_back(std::move(Child));
+    }
+  }
+  switch (RealChildren.size()) {
+  case 0:
+    return all();
+  case 1:
+    return std::move(RealChildren.front());
+  default:
+    return llvm::make_unique<AndIterator>(std::move(RealChildren));
+  }
 }
 
 std::unique_ptr<Iterator>
-createAnd(std::vector<std::unique_ptr<Iterator>> Children) {
-  return llvm::make_unique<AndIterator>(move(Children));
+Corpus::unionOf(std::vector<std::unique_ptr<Iterator>> Children) const {
+  std::vector<std::unique_ptr<Iterator>> RealChildren;
+  for (auto &Child : Children) {
+    switch (Child->kind()) {
+    case Iterator::Kind::False:
+      break; // No effect, drop the iterator.
+    case Iterator::Kind::Or: {
+      // Inline nested OR into parent OR.
+      auto &NewChildren = static_cast<OrIterator *>(Child.get())->Children;
+      std::move(NewChildren.begin(), NewChildren.end(),
+                std::back_inserter(RealChildren));
+      break;
+    }
+    case Iterator::Kind::True:
+      // Don't return all(), which would discard sibling boosts.
+    default:
+      RealChildren.push_back(std::move(Child));
+    }
+  }
+  switch (RealChildren.size()) {
+  case 0:
+    return none();
+  case 1:
+    return std::move(RealChildren.front());
+  default:
+    return llvm::make_unique<OrIterator>(std::move(RealChildren));
+  }
 }
 
-std::unique_ptr<Iterator>
-createOr(std::vector<std::unique_ptr<Iterator>> Children) {
-  return llvm::make_unique<OrIterator>(move(Children));
+std::unique_ptr<Iterator> Corpus::all() const {
+  return llvm::make_unique<TrueIterator>(Size);
+}
+
+std::unique_ptr<Iterator> Corpus::none() const {
+  return llvm::make_unique<FalseIterator>();
+}
+
+std::unique_ptr<Iterator> Corpus::boost(std::unique_ptr<Iterator> Child,
+                                        float Factor) const {
+  if (Factor == 1)
+    return Child;
+  if (Child->kind() == Iterator::Kind::False)
+    return Child;
+  return llvm::make_unique<BoostIterator>(std::move(Child), Factor);
+}
+
+std::unique_ptr<Iterator> Corpus::limit(std::unique_ptr<Iterator> Child,
+                                        size_t Limit) const {
+  if (Child->kind() == Iterator::Kind::False)
+    return Child;
+  return llvm::make_unique<LimitIterator>(std::move(Child), Limit);
 }
 
 } // namespace dex

@@ -16,6 +16,7 @@
 
 #include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -406,11 +407,11 @@ public:
     return SourceRange(getLocation(), getLocation());
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY {
+  SourceLocation getBeginLoc() const LLVM_READONLY {
     return getSourceRange().getBegin();
   }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
+  SourceLocation getEndLoc() const LLVM_READONLY {
     return getSourceRange().getEnd();
   }
 
@@ -481,13 +482,7 @@ public:
 
   const AttrVec &getAttrs() const;
   void dropAttrs();
-
-  void addAttr(Attr *A) {
-    if (hasAttrs())
-      getAttrs().push_back(A);
-    else
-      setAttrs(AttrVec(1, A));
-  }
+  void addAttr(Attr *A);
 
   using attr_iterator = AttrVec::const_iterator;
   using attr_range = llvm::iterator_range<attr_iterator>;
@@ -1070,11 +1065,11 @@ public:
     unsigned OldNS = IdentifierNamespace;
     assert((OldNS & (IDNS_Tag | IDNS_Ordinary |
                      IDNS_TagFriend | IDNS_OrdinaryFriend |
-                     IDNS_LocalExtern)) &&
+                     IDNS_LocalExtern | IDNS_NonMemberOperator)) &&
            "namespace includes neither ordinary nor tag");
     assert(!(OldNS & ~(IDNS_Tag | IDNS_Ordinary | IDNS_Type |
                        IDNS_TagFriend | IDNS_OrdinaryFriend |
-                       IDNS_LocalExtern)) &&
+                       IDNS_LocalExtern | IDNS_NonMemberOperator)) &&
            "namespace includes other than ordinary or tag");
 
     Decl *Prev = getPreviousDecl();
@@ -1087,7 +1082,8 @@ public:
         IdentifierNamespace |= IDNS_Tag | IDNS_Type;
     }
 
-    if (OldNS & (IDNS_Ordinary | IDNS_OrdinaryFriend | IDNS_LocalExtern)) {
+    if (OldNS & (IDNS_Ordinary | IDNS_OrdinaryFriend |
+                 IDNS_LocalExtern | IDNS_NonMemberOperator)) {
       IdentifierNamespace |= IDNS_OrdinaryFriend;
       if (PerformFriendInjection ||
           (Prev && Prev->getIdentifierNamespace() & IDNS_Ordinary))
@@ -1217,7 +1213,6 @@ public:
     value_type SingleElement;
 
   public:
-    iterator() = default;
     explicit iterator(pointer Pos, value_type Single = nullptr)
         : IteratorBase(Pos), SingleElement(Single) {}
 
@@ -1253,47 +1248,424 @@ public:
 /// that directly derive from DeclContext are mentioned, not their subclasses):
 ///
 ///   TranslationUnitDecl
+///   ExternCContext
 ///   NamespaceDecl
-///   FunctionDecl
 ///   TagDecl
+///   OMPDeclareReductionDecl
+///   FunctionDecl
 ///   ObjCMethodDecl
 ///   ObjCContainerDecl
 ///   LinkageSpecDecl
 ///   ExportDecl
 ///   BlockDecl
-///   OMPDeclareReductionDecl
+///   CapturedDecl
 class DeclContext {
-  /// DeclKind - This indicates which class this is.
-  unsigned DeclKind : 8;
+  /// For makeDeclVisibleInContextImpl
+  friend class ASTDeclReader;
+  /// For reconcileExternalVisibleStorage, CreateStoredDeclsMap,
+  /// hasNeedToReconcileExternalVisibleStorage
+  friend class ExternalASTSource;
+  /// For CreateStoredDeclsMap
+  friend class DependentDiagnostic;
+  /// For hasNeedToReconcileExternalVisibleStorage,
+  /// hasLazyLocalLexicalLookups, hasLazyExternalLexicalLookups
+  friend class ASTWriter;
 
-  /// Whether this declaration context also has some external
-  /// storage that contains additional declarations that are lexically
-  /// part of this context.
-  mutable bool ExternalLexicalStorage : 1;
+  // We use uint64_t in the bit-fields below since some bit-fields
+  // cross the unsigned boundary and this breaks the packing.
 
-  /// Whether this declaration context also has some external
-  /// storage that contains additional declarations that are visible
-  /// in this context.
-  mutable bool ExternalVisibleStorage : 1;
+  /// Stores the bits used by DeclContext.
+  /// If modified NumDeclContextBit, the ctor of DeclContext and the accessor
+  /// methods in DeclContext should be updated appropriately.
+  class DeclContextBitfields {
+    friend class DeclContext;
+    /// DeclKind - This indicates which class this is.
+    uint64_t DeclKind : 7;
 
-  /// Whether this declaration context has had external visible
-  /// storage added since the last lookup. In this case, \c LookupPtr's
-  /// invariant may not hold and needs to be fixed before we perform
-  /// another lookup.
-  mutable bool NeedToReconcileExternalVisibleStorage : 1;
+    /// Whether this declaration context also has some external
+    /// storage that contains additional declarations that are lexically
+    /// part of this context.
+    mutable uint64_t ExternalLexicalStorage : 1;
 
-  /// If \c true, this context may have local lexical declarations
-  /// that are missing from the lookup table.
-  mutable bool HasLazyLocalLexicalLookups : 1;
+    /// Whether this declaration context also has some external
+    /// storage that contains additional declarations that are visible
+    /// in this context.
+    mutable uint64_t ExternalVisibleStorage : 1;
 
-  /// If \c true, the external source may have lexical declarations
-  /// that are missing from the lookup table.
-  mutable bool HasLazyExternalLexicalLookups : 1;
+    /// Whether this declaration context has had externally visible
+    /// storage added since the last lookup. In this case, \c LookupPtr's
+    /// invariant may not hold and needs to be fixed before we perform
+    /// another lookup.
+    mutable uint64_t NeedToReconcileExternalVisibleStorage : 1;
 
-  /// If \c true, lookups should only return identifier from
-  /// DeclContext scope (for example TranslationUnit). Used in
-  /// LookupQualifiedName()
-  mutable bool UseQualifiedLookup : 1;
+    /// If \c true, this context may have local lexical declarations
+    /// that are missing from the lookup table.
+    mutable uint64_t HasLazyLocalLexicalLookups : 1;
+
+    /// If \c true, the external source may have lexical declarations
+    /// that are missing from the lookup table.
+    mutable uint64_t HasLazyExternalLexicalLookups : 1;
+
+    /// If \c true, lookups should only return identifier from
+    /// DeclContext scope (for example TranslationUnit). Used in
+    /// LookupQualifiedName()
+    mutable uint64_t UseQualifiedLookup : 1;
+  };
+
+  /// Number of bits in DeclContextBitfields.
+  enum { NumDeclContextBits = 13 };
+
+  /// Stores the bits used by TagDecl.
+  /// If modified NumTagDeclBits and the accessor
+  /// methods in TagDecl should be updated appropriately.
+  class TagDeclBitfields {
+    friend class TagDecl;
+    /// For the bits in DeclContextBitfields
+    uint64_t : NumDeclContextBits;
+
+    /// The TagKind enum.
+    uint64_t TagDeclKind : 3;
+
+    /// True if this is a definition ("struct foo {};"), false if it is a
+    /// declaration ("struct foo;").  It is not considered a definition
+    /// until the definition has been fully processed.
+    uint64_t IsCompleteDefinition : 1;
+
+    /// True if this is currently being defined.
+    uint64_t IsBeingDefined : 1;
+
+    /// True if this tag declaration is "embedded" (i.e., defined or declared
+    /// for the very first time) in the syntax of a declarator.
+    uint64_t IsEmbeddedInDeclarator : 1;
+
+    /// True if this tag is free standing, e.g. "struct foo;".
+    uint64_t IsFreeStanding : 1;
+
+    /// Indicates whether it is possible for declarations of this kind
+    /// to have an out-of-date definition.
+    ///
+    /// This option is only enabled when modules are enabled.
+    uint64_t MayHaveOutOfDateDef : 1;
+
+    /// Has the full definition of this type been required by a use somewhere in
+    /// the TU.
+    uint64_t IsCompleteDefinitionRequired : 1;
+  };
+
+  /// Number of non-inherited bits in TagDeclBitfields.
+  enum { NumTagDeclBits = 9 };
+
+  /// Stores the bits used by EnumDecl.
+  /// If modified NumEnumDeclBit and the accessor
+  /// methods in EnumDecl should be updated appropriately.
+  class EnumDeclBitfields {
+    friend class EnumDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+    /// For the bits in TagDeclBitfields.
+    uint64_t : NumTagDeclBits;
+
+    /// Width in bits required to store all the non-negative
+    /// enumerators of this enum.
+    uint64_t NumPositiveBits : 8;
+
+    /// Width in bits required to store all the negative
+    /// enumerators of this enum.
+    uint64_t NumNegativeBits : 8;
+
+    /// True if this tag declaration is a scoped enumeration. Only
+    /// possible in C++11 mode.
+    uint64_t IsScoped : 1;
+
+    /// If this tag declaration is a scoped enum,
+    /// then this is true if the scoped enum was declared using the class
+    /// tag, false if it was declared with the struct tag. No meaning is
+    /// associated if this tag declaration is not a scoped enum.
+    uint64_t IsScopedUsingClassTag : 1;
+
+    /// True if this is an enumeration with fixed underlying type. Only
+    /// possible in C++11, Microsoft extensions, or Objective C mode.
+    uint64_t IsFixed : 1;
+
+    /// True if a valid hash is stored in ODRHash.
+    uint64_t HasODRHash : 1;
+  };
+
+  /// Number of non-inherited bits in EnumDeclBitfields.
+  enum { NumEnumDeclBits = 20 };
+
+  /// Stores the bits used by RecordDecl.
+  /// If modified NumRecordDeclBits and the accessor
+  /// methods in RecordDecl should be updated appropriately.
+  class RecordDeclBitfields {
+    friend class RecordDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+    /// For the bits in TagDeclBitfields.
+    uint64_t : NumTagDeclBits;
+
+    /// This is true if this struct ends with a flexible
+    /// array member (e.g. int X[]) or if this union contains a struct that does.
+    /// If so, this cannot be contained in arrays or other structs as a member.
+    uint64_t HasFlexibleArrayMember : 1;
+
+    /// Whether this is the type of an anonymous struct or union.
+    uint64_t AnonymousStructOrUnion : 1;
+
+    /// This is true if this struct has at least one member
+    /// containing an Objective-C object pointer type.
+    uint64_t HasObjectMember : 1;
+
+    /// This is true if struct has at least one member of
+    /// 'volatile' type.
+    uint64_t HasVolatileMember : 1;
+
+    /// Whether the field declarations of this record have been loaded
+    /// from external storage. To avoid unnecessary deserialization of
+    /// methods/nested types we allow deserialization of just the fields
+    /// when needed.
+    mutable uint64_t LoadedFieldsFromExternalStorage : 1;
+
+    /// Basic properties of non-trivial C structs.
+    uint64_t NonTrivialToPrimitiveDefaultInitialize : 1;
+    uint64_t NonTrivialToPrimitiveCopy : 1;
+    uint64_t NonTrivialToPrimitiveDestroy : 1;
+
+    /// Indicates whether this struct is destroyed in the callee.
+    uint64_t ParamDestroyedInCallee : 1;
+
+    /// Represents the way this type is passed to a function.
+    uint64_t ArgPassingRestrictions : 2;
+  };
+
+  /// Number of non-inherited bits in RecordDeclBitfields.
+  enum { NumRecordDeclBits = 11 };
+
+  /// Stores the bits used by OMPDeclareReductionDecl.
+  /// If modified NumOMPDeclareReductionDeclBits and the accessor
+  /// methods in OMPDeclareReductionDecl should be updated appropriately.
+  class OMPDeclareReductionDeclBitfields {
+    friend class OMPDeclareReductionDecl;
+    /// For the bits in DeclContextBitfields
+    uint64_t : NumDeclContextBits;
+
+    /// Kind of initializer,
+    /// function call or omp_priv<init_expr> initializtion.
+    uint64_t InitializerKind : 2;
+  };
+
+  /// Number of non-inherited bits in OMPDeclareReductionDeclBitfields.
+  enum { NumOMPDeclareReductionDeclBits = 2 };
+
+  /// Stores the bits used by FunctionDecl.
+  /// If modified NumFunctionDeclBits and the accessor
+  /// methods in FunctionDecl and CXXDeductionGuideDecl
+  /// (for IsCopyDeductionCandidate) should be updated appropriately.
+  class FunctionDeclBitfields {
+    friend class FunctionDecl;
+    /// For IsCopyDeductionCandidate
+    friend class CXXDeductionGuideDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+
+    uint64_t SClass : 3;
+    uint64_t IsInline : 1;
+    uint64_t IsInlineSpecified : 1;
+
+    /// This is shared by CXXConstructorDecl,
+    /// CXXConversionDecl, and CXXDeductionGuideDecl.
+    uint64_t IsExplicitSpecified : 1;
+
+    uint64_t IsVirtualAsWritten : 1;
+    uint64_t IsPure : 1;
+    uint64_t HasInheritedPrototype : 1;
+    uint64_t HasWrittenPrototype : 1;
+    uint64_t IsDeleted : 1;
+    /// Used by CXXMethodDecl
+    uint64_t IsTrivial : 1;
+
+    /// This flag indicates whether this function is trivial for the purpose of
+    /// calls. This is meaningful only when this function is a copy/move
+    /// constructor or a destructor.
+    uint64_t IsTrivialForCall : 1;
+
+    /// Used by CXXMethodDecl
+    uint64_t IsDefaulted : 1;
+    /// Used by CXXMethodDecl
+    uint64_t IsExplicitlyDefaulted : 1;
+    uint64_t HasImplicitReturnZero : 1;
+    uint64_t IsLateTemplateParsed : 1;
+    uint64_t IsConstexpr : 1;
+    uint64_t InstantiationIsPending : 1;
+
+    /// Indicates if the function uses __try.
+    uint64_t UsesSEHTry : 1;
+
+    /// Indicates if the function was a definition
+    /// but its body was skipped.
+    uint64_t HasSkippedBody : 1;
+
+    /// Indicates if the function declaration will
+    /// have a body, once we're done parsing it.
+    uint64_t WillHaveBody : 1;
+
+    /// Indicates that this function is a multiversioned
+    /// function using attribute 'target'.
+    uint64_t IsMultiVersion : 1;
+
+    /// [C++17] Only used by CXXDeductionGuideDecl. Indicates that
+    /// the Deduction Guide is the implicitly generated 'copy
+    /// deduction candidate' (is used during overload resolution).
+    uint64_t IsCopyDeductionCandidate : 1;
+
+    /// Store the ODRHash after first calculation.
+    uint64_t HasODRHash : 1;
+  };
+
+  /// Number of non-inherited bits in FunctionDeclBitfields.
+  enum { NumFunctionDeclBits = 25 };
+
+  /// Stores the bits used by CXXConstructorDecl. If modified
+  /// NumCXXConstructorDeclBits and the accessor
+  /// methods in CXXConstructorDecl should be updated appropriately.
+  class CXXConstructorDeclBitfields {
+    friend class CXXConstructorDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+    /// For the bits in FunctionDeclBitfields.
+    uint64_t : NumFunctionDeclBits;
+
+    /// 25 bits to fit in the remaining availible space.
+    /// Note that this makes CXXConstructorDeclBitfields take
+    /// exactly 64 bits and thus the width of NumCtorInitializers
+    /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
+    /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
+    uint64_t NumCtorInitializers : 25;
+    uint64_t IsInheritingConstructor : 1;
+  };
+
+  /// Number of non-inherited bits in CXXConstructorDeclBitfields.
+  enum { NumCXXConstructorDeclBits = 26 };
+
+  /// Stores the bits used by ObjCMethodDecl.
+  /// If modified NumObjCMethodDeclBits and the accessor
+  /// methods in ObjCMethodDecl should be updated appropriately.
+  class ObjCMethodDeclBitfields {
+    friend class ObjCMethodDecl;
+
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+
+    /// The conventional meaning of this method; an ObjCMethodFamily.
+    /// This is not serialized; instead, it is computed on demand and
+    /// cached.
+    mutable uint64_t Family : ObjCMethodFamilyBitWidth;
+
+    /// instance (true) or class (false) method.
+    uint64_t IsInstance : 1;
+    uint64_t IsVariadic : 1;
+
+    /// True if this method is the getter or setter for an explicit property.
+    uint64_t IsPropertyAccessor : 1;
+
+    /// Method has a definition.
+    uint64_t IsDefined : 1;
+
+    /// Method redeclaration in the same interface.
+    uint64_t IsRedeclaration : 1;
+
+    /// Is redeclared in the same interface.
+    mutable uint64_t HasRedeclaration : 1;
+
+    /// \@required/\@optional
+    uint64_t DeclImplementation : 2;
+
+    /// in, inout, etc.
+    uint64_t objcDeclQualifier : 7;
+
+    /// Indicates whether this method has a related result type.
+    uint64_t RelatedResultType : 1;
+
+    /// Whether the locations of the selector identifiers are in a
+    /// "standard" position, a enum SelectorLocationsKind.
+    uint64_t SelLocsKind : 2;
+
+    /// Whether this method overrides any other in the class hierarchy.
+    ///
+    /// A method is said to override any method in the class's
+    /// base classes, its protocols, or its categories' protocols, that has
+    /// the same selector and is of the same kind (class or instance).
+    /// A method in an implementation is not considered as overriding the same
+    /// method in the interface or its categories.
+    uint64_t IsOverriding : 1;
+
+    /// Indicates if the method was a definition but its body was skipped.
+    uint64_t HasSkippedBody : 1;
+  };
+
+  /// Number of non-inherited bits in ObjCMethodDeclBitfields.
+  enum { NumObjCMethodDeclBits = 24 };
+
+  /// Stores the bits used by ObjCContainerDecl.
+  /// If modified NumObjCContainerDeclBits and the accessor
+  /// methods in ObjCContainerDecl should be updated appropriately.
+  class ObjCContainerDeclBitfields {
+    friend class ObjCContainerDecl;
+    /// For the bits in DeclContextBitfields
+    uint32_t : NumDeclContextBits;
+
+    // Not a bitfield but this saves space.
+    // Note that ObjCContainerDeclBitfields is full.
+    SourceLocation AtStart;
+  };
+
+  /// Number of non-inherited bits in ObjCContainerDeclBitfields.
+  /// Note that here we rely on the fact that SourceLocation is 32 bits
+  /// wide. We check this with the static_assert in the ctor of DeclContext.
+  enum { NumObjCContainerDeclBits = 64 - NumDeclContextBits };
+
+  /// Stores the bits used by LinkageSpecDecl.
+  /// If modified NumLinkageSpecDeclBits and the accessor
+  /// methods in LinkageSpecDecl should be updated appropriately.
+  class LinkageSpecDeclBitfields {
+    friend class LinkageSpecDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+
+    /// The language for this linkage specification with values
+    /// in the enum LinkageSpecDecl::LanguageIDs.
+    uint64_t Language : 3;
+
+    /// True if this linkage spec has braces.
+    /// This is needed so that hasBraces() returns the correct result while the
+    /// linkage spec body is being parsed.  Once RBraceLoc has been set this is
+    /// not used, so it doesn't need to be serialized.
+    uint64_t HasBraces : 1;
+  };
+
+  /// Number of non-inherited bits in LinkageSpecDeclBitfields.
+  enum { NumLinkageSpecDeclBits = 4 };
+
+  /// Stores the bits used by BlockDecl.
+  /// If modified NumBlockDeclBits and the accessor
+  /// methods in BlockDecl should be updated appropriately.
+  class BlockDeclBitfields {
+    friend class BlockDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+
+    uint64_t IsVariadic : 1;
+    uint64_t CapturesCXXThis : 1;
+    uint64_t BlockMissingReturnType : 1;
+    uint64_t IsConversionFromLambda : 1;
+
+    /// A bit that indicates this block is passed directly to a function as a
+    /// non-escaping parameter.
+    uint64_t DoesNotEscape : 1;
+  };
+
+  /// Number of non-inherited bits in BlockDeclBitfields.
+  enum { NumBlockDeclBits = 5 };
 
   /// Pointer to the data structure used to lookup declarations
   /// within this context (or a DependentStoredDeclsMap if this is a
@@ -1304,9 +1676,50 @@ class DeclContext {
   mutable StoredDeclsMap *LookupPtr = nullptr;
 
 protected:
-  friend class ASTDeclReader;
-  friend class ASTWriter;
-  friend class ExternalASTSource;
+  /// This anonymous union stores the bits belonging to DeclContext and classes
+  /// deriving from it. The goal is to use otherwise wasted
+  /// space in DeclContext to store data belonging to derived classes.
+  /// The space saved is especially significient when pointers are aligned
+  /// to 8 bytes. In this case due to alignment requirements we have a
+  /// little less than 8 bytes free in DeclContext which we can use.
+  /// We check that none of the classes in this union is larger than
+  /// 8 bytes with static_asserts in the ctor of DeclContext.
+  union {
+    DeclContextBitfields DeclContextBits;
+    TagDeclBitfields TagDeclBits;
+    EnumDeclBitfields EnumDeclBits;
+    RecordDeclBitfields RecordDeclBits;
+    OMPDeclareReductionDeclBitfields OMPDeclareReductionDeclBits;
+    FunctionDeclBitfields FunctionDeclBits;
+    CXXConstructorDeclBitfields CXXConstructorDeclBits;
+    ObjCMethodDeclBitfields ObjCMethodDeclBits;
+    ObjCContainerDeclBitfields ObjCContainerDeclBits;
+    LinkageSpecDeclBitfields LinkageSpecDeclBits;
+    BlockDeclBitfields BlockDeclBits;
+
+    static_assert(sizeof(DeclContextBitfields) <= 8,
+                  "DeclContextBitfields is larger than 8 bytes!");
+    static_assert(sizeof(TagDeclBitfields) <= 8,
+                  "TagDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(EnumDeclBitfields) <= 8,
+                  "EnumDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(RecordDeclBitfields) <= 8,
+                  "RecordDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(OMPDeclareReductionDeclBitfields) <= 8,
+                  "OMPDeclareReductionDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(FunctionDeclBitfields) <= 8,
+                  "FunctionDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(CXXConstructorDeclBitfields) <= 8,
+                  "CXXConstructorDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(ObjCMethodDeclBitfields) <= 8,
+                  "ObjCMethodDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(ObjCContainerDeclBitfields) <= 8,
+                  "ObjCContainerDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(LinkageSpecDeclBitfields) <= 8,
+                  "LinkageSpecDeclBitfields is larger than 8 bytes!");
+    static_assert(sizeof(BlockDeclBitfields) <= 8,
+                  "BlockDeclBitfields is larger than 8 bytes!");
+  };
 
   /// FirstDecl - The first declaration stored within this declaration
   /// context.
@@ -1324,18 +1737,13 @@ protected:
   static std::pair<Decl *, Decl *>
   BuildDeclChain(ArrayRef<Decl*> Decls, bool FieldsAlreadyLoaded);
 
-  DeclContext(Decl::Kind K)
-      : DeclKind(K), ExternalLexicalStorage(false),
-        ExternalVisibleStorage(false),
-        NeedToReconcileExternalVisibleStorage(false),
-        HasLazyLocalLexicalLookups(false), HasLazyExternalLexicalLookups(false),
-        UseQualifiedLookup(false) {}
+  DeclContext(Decl::Kind K);
 
 public:
   ~DeclContext();
 
   Decl::Kind getDeclKind() const {
-    return static_cast<Decl::Kind>(DeclKind);
+    return static_cast<Decl::Kind>(DeclContextBits.DeclKind);
   }
 
   const char *getDeclKindName() const;
@@ -1374,54 +1782,54 @@ public:
     return cast<Decl>(this)->getASTContext();
   }
 
-  bool isClosure() const {
-    return DeclKind == Decl::Block;
-  }
+  bool isClosure() const { return getDeclKind() == Decl::Block; }
 
   bool isObjCContainer() const {
-    switch (DeclKind) {
-        case Decl::ObjCCategory:
-        case Decl::ObjCCategoryImpl:
-        case Decl::ObjCImplementation:
-        case Decl::ObjCInterface:
-        case Decl::ObjCProtocol:
-            return true;
+    switch (getDeclKind()) {
+    case Decl::ObjCCategory:
+    case Decl::ObjCCategoryImpl:
+    case Decl::ObjCImplementation:
+    case Decl::ObjCInterface:
+    case Decl::ObjCProtocol:
+      return true;
+    default:
+      return false;
     }
-    return false;
   }
 
   bool isFunctionOrMethod() const {
-    switch (DeclKind) {
+    switch (getDeclKind()) {
     case Decl::Block:
     case Decl::Captured:
     case Decl::ObjCMethod:
       return true;
     default:
-      return DeclKind >= Decl::firstFunction && DeclKind <= Decl::lastFunction;
+      return getDeclKind() >= Decl::firstFunction &&
+             getDeclKind() <= Decl::lastFunction;
     }
   }
 
   /// Test whether the context supports looking up names.
   bool isLookupContext() const {
-    return !isFunctionOrMethod() && DeclKind != Decl::LinkageSpec &&
-           DeclKind != Decl::Export;
+    return !isFunctionOrMethod() && getDeclKind() != Decl::LinkageSpec &&
+           getDeclKind() != Decl::Export;
   }
 
   bool isFileContext() const {
-    return DeclKind == Decl::TranslationUnit || DeclKind == Decl::Namespace;
+    return getDeclKind() == Decl::TranslationUnit ||
+           getDeclKind() == Decl::Namespace;
   }
 
   bool isTranslationUnit() const {
-    return DeclKind == Decl::TranslationUnit;
+    return getDeclKind() == Decl::TranslationUnit;
   }
 
   bool isRecord() const {
-    return DeclKind >= Decl::firstRecord && DeclKind <= Decl::lastRecord;
+    return getDeclKind() >= Decl::firstRecord &&
+           getDeclKind() <= Decl::lastRecord;
   }
 
-  bool isNamespace() const {
-    return DeclKind == Decl::Namespace;
-  }
+  bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 
   bool isStdNamespace() const;
 
@@ -1889,7 +2297,7 @@ public:
   void setMustBuildLookupTable() {
     assert(this == getPrimaryContext() &&
            "should only be called on primary context");
-    HasLazyExternalLexicalLookups = true;
+    DeclContextBits.HasLazyExternalLexicalLookups = true;
   }
 
   /// Retrieve the internal representation of the lookup structure.
@@ -1901,24 +2309,28 @@ public:
 
   /// Whether this DeclContext has external storage containing
   /// additional declarations that are lexically in this context.
-  bool hasExternalLexicalStorage() const { return ExternalLexicalStorage; }
+  bool hasExternalLexicalStorage() const {
+    return DeclContextBits.ExternalLexicalStorage;
+  }
 
   /// State whether this DeclContext has external storage for
   /// declarations lexically in this context.
-  void setHasExternalLexicalStorage(bool ES = true) {
-    ExternalLexicalStorage = ES;
+  void setHasExternalLexicalStorage(bool ES = true) const {
+    DeclContextBits.ExternalLexicalStorage = ES;
   }
 
   /// Whether this DeclContext has external storage containing
   /// additional declarations that are visible in this context.
-  bool hasExternalVisibleStorage() const { return ExternalVisibleStorage; }
+  bool hasExternalVisibleStorage() const {
+    return DeclContextBits.ExternalVisibleStorage;
+  }
 
   /// State whether this DeclContext has external storage for
   /// declarations visible in this context.
-  void setHasExternalVisibleStorage(bool ES = true) {
-    ExternalVisibleStorage = ES;
+  void setHasExternalVisibleStorage(bool ES = true) const {
+    DeclContextBits.ExternalVisibleStorage = ES;
     if (ES && LookupPtr)
-      NeedToReconcileExternalVisibleStorage = true;
+      DeclContextBits.NeedToReconcileExternalVisibleStorage = true;
   }
 
   /// Determine whether the given declaration is stored in the list of
@@ -1928,14 +2340,14 @@ public:
                  D == LastDecl);
   }
 
-  bool setUseQualifiedLookup(bool use = true) {
-    bool old_value = UseQualifiedLookup;
-    UseQualifiedLookup = use;
+  bool setUseQualifiedLookup(bool use = true) const {
+    bool old_value = DeclContextBits.UseQualifiedLookup;
+    DeclContextBits.UseQualifiedLookup = use;
     return old_value;
   }
 
   bool shouldUseQualifiedLookup() const {
-    return UseQualifiedLookup;
+    return DeclContextBits.UseQualifiedLookup;
   }
 
   static bool classof(const Decl *D);
@@ -1947,7 +2359,45 @@ public:
                    bool Deserialize = false) const;
 
 private:
-  friend class DependentDiagnostic;
+  /// Whether this declaration context has had externally visible
+  /// storage added since the last lookup. In this case, \c LookupPtr's
+  /// invariant may not hold and needs to be fixed before we perform
+  /// another lookup.
+  bool hasNeedToReconcileExternalVisibleStorage() const {
+    return DeclContextBits.NeedToReconcileExternalVisibleStorage;
+  }
+
+  /// State that this declaration context has had externally visible
+  /// storage added since the last lookup. In this case, \c LookupPtr's
+  /// invariant may not hold and needs to be fixed before we perform
+  /// another lookup.
+  void setNeedToReconcileExternalVisibleStorage(bool Need = true) const {
+    DeclContextBits.NeedToReconcileExternalVisibleStorage = Need;
+  }
+
+  /// If \c true, this context may have local lexical declarations
+  /// that are missing from the lookup table.
+  bool hasLazyLocalLexicalLookups() const {
+    return DeclContextBits.HasLazyLocalLexicalLookups;
+  }
+
+  /// If \c true, this context may have local lexical declarations
+  /// that are missing from the lookup table.
+  void setHasLazyLocalLexicalLookups(bool HasLLLL = true) const {
+    DeclContextBits.HasLazyLocalLexicalLookups = HasLLLL;
+  }
+
+  /// If \c true, the external source may have lexical declarations
+  /// that are missing from the lookup table.
+  bool hasLazyExternalLexicalLookups() const {
+    return DeclContextBits.HasLazyExternalLexicalLookups;
+  }
+
+  /// If \c true, the external source may have lexical declarations
+  /// that are missing from the lookup table.
+  void setHasLazyExternalLexicalLookups(bool HasLELL = true) const {
+    DeclContextBits.HasLazyExternalLexicalLookups = HasLELL;
+  }
 
   void reconcileExternalVisibleStorage() const;
   bool LoadLexicalDeclsFromExternalStorage() const;

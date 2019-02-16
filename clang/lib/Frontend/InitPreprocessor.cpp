@@ -21,7 +21,6 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/PTHManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTReader.h"
@@ -74,23 +73,6 @@ static void AddImplicitIncludeMacros(MacroBuilder &Builder, StringRef File) {
   Builder.append(Twine("#__include_macros \"") + File + "\"");
   // Marker token to stop the __include_macros fetch loop.
   Builder.append("##"); // ##?
-}
-
-/// AddImplicitIncludePTH - Add an implicit \#include using the original file
-/// used to generate a PTH cache.
-static void AddImplicitIncludePTH(MacroBuilder &Builder, Preprocessor &PP,
-                                  StringRef ImplicitIncludePTH) {
-  PTHManager *P = PP.getPTHManager();
-  // Null check 'P' in the corner case where it couldn't be created.
-  const char *OriginalFile = P ? P->getOriginalSourceFile() : nullptr;
-
-  if (!OriginalFile) {
-    PP.getDiagnostics().Report(diag::err_fe_pth_file_has_no_source_header)
-      << ImplicitIncludePTH;
-    return;
-  }
-
-  AddImplicitInclude(Builder, OriginalFile);
 }
 
 /// Add an implicit \#include using the original file used to generate
@@ -421,7 +403,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__STDC_UTF_16__", "1");
   Builder.defineMacro("__STDC_UTF_32__", "1");
 
-  if (LangOpts.ObjC1)
+  if (LangOpts.ObjC)
     Builder.defineMacro("__OBJC__");
 
   // OpenCL v1.0/1.1 s6.9, v1.2/2.0 s6.10: Preprocessor Directives and Macros.
@@ -558,15 +540,15 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.RelaxedTemplateTemplateArgs)
     Builder.defineMacro("__cpp_template_template_args", "201611L");
 
+  // C++20 features.
+  if (LangOpts.Char8)
+    Builder.defineMacro("__cpp_char8_t", "201811L");
+
   // TS features.
   if (LangOpts.ConceptsTS)
     Builder.defineMacro("__cpp_experimental_concepts", "1L");
   if (LangOpts.CoroutinesTS)
     Builder.defineMacro("__cpp_coroutines", "201703L");
-
-  // Potential future breaking changes.
-  if (LangOpts.Char8)
-    Builder.defineMacro("__cpp_char8_t", "201803L");
 }
 
 static void InitializePredefinedMacros(const TargetInfo &TI,
@@ -635,7 +617,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (!LangOpts.MSVCCompat && LangOpts.CPlusPlus11)
     Builder.defineMacro("__GXX_EXPERIMENTAL_CXX0X__");
 
-  if (LangOpts.ObjC1) {
+  if (LangOpts.ObjC) {
     if (LangOpts.ObjCRuntime.isNonFragile()) {
       Builder.defineMacro("__OBJC2__");
 
@@ -699,7 +681,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (!LangOpts.NoConstantCFStrings)
       Builder.defineMacro("__CONSTANT_CFSTRINGS__");
 
-  if (LangOpts.ObjC2)
+  if (LangOpts.ObjC)
     Builder.defineMacro("OBJC_NEW_PROPERTIES");
 
   if (LangOpts.PascalStrings)
@@ -1016,7 +998,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__strong", "__attribute__((objc_gc(strong)))");
     Builder.defineMacro("__autoreleasing", "");
     Builder.defineMacro("__unsafe_unretained", "");
-  } else if (LangOpts.ObjC1) {
+  } else if (LangOpts.ObjC) {
     Builder.defineMacro("__weak", "__attribute__((objc_ownership(weak)))");
     Builder.defineMacro("__strong", "__attribute__((objc_ownership(strong)))");
     Builder.defineMacro("__autoreleasing",
@@ -1130,7 +1112,7 @@ void clang::InitializePreprocessor(
 
     // Install definitions to make Objective-C++ ARC work well with various
     // C++ Standard Library implementations.
-    if (LangOpts.ObjC1 && LangOpts.CPlusPlus &&
+    if (LangOpts.ObjC && LangOpts.CPlusPlus &&
         (LangOpts.ObjCAutoRefCount || LangOpts.ObjCWeak)) {
       switch (InitOpts.ObjCXXARCStandardLibrary) {
       case ARCXX_nolib:
@@ -1177,8 +1159,6 @@ void clang::InitializePreprocessor(
   if (!InitOpts.ImplicitPCHInclude.empty())
     AddImplicitIncludePCH(Builder, PP, PCHContainerRdr,
                           InitOpts.ImplicitPCHInclude);
-  if (!InitOpts.ImplicitPTHInclude.empty())
-    AddImplicitIncludePTH(Builder, PP, InitOpts.ImplicitPTHInclude);
 
   // Process -include directives.
   for (unsigned i = 0, e = InitOpts.Includes.size(); i != e; ++i) {

@@ -30,8 +30,8 @@ define <16 x float> @fmafunc(<16 x float> %a, <16 x float> %b, <16 x float> %c) 
 ; CHECK-NOFMA-NEXT:    andl $-32, %esp
 ; CHECK-NOFMA-NEXT:    subl $32, %esp
 ; CHECK-NOFMA-NEXT:    vmulps %ymm2, %ymm0, %ymm0
-; CHECK-NOFMA-NEXT:    vaddps 8(%ebp), %ymm0, %ymm0
 ; CHECK-NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; CHECK-NOFMA-NEXT:    vaddps 8(%ebp), %ymm0, %ymm0
 ; CHECK-NOFMA-NEXT:    vaddps 40(%ebp), %ymm1, %ymm1
 ; CHECK-NOFMA-NEXT:    movl %ebp, %esp
 ; CHECK-NOFMA-NEXT:    popl %ebp

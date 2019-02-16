@@ -107,7 +107,7 @@ define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; SSE-NEXT: psrld $16, %xmm0
 ; SSE-NEXT: movdqa {{.*#+}} [[HIGHCST:xmm[0-9]+]] = [1392508928,1392508928,1392508928,1392508928]
 ; SSE-NEXT: por %[[HIGHCST]], %xmm0
-; SSE-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [-5.497642e+11,-5.497642e+11,-5.497642e+11,-5.497642e+11]
+; SSE-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [-5.49764202E+11,-5.49764202E+11,-5.49764202E+11,-5.49764202E+11]
 ; SSE-NEXT: addps %[[MAGICCST]], %xmm0
 ; SSE-NEXT: addps [[VECLOW]], %xmm0
 ; MASK is the low vector of the second part after this point.
@@ -125,7 +125,7 @@ define <8 x float> @test2(<8 x i32> %A) nounwind {
 ; SSE41-NEXT: psrld $16, %xmm0
 ; SSE41-NEXT: movdqa {{.*#+}} [[HIGHCST:xmm[0-9]+]] = [1392508928,1392508928,1392508928,1392508928]
 ; SSE41-NEXT: pblendw $170, %[[HIGHCST]], %xmm0
-; SSE41-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [-5.497642e+11,-5.497642e+11,-5.497642e+11,-5.497642e+11]
+; SSE41-NEXT: movaps {{.*#+}} [[MAGICCST:xmm[0-9]+]] = [-5.49764202E+11,-5.49764202E+11,-5.49764202E+11,-5.49764202E+11]
 ; SSE41-NEXT: addps %[[MAGICCST]], %xmm0
 ; SSE41-NEXT: addps [[VECLOW]], %xmm0
 ; LOWCST is the low vector of the second part after this point.

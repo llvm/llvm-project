@@ -454,7 +454,7 @@ T tmain(T argc) {
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
 #pragma omp target data map(always, tofrom: always, tofrom, x)
 #pragma omp target teams map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();
@@ -529,7 +529,7 @@ int main(int argc, char **argv) {
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always'}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+#pragma omp target data map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
 #pragma omp target data map(always, tofrom: always, tofrom, x)
 #pragma omp target teams map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   foo();

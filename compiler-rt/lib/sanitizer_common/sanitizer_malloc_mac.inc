@@ -30,8 +30,26 @@
 // https://github.com/gperftools/gperftools.
 
 namespace __sanitizer {
+
 extern malloc_zone_t sanitizer_zone;
+
+struct sanitizer_malloc_introspection_t : public malloc_introspection_t {
+  // IMPORTANT: Do not change the order, alignment, or types of these fields to
+  // maintain binary compatibility. You should only add fields to this struct.
+
+  // Used to track changes to the allocator that will affect
+  // zone enumeration.
+  u64 allocator_enumeration_version;
+};
+
+u64 GetMallocZoneAllocatorEnumerationVersion() {
+  // This represents the current allocator ABI version.
+  // This field should be incremented every time the Allocator
+  // ABI changes in a way that breaks allocator enumeration.
+  return 0;
 }
+
+}  // namespace __sanitizer
 
 INTERCEPTOR(malloc_zone_t *, malloc_create_zone,
                              vm_size_t start_size, unsigned zone_flags) {
@@ -247,6 +265,13 @@ void *__sanitizer_mz_memalign(malloc_zone_t *zone, size_t align, size_t size) {
   return p;
 }
 
+// This public API exists purely for testing purposes.
+extern "C"
+SANITIZER_INTERFACE_ATTRIBUTE
+malloc_zone_t* __sanitizer_mz_default_zone() {
+  return &sanitizer_zone;
+}
+
 // This function is currently unused, and we build with -Werror.
 #if 0
 void __sanitizer_mz_free_definite_size(
@@ -302,8 +327,8 @@ boolean_t mi_zone_locked(malloc_zone_t *zone) {
 
 namespace COMMON_MALLOC_NAMESPACE {
 
-void ReplaceSystemMalloc() {
-  static malloc_introspection_t sanitizer_zone_introspection;
+void InitMallocZoneFields() {
+  static sanitizer_malloc_introspection_t sanitizer_zone_introspection;
   // Ok to use internal_memset, these places are not performance-critical.
   internal_memset(&sanitizer_zone_introspection, 0,
                   sizeof(sanitizer_zone_introspection));
@@ -317,6 +342,10 @@ void ReplaceSystemMalloc() {
   sanitizer_zone_introspection.force_unlock = &mi_force_unlock;
   sanitizer_zone_introspection.statistics = &mi_statistics;
   sanitizer_zone_introspection.zone_locked = &mi_zone_locked;
+
+  // Set current allocator enumeration version.
+  sanitizer_zone_introspection.allocator_enumeration_version =
+      GetMallocZoneAllocatorEnumerationVersion();
 
   internal_memset(&sanitizer_zone, 0, sizeof(malloc_zone_t));
 
@@ -335,6 +364,10 @@ void ReplaceSystemMalloc() {
   sanitizer_zone.free_definite_size = 0;
   sanitizer_zone.memalign = &__sanitizer_mz_memalign;
   sanitizer_zone.introspect = &sanitizer_zone_introspection;
+}
+
+void ReplaceSystemMalloc() {
+  InitMallocZoneFields();
 
   // Register the zone.
   malloc_zone_register(&sanitizer_zone);

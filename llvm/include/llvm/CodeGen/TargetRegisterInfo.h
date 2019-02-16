@@ -510,6 +510,13 @@ public:
   /// markSuperRegs() and checkAllSuperRegsMarked() in this case.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
 
+  /// Returns false if we can't guarantee that Physreg, specified as an IR asm
+  /// clobber constraint, will be preserved across the statement.
+  virtual bool isAsmClobberable(const MachineFunction &MF,
+                               unsigned PhysReg) const {
+    return true;
+  }
+
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
   virtual bool isConstantPhysReg(unsigned PhysReg) const { return false; }
@@ -816,13 +823,6 @@ public:
                                   MachineFunction &MF) const {
     // Do nothing.
   }
-
-  /// The creation of multiple copy hints have been implemented in
-  /// weightCalcHelper(), but since this affects so many tests for many
-  /// targets, this is temporarily disabled per default. THIS SHOULD BE
-  /// "GENERAL GOODNESS" and hopefully all targets will update their tests
-  /// and enable this soon. This hook should then be removed.
-  virtual bool enableMultipleCopyHints() const { return false; }
 
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with

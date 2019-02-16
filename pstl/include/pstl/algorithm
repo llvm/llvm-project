@@ -1,0 +1,25 @@
+// -*- C++ -*-
+//===-- algorithm ---------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef __PSTL_algorithm
+#define __PSTL_algorithm
+
+#include "internal/pstl_config.h"
+
+#if __PSTL_EXECUTION_POLICIES_DEFINED
+// If <execution> has already been included, pull in implementations
+#include "internal/glue_algorithm_impl.h"
+#else
+// Otherwise just pull in forward declarations
+#include "internal/glue_algorithm_defs.h"
+#define __PSTL_ALGORITHM_FORWARD_DECLARED 1
+#endif
+
+#endif /* __PSTL_algorithm */

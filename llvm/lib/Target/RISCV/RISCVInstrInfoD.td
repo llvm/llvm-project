@@ -212,13 +212,8 @@ let Predicates = [HasStdExtD] in {
 def : Pat<(fpround FPR64:$rs1), (FCVT_S_D FPR64:$rs1, 0b111)>;
 def : Pat<(fpextend FPR32:$rs1), (FCVT_D_S FPR32:$rs1)>;
 
-// FP->[u]int. Round-to-zero must be used
-def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_W_D FPR64:$rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR64:$rs1), (FCVT_WU_D FPR64:$rs1, 0b001)>;
-
-// [u]int->fp
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_D_W GPR:$rs1)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_WU GPR:$rs1)>;
+// [u]int<->double conversion patterns must be gated on IsRV32 or IsRV64, so
+// are defined later.
 
 /// Float arithmetic operations
 
@@ -234,6 +229,22 @@ def : Pat<(fabs FPR64:$rs1), (FSGNJX_D $rs1, $rs1)>;
 
 def : PatFpr64Fpr64<fcopysign, FSGNJ_D>;
 def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)), (FSGNJN_D $rs1, $rs2)>;
+
+// fmadd: rs1 * rs2 + rs3
+def : Pat<(fma FPR64:$rs1, FPR64:$rs2, FPR64:$rs3),
+          (FMADD_D $rs1, $rs2, $rs3, 0b111)>;
+
+// fmsub: rs1 * rs2 - rs3
+def : Pat<(fma FPR64:$rs1, FPR64:$rs2, (fneg FPR64:$rs3)),
+          (FMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
+
+// fnmsub: -rs1 * rs2 + rs3
+def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
+          (FNMSUB_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
+
+// fnmadd: -rs1 * rs2 - rs3
+def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
+          (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
 // The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
 // canonical NaN when giving a signaling NaN. This doesn't match the LLVM
@@ -287,3 +298,13 @@ def SplitF64Pseudo
              [(set GPR:$dst1, GPR:$dst2, (RISCVSplitF64 FPR64:$src))]>;
 
 } // Predicates = [HasStdExtD]
+
+let Predicates = [HasStdExtD, IsRV32] in {
+// double->[u]int. Round-to-zero must be used.
+def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_W_D FPR64:$rs1, 0b001)>;
+def : Pat<(fp_to_uint FPR64:$rs1), (FCVT_WU_D FPR64:$rs1, 0b001)>;
+
+// [u]int->double.
+def : Pat<(sint_to_fp GPR:$rs1), (FCVT_D_W GPR:$rs1)>;
+def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_WU GPR:$rs1)>;
+} // Predicates = [HasStdExtD, IsRV32]

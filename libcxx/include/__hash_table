@@ -35,15 +35,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Key, class _Tp>
 struct __hash_value_type;
 
-template <class _Key, class _Cp, class _Hash,
-          bool =  is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value>
-class __unordered_map_hasher;
-
-template <class _Key, class _Cp, class _Pred,
-          bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value
-         >
-class __unordered_map_equal;
-
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
 struct __is_hash_value_type_imp : false_type {};
@@ -418,7 +409,7 @@ public:
         _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
     }
 
-    _LIBCPP_INLINE_VISIBILITY 
+    _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator(const __non_const_iterator& __x) _NOEXCEPT
         : __node_(__x.__node_)
     {
@@ -871,35 +862,32 @@ struct __generic_container_node_destructor<__hash_node<_Tp, _VoidPtr>, _Alloc>
 };
 #endif
 
+template <class _Key, class _Hash, class _Equal>
+struct __enforce_unordered_container_requirements {
 #ifndef _LIBCPP_CXX03_LANG
-template <class _Key, class _Hash, class _Equal, class _Alloc>
-struct __diagnose_hash_table_helper {
-  static constexpr bool __trigger_diagnostics()
-    _LIBCPP_DIAGNOSE_WARNING(__check_hash_requirements<_Key, _Hash>::value
-                         && !__invokable<_Hash const&, _Key const&>::value,
-      "the specified hash functor does not provide a const call operator")
-    _LIBCPP_DIAGNOSE_WARNING(is_copy_constructible<_Equal>::value
-                          && !__invokable<_Equal const&, _Key const&, _Key const&>::value,
-      "the specified comparator type does not provide a const call operator")
-  {
     static_assert(__check_hash_requirements<_Key, _Hash>::value,
-      "the specified hash does not meet the Hash requirements");
+    "the specified hash does not meet the Hash requirements");
     static_assert(is_copy_constructible<_Equal>::value,
-      "the specified comparator is required to be copy constructible");
-    return true;
-  }
+    "the specified comparator is required to be copy constructible");
+#endif
+    typedef int type;
 };
 
-template <class _Key, class _Value, class _Hash, class _Equal, class _Alloc>
-struct __diagnose_hash_table_helper<
-  __hash_value_type<_Key, _Value>,
-  __unordered_map_hasher<_Key, __hash_value_type<_Key, _Value>, _Hash>,
-  __unordered_map_equal<_Key, __hash_value_type<_Key, _Value>, _Equal>,
-  _Alloc>
-: __diagnose_hash_table_helper<_Key, _Hash, _Equal, _Alloc>
-{
-};
-#endif // _LIBCPP_CXX03_LANG
+template <class _Key, class _Hash, class _Equal>
+#ifndef _LIBCPP_CXX03_LANG
+    _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
+    "the specified comparator type does not provide a const call operator")
+    _LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
+    "the specified hash functor does not provide a const call operator")
+#endif
+typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
+__diagnose_unordered_container_requirements(int);
+
+// This dummy overload is used so that the compiler won't emit a spurious
+// "no matching function for call to __diagnose_unordered_xxx" diagnostic
+// when the overload above causes a hard error.
+template <class _Key, class _Hash, class _Equal>
+int __diagnose_unordered_container_requirements(void*);
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 class __hash_table
@@ -962,10 +950,6 @@ private:
     typedef unique_ptr<__next_pointer[], __bucket_list_deleter> __bucket_list;
     typedef allocator_traits<__pointer_allocator>          __pointer_alloc_traits;
     typedef typename __bucket_list_deleter::pointer       __node_pointer_pointer;
-
-#ifndef _LIBCPP_CXX03_LANG
-    static_assert(__diagnose_hash_table_helper<_Tp, _Hash, _Equal, _Alloc>::__trigger_diagnostics(), "");
-#endif
 
     // --- Member data begin ---
     __bucket_list                                         __bucket_list_;
@@ -1058,8 +1042,26 @@ public:
         );
     }
 
+private:
+    _LIBCPP_INLINE_VISIBILITY
+    __next_pointer __node_insert_multi_prepare(size_t __cp_hash,
+                                               value_type& __cp_val);
+    _LIBCPP_INLINE_VISIBILITY
+    void __node_insert_multi_perform(__node_pointer __cp,
+                                     __next_pointer __pn) _NOEXCEPT;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __next_pointer __node_insert_unique_prepare(size_t __nd_hash,
+                                                value_type& __nd_val);
+    _LIBCPP_INLINE_VISIBILITY
+    void __node_insert_unique_perform(__node_pointer __ptr) _NOEXCEPT;
+
+public:
+    _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> __node_insert_unique(__node_pointer __nd);
+    _LIBCPP_INLINE_VISIBILITY
     iterator             __node_insert_multi(__node_pointer __nd);
+    _LIBCPP_INLINE_VISIBILITY
     iterator             __node_insert_multi(const_iterator __p,
                                              __node_pointer __nd);
 
@@ -1170,6 +1172,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator __node_handle_insert_unique(const_iterator __hint,
                                          _NodeHandle&& __nh);
+    template <class _Table>
+    _LIBCPP_INLINE_VISIBILITY
+    void __node_handle_merge_unique(_Table& __source);
 
     template <class _NodeHandle>
     _LIBCPP_INLINE_VISIBILITY
@@ -1177,6 +1182,9 @@ public:
     template <class _NodeHandle>
     _LIBCPP_INLINE_VISIBILITY
     iterator __node_handle_insert_multi(const_iterator __hint, _NodeHandle&& __nh);
+    template <class _Table>
+    _LIBCPP_INLINE_VISIBILITY
+    void __node_handle_merge_multi(_Table& __source);
 
     template <class _NodeHandle>
     _LIBCPP_INLINE_VISIBILITY
@@ -1849,73 +1857,112 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::clear() _NOEXCEPT
     }
 }
 
+
+// Prepare the container for an insertion of the value __value with the hash
+// __hash. This does a lookup into the container to see if __value is already
+// present, and performs a rehash if necessary. Returns a pointer to the
+// existing element if it exists, otherwise nullptr.
+//
+// Note that this function does forward exceptions if key_eq() throws, and never
+// mutates __value or actually inserts into the map.
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __nd)
+_LIBCPP_INLINE_VISIBILITY
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__next_pointer
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(
+    size_t __hash, value_type& __value)
 {
-    __nd->__hash_ = hash_function()(__nd->__value_);
     size_type __bc = bucket_count();
-    bool __inserted = false;
-    __next_pointer __ndptr;
-    size_t __chash;
+
     if (__bc != 0)
     {
-        __chash = __constrain_hash(__nd->__hash_, __bc);
-        __ndptr = __bucket_list_[__chash];
+        size_t __chash = __constrain_hash(__hash, __bc);
+        __next_pointer __ndptr = __bucket_list_[__chash];
         if (__ndptr != nullptr)
         {
             for (__ndptr = __ndptr->__next_; __ndptr != nullptr &&
                                              __constrain_hash(__ndptr->__hash(), __bc) == __chash;
                                                      __ndptr = __ndptr->__next_)
             {
-                if (key_eq()(__ndptr->__upcast()->__value_, __nd->__value_))
-                    goto __done;
+                if (key_eq()(__ndptr->__upcast()->__value_, __value))
+                    return __ndptr;
             }
         }
     }
+    if (size()+1 > __bc * max_load_factor() || __bc == 0)
     {
-        if (size()+1 > __bc * max_load_factor() || __bc == 0)
-        {
-            rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
-                           size_type(ceil(float(size() + 1) / max_load_factor()))));
-            __bc = bucket_count();
-            __chash = __constrain_hash(__nd->__hash_, __bc);
-        }
-        // insert_after __bucket_list_[__chash], or __first_node if bucket is null
-        __next_pointer __pn = __bucket_list_[__chash];
-        if (__pn == nullptr)
-        {
-            __pn =__p1_.first().__ptr();
-            __nd->__next_ = __pn->__next_;
-            __pn->__next_ = __nd->__ptr();
-            // fix up __bucket_list_
-            __bucket_list_[__chash] = __pn;
-            if (__nd->__next_ != nullptr)
-                __bucket_list_[__constrain_hash(__nd->__next_->__hash(), __bc)] = __nd->__ptr();
-        }
-        else
-        {
-            __nd->__next_ = __pn->__next_;
-            __pn->__next_ = __nd->__ptr();
-        }
-        __ndptr = __nd->__ptr();
-        // increment size
-        ++size();
-        __inserted = true;
+        rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
+                                     size_type(ceil(float(size() + 1) / max_load_factor()))));
     }
-__done:
-#if _LIBCPP_DEBUG_LEVEL >= 2
-    return pair<iterator, bool>(iterator(__ndptr, this), __inserted);
-#else
-    return pair<iterator, bool>(iterator(__ndptr), __inserted);
-#endif
+    return nullptr;
+}
+
+// Insert the node __nd into the container by pushing it into the right bucket,
+// and updating size(). Assumes that __nd->__hash is up-to-date, and that
+// rehashing has already occurred and that no element with the same key exists
+// in the map.
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+_LIBCPP_INLINE_VISIBILITY
+void
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_perform(
+    __node_pointer __nd) _NOEXCEPT
+{
+    size_type __bc = bucket_count();
+    size_t __chash = __constrain_hash(__nd->__hash(), __bc);
+    // insert_after __bucket_list_[__chash], or __first_node if bucket is null
+    __next_pointer __pn = __bucket_list_[__chash];
+    if (__pn == nullptr)
+    {
+        __pn =__p1_.first().__ptr();
+        __nd->__next_ = __pn->__next_;
+        __pn->__next_ = __nd->__ptr();
+        // fix up __bucket_list_
+        __bucket_list_[__chash] = __pn;
+        if (__nd->__next_ != nullptr)
+            __bucket_list_[__constrain_hash(__nd->__next_->__hash(), __bc)] = __nd->__ptr();
+    }
+    else
+    {
+        __nd->__next_ = __pn->__next_;
+        __pn->__next_ = __nd->__ptr();
+    }
+    ++size();
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __cp)
+pair<typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator, bool>
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __nd)
 {
-    __cp->__hash_ = hash_function()(__cp->__value_);
+    __nd->__hash_ = hash_function()(__nd->__value_);
+    __next_pointer __existing_node =
+        __node_insert_unique_prepare(__nd->__hash(), __nd->__value_);
+
+    // Insert the node, unless it already exists in the container.
+    bool __inserted = false;
+    if (__existing_node == nullptr)
+    {
+        __node_insert_unique_perform(__nd);
+        __existing_node = __nd->__ptr();
+        __inserted = true;
+    }
+#if _LIBCPP_DEBUG_LEVEL >= 2
+    return pair<iterator, bool>(iterator(__existing_node, this), __inserted);
+#else
+    return pair<iterator, bool>(iterator(__existing_node), __inserted);
+#endif
+}
+
+// Prepare the container for an insertion of the value __cp_val with the hash
+// __cp_hash. This does a lookup into the container to see if __cp_value is
+// already present, and performs a rehash if necessary. Returns a pointer to the
+// last occurance of __cp_val in the map.
+//
+// Note that this function does forward exceptions if key_eq() throws, and never
+// mutates __value or actually inserts into the map.
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__next_pointer
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_prepare(
+    size_t __cp_hash, value_type& __cp_val)
+{
     size_type __bc = bucket_count();
     if (size()+1 > __bc * max_load_factor() || __bc == 0)
     {
@@ -1923,8 +1970,44 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
                        size_type(ceil(float(size() + 1) / max_load_factor()))));
         __bc = bucket_count();
     }
-    size_t __chash = __constrain_hash(__cp->__hash_, __bc);
+    size_t __chash = __constrain_hash(__cp_hash, __bc);
     __next_pointer __pn = __bucket_list_[__chash];
+    if (__pn != nullptr)
+    {
+        for (bool __found = false; __pn->__next_ != nullptr &&
+                                   __constrain_hash(__pn->__next_->__hash(), __bc) == __chash;
+                                                           __pn = __pn->__next_)
+        {
+            //      __found    key_eq()     action
+            //      false       false       loop
+            //      true        true        loop
+            //      false       true        set __found to true
+            //      true        false       break
+            if (__found != (__pn->__next_->__hash() == __cp_hash &&
+                            key_eq()(__pn->__next_->__upcast()->__value_, __cp_val)))
+            {
+                if (!__found)
+                    __found = true;
+                else
+                    break;
+            }
+        }
+    }
+    return __pn;
+}
+
+// Insert the node __cp into the container after __pn (which is the last node in
+// the bucket that compares equal to __cp). Rehashing, and checking for
+// uniqueness has already been performed (in __node_insert_multi_prepare), so
+// all we need to do is update the bucket and size(). Assumes that __cp->__hash
+// is up-to-date.
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+void
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi_perform(
+    __node_pointer __cp, __next_pointer __pn) _NOEXCEPT
+{
+    size_type __bc = bucket_count();
+    size_t __chash = __constrain_hash(__cp->__hash_, __bc);
     if (__pn == nullptr)
     {
         __pn =__p1_.first().__ptr();
@@ -1938,24 +2021,6 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
     }
     else
     {
-        for (bool __found = false; __pn->__next_ != nullptr &&
-                                   __constrain_hash(__pn->__next_->__hash(), __bc) == __chash;
-                                                           __pn = __pn->__next_)
-        {
-            //      __found    key_eq()     action
-            //      false       false       loop
-            //      true        true        loop
-            //      false       true        set __found to true
-            //      true        false       break
-            if (__found != (__pn->__next_->__hash() == __cp->__hash_ &&
-                            key_eq()(__pn->__next_->__upcast()->__value_, __cp->__value_)))
-            {
-                if (!__found)
-                    __found = true;
-                else
-                    break;
-            }
-        }
         __cp->__next_ = __pn->__next_;
         __pn->__next_ = __cp->__ptr();
         if (__cp->__next_ != nullptr)
@@ -1966,6 +2031,17 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
         }
     }
     ++size();
+}
+
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __cp)
+{
+    __cp->__hash_ = hash_function()(__cp->__value_);
+    __next_pointer __pn = __node_insert_multi_prepare(__cp->__hash(), __cp->__value_);
+    __node_insert_multi_perform(__cp, __pn);
+
 #if _LIBCPP_DEBUG_LEVEL >= 2
     return iterator(__cp->__ptr(), this);
 #else
@@ -2217,6 +2293,32 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _Table>
+_LIBCPP_INLINE_VISIBILITY
+void
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_unique(
+    _Table& __source)
+{
+    static_assert(is_same<__node, typename _Table::__node>::value, "");
+
+    for (typename _Table::iterator __it = __source.begin();
+         __it != __source.end();)
+    {
+        __node_pointer __src_ptr = __it.__node_->__upcast();
+        size_t __hash = hash_function()(__src_ptr->__value_);
+        __next_pointer __existing_node =
+            __node_insert_unique_prepare(__hash, __src_ptr->__value_);
+        auto __prev_iter = __it++;
+        if (__existing_node == nullptr)
+        {
+            (void)__source.remove(__prev_iter).release();
+            __src_ptr->__hash_ = __hash;
+            __node_insert_unique_perform(__src_ptr);
+        }
+    }
+}
+
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _NodeHandle>
 _LIBCPP_INLINE_VISIBILITY
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
@@ -2244,6 +2346,27 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_insert_multi(
     return __result;
 }
 
+template <class _Tp, class _Hash, class _Equal, class _Alloc>
+template <class _Table>
+_LIBCPP_INLINE_VISIBILITY
+void
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_merge_multi(
+    _Table& __source)
+{
+    static_assert(is_same<typename _Table::__node, __node>::value, "");
+
+    for (typename _Table::iterator __it = __source.begin();
+         __it != __source.end();)
+    {
+        __node_pointer __src_ptr = __it.__node_->__upcast();
+        size_t __src_hash = hash_function()(__src_ptr->__value_);
+        __next_pointer __pn =
+            __node_insert_multi_prepare(__src_hash, __src_ptr->__value_);
+        (void)__source.remove(__it++).release();
+        __src_ptr->__hash_ = __src_hash;
+        __node_insert_multi_perform(__src_ptr, __pn);
+    }
+}
 #endif  // _LIBCPP_STD_VER > 14
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>

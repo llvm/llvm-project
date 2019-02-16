@@ -96,6 +96,8 @@ public:
 
   StringRef getExecutorName() const override { return ExecutorName; }
 
+  bool isSingleProcess() const override { return true; }
+
   llvm::Error
   execute(llvm::ArrayRef<std::pair<std::unique_ptr<FrontendActionFactory>,
                                    ArgumentsAdjuster>>) override {
@@ -246,12 +248,14 @@ private:
 MATCHER_P(Named, Name, "") { return arg.first == Name; }
 
 TEST(AllTUsToolTest, AFewFiles) {
-  FixedCompilationDatabaseWithFiles Compilations(".", {"a.cc", "b.cc", "c.cc"},
-                                                 std::vector<std::string>());
+  FixedCompilationDatabaseWithFiles Compilations(
+      ".", {"a.cc", "b.cc", "c.cc", "ignore.cc"}, std::vector<std::string>());
   AllTUsToolExecutor Executor(Compilations, /*ThreadCount=*/0);
+  Filter.setValue("[a-c].cc");
   Executor.mapVirtualFile("a.cc", "void x() {}");
   Executor.mapVirtualFile("b.cc", "void y() {}");
   Executor.mapVirtualFile("c.cc", "void z() {}");
+  Executor.mapVirtualFile("ignore.cc", "void d() {}");
 
   auto Err = Executor.execute(std::unique_ptr<FrontendActionFactory>(
       new ReportResultActionFactory(Executor.getExecutionContext())));
@@ -259,6 +263,7 @@ TEST(AllTUsToolTest, AFewFiles) {
   EXPECT_THAT(
       Executor.getToolResults()->AllKVResults(),
       ::testing::UnorderedElementsAre(Named("x"), Named("y"), Named("z")));
+  Filter.setValue(".*"); // reset to default value.
 }
 
 TEST(AllTUsToolTest, ManyFiles) {

@@ -1,12 +1,12 @@
 ; LTO
 ; RUN: llvm-as %s -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext %t.o -o %t.out -wrap=bar -plugin-opt=save-temps
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t.o -o %t.out -wrap=bar -plugin-opt=save-temps
 ; RUN: llvm-readobj -t %t.out | FileCheck %s
 ; RUN: cat %t.out.resolution.txt | FileCheck -check-prefix=RESOLS %s
 
 ; ThinLTO
 ; RUN: opt -module-summary %s -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext %t.o -o %t.out -wrap=bar -plugin-opt=save-temps
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t.o -o %t.out -wrap=bar -plugin-opt=save-temps
 ; RUN: llvm-readobj -t %t.out | FileCheck %s
 ; RUN: cat %t.out.resolution.txt | FileCheck -check-prefix=RESOLS %s
 

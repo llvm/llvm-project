@@ -31,12 +31,12 @@ void f() {
 
   printf("%" PRIu64 ": ompt_get_state()=%d\n", tvalue, ompt_get_state(NULL));
 
-  int state = omp_state_undefined;
+  int state = ompt_state_undefined;
   const char *state_name;
   printf("%" PRIu64 ": ompt_enumerate_states()=%d\n", tvalue,
          ompt_enumerate_states(state, &state, &state_name));
 
-  int impl = ompt_mutex_impl_unknown;
+  int impl = ompt_mutex_impl_none;
   const char *impl_name;
   printf("%" PRIu64 ": ompt_enumerate_mutex_impls()=%d\n", tvalue,
          ompt_enumerate_mutex_impls(impl, &impl, &impl_name));

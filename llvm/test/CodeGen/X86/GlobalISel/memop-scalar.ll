@@ -82,9 +82,9 @@ define double @test_load_double(double * %p1) {
 define i1 * @test_store_i1(i1 %val, i1 * %p1) {
 ; ALL-LABEL: test_store_i1:
 ; ALL:       # %bb.0:
+; ALL-NEXT:    movq %rsi, %rax
 ; ALL-NEXT:    andb $1, %dil
 ; ALL-NEXT:    movb %dil, (%rsi)
-; ALL-NEXT:    movq %rsi, %rax
 ; ALL-NEXT:    retq
   store i1 %val, i1* %p1
   ret i1 * %p1;
@@ -93,8 +93,8 @@ define i1 * @test_store_i1(i1 %val, i1 * %p1) {
 define i32 * @test_store_i32(i32 %val, i32 * %p1) {
 ; ALL-LABEL: test_store_i32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movl %edi, (%rsi)
 ; ALL-NEXT:    movq %rsi, %rax
+; ALL-NEXT:    movl %edi, (%rsi)
 ; ALL-NEXT:    retq
   store i32 %val, i32* %p1
   ret i32 * %p1;
@@ -103,8 +103,8 @@ define i32 * @test_store_i32(i32 %val, i32 * %p1) {
 define i64 * @test_store_i64(i64 %val, i64 * %p1) {
 ; ALL-LABEL: test_store_i64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movq %rdi, (%rsi)
 ; ALL-NEXT:    movq %rsi, %rax
+; ALL-NEXT:    movq %rdi, (%rsi)
 ; ALL-NEXT:    retq
   store i64 %val, i64* %p1
   ret i64 * %p1;
@@ -114,15 +114,15 @@ define float * @test_store_float(float %val, float * %p1) {
 ;
 ; SSE_FAST-LABEL: test_store_float:
 ; SSE_FAST:       # %bb.0:
-; SSE_FAST-NEXT:    movd %xmm0, %eax
-; SSE_FAST-NEXT:    movl %eax, (%rdi)
 ; SSE_FAST-NEXT:    movq %rdi, %rax
+; SSE_FAST-NEXT:    movd %xmm0, %ecx
+; SSE_FAST-NEXT:    movl %ecx, (%rdi)
 ; SSE_FAST-NEXT:    retq
 ;
 ; SSE_GREEDY-LABEL: test_store_float:
 ; SSE_GREEDY:       # %bb.0:
-; SSE_GREEDY-NEXT:    movss %xmm0, (%rdi)
 ; SSE_GREEDY-NEXT:    movq %rdi, %rax
+; SSE_GREEDY-NEXT:    movss %xmm0, (%rdi)
 ; SSE_GREEDY-NEXT:    retq
   store float %val, float* %p1
   ret float * %p1;
@@ -132,15 +132,15 @@ define double * @test_store_double(double %val, double * %p1) {
 ;
 ; SSE_FAST-LABEL: test_store_double:
 ; SSE_FAST:       # %bb.0:
-; SSE_FAST-NEXT:    movq %xmm0, %rax
-; SSE_FAST-NEXT:    movq %rax, (%rdi)
 ; SSE_FAST-NEXT:    movq %rdi, %rax
+; SSE_FAST-NEXT:    movq %xmm0, %rcx
+; SSE_FAST-NEXT:    movq %rcx, (%rdi)
 ; SSE_FAST-NEXT:    retq
 ;
 ; SSE_GREEDY-LABEL: test_store_double:
 ; SSE_GREEDY:       # %bb.0:
-; SSE_GREEDY-NEXT:    movsd %xmm0, (%rdi)
 ; SSE_GREEDY-NEXT:    movq %rdi, %rax
+; SSE_GREEDY-NEXT:    movsd %xmm0, (%rdi)
 ; SSE_GREEDY-NEXT:    retq
   store double %val, double* %p1
   ret double * %p1;

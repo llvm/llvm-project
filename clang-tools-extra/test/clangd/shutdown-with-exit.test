@@ -1,4 +1,0 @@
-# RUN: clangd -lit-test < %s
-{"jsonrpc":"2.0","id":3,"method":"shutdown"}
----
-{"jsonrpc":"2.0":"method":"exit"}

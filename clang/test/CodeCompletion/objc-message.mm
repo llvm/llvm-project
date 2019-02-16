@@ -41,6 +41,6 @@ void func(const RetainPtr<id <FooTestProtocol>>& ptr)
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -code-completion-at=%s:33:8 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: categoryInstanceMethod : [#id#]categoryInstanceMethod
 // CHECK-CC1: instanceMethod1 : [#id#]instanceMethod1
-// CHECK-CC1: protocolInstanceMethod : [#id#]protocolInstanceMethod
+// CHECK-CC1: protocolInstanceMethod (InBase) : [#id#]protocolInstanceMethod
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -code-completion-at=%s:38:8 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
 // CHECK-CC2: protocolInstanceMethod : [#id#]protocolInstanceMethod

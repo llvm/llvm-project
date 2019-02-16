@@ -56,9 +56,13 @@ LibIgnore *libignore();
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(ret, func, ...) \
   TSAN_INTERCEPTOR(ret, __libc_thr_##func, __VA_ARGS__) \
   ALIAS(WRAPPER_NAME(pthread_##func));
+# define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR2(ret, func, func2, ...) \
+  TSAN_INTERCEPTOR(ret, __libc_thr_##func, __VA_ARGS__) \
+  ALIAS(WRAPPER_NAME(pthread_##func2));
 #else
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS(ret, func, ...)
 # define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(ret, func, ...)
+# define TSAN_INTERCEPTOR_NETBSD_ALIAS_THR2(ret, func, func2, ...)
 #endif
 
 #endif  // TSAN_INTERCEPTORS_H

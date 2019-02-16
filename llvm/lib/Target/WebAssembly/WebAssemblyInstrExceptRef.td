@@ -12,8 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-let Defs = [ARGUMENTS] in {
-
 defm SELECT_EXCEPT_REF : I<(outs EXCEPT_REF:$dst),
                            (ins EXCEPT_REF:$lhs, EXCEPT_REF:$rhs, I32:$cond),
                            (outs), (ins),
@@ -22,8 +20,6 @@ defm SELECT_EXCEPT_REF : I<(outs EXCEPT_REF:$dst),
                              EXCEPT_REF:$rhs))],
                            "except_ref.select\t$dst, $lhs, $rhs, $cond",
                            "except_ref.select", 0x1b>;
-
-} // Defs = [ARGUMENTS]
 
 def : Pat<(select (i32 (setne I32:$cond, 0)), EXCEPT_REF:$lhs, EXCEPT_REF:$rhs),
           (SELECT_EXCEPT_REF EXCEPT_REF:$lhs, EXCEPT_REF:$rhs, I32:$cond)>;

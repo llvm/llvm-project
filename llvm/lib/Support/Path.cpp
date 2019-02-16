@@ -190,48 +190,57 @@ createUniqueEntity(const Twine &Model, int &ResultFD,
   ResultPath.push_back(0);
   ResultPath.pop_back();
 
-retry_random_path:
-  // Replace '%' with random chars.
-  for (unsigned i = 0, e = ModelStorage.size(); i != e; ++i) {
-    if (ModelStorage[i] == '%')
-      ResultPath[i] = "0123456789abcdef"[sys::Process::GetRandomNumber() & 15];
-  }
-
-  // Try to open + create the file.
-  switch (Type) {
-  case FS_File: {
-    if (std::error_code EC =
-            sys::fs::openFileForReadWrite(Twine(ResultPath.begin()), ResultFD,
-                                          sys::fs::CD_CreateNew, Flags, Mode)) {
-      if (EC == errc::file_exists)
-        goto retry_random_path;
-      return EC;
+  // Limit the number of attempts we make, so that we don't infinite loop. E.g.
+  // "permission denied" could be for a specific file (so we retry with a
+  // different name) or for the whole directory (retry would always fail).
+  // Checking which is racy, so we try a number of times, then give up.
+  std::error_code EC;
+  for (int Retries = 128; Retries > 0; --Retries) {
+    // Replace '%' with random chars.
+    for (unsigned i = 0, e = ModelStorage.size(); i != e; ++i) {
+      if (ModelStorage[i] == '%')
+        ResultPath[i] =
+            "0123456789abcdef"[sys::Process::GetRandomNumber() & 15];
     }
 
-    return std::error_code();
-  }
+    // Try to open + create the file.
+    switch (Type) {
+    case FS_File: {
+      EC = sys::fs::openFileForReadWrite(Twine(ResultPath.begin()), ResultFD,
+                                         sys::fs::CD_CreateNew, Flags, Mode);
+      if (EC) {
+        // errc::permission_denied happens on Windows when we try to open a file
+        // that has been marked for deletion.
+        if (EC == errc::file_exists || EC == errc::permission_denied)
+          continue;
+        return EC;
+      }
 
-  case FS_Name: {
-    std::error_code EC =
-        sys::fs::access(ResultPath.begin(), sys::fs::AccessMode::Exist);
-    if (EC == errc::no_such_file_or_directory)
       return std::error_code();
-    if (EC)
-      return EC;
-    goto retry_random_path;
-  }
-
-  case FS_Dir: {
-    if (std::error_code EC =
-            sys::fs::create_directory(ResultPath.begin(), false)) {
-      if (EC == errc::file_exists)
-        goto retry_random_path;
-      return EC;
     }
-    return std::error_code();
+
+    case FS_Name: {
+      EC = sys::fs::access(ResultPath.begin(), sys::fs::AccessMode::Exist);
+      if (EC == errc::no_such_file_or_directory)
+        return std::error_code();
+      if (EC)
+        return EC;
+      continue;
+    }
+
+    case FS_Dir: {
+      EC = sys::fs::create_directory(ResultPath.begin(), false);
+      if (EC) {
+        if (EC == errc::file_exists)
+          continue;
+        return EC;
+      }
+      return std::error_code();
+    }
+    }
+    llvm_unreachable("Invalid Type");
   }
-  }
-  llvm_unreachable("Invalid Type");
+  return EC;
 }
 
 namespace llvm {
@@ -524,7 +533,7 @@ void replace_path_prefix(SmallVectorImpl<char> &Path,
 
   // If prefixes have the same size we can simply copy the new one over.
   if (OldPrefix.size() == NewPrefix.size()) {
-    std::copy(NewPrefix.begin(), NewPrefix.end(), Path.begin());
+    llvm::copy(NewPrefix, Path.begin());
     return;
   }
 
@@ -1076,12 +1085,13 @@ std::error_code is_other(const Twine &Path, bool &Result) {
   return std::error_code();
 }
 
-void directory_entry::replace_filename(const Twine &filename,
-                                       basic_file_status st) {
-  SmallString<128> path = path::parent_path(Path);
-  path::append(path, filename);
-  Path = path.str();
-  Status = st;
+void directory_entry::replace_filename(const Twine &Filename, file_type Type,
+                                       basic_file_status Status) {
+  SmallString<128> PathStr = path::parent_path(Path);
+  path::append(PathStr, Filename);
+  this->Path = PathStr.str();
+  this->Type = Type;
+  this->Status = Status;
 }
 
 ErrorOr<perms> getPermissions(const Twine &Path) {
@@ -1150,8 +1160,16 @@ Error TempFile::keep(const Twine &Name) {
   // If we can't cancel the delete don't rename.
   auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   std::error_code RenameEC = setDeleteDisposition(H, false);
-  if (!RenameEC)
+  if (!RenameEC) {
     RenameEC = rename_fd(FD, Name);
+    // If rename failed because it's cross-device, copy instead
+    if (RenameEC ==
+      std::error_code(ERROR_NOT_SAME_DEVICE, std::system_category())) {
+      RenameEC = copy_file(TmpName, Name);
+      setDeleteDisposition(H, true);
+    }
+  }
+
   // If we can't rename, discard the temporary file.
   if (RenameEC)
     setDeleteDisposition(H, true);
@@ -1222,17 +1240,5 @@ Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
 }
 }
 
-namespace path {
-
-bool user_cache_directory(SmallVectorImpl<char> &Result, const Twine &Path1,
-                          const Twine &Path2, const Twine &Path3) {
-  if (getUserCacheDir(Result)) {
-    append(Result, Path1, Path2, Path3);
-    return true;
-  }
-  return false;
-}
-
-} // end namespace path
 } // end namsspace sys
 } // end namespace llvm

@@ -4,25 +4,28 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 ; The table for @f
-; CHECK: @switch.table.f = private unnamed_addr constant [7 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 27, i32 62, i32 1]
+; CHECK: @switch.table.f = private unnamed_addr constant [7 x i32] [i32 55, i32 123, i32 0, i32 -1, i32 27, i32 62, i32 1], align 4
+
+; The char table for char
+; CHECK: @switch.table.char = private unnamed_addr constant [9 x i8] c"7{\00\FF\1B>\01!T", align 1
 
 ; The float table for @h
-; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000]
+; CHECK: @switch.table.h = private unnamed_addr constant [4 x float] [float 0x40091EB860000000, float 0x3FF3BE76C0000000, float 0x4012449BA0000000, float 0x4001AE1480000000], align 4
 
 ; The table for @foostring
-; CHECK: @switch.table.foostring = private unnamed_addr constant [4 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0)]
+; CHECK: @switch.table.foostring = private unnamed_addr constant [4 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str2, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str3, i64 0, i64 0)], align 8
 
 ; The table for @earlyreturncrash
-; CHECK: @switch.table.earlyreturncrash = private unnamed_addr constant [4 x i32] [i32 42, i32 9, i32 88, i32 5]
+; CHECK: @switch.table.earlyreturncrash = private unnamed_addr constant [4 x i32] [i32 42, i32 9, i32 88, i32 5], align 4
 
 ; The table for @large
 ; CHECK: @switch.table.large = private unnamed_addr constant [199 x i32] [i32 1, i32 4, i32 9,
 
 ; The table for @cprop
-; CHECK: @switch.table.cprop = private unnamed_addr constant [7 x i32] [i32 5, i32 42, i32 126, i32 -452, i32 128, i32 6, i32 7]
+; CHECK: @switch.table.cprop = private unnamed_addr constant [7 x i32] [i32 5, i32 42, i32 126, i32 -452, i32 128, i32 6, i32 7], align 4
 
 ; The table for @unreachable_case
-; CHECK: @switch.table.unreachable_case = private unnamed_addr constant [9 x i32] [i32 0, i32 0, i32 0, i32 2, i32 -1, i32 1, i32 1, i32 1, i32 1]
+; CHECK: @switch.table.unreachable_case = private unnamed_addr constant [9 x i32] [i32 0, i32 0, i32 0, i32 2, i32 -1, i32 1, i32 1, i32 1, i32 1], align 4
 
 ; A simple int-to-int selection switch.
 ; It is dense enough to be replaced by table lookup.
@@ -63,6 +66,48 @@ return:
 ; CHECK-NEXT: ret i32 %switch.load
 ; CHECK: return:
 ; CHECK-NEXT: ret i32 15
+}
+
+; Same thing, but with i8's
+
+define i8 @char(i32 %c) {
+entry:
+  switch i32 %c, label %sw.default [
+    i32 42, label %return
+    i32 43, label %sw.bb1
+    i32 44, label %sw.bb2
+    i32 45, label %sw.bb3
+    i32 46, label %sw.bb4
+    i32 47, label %sw.bb5
+    i32 48, label %sw.bb6
+    i32 49, label %sw.bb7
+    i32 50, label %sw.bb8
+  ]
+
+sw.bb1: br label %return
+sw.bb2: br label %return
+sw.bb3: br label %return
+sw.bb4: br label %return
+sw.bb5: br label %return
+sw.bb6: br label %return
+sw.bb7: br label %return
+sw.bb8: br label %return
+sw.default: br label %return
+return:
+  %retval.0 = phi i8 [ 15, %sw.default ], [ 84, %sw.bb8 ], [ 33, %sw.bb7 ], [ 1, %sw.bb6 ], [ 62, %sw.bb5 ], [ 27, %sw.bb4 ], [ -1, %sw.bb3 ], [ 0, %sw.bb2 ], [ 123, %sw.bb1 ], [ 55, %entry ]
+  ret i8 %retval.0
+
+; CHECK-LABEL: @char(
+; CHECK: entry:
+; CHECK-NEXT: %switch.tableidx = sub i32 %c, 42
+; CHECK-NEXT: %0 = icmp ult i32 %switch.tableidx, 9
+; CHECK-NEXT: br i1 %0, label %switch.lookup, label %return
+; CHECK: switch.lookup:
+; CHECK-NEXT: %switch.gep = getelementptr inbounds [9 x i8], [9 x i8]* @switch.table.char, i32 0, i32 %switch.tableidx
+; CHECK-NEXT: %switch.load = load i8, i8* %switch.gep
+; CHECK-NEXT: ret i8 %switch.load
+; CHECK: return:
+; CHECK-NEXT: ret i8 15
 }
 
 ; A switch used to initialize two variables, an i8 and a float.

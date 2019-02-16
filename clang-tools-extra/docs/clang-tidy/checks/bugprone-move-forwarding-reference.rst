@@ -5,7 +5,7 @@ bugprone-move-forwarding-reference
 
 Warns if ``std::move`` is called on a forwarding reference, for example:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     template <typename T>
     void foo(T&& t) {
@@ -22,7 +22,7 @@ function template argument.)
 
 In this example, the suggested fix would be
 
-  .. code-block:: c++
+.. code-block:: c++
 
     bar(std::forward<T>(t));
 
@@ -34,7 +34,7 @@ Code like the example above is sometimes written with the expectation that
 deduced for ``T``, and that it is therefore not possible to pass an lvalue to
 ``foo()``. However, this is not true. Consider this example:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     std::string s = "Hello, world";
     foo(s);

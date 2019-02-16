@@ -46,15 +46,15 @@
 
 @implementation Foo
 // CHECK-LABEL: define internal void @"\01-[Foo .cxx_destruct]"
-// CHECK: call void @objc_destroyWeak
+// CHECK: call void @llvm.objc.destroyWeak
 @end
 
 
 void test1(__weak id x) {}
 // CHECK-LABEL: define void @test1
 // CHECK:      [[X:%.*]] = alloca i8*,
-// CHECK-NEXT: objc_initWeak
-// CHECK-NEXT: objc_destroyWeak
+// CHECK-NEXT: @llvm.objc.initWeak
+// CHECK-NEXT: @llvm.objc.destroyWeak
 // CHECK-NEXT: ret void
 
 void test2(id y) {
@@ -65,8 +65,8 @@ void test2(id y) {
 // CHECK-NEXT: [[Z:%.*]] = alloca i8*,
 // CHECK-NEXT: store
 // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[Y]]
-// CHECK-NEXT: call i8* @objc_initWeak(i8** [[Z]], i8* [[T0]])
-// CHECK-NEXT: call void @objc_destroyWeak(i8** [[Z]])
+// CHECK-NEXT: call i8* @llvm.objc.initWeak(i8** [[Z]], i8* [[T0]])
+// CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[Z]])
 // CHECK-NEXT: ret void
 
 void test3(id y) {
@@ -79,8 +79,8 @@ void test3(id y) {
 // CHECK-NEXT: store
 // CHECK-NEXT: store i8* null, i8** [[Z]]
 // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[Y]]
-// CHECK-NEXT: call i8* @objc_storeWeak(i8** [[Z]], i8* [[T0]])
-// CHECK-NEXT: call void @objc_destroyWeak(i8** [[Z]])
+// CHECK-NEXT: call i8* @llvm.objc.storeWeak(i8** [[Z]], i8* [[T0]])
+// CHECK-NEXT: call void @llvm.objc.destroyWeak(i8** [[Z]])
 // CHECK-NEXT: ret void
 
 void test4(__weak id *p) {
@@ -91,7 +91,7 @@ void test4(__weak id *p) {
 // CHECK-NEXT: [[Y:%.*]] = alloca i8*,
 // CHECK-NEXT: store
 // CHECK-NEXT: [[T0:%.*]] = load i8**, i8*** [[P]]
-// CHECK-NEXT: [[T1:%.*]] = call i8* @objc_loadWeak(i8** [[T0]])
+// CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.loadWeak(i8** [[T0]])
 // CHECK-NEXT: store i8* [[T1]], i8** [[Y]]
 // CHECK-NEXT: ret void
 
@@ -103,7 +103,7 @@ void test5(__weak id *p) {
 // CHECK-NEXT: [[Y:%.*]] = alloca i8*,
 // CHECK-NEXT: store
 // CHECK-NEXT: [[T0:%.*]] = load i8**, i8*** [[P]]
-// CHECK-NEXT: [[T1:%.*]] = call i8* @objc_loadWeakRetained(i8** [[T0]])
+// CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T0]])
 // CHECK-NEXT: store i8* [[T1]], i8** [[Y]]
 // CHECK-NEXT: ret void
 
@@ -116,7 +116,7 @@ void test6(__weak Foo **p) {
 // CHECK-NEXT: store
 // CHECK-NEXT: [[T0:%.*]] = load [[FOO]]**, [[FOO]]*** [[P]]
 // CHECK-NEXT: [[T1:%.*]] = bitcast [[FOO]]** [[T0]] to i8**
-// CHECK-NEXT: [[T2:%.*]] = call i8* @objc_loadWeakRetained(i8** [[T1]])
+// CHECK-NEXT: [[T2:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T1]])
 // CHECK-NEXT: [[T3:%.*]] = bitcast i8* [[T2]] to [[FOO]]*
 // CHECK-NEXT: store [[FOO]]* [[T3]], [[FOO]]** [[Y]]
 // CHECK-NEXT: ret void
@@ -134,32 +134,32 @@ void test7(void) {
 // CHECK-NEXT:  [[T1:%.*]] = bitcast i8* [[T0]] to [[FOO]]*
 // CHECK-NEXT:  [[T2:%.*]] = bitcast [[FOO]]** [[P]] to i8**
 // CHECK-NEXT:  [[T3:%.*]] = bitcast [[FOO]]* [[T1]] to i8*
-// CHECK-NEXT:  call i8* @objc_initWeak(i8** [[T2]], i8* [[T3]])
-// CHECK:       call void @objc_copyWeak
+// CHECK-NEXT:  call i8* @llvm.objc.initWeak(i8** [[T2]], i8* [[T3]])
+// CHECK:       call void @llvm.objc.copyWeak
 // CHECK:       call void @use_block
-// CHECK:       call void @objc_destroyWeak
+// CHECK:       call void @llvm.objc.destroyWeak
 
 // CHECK-LABEL: define linkonce_odr hidden void @__copy_helper_block
-// CHECK:       @objc_copyWeak
+// CHECK:       @llvm.objc.copyWeak
 
 // CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block
-// CHECK:       @objc_destroyWeak
+// CHECK:       @llvm.objc.destroyWeak
 
 void test8(void) {
   __block __weak Foo *p = get_object();
   use_block(^{ [p run ]; });
 }
 // CHECK-LABEL: define void @test8
-// CHECK:       call i8* @objc_initWeak
-// CHECK-NOT:   call void @objc_copyWeak
+// CHECK:       call i8* @llvm.objc.initWeak
+// CHECK-NOT:   call void @llvm.objc.copyWeak
 // CHECK:       call void @use_block
-// CHECK:       call void @objc_destroyWeak
+// CHECK:       call void @llvm.objc.destroyWeak
 
 // CHECK-LABEL: define internal void @__Block_byref_object_copy
-// CHECK:       call void @objc_moveWeak
+// CHECK:       call void @llvm.objc.moveWeak
 
 // CHECK-LABEL: define internal void @__Block_byref_object_dispose
-// CHECK:       call void @objc_destroyWeak
+// CHECK:       call void @llvm.objc.destroyWeak
 
 // CHECK-LABEL: define void @test9_baseline()
 // CHECK:       define linkonce_odr hidden void @__copy_helper

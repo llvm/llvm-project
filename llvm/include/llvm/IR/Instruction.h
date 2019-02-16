@@ -127,11 +127,15 @@ public:
 
   const char *getOpcodeName() const { return getOpcodeName(getOpcode()); }
   bool isTerminator() const { return isTerminator(getOpcode()); }
+  bool isUnaryOp() const { return isUnaryOp(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
   bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
   bool isShift() { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
+  bool isExceptionalTerminator() const {
+    return isExceptionalTerminator(getOpcode());
+  }
 
   static const char* getOpcodeName(unsigned OpCode);
 
@@ -139,6 +143,9 @@ public:
     return OpCode >= TermOpsBegin && OpCode < TermOpsEnd;
   }
 
+  static inline bool isUnaryOp(unsigned Opcode) {
+    return Opcode >= UnaryOpsBegin && Opcode < UnaryOpsEnd;
+  }
   static inline bool isBinaryOp(unsigned Opcode) {
     return Opcode >= BinaryOpsBegin && Opcode < BinaryOpsEnd;
   }
@@ -180,6 +187,20 @@ public:
   /// Determine if the OpCode is one of the FuncletPadInst instructions.
   static inline bool isFuncletPad(unsigned OpCode) {
     return OpCode >= FuncletPadOpsBegin && OpCode < FuncletPadOpsEnd;
+  }
+
+  /// Returns true if the OpCode is a terminator related to exception handling.
+  static inline bool isExceptionalTerminator(unsigned OpCode) {
+    switch (OpCode) {
+    case Instruction::CatchSwitch:
+    case Instruction::CatchRet:
+    case Instruction::CleanupRet:
+    case Instruction::Invoke:
+    case Instruction::Resume:
+      return true;
+    default:
+      return false;
+    }
   }
 
   //===--------------------------------------------------------------------===//
@@ -561,12 +582,24 @@ public:
     }
   }
 
+  /// Return true if the instruction is a llvm.lifetime.start or
+  /// llvm.lifetime.end marker.
+  bool isLifetimeStartOrEnd() const;
+
   /// Return a pointer to the next non-debug instruction in the same basic
   /// block as 'this', or nullptr if no such instruction exists.
   const Instruction *getNextNonDebugInstruction() const;
   Instruction *getNextNonDebugInstruction() {
     return const_cast<Instruction *>(
         static_cast<const Instruction *>(this)->getNextNonDebugInstruction());
+  }
+
+  /// Return a pointer to the previous non-debug instruction in the same basic
+  /// block as 'this', or nullptr if no such instruction exists.
+  const Instruction *getPrevNonDebugInstruction() const;
+  Instruction *getPrevNonDebugInstruction() {
+    return const_cast<Instruction *>(
+        static_cast<const Instruction *>(this)->getPrevNonDebugInstruction());
   }
 
   /// Create a copy of 'this' instruction that is identical in all ways except
@@ -611,6 +644,16 @@ public:
   /// operands in the corresponding predecessor block.
   bool isUsedOutsideOfBlock(const BasicBlock *BB) const;
 
+  /// Return the number of successors that this instruction has. The instruction
+  /// must be a terminator.
+  unsigned getNumSuccessors() const;
+
+  /// Return the specified successor. This instruction must be a terminator.
+  BasicBlock *getSuccessor(unsigned Idx) const;
+
+  /// Update the specified successor to point at the provided block. This
+  /// instruction must be a terminator.
+  void setSuccessor(unsigned Idx, BasicBlock *BB);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
@@ -624,6 +667,13 @@ public:
 #define  FIRST_TERM_INST(N)             TermOpsBegin = N,
 #define HANDLE_TERM_INST(N, OPC, CLASS) OPC = N,
 #define   LAST_TERM_INST(N)             TermOpsEnd = N+1
+#include "llvm/IR/Instruction.def"
+  };
+
+  enum UnaryOps {
+#define  FIRST_UNARY_INST(N)             UnaryOpsBegin = N,
+#define HANDLE_UNARY_INST(N, OPC, CLASS) OPC = N,
+#define   LAST_UNARY_INST(N)             UnaryOpsEnd = N+1
 #include "llvm/IR/Instruction.def"
   };
 

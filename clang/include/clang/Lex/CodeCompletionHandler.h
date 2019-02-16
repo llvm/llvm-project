@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_LEX_CODECOMPLETIONHANDLER_H
 #define LLVM_CLANG_LEX_CODECOMPLETIONHANDLER_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace clang {
 
 class IdentifierInfo;
@@ -59,6 +61,11 @@ public:
   virtual void CodeCompleteMacroArgument(IdentifierInfo *Macro,
                                          MacroInfo *MacroInfo,
                                          unsigned ArgumentIndex) { }
+
+  /// Callback invoked when performing code completion inside the filename
+  /// part of an #include directive. (Also #import, #include_next, etc).
+  /// \p Dir is the directory relative to the include path.
+  virtual void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) {}
 
   /// Callback invoked when performing code completion in a part of the
   /// file where we expect natural language, e.g., a comment, string, or

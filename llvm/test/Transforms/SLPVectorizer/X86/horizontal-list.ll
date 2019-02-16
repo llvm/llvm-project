@@ -1679,7 +1679,7 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add nuw i32 [[TMP12]], [[ARG]]
 ; CHECK-NEXT:    [[OP_EXTRA3:%.*]] = add nsw i32 [[OP_EXTRA]], [[TMP9]]
-; CHECK-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], undef
+; CHECK-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], [[TMP9]]
 ; CHECK-NEXT:    ret i32 [[OP_EXTRA3]]
 ;
 ; THRESHOLD-LABEL: @wobble(
@@ -1707,7 +1707,7 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ; THRESHOLD-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[BIN_RDX2]], i32 0
 ; THRESHOLD-NEXT:    [[OP_EXTRA:%.*]] = add nuw i32 [[TMP12]], [[ARG]]
 ; THRESHOLD-NEXT:    [[OP_EXTRA3:%.*]] = add nsw i32 [[OP_EXTRA]], [[TMP9]]
-; THRESHOLD-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], undef
+; THRESHOLD-NEXT:    [[R5:%.*]] = add nsw i32 [[R4]], [[TMP9]]
 ; THRESHOLD-NEXT:    ret i32 [[OP_EXTRA3]]
 ;
   bb:

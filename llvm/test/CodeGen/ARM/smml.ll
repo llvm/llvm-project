@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 ; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 ; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V4
-; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6T2
+; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 
 define i32 @Test0(i32 %a, i32 %b, i32 %c) nounwind readnone ssp {
 entry:
@@ -44,7 +44,7 @@ declare void @opaque(i32)
 define void @test_used_flags(i32 %in1, i32 %in2) {
 ; CHECK-LABEL: test_used_flags:
 ; CHECK-THUMB: movs    r2, #0
-; CHECK-THUMB: subs    r0, r2, r0
+; CHECK-THUMB: rsbs    r0, r0, #0
 ; CHECK-THUMB: sbcs    r2, r1
 ; CHECK-THUMB: bge
 ; CHECK-V6: smull [[PROD_LO:r[0-9]+]], [[PROD_HI:r[0-9]+]], r0, r1

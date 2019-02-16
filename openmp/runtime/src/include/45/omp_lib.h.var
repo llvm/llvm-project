@@ -523,6 +523,7 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_is_initial_device
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_initial_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_devices
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_teams
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_team_num
@@ -595,6 +596,7 @@
 !$omp declare target(omp_get_default_device )
 !$omp declare target(omp_set_default_device )
 !$omp declare target(omp_is_initial_device )
+!$omp declare target(omp_get_initial_device )
 !$omp declare target(omp_get_num_devices )
 !$omp declare target(omp_get_num_teams )
 !$omp declare target(omp_get_team_num )
@@ -641,4 +643,3 @@
 !$omp declare target(omp_init_nest_lock_with_hint )
 !DIR$ ENDIF
 !DIR$ ENDIF
-

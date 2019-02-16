@@ -1,4 +1,4 @@
-//===- CFG.h - Process LLVM structures as graphs ----------------*- C++ -*-===//
+//===- CFG.h ----------------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,15 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines specializations of GraphTraits that allow Function and
-// BasicBlock graphs to be treated as proper graphs for generic algorithms.
-//
+/// \file
+///
+/// This file provides various utilities for inspecting and working with the
+/// control flow graph in LLVM IR. This includes generic facilities for
+/// iterating successors and predecessors of basic blocks, the successors of
+/// specific terminator instructions, etc. It also defines specializations of
+/// GraphTraits that allow Function and BasicBlock graphs to be treated as
+/// proper graphs for generic algorithms.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_CFG_H
@@ -44,8 +49,13 @@ class PredIterator : public std::iterator<std::forward_iterator_tag,
 
   inline void advancePastNonTerminators() {
     // Loop to ignore non-terminator uses (for example BlockAddresses).
-    while (!It.atEnd() && !isa<TerminatorInst>(*It))
+    while (!It.atEnd()) {
+      if (auto *Inst = dyn_cast<Instruction>(*It))
+        if (Inst->isTerminator())
+          break;
+
       ++It;
+    }
   }
 
 public:
@@ -63,7 +73,7 @@ public:
 
   inline reference operator*() const {
     assert(!It.atEnd() && "pred_iterator out of range!");
-    return cast<TerminatorInst>(*It)->getParent();
+    return cast<Instruction>(*It)->getParent();
   }
   inline pointer *operator->() const { return &operator*(); }
 
@@ -107,6 +117,8 @@ inline const_pred_iterator pred_end(const BasicBlock *BB) {
 inline bool pred_empty(const BasicBlock *BB) {
   return pred_begin(BB) == pred_end(BB);
 }
+/// Get the number of predecessors of \p BB. This is a linear time operation.
+/// Use \ref BasicBlock::hasNPredecessors() or hasNPredecessorsOrMore if able.
 inline unsigned pred_size(const BasicBlock *BB) {
   return std::distance(pred_begin(BB), pred_end(BB));
 }
@@ -118,15 +130,143 @@ inline pred_const_range predecessors(const BasicBlock *BB) {
 }
 
 //===----------------------------------------------------------------------===//
-// BasicBlock succ_iterator helpers
+// Instruction and BasicBlock succ_iterator helpers
 //===----------------------------------------------------------------------===//
 
-using succ_iterator =
-    TerminatorInst::SuccIterator<TerminatorInst *, BasicBlock>;
-using succ_const_iterator =
-    TerminatorInst::SuccIterator<const TerminatorInst *, const BasicBlock>;
+template <class InstructionT, class BlockT>
+class SuccIterator
+    : public iterator_facade_base<SuccIterator<InstructionT, BlockT>,
+                                  std::random_access_iterator_tag, BlockT, int,
+                                  BlockT *, BlockT *> {
+public:
+  using difference_type = int;
+  using pointer = BlockT *;
+  using reference = BlockT *;
+
+private:
+  InstructionT *Inst;
+  int Idx;
+  using Self = SuccIterator<InstructionT, BlockT>;
+
+  inline bool index_is_valid(int Idx) {
+    // Note that we specially support the index of zero being valid even in the
+    // face of a null instruction.
+    return Idx >= 0 && (Idx == 0 || Idx <= (int)Inst->getNumSuccessors());
+  }
+
+  /// Proxy object to allow write access in operator[]
+  class SuccessorProxy {
+    Self It;
+
+  public:
+    explicit SuccessorProxy(const Self &It) : It(It) {}
+
+    SuccessorProxy(const SuccessorProxy &) = default;
+
+    SuccessorProxy &operator=(SuccessorProxy RHS) {
+      *this = reference(RHS);
+      return *this;
+    }
+
+    SuccessorProxy &operator=(reference RHS) {
+      It.Inst->setSuccessor(It.Idx, RHS);
+      return *this;
+    }
+
+    operator reference() const { return *It; }
+  };
+
+public:
+  // begin iterator
+  explicit inline SuccIterator(InstructionT *Inst) : Inst(Inst), Idx(0) {}
+  // end iterator
+  inline SuccIterator(InstructionT *Inst, bool) : Inst(Inst) {
+    if (Inst)
+      Idx = Inst->getNumSuccessors();
+    else
+      // Inst == NULL happens, if a basic block is not fully constructed and
+      // consequently getTerminator() returns NULL. In this case we construct
+      // a SuccIterator which describes a basic block that has zero
+      // successors.
+      // Defining SuccIterator for incomplete and malformed CFGs is especially
+      // useful for debugging.
+      Idx = 0;
+  }
+
+  /// This is used to interface between code that wants to
+  /// operate on terminator instructions directly.
+  int getSuccessorIndex() const { return Idx; }
+
+  inline bool operator==(const Self &x) const { return Idx == x.Idx; }
+
+  inline BlockT *operator*() const { return Inst->getSuccessor(Idx); }
+
+  // We use the basic block pointer directly for operator->.
+  inline BlockT *operator->() const { return operator*(); }
+
+  inline bool operator<(const Self &RHS) const {
+    assert(Inst == RHS.Inst && "Cannot compare iterators of different blocks!");
+    return Idx < RHS.Idx;
+  }
+
+  int operator-(const Self &RHS) const {
+    assert(Inst == RHS.Inst && "Cannot compare iterators of different blocks!");
+    return Idx - RHS.Idx;
+  }
+
+  inline Self &operator+=(int RHS) {
+    int NewIdx = Idx + RHS;
+    assert(index_is_valid(NewIdx) && "Iterator index out of bound");
+    Idx = NewIdx;
+    return *this;
+  }
+
+  inline Self &operator-=(int RHS) { return operator+=(-RHS); }
+
+  // Specially implement the [] operation using a proxy object to support
+  // assignment.
+  inline SuccessorProxy operator[](int Offset) {
+    Self TmpIt = *this;
+    TmpIt += Offset;
+    return SuccessorProxy(TmpIt);
+  }
+
+  /// Get the source BlockT of this iterator.
+  inline BlockT *getSource() {
+    assert(Inst && "Source not available, if basic block was malformed");
+    return Inst->getParent();
+  }
+};
+
+template <typename T, typename U> struct isPodLike<SuccIterator<T, U>> {
+  static const bool value = isPodLike<T>::value;
+};
+
+using succ_iterator = SuccIterator<Instruction, BasicBlock>;
+using succ_const_iterator = SuccIterator<const Instruction, const BasicBlock>;
 using succ_range = iterator_range<succ_iterator>;
 using succ_const_range = iterator_range<succ_const_iterator>;
+
+inline succ_iterator succ_begin(Instruction *I) { return succ_iterator(I); }
+inline succ_const_iterator succ_begin(const Instruction *I) {
+  return succ_const_iterator(I);
+}
+inline succ_iterator succ_end(Instruction *I) { return succ_iterator(I, true); }
+inline succ_const_iterator succ_end(const Instruction *I) {
+  return succ_const_iterator(I, true);
+}
+inline bool succ_empty(const Instruction *I) {
+  return succ_begin(I) == succ_end(I);
+}
+inline unsigned succ_size(const Instruction *I) {
+  return std::distance(succ_begin(I), succ_end(I));
+}
+inline succ_range successors(Instruction *I) {
+  return succ_range(succ_begin(I), succ_end(I));
+}
+inline succ_const_range successors(const Instruction *I) {
+  return succ_const_range(succ_begin(I), succ_end(I));
+}
 
 inline succ_iterator succ_begin(BasicBlock *BB) {
   return succ_iterator(BB->getTerminator());
@@ -152,11 +292,6 @@ inline succ_range successors(BasicBlock *BB) {
 inline succ_const_range successors(const BasicBlock *BB) {
   return succ_const_range(succ_begin(BB), succ_end(BB));
 }
-
-template <typename T, typename U>
-struct isPodLike<TerminatorInst::SuccIterator<T, U>> {
-  static const bool value = isPodLike<T>::value;
-};
 
 //===--------------------------------------------------------------------===//
 // GraphTraits specializations for basic block graphs (CFGs)

@@ -203,7 +203,7 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     %4 = COPY $sgpr4_sgpr5
-    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %8 = S_MOV_B64 0
     %7 = COPY %9
     %30 = V_MOV_B32_e32 1, implicit $exec
@@ -365,7 +365,7 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     %4 = COPY $sgpr4_sgpr5
-    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %9 = S_LOAD_DWORDX2_IMM %4, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %8 = S_MOV_B64 0
     %7 = COPY %9
     %30 = V_MOV_B32_e32 1, implicit $exec

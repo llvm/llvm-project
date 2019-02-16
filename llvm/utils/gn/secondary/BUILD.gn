@@ -1,0 +1,152 @@
+import("//clang/lib/ARCMigrate/enable.gni")
+import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+
+group("default") {
+  deps = [
+    "//clang/test",
+    "//lld/test",
+    "//llvm/tools/bugpoint",
+    "//llvm/tools/dsymutil",
+    "//llvm/tools/lli",
+    "//llvm/tools/lli/ChildTarget:lli-child-target",
+    "//llvm/tools/llvm-c-test",
+    "//llvm/tools/llvm-cfi-verify",
+    "//llvm/tools/llvm-cov",
+    "//llvm/tools/llvm-cvtres",
+    "//llvm/tools/llvm-cxxdump",
+    "//llvm/tools/llvm-cxxfilt",
+    "//llvm/tools/llvm-cxxmap",
+    "//llvm/tools/llvm-diff",
+    "//llvm/tools/llvm-dwp",
+    "//llvm/tools/llvm-exegesis",
+    "//llvm/tools/llvm-extract",
+    "//llvm/tools/llvm-isel-fuzzer",
+    "//llvm/tools/llvm-link",
+    "//llvm/tools/llvm-mca",
+    "//llvm/tools/llvm-mt",
+    "//llvm/tools/llvm-opt-fuzzer",
+    "//llvm/tools/llvm-opt-report",
+    "//llvm/tools/llvm-rc",
+    "//llvm/tools/llvm-rtdyld",
+    "//llvm/tools/llvm-size",
+    "//llvm/tools/llvm-split",
+    "//llvm/tools/llvm-strings",
+    "//llvm/tools/llvm-undname",
+    "//llvm/tools/llvm-xray",
+    "//llvm/tools/sancov",
+    "//llvm/tools/sanstats",
+    "//llvm/tools/verify-uselistorder",
+    "//llvm/utils/yaml-bench",
+  ]
+  if (clang_enable_arcmt) {
+    deps += [
+      "//clang/tools/arcmt-test",
+      "//clang/tools/c-arcmt-test",
+    ]
+  }
+  if (clang_enable_static_analyzer) {
+    deps += [
+      "//clang/tools/clang-check",
+      "//clang/tools/clang-func-mapping",
+    ]
+  }
+  if (host_os != "win") {
+    # loadable_modules don't work on Windows.
+    # FIXME: In the CMake build, ENABLE_SHARED makes them work somehow
+    # (but they're off by default there too).
+    deps += [
+      "//llvm/lib/Transforms/Hello",
+      "//llvm/tools/bugpoint-passes",
+    ]
+  }
+  testonly = true
+}
+
+# Symlink handling.
+# On POSIX, symlinks to the target can be created before the target exist,
+# and the target can depend on the symlink targets, so that building the
+# target ensures the symlinks exist.
+# However, symlinks didn't exist on Windows until recently, so there the
+# binary needs to be copied -- which requires it to exist. So the symlink step
+# needs to run after the target that creates the binary.
+# In the cmake build, this is done via a "postbuild" on the target, which just
+# tacks on "&& copy out.exe out2.exe" to the link command.
+# GN doesn't have a way to express postbuild commands.  It could probably be
+# emulated by having the link command in the toolchain be a wrapper script that
+# reads a ".symlinks" file next to the target, and have an action write that
+# and make the target depend on that, but then every single link has to use the
+# wrapper (unless we do further acrobatics to use a different toolchain for
+# targets that need symlinks) even though most links don't need symlinks.
+# Instead, have a top-level target for each target that needs symlinks, and
+# make that depend on the symlinks. Then the symlinks can depend on the
+# executable.  This has the effect that `ninja lld` builds lld and then creates
+# symlinks (via this target), while `ninja bin/lld` only builds lld and doesn't
+# update symlinks (in particular, on Windows it doesn't copy the new lld to its
+# new locations).
+# That seems simpler, more explicit, and good enough.
+group("clang") {
+  deps = [
+    "//clang/tools/driver:symlinks",
+  ]
+}
+group("lld") {
+  deps = [
+    "//lld/tools/lld:symlinks",
+  ]
+}
+group("llvm-ar") {
+  deps = [
+    "//llvm/tools/llvm-ar:symlinks",
+  ]
+}
+group("llvm-dwp") {
+  deps = [
+    "//llvm/tools/llvm-dwp:symlinks",
+  ]
+}
+group("llvm-nm") {
+  deps = [
+    "//llvm/tools/llvm-nm:symlinks",
+  ]
+}
+group("llvm-cxxfilt") {
+  deps = [
+    "//llvm/tools/llvm-cxxfilt:symlinks",
+  ]
+}
+group("llvm-objcopy") {
+  deps = [
+    "//llvm/tools/llvm-objcopy:symlinks",
+  ]
+}
+group("llvm-objdump") {
+  deps = [
+    "//llvm/tools/llvm-objdump:symlinks",
+  ]
+}
+group("llvm-readobj") {
+  deps = [
+    "//llvm/tools/llvm-readobj:symlinks",
+  ]
+}
+group("llvm-size") {
+  deps = [
+    "//llvm/tools/llvm-size:symlinks",
+  ]
+}
+group("llvm-strings") {
+  deps = [
+    "//llvm/tools/llvm-strings:symlinks",
+  ]
+}
+group("llvm-symbolizer") {
+  deps = [
+    "//llvm/tools/llvm-symbolizer:symlinks",
+  ]
+}
+
+# A pool called "console" in the root BUILD.gn is magic and represents ninja's
+# built-in console pool. (Requires a GN with `gn --version` >= 552353.)
+pool("console") {
+  depth = 1
+}

@@ -645,13 +645,8 @@ template <class BidirectionalIterator, class Compare>
 #include <functional>
 #include <iterator>
 #include <cstddef>
-
-#if defined(__IBMCPP__)
-#include "support/ibm/support.h"
-#endif
-#if defined(_LIBCPP_COMPILER_MSVC)
-#include <intrin.h>
-#endif
+#include <bit>
+#include <version>
 
 #include <__debug>
 
@@ -755,6 +750,32 @@ public:
     bool operator()(const _T1& __x, const _T2& __y) {return __p_(__y, __x);}
 };
 
+// Perform division by two quickly for positive integers (llvm.org/PR39129)
+
+template <typename _Integral>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+typename enable_if
+<
+    is_integral<_Integral>::value,
+    _Integral
+>::type
+__half_positive(_Integral __value)
+{
+    return static_cast<_Integral>(static_cast<typename make_unsigned<_Integral>::type>(__value) / 2);
+}
+
+template <typename _Tp>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+typename enable_if
+<
+    !is_integral<_Tp>::value,
+    _Tp
+>::type
+__half_positive(_Tp __value)
+{
+    return __value / 2;
+}
+
 #ifdef _LIBCPP_DEBUG
 
 template <class _Compare>
@@ -787,135 +808,6 @@ struct __debug_less
 };
 
 #endif  // _LIBCPP_DEBUG
-
-// Precondition:  __x != 0
-inline _LIBCPP_INLINE_VISIBILITY
-unsigned __ctz(unsigned __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned>(__builtin_ctz(__x));
-#else
-  static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
-  static_assert(sizeof(unsigned long) == 4, "");
-  unsigned long where;
-  // Search from LSB to MSB for first set bit.
-  // Returns zero if no set bit is found.
-  if (_BitScanForward(&where, __x))
-    return where;
-  return 32;
-#endif
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-unsigned long __ctz(unsigned long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long>(__builtin_ctzl(__x));
-#else
-    static_assert(sizeof(unsigned long) == sizeof(unsigned), "");
-    return __ctz(static_cast<unsigned>(__x));
-#endif
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-unsigned long long __ctz(unsigned long long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long long>(__builtin_ctzll(__x));
-#else
-    unsigned long where;
-// Search from LSB to MSB for first set bit.
-// Returns zero if no set bit is found.
-#if defined(_LIBCPP_HAS_BITSCAN64)
-    (defined(_M_AMD64) || defined(__x86_64__))
-  if (_BitScanForward64(&where, __x))
-    return static_cast<int>(where);
-#else
-  // Win32 doesn't have _BitScanForward64 so emulate it with two 32 bit calls.
-  // Scan the Low Word.
-  if (_BitScanForward(&where, static_cast<unsigned long>(__x)))
-    return where;
-  // Scan the High Word.
-  if (_BitScanForward(&where, static_cast<unsigned long>(__x >> 32)))
-    return where + 32; // Create a bit offset from the LSB.
-#endif
-  return 64;
-#endif // _LIBCPP_COMPILER_MSVC
-}
-
-// Precondition:  __x != 0
-inline _LIBCPP_INLINE_VISIBILITY
-unsigned __clz(unsigned __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned>(__builtin_clz(__x));
-#else
-  static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
-  static_assert(sizeof(unsigned long) == 4, "");
-  unsigned long where;
-  // Search from LSB to MSB for first set bit.
-  // Returns zero if no set bit is found.
-  if (_BitScanReverse(&where, __x))
-    return 31 - where;
-  return 32; // Undefined Behavior.
-#endif
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-unsigned long __clz(unsigned long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long>(__builtin_clzl (__x));
-#else
-    static_assert(sizeof(unsigned) == sizeof(unsigned long), "");
-    return __clz(static_cast<unsigned>(__x));
-#endif
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-unsigned long long __clz(unsigned long long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-    return static_cast<unsigned long long>(__builtin_clzll(__x));
-#else
-  unsigned long where;
-// BitScanReverse scans from MSB to LSB for first set bit.
-// Returns 0 if no set bit is found.
-#if defined(_LIBCPP_HAS_BITSCAN64)
-  if (_BitScanReverse64(&where, __x))
-    return static_cast<int>(63 - where);
-#else
-  // Scan the high 32 bits.
-  if (_BitScanReverse(&where, static_cast<unsigned long>(__x >> 32)))
-    return 63 - (where + 32); // Create a bit offset from the MSB.
-  // Scan the low 32 bits.
-  if (_BitScanReverse(&where, static_cast<unsigned long>(__x)))
-    return 63 - where;
-#endif
-  return 64; // Undefined Behavior.
-#endif // _LIBCPP_COMPILER_MSVC
-}
-
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-  return __builtin_popcount  (__x);
-#else
-  static_assert(sizeof(unsigned) == 4, "");
-  return __popcnt(__x);
-#endif
-}
-
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-  return __builtin_popcountl (__x);
-#else
-  static_assert(sizeof(unsigned long) == 4, "");
-  return __popcnt(__x);
-#endif
-}
-
-inline _LIBCPP_INLINE_VISIBILITY int __pop_count(unsigned long long __x) {
-#ifndef _LIBCPP_COMPILER_MSVC
-  return __builtin_popcountll(__x);
-#else
-  static_assert(sizeof(unsigned long long) == 8, "");
-  return __popcnt64(__x);
-#endif
-}
 
 // all_of
 
@@ -2533,6 +2425,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _ForwardIterator
 min_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
+    static_assert(__is_forward_iterator<_ForwardIterator>::value,
+        "std::min_element requires a ForwardIterator");
     if (__first != __last)
     {
         _ForwardIterator __i = __first;
@@ -2597,6 +2491,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _ForwardIterator
 max_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
+    static_assert(__is_forward_iterator<_ForwardIterator>::value,
+        "std::max_element requires a ForwardIterator");
     if (__first != __last)
     {
         _ForwardIterator __i = __first;
@@ -2683,6 +2579,8 @@ _LIBCPP_CONSTEXPR_AFTER_CXX11
 std::pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
+  static_assert(__is_forward_iterator<_ForwardIterator>::value,
+        "std::minmax_element requires a ForwardIterator");
   std::pair<_ForwardIterator, _ForwardIterator> __result(__first, __first);
   if (__first != __last)
   {
@@ -3027,10 +2925,11 @@ template<class _IntType>
 template<class _URNG>
 typename uniform_int_distribution<_IntType>::result_type
 uniform_int_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p)
+_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
     typedef typename conditional<sizeof(result_type) <= sizeof(uint32_t),
                                             uint32_t, uint64_t>::type _UIntType;
-    const _UIntType _Rp = __p.b() - __p.a() + _UIntType(1);
+    const _UIntType _Rp = _UIntType(__p.b()) - _UIntType(__p.a()) + _UIntType(1);
     if (_Rp == 1)
         return __p.a();
     const size_t _Dt = numeric_limits<_UIntType>::digits;
@@ -3080,7 +2979,7 @@ public:
 _LIBCPP_FUNC_VIS __rs_default __rs_get();
 
 template <class _RandomAccessIterator>
-void
+_LIBCPP_DEPRECATED_IN_CXX14 void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
     typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
@@ -3101,7 +3000,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last)
 }
 
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
-void
+_LIBCPP_DEPRECATED_IN_CXX14 void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
 #ifndef _LIBCPP_CXX03_LANG
                _RandomNumberGenerator&& __rand)
@@ -3116,7 +3015,8 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last,
         for (--__last; __first < __last; ++__first, --__d)
         {
             difference_type __i = __rand(__d);
-            swap(*__first, *(__first + __i));
+            if (__i != difference_type(0))
+              swap(*__first, *(__first + __i));
         }
     }
 }
@@ -3328,7 +3228,7 @@ partition_point(_ForwardIterator __first, _ForwardIterator __last, _Predicate __
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__pred(*__m))
@@ -3737,6 +3637,7 @@ __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
 // stable, 4-10 compares, 0-9 swaps
 
 template <class _Compare, class _ForwardIterator>
+_LIBCPP_HIDDEN
 unsigned
 __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
             _ForwardIterator __x4, _ForwardIterator __x5, _Compare __c)
@@ -4195,7 +4096,7 @@ __lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__comp(*__m, __value_))
@@ -4214,14 +4115,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 lower_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __lower_bound<_Comp_ref>(__first, __last, __value_, __c);
-#else  // _LIBCPP_DEBUG
     typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
     return __lower_bound<_Comp_ref>(__first, __last, __value_, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _ForwardIterator, class _Tp>
@@ -4243,7 +4138,7 @@ __upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__comp(__value_, *__m))
@@ -4262,14 +4157,8 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _ForwardIterator
 upper_bound(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value_, _Compare __comp)
 {
-#ifdef _LIBCPP_DEBUG
-    typedef typename add_lvalue_reference<__debug_less<_Compare> >::type _Comp_ref;
-    __debug_less<_Compare> __c(__comp);
-    return __upper_bound<_Comp_ref>(__first, __last, __value_, __c);
-#else  // _LIBCPP_DEBUG
     typedef typename add_lvalue_reference<_Compare>::type _Comp_ref;
     return __upper_bound<_Comp_ref>(__first, __last, __value_, __comp);
-#endif  // _LIBCPP_DEBUG
 }
 
 template <class _ForwardIterator, class _Tp>
@@ -4291,7 +4180,7 @@ __equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
     difference_type __len = _VSTD::distance(__first, __last);
     while (__len != 0)
     {
-        difference_type __l2 = __len / 2;
+        difference_type __l2 = _VSTD::__half_positive(__len);
         _ForwardIterator __m = __first;
         _VSTD::advance(__m, __l2);
         if (__comp(*__m, __value_))

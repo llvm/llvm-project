@@ -585,7 +585,7 @@ int f28(int i, int j, int k, int l) {
   m28[j].s3[k] = 1;
   struct ll * l28 = (struct ll*)(&m28[1]);
   l28->s1[l] = 2;
-  char input[] = {'a', 'b', 'c', 'd'};
+  char input[] = {'a', 'b', 'c', 'd'}; // expected-warning{{Potential leak of memory pointed to by field 's4'}}
   memcpy(l28->s1, input, 4);
   clang_analyzer_eval(m28[0].s3[0] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(m28[0].s3[1] == 1); // expected-warning{{UNKNOWN}}

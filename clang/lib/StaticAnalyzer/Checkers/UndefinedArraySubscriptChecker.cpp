@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -55,10 +55,14 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
   // Generate a report for this bug.
   auto R = llvm::make_unique<BugReport>(*BT, BT->getName(), N);
   R->addRange(A->getIdx()->getSourceRange());
-  bugreporter::trackNullOrUndefValue(N, A->getIdx(), *R);
+  bugreporter::trackExpressionValue(N, A->getIdx(), *R);
   C.emitReport(std::move(R));
 }
 
 void ento::registerUndefinedArraySubscriptChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefinedArraySubscriptChecker>();
+}
+
+bool ento::shouldRegisterUndefinedArraySubscriptChecker(const LangOptions &LO) {
+  return true;
 }

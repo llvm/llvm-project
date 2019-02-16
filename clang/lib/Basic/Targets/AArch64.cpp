@@ -37,11 +37,11 @@ const Builtin::Info AArch64TargetInfo::BuiltinInfo[] = {
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
-  if (getTriple().getOS() == llvm::Triple::OpenBSD) {
+  if (getTriple().isOSOpenBSD()) {
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {
-    if (!getTriple().isOSDarwin() && getTriple().getOS() != llvm::Triple::NetBSD)
+    if (!getTriple().isOSDarwin() && !getTriple().isOSNetBSD())
       WCharType = UnsignedInt;
 
     Int64Type = SignedLong;
@@ -122,10 +122,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
   Builder.defineMacro("__aarch64__");
-  // For bare-metal none-eabi.
+  // For bare-metal.
   if (getTriple().getOS() == llvm::Triple::UnknownOS &&
-      (getTriple().getEnvironment() == llvm::Triple::EABI ||
-       getTriple().getEnvironment() == llvm::Triple::EABIHF))
+      getTriple().isOSBinFormatELF())
     Builder.defineMacro("__ELF__");
 
   // Target properties.
@@ -195,6 +194,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasDotProd)
     Builder.defineMacro("__ARM_FEATURE_DOTPROD", "1");
 
+  if ((FPU & NeonMode) && HasFP16FML)
+    Builder.defineMacro("__ARM_FEATURE_FP16FML", "1");
+
   switch (ArchKind) {
   default:
     break;
@@ -232,6 +234,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Unaligned = 1;
   HasFullFP16 = 0;
   HasDotProd = 0;
+  HasFP16FML = 0;
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
@@ -253,6 +256,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullFP16 = 1;
     if (Feature == "+dotprod")
       HasDotProd = 1;
+    if (Feature == "+fp16fml")
+      HasFP16FML = 1;
   }
 
   setDataLayout();
@@ -268,6 +273,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_PreserveMost:
   case CC_PreserveAll:
   case CC_OpenCLKernel:
+  case CC_AArch64VectorCall:
   case CC_Win64:
     return CCCR_OK;
   default:
@@ -508,6 +514,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_Swift:
   case CC_Win64:
     return CCCR_OK;
   default:

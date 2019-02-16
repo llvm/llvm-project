@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -109,10 +109,10 @@ SimpleStreamChecker::SimpleStreamChecker()
   DoubleCloseBugType.reset(
       new BugType(this, "Double fclose", "Unix Stream API Error"));
 
-  LeakBugType.reset(
-      new BugType(this, "Resource Leak", "Unix Stream API Error"));
   // Sinks are higher importance bugs as well as calls to assert() or exit(0).
-  LeakBugType->setSuppressOnSink(true);
+  LeakBugType.reset(
+      new BugType(this, "Resource Leak", "Unix Stream API Error",
+                  /*SuppressOnSink=*/true));
 }
 
 void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
@@ -268,4 +268,9 @@ SimpleStreamChecker::checkPointerEscape(ProgramStateRef State,
 
 void ento::registerSimpleStreamChecker(CheckerManager &mgr) {
   mgr.registerChecker<SimpleStreamChecker>();
+}
+
+// This checker should be enabled regardless of how language options are set.
+bool ento::shouldRegisterSimpleStreamChecker(const LangOptions &LO) {
+  return true;
 }

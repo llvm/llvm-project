@@ -1,16 +1,19 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK: vaddh(r{{[0-9]+}},r{{[0-9]+}})
 
-@j = external global i32
-@k = external global i32
+@g0 = external global i32
+@g1 = external global i32
 
-define void @foo() nounwind {
-entry:
-  %0 = load i32, i32* @j, align 4
-  %1 = load i32, i32* @k, align 4
-  %2 = call i32 @llvm.hexagon.A2.svaddh(i32 %0, i32 %1)
-  store i32 %2, i32* @k, align 4
+define void @f0() #0 {
+b0:
+  %v0 = load i32, i32* @g0, align 4
+  %v1 = load i32, i32* @g1, align 4
+  %v2 = call i32 @llvm.hexagon.A2.svaddh(i32 %v0, i32 %v1)
+  store i32 %v2, i32* @g1, align 4
   ret void
 }
 
-declare i32 @llvm.hexagon.A2.svaddh(i32, i32) nounwind readnone
+declare i32 @llvm.hexagon.A2.svaddh(i32, i32) #1
+
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }
+attributes #1 = { nounwind readnone "target-cpu"="hexagonv5" }

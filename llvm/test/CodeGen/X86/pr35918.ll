@@ -7,59 +7,54 @@
 define void @fetch_r16g16_snorm_unorm8(<4 x i8>*, i8*, i32, i32, { [2048 x i32], [128 x i64] }*) nounwind {
 ; X86-SKYLAKE-LABEL: fetch_r16g16_snorm_unorm8:
 ; X86-SKYLAKE:       # %bb.0: # %entry
-; X86-SKYLAKE-NEXT:    subl $12, %esp
+; X86-SKYLAKE-NEXT:    subl $8, %esp
 ; X86-SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKYLAKE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SKYLAKE-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SKYLAKE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-SKYLAKE-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X86-SKYLAKE-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; X86-SKYLAKE-NEXT:    vpsrad $16, %xmm0, %xmm0
+; X86-SKYLAKE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-SKYLAKE-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; X86-SKYLAKE-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; X86-SKYLAKE-NEXT:    vpsrld $7, %xmm0, %xmm0
-; X86-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; X86-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-SKYLAKE-NEXT:    vmovd %xmm0, %ecx
 ; X86-SKYLAKE-NEXT:    orl $-16777216, %ecx # imm = 0xFF000000
 ; X86-SKYLAKE-NEXT:    movl %ecx, (%eax)
-; X86-SKYLAKE-NEXT:    addl $12, %esp
+; X86-SKYLAKE-NEXT:    addl $8, %esp
 ; X86-SKYLAKE-NEXT:    retl
 ;
 ; X86-SKX-LABEL: fetch_r16g16_snorm_unorm8:
 ; X86-SKX:       # %bb.0: # %entry
-; X86-SKX-NEXT:    subl $12, %esp
+; X86-SKX-NEXT:    subl $8, %esp
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SKX-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,xmm0[0,1],zero,zero,xmm0[2,3],zero,zero,xmm0[u,u],zero,zero,xmm0[u,u]
+; X86-SKX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,0,1,u,u,2,3,u,u,u,u,u,u,u,u]
 ; X86-SKX-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-SKX-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; X86-SKX-NEXT:    vpsrld $7, %xmm0, %xmm0
-; X86-SKX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
-; X86-SKX-NEXT:    vpmovqw %xmm1, {{[0-9]+}}(%esp)
-; X86-SKX-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X86-SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; X86-SKX-NEXT:    vpmovqw %xmm0, {{[0-9]+}}(%esp)
-; X86-SKX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X86-SKX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
+; X86-SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SKX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X86-SKX-NEXT:    vpmovdb %xmm0, (%esp)
 ; X86-SKX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    movzwl (%esp), %ecx
 ; X86-SKX-NEXT:    orl $-16777216, %ecx # imm = 0xFF000000
 ; X86-SKX-NEXT:    movl %ecx, (%eax)
-; X86-SKX-NEXT:    addl $12, %esp
+; X86-SKX-NEXT:    addl $8, %esp
 ; X86-SKX-NEXT:    retl
 ;
 ; X64-SKYLAKE-LABEL: fetch_r16g16_snorm_unorm8:
 ; X64-SKYLAKE:       # %bb.0: # %entry
 ; X64-SKYLAKE-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SKYLAKE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-SKYLAKE-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; X64-SKYLAKE-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
 ; X64-SKYLAKE-NEXT:    vpsrad $16, %xmm0, %xmm0
+; X64-SKYLAKE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-SKYLAKE-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; X64-SKYLAKE-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; X64-SKYLAKE-NEXT:    vpsrld $7, %xmm0, %xmm0
-; X64-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; X64-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-SKYLAKE-NEXT:    vmovd %xmm0, %eax
 ; X64-SKYLAKE-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
 ; X64-SKYLAKE-NEXT:    movl %eax, (%rdi)
@@ -68,19 +63,16 @@ define void @fetch_r16g16_snorm_unorm8(<4 x i8>*, i8*, i32, i32, { [2048 x i32],
 ; X64-SKX-LABEL: fetch_r16g16_snorm_unorm8:
 ; X64-SKX:       # %bb.0: # %entry
 ; X64-SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SKX-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,xmm0[0,1],zero,zero,xmm0[2,3],zero,zero,xmm0[u,u],zero,zero,xmm0[u,u]
+; X64-SKX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,0,1,u,u,2,3,u,u,u,u,u,u,u,u]
 ; X64-SKX-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; X64-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-SKX-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X64-SKX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
 ; X64-SKX-NEXT:    vpsrld $7, %xmm0, %xmm0
-; X64-SKX-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X64-SKX-NEXT:    vpmovqw %xmm1, -{{[0-9]+}}(%rsp)
-; X64-SKX-NEXT:    vpmovzxbd {{.*#+}} xmm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X64-SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; X64-SKX-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-SKX-NEXT:    vpmovqw %xmm0, -{{[0-9]+}}(%rsp)
-; X64-SKX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; X64-SKX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,2],xmm0[0,2]
+; X64-SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-SKX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-SKX-NEXT:    vpmovdb %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-SKX-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-SKX-NEXT:    orl $-16777216, %eax # imm = 0xFF000000

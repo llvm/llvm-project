@@ -9,7 +9,6 @@
 define i32 @callee_unknown_use2(i32 %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL:define{{.*}}@callee_unknown_use2.{{[0-9]}}
 ; CHECK-NOT: alloca
-; CHECK: call void @llvm.lifetime
 bb:
   %tmp = alloca i32, align 4
   %tmp1 = bitcast i32* %tmp to i8*

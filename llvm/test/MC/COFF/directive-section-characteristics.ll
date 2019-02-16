@@ -13,7 +13,7 @@ entry:
 
 ; CHECK: Section {
 ; CHECK:   Name: .drectve
-; CHECK:   PointerToRawData: 0xB8
+; CHECK:   PointerToRawData: 0xB5
 ; CHECK:   Characteristics [
 ; CHECK:     IMAGE_SCN_ALIGN_1BYTES
 ; CHECK:     IMAGE_SCN_LNK_INFO

@@ -31,7 +31,7 @@ else()
   list(APPEND LIBCXXABI_SOURCES cxa_noexception.cpp)
 endif()
 
-if (LIBCXXABI_ENABLE_THREADS AND UNIX AND NOT (APPLE OR CYGWIN))
+if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN))
   list(APPEND LIBCXXABI_SOURCES cxa_thread_atexit.cpp)
 endif()
 
@@ -101,6 +101,31 @@ if ( APPLE )
     list(APPEND LIBCXXABI_SHARED_LINK_FLAGS
       "-compatibility_version 1"
       "-install_name /usr/lib/libc++abi.1.dylib")
+  endif()
+
+  if (LLVM_USE_SANITIZER)
+    if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
+        ("${LLVM_USE_SANITIZER}" STREQUAL "Address;Undefined") OR
+        ("${LLVM_USE_SANITIZER}" STREQUAL "Undefined;Address"))
+      set(LIBFILE "libclang_rt.asan_osx_dynamic.dylib")
+    elseif("${LLVM_USE_SANITIZER}" STREQUAL "Undefined")
+      set(LIBFILE "libclang_rt.ubsan_osx_dynamic.dylib")
+    elseif("${LLVM_USE_SANITIZER}" STREQUAL "Thread")
+      set(LIBFILE "libclang_rt.tsan_osx_dynamic.dylib")
+    else()
+      message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on OS X")
+    endif()
+    if (LIBFILE)
+      find_compiler_rt_dir(LIBDIR)
+      if (NOT IS_DIRECTORY "${LIBDIR}")
+        message(FATAL_ERROR "Cannot find compiler-rt directory on OS X required for LLVM_USE_SANITIZER")
+      endif()
+      set(LIBCXXABI_SANITIZER_LIBRARY "${LIBDIR}/${LIBFILE}")
+      set(LIBCXXABI_SANITIZER_LIBRARY "${LIBCXXABI_SANITIZER_LIBRARY}" PARENT_SCOPE)
+      message(STATUS "Manually linking compiler-rt library: ${LIBCXXABI_SANITIZER_LIBRARY}")
+      add_library_flags("${LIBCXXABI_SANITIZER_LIBRARY}")
+      add_link_flags("-Wl,-rpath,${LIBDIR}")
+    endif()
   endif()
 endif()
 

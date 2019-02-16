@@ -14,8 +14,8 @@
 # ...
 #
 # CHECK: bb.1.if.end:
-# CHECK: DBG_VALUE debug-use $rbp, 0, !37, !DIExpression(DW_OP_constu, 44, DW_OP_minus), debug-location !58
-# CHECK-NOT: DBG_VALUE debug-use $rbp, 0, !36, !DIExpression(DW_OP_constu, 48, DW_OP_minus), debug-location !57
+# CHECK: DBG_VALUE $rbp, 0, !37, !DIExpression(DW_OP_constu, 44, DW_OP_minus), debug-location !58
+# CHECK-NOT: DBG_VALUE $rbp, 0, !36, !DIExpression(DW_OP_constu, 48, DW_OP_minus), debug-location !57
 
 --- |
   ; ModuleID = '<stdin>'
@@ -274,12 +274,12 @@ body:             |
     CFI_INSTRUCTION offset $r13, -40
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
-    DBG_VALUE debug-use $edi, debug-use $noreg, !36, !DIExpression(), debug-location !57
-    DBG_VALUE debug-use $esi, debug-use $noreg, !37, !DIExpression(), debug-location !58
+    DBG_VALUE $edi, $noreg, !36, !DIExpression(), debug-location !57
+    DBG_VALUE $esi, $noreg, !37, !DIExpression(), debug-location !58
     $ebx = MOV32rr $esi
-    DBG_VALUE debug-use $ebx, debug-use $noreg, !37, !DIExpression(), debug-location !58
+    DBG_VALUE $ebx, $noreg, !37, !DIExpression(), debug-location !58
     $r15d = MOV32rr $edi
-    DBG_VALUE debug-use $r15d, debug-use $noreg, !36, !DIExpression(), debug-location !57
+    DBG_VALUE $r15d, $noreg, !36, !DIExpression(), debug-location !57
     renamable $r14 = MOV64ri -9223372036854775808
     $edi = MOV32rr $ebx
     CALL64pcrel32 @func1, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax

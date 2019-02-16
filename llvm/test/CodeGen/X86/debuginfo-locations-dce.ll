@@ -69,4 +69,3 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 ; CHECK-NEXT: DW_AT_location{{.*}}
 ; CHECK-NEXT: {{.*}}DW_OP_reg17 XMM0
 ; CHECK-NEXT: DW_AT_name{{.*}}("MyVar")
-

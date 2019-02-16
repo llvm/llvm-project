@@ -59,9 +59,6 @@ struct TestSelectionRangesInFile {
   };
   std::vector<RangeGroup> GroupedRanges;
 
-  TestSelectionRangesInFile(TestSelectionRangesInFile &&) = default;
-  TestSelectionRangesInFile &operator=(TestSelectionRangesInFile &&) = default;
-
   bool foreachRange(const SourceManager &SM,
                     llvm::function_ref<void(SourceRange)> Callback) const;
 

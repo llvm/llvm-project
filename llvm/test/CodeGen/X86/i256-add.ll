@@ -12,7 +12,7 @@ define void @add(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    subl $8, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl 28(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl 24(%eax), %ecx
 ; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl 20(%eax), %esi
@@ -30,7 +30,7 @@ define void @add(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    adcl %esi, 20(%eax)
 ; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X32-NEXT:    adcl %ecx, 24(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X32-NEXT:    adcl %ecx, 28(%eax)
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi
@@ -66,7 +66,7 @@ define void @sub(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    subl $8, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl 28(%eax), %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
+; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X32-NEXT:    movl 24(%eax), %ecx
 ; X32-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; X32-NEXT:    movl 20(%eax), %esi
@@ -84,7 +84,7 @@ define void @sub(i256* %p, i256* %q) nounwind {
 ; X32-NEXT:    sbbl %esi, 20(%eax)
 ; X32-NEXT:    movl (%esp), %ecx # 4-byte Reload
 ; X32-NEXT:    sbbl %ecx, 24(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx # 4-byte Reload
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X32-NEXT:    sbbl %ecx, 28(%eax)
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi

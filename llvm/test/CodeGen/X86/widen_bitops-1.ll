@@ -15,8 +15,8 @@ define i32 @and_i32_as_v4i8(i32 %a, i32 %b) nounwind {
 ;
 ; X64-SSE-LABEL: and_i32_as_v4i8:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    andl %esi, %edi
 ; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    andl %esi, %eax
 ; X64-SSE-NEXT:    retq
   %1 = bitcast i32 %a to <4 x i8>
   %2 = bitcast i32 %b to <4 x i8>
@@ -34,8 +34,8 @@ define i32 @xor_i32_as_v4i8(i32 %a, i32 %b) nounwind {
 ;
 ; X64-SSE-LABEL: xor_i32_as_v4i8:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorl %esi, %edi
 ; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    xorl %esi, %eax
 ; X64-SSE-NEXT:    retq
   %1 = bitcast i32 %a to <4 x i8>
   %2 = bitcast i32 %b to <4 x i8>
@@ -53,8 +53,8 @@ define i32 @or_i32_as_v4i8(i32 %a, i32 %b) nounwind {
 ;
 ; X64-SSE-LABEL: or_i32_as_v4i8:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    orl %esi, %edi
 ; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    orl %esi, %eax
 ; X64-SSE-NEXT:    retq
   %1 = bitcast i32 %a to <4 x i8>
   %2 = bitcast i32 %b to <4 x i8>
@@ -76,8 +76,8 @@ define i32 @and_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 ;
 ; X64-SSE-LABEL: and_i32_as_v8i4:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    andl %esi, %edi
 ; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    andl %esi, %eax
 ; X64-SSE-NEXT:    retq
   %1 = bitcast i32 %a to <8 x i4>
   %2 = bitcast i32 %b to <8 x i4>
@@ -95,8 +95,8 @@ define i32 @xor_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 ;
 ; X64-SSE-LABEL: xor_i32_as_v8i4:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorl %esi, %edi
 ; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    xorl %esi, %eax
 ; X64-SSE-NEXT:    retq
   %1 = bitcast i32 %a to <8 x i4>
   %2 = bitcast i32 %b to <8 x i4>
@@ -114,8 +114,8 @@ define i32 @or_i32_as_v8i4(i32 %a, i32 %b) nounwind {
 ;
 ; X64-SSE-LABEL: or_i32_as_v8i4:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    orl %esi, %edi
 ; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    orl %esi, %eax
 ; X64-SSE-NEXT:    retq
   %1 = bitcast i32 %a to <8 x i4>
   %2 = bitcast i32 %b to <8 x i4>

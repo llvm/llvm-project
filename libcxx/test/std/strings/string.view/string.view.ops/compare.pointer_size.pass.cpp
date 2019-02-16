@@ -13,6 +13,7 @@
 
 #include <string_view>
 #include <cassert>
+#include <stdexcept>
 
 #include "test_macros.h"
 #include "constexpr_char_traits.hpp"

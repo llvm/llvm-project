@@ -1,4 +1,5 @@
 include TODO lit.py
+recursive-include lit/builtin_commands *
 recursive-include tests *
 recursive-include examples *
 global-exclude *pyc

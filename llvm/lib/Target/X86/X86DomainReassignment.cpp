@@ -31,10 +31,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeX86DomainReassignmentPass(PassRegistry &);
-}
-
 #define DEBUG_TYPE "x86-domain-reassignment"
 
 STATISTIC(NumClosuresConverted, "Number of closures converted by the pass");
@@ -216,6 +212,27 @@ public:
 
   InstrCOPYReplacer(unsigned SrcOpcode, RegDomain DstDomain, unsigned DstOpcode)
       : InstrReplacer(SrcOpcode, DstOpcode), DstDomain(DstDomain) {}
+
+  bool isLegal(const MachineInstr *MI,
+               const TargetInstrInfo *TII) const override {
+    if (!InstrConverterBase::isLegal(MI, TII))
+      return false;
+
+    // Don't allow copies to/flow GR8/GR16 physical registers.
+    // FIXME: Is there some better way to support this?
+    unsigned DstReg = MI->getOperand(0).getReg();
+    if (TargetRegisterInfo::isPhysicalRegister(DstReg) &&
+        (X86::GR8RegClass.contains(DstReg) ||
+         X86::GR16RegClass.contains(DstReg)))
+      return false;
+    unsigned SrcReg = MI->getOperand(1).getReg();
+    if (TargetRegisterInfo::isPhysicalRegister(SrcReg) &&
+        (X86::GR8RegClass.contains(SrcReg) ||
+         X86::GR16RegClass.contains(SrcReg)))
+      return false;
+
+    return true;
+  }
 
   double getExtraCost(const MachineInstr *MI,
                       MachineRegisterInfo *MRI) const override {

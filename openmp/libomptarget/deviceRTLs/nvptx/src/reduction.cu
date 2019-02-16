@@ -31,7 +31,7 @@ int32_t __gpu_block_reduce() {
 }
 
 EXTERN
-int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
+int32_t __kmpc_reduce_gpu(kmp_Ident *loc, int32_t global_tid, int32_t num_vars,
                           size_t reduce_size, void *reduce_data,
                           void *reduce_array_size, kmp_ReductFctPtr *reductFct,
                           kmp_CriticalName *lck) {
@@ -40,7 +40,8 @@ int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
   int numthread;
   if (currTaskDescr->IsParallelConstruct()) {
     numthread =
-        GetNumberOfOmpThreads(threadId, isSPMDMode(), isRuntimeUninitialized());
+        GetNumberOfOmpThreads(threadId, checkSPMDMode(loc),
+                              checkRuntimeUninitialized(loc));
   } else {
     numthread = GetNumberOfOmpTeams();
   }
@@ -55,12 +56,12 @@ int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
 }
 
 EXTERN
-int32_t __kmpc_reduce_combined(kmp_Indent *loc) {
+int32_t __kmpc_reduce_combined(kmp_Ident *loc) {
   return threadIdx.x == 0 ? 2 : 0;
 }
 
 EXTERN
-int32_t __kmpc_reduce_simd(kmp_Indent *loc) {
+int32_t __kmpc_reduce_simd(kmp_Ident *loc) {
   return (threadIdx.x % 32 == 0) ? 1 : 0;
 }
 
@@ -75,12 +76,12 @@ EXTERN int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size) {
 }
 
 EXTERN int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size) {
-  int lo, hi;
-  asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
-  hi = __SHFL_DOWN_SYNC(0xFFFFFFFF, hi, delta, size);
-  lo = __SHFL_DOWN_SYNC(0xFFFFFFFF, lo, delta, size);
-  asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
-  return val;
+   int lo, hi;
+   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
+   hi = __SHFL_DOWN_SYNC(0xFFFFFFFF, hi, delta, size);
+   lo = __SHFL_DOWN_SYNC(0xFFFFFFFF, lo, delta, size);
+   asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
+   return val;
 }
 
 static INLINE void gpu_regular_warp_reduce(void *reduce_data,
@@ -148,7 +149,7 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                      kmp_ShuffleReductFctPtr shflFct,
                                      kmp_InterWarpCopyFctPtr cpyFct,
                                      bool isSPMDExecutionMode,
-                                     bool isRuntimeUninitialized = false) {
+                                     bool isRuntimeUninitialized) {
   uint32_t BlockThreadId = GetLogicalThreadIdInBlock();
   uint32_t NumThreads = GetNumberOfOmpThreads(
       BlockThreadId, isSPMDExecutionMode, isRuntimeUninitialized);
@@ -231,8 +232,7 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
 
   // Get the OMP thread Id. This is different from BlockThreadId in the case of
   // an L2 parallel region.
-  return GetOmpThreadId(BlockThreadId, isSPMDExecutionMode,
-                        isRuntimeUninitialized) == 0;
+  return global_tid == 0;
 #endif // __CUDA_ARCH__ >= 700
 }
 
@@ -240,9 +240,10 @@ EXTERN
 int32_t __kmpc_nvptx_parallel_reduce_nowait(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct) {
-  return nvptx_parallel_reduce_nowait(global_tid, num_vars, reduce_size,
-                                      reduce_data, shflFct, cpyFct,
-                                      /*isSPMDExecutionMode=*/isSPMDMode());
+  return nvptx_parallel_reduce_nowait(
+      global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
+      /*isSPMDExecutionMode=*/isSPMDMode(),
+      /*isRuntimeUninitialized=*/isRuntimeUninitialized());
 }
 
 EXTERN
@@ -270,7 +271,7 @@ int32_t nvptx_teams_reduce_nowait(
     int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
     kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct,
     kmp_CopyToScratchpadFctPtr scratchFct, kmp_LoadReduceFctPtr ldFct,
-    bool isSPMDExecutionMode, bool isRuntimeUninitialized = false) {
+    bool isSPMDExecutionMode, bool isRuntimeUninitialized) {
   uint32_t ThreadId = GetLogicalThreadIdInBlock();
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
@@ -399,9 +400,10 @@ int32_t __kmpc_nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                          kmp_InterWarpCopyFctPtr cpyFct,
                                          kmp_CopyToScratchpadFctPtr scratchFct,
                                          kmp_LoadReduceFctPtr ldFct) {
-  return nvptx_teams_reduce_nowait(global_tid, num_vars, reduce_size,
-                                   reduce_data, shflFct, cpyFct, scratchFct,
-                                   ldFct, /*isSPMDExecutionMode=*/isSPMDMode());
+  return nvptx_teams_reduce_nowait(
+      global_tid, num_vars, reduce_size, reduce_data, shflFct, cpyFct,
+      scratchFct, ldFct, /*isSPMDExecutionMode=*/isSPMDMode(),
+      /*isRuntimeUninitialized=*/isRuntimeUninitialized());
 }
 
 EXTERN
@@ -427,3 +429,22 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_simple_generic(
                                    /*isSPMDExecutionMode=*/false,
                                    /*isRuntimeUninitialized=*/true);
 }
+
+EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_simple(kmp_Ident *loc,
+                                                       int32_t global_tid,
+                                                       kmp_CriticalName *crit) {
+  if (checkSPMDMode(loc) && GetThreadIdInBlock() != 0)
+    return 0;
+  // The master thread of the team actually does the reduction.
+  while (atomicCAS((uint32_t *)crit, 0, 1))
+    ;
+  return 1;
+}
+
+EXTERN void
+__kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
+                                            kmp_CriticalName *crit) {
+  __threadfence_system();
+  (void)atomicExch((uint32_t *)crit, 0);
+}
+

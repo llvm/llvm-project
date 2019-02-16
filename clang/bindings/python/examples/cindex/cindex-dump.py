@@ -79,7 +79,7 @@ def main():
     if not tu:
         parser.error("unable to load input")
 
-    pprint(('diags', map(get_diag_info, tu.diagnostics)))
+    pprint(('diags', [get_diag_info(d) for d in  tu.diagnostics]))
     pprint(('nodes', get_info(tu.cursor)))
 
 if __name__ == '__main__':

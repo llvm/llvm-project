@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=hawaii -verify-machineinstrs -run-pass si-fold-operands,dead-mi-elimination -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -run-pass si-fold-operands,dead-mi-elimination -o - %s | FileCheck -check-prefix=GCN %s
 ...
 
 # GCN-LABEL: name: s_fold_and_imm_regimm_32{{$}}
@@ -316,7 +316,7 @@ body:             |
 
     %2 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %3 = S_LOAD_DWORDX2_IMM %0, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %15 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16 = REG_SEQUENCE %2, 1, %15, 2
     %17 = V_LSHLREV_B64 2, killed %16, implicit $exec
@@ -829,5 +829,77 @@ body:             |
     liveins: $vcc
     SI_END_CF %0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM implicit $vcc
+
+...
+---
+# GCN-LABEL: name: constant_fold_lshl_or_reg0_immreg_reg{{$}}
+# GCN: %2:vgpr_32 = COPY $vgpr0, implicit $exec
+# GCN-NEXT: S_ENDPGM implicit %2
+
+name: constant_fold_lshl_or_reg0_immreg_reg
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+  %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+  %2:vgpr_32 = V_LSHL_OR_B32 %0,%1, $vgpr0, implicit $exec
+  S_ENDPGM implicit %2
+
+...
+
+---
+
+# GCN-LABEL: name: constant_fold_lshl_or_reg0_immreg_imm{{$}}
+# GCN: %2:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
+# GCN-NEXT: S_ENDPGM implicit %2
+
+name: constant_fold_lshl_or_reg0_immreg_imm
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+
+  %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+  %2:vgpr_32 = V_LSHL_OR_B32 %0, %1, 10, implicit $exec
+  S_ENDPGM implicit %2
+
+...
+
+---
+
+# GCN-LABEL: name: constant_fold_lshl_or_reg0_immreg_immreg{{$}}
+# GCN: %3:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec, implicit $exec
+# GCN-NEXT: S_ENDPGM implicit %3
+
+name: constant_fold_lshl_or_reg0_immreg_immreg
+alignment:       0
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+
+  %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  %1:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+  %2:vgpr_32 = V_MOV_B32_e32 12345, implicit $exec
+  %3:vgpr_32 = V_LSHL_OR_B32 %0, %1, %2, implicit $exec
+  S_ENDPGM implicit %3
 
 ...

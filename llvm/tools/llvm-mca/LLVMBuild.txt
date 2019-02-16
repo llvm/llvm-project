@@ -19,4 +19,4 @@
 type = Tool
 name = llvm-mca
 parent = Tools
-required_libraries = MC MCParser Support all-targets
+required_libraries = MC MCA MCParser Support all-targets

@@ -47,7 +47,7 @@
 ; CHECK: void __cdecl WrapFnRef<&void __cdecl VoidFn(void)>(void)
 
 ??$WrapFnPtr@$1?VoidStaticMethod@Thing@@SAXXZ@@YAXXZ
-; CHECK: void __cdecl WrapFnPtr<&static void __cdecl Thing::VoidStaticMethod(void)>(void)
+; CHECK: void __cdecl WrapFnPtr<&public: static void __cdecl Thing::VoidStaticMethod(void)>(void)
 
 ??$WrapFnRef@$1?VoidStaticMethod@Thing@@SAXXZ@@YAXXZ
-; CHECK: void __cdecl WrapFnRef<&static void __cdecl Thing::VoidStaticMethod(void)>(void)
+; CHECK: void __cdecl WrapFnRef<&public: static void __cdecl Thing::VoidStaticMethod(void)>(void)

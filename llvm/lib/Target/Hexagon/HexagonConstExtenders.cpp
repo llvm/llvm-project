@@ -376,7 +376,7 @@ namespace {
     using IndexList = SetVector<unsigned>;
     using ExtenderInit = std::pair<ExtValue, ExtExpr>;
     using AssignmentMap = std::map<ExtenderInit, IndexList>;
-    using LocDefMap = std::map<Loc, IndexList>;
+    using LocDefList = std::vector<std::pair<Loc, IndexList>>;
 
     const HexagonInstrInfo *HII = nullptr;
     const HexagonRegisterInfo *HRI = nullptr;
@@ -399,7 +399,7 @@ namespace {
     void assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
                      AssignmentMap &IMap);
     void calculatePlacement(const ExtenderInit &ExtI, const IndexList &Refs,
-                            LocDefMap &Defs);
+                            LocDefList &Defs);
     Register insertInitializer(Loc DefL, const ExtenderInit &ExtI);
     bool replaceInstrExact(const ExtDesc &ED, Register ExtR);
     bool replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
@@ -730,21 +730,13 @@ bool HCE::ExtRoot::operator< (const HCE::ExtRoot &ER) const {
     }
     case MachineOperand::MO_ExternalSymbol:
       return StringRef(V.SymbolName) < StringRef(ER.V.SymbolName);
-    case MachineOperand::MO_GlobalAddress: {
-      // Global values may not have names, so compare their positions
-      // in the parent module.
-      const Module &M = *V.GV->getParent();
-      auto FindPos = [&M] (const GlobalValue &V) {
-        unsigned P = 0;
-        for (const GlobalValue &T : M.global_values()) {
-          if (&T == &V)
-            return P;
-          P++;
-        }
-        llvm_unreachable("Global value not found in module");
-      };
-      return FindPos(*V.GV) < FindPos(*ER.V.GV);
-    }
+    case MachineOperand::MO_GlobalAddress:
+      // Do not use GUIDs, since they depend on the source path. Moving the
+      // source file to a different directory could cause different GUID
+      // values for a pair of given symbols. These symbols could then compare
+      // "less" in one directory, but "greater" in another.
+      assert(!V.GV->getName().empty() && !ER.V.GV->getName().empty());
+      return V.GV->getName() < ER.V.GV->getName();
     case MachineOperand::MO_BlockAddress: {
       const BasicBlock *ThisB = V.BA->getBasicBlock();
       const BasicBlock *OtherB = ER.V.BA->getBasicBlock();
@@ -796,6 +788,7 @@ HCE::ExtValue::operator MachineOperand() const {
       return MachineOperand::CreateCPI(V.ImmVal, Offset, TF);
     case MachineOperand::MO_JumpTableIndex:
       assert(Offset == 0);
+      return MachineOperand::CreateJTI(V.ImmVal, TF);
     default:
       llvm_unreachable("Unhandled kind");
  }
@@ -1215,12 +1208,19 @@ void HCE::recordExtender(MachineInstr &MI, unsigned OpNum) {
       case Hexagon::S4_subaddi:       // (__: ## - Rs<<0)
         ED.Expr.Rs = MI.getOperand(OpNum+1);
         ED.Expr.Neg = true;
+        break;
       default:                        // (__: ## + __<<_)
         break;
     }
   }
 
   ED.UseMI = &MI;
+
+  // Ignore unnamed globals.
+  ExtRoot ER(ED.getOp());
+  if (ER.Kind == MachineOperand::MO_GlobalAddress)
+    if (ER.V.GV->getName().empty())
+      return;
   Extenders.push_back(ED);
 }
 
@@ -1243,9 +1243,13 @@ void HCE::collectInstr(MachineInstr &MI) {
 
 void HCE::collect(MachineFunction &MF) {
   Extenders.clear();
-  for (MachineBasicBlock &MBB : MF)
+  for (MachineBasicBlock &MBB : MF) {
+    // Skip unreachable blocks.
+    if (MBB.getNumber() == -1)
+      continue;
     for (MachineInstr &MI : MBB)
       collectInstr(MI);
+  }
 }
 
 void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
@@ -1470,7 +1474,7 @@ void HCE::assignInits(const ExtRoot &ER, unsigned Begin, unsigned End,
 }
 
 void HCE::calculatePlacement(const ExtenderInit &ExtI, const IndexList &Refs,
-      LocDefMap &Defs) {
+      LocDefList &Defs) {
   if (Refs.empty())
     return;
 
@@ -1517,7 +1521,7 @@ void HCE::calculatePlacement(const ExtenderInit &ExtI, const IndexList &Refs,
     It = DomB->getFirstTerminator();
   }
   Loc DefLoc(DomB, It);
-  Defs.emplace(DefLoc, Refs);
+  Defs.emplace_back(DefLoc, Refs);
 }
 
 HCE::Register HCE::insertInitializer(Loc DefL, const ExtenderInit &ExtI) {
@@ -1629,7 +1633,7 @@ bool HCE::replaceInstrExact(const ExtDesc &ED, Register ExtR) {
       else
         MIB.add(MachineOperand(ExtR));
     }
-    MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    MIB.cloneMemRefs(MI);
     MBB.erase(MI);
     return true;
   }
@@ -1680,7 +1684,7 @@ bool HCE::replaceInstrExact(const ExtDesc &ED, Register ExtR) {
     // Add the stored value for stores.
     if (MI.mayStore())
       MIB.add(getStoredValueOp(MI));
-    MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    MIB.cloneMemRefs(MI);
     MBB.erase(MI);
     return true;
   }
@@ -1715,6 +1719,15 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
 
     // Clamp Diff to the 16 bit range.
     int32_t D = isInt<16>(Diff) ? Diff : (Diff > 0 ? 32767 : -32768);
+    if (Diff > 32767) {
+      // Split Diff into two values: one that is close to min/max int16,
+      // and the other being the rest, and such that both have the same
+      // "alignment" as Diff.
+      uint32_t UD = Diff;
+      OffsetRange R = getOffsetRange(MI.getOperand(0));
+      uint32_t A = std::min<uint32_t>(R.Align, 1u << countTrailingZeros(UD));
+      D &= ~(A-1);
+    }
     BuildMI(MBB, At, dl, HII->get(IdxOpc))
       .add(MI.getOperand(0))
       .add(MachineOperand(ExtR))
@@ -1797,7 +1810,7 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
     // Add the stored value for stores.
     if (MI.mayStore())
       MIB.add(getStoredValueOp(MI));
-    MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    MIB.cloneMemRefs(MI);
     MBB.erase(MI);
     return true;
   }
@@ -1878,7 +1891,7 @@ bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
 }
 
 bool HCE::replaceExtenders(const AssignmentMap &IMap) {
-  LocDefMap Defs;
+  LocDefList Defs;
   bool Changed = false;
 
   for (const std::pair<ExtenderInit,IndexList> &P : IMap) {
@@ -1931,6 +1944,11 @@ const MachineOperand &HCE::getStoredValueOp(const MachineInstr &MI) const {
 bool HCE::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  if (MF.getFunction().hasPersonalityFn()) {
+    LLVM_DEBUG(dbgs() << getPassName() << ": skipping " << MF.getName()
+                      << " due to exception handling\n");
+    return false;
+  }
   LLVM_DEBUG(MF.print(dbgs() << "Before " << getPassName() << '\n', nullptr));
 
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
@@ -1940,10 +1958,24 @@ bool HCE::runOnMachineFunction(MachineFunction &MF) {
   AssignmentMap IMap;
 
   collect(MF);
-  llvm::sort(Extenders.begin(), Extenders.end(),
-    [](const ExtDesc &A, const ExtDesc &B) {
-      return ExtValue(A) < ExtValue(B);
-    });
+  llvm::sort(Extenders, [this](const ExtDesc &A, const ExtDesc &B) {
+    ExtValue VA(A), VB(B);
+    if (VA != VB)
+      return VA < VB;
+    const MachineInstr *MA = A.UseMI;
+    const MachineInstr *MB = B.UseMI;
+    if (MA == MB) {
+      // If it's the same instruction, compare operand numbers.
+      return A.OpNum < B.OpNum;
+    }
+
+    const MachineBasicBlock *BA = MA->getParent();
+    const MachineBasicBlock *BB = MB->getParent();
+    assert(BA->getNumber() != -1 && BB->getNumber() != -1);
+    if (BA != BB)
+      return BA->getNumber() < BB->getNumber();
+    return MDT->dominates(MA, MB);
+  });
 
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "Collected " << Extenders.size() << " extenders\n");

@@ -83,9 +83,7 @@ declare i32 @doSomething(i32, i32*)
 ; DISABLE: testl %edi, %edi
 ; DISABLE: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
-; SUM is in %esi because it is coalesced with the second
-; argument on the else path.
-; CHECK: xorl [[SUM:%esi]], [[SUM]]
+; CHECK: xorl [[SUM:%eax]], [[SUM]]
 ; CHECK-NEXT: movl $10, [[IV:%e[a-z]+]]
 ;
 ; Next BB.
@@ -99,23 +97,22 @@ declare i32 @doSomething(i32, i32*)
 ; SUM << 3.
 ; CHECK: shll $3, [[SUM]]
 ;
-; Jump to epilogue.
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 entry:
@@ -129,7 +126,7 @@ for.preheader:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.preheader ]
   %sum.04 = phi i32 [ %add, %for.body ], [ 0, %for.preheader ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -181,7 +178,7 @@ for.preheader:
 for.body:                                         ; preds = %for.body, %entry
   %i.04 = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]
   %sum.03 = phi i32 [ 0, %for.preheader ], [ %add, %for.body ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.03
   %inc = add nuw nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -210,7 +207,7 @@ for.end:                                          ; preds = %for.body
 ; DISABLE-NEXT: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: nop
-; CHECK: xorl [[SUM:%esi]], [[SUM]]
+; CHECK: xorl [[SUM:%eax]], [[SUM]]
 ; CHECK-NEXT: movl $10, [[IV:%e[a-z]+]]
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ## %for.body
@@ -222,22 +219,22 @@ for.end:                                          ; preds = %for.body
 ; CHECK: nop
 ; CHECK: shll $3, [[SUM]]
 ;
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 entry:
@@ -251,7 +248,7 @@ for.preheader:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.preheader ]
   %sum.04 = phi i32 [ %add, %for.body ], [ 0, %for.preheader ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -286,7 +283,7 @@ if.end:                                           ; preds = %if.else, %for.end
 ; DISABLE-NEXT: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; CHECK: nop
-; CHECK: xorl [[SUM:%esi]], [[SUM]]
+; CHECK: xorl [[SUM:%eax]], [[SUM]]
 ; CHECK-NEXT: movl $10, [[IV:%e[a-z]+]]
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ## %for.body
@@ -297,23 +294,23 @@ if.end:                                           ; preds = %if.else, %for.end
 ; Next BB.
 ; CHECK: shll $3, [[SUM]]
 ;
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
 
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 entry:
@@ -327,7 +324,7 @@ if.then:                                          ; preds = %entry
 for.body:                                         ; preds = %for.body, %if.then
   %i.05 = phi i32 [ 0, %if.then ], [ %inc, %for.body ]
   %sum.04 = phi i32 [ 0, %if.then ], [ %add, %for.body ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -379,24 +376,24 @@ entry:
 ; CHECK-NEXT: jne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: nop
-; CHECK: xorl %esi, %esi
+; CHECK: xorl %eax, %eax
 ;
-; DISABLE: jmp [[EPILOG_BB:LBB[0-9_]+]]
+; DISABLE: popq
+; DISABLE: retq
 ;
 ; DISABLE: [[ELSE_LABEL]]: ## %if.else
-; Shift second argument by one and store into returned register.
-; DISABLE: addl %esi, %esi
-; DISABLE: [[EPILOG_BB]]: ## %if.end
+; Shift second argument by one in returned register.
+; DISABLE: movl %esi, %eax
+; DISABLE: addl %esi, %eax
 ;
 ; Epilogue code.
 ; CHECK-DAG: popq %rbx
-; CHECK-DAG: movl %esi, %eax
 ; CHECK: retq
 ;
 ; ENABLE: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; ENABLE: addl %esi, %esi
-; ENABLE-NEXT: movl %esi, %eax
+; ENABLE: movl %esi, %eax
+; ENABLE: addl %esi, %eax
 ; ENABLE-NEXT: retq
 define i32 @inlineAsm(i32 %cond, i32 %N) {
 entry:
@@ -430,41 +427,38 @@ if.end:                                           ; preds = %for.body, %if.else
 ; Check that we handle calls to variadic functions correctly.
 ; CHECK-LABEL: callVariadicFunc:
 ;
+; ENABLE: movl %esi, %eax
 ; ENABLE: testl %edi, %edi
 ; ENABLE-NEXT: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Prologue code.
 ; CHECK: pushq
 ;
+; DISABLE: movl %esi, %eax
 ; DISABLE: testl %edi, %edi
 ; DISABLE-NEXT: je [[ELSE_LABEL:LBB[0-9_]+]]
 ;
 ; Setup of the varags.
-; CHECK: movl %esi, (%rsp)
-; CHECK-NEXT: xorl %eax, %eax
-; CHECK-NEXT: %esi, %edi
-; CHECK-NEXT: %esi, %edx
-; CHECK-NEXT: %esi, %ecx
-; CHECK-NEXT: %esi, %r8d
-; CHECK-NEXT: %esi, %r9d
+; CHECK:       movl	%eax, (%rsp)
+; CHECK-NEXT:  movl	%eax, %edi
+; CHECK-NEXT:  movl	%eax, %esi
+; CHECK-NEXT:  movl	%eax, %edx
+; CHECK-NEXT:  movl	%eax, %ecx
+; CHECK-NEXT:  movl	%eax, %r8d
+; CHECK-NEXT:  movl	%eax, %r9d
+; CHECK-NEXT:  xorl	%eax, %eax
 ; CHECK-NEXT: callq _someVariadicFunc
-; CHECK-NEXT: movl %eax, %esi
-; CHECK-NEXT: shll $3, %esi
+; CHECK-NEXT: shll $3, %eax
 ;
 ; ENABLE-NEXT: addq $8, %rsp
-; ENABLE-NEXT: movl %esi, %eax
 ; ENABLE-NEXT: retq
 ;
-; DISABLE: jmp [[IFEND_LABEL:LBB[0-9_]+]]
-;
+
 ; CHECK: [[ELSE_LABEL]]: ## %if.else
 ; Shift second argument by one and store into returned register.
-; CHECK: addl %esi, %esi
-;
-; DISABLE: [[IFEND_LABEL]]: ## %if.end
+; CHECK: addl %eax, %eax
 ;
 ; Epilogue code.
-; CHECK-NEXT: movl %esi, %eax
 ; DISABLE-NEXT: popq
 ; CHECK-NEXT: retq
 define i32 @callVariadicFunc(i32 %cond, i32 %N) {
@@ -519,8 +513,7 @@ declare hidden fastcc %struct.temp_slot* @find_temp_slot_from_address(%struct.rt
 ; CHECK: testq   %rdi, %rdi
 ; CHECK-NEXT: je      [[CLEANUP:LBB[0-9_]+]]
 ;
-; CHECK: movzwl  (%rdi), [[BF_LOAD:%e[a-z]+]]
-; CHECK-NEXT: cmpl $66, [[BF_LOAD]]
+; CHECK: cmpw $66, (%rdi)
 ; CHECK-NEXT: jne [[CLEANUP]]
 ;
 ; CHECK: movq 8(%rdi), %rdi

@@ -100,7 +100,7 @@ for.preheader:                                    ; preds = %entry
 for.body:                                         ; preds = %for.body, %for.preheader
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.preheader ]
   %sum.04 = phi i32 [ %add, %for.body ], [ 0, %for.preheader ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10

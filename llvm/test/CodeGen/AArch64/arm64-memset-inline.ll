@@ -113,9 +113,9 @@ define void @bzero_20_stack() {
 
 define void @bzero_26_stack() {
 ; CHECK-LABEL: bzero_26_stack:
-; CHECK:       stp xzr, xzr, [sp]
+; CHECK:       stp xzr, xzr, [sp, #8]
+; CHECK-NEXT:  str xzr, [sp]
 ; CHECK-NEXT:  strh wzr, [sp, #24]
-; CHECK-NEXT:  str xzr, [sp, #16]
 ; CHECK-NEXT:  bl something
   %buf = alloca [26 x i8], align 1
   %cast = bitcast [26 x i8]* %buf to i8*
@@ -137,14 +137,12 @@ define void @bzero_32_stack() {
   ret void
 }
 
-; FIXME These don't pair up because the offset isn't a multiple of 16 bits. x0, however, could be used as a base for a paired store.
 define void @bzero_40_stack() {
 ; CHECK-LABEL: bzero_40_stack:
-; CHECK:      stp xzr, x30, [sp, #40]
-; CHECK:      movi v0.2d, #0000000000000000
-; CHECK-NEXT: add x0, sp, #8
-; CHECK-NEXT: stur q0, [sp, #24]
-; CHECK-NEXT: stur q0, [sp, #8]
+; CHECK:       movi v0.2d, #0000000000000000
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str xzr, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT: bl something
   %buf = alloca [40 x i8], align 1
   %cast = bitcast [40 x i8]* %buf to i8*
@@ -167,16 +165,13 @@ define void @bzero_64_stack() {
   ret void
 }
 
-; FIXME These don't pair up because the offset isn't a multiple of 16 bits. x0, however, could be used as a base for a paired store.
 define void @bzero_72_stack() {
 ; CHECK-LABEL: bzero_72_stack:
-; CHECK:       stp xzr, x30, [sp, #72]
 ; CHECK:       movi v0.2d, #0000000000000000
-; CHECK-NEXT:  x0, sp, #8
-; CHECK-NEXT:  stur q0, [sp, #56]
-; CHECK-NEXT:  stur q0, [sp, #40]
-; CHECK-NEXT:  stur q0, [sp, #24]
-; CHECK-NEXT:  stur q0, [sp, #8]
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str xzr, [sp, #64]
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [72 x i8], align 1
   %cast = bitcast [72 x i8]* %buf to i8*
@@ -247,14 +242,12 @@ define void @memset_8_stack() {
   ret void
 }
 
-; FIXME This could be better: x9 is a superset of w8's bit-pattern.
 define void @memset_12_stack() {
 ; CHECK-LABEL: memset_12_stack:
-; CHECK:       mov w8, #-1431655766
-; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK:       mov x8, #-6148914691236517206
 ; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str x8, [sp]
 ; CHECK-NEXT:  str w8, [sp, #8]
-; CHECK-NEXT:  str x9, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [12 x i8], align 1
   %cast = bitcast [12 x i8]* %buf to i8*
@@ -277,14 +270,12 @@ define void @memset_16_stack() {
   ret void
 }
 
-; FIXME This could be better: x9 is a superset of w8's bit-pattern.
 define void @memset_20_stack() {
 ; CHECK-LABEL: memset_20_stack:
-; CHECK:       mov w8, #-1431655766
-; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK:       mov x8, #-6148914691236517206
 ; CHECK-NEXT:  add x0, sp, #8
+; CHECK-NEXT:  stp x8, x8, [sp, #8]
 ; CHECK-NEXT:  str w8, [sp, #24]
-; CHECK-NEXT:  stp x9, x9, [sp, #8]
 ; CHECK-NEXT:  bl something
   %buf = alloca [20 x i8], align 1
   %cast = bitcast [20 x i8]* %buf to i8*
@@ -293,15 +284,13 @@ define void @memset_20_stack() {
   ret void
 }
 
-; FIXME This could be better: x9 is a superset of w8's bit-pattern.
 define void @memset_26_stack() {
 ; CHECK-LABEL: memset_26_stack:
-; CHECK:       mov w8, #43690
-; CHECK-NEXT:  mov x9, #-6148914691236517206
+; CHECK:       mov x8, #-6148914691236517206
 ; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  stp x8, x8, [sp, #8]
+; CHECK-NEXT:  str x8, [sp]
 ; CHECK-NEXT:  strh w8, [sp, #24]
-; CHECK-NEXT:  stp x9, x9, [sp, #8]
-; CHECK-NEXT:  str x9, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [26 x i8], align 1
   %cast = bitcast [26 x i8]* %buf to i8*
@@ -310,14 +299,11 @@ define void @memset_26_stack() {
   ret void
 }
 
-; FIXME This could use FP ops.
 define void @memset_32_stack() {
 ; CHECK-LABEL: memset_32_stack:
-; CHECK:       mov x8, #-6148914691236517206
+; CHECK:       movi v0.16b, #170
 ; CHECK-NEXT:  mov x0, sp
-; CHECK-NEXT:  stp x8, x30, [sp, #24]
-; CHECK-NEXT:  stp x8, x8, [sp, #8]
-; CHECK-NEXT:  str x8, [sp]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [32 x i8], align 1
   %cast = bitcast [32 x i8]* %buf to i8*
@@ -326,14 +312,13 @@ define void @memset_32_stack() {
   ret void
 }
 
-; FIXME This could use FP ops.
 define void @memset_40_stack() {
 ; CHECK-LABEL: memset_40_stack:
 ; CHECK:       mov x8, #-6148914691236517206
-; CHECK-NEXT:  add x0, sp, #8
-; CHECK-NEXT:  stp x8, x30, [sp, #40]
-; CHECK-NEXT:  stp x8, x8, [sp, #24]
-; CHECK-NEXT:  stp x8, x8, [sp, #8]
+; CHECK-NEXT:  movi v0.16b, #170
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str x8, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT: bl something
   %buf = alloca [40 x i8], align 1
   %cast = bitcast [40 x i8]* %buf to i8*
@@ -342,16 +327,12 @@ define void @memset_40_stack() {
   ret void
 }
 
-; FIXME This could use FP ops.
 define void @memset_64_stack() {
 ; CHECK-LABEL: memset_64_stack:
-; CHECK:       mov x8, #-6148914691236517206
+; CHECK:       movi v0.16b, #170
 ; CHECK-NEXT:  mov x0, sp
-; CHECK-NEXT:  stp x8, x30, [sp, #56]
-; CHECK-NEXT:  stp x8, x8, [sp, #40]
-; CHECK-NEXT:  stp x8, x8, [sp, #24]
-; CHECK-NEXT:  stp x8, x8, [sp, #8]
-; CHECK-NEXT:  str x8, [sp]
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [64 x i8], align 1
   %cast = bitcast [64 x i8]* %buf to i8*
@@ -360,16 +341,14 @@ define void @memset_64_stack() {
   ret void
 }
 
-; FIXME This could use FP ops.
 define void @memset_72_stack() {
 ; CHECK-LABEL: memset_72_stack:
 ; CHECK:       mov x8, #-6148914691236517206
-; CHECK-NEXT:  add x0, sp, #8
-; CHECK-NEXT:  stp x8, x30, [sp, #72]
-; CHECK-NEXT:  stp x8, x8, [sp, #56]
-; CHECK-NEXT:  stp x8, x8, [sp, #40]
-; CHECK-NEXT:  stp x8, x8, [sp, #24]
-; CHECK-NEXT:  stp x8, x8, [sp, #8]
+; CHECK-NEXT:  movi v0.16b, #170
+; CHECK-NEXT:  mov x0, sp
+; CHECK-NEXT:  str x8, [sp, #64]
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [72 x i8], align 1
   %cast = bitcast [72 x i8]* %buf to i8*
@@ -378,20 +357,14 @@ define void @memset_72_stack() {
   ret void
 }
 
-; FIXME This could use FP ops.
 define void @memset_128_stack() {
 ; CHECK-LABEL: memset_128_stack:
-; CHECK:       mov x8, #-6148914691236517206
+; CHECK:       movi v0.16b, #170
 ; CHECK-NEXT:  mov x0, sp
-; CHECK-NEXT:  stp x8, x30, [sp, #120]
-; CHECK-NEXT:  stp x8, x8, [sp, #104]
-; CHECK-NEXT:  stp x8, x8, [sp, #88]
-; CHECK-NEXT:  stp x8, x8, [sp, #72]
-; CHECK-NEXT:  stp x8, x8, [sp, #56]
-; CHECK-NEXT:  stp x8, x8, [sp, #40]
-; CHECK-NEXT:  stp x8, x8, [sp, #24]
-; CHECK-NEXT:  stp x8, x8, [sp, #8]
-; CHECK-NEXT:  str x8, [sp]
+; CHECK-NEXT:  stp q0, q0, [sp, #96]
+; CHECK-NEXT:  stp q0, q0, [sp, #64]
+; CHECK-NEXT:  stp q0, q0, [sp, #32]
+; CHECK-NEXT:  stp q0, q0, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [128 x i8], align 1
   %cast = bitcast [128 x i8]* %buf to i8*
@@ -400,27 +373,18 @@ define void @memset_128_stack() {
   ret void
 }
 
-; FIXME This could use FP ops.
 define void @memset_256_stack() {
 ; CHECK-LABEL: memset_256_stack:
-; CHECK:       mov x8, #-6148914691236517206
-; CHECK-NEXT:  mov x0, sp
-; CHECK-NEXT:  stp x8, x8, [sp, #240]
-; CHECK-NEXT:  stp x8, x8, [sp, #224]
-; CHECK-NEXT:  stp x8, x8, [sp, #208]
-; CHECK-NEXT:  stp x8, x8, [sp, #192]
-; CHECK-NEXT:  stp x8, x8, [sp, #176]
-; CHECK-NEXT:  stp x8, x8, [sp, #160]
-; CHECK-NEXT:  stp x8, x8, [sp, #144]
-; CHECK-NEXT:  stp x8, x8, [sp, #128]
-; CHECK-NEXT:  stp x8, x8, [sp, #112]
-; CHECK-NEXT:  stp x8, x8, [sp, #96]
-; CHECK-NEXT:  stp x8, x8, [sp, #80]
-; CHECK-NEXT:  stp x8, x8, [sp, #64]
-; CHECK-NEXT:  stp x8, x8, [sp, #48]
-; CHECK-NEXT:  stp x8, x8, [sp, #32]
-; CHECK-NEXT:  stp x8, x8, [sp, #16]
-; CHECK-NEXT:  stp x8, x8, [sp]
+; CHECK:       movi	v0.16b, #170
+; CHECK-NEXT:  mov	x0, sp
+; CHECK-NEXT:  stp	q0, q0, [sp, #224]
+; CHECK-NEXT:  stp	q0, q0, [sp, #192]
+; CHECK-NEXT:  stp	q0, q0, [sp, #160]
+; CHECK-NEXT:  stp	q0, q0, [sp, #128]
+; CHECK-NEXT:  stp	q0, q0, [sp, #96]
+; CHECK-NEXT:  stp	q0, q0, [sp, #64]
+; CHECK-NEXT:  stp	q0, q0, [sp, #32]
+; CHECK-NEXT:  stp	q0, q0, [sp]
 ; CHECK-NEXT:  bl something
   %buf = alloca [256 x i8], align 1
   %cast = bitcast [256 x i8]* %buf to i8*

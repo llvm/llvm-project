@@ -135,6 +135,12 @@ def brtarget   : Operand<OtherVT>;
 // Misc. PatFrags
 //===----------------------------------------------------------------------===//
 
+class HasOneUseUnaryOp<SDPatternOperator op> : PatFrag<
+  (ops node:$src0),
+  (op $src0),
+  [{ return N->hasOneUse(); }]
+>;
+
 class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
   (op $src0, $src1),
@@ -152,12 +158,20 @@ def smax_oneuse : HasOneUseBinOp<smax>;
 def smin_oneuse : HasOneUseBinOp<smin>;
 def umax_oneuse : HasOneUseBinOp<umax>;
 def umin_oneuse : HasOneUseBinOp<umin>;
+
 def fminnum_oneuse : HasOneUseBinOp<fminnum>;
 def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
+
+def fminnum_ieee_oneuse : HasOneUseBinOp<fminnum_ieee>;
+def fmaxnum_ieee_oneuse : HasOneUseBinOp<fmaxnum_ieee>;
+
+
 def and_oneuse : HasOneUseBinOp<and>;
 def or_oneuse : HasOneUseBinOp<or>;
 def xor_oneuse : HasOneUseBinOp<xor>;
 } // Properties = [SDNPCommutative, SDNPAssociative]
+
+def not_oneuse : HasOneUseUnaryOp<not>;
 
 def add_oneuse : HasOneUseBinOp<add>;
 def sub_oneuse : HasOneUseBinOp<sub>;
@@ -166,6 +180,9 @@ def srl_oneuse : HasOneUseBinOp<srl>;
 def shl_oneuse : HasOneUseBinOp<shl>;
 
 def select_oneuse : HasOneUseTernaryOp<select>;
+
+def AMDGPUmul_u24_oneuse : HasOneUseBinOp<AMDGPUmul_u24>;
+def AMDGPUmul_i24_oneuse : HasOneUseBinOp<AMDGPUmul_i24>;
 
 def srl_16 : PatFrag<
   (ops node:$src0), (srl_oneuse node:$src0, (i32 16))
@@ -328,37 +345,37 @@ class StoreHi16<SDPatternOperator op> : PatFrag <
 >;
 
 class PrivateAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.PRIVATE_ADDRESS;
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
 }]>;
 
 class ConstantAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS;
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }]>;
 
 class LocalAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }]>;
 
 class GlobalAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS;
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
 }]>;
 
 class GlobalLoadAddress : CodePatPred<[{
   auto AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUASI.GLOBAL_ADDRESS || AS == AMDGPUASI.CONSTANT_ADDRESS;
+  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS;
 }]>;
 
 class FlatLoadAddress : CodePatPred<[{
   const auto AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUASI.FLAT_ADDRESS ||
-         AS == AMDGPUASI.GLOBAL_ADDRESS ||
-         AS == AMDGPUASI.CONSTANT_ADDRESS;
+  return AS == AMDGPUAS::FLAT_ADDRESS ||
+         AS == AMDGPUAS::GLOBAL_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS;
 }]>;
 
 class FlatStoreAddress : CodePatPred<[{
   const auto AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUASI.FLAT_ADDRESS ||
-         AS == AMDGPUASI.GLOBAL_ADDRESS;
+  return AS == AMDGPUAS::FLAT_ADDRESS ||
+         AS == AMDGPUAS::GLOBAL_ADDRESS;
 }]>;
 
 class AZExtLoadBase <SDPatternOperator ld_node>: PatFrag<(ops node:$ptr),
@@ -480,7 +497,7 @@ def az_extloadi16_constant : ConstantLoad <az_extloadi16>;
 class local_binary_atomic_op<SDNode atomic_op> :
   PatFrag<(ops node:$ptr, node:$value),
     (atomic_op node:$ptr, node:$value), [{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }]>;
 
 def atomic_swap_local : local_binary_atomic_op<atomic_swap>;
@@ -497,14 +514,14 @@ def atomic_load_umax_local : local_binary_atomic_op<atomic_load_umax>;
 
 def mskor_global : PatFrag<(ops node:$val, node:$ptr),
                             (AMDGPUstore_mskor node:$val, node:$ptr), [{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS;
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
 }]>;
 
 class AtomicCmpSwapLocal <SDNode cmp_swap_node> : PatFrag<
     (ops node:$ptr, node:$cmp, node:$swap),
     (cmp_swap_node node:$ptr, node:$cmp, node:$swap), [{
       AtomicSDNode *AN = cast<AtomicSDNode>(N);
-      return AN->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS;
+      return AN->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }]>;
 
 def atomic_cmp_swap_local : AtomicCmpSwapLocal <atomic_cmp_swap>;
@@ -513,17 +530,17 @@ multiclass global_binary_atomic_op<SDNode atomic_op> {
   def "" : PatFrag<
         (ops node:$ptr, node:$value),
         (atomic_op node:$ptr, node:$value),
-        [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS;}]>;
+        [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;}]>;
 
   def _noret : PatFrag<
         (ops node:$ptr, node:$value),
         (atomic_op node:$ptr, node:$value),
-        [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS && (SDValue(N, 0).use_empty());}]>;
+        [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (SDValue(N, 0).use_empty());}]>;
 
   def _ret : PatFrag<
         (ops node:$ptr, node:$value),
         (atomic_op node:$ptr, node:$value),
-        [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS && (!SDValue(N, 0).use_empty());}]>;
+        [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (!SDValue(N, 0).use_empty());}]>;
 }
 
 defm atomic_swap_global : global_binary_atomic_op<atomic_swap>;
@@ -550,12 +567,12 @@ def atomic_cmp_swap_global : PatFrag<
 def atomic_cmp_swap_global_noret : PatFrag<
   (ops node:$ptr, node:$cmp, node:$value),
   (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS && (SDValue(N, 0).use_empty());}]>;
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (SDValue(N, 0).use_empty());}]>;
 
 def atomic_cmp_swap_global_ret : PatFrag<
   (ops node:$ptr, node:$cmp, node:$value),
   (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.GLOBAL_ADDRESS && (!SDValue(N, 0).use_empty());}]>;
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (!SDValue(N, 0).use_empty());}]>;
 
 //===----------------------------------------------------------------------===//
 // Misc Pattern Fragments
@@ -787,18 +804,30 @@ class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
   (BIT_ALIGN $src0, $src0, $src1)
 >;
 
-// This matches 16 permutations of
-// max(min(x, y), min(max(x, y), z))
-class IntMed3Pat<Instruction med3Inst,
+multiclass IntMed3Pat<Instruction med3Inst,
+                 SDPatternOperator min,
                  SDPatternOperator max,
-                 SDPatternOperator max_oneuse,
                  SDPatternOperator min_oneuse,
-                 ValueType vt = i32> : AMDGPUPat<
+                 SDPatternOperator max_oneuse,
+                 ValueType vt = i32> {
+
+  // This matches 16 permutations of 
+  // min(max(a, b), max(min(a, b), c))
+  def : AMDGPUPat <
+  (min (max_oneuse vt:$src0, vt:$src1),
+       (max_oneuse (min_oneuse vt:$src0, vt:$src1), vt:$src2)),
+  (med3Inst vt:$src0, vt:$src1, vt:$src2)
+>;
+
+  // This matches 16 permutations of 
+  // max(min(x, y), min(max(x, y), z))
+  def : AMDGPUPat <
   (max (min_oneuse vt:$src0, vt:$src1),
        (min_oneuse (max_oneuse vt:$src0, vt:$src1), vt:$src2)),
   (med3Inst $src0, $src1, $src2)
 >;
-
+}
+  
 // Special conversion patterns
 
 def cvt_rpi_i32_f32 : PatFrag <
@@ -833,4 +862,26 @@ class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
 class RsqPat<Instruction RsqInst, ValueType vt> : AMDGPUPat <
   (AMDGPUrcp (fsqrt vt:$src)),
   (RsqInst $src)
+>;
+
+// Instructions which select to the same v_min_f*
+def fminnum_like : PatFrags<(ops node:$src0, node:$src1),
+  [(fminnum_ieee node:$src0, node:$src1),
+   (fminnum node:$src0, node:$src1)]
+>;
+
+// Instructions which select to the same v_max_f*
+def fmaxnum_like : PatFrags<(ops node:$src0, node:$src1),
+  [(fmaxnum_ieee node:$src0, node:$src1),
+   (fmaxnum node:$src0, node:$src1)]
+>;
+
+def fminnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
+  [(fminnum_ieee_oneuse node:$src0, node:$src1),
+   (fminnum_oneuse node:$src0, node:$src1)]
+>;
+
+def fmaxnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
+  [(fmaxnum_ieee_oneuse node:$src0, node:$src1),
+   (fmaxnum_oneuse node:$src0, node:$src1)]
 >;

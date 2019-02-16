@@ -17,25 +17,19 @@
 #include "kmp.h"
 
 /*****************************************************************************
- * types
- ****************************************************************************/
-
-typedef kmp_info_t ompt_thread_t;
-
-/*****************************************************************************
  * forward declarations
  ****************************************************************************/
 
 void __ompt_team_assign_id(kmp_team_t *team, ompt_data_t ompt_pid);
 void __ompt_thread_assign_wait_id(void *variable);
 
-void __ompt_lw_taskteam_init(ompt_lw_taskteam_t *lwt, ompt_thread_t *thr,
+void __ompt_lw_taskteam_init(ompt_lw_taskteam_t *lwt, kmp_info_t *thr,
                              int gtid, ompt_data_t *ompt_pid, void *codeptr);
 
-void __ompt_lw_taskteam_link(ompt_lw_taskteam_t *lwt, ompt_thread_t *thr,
+void __ompt_lw_taskteam_link(ompt_lw_taskteam_t *lwt, kmp_info_t *thr,
                              int on_heap);
 
-void __ompt_lw_taskteam_unlink(ompt_thread_t *thr);
+void __ompt_lw_taskteam_unlink(kmp_info_t *thr);
 
 ompt_team_info_t *__ompt_get_teaminfo(int depth, int *size);
 
@@ -47,12 +41,15 @@ int __ompt_get_parallel_info_internal(int ancestor_level,
 
 int __ompt_get_task_info_internal(int ancestor_level, int *type,
                                   ompt_data_t **task_data,
-                                  omp_frame_t **task_frame,
+                                  ompt_frame_t **task_frame,
                                   ompt_data_t **parallel_data, int *thread_num);
 
 ompt_data_t *__ompt_get_thread_data_internal();
 
+/*
+ * Unused currently
 static uint64_t __ompt_get_get_unique_id_internal();
+*/
 
 /*****************************************************************************
  * macros
@@ -87,16 +84,16 @@ inline void *__ompt_load_return_address(int gtid) {
 // inline functions
 //******************************************************************************
 
-inline ompt_thread_t *ompt_get_thread_gtid(int gtid) {
+inline kmp_info_t *ompt_get_thread_gtid(int gtid) {
   return (gtid >= 0) ? __kmp_thread_from_gtid(gtid) : NULL;
 }
 
-inline ompt_thread_t *ompt_get_thread() {
+inline kmp_info_t *ompt_get_thread() {
   int gtid = __kmp_get_gtid();
   return ompt_get_thread_gtid(gtid);
 }
 
-inline void ompt_set_thread_state(ompt_thread_t *thread, omp_state_t state) {
+inline void ompt_set_thread_state(kmp_info_t *thread, ompt_state_t state) {
   thread->th.ompt_thread_info.state = state;
 }
 

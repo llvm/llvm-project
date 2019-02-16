@@ -258,6 +258,31 @@ void this_counts(int n) noexcept {
   throw ignored1();
 }
 
+void thrower(int n) {
+  throw n;
+}
+
+int directly_recursive(int n) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'directly_recursive' which should not throw exceptions
+  if (n == 0)
+    thrower(n);
+  return directly_recursive(n);
+}
+
+int indirectly_recursive(int n) noexcept;
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'indirectly_recursive' which should not throw exceptions
+
+int recursion_helper(int n) {
+  indirectly_recursive(n);
+}
+
+int indirectly_recursive(int n) noexcept {
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'indirectly_recursive' which should not throw exceptions
+  if (n == 0)
+    thrower(n);
+  return recursion_helper(n);
+}
+
 int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'main' which should not throw exceptions
   throw 1;

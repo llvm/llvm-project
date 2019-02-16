@@ -278,7 +278,7 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
 
 void CodeGenTarget::ReadRegAltNameIndices() const {
   RegAltNameIndices = Records.getAllDerivedDefinitions("RegAltNameIndex");
-  llvm::sort(RegAltNameIndices.begin(), RegAltNameIndices.end(), LessRecord());
+  llvm::sort(RegAltNameIndices, LessRecord());
 }
 
 /// getRegisterByName - If there is a register with the specific AsmName,
@@ -303,7 +303,7 @@ std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)
   }
 
   // Remove duplicates.
-  llvm::sort(Result.begin(), Result.end());
+  llvm::sort(Result);
   Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
   return Result;
 }
@@ -314,7 +314,7 @@ void CodeGenTarget::ReadLegalValueTypes() const {
     LegalValueTypes.insert(LegalValueTypes.end(), RC.VTs.begin(), RC.VTs.end());
 
   // Remove duplicates.
-  llvm::sort(LegalValueTypes.begin(), LegalValueTypes.end());
+  llvm::sort(LegalValueTypes);
   LegalValueTypes.erase(std::unique(LegalValueTypes.begin(),
                                     LegalValueTypes.end()),
                         LegalValueTypes.end());
@@ -513,7 +513,7 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC,
     if (isTarget == TargetOnly)
       Intrinsics.push_back(CodeGenIntrinsic(Defs[I]));
   }
-  llvm::sort(Intrinsics.begin(), Intrinsics.end(),
+  llvm::sort(Intrinsics,
              [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
                return std::tie(LHS.TargetPrefix, LHS.Name) <
                       std::tie(RHS.TargetPrefix, RHS.Name);
@@ -536,6 +536,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   isCommutative = false;
   canThrow = false;
   isNoReturn = false;
+  isCold = false;
   isNoDuplicate = false;
   isConvergent = false;
   isSpeculatable = false;
@@ -682,6 +683,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
       isConvergent = true;
     else if (Property->getName() == "IntrNoReturn")
       isNoReturn = true;
+    else if (Property->getName() == "IntrCold")
+      isCold = true;
     else if (Property->getName() == "IntrSpeculatable")
       isSpeculatable = true;
     else if (Property->getName() == "IntrHasSideEffects")
@@ -709,6 +712,5 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   Properties = parseSDPatternOperatorProperties(R);
 
   // Sort the argument attributes for later benefit.
-  llvm::sort(ArgumentAttributes.begin(), ArgumentAttributes.end());
+  llvm::sort(ArgumentAttributes);
 }
-

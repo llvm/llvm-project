@@ -29,8 +29,8 @@ define half @test3(float %a) {
   ret half %c
 }
 
-define half @test4(float %a) {
-; CHECK-LABEL: @test4(
+define half @fneg_fptrunc(float %a) {
+; CHECK-LABEL: @fneg_fptrunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
 ; CHECK-NEXT:    [[C:%.*]] = fsub half 0xH8000, [[TMP1]]
 ; CHECK-NEXT:    ret half [[C]]
@@ -38,6 +38,17 @@ define half @test4(float %a) {
   %b = fsub float -0.0, %a
   %c = fptrunc float %b to half
   ret half %c
+}
+
+define <2 x half> @fneg_fptrunc_vec_undef(<2 x float> %a) {
+; CHECK-LABEL: @fneg_fptrunc_vec_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fsub <2 x half> <half 0xH8000, half 0xH8000>, [[TMP1]]
+; CHECK-NEXT:    ret <2 x half> [[C]]
+;
+  %b = fsub <2 x float> <float -0.0, float undef>, %a
+  %c = fptrunc <2 x float> %b to <2 x half>
+  ret <2 x half> %c
 }
 
 define half @test4-fast(float %a) {

@@ -120,7 +120,7 @@ private:
   /// function is automatically inserted into the end of the function list for
   /// the module.
   ///
-  Function(FunctionType *Ty, LinkageTypes Linkage,
+  Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
            const Twine &N = "", Module *M = nullptr);
 
 public:
@@ -134,9 +134,23 @@ public:
   const Function &getFunction() const { return *this; }
 
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
-                          const Twine &N = "", Module *M = nullptr) {
-    return new Function(Ty, Linkage, N, M);
+                          unsigned AddrSpace, const Twine &N = "",
+                          Module *M = nullptr) {
+    return new Function(Ty, Linkage, AddrSpace, N, M);
   }
+
+  // TODO: remove this once all users have been updated to pass an AddrSpace
+  static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
+                          const Twine &N = "", Module *M = nullptr) {
+    return new Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
+  }
+
+  /// Creates a new function and attaches it to a module.
+  ///
+  /// Places the function in the program address space as specified
+  /// by the module's data layout.
+  static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
+                          const Twine &N, Module &M);
 
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -144,7 +158,7 @@ public:
   /// Returns the number of non-debug IR instructions in this function.
   /// This is equivalent to the sum of the sizes of each basic block contained
   /// within this function.
-  unsigned getInstructionCount();
+  unsigned getInstructionCount() const;
 
   /// Returns the FunctionType for me.
   FunctionType *getFunctionType() const {
@@ -557,7 +571,7 @@ public:
 
   /// True if this function needs an unwind table.
   bool needsUnwindTableEntry() const {
-    return hasUWTable() || !doesNotThrow();
+    return hasUWTable() || !doesNotThrow() || hasPersonalityFn();
   }
 
   /// Determine if the function returns a structure through first

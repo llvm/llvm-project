@@ -8,7 +8,7 @@
 \*===----------------------------------------------------------------------===*/
 
 #if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) && \
-    !(defined(__sun__) && defined(__svr4__))
+    !(defined(__sun__) && defined(__svr4__)) && !defined(__NetBSD__)
 
 #include <stdlib.h>
 

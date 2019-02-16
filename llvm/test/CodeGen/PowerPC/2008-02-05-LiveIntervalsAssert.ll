@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
 	%struct.Handle = type { %struct.oopDesc** }
 	%struct.JNI_ArgumentPusher = type { %struct.SignatureIterator, %struct.JavaCallArguments* }
@@ -11,6 +11,8 @@
 	%struct.oopDesc = type { %struct.instanceOopDesc*, %struct.instanceOopDesc* }
 @.str = external constant [44 x i8]		; <[44 x i8]*> [#uses=1]
 
+; CHECK: _ZN23JNI_ArgumentPusherArray7iterateEy
+; CHECK: blr
 define void @_ZN23JNI_ArgumentPusherArray7iterateEy(%struct.JNI_ArgumentPusherArray* %this, i64 %fingerprint) nounwind  {
 entry:
 	br label %bb113

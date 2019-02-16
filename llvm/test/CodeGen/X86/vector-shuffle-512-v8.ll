@@ -1845,7 +1845,7 @@ define <8 x double> @test_vshuff64x2_512(<8 x double> %x, <8 x double> %x1) noun
 define <8 x double> @test_vshuff64x2_512_maskz(<8 x double> %x, <8 x double> %x1, <8 x i1> %mask) nounwind {
 ; ALL-LABEL: test_vshuff64x2_512_maskz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpmovsxwq %xmm2, %zmm2
+; ALL-NEXT:    vpmovzxwq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero
 ; ALL-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; ALL-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,4,5],zmm1[2,3,0,1]
@@ -1858,7 +1858,7 @@ define <8 x double> @test_vshuff64x2_512_maskz(<8 x double> %x, <8 x double> %x1
 define <8 x i64> @test_vshufi64x2_512_mask(<8 x i64> %x, <8 x i64> %x1, <8 x i1> %mask) nounwind {
 ; ALL-LABEL: test_vshufi64x2_512_mask:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpmovsxwq %xmm2, %zmm2
+; ALL-NEXT:    vpmovzxwq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero
 ; ALL-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; ALL-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; ALL-NEXT:    vshufi64x2 {{.*#+}} zmm0 {%k1} = zmm0[0,1,4,5],zmm1[2,3,0,1]
@@ -1887,7 +1887,7 @@ define <8 x double> @test_vshuff64x2_512_mem(<8 x double> %x, <8 x double> *%ptr
 define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, <8 x double> *%ptr, <8 x i1> %mask) nounwind {
 ; AVX512F-LABEL: test_vshuff64x2_512_mem_mask:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} = zmm0[0,1,4,5],mem[2,3,0,1]
@@ -1895,7 +1895,7 @@ define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, <8 x double> 
 ;
 ; AVX512F-32-LABEL: test_vshuff64x2_512_mem_mask:
 ; AVX512F-32:       # %bb.0:
-; AVX512F-32-NEXT:    vpmovsxwq %xmm1, %zmm1
+; AVX512F-32-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; AVX512F-32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1910,7 +1910,7 @@ define <8 x double> @test_vshuff64x2_512_mem_mask(<8 x double> %x, <8 x double> 
 define <8 x double> @test_vshuff64x2_512_mem_maskz(<8 x double> %x, <8 x double> *%ptr, <8 x i1> %mask) nounwind {
 ; AVX512F-LABEL: test_vshuff64x2_512_mem_maskz:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,4,5],mem[2,3,0,1]
@@ -1918,7 +1918,7 @@ define <8 x double> @test_vshuff64x2_512_mem_maskz(<8 x double> %x, <8 x double>
 ;
 ; AVX512F-32-LABEL: test_vshuff64x2_512_mem_maskz:
 ; AVX512F-32:       # %bb.0:
-; AVX512F-32-NEXT:    vpmovsxwq %xmm1, %zmm1
+; AVX512F-32-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; AVX512F-32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax

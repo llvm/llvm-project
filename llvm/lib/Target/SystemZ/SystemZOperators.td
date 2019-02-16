@@ -127,14 +127,6 @@ def SDT_ZIPM                : SDTypeProfile<1, 1,
 def SDT_ZPrefetch           : SDTypeProfile<0, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>]>;
-def SDT_ZLoadBSwap          : SDTypeProfile<1, 2,
-                                            [SDTCisInt<0>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisVT<2, OtherVT>]>;
-def SDT_ZStoreBSwap         : SDTypeProfile<0, 3,
-                                            [SDTCisInt<0>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisVT<2, OtherVT>]>;
 def SDT_ZTBegin             : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
@@ -283,9 +275,9 @@ def z_subcarry_1        : SDNode<"SystemZISD::SUBCARRY", SDT_ZBinaryWithCarry>;
 def z_membarrier        : SDNode<"SystemZISD::MEMBARRIER", SDTNone,
                                  [SDNPHasChain, SDNPSideEffect]>;
 
-def z_loadbswap        : SDNode<"SystemZISD::LRV", SDT_ZLoadBSwap,
+def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def z_storebswap       : SDNode<"SystemZISD::STRV", SDT_ZStoreBSwap,
+def z_storebswap       : SDNode<"SystemZISD::STRV", SDTStore,
                                  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest>;
@@ -429,16 +421,28 @@ def z_vsrl              : SDNode<"ISD::SRL", SDT_ZVecBinary>;
 // Pattern fragments
 //===----------------------------------------------------------------------===//
 
-def z_lrvh  : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i16)>;
-def z_lrv   : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i32)>;
-def z_lrvg  : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i64)>;
+def z_loadbswap16 : PatFrag<(ops node:$addr), (z_loadbswap node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_loadbswap32 : PatFrag<(ops node:$addr), (z_loadbswap node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_loadbswap64 : PatFrag<(ops node:$addr), (z_loadbswap node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
 
-def z_strvh : PatFrag<(ops node:$src, node:$addr),
-                      (z_storebswap node:$src, node:$addr, i16)>;
-def z_strv  : PatFrag<(ops node:$src, node:$addr),
-                      (z_storebswap node:$src, node:$addr, i32)>;
-def z_strvg : PatFrag<(ops node:$src, node:$addr),
-                      (z_storebswap node:$src, node:$addr, i64)>;
+def z_storebswap16 : PatFrag<(ops node:$src, node:$addr),
+                             (z_storebswap node:$src, node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_storebswap32 : PatFrag<(ops node:$src, node:$addr),
+                             (z_storebswap node:$src, node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_storebswap64 : PatFrag<(ops node:$src, node:$addr),
+                             (z_storebswap node:$src, node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
 
 // Fragments including CC as an implicit source.
 def z_br_ccmask
@@ -556,7 +560,6 @@ class NonvolatileLoad<SDPatternOperator load>
   auto *Load = cast<LoadSDNode>(N);
   return !Load->isVolatile();
 }]>;
-def nonvolatile_load          : NonvolatileLoad<load>;
 def nonvolatile_anyextloadi8  : NonvolatileLoad<anyextloadi8>;
 def nonvolatile_anyextloadi16 : NonvolatileLoad<anyextloadi16>;
 def nonvolatile_anyextloadi32 : NonvolatileLoad<anyextloadi32>;
@@ -567,7 +570,6 @@ class NonvolatileStore<SDPatternOperator store>
   auto *Store = cast<StoreSDNode>(N);
   return !Store->isVolatile();
 }]>;
-def nonvolatile_store         : NonvolatileStore<store>;
 def nonvolatile_truncstorei8  : NonvolatileStore<truncstorei8>;
 def nonvolatile_truncstorei16 : NonvolatileStore<truncstorei16>;
 def nonvolatile_truncstorei32 : NonvolatileStore<truncstorei32>;
@@ -743,37 +745,37 @@ class z_vllez<ValueType scalartype, SDPatternOperator load, int index>
 def z_vllezi8  : z_vllez<i32, anyextloadi8, 7>;
 def z_vllezi16 : z_vllez<i32, anyextloadi16, 3>;
 def z_vllezi32 : z_vllez<i32, load, 1>;
-def z_vllezi64 : PatFrag<(ops node:$addr),
-                         (z_join_dwords (i64 (load node:$addr)), (i64 0))>;
+def z_vllezi64 : PatFrags<(ops node:$addr),
+                          [(z_vector_insert (z_vzero),
+                                            (i64 (load node:$addr)), (i32 0)),
+                           (z_join_dwords (i64 (load node:$addr)), (i64 0))]>;
 // We use high merges to form a v4f32 from four f32s.  Propagating zero
 // into all elements but index 1 gives this expression.
 def z_vllezf32 : PatFrag<(ops node:$addr),
-                         (bitconvert
-                          (z_merge_high
-                           (v2i64
-                            (z_unpackl_high
-                             (v4i32
-                              (bitconvert
-                               (v4f32 (scalar_to_vector
-                                       (f32 (load node:$addr)))))))),
-                           (v2i64 (z_vzero))))>;
+                         (z_merge_high
+                          (v2i64
+                           (z_unpackl_high
+                            (v4i32
+                             (bitconvert
+                              (v4f32 (scalar_to_vector
+                                      (f32 (load node:$addr)))))))),
+                          (v2i64 (z_vzero)))>;
 def z_vllezf64 : PatFrag<(ops node:$addr),
                          (z_merge_high
-                          (scalar_to_vector (f64 (load node:$addr))),
+                          (v2f64 (scalar_to_vector (f64 (load node:$addr)))),
                           (z_vzero))>;
 
 // Similarly for the high element of a zeroed vector.
 def z_vllezli32 : z_vllez<i32, load, 0>;
 def z_vllezlf32 : PatFrag<(ops node:$addr),
-                          (bitconvert
-                           (z_merge_high
-                            (v2i64
-                             (bitconvert
-                              (z_merge_high
-                               (v4f32 (scalar_to_vector
-                                       (f32 (load node:$addr)))),
-                               (v4f32 (z_vzero))))),
-                            (v2i64 (z_vzero))))>;
+                          (z_merge_high
+                           (v2i64
+                            (bitconvert
+                             (z_merge_high
+                              (v4f32 (scalar_to_vector
+                                      (f32 (load node:$addr)))),
+                              (v4f32 (z_vzero))))),
+                           (v2i64 (z_vzero)))>;
 
 // Store one element of a vector.
 class z_vste<ValueType scalartype, SDPatternOperator store>

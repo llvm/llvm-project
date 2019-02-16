@@ -13,19 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "hwasan.h"
-#include "hwasan_mapping.h"
+#include "hwasan_checks.h"
 #include "hwasan_poisoning.h"
 #include "hwasan_report.h"
 #include "hwasan_thread.h"
+#include "hwasan_thread_list.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
-#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "ubsan/ubsan_flags.h"
 #include "ubsan/ubsan_init.h"
 
@@ -36,17 +37,17 @@ using namespace __sanitizer;
 namespace __hwasan {
 
 void EnterSymbolizer() {
-  HwasanThread *t = GetCurrentThread();
+  Thread *t = GetCurrentThread();
   CHECK(t);
   t->EnterSymbolizer();
 }
 void ExitSymbolizer() {
-  HwasanThread *t = GetCurrentThread();
+  Thread *t = GetCurrentThread();
   CHECK(t);
   t->LeaveSymbolizer();
 }
 bool IsInSymbolizer() {
-  HwasanThread *t = GetCurrentThread();
+  Thread *t = GetCurrentThread();
   return t && t->InSymbolizer();
 }
 
@@ -57,6 +58,7 @@ Flags *flags() {
 }
 
 int hwasan_inited = 0;
+int hwasan_shadow_inited = 0;
 bool hwasan_init_is_running;
 
 int hwasan_report_count = 0;
@@ -86,7 +88,18 @@ static void InitializeFlags() {
     cf.check_printf = false;
     cf.intercept_tls_get_addr = true;
     cf.exitcode = 99;
+    // Sigtrap is used in error reporting.
     cf.handle_sigtrap = kHandleSignalExclusive;
+
+#if SANITIZER_ANDROID
+    // Let platform handle other signals. It is better at reporting them then we
+    // are.
+    cf.handle_segv = kHandleSignalNo;
+    cf.handle_sigbus = kHandleSignalNo;
+    cf.handle_abort = kHandleSignalNo;
+    cf.handle_sigill = kHandleSignalNo;
+    cf.handle_sigfpe = kHandleSignalNo;
+#endif
     OverrideCommonFlags(cf);
   }
 
@@ -119,7 +132,8 @@ static void InitializeFlags() {
 #if HWASAN_CONTAINS_UBSAN
   ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
 #endif
-  VPrintf(1, "HWASAN_OPTIONS: %s\n", hwasan_options ? hwasan_options : "<empty>");
+  VPrintf(1, "HWASAN_OPTIONS: %s\n",
+          hwasan_options ? hwasan_options : "<empty>");
 
   InitializeCommonFlags();
 
@@ -130,19 +144,19 @@ static void InitializeFlags() {
 
 void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
                    void *context, bool request_fast_unwind) {
-  HwasanThread *t = GetCurrentThread();
-  if (!t || !StackTrace::WillUseFastUnwind(request_fast_unwind)) {
+  Thread *t = GetCurrentThread();
+  if (!t) {
+    // the thread is still being created.
+    stack->size = 0;
+    return;
+  }
+  if (!StackTrace::WillUseFastUnwind(request_fast_unwind)) {
     // Block reports from our interceptors during _Unwind_Backtrace.
     SymbolizerScope sym_scope;
     return stack->Unwind(max_s, pc, bp, context, 0, 0, request_fast_unwind);
   }
   stack->Unwind(max_s, pc, bp, context, t->stack_top(), t->stack_bottom(),
                 request_fast_unwind);
-}
-
-void PrintWarning(uptr pc, uptr bp) {
-  GET_FATAL_STACK_TRACE_PC_BP(pc, bp);
-  ReportInvalidAccess(&stack, 0);
 }
 
 static void HWAsanCheckFailed(const char *file, int line, const char *cond,
@@ -153,6 +167,84 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
   Die();
 }
 
+static constexpr uptr kMemoryUsageBufferSize = 4096;
+
+static void HwasanFormatMemoryUsage(InternalScopedString &s) {
+  HwasanThreadList &thread_list = hwasanThreadList();
+  auto thread_stats = thread_list.GetThreadStats();
+  auto *sds = StackDepotGetStats();
+  AllocatorStatCounters asc;
+  GetAllocatorStats(asc);
+  s.append(
+      "HWASAN pid: %d rss: %zd threads: %zd stacks: %zd"
+      " thr_aux: %zd stack_depot: %zd uniq_stacks: %zd"
+      " heap: %zd",
+      internal_getpid(), GetRSS(), thread_stats.n_live_threads,
+      thread_stats.total_stack_size,
+      thread_stats.n_live_threads * thread_list.MemoryUsedPerThread(),
+      sds->allocated, sds->n_uniq_ids, asc[AllocatorStatMapped]);
+}
+
+#if SANITIZER_ANDROID
+static char *memory_usage_buffer = nullptr;
+
+#define PR_SET_VMA 0x53564d41
+#define PR_SET_VMA_ANON_NAME 0
+
+static void InitMemoryUsage() {
+  memory_usage_buffer =
+      (char *)MmapOrDie(kMemoryUsageBufferSize, "memory usage string");
+  CHECK(memory_usage_buffer);
+  memory_usage_buffer[0] = '\0';
+  CHECK(internal_prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME,
+                       (uptr)memory_usage_buffer, kMemoryUsageBufferSize,
+                       (uptr)memory_usage_buffer) == 0);
+}
+
+void UpdateMemoryUsage() {
+  if (!flags()->export_memory_stats)
+    return;
+  if (!memory_usage_buffer)
+    InitMemoryUsage();
+  InternalScopedString s(kMemoryUsageBufferSize);
+  HwasanFormatMemoryUsage(s);
+  internal_strncpy(memory_usage_buffer, s.data(), kMemoryUsageBufferSize - 1);
+  memory_usage_buffer[kMemoryUsageBufferSize - 1] = '\0';
+}
+#else
+void UpdateMemoryUsage() {}
+#endif
+
+struct FrameDescription {
+  uptr PC;
+  const char *Descr;
+};
+
+struct FrameDescriptionArray {
+  FrameDescription *beg, *end;
+};
+
+static InternalMmapVectorNoCtor<FrameDescriptionArray> AllFrames;
+
+void InitFrameDescriptors(uptr b, uptr e) {
+  FrameDescription *beg = reinterpret_cast<FrameDescription *>(b);
+  FrameDescription *end = reinterpret_cast<FrameDescription *>(e);
+  if (beg == end)
+    return;
+  AllFrames.push_back({beg, end});
+  if (Verbosity())
+    for (FrameDescription *frame_descr = beg; frame_descr < end; frame_descr++)
+      Printf("Frame: %p %s\n", frame_descr->PC, frame_descr->Descr);
+}
+
+const char *GetStackFrameDescr(uptr pc) {
+  for (uptr i = 0, n = AllFrames.size(); i < n; i++)
+    for (auto p = AllFrames[i].beg; p < AllFrames[i].end; p++)
+      if (p->PC == pc)
+        return p->Descr;
+  return nullptr;
+}
+
 } // namespace __hwasan
 
 // Interface.
@@ -160,6 +252,20 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
 using namespace __hwasan;
 
 uptr __hwasan_shadow_memory_dynamic_address;  // Global interface symbol.
+
+void __hwasan_shadow_init() {
+  if (hwasan_shadow_inited) return;
+  if (!InitShadow()) {
+    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
+    DumpProcessMap();
+    Die();
+  }
+  hwasan_shadow_inited = 1;
+}
+
+void __hwasan_init_frames(uptr beg, uptr end) {
+  InitFrameDescriptors(beg, end);
+}
 
 void __hwasan_init() {
   CHECK(!hwasan_init_is_running);
@@ -177,18 +283,20 @@ void __hwasan_init() {
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
+  AndroidTestTlsSlot();
+
   DisableCoreDumperIfNecessary();
-  if (!InitShadow()) {
-    Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
-    if (HWASAN_FIXED_MAPPING) {
-      Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
-      Printf("FATAL: Disabling ASLR is known to cause this error.\n");
-      Printf("FATAL: If running under GDB, try "
-             "'set disable-randomization off'.\n");
-    }
-    DumpProcessMap();
-    Die();
-  }
+
+  __hwasan_shadow_init();
+
+  InitThreads();
+  hwasanThreadList().CreateCurrentThread();
+
+  MadviseShadow();
+
+  SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
+  // This may call libc -> needs initialized shadow.
+  AndroidLogInit();
 
   InitializeInterceptors();
   InstallDeadlySignalHandlers(HwasanOnDeadlySignal);
@@ -198,13 +306,10 @@ void __hwasan_init() {
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 
-  HwasanTSDInit(HwasanTSDDtor);
+  HwasanTSDInit();
+  HwasanTSDThreadInit();
 
   HwasanAllocatorInit();
-
-  HwasanThread *main_thread = HwasanThread::Create(nullptr, nullptr);
-  SetCurrentThread(main_thread);
-  main_thread->ThreadStart();
 
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
@@ -216,9 +321,14 @@ void __hwasan_init() {
   hwasan_inited = 1;
 }
 
-void __hwasan_print_shadow(const void *x, uptr size) {
-  // FIXME:
-  Printf("FIXME: __hwasan_print_shadow unimplemented\n");
+void __hwasan_print_shadow(const void *p, uptr sz) {
+  uptr ptr_raw = UntagAddr(reinterpret_cast<uptr>(p));
+  uptr shadow_first = MemToShadow(ptr_raw);
+  uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
+  Printf("HWASan shadow map for %zx .. %zx (pointer tag %x)\n", ptr_raw,
+         ptr_raw + sz, GetTagFromPointer((uptr)p));
+  for (uptr s = shadow_first; s <= shadow_last; ++s)
+    Printf("  %zx: %x\n", ShadowToMem(s), *(tag_t *)s);
 }
 
 sptr __hwasan_test_shadow(const void *p, uptr sz) {
@@ -227,12 +337,12 @@ sptr __hwasan_test_shadow(const void *p, uptr sz) {
   tag_t ptr_tag = GetTagFromPointer((uptr)p);
   if (ptr_tag == 0)
     return -1;
-  uptr ptr_raw = GetAddressFromPointer((uptr)p);
-  uptr shadow_first = MEM_TO_SHADOW(ptr_raw);
-  uptr shadow_last = MEM_TO_SHADOW(ptr_raw + sz - 1);
+  uptr ptr_raw = UntagAddr(reinterpret_cast<uptr>(p));
+  uptr shadow_first = MemToShadow(ptr_raw);
+  uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
   for (uptr s = shadow_first; s <= shadow_last; ++s)
     if (*(tag_t*)s != ptr_tag)
-      return SHADOW_TO_MEM(s) - ptr_raw;
+      return ShadowToMem(s) - ptr_raw;
   return -1;
 }
 
@@ -253,63 +363,6 @@ void __sanitizer_unaligned_store32(uu32 *p, u32 x) {
 }
 void __sanitizer_unaligned_store64(uu64 *p, u64 x) {
   *p = x;
-}
-
-template<unsigned X>
-__attribute__((always_inline))
-static void SigTrap(uptr p) {
-#if defined(__aarch64__)
-  (void)p;
-  // 0x900 is added to do not interfere with the kernel use of lower values of
-  // brk immediate.
-  // FIXME: Add a constraint to put the pointer into x0, the same as x86 branch.
-  asm("brk %0\n\t" ::"n"(0x900 + X));
-#elif defined(__x86_64__)
-  // INT3 + NOP DWORD ptr [EAX + X] to pass X to our signal handler, 5 bytes
-  // total. The pointer is passed via rdi.
-  // 0x40 is added as a safeguard, to help distinguish our trap from others and
-  // to avoid 0 offsets in the command (otherwise it'll be reduced to a
-  // different nop command, the three bytes one).
-  asm volatile(
-      "int3\n"
-      "nopl %c0(%%rax)\n"
-      :: "n"(0x40 + X), "D"(p));
-#else
-  // FIXME: not always sigill.
-  __builtin_trap();
-#endif
-  // __builtin_unreachable();
-}
-
-enum class ErrorAction { Abort, Recover };
-enum class AccessType { Load, Store };
-
-template <ErrorAction EA, AccessType AT, unsigned LogSize>
-__attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
-  tag_t ptr_tag = GetTagFromPointer(p);
-  uptr ptr_raw = p & ~kAddressTagMask;
-  tag_t mem_tag = *(tag_t *)MEM_TO_SHADOW(ptr_raw);
-  if (UNLIKELY(ptr_tag != mem_tag)) {
-    SigTrap<0x20 * (EA == ErrorAction::Recover) +
-           0x10 * (AT == AccessType::Store) + LogSize>(p);
-    if (EA == ErrorAction::Abort) __builtin_unreachable();
-  }
-}
-
-template <ErrorAction EA, AccessType AT>
-__attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
-                                                                      uptr sz) {
-  CHECK_NE(0, sz);
-  tag_t ptr_tag = GetTagFromPointer(p);
-  uptr ptr_raw = p & ~kAddressTagMask;
-  tag_t *shadow_first = (tag_t *)MEM_TO_SHADOW(ptr_raw);
-  tag_t *shadow_last = (tag_t *)MEM_TO_SHADOW(ptr_raw + sz - 1);
-  for (tag_t *t = shadow_first; t <= shadow_last; ++t)
-    if (UNLIKELY(ptr_tag != *t)) {
-      SigTrap<0x20 * (EA == ErrorAction::Recover) +
-             0x10 * (AT == AccessType::Store) + 0xf>(p);
-      if (EA == ErrorAction::Abort) __builtin_unreachable();
-    }
 }
 
 void __hwasan_loadN(uptr p, uptr sz) {
@@ -392,10 +445,38 @@ void __hwasan_tag_memory(uptr p, u8 tag, uptr sz) {
   TagMemoryAligned(p, sz, tag);
 }
 
+uptr __hwasan_tag_pointer(uptr p, u8 tag) {
+  return AddTagToPointer(p, tag);
+}
+
+void __hwasan_handle_longjmp(const void *sp_dst) {
+  uptr dst = (uptr)sp_dst;
+  // HWASan does not support tagged SP.
+  CHECK(GetTagFromPointer(dst) == 0);
+
+  uptr sp = (uptr)__builtin_frame_address(0);
+  static const uptr kMaxExpectedCleanupSize = 64 << 20;  // 64M
+  if (dst < sp || dst - sp > kMaxExpectedCleanupSize) {
+    Report(
+        "WARNING: HWASan is ignoring requested __hwasan_handle_longjmp: "
+        "stack top: %p; target %p; distance: %p (%zd)\n"
+        "False positive error reports may follow\n",
+        (void *)sp, (void *)dst, dst - sp);
+    return;
+  }
+  TagMemory(sp, dst - sp, 0);
+}
+
+void __hwasan_print_memory_usage() {
+  InternalScopedString s(kMemoryUsageBufferSize);
+  HwasanFormatMemoryUsage(s);
+  Printf("%s\n", s.data());
+}
+
 static const u8 kFallbackTag = 0xBB;
 
 u8 __hwasan_generate_tag() {
-  HwasanThread *t = GetCurrentThread();
+  Thread *t = GetCurrentThread();
   if (!t) return kFallbackTag;
   return t->GenerateRandomTag();
 }

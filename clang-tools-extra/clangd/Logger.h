@@ -15,6 +15,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <mutex>
 
 namespace clang {
 namespace clangd {
@@ -56,7 +57,7 @@ void log(Logger::Level L, const char *Fmt, Ts &&... Vals) {
 template <typename... Ts> void elog(const char *Fmt, Ts &&... Vals) {
   detail::log(Logger::Error, Fmt, std::forward<Ts>(Vals)...);
 }
-// log() is used for information important to understanding a clangd session.
+// log() is used for information important to understand a clangd session.
 // e.g. the names of LSP messages sent are logged at this level.
 // This level could be enabled in production builds to allow later inspection.
 template <typename... Ts> void log(const char *Fmt, Ts &&... Vals) {
@@ -84,6 +85,22 @@ public:
 
   LoggingSession(LoggingSession const &) = delete;
   LoggingSession &operator=(LoggingSession const &) = delete;
+};
+
+// Logs to an output stream, such as stderr.
+class StreamLogger : public Logger {
+public:
+  StreamLogger(llvm::raw_ostream &Logs, Logger::Level MinLevel)
+      : MinLevel(MinLevel), Logs(Logs) {}
+
+  /// Write a line to the logging stream.
+  void log(Level, const llvm::formatv_object_base &Message) override;
+
+private:
+  Logger::Level MinLevel;
+  llvm::raw_ostream &Logs;
+
+  std::mutex StreamMutex;
 };
 
 } // namespace clangd

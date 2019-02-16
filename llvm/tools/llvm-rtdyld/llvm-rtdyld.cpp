@@ -88,25 +88,30 @@ CheckFiles("check",
            cl::desc("File containing RuntimeDyld verifier checks."),
            cl::ZeroOrMore);
 
-static cl::opt<uint64_t>
+// Tracking BUG: 19665
+// http://llvm.org/bugs/show_bug.cgi?id=19665
+//
+// Do not change these options to cl::opt<uint64_t> since this silently breaks
+// argument parsing.
+static cl::opt<unsigned long long>
 PreallocMemory("preallocate",
               cl::desc("Allocate memory upfront rather than on-demand"),
               cl::init(0));
 
-static cl::opt<uint64_t>
+static cl::opt<unsigned long long>
 TargetAddrStart("target-addr-start",
                 cl::desc("For -verify only: start of phony target address "
                          "range."),
                 cl::init(4096), // Start at "page 1" - no allocating at "null".
                 cl::Hidden);
 
-static cl::opt<uint64_t>
+static cl::opt<unsigned long long>
 TargetAddrEnd("target-addr-end",
               cl::desc("For -verify only: end of phony target address range."),
               cl::init(~0ULL),
               cl::Hidden);
 
-static cl::opt<uint64_t>
+static cl::opt<unsigned long long>
 TargetSectionSep("target-section-sep",
                  cl::desc("For -verify only: Separation between sections in "
                           "phony target address space."),
@@ -304,7 +309,7 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
     if (!MaybeObj) {
       std::string Buf;
       raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      logAllUnhandledErrors(MaybeObj.takeError(), OS);
       OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }
@@ -433,7 +438,7 @@ static int executeInput() {
     if (!MaybeObj) {
       std::string Buf;
       raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      logAllUnhandledErrors(MaybeObj.takeError(), OS);
       OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }
@@ -577,7 +582,11 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
     if (LoadAddr &&
         *LoadAddr != static_cast<uint64_t>(
                        reinterpret_cast<uintptr_t>(Tmp->first))) {
-      AlreadyAllocated[*LoadAddr] = Tmp->second;
+      // A section will have a LoadAddr of 0 if it wasn't loaded for whatever
+      // reason (e.g. zero byte COFF sections). Don't include those sections in
+      // the allocation map.
+      if (*LoadAddr != 0)
+        AlreadyAllocated[*LoadAddr] = Tmp->second;
       Worklist.erase(Tmp);
     }
   }
@@ -701,7 +710,7 @@ static int linkAndVerify() {
     if (!MaybeObj) {
       std::string Buf;
       raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      logAllUnhandledErrors(MaybeObj.takeError(), OS);
       OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }

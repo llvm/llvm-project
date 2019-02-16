@@ -14,9 +14,9 @@
 
 
 // RUN: %clang -v --target=i386-unknown-linux \
-// RUN:   --sysroot=%S/Inputs/CUDA 2>&1 | FileCheck %s
+// RUN:   --sysroot=%S/Inputs/CUDA --cuda-path-ignore-env 2>&1 | FileCheck %s
 // RUN: %clang -v --target=i386-apple-macosx \
-// RUN:   --sysroot=%S/Inputs/CUDA 2>&1 | FileCheck %s
+// RUN:   --sysroot=%S/Inputs/CUDA --cuda-path-ignore-env 2>&1 | FileCheck %s
 
 // RUN: %clang -v --target=i386-unknown-linux \
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda 2>&1 | FileCheck %s
@@ -145,8 +145,8 @@
 
 // COMMON: "-triple" "nvptx-nvidia-cuda"
 // COMMON-SAME: "-fcuda-is-device"
-// LIBDEVICE-SAME: "-mlink-cuda-bitcode"
-// NOLIBDEVICE-NOT: "-mlink-cuda-bitcode"
+// LIBDEVICE-SAME: "-mlink-builtin-bitcode"
+// NOLIBDEVICE-NOT: "-mlink-builtin-bitcode"
 // LIBDEVICE20-SAME: libdevice.compute_20.10.bc
 // LIBDEVICE30-SAME: libdevice.compute_30.10.bc
 // LIBDEVICE35-SAME: libdevice.compute_35.10.bc
@@ -164,6 +164,6 @@
 // COMMON-SAME: "-x" "cuda"
 // CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
-// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "x86_64--linux-gnu"
+// CHECK-CXXINCLUDE: clang{{.*}} "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-CXXINCLUDE-SAME: {{.*}}"-internal-isystem" "{{.+}}/include/c++/4.8"
 // CHECK-CXXINCLUDE: ld{{.*}}"

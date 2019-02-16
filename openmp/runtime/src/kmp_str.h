@@ -51,9 +51,10 @@ void __kmp_str_buf_reserve(kmp_str_buf_t *buffer, int size);
 void __kmp_str_buf_detach(kmp_str_buf_t *buffer);
 void __kmp_str_buf_free(kmp_str_buf_t *buffer);
 void __kmp_str_buf_cat(kmp_str_buf_t *buffer, char const *str, int len);
-void __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
-                          va_list args);
-void __kmp_str_buf_print(kmp_str_buf_t *buffer, char const *format, ...);
+void __kmp_str_buf_catbuf(kmp_str_buf_t *dest, const kmp_str_buf_t *src);
+int __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
+                         va_list args);
+int __kmp_str_buf_print(kmp_str_buf_t *buffer, char const *format, ...);
 void __kmp_str_buf_print_size(kmp_str_buf_t *buffer, size_t size);
 
 /* File name parser.

@@ -80,6 +80,60 @@ LLVM_DUMP_METHOD void SourceLocation::dump(const SourceManager &SM) const {
   llvm::errs() << '\n';
 }
 
+LLVM_DUMP_METHOD void SourceRange::dump(const SourceManager &SM) const {
+  print(llvm::errs(), SM);
+  llvm::errs() << '\n';
+}
+
+static PresumedLoc PrintDifference(raw_ostream &OS, const SourceManager &SM,
+                                   SourceLocation Loc, PresumedLoc Previous) {
+  if (Loc.isFileID()) {
+
+    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+
+    if (PLoc.isInvalid()) {
+      OS << "<invalid sloc>";
+      return Previous;
+    }
+
+    if (Previous.isInvalid() ||
+        strcmp(PLoc.getFilename(), Previous.getFilename()) != 0) {
+      OS << PLoc.getFilename() << ':' << PLoc.getLine() << ':'
+         << PLoc.getColumn();
+    } else if (Previous.isInvalid() || PLoc.getLine() != Previous.getLine()) {
+      OS << "line" << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
+    } else {
+      OS << "col" << ':' << PLoc.getColumn();
+    }
+    return PLoc;
+  }
+  auto PrintedLoc = PrintDifference(OS, SM, SM.getExpansionLoc(Loc), Previous);
+
+  OS << " <Spelling=";
+  PrintedLoc = PrintDifference(OS, SM, SM.getSpellingLoc(Loc), PrintedLoc);
+  OS << '>';
+  return PrintedLoc;
+}
+
+void SourceRange::print(raw_ostream &OS, const SourceManager &SM) const {
+
+  OS << '<';
+  auto PrintedLoc = PrintDifference(OS, SM, B, {});
+  if (B != E) {
+    OS << ", ";
+    PrintDifference(OS, SM, E, PrintedLoc);
+  }
+  OS << '>';
+}
+
+LLVM_DUMP_METHOD std::string
+SourceRange::printToString(const SourceManager &SM) const {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  print(OS, SM);
+  return OS.str();
+}
+
 //===----------------------------------------------------------------------===//
 // FullSourceLoc
 //===----------------------------------------------------------------------===//

@@ -38,4 +38,4 @@ B:
 ; CHECK: ![[e3]] = !{void (i1)* @freq, i32 ()* @func3, i64 150}
 ; CHECK: ![[e4]] = !{void (i1)* @freq, i32 ()* @func1, i64 10}
 ; CHECK: ![[e5]] = !{void (i1)* @freq, void ()* @a, i64 11}
-; CHECK: ![[e6]] = !{void (i1)* @freq, void ()* @b, i64 20}
+; CHECK: ![[e6]] = !{void (i1)* @freq, void ()* @b, i64 21}

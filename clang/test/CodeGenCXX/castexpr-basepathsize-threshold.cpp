@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 %s -emit-llvm -o -
+// RUN: %clang_cc1 %s -emit-llvm-only -o -
 
 // https://bugs.llvm.org/show_bug.cgi?id=38356
 // We only check that we do not crash.
+
+// ASAN increases stack usage, so we are hitting stack overflow before reaching
+// recursive template instantiation limit.
+// XFAIL: darwin && asan
 
 template <typename a, a b(unsigned), int c, unsigned...>
 struct d : d<a, b, c - 1> {};

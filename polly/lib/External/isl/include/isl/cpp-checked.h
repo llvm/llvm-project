@@ -1200,6 +1200,7 @@ public:
   static inline val neginfty(ctx ctx);
   static inline val negone(ctx ctx);
   static inline val one(ctx ctx);
+  inline val pow2() const;
   inline int sgn() const;
   inline val sub(val v2) const;
   inline val trunc() const;
@@ -4849,6 +4850,12 @@ val val::negone(ctx ctx)
 val val::one(ctx ctx)
 {
   auto res = isl_val_one(ctx.release());
+  return manage(res);
+}
+
+val val::pow2() const
+{
+  auto res = isl_val_pow2(copy());
   return manage(res);
 }
 

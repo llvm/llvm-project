@@ -1,7 +1,10 @@
-; RUN: opt -data-layout=A5 -S -load-store-vectorizer -mattr=-unaligned-buffer-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
-; RUN: opt -data-layout=A5 -S -load-store-vectorizer -mattr=+unaligned-buffer-access,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
+; RUN: opt -S -load-store-vectorizer -mattr=-unaligned-buffer-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
+; RUN: opt -S -load-store-vectorizer -mattr=+unaligned-buffer-access,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
+; RUN: opt -S -passes='function(load-store-vectorizer)' -mattr=-unaligned-buffer-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=ALIGNED -check-prefix=ALL %s
+; RUN: opt -S -passes='function(load-store-vectorizer)' -mattr=+unaligned-buffer-access,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck -check-prefix=UNALIGNED -check-prefix=ALL %s
 
 target triple = "amdgcn--"
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 ; ALL-LABEL: @load_unknown_offset_align1_i8(
 ; ALL: alloca [128 x i8], align 1
@@ -63,10 +66,7 @@ define amdgpu_kernel void @load_unknown_offset_align1_i32(i32 addrspace(1)* noal
 ; ALL: alloca [128 x i32], align 16
 
 ; UNALIGNED: load <2 x i32>, <2 x i32> addrspace(5)* %{{[0-9]+}}, align 1{{$}}
-
-; FIXME: Should change alignment
-; ALIGNED: load i32
-; ALIGNED: load i32
+; ALIGNED: load <2 x i32>, <2 x i32> addrspace(5)* %{{[0-9]+}}, align 4{{$}}
 define amdgpu_kernel void @load_alloca16_unknown_offset_align1_i32(i32 addrspace(1)* noalias %out, i32 %offset) #0 {
   %alloca = alloca [128 x i32], align 16, addrspace(5)
   %ptr0 = getelementptr inbounds [128 x i32], [128 x i32] addrspace(5)* %alloca, i32 0, i32 %offset
@@ -127,5 +127,84 @@ define amdgpu_kernel void @store_unknown_offset_align1_i32(i32 addrspace(1)* noa
   ret void
 }
 
-attributes #0 = { nounwind }
+; ALL-LABEL: @merge_private_store_4_vector_elts_loads_v4i32(
+; ALIGNED: %alloca = alloca [8 x i32], align 4, addrspace(5)
+; ALIGNED: store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, <4 x i32> addrspace(5)* %1, align 4
 
+; UNALIGNED: %alloca = alloca [8 x i32], align 1, addrspace(5)
+; UNALIGNED: store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, <4 x i32> addrspace(5)* %1, align 1
+define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32() {
+  %alloca = alloca [8 x i32], align 1, addrspace(5)
+  %out = bitcast [8 x i32] addrspace(5)* %alloca to i32 addrspace(5)*
+  %out.gep.1 = getelementptr i32, i32 addrspace(5)* %out, i32 1
+  %out.gep.2 = getelementptr i32, i32 addrspace(5)* %out, i32 2
+  %out.gep.3 = getelementptr i32, i32 addrspace(5)* %out, i32 3
+
+  store i32 9, i32 addrspace(5)* %out, align 1
+  store i32 1, i32 addrspace(5)* %out.gep.1, align 1
+  store i32 23, i32 addrspace(5)* %out.gep.2, align 1
+  store i32 19, i32 addrspace(5)* %out.gep.3, align 1
+  ret void
+}
+
+; ALL-LABEL: @merge_private_store_4_vector_elts_loads_v4i8(
+; ALIGNED: %alloca = alloca [8 x i8], align 4, addrspace(5)
+; ALIGNED: store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, <4 x i8> addrspace(5)* %1, align 4
+
+; UNALIGNED: %alloca = alloca [8 x i8], align 1, addrspace(5)
+; UNALIGNED: store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, <4 x i8> addrspace(5)* %1, align 1
+define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8() {
+  %alloca = alloca [8 x i8], align 1, addrspace(5)
+  %out = bitcast [8 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
+  %out.gep.1 = getelementptr i8, i8 addrspace(5)* %out, i8 1
+  %out.gep.2 = getelementptr i8, i8 addrspace(5)* %out, i8 2
+  %out.gep.3 = getelementptr i8, i8 addrspace(5)* %out, i8 3
+
+  store i8 9, i8 addrspace(5)* %out, align 1
+  store i8 1, i8 addrspace(5)* %out.gep.1, align 1
+  store i8 23, i8 addrspace(5)* %out.gep.2, align 1
+  store i8 19, i8 addrspace(5)* %out.gep.3, align 1
+  ret void
+}
+
+; ALL-LABEL: @merge_private_load_4_vector_elts_loads_v4i32(
+; ALIGNED: %alloca = alloca [8 x i32], align 4, addrspace(5)
+; ALIGNED: load <4 x i32>, <4 x i32> addrspace(5)* %1, align 4
+
+; UNALIGNED: %alloca = alloca [8 x i32], align 1, addrspace(5)
+; UNALIGNED: load <4 x i32>, <4 x i32> addrspace(5)* %1, align 1
+define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i32() {
+  %alloca = alloca [8 x i32], align 1, addrspace(5)
+  %out = bitcast [8 x i32] addrspace(5)* %alloca to i32 addrspace(5)*
+  %out.gep.1 = getelementptr i32, i32 addrspace(5)* %out, i32 1
+  %out.gep.2 = getelementptr i32, i32 addrspace(5)* %out, i32 2
+  %out.gep.3 = getelementptr i32, i32 addrspace(5)* %out, i32 3
+
+  %load0 = load i32, i32 addrspace(5)* %out, align 1
+  %load1 = load i32, i32 addrspace(5)* %out.gep.1, align 1
+  %load2 = load i32, i32 addrspace(5)* %out.gep.2, align 1
+  %load3 = load i32, i32 addrspace(5)* %out.gep.3, align 1
+  ret void
+}
+
+; ALL-LABEL: @merge_private_load_4_vector_elts_loads_v4i8(
+; ALIGNED: %alloca = alloca [8 x i8], align 4, addrspace(5)
+; ALIGNED: load <4 x i8>, <4 x i8> addrspace(5)* %1, align 4
+
+; UNALIGNED: %alloca = alloca [8 x i8], align 1, addrspace(5)
+; UNALIGNED: load <4 x i8>, <4 x i8> addrspace(5)* %1, align 1
+define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i8() {
+  %alloca = alloca [8 x i8], align 1, addrspace(5)
+  %out = bitcast [8 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
+  %out.gep.1 = getelementptr i8, i8 addrspace(5)* %out, i8 1
+  %out.gep.2 = getelementptr i8, i8 addrspace(5)* %out, i8 2
+  %out.gep.3 = getelementptr i8, i8 addrspace(5)* %out, i8 3
+
+  %load0 = load i8, i8 addrspace(5)* %out, align 1
+  %load1 = load i8, i8 addrspace(5)* %out.gep.1, align 1
+  %load2 = load i8, i8 addrspace(5)* %out.gep.2, align 1
+  %load3 = load i8, i8 addrspace(5)* %out.gep.3, align 1
+  ret void
+}
+
+attributes #0 = { nounwind }

@@ -39,5 +39,6 @@ int main()
     static_assert((std::is_same<It::difference_type, int>::value), "");
     static_assert((std::is_same<It::value_type, A>::value), "");
     static_assert((std::is_same<It::pointer, A*>::value), "");
+    static_assert((std::is_same<It::reference, A&>::value), "");
     static_assert((std::is_same<It::iterator_category, std::forward_iterator_tag>::value), "");
 }

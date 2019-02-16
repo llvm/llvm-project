@@ -26,8 +26,7 @@ entry:
 ; CHECK-VSX: .quad 4562098671269285104
 ; CHECK-VSX-LABEL: test_double_const:
 ; CHECK-VSX: addis [[REG1:[0-9]+]], 2, [[VAR]]@toc@ha
-; CHECK-VSX: addi [[REG1]], {{[0-9]+}}, [[VAR]]@toc@l
-; CHECK-VSX: lfdx {{[0-9]+}}, 0, [[REG1]]
+; CHECK-VSX: lfd {{[0-9]+}}, [[VAR]]@toc@l({{[0-9]+}}) 
 
 ; CHECK-P9: [[VAR:[a-z0-9A-Z_.]+]]:
 ; CHECK-P9: .quad 4562098671269285104

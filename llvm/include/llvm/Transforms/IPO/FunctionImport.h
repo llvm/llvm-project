@@ -37,13 +37,61 @@ public:
   /// containing all the GUIDs of all functions to import for a source module.
   using FunctionsToImportTy = std::unordered_set<GlobalValue::GUID>;
 
+  /// The different reasons selectCallee will chose not to import a
+  /// candidate.
+  enum ImportFailureReason {
+    None,
+    // We can encounter a global variable instead of a function in rare
+    // situations with SamplePGO. See comments where this failure type is
+    // set for more details.
+    GlobalVar,
+    // Found to be globally dead, so we don't bother importing.
+    NotLive,
+    // Instruction count over the current threshold.
+    TooLarge,
+    // Don't import something with interposable linkage as we can't inline it
+    // anyway.
+    InterposableLinkage,
+    // Generally we won't end up failing due to this reason, as we expect
+    // to find at least one summary for the GUID that is global or a local
+    // in the referenced module for direct calls.
+    LocalLinkageNotInModule,
+    // This corresponds to the NotEligibleToImport being set on the summary,
+    // which can happen in a few different cases (e.g. local that can't be
+    // renamed or promoted because it is referenced on a llvm*.used variable).
+    NotEligible,
+    // This corresponds to NoInline being set on the function summary,
+    // which will happen if it is known that the inliner will not be able
+    // to inline the function (e.g. it is marked with a NoInline attribute).
+    NoInline
+  };
+
+  /// Information optionally tracked for candidates the importer decided
+  /// not to import. Used for optional stat printing.
+  struct ImportFailureInfo {
+    // The ValueInfo corresponding to the candidate. We save an index hash
+    // table lookup for each GUID by stashing this here.
+    ValueInfo VI;
+    // The maximum call edge hotness for all failed imports of this candidate.
+    CalleeInfo::HotnessType MaxHotness;
+    // most recent reason for failing to import (doesn't necessarily correspond
+    // to the attempt with the maximum hotness).
+    ImportFailureReason Reason;
+    // The number of times we tried to import candidate but failed.
+    unsigned Attempts;
+    ImportFailureInfo(ValueInfo VI, CalleeInfo::HotnessType MaxHotness,
+                      ImportFailureReason Reason, unsigned Attempts)
+        : VI(VI), MaxHotness(MaxHotness), Reason(Reason), Attempts(Attempts) {}
+  };
+
   /// Map of callee GUID considered for import into a given module to a pair
   /// consisting of the largest threshold applied when deciding whether to
   /// import it and, if we decided to import, a pointer to the summary instance
   /// imported. If we decided not to import, the summary will be nullptr.
   using ImportThresholdsTy =
       DenseMap<GlobalValue::GUID,
-               std::pair<unsigned, const GlobalValueSummary *>>;
+               std::tuple<unsigned, const GlobalValueSummary *,
+                          std::unique_ptr<ImportFailureInfo>>>;
 
   /// The map contains an entry for every module to import from, the key being
   /// the module identifier to pass to the ModuleLoader. The value is the set of
@@ -128,6 +176,14 @@ void computeDeadSymbols(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
 
+/// Compute dead symbols and run constant propagation in combined index
+/// after that.
+void computeDeadSymbolsWithConstProp(
+    ModuleSummaryIndex &Index,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
+    bool ImportEnabled);
+
 /// Converts value \p GV to declaration, or replaces with a declaration if
 /// it is an alias. Returns true if converted, false if replaced.
 bool convertToDeclaration(GlobalValue &GV);
@@ -153,10 +209,10 @@ std::error_code EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
     const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
-/// Resolve WeakForLinker values in \p TheModule based on the information
+/// Resolve prevailing symbol linkages in \p TheModule based on the information
 /// recorded in the summaries during global summary-based analysis.
-void thinLTOResolveWeakForLinkerModule(Module &TheModule,
-                                       const GVSummaryMapTy &DefinedGlobals);
+void thinLTOResolvePrevailingInModule(Module &TheModule,
+                                      const GVSummaryMapTy &DefinedGlobals);
 
 /// Internalize \p TheModule based on the information recorded in the summaries
 /// during global summary-based analysis.

@@ -24,8 +24,11 @@ result is printed out as YAML to the standard output.
 The main goal of this tool is to automatically (in)validate the LLVM's TableDef
 scheduling models. To that end, we also provide analysis of the results.
 
-EXAMPLES: benchmarking
-----------------------
+:program:`llvm-exegesis` can also benchmark arbitrary user-provided code
+snippets.
+
+EXAMPLE 1: benchmarking instructions
+------------------------------------
 
 Assume you have an X86-64 machine. To measure the latency of a single
 instruction, run:
@@ -75,8 +78,45 @@ To measure the latency of all instructions for the host architecture, run:
 
 FIXME: Provide an :program:`llvm-exegesis` option to test all instructions.
 
-EXAMPLES: analysis
-----------------------
+
+EXAMPLE 2: benchmarking a custom code snippet
+---------------------------------------------
+
+To measure the latency/uops of a custom piece of code, you can specify the
+`snippets-file` option (`-` reads from standard input).
+
+.. code-block:: bash
+
+    $ echo "vzeroupper" | llvm-exegesis -mode=uops -snippets-file=-
+
+Real-life code snippets typically depend on registers or memory.
+:program:`llvm-exegesis` checks the liveliness of registers (i.e. any register
+use has a corresponding def or is a "live in"). If your code depends on the
+value of some registers, you have two options:
+
+- Mark the register as requiring a definition. :program:`llvm-exegesis` will
+  automatically assign a value to the register. This can be done using the
+  directive `LLVM-EXEGESIS-DEFREG <reg name> <hex_value>`, where `<hex_value>`
+  is a bit pattern used to fill `<reg_name>`. If `<hex_value>` is smaller than
+  the register width, it will be sign-extended.
+- Mark the register as a "live in". :program:`llvm-exegesis` will benchmark
+  using whatever value was in this registers on entry. This can be done using
+  the directive `LLVM-EXEGESIS-LIVEIN <reg name>`.
+
+For example, the following code snippet depends on the values of XMM1 (which
+will be set by the tool) and the memory buffer passed in RDI (live in).
+
+.. code-block:: none
+
+  # LLVM-EXEGESIS-LIVEIN RDI
+  # LLVM-EXEGESIS-DEFREG XMM1 42
+  vmulps	(%rdi), %xmm1, %xmm2
+  vhaddps	%xmm2, %xmm2, %xmm3
+  addq $0x10, %rdi
+
+
+EXAMPLE 3: analysis
+-------------------
 
 Assuming you have a set of benchmarked instructions (either latency or uops) as
 YAML in file `/tmp/benchmarks.yaml`, you can analyze the results using the
@@ -87,7 +127,7 @@ following command:
     $ llvm-exegesis -mode=analysis \
   -benchmarks-file=/tmp/benchmarks.yaml \
   -analysis-clusters-output-file=/tmp/clusters.csv \
-  -analysis-inconsistencies-output-file=/tmp/inconsistencies.txt
+  -analysis-inconsistencies-output-file=/tmp/inconsistencies.html
 
 This will group the instructions into clusters with the same performance
 characteristics. The clusters will be written out to `/tmp/clusters.csv` in the
@@ -132,13 +172,19 @@ OPTIONS
 
 .. option:: -opcode-index=<LLVM opcode index>
 
- Specify the opcode to measure, by index.
- Either `opcode-index` or `opcode-name` must be set.
+ Specify the opcode to measure, by index. See example 1 for details.
+ Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
-.. option:: -opcode-name=<LLVM opcode name>
+.. option:: -opcode-name=<opcode name 1>,<opcode name 2>,...
 
- Specify the opcode to measure, by name.
- Either `opcode-index` or `opcode-name` must be set.
+ Specify the opcode to measure, by name. Several opcodes can be specified as
+ a comma-separated list. See example 1 for details.
+ Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
+
+ .. option:: -snippets-file=<filename>
+
+  Specify the custom code snippet to measure. See example 2 for details.
+  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
 .. option:: -mode=[latency|uops|analysis]
 
@@ -178,6 +224,10 @@ OPTIONS
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
+ .. option:: -mcpu=<cpu name>
+
+  If set, measure the cpu characteristics using the counters for this CPU. This
+  is useful when creating new sched models (the host CPU is unknown to LLVM).
 
 EXIT STATUS
 -----------

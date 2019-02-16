@@ -39,7 +39,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:      Group
 ; CHECK-NEXT:        (Low: %b High: ((4 * (1 umax %x)) + %b))
 ; CHECK-NEXT:          Member: {%b,+,4}<%for.body>
-; CHECK:         Store to invariant address was not found in loop.
+; CHECK:         Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:    SCEV assumptions:
 ; CHECK-NEXT:    {1,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:    {0,+,1}<%for.body> Added Flags: <nusw>

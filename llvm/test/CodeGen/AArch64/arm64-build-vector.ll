@@ -39,3 +39,39 @@ define <8 x i16> @concat_2_build_vector(<4 x i16> %in0) {
   %shuffle.i = shufflevector <4 x i16> %vshl_n2, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i16> %shuffle.i
 }
+
+; The lowering of a widened f16 BUILD_VECTOR tries to optimize it by building
+; an equivalent integer vector and BITCAST-ing that. This case checks that
+; normalizing the vector generates a valid result. The choice of the
+; constant prevents earlier passes from replacing the BUILD_VECTOR.
+define void @widen_f16_build_vector(half* %addr) {
+; CHECK-LABEL: widen_f16_build_vector:
+; CHECK: mov    w[[GREG:[0-9]+]], #13294
+; CHECK: dup.4h v0, w[[GREG]]
+; CHECK: str    s0, [x0]
+  %1 = bitcast half* %addr to <2 x half>*
+  store <2 x half> <half 0xH33EE, half 0xH33EE>, <2 x half>* %1, align 2
+  ret void
+}
+
+; Check that a single element vector is constructed with a mov
+define <1 x i64> @single_element_vector_i64(<1 x i64> %arg) {
+; CHECK-LABEL: single_element_vector_i64
+; CHECK: orr w[[GREG:[0-9]+]], wzr, #0x1
+; CHECK: fmov d[[DREG:[0-9]+]], x[[GREG]]
+; CHECK: add d0, d0, d[[DREG]]
+; CHECK: ret
+entry:
+  %add = add <1 x i64> %arg, <i64 1>
+  ret <1 x i64> %add
+}
+
+define <1 x double> @single_element_vector_double(<1 x double> %arg) {
+; CHECK-LABEL: single_element_vector_double
+; CHECK: fmov d[[DREG:[0-9]+]], #1.00000000
+; CHECK: fadd d0, d0, d[[DREG]]
+; CHECK: ret
+entry:
+  %add = fadd <1 x double> %arg, <double 1.0>
+  ret <1 x double> %add
+}

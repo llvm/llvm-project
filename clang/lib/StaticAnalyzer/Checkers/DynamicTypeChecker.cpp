@@ -17,7 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -205,4 +205,8 @@ void DynamicTypeChecker::checkPostStmt(const ImplicitCastExpr *CE,
 
 void ento::registerDynamicTypeChecker(CheckerManager &mgr) {
   mgr.registerChecker<DynamicTypeChecker>();
+}
+
+bool ento::shouldRegisterDynamicTypeChecker(const LangOptions &LO) {
+  return true;
 }

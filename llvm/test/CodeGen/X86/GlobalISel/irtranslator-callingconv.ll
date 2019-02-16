@@ -285,7 +285,7 @@ define <8 x i32> @test_v8i32_args(<8 x i32> %arg1) {
   ; X32:   liveins: $xmm0, $xmm1
   ; X32:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X32:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
-  ; X32:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
+  ; X32:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X32:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV]](<8 x s32>)
   ; X32:   $xmm0 = COPY [[UV]](<4 x s32>)
   ; X32:   $xmm1 = COPY [[UV1]](<4 x s32>)
@@ -295,7 +295,7 @@ define <8 x i32> @test_v8i32_args(<8 x i32> %arg1) {
   ; X64:   liveins: $xmm0, $xmm1
   ; X64:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
-  ; X64:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
+  ; X64:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
   ; X64:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV]](<8 x s32>)
   ; X64:   $xmm0 = COPY [[UV]](<4 x s32>)
   ; X64:   $xmm1 = COPY [[UV1]](<4 x s32>)
@@ -494,8 +494,8 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X32:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X32:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 16 from %fixed-stack.0, align 0)
-  ; X32:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
-  ; X32:   [[MV1:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY2]](<4 x s32>), [[LOAD]](<4 x s32>)
+  ; X32:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
+  ; X32:   [[MV1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[LOAD]](<4 x s32>)
   ; X32:   ADJCALLSTACKDOWN32 0, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV1]](<8 x s32>)
   ; X32:   $xmm0 = COPY [[UV]](<4 x s32>)
@@ -503,7 +503,7 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X32:   CALLpcrel32 @split_return_callee, csr_32, implicit $esp, implicit $ssp, implicit $xmm0, implicit $xmm1, implicit-def $xmm0, implicit-def $xmm1
   ; X32:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X32:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
-  ; X32:   [[MV2:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY3]](<4 x s32>), [[COPY4]](<4 x s32>)
+  ; X32:   [[MV2:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY3]](<4 x s32>), [[COPY4]](<4 x s32>)
   ; X32:   ADJCALLSTACKUP32 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X32:   [[ADD:%[0-9]+]]:_(<8 x s32>) = G_ADD [[MV]], [[MV2]]
   ; X32:   [[UV2:%[0-9]+]]:_(<4 x s32>), [[UV3:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[ADD]](<8 x s32>)
@@ -517,8 +517,8 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X64:   [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
   ; X64:   [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $xmm2
   ; X64:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $xmm3
-  ; X64:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
-  ; X64:   [[MV1:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY2]](<4 x s32>), [[COPY3]](<4 x s32>)
+  ; X64:   [[MV:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
+  ; X64:   [[MV1:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY2]](<4 x s32>), [[COPY3]](<4 x s32>)
   ; X64:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[MV1]](<8 x s32>)
   ; X64:   $xmm0 = COPY [[UV]](<4 x s32>)
@@ -526,7 +526,7 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ; X64:   CALL64pcrel32 @split_return_callee, csr_64, implicit $rsp, implicit $ssp, implicit $xmm0, implicit $xmm1, implicit-def $xmm0, implicit-def $xmm1
   ; X64:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X64:   [[COPY5:%[0-9]+]]:_(<4 x s32>) = COPY $xmm1
-  ; X64:   [[MV2:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY4]](<4 x s32>), [[COPY5]](<4 x s32>)
+  ; X64:   [[MV2:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY4]](<4 x s32>), [[COPY5]](<4 x s32>)
   ; X64:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64:   [[ADD:%[0-9]+]]:_(<8 x s32>) = G_ADD [[MV]], [[MV2]]
   ; X64:   [[UV2:%[0-9]+]]:_(<4 x s32>), [[UV3:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[ADD]](<8 x s32>)

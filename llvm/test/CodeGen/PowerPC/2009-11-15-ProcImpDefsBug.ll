@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin8
+; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu
 
 define void @gcov_exit() nounwind {
 entry:

@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -analyzer-config suppress-null-return-paths=false -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file -analyzer-config suppress-null-return-paths=false %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/path-notes.c.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/path-notes.c.plist -
 
 void zero(int **p) {
   *p = 0;

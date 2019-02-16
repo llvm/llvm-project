@@ -18,7 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "UninitializedObject.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -28,9 +28,14 @@
 using namespace clang;
 using namespace clang::ento;
 
+/// We'll mark fields (and pointee of fields) that are confirmed to be
+/// uninitialized as already analyzed.
+REGISTER_SET_WITH_PROGRAMSTATE(AnalyzedRegions, const MemRegion *)
+
 namespace {
 
-class UninitializedObjectChecker : public Checker<check::EndFunction> {
+class UninitializedObjectChecker
+    : public Checker<check::EndFunction, check::DeadSymbols> {
   std::unique_ptr<BuiltinBug> BT_uninitField;
 
 public:
@@ -39,7 +44,9 @@ public:
 
   UninitializedObjectChecker()
       : BT_uninitField(new BuiltinBug(this, "Uninitialized fields")) {}
+
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
+  void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
 };
 
 /// A basic field type, that is not a pointer or a reference, it's dynamic and
@@ -96,12 +103,11 @@ public:
 
 // Utility function declarations.
 
-/// Returns the object that was constructed by CtorDecl, or None if that isn't
-/// possible.
-// TODO: Refactor this function so that it returns the constructed object's
-// region.
-static Optional<nonloc::LazyCompoundVal>
-getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
+/// Returns the region that was constructed by CtorDecl, or nullptr if that
+/// isn't possible.
+static const TypedValueRegion *
+getConstructedRegion(const CXXConstructorDecl *CtorDecl,
+                     CheckerContext &Context);
 
 /// Checks whether the object constructed by \p Ctor will be analyzed later
 /// (e.g. if the object is a field of another object, in which case we'd check
@@ -135,20 +141,26 @@ void UninitializedObjectChecker::checkEndFunction(
   if (willObjectBeAnalyzedLater(CtorDecl, Context))
     return;
 
-  Optional<nonloc::LazyCompoundVal> Object = getObjectVal(CtorDecl, Context);
-  if (!Object)
+  const TypedValueRegion *R = getConstructedRegion(CtorDecl, Context);
+  if (!R)
     return;
 
-  FindUninitializedFields F(Context.getState(), Object->getRegion(), Opts);
+  FindUninitializedFields F(Context.getState(), R, Opts);
 
-  const UninitFieldMap &UninitFields = F.getUninitFields();
+  std::pair<ProgramStateRef, const UninitFieldMap &> UninitInfo =
+      F.getResults();
 
-  if (UninitFields.empty())
+  ProgramStateRef UpdatedState = UninitInfo.first;
+  const UninitFieldMap &UninitFields = UninitInfo.second;
+
+  if (UninitFields.empty()) {
+    Context.addTransition(UpdatedState);
     return;
+  }
 
   // There are uninitialized fields in the record.
 
-  ExplodedNode *Node = Context.generateNonFatalErrorNode(Context.getState());
+  ExplodedNode *Node = Context.generateNonFatalErrorNode(UpdatedState);
   if (!Node)
     return;
 
@@ -189,6 +201,15 @@ void UninitializedObjectChecker::checkEndFunction(
   Context.emitReport(std::move(Report));
 }
 
+void UninitializedObjectChecker::checkDeadSymbols(SymbolReaper &SR,
+                                                  CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  for (const MemRegion *R : State->get<AnalyzedRegions>()) {
+    if (!SR.isLiveRegion(R))
+      State = State->remove<AnalyzedRegions>(R);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //                   Methods for FindUninitializedFields.
 //===----------------------------------------------------------------------===//
@@ -206,17 +227,34 @@ FindUninitializedFields::FindUninitializedFields(
     UninitFields.clear();
 }
 
-bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain) {
+bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain,
+                                                const MemRegion *PointeeR) {
+  const FieldRegion *FR = Chain.getUninitRegion();
+
+  assert((PointeeR || !isDereferencableType(FR->getDecl()->getType())) &&
+         "One must also pass the pointee region as a parameter for "
+         "dereferenceable fields!");
+
+  if (State->contains<AnalyzedRegions>(FR))
+    return false;
+
+  if (PointeeR) {
+    if (State->contains<AnalyzedRegions>(PointeeR)) {
+      return false;
+    }
+    State = State->add<AnalyzedRegions>(PointeeR);
+  }
+
+  State = State->add<AnalyzedRegions>(FR);
+
   if (State->getStateManager().getContext().getSourceManager().isInSystemHeader(
-          Chain.getUninitRegion()->getDecl()->getLocation()))
+          FR->getDecl()->getLocation()))
     return false;
 
   UninitFieldMap::mapped_type NoteMsgBuf;
   llvm::raw_svector_ostream OS(NoteMsgBuf);
   Chain.printNoteMsg(OS);
-  return UninitFields
-      .insert(std::make_pair(Chain.getUninitRegion(), std::move(NoteMsgBuf)))
-      .second;
+  return UninitFields.insert({FR, std::move(NoteMsgBuf)}).second;
 }
 
 bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
@@ -400,25 +438,27 @@ static void printTail(llvm::raw_ostream &Out,
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
-static Optional<nonloc::LazyCompoundVal>
-getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context) {
+static const TypedValueRegion *
+getConstructedRegion(const CXXConstructorDecl *CtorDecl,
+                     CheckerContext &Context) {
 
-  Loc ThisLoc = Context.getSValBuilder().getCXXThis(CtorDecl->getParent(),
+  Loc ThisLoc = Context.getSValBuilder().getCXXThis(CtorDecl,
                                                     Context.getStackFrame());
-  // Getting the value for 'this'.
-  SVal This = Context.getState()->getSVal(ThisLoc);
 
-  // Getting the value for '*this'.
-  SVal Object = Context.getState()->getSVal(This.castAs<Loc>());
+  SVal ObjectV = Context.getState()->getSVal(ThisLoc);
 
-  return Object.getAs<nonloc::LazyCompoundVal>();
+  auto *R = ObjectV.getAsRegion()->getAs<TypedValueRegion>();
+  if (R && !R->getValueType()->getAsCXXRecordDecl())
+    return nullptr;
+
+  return R;
 }
 
 static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
                                       CheckerContext &Context) {
 
-  Optional<nonloc::LazyCompoundVal> CurrentObject = getObjectVal(Ctor, Context);
-  if (!CurrentObject)
+  const TypedValueRegion *CurrRegion = getConstructedRegion(Ctor, Context);
+  if (!CurrRegion)
     return false;
 
   const LocationContext *LC = Context.getLocationContext();
@@ -429,14 +469,14 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
     if (!OtherCtor)
       continue;
 
-    Optional<nonloc::LazyCompoundVal> OtherObject =
-        getObjectVal(OtherCtor, Context);
-    if (!OtherObject)
+    const TypedValueRegion *OtherRegion =
+        getConstructedRegion(OtherCtor, Context);
+    if (!OtherRegion)
       continue;
 
-    // If the CurrentObject is a subregion of OtherObject, it will be analyzed
-    // during the analysis of OtherObject.
-    if (CurrentObject->getRegion()->isSubRegionOf(OtherObject->getRegion()))
+    // If the CurrRegion is a subregion of OtherRegion, it will be analyzed
+    // during the analysis of OtherRegion.
+    if (CurrRegion->isSubRegionOf(OtherRegion))
       return true;
   }
 
@@ -487,12 +527,16 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   UninitObjCheckerOptions &ChOpts = Chk->Opts;
 
   ChOpts.IsPedantic =
-      AnOpts.getBooleanOption("Pedantic", /*DefaultVal*/ false, Chk);
+      AnOpts.getCheckerBooleanOption("Pedantic", /*DefaultVal*/ false, Chk);
   ChOpts.ShouldConvertNotesToWarnings =
-      AnOpts.getBooleanOption("NotesAsWarnings", /*DefaultVal*/ false, Chk);
-  ChOpts.CheckPointeeInitialization = AnOpts.getBooleanOption(
+      AnOpts.getCheckerBooleanOption("NotesAsWarnings", /*DefaultVal*/ false, Chk);
+  ChOpts.CheckPointeeInitialization = AnOpts.getCheckerBooleanOption(
       "CheckPointeeInitialization", /*DefaultVal*/ false, Chk);
   ChOpts.IgnoredRecordsWithFieldPattern =
-      AnOpts.getOptionAsString("IgnoreRecordsWithField",
+      AnOpts.getCheckerStringOption("IgnoreRecordsWithField",
                                /*DefaultVal*/ "", Chk);
+}
+
+bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {
+  return true;
 }

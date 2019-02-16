@@ -9,6 +9,7 @@ config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.llvm_shlib_dir = "@SHLIBDIR@"
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.debuginfo_tests_obj_root = "@DEBUGINFO_TESTS_BINARY_DIR@"
 config.debuginfo_tests_src_root = "@DEBUGINFO_TESTS_SOURCE_DIR@"
@@ -19,7 +20,8 @@ config.host_arch = "@HOST_ARCH@"
 
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 
-@LIT_SITE_CFG_IN_FOOTER@
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@DEBUGINFO_TESTS_SOURCE_DIR@/lit.cfg.py")

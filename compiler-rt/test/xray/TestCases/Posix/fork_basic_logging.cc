@@ -11,6 +11,9 @@
 // REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 
+// Not ported.
+// UNSUPPORTED: netbsd
+
 #include "xray/xray_log_interface.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -81,20 +84,20 @@ int main()
 }
 
 // Make sure we know which thread is the parent process
-// TRACE-DAG: - { type: 0, func-id: [[LSGT:[0-9]+]], function: {{.*log_syscall_gettid.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[LSGT:[0-9]+]], function: {{.*log_syscall_gettid.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}}, data: '' }
 
-// TRACE-DAG: - { type: 0, func-id: [[PPOC:[0-9]+]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[PPOC:[0-9]+]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-enter, tsc: {{[0-9]+}}, data: '' }
 //
 // The parent will print its pid
-// TRACE-DAG: - { type: 0, func-id: [[PPTARG:[0-9]+]], function: {{.*print_parent_tid.*}}, args: [ [[THREAD1]] ], cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-enter-arg, tsc: {{[0-9]+}} }
-// TRACE-DAG: - { type: 0, func-id: [[PPTARG]], function: {{.*print_parent_tid.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[PPTARG:[0-9]+]], function: {{.*print_parent_tid.*}}, args: [ [[THREAD1]] ], cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-enter-arg, tsc: {{[0-9]+}}, data: '' }
+// TRACE-DAG: - { type: 0, func-id: [[PPTARG]], function: {{.*print_parent_tid.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-exit, tsc: {{[0-9]+}}, data: '' }
 //
-// TRACE-DAG  - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
+// TRACE-DAG  - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS1]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}}, data: '' }
 
-// TRACE-DAG: - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], process: [[PROCESS2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], process: [[PROCESS2:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}}, data: '' }
 //
 // The child will print its pid
-// TRACE-DAG: - { type: 0, func-id: [[PCTARG:[0-9]+]], function: {{.*print_child_tid.*}}, args: [ [[THREAD2]] ], cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-enter-arg, tsc: {{[0-9]+}} }
-// TRACE-DAG: - { type: 0, func-id: [[PCTARG]], function: {{.*print_child_tid.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-exit, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[PCTARG:[0-9]+]], function: {{.*print_child_tid.*}}, args: [ [[THREAD2]] ], cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-enter-arg, tsc: {{[0-9]+}}, data: '' }
+// TRACE-DAG: - { type: 0, func-id: [[PCTARG]], function: {{.*print_child_tid.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-exit, tsc: {{[0-9]+}}, data: '' }
 //
-// TRACE-DAG: - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[PPOC]], function: {{.*print_parent_or_child.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS2]], kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}}, data: '' }

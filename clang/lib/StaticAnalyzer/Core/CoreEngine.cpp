@@ -53,26 +53,28 @@ STATISTIC(NumPathsExplored,
 // Core analysis engine.
 //===----------------------------------------------------------------------===//
 
-static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
+static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts,
+                                                  SubEngine &subengine) {
   switch (Opts.getExplorationStrategy()) {
-    case AnalyzerOptions::ExplorationStrategyKind::DFS:
+    case ExplorationStrategyKind::DFS:
       return WorkList::makeDFS();
-    case AnalyzerOptions::ExplorationStrategyKind::BFS:
+    case ExplorationStrategyKind::BFS:
       return WorkList::makeBFS();
-    case AnalyzerOptions::ExplorationStrategyKind::BFSBlockDFSContents:
+    case ExplorationStrategyKind::BFSBlockDFSContents:
       return WorkList::makeBFSBlockDFSContents();
-    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirst:
+    case ExplorationStrategyKind::UnexploredFirst:
       return WorkList::makeUnexploredFirst();
-    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirstQueue:
+    case ExplorationStrategyKind::UnexploredFirstQueue:
       return WorkList::makeUnexploredFirstPriorityQueue();
-    default:
-      llvm_unreachable("Unexpected case");
+    case ExplorationStrategyKind::UnexploredFirstLocationQueue:
+      return WorkList::makeUnexploredFirstPriorityLocationQueue();
   }
+  llvm_unreachable("Unknown AnalyzerOptions::ExplorationStrategyKind");
 }
 
 CoreEngine::CoreEngine(SubEngine &subengine, FunctionSummariesTy *FS,
                        AnalyzerOptions &Opts)
-    : SubEng(subengine), WList(generateWorkList(Opts)),
+    : SubEng(subengine), WList(generateWorkList(Opts, subengine)),
       BCounterFactory(G.getAllocator()), FunctionSummaries(FS) {}
 
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.

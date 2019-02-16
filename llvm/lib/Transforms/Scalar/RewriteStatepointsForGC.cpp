@@ -28,7 +28,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -38,6 +37,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -65,6 +65,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <algorithm>
 #include <cassert>
@@ -1824,7 +1825,7 @@ static void relocationViaAlloca(
       }
     }
 
-    llvm::sort(Uses.begin(), Uses.end());
+    llvm::sort(Uses);
     auto Last = std::unique(Uses.begin(), Uses.end());
     Uses.erase(Last, Uses.end());
 
@@ -1850,13 +1851,13 @@ static void relocationViaAlloca(
     StoreInst *Store = new StoreInst(Def, Alloca);
     if (Instruction *Inst = dyn_cast<Instruction>(Def)) {
       if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Inst)) {
-        // InvokeInst is a TerminatorInst so the store need to be inserted
-        // into its normal destination block.
+        // InvokeInst is a terminator so the store need to be inserted into its
+        // normal destination block.
         BasicBlock *NormalDest = Invoke->getNormalDest();
         Store->insertBefore(NormalDest->getFirstNonPHI());
       } else {
         assert(!Inst->isTerminator() &&
-               "The only TerminatorInst that can produce a value is "
+               "The only terminator that can produce a value is "
                "InvokeInst which is handled above.");
         Store->insertAfter(Inst);
       }
@@ -2534,9 +2535,10 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   // Delete any unreachable statepoints so that we don't have unrewritten
   // statepoints surviving this pass.  This makes testing easier and the
   // resulting IR less confusing to human readers.
-  DeferredDominance DD(DT);
-  bool MadeChange = removeUnreachableBlocks(F, nullptr, &DD);
-  DD.flush();
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  bool MadeChange = removeUnreachableBlocks(F, nullptr, &DTU);
+  // Flush the Dominator Tree.
+  DTU.getDomTree();
 
   // Gather all the statepoints which need rewritten.  Be careful to only
   // consider those in reachable code since we need to ask dominance queries
@@ -2582,7 +2584,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   // increase the liveset of any statepoint we move over.  This is profitable
   // as long as all statepoints are in rare blocks.  If we had in-register
   // lowering for live values this would be a much safer transform.
-  auto getConditionInst = [](TerminatorInst *TI) -> Instruction* {
+  auto getConditionInst = [](Instruction *TI) -> Instruction * {
     if (auto *BI = dyn_cast<BranchInst>(TI))
       if (BI->isConditional())
         return dyn_cast<Instruction>(BI->getCondition());
@@ -2590,7 +2592,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
     return nullptr;
   };
   for (BasicBlock &BB : F) {
-    TerminatorInst *TI = BB.getTerminator();
+    Instruction *TI = BB.getTerminator();
     if (auto *Cond = getConditionInst(TI))
       // TODO: Handle more than just ICmps here.  We should be able to move
       // most instructions without side effects or memory access.
@@ -2673,7 +2675,7 @@ static SetVector<Value *> computeKillSet(BasicBlock *BB) {
 /// Check that the items in 'Live' dominate 'TI'.  This is used as a basic
 /// sanity check for the liveness computation.
 static void checkBasicSSA(DominatorTree &DT, SetVector<Value *> &Live,
-                          TerminatorInst *TI, bool TermOkay = false) {
+                          Instruction *TI, bool TermOkay = false) {
   for (Value *V : Live) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       // The terminator can be a member of the LiveOut set.  LLVM's definition

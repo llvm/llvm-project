@@ -213,6 +213,12 @@ static void HandleExit() {
   }
 }
 
+bool HandleDlopenInit() {
+  // Not supported on this platform.
+  static_assert(!SANITIZER_SUPPORTS_INIT_FOR_DLOPEN,
+                "Expected SANITIZER_SUPPORTS_INIT_FOR_DLOPEN to be false");
+  return false;
+}
 }  // namespace __asan
 
 // These are declared (in extern "C") by <some_path/sanitizer.h>.

@@ -55,13 +55,19 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		"
 	if [ "`uname -a | grep ppc64le`" != "" ]; then
 		SUFFIX="linux_ppc64le"
+		ARCHCFLAGS="-m64"
 	elif [ "`uname -a | grep x86_64`" != "" ]; then
 		SUFFIX="linux_amd64"
+		ARCHCFLAGS="-m64"
 		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Werror -Wno-unknown-warning-option"
+	elif [ "`uname -a | grep aarch64`" != "" ]; then
+		SUFFIX="linux_arm64"
+		ARCHCFLAGS=""
 	fi
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	SUFFIX="freebsd_amd64"
 	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
+	ARCHCFLAGS="-m64"
 	OSLDFLAGS="-lpthread -fPIC -fpie"
 	SRCS="
 		$SRCS
@@ -77,6 +83,7 @@ elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 elif [ "`uname -a | grep NetBSD`" != "" ]; then
 	SUFFIX="netbsd_amd64"
 	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
+	ARCHCFLAGS="-m64"
 	OSLDFLAGS="-lpthread -fPIC -fpie"
 	SRCS="
 		$SRCS
@@ -87,11 +94,13 @@ elif [ "`uname -a | grep NetBSD`" != "" ]; then
 		../../sanitizer_common/sanitizer_procmaps_common.cc
 		../../sanitizer_common/sanitizer_linux.cc
 		../../sanitizer_common/sanitizer_linux_libcdep.cc
+		../../sanitizer_common/sanitizer_netbsd.cc
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
 	"
 elif [ "`uname -a | grep Darwin`" != "" ]; then
 	SUFFIX="darwin_amd64"
 	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option -mmacosx-version-min=10.7"
+	ARCHCFLAGS="-m64"
 	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7"
 	SRCS="
 		$SRCS
@@ -104,6 +113,7 @@ elif [ "`uname -a | grep Darwin`" != "" ]; then
 elif [ "`uname -a | grep MINGW`" != "" ]; then
 	SUFFIX="windows_amd64"
 	OSCFLAGS="-Wno-error=attributes -Wno-attributes -Wno-unused-const-variable -Wno-unknown-warning-option"
+	ARCHCFLAGS="-m64"
 	OSLDFLAGS=""
 	SRCS="
 		$SRCS
@@ -136,7 +146,7 @@ for F in $SRCS; do
 	cat $F >> $DIR/gotsan.cc
 done
 
-FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++11 -m64 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS"
+FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++11 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS"
 if [ "$DEBUG" = "" ]; then
 	FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
 	if [ "$SUFFIX" = "linux_ppc64le" ]; then
@@ -153,7 +163,7 @@ if [ "$SILENT" != "1" ]; then
 fi
 $CC $DIR/gotsan.cc -c -o $DIR/race_$SUFFIX.syso $FLAGS $CFLAGS
 
-$CC $OSCFLAGS test.c $DIR/race_$SUFFIX.syso -m64 -g -o $DIR/test $OSLDFLAGS $LDFLAGS
+$CC $OSCFLAGS $ARCHCFLAGS test.c $DIR/race_$SUFFIX.syso -g -o $DIR/test $OSLDFLAGS $LDFLAGS
 
 export GORACE="exitcode=0 atexit_sleep_ms=0"
 if [ "$SILENT" != "1" ]; then

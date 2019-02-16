@@ -392,18 +392,20 @@ kmpc_set_defaults                           224
         __kmpc_doacross_post                263
         __kmpc_doacross_fini                264
         __kmpc_taskloop                     266
+        __kmpc_critical_with_hint           270
     %endif
 %endif
 kmpc_aligned_malloc                         265
 kmpc_set_disp_num_buffers                   267
 
 # OpenMP 5.0 entry points
-# TODO: change to OMP_50 once it is implemented
 %ifndef stub
-    %ifdef OMP_45
+    %ifdef OMP_50
         __kmpc_task_reduction_init          268
         __kmpc_task_reduction_get_th_data   269
+# USED FOR 4.5 __kmpc_critical_with_hint    270
         __kmpc_get_target_offload           271
+	__kmpc_omp_reg_task_with_affinity   272
     %endif
 %endif
 
@@ -508,9 +510,7 @@ kmp_set_warnings_off                        780
     omp_is_initial_device                   869
     omp_set_default_device                  879
     omp_get_default_device                  880
-    %ifdef stub
-        omp_get_num_devices                 881
-    %endif
+    omp_get_num_devices                     881
 %endif # OMP_40
 
 # OpenMP 45
@@ -525,8 +525,8 @@ kmp_set_warnings_off                        780
     omp_get_place_num                       876
     omp_get_partition_num_places            877
     omp_get_partition_place_nums            878
+    omp_get_initial_device                  882
     %ifdef stub
-        omp_get_initial_device              882
         omp_target_alloc                    883
         omp_target_free                     884
         omp_target_is_present               885
@@ -538,6 +538,33 @@ kmp_set_warnings_off                        780
 %endif # OMP_45
 
 kmp_set_disp_num_buffers                    890
+
+%ifdef OMP_50
+    omp_control_tool                        891
+    omp_set_default_allocator               892
+    omp_get_default_allocator               893
+    omp_alloc                               894
+    omp_free                                895
+    omp_get_device_num                      896
+    omp_set_affinity_format                 748
+    omp_get_affinity_format                 749
+    omp_display_affinity                    750
+    omp_capture_affinity                    751
+    ompc_set_affinity_format                752
+    ompc_get_affinity_format                753
+    ompc_display_affinity                   754
+    ompc_capture_affinity                   755
+
+    OMP_NULL_ALLOCATOR                     DATA
+    omp_default_mem_alloc                  DATA
+    omp_large_cap_mem_alloc                DATA
+    omp_const_mem_alloc                    DATA
+    omp_high_bw_mem_alloc                  DATA
+    omp_low_lat_mem_alloc                  DATA
+    omp_cgroup_mem_alloc                   DATA
+    omp_pteam_mem_alloc                    DATA
+    omp_thread_mem_alloc                   DATA
+%endif # OMP_50
 
 %ifndef stub
     # Ordinals between 900 and 999 are reserved

@@ -26,8 +26,9 @@ define i64 @test1(i64 %X, i8 %C) nounwind {
 ; X64-LABEL: test1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shlq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shlq %cl, %rax
 ; X64-NEXT:    retq
         %shift.upgrd.1 = zext i8 %C to i64              ; <i64> [#uses=1]
         %Y = shl i64 %X, %shift.upgrd.1         ; <i64> [#uses=1]
@@ -57,8 +58,9 @@ define i64 @test2(i64 %X, i8 %C) nounwind {
 ; X64-LABEL: test2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    sarq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    sarq %cl, %rax
 ; X64-NEXT:    retq
         %shift.upgrd.2 = zext i8 %C to i64              ; <i64> [#uses=1]
         %Y = ashr i64 %X, %shift.upgrd.2                ; <i64> [#uses=1]
@@ -87,8 +89,9 @@ define i64 @test3(i64 %X, i8 %C) nounwind {
 ; X64-LABEL: test3:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shrq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    retq
         %shift.upgrd.3 = zext i8 %C to i64              ; <i64> [#uses=1]
         %Y = lshr i64 %X, %shift.upgrd.3                ; <i64> [#uses=1]
@@ -109,8 +112,9 @@ define i32 @test4(i32 %A, i32 %B, i8 %C) nounwind {
 ; X64-LABEL: test4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shldl %cl, %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shldl %cl, %esi, %eax
 ; X64-NEXT:    retq
         %shift.upgrd.4 = zext i8 %C to i32              ; <i32> [#uses=1]
         %X = shl i32 %A, %shift.upgrd.4         ; <i32> [#uses=1]
@@ -133,8 +137,10 @@ define i16 @test5(i16 %A, i16 %B, i8 %C) nounwind {
 ; X64-LABEL: test5:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shldw %cl, %si, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shldw %cl, %si, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
         %shift.upgrd.6 = zext i8 %C to i16              ; <i16> [#uses=1]
         %X = shl i16 %A, %shift.upgrd.6         ; <i16> [#uses=1]
@@ -159,8 +165,9 @@ define i32 @test6(i32 %A, i32 %B, i8 %C) nounwind {
 ; X64-LABEL: test6:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrdl %cl, %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrdl %cl, %esi, %eax
 ; X64-NEXT:    retq
         %shift.upgrd.4 = zext i8 %C to i32              ; <i32> [#uses=1]
         %X = lshr i32 %A, %shift.upgrd.4         ; <i32> [#uses=1]
@@ -183,8 +190,10 @@ define i16 @test7(i16 %A, i16 %B, i8 %C) nounwind {
 ; X64-LABEL: test7:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrdw %cl, %si, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrdw %cl, %si, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
         %shift.upgrd.6 = zext i8 %C to i16              ; <i16> [#uses=1]
         %X = lshr i16 %A, %shift.upgrd.6         ; <i16> [#uses=1]
@@ -212,10 +221,11 @@ define i64 @test8(i64 %val, i32 %bits) nounwind {
 ;
 ; X64-LABEL: test8:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $31, %sil
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shlq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andb $31, %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shlq %cl, %rax
 ; X64-NEXT:    retq
   %and = and i32 %bits, 31
   %sh_prom = zext i32 %and to i64
@@ -235,10 +245,11 @@ define i64 @test9(i64 %val, i32 %bits) nounwind {
 ;
 ; X64-LABEL: test9:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $31, %sil
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    sarq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andb $31, %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    sarq %cl, %rax
 ; X64-NEXT:    retq
   %and = and i32 %bits, 31
   %sh_prom = zext i32 %and to i64
@@ -258,10 +269,11 @@ define i64 @test10(i64 %val, i32 %bits) nounwind {
 ;
 ; X64-LABEL: test10:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $31, %sil
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shrq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andb $31, %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    retq
   %and = and i32 %bits, 31
   %sh_prom = zext i32 %and to i64
@@ -284,10 +296,11 @@ define i32 @test11(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ;
 ; X64-LABEL: test11:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $31, %edx
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shldl %cl, %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl $31, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shldl %cl, %esi, %eax
 ; X64-NEXT:    retq
   %and = and i32 %bits, 31
   %and32 = sub i32 32, %and
@@ -310,10 +323,11 @@ define i32 @test12(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ;
 ; X64-LABEL: test12:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $31, %edx
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrdl %cl, %edi, %esi
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    andl $31, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrdl %cl, %edi, %eax
 ; X64-NEXT:    retq
   %and = and i32 %bits, 31
   %and32 = sub i32 32, %and
@@ -335,8 +349,9 @@ define i32 @test13(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X64-LABEL: test13:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shldl %cl, %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shldl %cl, %esi, %eax
 ; X64-NEXT:    retq
   %bits32 = sub i32 32, %bits
   %sh_lo = lshr i32 %lo, %bits32
@@ -357,8 +372,9 @@ define i32 @test14(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X64-LABEL: test14:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrdl %cl, %edi, %esi
 ; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrdl %cl, %edi, %eax
 ; X64-NEXT:    retq
   %bits32 = sub i32 32, %bits
   %sh_lo = shl i32 %hi, %bits32
@@ -379,8 +395,9 @@ define i32 @test15(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X64-LABEL: test15:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shldl %cl, %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shldl %cl, %esi, %eax
 ; X64-NEXT:    retq
   %bits32 = xor i32 %bits, 31
   %lo2 = lshr i32 %lo, 1
@@ -402,8 +419,9 @@ define i32 @test16(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X64-LABEL: test16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrdl %cl, %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrdl %cl, %esi, %eax
 ; X64-NEXT:    retq
   %bits32 = xor i32 %bits, 31
   %lo2 = shl i32 %lo, 1
@@ -425,8 +443,9 @@ define i32 @test17(i32 %hi, i32 %lo, i32 %bits) nounwind {
 ; X64-LABEL: test17:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shrdl %cl, %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrdl %cl, %esi, %eax
 ; X64-NEXT:    retq
   %bits32 = xor i32 %bits, 31
   %lo2 = add i32 %lo, %lo
@@ -434,4 +453,56 @@ define i32 @test17(i32 %hi, i32 %lo, i32 %bits) nounwind {
   %sh_hi = lshr i32 %hi, %bits
   %sh = or i32 %sh_lo, %sh_hi
   ret i32 %sh
+}
+
+; PR34641 - Masked Shift Counts
+
+define i32 @shld_safe_i32(i32, i32, i32) {
+; X86-LABEL: shld_safe_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shldl %cl, %edx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: shld_safe_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edx, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shldl %cl, %esi, %eax
+; X64-NEXT:    retq
+  %4 = and i32 %2, 31
+  %5 = shl i32 %0, %4
+  %6 = sub i32 0, %2
+  %7 = and i32 %6, 31
+  %8 = lshr i32 %1, %7
+  %9 = or i32 %5, %8
+  ret i32 %9
+}
+
+define i32 @shrd_safe_i32(i32, i32, i32) {
+; X86-LABEL: shrd_safe_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrdl %cl, %edx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: shrd_safe_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edx, %ecx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrdl %cl, %esi, %eax
+; X64-NEXT:    retq
+  %4 = and i32 %2, 31
+  %5 = lshr i32 %0, %4
+  %6 = sub i32 0, %2
+  %7 = and i32 %6, 31
+  %8 = shl i32 %1, %7
+  %9 = or i32 %5, %8
+  ret i32 %9
 }

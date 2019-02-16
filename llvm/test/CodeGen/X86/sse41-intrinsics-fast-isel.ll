@@ -832,27 +832,11 @@ declare <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8>, <16 x i8>, i8) nounwind rea
 define <2 x i64> @test_mm_mul_epi32(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_mul_epi32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psllq $32, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; SSE-NEXT:    psrad $31, %xmm0
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
-; SSE-NEXT:    psllq $32, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; SSE-NEXT:    pmuldq %xmm1, %xmm0
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
 ; AVX1-LABEL: test_mm_mul_epi32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    ret{{[l|q]}}
 ;

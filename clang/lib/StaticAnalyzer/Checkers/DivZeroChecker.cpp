@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -32,6 +32,13 @@ public:
 };
 } // end anonymous namespace
 
+static const Expr *getDenomExpr(const ExplodedNode *N) {
+  const Stmt *S = N->getLocationAs<PreStmt>()->getStmt();
+  if (const auto *BE = dyn_cast<BinaryOperator>(S))
+    return BE->getRHS();
+  return nullptr;
+}
+
 void DivZeroChecker::reportBug(
     const char *Msg, ProgramStateRef StateZero, CheckerContext &C,
     std::unique_ptr<BugReporterVisitor> Visitor) const {
@@ -41,7 +48,7 @@ void DivZeroChecker::reportBug(
 
     auto R = llvm::make_unique<BugReport>(*BT, Msg, N);
     R->addVisitor(std::move(Visitor));
-    bugreporter::trackNullOrUndefValue(N, bugreporter::GetDenomExpr(N), *R);
+    bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     C.emitReport(std::move(R));
   }
 }
@@ -91,4 +98,8 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
 
 void ento::registerDivZeroChecker(CheckerManager &mgr) {
   mgr.registerChecker<DivZeroChecker>();
+}
+
+bool ento::shouldRegisterDivZeroChecker(const LangOptions &LO) {
+  return true;
 }

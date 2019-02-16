@@ -43,7 +43,7 @@ void initLLVM() {
 
 /// Create a TargetMachine. As we lack a dedicated always available target for
 /// unittests, we go for "AArch64".
-std::unique_ptr<TargetMachine> createTargetMachine() {
+std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   Triple TargetTriple("aarch64--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -51,8 +51,9 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
-      "AArch64", "", "", Options, None, None, CodeGenOpt::Aggressive));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine("AArch64", "", "", Options, None, None,
+                             CodeGenOpt::Aggressive)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
@@ -78,7 +79,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 }
 
 std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
-createDummyModule(LLVMContext &Context, const TargetMachine &TM,
+createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
                   StringRef MIRFunc) {
   SmallString<512> S;
   StringRef MIRString = (Twine(R"MIR(
@@ -122,7 +123,7 @@ static void collectCopies(SmallVectorImpl<unsigned> &Copies,
 
 TEST(PatternMatchInstr, MatchIntConstant) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -143,7 +144,7 @@ TEST(PatternMatchInstr, MatchIntConstant) {
 
 TEST(PatternMatchInstr, MatchBinaryOp) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -203,8 +204,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
                    m_GSub(m_ICst(Cst), m_Reg(Src0)));
   ASSERT_FALSE(match);
 
-  auto MIBFMul = B.buildInstr(TargetOpcode::G_FMUL, s64, Copies[0],
-                              B.buildConstant(s64, 42));
+  auto MIBFMul = B.buildInstr(TargetOpcode::G_FMUL, {s64},
+                              {Copies[0], B.buildConstant(s64, 42)});
   // Match and test commutativity for FMUL.
   match = mi_match(MIBFMul->getOperand(0).getReg(), MRI,
                    m_GFMul(m_ICst(Cst), m_Reg(Src0)));
@@ -213,8 +214,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ASSERT_EQ(Src0, Copies[0]);
 
   // FSUB
-  auto MIBFSub = B.buildInstr(TargetOpcode::G_FSUB, s64, Copies[0],
-                              B.buildConstant(s64, 42));
+  auto MIBFSub = B.buildInstr(TargetOpcode::G_FSUB, {s64},
+                              {Copies[0], B.buildConstant(s64, 42)});
   match = mi_match(MIBFSub->getOperand(0).getReg(), MRI,
                    m_GFSub(m_Reg(Src0), m_Reg()));
   ASSERT_TRUE(match);
@@ -248,8 +249,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ASSERT_TRUE(match);
   ASSERT_EQ(Cst, 1);
   auto MIBCAdd1 =
-      CFB.buildInstr(TargetOpcode::G_ADD, s32, CFB.buildConstant(s32, 0),
-                     CFB.buildConstant(s32, 1));
+      CFB.buildInstr(TargetOpcode::G_ADD, {s32},
+                     {CFB.buildConstant(s32, 0), CFB.buildConstant(s32, 1)});
   // This should be a constant now.
   match = mi_match(MIBCAdd1->getOperand(0).getReg(), MRI, m_ICst(Cst));
   ASSERT_TRUE(match);
@@ -260,8 +261,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ConstantFoldingMIRBuilder CFB1(*MF);
   CFB1.setInsertPt(*EntryMBB, EntryMBB->end());
   auto MIBCSub =
-      CFB1.buildInstr(TargetOpcode::G_SUB, s32, CFB1.buildConstant(s32, 1),
-                      CFB1.buildConstant(s32, 1));
+      CFB1.buildInstr(TargetOpcode::G_SUB, {s32},
+                      {CFB1.buildConstant(s32, 1), CFB1.buildConstant(s32, 1)});
   // This should be a constant now.
   match = mi_match(MIBCSub->getOperand(0).getReg(), MRI, m_ICst(Cst));
   ASSERT_TRUE(match);
@@ -270,7 +271,7 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
 
 TEST(PatternMatchInstr, MatchFPUnaryOp) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -288,12 +289,12 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
   auto Copy0s32 = B.buildFPTrunc(s32, Copies[0]);
 
   // Match G_FABS.
-  auto MIBFabs = B.buildInstr(TargetOpcode::G_FABS, s32, Copy0s32);
+  auto MIBFabs = B.buildInstr(TargetOpcode::G_FABS, {s32}, {Copy0s32});
   bool match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg()));
   ASSERT_TRUE(match);
 
   unsigned Src;
-  auto MIBFNeg = B.buildInstr(TargetOpcode::G_FNEG, s32, Copy0s32);
+  auto MIBFNeg = B.buildInstr(TargetOpcode::G_FNEG, {s32}, {Copy0s32});
   match = mi_match(MIBFNeg->getOperand(0).getReg(), MRI, m_GFNeg(m_Reg(Src)));
   ASSERT_TRUE(match);
   ASSERT_EQ(Src, Copy0s32->getOperand(0).getReg());
@@ -341,7 +342,7 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
 
 TEST(PatternMatchInstr, MatchExtendsTrunc) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -397,7 +398,7 @@ TEST(PatternMatchInstr, MatchExtendsTrunc) {
 
 TEST(PatternMatchInstr, MatchSpecificType) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -444,7 +445,7 @@ TEST(PatternMatchInstr, MatchSpecificType) {
 
 TEST(PatternMatchInstr, MatchCombinators) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");

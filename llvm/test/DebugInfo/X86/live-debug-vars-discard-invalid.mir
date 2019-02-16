@@ -1,4 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - %s | FileCheck %s
+# FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39481.
+# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - -verify-machineinstrs=0 %s | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'
@@ -64,7 +65,7 @@ body:             |
 
   bb.1:
     ; This DBG_VALUE will be discarded (use before def of %0).
-    DBG_VALUE debug-use %0, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE %0, $noreg, !18, !DIExpression(), debug-location !25
     %0:gr64 = IMPLICIT_DEF
     %0:gr64 = IMPLICIT_DEF
     %0:gr64 = IMPLICIT_DEF
@@ -72,32 +73,32 @@ body:             |
 
   bb.2:
     ; This DBG_VALUE will be discarded (%1 is defined earlier, but it is not live in, so we do not know where %1 is stored).
-    DBG_VALUE debug-use %1, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE %1, $noreg, !18, !DIExpression(), debug-location !25
     %1:gr64 = IMPLICIT_DEF
     %1:gr64 = IMPLICIT_DEF
     %1:gr64 = IMPLICIT_DEF
     %1:gr64 = IMPLICIT_DEF
     ; This DBG_VALUE is kept, even if %1 is dead, it was defined in the prev instruction,
     ; so the value should be available for as long as the register allocated to %1 is live.
-    DBG_VALUE debug-use %1, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE %1, $noreg, !18, !DIExpression(), debug-location !25
 
   bb.3:
     %1:gr64 = IMPLICIT_DEF
-    DBG_VALUE 0, debug-use $noreg, !23, !DIExpression(), debug-location !25
+    DBG_VALUE 0, $noreg, !23, !DIExpression(), debug-location !25
     ; This DBG_VALUE is kept, even if %1 is dead, it was defined in the prev non-dbg instruction,
     ; so the value should be available for as long as the register allocated to %1 is live.
-    DBG_VALUE debug-use %1, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE %1, $noreg, !18, !DIExpression(), debug-location !25
 
   bb.4:
     ; All DBG_VALUEs here should survive. %2 is livein as it was defined in bb.0, and it has use/def in the BTS64rr instruction.
-    DBG_VALUE debug-use %2, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE %2, $noreg, !18, !DIExpression(), debug-location !25
     %2:gr64 = BTS64rr %2, 0, implicit-def $eflags
-    DBG_VALUE 0, debug-use $noreg, !23, !DIExpression(), debug-location !25
-    DBG_VALUE debug-use %2, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE 0, $noreg, !23, !DIExpression(), debug-location !25
+    DBG_VALUE %2, $noreg, !18, !DIExpression(), debug-location !25
     %2:gr64 = BTS64rr %2, 0, implicit-def $eflags
-    DBG_VALUE debug-use %2, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE %2, $noreg, !18, !DIExpression(), debug-location !25
     %2:gr64 = BTS64rr %2, 0, implicit-def $eflags
-    DBG_VALUE debug-use %2, debug-use $noreg, !18, !DIExpression(), debug-location !25
+    DBG_VALUE %2, $noreg, !18, !DIExpression(), debug-location !25
 
   bb.5:
     RET 0, debug-location !32
@@ -106,29 +107,29 @@ body:             |
 # CHECK-LABEL: name: foobar
 
 # CHECK-LABEL: bb.1:
-# CHECK:        DBG_VALUE debug-use $noreg
+# CHECK:        DBG_VALUE $noreg
 
 # CHECK-LABEL: bb.2:
-# CHECK:        DBG_VALUE debug-use $noreg
+# CHECK:        DBG_VALUE $noreg
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
-# CHECK-NEXT:   DBG_VALUE debug-use $rcx, debug-use $noreg, !18, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE $rcx, $noreg, !18, !DIExpression()
 
 # CHECK-LABEL: bb.3:
 # CHECK:        dead renamable $rcx = IMPLICIT_DEF
-# CHECK-NEXT:   DBG_VALUE 0, debug-use $noreg, !23, !DIExpression()
-# CHECK-NEXT:   DBG_VALUE debug-use $rcx, debug-use $noreg, !18, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE 0, $noreg, !23, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE $rcx, $noreg, !18, !DIExpression()
 
 # CHECK-LABEL: bb.4:
 # CHECK:        liveins: $rax
-# CHECK:        DBG_VALUE debug-use $rax, debug-use $noreg, !18, !DIExpression()
+# CHECK:        DBG_VALUE $rax, $noreg, !18, !DIExpression()
 # CHECK-NEXT:   renamable $rax = BTS64rr killed renamable $rax, 0, implicit-def $eflags
-# CHECK-NEXT:   DBG_VALUE 0, debug-use $noreg, !23, !DIExpression()
-# CHECK-NEXT:   DBG_VALUE debug-use $rax, debug-use $noreg, !18, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE 0, $noreg, !23, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE $rax, $noreg, !18, !DIExpression()
 # CHECK-NEXT:   renamable $rax = BTS64rr killed renamable $rax, 0, implicit-def $eflags
-# CHECK-NEXT:   DBG_VALUE debug-use $rax, debug-use $noreg, !18, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE $rax, $noreg, !18, !DIExpression()
 # CHECK-NEXT:   dead renamable $rax = BTS64rr killed renamable $rax, 0, implicit-def $eflags
 
 # CHECK-LABEL: bb.5:

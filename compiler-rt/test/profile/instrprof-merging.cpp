@@ -47,7 +47,7 @@ int main() {
 #ifdef _VERSION_2
 
 void foo() {
-  A x(0);   // V2: [[@LINE]]{{ *}}|{{ *}}1
+  A x{0};   // V2: [[@LINE]]{{ *}}|{{ *}}1
 }
 
 #endif // _VERSION_2

@@ -67,5 +67,5 @@ INVALID-SYMBOL-LIB_ORDINAL: macho-invalid-symbol-lib_ordinal': truncated or malf
 RUN: not llvm-objdump -macho -objc-meta-data %p/Inputs/macho-invalid-bind-entry 2>&1 | FileCheck -check-prefix INVALID-BIND-ENTRY %s
 INVALID-BIND-ENTRY: macho-invalid-bind-entry': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB bad library ordinal: 83 (max 0) for opcode at: 0x0)
 
-RUN: llvm-objdump -macho -r %p/Inputs/macho-invalid-reloc-section-index | FileCheck -check-prefix INVALID-RELOC-SECTION-INDEX %s
+RUN: llvm-objdump -macho -r -arch x86_64 %p/Inputs/macho-invalid-reloc-section-index | FileCheck -check-prefix INVALID-RELOC-SECTION-INDEX %s
 INVALID-RELOC-SECTION-INDEX: 00000021 False byte   False  UNSIGND False     8388613 (?,?)

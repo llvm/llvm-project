@@ -30,13 +30,11 @@ enum : int {
 
 char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
                       int *status);
-char *microsoftDemangle(const char *mangled_name, char *buf, size_t *n,
-                        int *status);
 
-/// Calls the callback \c Callback with \c Ctx as an argument whenever a type is
-/// encountered. Returns true if \c MangledName couldn't be parsed.
-bool itaniumFindTypesInMangledName(const char *MangledName, void *Ctx,
-                                   void (*Callback)(void *, const char *));
+
+enum MSDemangleFlags { MSDF_None = 0, MSDF_DumpBackrefs = 1 << 0 };
+char *microsoftDemangle(const char *mangled_name, char *buf, size_t *n,
+                        int *status, MSDemangleFlags Flags = MSDF_None);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain

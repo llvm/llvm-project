@@ -426,6 +426,16 @@ public:
     virtual ~failure() throw();
 };
 
+_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+void __throw_failure(char const* __msg) {
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw ios_base::failure(__msg);
+#else
+    ((void)__msg);
+    _VSTD::abort();
+#endif
+}
+
 class _LIBCPP_TYPE_VIS ios_base::Init
 {
 public:

@@ -5,7 +5,7 @@
 
 define i1 @test1(i32 %a) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 %a, -5
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[A:%.*]], -5
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add i32 %a, 4
@@ -15,7 +15,7 @@ define i1 @test1(i32 %a) {
 
 define <2 x i1> @test1vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test1vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> %a, <i32 -5, i32 -5>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 -5, i32 -5>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add <2 x i32> %a, <i32 4, i32 4>
@@ -25,7 +25,7 @@ define <2 x i1> @test1vec(<2 x i32> %a) {
 
 define i1 @test2(i32 %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 %a, 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = sub i32 %a, 4
@@ -35,7 +35,7 @@ define i1 @test2(i32 %a) {
 
 define <2 x i1> @test2vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test2vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> %a, <i32 4, i32 4>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 4, i32 4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = sub <2 x i32> %a, <i32 4, i32 4>
@@ -45,7 +45,7 @@ define <2 x i1> @test2vec(<2 x i32> %a) {
 
 define i1 @test3(i32 %a) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 %a, 2147483643
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[A:%.*]], 2147483643
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add i32 %a, 4
@@ -55,7 +55,7 @@ define i1 @test3(i32 %a) {
 
 define <2 x i1> @test3vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test3vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> %a, <i32 2147483643, i32 2147483643>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 2147483643, i32 2147483643>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add <2 x i32> %a, <i32 4, i32 4>
@@ -65,7 +65,7 @@ define <2 x i1> @test3vec(<2 x i32> %a) {
 
 define i1 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 %a, -4
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A:%.*]], -4
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add i32 %a, 2147483652
@@ -75,11 +75,12 @@ define i1 @test4(i32 %a) {
 
 define { i32, i1 } @test4multiuse(i32 %a) {
 ; CHECK-LABEL: @test4multiuse(
-; CHECK: [[B:%.*]] = add i32 %a, -2147483644
-; CHECK: [[C:%.*]] = icmp slt i32 %b, -4
-; CHECK: [[TMP:%.*]] = insertvalue { i32, i1 } undef, i32 [[B]], 0
-; CHECK: [[RES:%.*]] = insertvalue { i32, i1 } [[TMP]], i1 [[C]], 1
-; CHECK: ret { i32, i1 } [[RES]]
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[A:%.*]], -2147483644
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[B]], -4
+; CHECK-NEXT:    [[TMP:%.*]] = insertvalue { i32, i1 } undef, i32 [[B]], 0
+; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i32, i1 } [[TMP]], i1 [[C]], 1
+; CHECK-NEXT:    ret { i32, i1 } [[RES]]
+;
 
   %b = add i32 %a, -2147483644
   %c = icmp slt i32 %b, -4
@@ -92,7 +93,7 @@ define { i32, i1 } @test4multiuse(i32 %a) {
 
 define <2 x i1> @test4vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test4vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> %a, <i32 -4, i32 -4>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A:%.*]], <i32 -4, i32 -4>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add <2 x i32> %a, <i32 2147483652, i32 2147483652>
@@ -105,7 +106,7 @@ define <2 x i1> @test4vec(<2 x i32> %a) {
 
 define i1 @nsw_slt1(i8 %a) {
 ; CHECK-LABEL: @nsw_slt1(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 %a, -128
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], -128
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, 100
@@ -128,7 +129,7 @@ define <2 x i1> @nsw_slt1_splat_vec(<2 x i8> %a) {
 
 define i1 @nsw_slt2(i8 %a) {
 ; CHECK-LABEL: @nsw_slt2(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 %a, 127
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[A:%.*]], 127
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, -100
@@ -151,7 +152,7 @@ define <2 x i1> @nsw_slt2_splat_vec(<2 x i8> %a) {
 
 define i1 @nsw_slt3(i8 %a) {
 ; CHECK-LABEL: @nsw_slt3(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 %a, -126
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[A:%.*]], -126
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, 100
@@ -164,7 +165,7 @@ define i1 @nsw_slt3(i8 %a) {
 
 define i1 @nsw_slt4(i8 %a) {
 ; CHECK-LABEL: @nsw_slt4(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 %a, 126
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[A:%.*]], 126
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, -100
@@ -177,7 +178,7 @@ define i1 @nsw_slt4(i8 %a) {
 
 define i1 @nsw_sgt1(i8 %a) {
 ; CHECK-LABEL: @nsw_sgt1(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 %a, 127
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A:%.*]], 127
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %b = add nsw i8 %a, -100
@@ -207,7 +208,7 @@ define i1 @nsw_sgt2(i8 %a) {
 
 define <2 x i1> @nsw_sgt2_splat_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @nsw_sgt2_splat_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i8> %a, <i8 -126, i8 -126>
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i8> [[A:%.*]], <i8 -126, i8 -126>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %b = add nsw <2 x i8> %a, <i8 100, i8 100>
@@ -220,7 +221,7 @@ define <2 x i1> @nsw_sgt2_splat_vec(<2 x i8> %a) {
 
 define i1 @slt_zero_add_nsw(i32 %a) {
 ; CHECK-LABEL: @slt_zero_add_nsw(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 %a, -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = add nsw i32 %a, 1
@@ -232,7 +233,7 @@ define i1 @slt_zero_add_nsw(i32 %a) {
 
 define <2 x i1> @slt_zero_add_nsw_splat_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @slt_zero_add_nsw_splat_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> %a, <i8 -1, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = add nsw <2 x i8> %a, <i8 1, i8 1>
@@ -296,5 +297,169 @@ define i1 @slt_zero_add_nuw_signbit(i8 %x) {
   %y = add nuw i8 %x, 128
   %z = icmp slt i8 %y, 0
   ret i1 %z
+}
+
+define i1 @reduce_add_ult(i32 %in) {
+; CHECK-LABEL: @reduce_add_ult(
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[IN:%.*]], 9
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp ult i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @reduce_add_ugt(i32 %in) {
+; CHECK-LABEL: @reduce_add_ugt(
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[IN:%.*]], 9
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp ugt i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @reduce_add_ule(i32 %in) {
+; CHECK-LABEL: @reduce_add_ule(
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i32 [[IN:%.*]], 10
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp ule i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @reduce_add_uge(i32 %in) {
+; CHECK-LABEL: @reduce_add_uge(
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[IN:%.*]], 8
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add nuw i32 %in, 3
+  %a18 = icmp uge i32 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @ult_add_ssubov(i32 %in) {
+; CHECK-LABEL: @ult_add_ssubov(
+; CHECK-NEXT:    ret i1 false
+;
+  %a6 = add nuw i32 %in, 71
+  %a18 = icmp ult i32 %a6, 3
+  ret i1 %a18
+}
+
+define i1 @ult_add_nonuw(i8 %in) {
+; CHECK-LABEL: @ult_add_nonuw(
+; CHECK-NEXT:    [[A6:%.*]] = add i8 [[IN:%.*]], 71
+; CHECK-NEXT:    [[A18:%.*]] = icmp ult i8 [[A6]], 12
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add i8 %in, 71
+  %a18 = icmp ult i8 %a6, 12
+  ret i1 %a18
+}
+
+define i1 @uge_add_nonuw(i32 %in) {
+; CHECK-LABEL: @uge_add_nonuw(
+; CHECK-NEXT:    [[A6:%.*]] = add i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[A18:%.*]] = icmp ugt i32 [[A6]], 11
+; CHECK-NEXT:    ret i1 [[A18]]
+;
+  %a6 = add i32 %in, 3
+  %a18 = icmp uge i32 %a6, 12
+  ret i1 %a18
+}
+
+; Test unsigned add overflow patterns. The div ops are only here to
+; thwart complexity based canonicalization of the operand order.
+
+define i1 @op_ugt_sum_commute1(i8 %p1, i8 %p2) {
+; CHECK-LABEL: @op_ugt_sum_commute1(
+; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[P1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %x = sdiv i8 42, %p1
+  %y = sdiv i8 42, %p2
+  %a = add i8 %x, %y
+  %c = icmp ugt i8 %x, %a
+  ret i1 %c
+}
+
+define <2 x i1> @op_ugt_sum_vec_commute2(<2 x i8> %p1, <2 x i8> %p2) {
+; CHECK-LABEL: @op_ugt_sum_vec_commute2(
+; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 -42>, [[P1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sdiv <2 x i8> <i8 42, i8 -42>, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i8> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %x = sdiv <2 x i8> <i8 42, i8 -42>, %p1
+  %y = sdiv <2 x i8> <i8 42, i8 -42>, %p2
+  %a = add <2 x i8> %y, %x
+  %c = icmp ugt <2 x i8> %x, %a
+  ret <2 x i1> %c
+}
+
+define i1 @sum_ugt_op_uses(i8 %p1, i8 %p2, i8* %p3) {
+; CHECK-LABEL: @sum_ugt_op_uses(
+; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[P1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[P2:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Y]]
+; CHECK-NEXT:    store i8 [[A]], i8* [[P3:%.*]], align 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %x = sdiv i8 42, %p1
+  %y = sdiv i8 42, %p2
+  %a = add i8 %x, %y
+  store i8 %a, i8* %p3
+  %c = icmp ugt i8 %x, %a
+  ret i1 %c
+}
+
+define <2 x i1> @sum_ult_op_vec_commute1(<2 x i8> %p1, <2 x i8> %p2) {
+; CHECK-LABEL: @sum_ult_op_vec_commute1(
+; CHECK-NEXT:    [[X:%.*]] = sdiv <2 x i8> <i8 42, i8 -42>, [[P1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sdiv <2 x i8> <i8 -42, i8 42>, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i8> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %x = sdiv <2 x i8> <i8 42, i8 -42>, %p1
+  %y = sdiv <2 x i8> <i8 -42, i8 42>, %p2
+  %a = add <2 x i8> %x, %y
+  %c = icmp ult <2 x i8> %a, %x
+  ret <2 x i1> %c
+}
+
+define i1 @sum_ult_op_commute2(i8 %p1, i8 %p2) {
+; CHECK-LABEL: @sum_ult_op_commute2(
+; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[P1:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[P2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %x = sdiv i8 42, %p1
+  %y = sdiv i8 42, %p2
+  %a = add i8 %y, %x
+  %c = icmp ult i8 %a, %x
+  ret i1 %c
+}
+
+define i1 @sum_ult_op_uses(i8 %x, i8 %y, i8* %p) {
+; CHECK-LABEL: @sum_ult_op_uses(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    store i8 [[A]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[A]], [[X]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = add i8 %y, %x
+  store i8 %a, i8* %p
+  %c = icmp ult i8 %a, %x
+  ret i1 %c
 }
 

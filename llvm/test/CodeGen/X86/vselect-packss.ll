@@ -55,7 +55,7 @@ define <16 x i8> @vselect_packss_v16i16(<16 x i16> %a0, <16 x i16> %a1, <16 x i8
 ; AVX512NOBW-LABEL: vselect_packss_v16i16:
 ; AVX512NOBW:       # %bb.0:
 ; AVX512NOBW-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512NOBW-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512NOBW-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512NOBW-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512NOBW-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX512NOBW-NEXT:    vzeroupper

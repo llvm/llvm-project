@@ -80,10 +80,11 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
   return false;
 }
 
-LoopVectorizeHints::LoopVectorizeHints(const Loop *L, bool DisableInterleaving,
+LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
+                                       bool InterleaveOnlyWhenForced,
                                        OptimizationRemarkEmitter &ORE)
     : Width("vectorize.width", VectorizerParams::VectorizationFactor, HK_WIDTH),
-      Interleave("interleave.count", DisableInterleaving, HK_UNROLL),
+      Interleave("interleave.count", InterleaveOnlyWhenForced, HK_UNROLL),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED), TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
@@ -98,19 +99,19 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L, bool DisableInterleaving,
     // consider the loop to have been already vectorized because there's
     // nothing more that we can do.
     IsVectorized.Value = Width.Value == 1 && Interleave.Value == 1;
-  LLVM_DEBUG(if (DisableInterleaving && Interleave.Value == 1) dbgs()
+  LLVM_DEBUG(if (InterleaveOnlyWhenForced && Interleave.Value == 1) dbgs()
              << "LV: Interleaving disabled by the pass manager\n");
 }
 
-bool LoopVectorizeHints::allowVectorization(Function *F, Loop *L,
-                                            bool AlwaysVectorize) const {
+bool LoopVectorizeHints::allowVectorization(
+    Function *F, Loop *L, bool VectorizeOnlyWhenForced) const {
   if (getForce() == LoopVectorizeHints::FK_Disabled) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: #pragma vectorize disable.\n");
     emitRemarkWithHints();
     return false;
   }
 
-  if (!AlwaysVectorize && getForce() != LoopVectorizeHints::FK_Enabled) {
+  if (VectorizeOnlyWhenForced && getForce() != LoopVectorizeHints::FK_Enabled) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: No #pragma vectorize enable.\n");
     emitRemarkWithHints();
     return false;
@@ -434,7 +435,7 @@ static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
 /// identified reduction variable.
 static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
                                SmallPtrSetImpl<Value *> &AllowedExit) {
-  // Reduction and Induction instructions are allowed to have exit users. All
+  // Reductions, Inductions and non-header phis are allowed to have exit users. All
   // other instructions must not have external users.
   if (!AllowedExit.count(Inst))
     // Check that all of the users of the loop are inside the BB.
@@ -516,6 +517,18 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
       return false;
   }
 
+  // Check whether we are able to set up outer loop induction.
+  if (!setupOuterLoopInductions()) {
+    LLVM_DEBUG(
+        dbgs() << "LV: Not vectorizing: Unsupported outer loop Phi(s).\n");
+    ORE->emit(createMissedAnalysis("UnsupportedPhi")
+              << "Unsupported outer loop Phi(s)");
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
   return Result;
 }
 
@@ -561,13 +574,40 @@ void LoopVectorizationLegality::addInductionPhi(
   // back into the PHI node may have external users.
   // We can allow those uses, except if the SCEVs we have for them rely
   // on predicates that only hold within the loop, since allowing the exit
-  // currently means re-using this SCEV outside the loop.
+  // currently means re-using this SCEV outside the loop (see PR33706 for more
+  // details).
   if (PSE.getUnionPredicate().isAlwaysTrue()) {
     AllowedExit.insert(Phi);
     AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
   }
 
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
+}
+
+bool LoopVectorizationLegality::setupOuterLoopInductions() {
+  BasicBlock *Header = TheLoop->getHeader();
+
+  // Returns true if a given Phi is a supported induction.
+  auto isSupportedPhi = [&](PHINode &Phi) -> bool {
+    InductionDescriptor ID;
+    if (InductionDescriptor::isInductionPHI(&Phi, TheLoop, PSE, ID) &&
+        ID.getKind() == InductionDescriptor::IK_IntInduction) {
+      addInductionPhi(&Phi, ID, AllowedExit);
+      return true;
+    } else {
+      // Bail out for any Phi in the outer loop header that is not a supported
+      // induction.
+      LLVM_DEBUG(
+          dbgs()
+          << "LV: Found unsupported PHI for outer loop vectorization.\n");
+      return false;
+    }
+  };
+
+  if (llvm::all_of(Header->phis(), isSupportedPhi))
+    return true;
+  else
+    return false;
 }
 
 bool LoopVectorizationLegality::canVectorizeInstrs() {
@@ -597,14 +637,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // can convert it to select during if-conversion. No need to check if
         // the PHIs in this block are induction or reduction variables.
         if (BB != Header) {
-          // Check that this instruction has no outside users or is an
-          // identified reduction value with an outside user.
-          if (!hasOutsideLoopUser(TheLoop, Phi, AllowedExit))
-            continue;
-          ORE->emit(createMissedAnalysis("NeitherInductionNorReduction", Phi)
-                    << "value could not be identified as "
-                       "an induction or reduction variable");
-          return false;
+          // Non-header phi nodes that have outside uses can be vectorized. Add
+          // them to the list of allowed exits.
+          // Unsafe cyclic dependencies with header phis are identified during
+          // legalization for reduction, induction and first order
+          // recurrences.
+          continue;
         }
 
         // We only allow if-converted PHIs with exactly two incoming values.
@@ -625,6 +663,20 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
+        // TODO: Instead of recording the AllowedExit, it would be good to record the
+        // complementary set: NotAllowedExit. These include (but may not be
+        // limited to):
+        // 1. Reduction phis as they represent the one-before-last value, which
+        // is not available when vectorized 
+        // 2. Induction phis and increment when SCEV predicates cannot be used
+        // outside the loop - see addInductionPhi
+        // 3. Non-Phis with outside uses when SCEV predicates cannot be used
+        // outside the loop - see call to hasOutsideLoopUser in the non-phi
+        // handling below
+        // 4. FirstOrderRecurrence phis that can possibly be handled by
+        // extraction.
+        // By recording these, we can then reason about ways to vectorize each
+        // of these NotAllowedExit. 
         InductionDescriptor ID;
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
@@ -717,6 +769,14 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       // Reduction instructions are allowed to have exit users.
       // All other instructions must not have external users.
       if (hasOutsideLoopUser(TheLoop, &I, AllowedExit)) {
+        // We can safely vectorize loops where instructions within the loop are
+        // used outside the loop only if the SCEV predicates within the loop is
+        // same as outside the loop. Allowing the exit means reusing the SCEV
+        // outside the loop.
+        if (PSE.getUnionPredicate().isAlwaysTrue()) {
+          AllowedExit.insert(&I);
+          continue;
+        }
         ORE->emit(createMissedAnalysis("ValueUsedOutsideLoop", &I)
                   << "value cannot be used outside the loop");
         return false;
@@ -729,6 +789,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     if (Inductions.empty()) {
       ORE->emit(createMissedAnalysis("NoInductionVariable")
                 << "loop induction variable could not be identified");
+      return false;
+    } else if (!WidestIndTy) {
+      ORE->emit(createMissedAnalysis("NoIntegerInductionVariable")
+                << "integer loop induction variable could not be identified");
       return false;
     }
   }
@@ -754,13 +818,14 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   if (!LAI->canVectorizeMemory())
     return false;
 
-  if (LAI->hasStoreToLoopInvariantAddress()) {
+  if (LAI->hasDependenceInvolvingLoopInvariantAddress()) {
     ORE->emit(createMissedAnalysis("CantVectorizeStoreToLoopInvariantAddress")
-              << "write to a loop invariant address could not be vectorized");
-    LLVM_DEBUG(dbgs() << "LV: We don't allow storing to uniform addresses\n");
+              << "write to a loop invariant address could not "
+                 "be vectorized");
+    LLVM_DEBUG(
+        dbgs() << "LV: Non vectorizable stores to a uniform address\n");
     return false;
   }
-
   Requirements->addRuntimePointerChecks(LAI->getNumRuntimePointerChecks());
   PSE.addPredicate(LAI->getPSE().getUnionPredicate());
 
@@ -1067,6 +1132,61 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   // which may limit our maximum vectorization factor, so just return true with
   // no restrictions.
   return Result;
+}
+
+bool LoopVectorizationLegality::canFoldTailByMasking() {
+
+  LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
+
+  if (!PrimaryInduction) {
+    ORE->emit(createMissedAnalysis("NoPrimaryInduction")
+              << "Missing a primary induction variable in the loop, which is "
+              << "needed in order to fold tail by masking as required.");
+    LLVM_DEBUG(dbgs() << "LV: No primary induction, cannot fold tail by "
+                      << "masking.\n");
+    return false;
+  }
+
+  // TODO: handle reductions when tail is folded by masking.
+  if (!Reductions.empty()) {
+    ORE->emit(createMissedAnalysis("ReductionFoldingTailByMasking")
+              << "Cannot fold tail by masking in the presence of reductions.");
+    LLVM_DEBUG(dbgs() << "LV: Loop has reductions, cannot fold tail by "
+                      << "masking.\n");
+    return false;
+  }
+
+  // TODO: handle outside users when tail is folded by masking.
+  for (auto *AE : AllowedExit) {
+    // Check that all users of allowed exit values are inside the loop.
+    for (User *U : AE->users()) {
+      Instruction *UI = cast<Instruction>(U);
+      if (TheLoop->contains(UI))
+        continue;
+      ORE->emit(createMissedAnalysis("LiveOutFoldingTailByMasking")
+                << "Cannot fold tail by masking in the presence of live outs.");
+      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking, loop has an "
+                        << "outside user for : " << *UI << '\n');
+      return false;
+    }
+  }
+
+  // The list of pointers that we can safely read and write to remains empty.
+  SmallPtrSet<Value *, 8> SafePointers;
+
+  // Check and mark all blocks for predication, including those that ordinarily
+  // do not need predication such as the header block.
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    if (!blockCanBePredicated(BB, SafePointers)) {
+      ORE->emit(createMissedAnalysis("NoCFGForSelect", BB->getTerminator())
+                << "control flow cannot be substituted for a select");
+      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking as required.\n");
+      return false;
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "LV: can fold tail by masking.\n");
+  return true;
 }
 
 } // namespace llvm

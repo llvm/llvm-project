@@ -47,7 +47,7 @@ The 3.9 release of clang includes ThinLTO support. However, ThinLTO
 is under active development, and new features, improvements and bugfixes
 are being added for the next release. For the latest ThinLTO support,
 `build a recent version of clang and LLVM
-<http://llvm.org/docs/CMake.html>`_.
+<https://llvm.org/docs/CMake.html>`_.
 
 Linkers
 -------
@@ -59,7 +59,7 @@ ThinLTO is currently supported for the following linkers:
 - **gold (via the gold-plugin)**:
   Similar to monolithic LTO, this requires using
   a `gold linker configured with plugins enabled
-  <http://llvm.org/docs/GoldPlugin.html>`_.
+  <https://llvm.org/docs/GoldPlugin.html>`_.
 - **ld64**:
   Starting with `Xcode 8 <https://developer.apple.com/xcode/>`_.
 - **lld**:
@@ -99,13 +99,15 @@ With gold, if you see an error during the link of the form:
 Then either gold was not configured with plugins enabled, or clang
 was not built with ``-DLLVM_BINUTILS_INCDIR`` set properly. See
 the instructions for the
-`LLVM gold plugin <http://llvm.org/docs/GoldPlugin.html#how-to-build-it>`_.
+`LLVM gold plugin <https://llvm.org/docs/GoldPlugin.html#how-to-build-it>`_.
 
 Controlling Backend Parallelism
 -------------------------------
 .. _parallelism:
 
-By default, the ThinLTO link step will launch up to
+By default, the ThinLTO link step will launch as many
+threads in parallel as there are cores. If the number of
+cores can't be computed for the architecture, then it will launch
 ``std::thread::hardware_concurrency`` number of threads in parallel.
 For machines with hyper-threading, this is the total number of
 virtual cores. For some applications and machine configurations this
@@ -196,9 +198,9 @@ To bootstrap clang/LLVM with ThinLTO, follow these steps:
 
 1. The host compiler_ must be a version of clang that supports ThinLTO.
 #. The host linker_ must support ThinLTO (and in the case of gold, must be
-   `configured with plugins enabled <http://llvm.org/docs/GoldPlugin.html>`_.
+   `configured with plugins enabled <https://llvm.org/docs/GoldPlugin.html>`_.
 #. Use the following additional `CMake variables
-   <http://llvm.org/docs/CMake.html#options-and-variables>`_
+   <https://llvm.org/docs/CMake.html#options-and-variables>`_
    when configuring the bootstrap compiler build:
 
   * ``-DLLVM_ENABLE_LTO=Thin``

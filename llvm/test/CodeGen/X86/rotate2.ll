@@ -14,8 +14,8 @@ define i64 @test1(i64 %x) nounwind  {
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    rolq $9, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    rolq $9, %rax
 ; X64-NEXT:    retq
 entry:
 	%tmp2 = lshr i64 %x, 55		; <i64> [#uses=1]
@@ -34,9 +34,8 @@ define i64 @test2(i32 %x) nounwind  {
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    roll $10, %edi
-; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    roll $10, %eax
 ; X64-NEXT:    retq
 entry:
 	%tmp2 = lshr i32 %x, 22		; <i32> [#uses=1]

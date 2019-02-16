@@ -7,12 +7,12 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
 // constexpr span(pointer first, pointer last);
-// Requires: [first, last) shall be a valid range. 
+// Requires: [first, last) shall be a valid range.
 //   If extent is not equal to dynamic_extent, then last - first shall be equal to extent.
 //
 

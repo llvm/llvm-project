@@ -38,3 +38,9 @@ int main() {
 
 [[clang::always_destroy]] [[clang::no_destroy]] int p; // expected-error{{'no_destroy' and 'always_destroy' attributes are not compatible}} // expected-note{{here}}
 [[clang::no_destroy]] [[clang::always_destroy]] int p2; // expected-error{{'always_destroy' and 'no_destroy' attributes are not compatible}} // expected-note{{here}}
+
+[[clang::always_destroy]] void f() {} // expected-warning{{'always_destroy' attribute only applies to variables}}
+struct [[clang::no_destroy]] DoesntApply {};  // expected-warning{{'no_destroy' attribute only applies to variables}}
+
+[[clang::no_destroy(0)]] int no_args; // expected-error{{'no_destroy' attribute takes no arguments}}
+[[clang::always_destroy(0)]] int no_args2; // expected-error{{'always_destroy' attribute takes no arguments}}

@@ -7,14 +7,14 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
 // template<size_t N>
 //     constexpr span(array<value_type, N>& arr) noexcept;
 // template<size_t N>
-//     constexpr span(const array<value_type, N>& arr) noexcept;  
+//     constexpr span(const array<value_type, N>& arr) noexcept;
 //
 // Remarks: These constructors shall not participate in overload resolution unless:
 //   — extent == dynamic_extent || N == extent is true, and

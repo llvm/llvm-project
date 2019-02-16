@@ -286,7 +286,9 @@ public:
     VK_Hexagon_IE_GOT,
 
     VK_WebAssembly_FUNCTION, // Function table index, rather than virtual addr
+    VK_WebAssembly_GLOBAL,   // Global object index
     VK_WebAssembly_TYPEINDEX,// Type table index
+    VK_WebAssembly_EVENT,    // Event index
 
     VK_AMDGPU_GOTPCREL32_LO, // symbol@gotpcrel32@lo
     VK_AMDGPU_GOTPCREL32_HI, // symbol@gotpcrel32@hi
@@ -588,6 +590,8 @@ public:
   virtual bool evaluateAsRelocatableImpl(MCValue &Res,
                                          const MCAsmLayout *Layout,
                                          const MCFixup *Fixup) const = 0;
+  // allow Target Expressions to be checked for equality
+  virtual bool isEqualTo(const MCExpr *x) const { return false; }
   // This should be set when assigned expressions are not valid ".set"
   // expressions, e.g. registers, and must be inlined.
   virtual bool inlineAssignedExpr() const { return false; }

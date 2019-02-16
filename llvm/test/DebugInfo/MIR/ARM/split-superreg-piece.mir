@@ -113,7 +113,7 @@ body:             |
     tBL 14, _, @v, csr_ios, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0, implicit-def $r1, implicit-def $r2, implicit-def $r3, debug-location !19
     $d1 = VMOVDRR killed $r2, killed $r3, 14, _, implicit-def $q0, debug-location !19
     $d0 = VMOVDRR killed $r0, killed $r1, 14, _, implicit killed $q0, implicit-def $q0, debug-location !19
-    DBG_VALUE debug-use $q0, debug-use _, !14, !20, debug-location !21
+    DBG_VALUE $q0, _, !14, !20, debug-location !21
     $s4 = VMOVS $s1, 14, _, implicit-def $d2, debug-location !24
     $d0 = VADDfd $d0, killed $d2, 14, _, implicit killed $q0, debug-location !24
     $r0 = VMOVRS $s0, 14, _, implicit killed $d0, debug-location !25

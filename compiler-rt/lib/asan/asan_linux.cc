@@ -248,6 +248,13 @@ void *AsanDlSymNext(const char *sym) {
   return dlsym(RTLD_NEXT, sym);
 }
 
+bool HandleDlopenInit() {
+  // Not supported on this platform.
+  static_assert(!SANITIZER_SUPPORTS_INIT_FOR_DLOPEN,
+                "Expected SANITIZER_SUPPORTS_INIT_FOR_DLOPEN to be false");
+  return false;
+}
+
 } // namespace __asan
 
 #endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||

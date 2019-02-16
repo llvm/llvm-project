@@ -37,7 +37,7 @@ entry:
   %add.i = add <16 x i8> %1, %0
   tail call void (...) @sink(<16 x i8> %add.i)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vaddubm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -46,7 +46,7 @@ entry:
   %add.i22 = add <16 x i8> %3, %2
   tail call void (...) @sink(<16 x i8> %add.i22)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vaddubm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -55,7 +55,7 @@ entry:
   %add.i21 = add <8 x i16> %5, %4
   tail call void (...) @sink(<8 x i16> %add.i21)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vadduhm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -64,7 +64,7 @@ entry:
   %add.i20 = add <8 x i16> %7, %6
   tail call void (...) @sink(<8 x i16> %add.i20)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vadduhm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -73,7 +73,7 @@ entry:
   %add.i19 = add <4 x i32> %9, %8
   tail call void (...) @sink(<4 x i32> %add.i19)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vadduwm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -82,7 +82,7 @@ entry:
   %add.i18 = add <4 x i32> %11, %10
   tail call void (...) @sink(<4 x i32> %add.i18)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vadduwm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -91,7 +91,7 @@ entry:
   %add.i17 = add <2 x i64> %13, %12
   tail call void (...) @sink(<2 x i64> %add.i17)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vaddudm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -100,7 +100,7 @@ entry:
   %add.i16 = add <2 x i64> %15, %14
   tail call void (...) @sink(<2 x i64> %add.i16)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vaddudm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -109,7 +109,7 @@ entry:
   %add.i15 = add <1 x i128> %17, %16
   tail call void (...) @sink(<1 x i128> %add.i15)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vadduqm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -118,7 +118,7 @@ entry:
   %add.i14 = add <1 x i128> %19, %18
   tail call void (...) @sink(<1 x i128> %add.i14)
 ; CHECK: lxvx 34, 0, 3
-; CHECK: lxvx 35, 0, 4
+; CHECK: lxvx 35, 0, 3 
 ; CHECK: vadduqm 2, 3, 2
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -127,7 +127,7 @@ entry:
   %add.i13 = fadd <4 x float> %20, %21
   tail call void (...) @sink(<4 x float> %add.i13)
 ; CHECK: lxvx 0, 0, 3
-; CHECK: lxvx 1, 0, 4
+; CHECK: lxvx 1, 0, 3 
 ; CHECK: xvaddsp 34, 0, 1
 ; CHECK: stxv 34,
 ; CHECK: bl sink
@@ -136,7 +136,7 @@ entry:
   %add.i12 = fadd <2 x double> %22, %23
   tail call void (...) @sink(<2 x double> %add.i12)
 ; CHECK: lxvx 0, 0, 3
-; CHECK: lxvx 1, 0, 4
+; CHECK: lxvx 1, 0, 3 
 ; CHECK: xvadddp 0, 0, 1
 ; CHECK: stxv 0,
 ; CHECK: bl sink

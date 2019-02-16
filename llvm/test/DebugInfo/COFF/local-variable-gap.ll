@@ -73,7 +73,7 @@
 ; OBJ-NOT:     LocalSym {
 ; OBJ:         DefRangeRegisterSym {
 ; OBJ-NEXT:      Kind:
-; OBJ-NEXT:      Register: CVRegESI (0x17)
+; OBJ-NEXT:      Register: ESI (0x17)
 ; OBJ-NEXT:      MayHaveNoName: 0
 ; OBJ-NEXT:      LocalVariableAddrRange {
 ; OBJ-NEXT:        OffsetStart: .text+0x{{.*}}

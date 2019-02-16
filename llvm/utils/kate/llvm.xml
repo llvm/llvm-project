@@ -120,6 +120,7 @@
       <item> fadd </item>
       <item> sub </item>
       <item> fsub </item>
+      <item> fneg </item>
       <item> mul </item>
       <item> fmul </item>
       <item> udiv </item>

@@ -337,18 +337,8 @@ enum NodeType : unsigned {
   // Val, CC, OUTCHAIN = ATOMIC_CMP_SWAP(INCHAIN, ptr, cmp, swap)
   ATOMIC_CMP_SWAP_128,
 
-  // Byte swapping load.
-  //
-  // Operand 0: the address to load from
-  // Operand 1: the type of load (i16, i32, i64)
-  LRV,
-
-  // Byte swapping store.
-  //
-  // Operand 0: the value to store
-  // Operand 1: the address to store to
-  // Operand 2: the type of store (i16, i32, i64)
-  STRV,
+  // Byte swapping load/store.  Same operands as regular load/store.
+  LRV, STRV,
 
   // Prefetch from the second operand using the 4-bit control code in
   // the first operand.  The code is 1 for a load prefetch and 2 for
@@ -389,7 +379,7 @@ public:
     // want to clobber the upper 32 bits of a GPR unnecessarily.
     return MVT::i32;
   }
-  TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(EVT VT)
+  TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
     const override {
     // Widen subvectors to the full width rather than promoting integer
     // elements.  This is better because:
@@ -597,14 +587,17 @@ private:
   SDValue combineSIGN_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSIGN_EXTEND_INREG(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineMERGE(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineLOAD(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSTORE(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineEXTRACT_VECTOR_ELT(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineJOIN_DWORDS(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
 
   // If the last instruction before MBBI in MBB was some form of COMPARE,
   // try to replace it with a COMPARE AND BRANCH just before MBBI.

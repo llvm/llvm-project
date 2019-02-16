@@ -42,7 +42,7 @@ TEST(ProcessTest, None) {
   Optional<std::string> val(
       Process::GetEnv("__LLVM_TEST_ENVIRON_NO_SUCH_VAR__"));
   EXPECT_FALSE(val.hasValue());
-} 
+}
 #endif
 
 #ifdef _WIN32

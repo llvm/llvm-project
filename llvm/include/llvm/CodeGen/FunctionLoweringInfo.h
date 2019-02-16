@@ -1,4 +1,4 @@
-//===- FunctionLoweringInfo.h - Lower functions from LLVM IR to CodeGen ---===//
+//===- FunctionLoweringInfo.h - Lower functions from LLVM IR ---*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -246,6 +246,7 @@ public:
       return 0;
     unsigned &R = ValueMap[V];
     assert(R == 0 && "Already initialized this value register!");
+    assert(VirtReg2Value.empty());
     return R = CreateRegs(V->getType());
   }
 

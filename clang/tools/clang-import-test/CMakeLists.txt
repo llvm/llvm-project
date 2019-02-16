@@ -21,6 +21,7 @@ set(CLANG_IMPORT_TEST_LIB_DEPS
   clangFrontend
   clangLex
   clangParse
+  clangSerialization
   )
 
 target_link_libraries(clang-import-test

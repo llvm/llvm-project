@@ -15,7 +15,7 @@
 #include "llvm/MC/MCAsmInfoWasm.h"
 using namespace llvm;
 
-void MCAsmInfoWasm::anchor() { }
+void MCAsmInfoWasm::anchor() {}
 
 MCAsmInfoWasm::MCAsmInfoWasm() {
   HasIdentDirective = true;

@@ -15,6 +15,7 @@
 // operator>>(short& val);
 
 #include <istream>
+#include <limits>
 #include <cassert>
 
 template <class CharT>

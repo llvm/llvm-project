@@ -220,6 +220,10 @@ public:
   bool operator!=(const SourceRange &X) const {
     return B != X.B || E != X.E;
   }
+
+  void print(raw_ostream &OS, const SourceManager &SM) const;
+  std::string printToString(const SourceManager &SM) const;
+  void dump(const SourceManager &SM) const;
 };
 
 /// Represents a character-granular source range.

@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -154,4 +154,8 @@ void BoolAssignmentChecker::checkBind(SVal loc, SVal val, const Stmt *S,
 
 void ento::registerBoolAssignmentChecker(CheckerManager &mgr) {
     mgr.registerChecker<BoolAssignmentChecker>();
+}
+
+bool ento::shouldRegisterBoolAssignmentChecker(const LangOptions &LO) {
+  return true;
 }

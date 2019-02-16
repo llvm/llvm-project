@@ -46,9 +46,8 @@ void RTLsTy::LoadRTLs() {
 #endif // OMPTARGET_DEBUG
 
   // Parse environment variable OMP_TARGET_OFFLOAD (if set)
-  char *envStr = getenv("OMP_TARGET_OFFLOAD");
-  if (envStr && !strcmp(envStr, "DISABLED")) {
-    DP("Target offloading disabled by environment\n");
+  TargetOffloadPolicy = (kmp_target_offload_kind_t) __kmpc_get_target_offload();
+  if (TargetOffloadPolicy == tgt_disabled) {
     return;
   }
 
@@ -216,7 +215,6 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
       if (!R.isUsed) {
         // Initialize the device information for the RTL we are about to use.
         DeviceTy device(&R);
-
         size_t start = Devices.size();
         Devices.resize(start + R.NumberOfDevices, device);
         for (int32_t device_id = 0; device_id < R.NumberOfDevices;
@@ -225,9 +223,6 @@ void RTLsTy::RegisterLib(__tgt_bin_desc *desc) {
           Devices[start + device_id].DeviceID = start + device_id;
           // RTL local device ID
           Devices[start + device_id].RTLDeviceID = device_id;
-
-          // Save pointer to device in RTL in case we want to unregister the RTL
-          R.Devices.push_back(&Devices[start + device_id]);
         }
 
         // Initialize the index of this RTL and save it in the used RTLs.

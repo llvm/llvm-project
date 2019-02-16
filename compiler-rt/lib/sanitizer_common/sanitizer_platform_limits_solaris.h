@@ -210,8 +210,7 @@ struct __sanitizer_cmsghdr {
   int cmsg_type;
 };
 
-#if SANITIZER_SOLARIS32 && 0
-// FIXME: need to deal with large file and non-large file cases
+#if SANITIZER_SOLARIS && (defined(_LP64) || _FILE_OFFSET_BITS == 64)
 struct __sanitizer_dirent {
   unsigned long long d_ino;
   long long d_off;

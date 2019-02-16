@@ -49,14 +49,14 @@ getNumDecoderSlots(SUnit *SU) const {
   if (!SC->isValid())
     return 0; // IMPLICIT_DEF / KILL -- will not make impact in output.
 
-  if (SC->BeginGroup) {
-    if (!SC->EndGroup)
-      return 2; // Cracked instruction
-    else
-      return 3; // Expanded/group-alone instruction
-  }
+  assert((SC->NumMicroOps != 2 || (SC->BeginGroup && !SC->EndGroup)) &&
+         "Only cracked instruction can have 2 uops.");
+  assert((SC->NumMicroOps < 3 || (SC->BeginGroup && SC->EndGroup)) &&
+         "Expanded instructions always group alone.");
+  assert((SC->NumMicroOps < 3 || (SC->NumMicroOps % 3 == 0)) &&
+         "Expanded instructions fill the group(s).");
 
-  return 1; // Normal instruction
+  return SC->NumMicroOps;
 }
 
 unsigned SystemZHazardRecognizer::getCurrCycleIdx(SUnit *SU) const {
@@ -139,16 +139,21 @@ void SystemZHazardRecognizer::nextGroup() {
   LLVM_DEBUG(dumpCurrGroup("Completed decode group"));
   LLVM_DEBUG(CurGroupDbg = "";);
 
-  GrpCount++;
+  int NumGroups = ((CurrGroupSize > 3) ? (CurrGroupSize / 3) : 1);
+  assert((CurrGroupSize <= 3 || CurrGroupSize % 3 == 0) &&
+         "Current decoder group bad.");
 
   // Reset counter for next group.
   CurrGroupSize = 0;
   CurrGroupHas4RegOps = false;
 
-  // Decrease counters for execution units by one.
+  GrpCount += ((unsigned) NumGroups);
+
+  // Decrease counters for execution units.
   for (unsigned i = 0; i < SchedModel->getNumProcResourceKinds(); ++i)
-    if (ProcResourceCounters[i] > 0)
-      ProcResourceCounters[i]--;
+    ProcResourceCounters[i] = ((ProcResourceCounters[i] > NumGroups)
+                                   ? (ProcResourceCounters[i] - NumGroups)
+                                   : 0);
 
   // Clear CriticalResourceIdx if it is now below the threshold.
   if (CriticalResourceIdx != UINT_MAX &&
@@ -323,13 +328,13 @@ EmitInstruction(SUnit *SU) {
   // in current group.
   CurrGroupSize += getNumDecoderSlots(SU);
   CurrGroupHas4RegOps |= has4RegOps(SU->getInstr());
-  unsigned GroupLim =
-    ((CurrGroupHas4RegOps && getNumDecoderSlots(SU) < 3) ? 2 : 3);
-  assert (CurrGroupSize <= GroupLim && "SU does not fit into decoder group!");
+  unsigned GroupLim = (CurrGroupHas4RegOps ? 2 : 3);
+  assert((CurrGroupSize <= GroupLim || CurrGroupSize == getNumDecoderSlots(SU))
+         && "SU does not fit into decoder group!");
 
   // Check if current group is now full/ended. If so, move on to next
   // group to be ready to evaluate more candidates.
-  if (CurrGroupSize == GroupLim || SC->EndGroup)
+  if (CurrGroupSize >= GroupLim || SC->EndGroup)
     nextGroup();
 }
 

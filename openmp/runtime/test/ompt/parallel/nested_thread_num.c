@@ -80,7 +80,7 @@ int main() {
 // THREADS: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
 // THREADS-SAME: parent_task_id=[[PARENT_TASK_ID:[0-9]+]], 
 // THREADS-SAME: parent_task_frame.exit=[[NULL]],
-// THREADS-SAME: parent_task_frame.reenter=[[MAIN_REENTER]],
+// THREADS-SAME: parent_task_frame.reenter=0x{{[0-f]+}},
 // THREADS-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]], requested_team_size=2,
 // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}},
 // THREADS-SAME: invoker=[[PARALLEL_INVOKER:[0-9]+]]
@@ -101,14 +101,14 @@ int main() {
 // THREADS: {{^}}[[MASTER_ID]]: task level 1:
 // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID:[0-9]+]], 
 // THREADS-SAME: task_id=[[PARENT_TASK_ID]], exit_frame=[[NULL]], 
-// THREADS-SAME: reenter_frame=[[MAIN_REENTER]]
+// THREADS-SAME: reenter_frame=0x{{[0-f]+}}
 
 // THREADS: __builtin_frame_address(0)=[[REENTER:0x[0-f]+]]
 
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin:
 // THREADS-SAME: parent_task_id=[[IMPLICIT_TASK_ID]], 
 // THREADS-SAME: parent_task_frame.exit=[[EXIT]],
-// THREADS-SAME: parent_task_frame.reenter=[[REENTER]],
+// THREADS-SAME: parent_task_frame.reenter=0x{{[0-f]+}},
 // THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID:[0-9]+]], 
 // THREADS-SAME: requested_team_size=2,
 // THREADS-SAME: codeptr_ra=[[NESTED_RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}},
@@ -129,12 +129,12 @@ int main() {
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 1: parallel_id=[[PARALLEL_ID]],
 // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
-// THREADS-SAME: reenter_frame=[[REENTER]]
+// THREADS-SAME: reenter_frame=0x{{[0-f]+}}
 
 // THREADS: {{^}}[[MASTER_ID]]: task level 2:
 // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]], 
 // THREADS-SAME: task_id=[[PARENT_TASK_ID]], exit_frame=[[NULL]], 
-// THREADS-SAME: reenter_frame=[[MAIN_REENTER]]
+// THREADS-SAME: reenter_frame=0x{{[0-f]+}}
 
 // THREADS: __builtin_frame_address(0)=[[NESTED_REENTER:0x[0-f]+]]
 
@@ -149,7 +149,7 @@ int main() {
 // THREADS: {{^}}[[MASTER_ID]]: task level 0:
 // THREADS-SAME:  parallel_id=[[NESTED_PARALLEL_ID]], 
 // THREADS-SAME: task_id=[[NESTED_IMPLICIT_TASK_ID]],
-// THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame=[[NESTED_REENTER]]
+// THREADS-SAME: exit_frame=[[NESTED_EXIT]], reenter_frame=0x{{[0-f]+}}
 
 // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end:
 // THREADS-SAME: parallel_id=[[NESTED_PARALLEL_ID]], 

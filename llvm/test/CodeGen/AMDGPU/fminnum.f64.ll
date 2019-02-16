@@ -7,15 +7,35 @@ declare <4 x double> @llvm.minnum.v4f64(<4 x double>, <4 x double>) #0
 declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>) #0
 declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>) #0
 
-; FUNC-LABEL: @test_fmin_f64
-; SI: v_min_f64
-define amdgpu_kernel void @test_fmin_f64(double addrspace(1)* %out, double %a, double %b) nounwind {
+; FUNC-LABEL: {{^}}test_fmin_f64_ieee:
+; SI: s_load_dwordx2 [[A:s\[[0-9]+:[0-9]+\]]]
+; SI: s_load_dwordx2 [[B:s\[[0-9]+:[0-9]+\]]]
+; SI-DAG: v_max_f64 [[QUIETA:v\[[0-9]+:[0-9]+\]]], [[A]], [[A]]
+; SI-DAG: v_max_f64 [[QUIETB:v\[[0-9]+:[0-9]+\]]], [[B]], [[B]]
+; SI: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[QUIETA]], [[QUIETB]]
+define amdgpu_kernel void @test_fmin_f64_ieee([8 x i32], double %a, [8 x i32], double %b) nounwind {
   %val = call double @llvm.minnum.f64(double %a, double %b) #0
-  store double %val, double addrspace(1)* %out, align 8
+  store double %val, double addrspace(1)* undef, align 8
   ret void
 }
 
-; FUNC-LABEL: @test_fmin_v2f64
+; FUNC-LABEL: {{^}}test_fmin_f64_no_ieee:
+; SI: ds_read_b64 [[VAL0:v\[[0-9]+:[0-9]+\]]]
+; SI: ds_read_b64 [[VAL1:v\[[0-9]+:[0-9]+\]]]
+; SI-NOT: [[VAL0]]
+; SI-NOT: [[VAL1]]
+; SI: v_min_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VAL0]], [[VAL1]]
+; SI-NOT: [[RESULT]]
+; SI: ds_write_b64 v{{[0-9]+}}, [[RESULT]]
+define amdgpu_ps void @test_fmin_f64_no_ieee() nounwind {
+  %a = load volatile double, double addrspace(3)* undef
+  %b = load volatile double, double addrspace(3)* undef
+  %val = call double @llvm.minnum.f64(double %a, double %b) #0
+  store volatile double %val, double addrspace(3)* undef
+  ret void
+}
+
+; FUNC-LABEL: {{^}}test_fmin_v2f64:
 ; SI: v_min_f64
 ; SI: v_min_f64
 define amdgpu_kernel void @test_fmin_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %a, <2 x double> %b) nounwind {
@@ -24,7 +44,7 @@ define amdgpu_kernel void @test_fmin_v2f64(<2 x double> addrspace(1)* %out, <2 x
   ret void
 }
 
-; FUNC-LABEL: @test_fmin_v4f64
+; FUNC-LABEL: {{^}}test_fmin_v4f64:
 ; SI: v_min_f64
 ; SI: v_min_f64
 ; SI: v_min_f64
@@ -35,7 +55,7 @@ define amdgpu_kernel void @test_fmin_v4f64(<4 x double> addrspace(1)* %out, <4 x
   ret void
 }
 
-; FUNC-LABEL: @test_fmin_v8f64
+; FUNC-LABEL: {{^}}test_fmin_v8f64:
 ; SI: v_min_f64
 ; SI: v_min_f64
 ; SI: v_min_f64
@@ -50,7 +70,7 @@ define amdgpu_kernel void @test_fmin_v8f64(<8 x double> addrspace(1)* %out, <8 x
   ret void
 }
 
-; FUNC-LABEL: @test_fmin_v16f64
+; FUNC-LABEL: {{^}}test_fmin_v16f64:
 ; SI: v_min_f64
 ; SI: v_min_f64
 ; SI: v_min_f64

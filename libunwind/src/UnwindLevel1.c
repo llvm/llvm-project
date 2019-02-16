@@ -32,6 +32,8 @@
 
 #if !defined(_LIBUNWIND_ARM_EHABI) && !defined(__USING_SJLJ_EXCEPTIONS__)
 
+#ifndef _LIBUNWIND_SUPPORT_SEH_UNWIND
+
 static _Unwind_Reason_Code
 unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *exception_object) {
   unw_init_local(cursor, uc);
@@ -449,6 +451,7 @@ _Unwind_GetRegionStart(struct _Unwind_Context *context) {
   return result;
 }
 
+#endif // !_LIBUNWIND_SUPPORT_SEH_UNWIND
 
 /// Called by personality handler during phase 2 if a foreign exception
 // is caught.

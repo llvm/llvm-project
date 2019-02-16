@@ -142,8 +142,4 @@ TEST(SmallSetTest, IteratorIncMoveCopy) {
   auto Iter2 = s1.begin();
   Iter = std::move(Iter2);
   EXPECT_EQ("str 0", *Iter);
-
-  auto Iter3 = s1.end();
-  Iter3 = Iter2;
-  EXPECT_EQ(Iter3, Iter2);
 }

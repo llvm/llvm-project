@@ -22,4 +22,5 @@ MACHO: 0x00000010 000031c0 5ac3                       ..1.Z.
 RUN: llvm-readobj -x 1 %p/Inputs/trivial.obj.wasm \
 RUN:     | FileCheck %s --check-prefix WASM
 
-WASM: 0x00000000 03600001 7f60017f 017f6001 7f00 .`...`....`...
+WASM: 0x00000000 04600001 7f60017f 017f6000 0060017f .`...`....`..`..
+WASM: 0x00000010 00                                  .

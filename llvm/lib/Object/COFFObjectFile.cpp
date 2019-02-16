@@ -616,6 +616,8 @@ std::error_code COFFObjectFile::initBaseRelocPtr() {
       IntPtr);
   BaseRelocEnd = reinterpret_cast<coff_base_reloc_block_header *>(
       IntPtr + DataEntry->Size);
+  // FIXME: Verify the section containing BaseRelocHeader has at least
+  // DataEntry->Size bytes after DataEntry->RelativeVirtualAddress.
   return std::error_code();
 }
 
@@ -637,10 +639,10 @@ std::error_code COFFObjectFile::initDebugDirectoryPtr() {
   if (std::error_code EC = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr))
     return EC;
   DebugDirectoryBegin = reinterpret_cast<const debug_directory *>(IntPtr);
-  if (std::error_code EC = getRvaPtr(
-          DataEntry->RelativeVirtualAddress + DataEntry->Size, IntPtr))
-    return EC;
-  DebugDirectoryEnd = reinterpret_cast<const debug_directory *>(IntPtr);
+  DebugDirectoryEnd = reinterpret_cast<const debug_directory *>(
+      IntPtr + DataEntry->Size);
+  // FIXME: Verify the section containing DebugDirectoryBegin has at least
+  // DataEntry->Size bytes after DataEntry->RelativeVirtualAddress.
   return std::error_code();
 }
 
@@ -936,6 +938,18 @@ iterator_range<base_reloc_iterator> COFFObjectFile::base_relocs() const {
   return make_range(base_reloc_begin(), base_reloc_end());
 }
 
+std::error_code
+COFFObjectFile::getCOFFHeader(const coff_file_header *&Res) const {
+  Res = COFFHeader;
+  return std::error_code();
+}
+
+std::error_code
+COFFObjectFile::getCOFFBigObjHeader(const coff_bigobj_file_header *&Res) const {
+  Res = COFFBigObjHeader;
+  return std::error_code();
+}
+
 std::error_code COFFObjectFile::getPE32Header(const pe32_header *&Res) const {
   Res = PE32Header;
   return std::error_code();
@@ -1049,6 +1063,16 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
 #endif
   }
   return makeArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
+}
+
+uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
+  uintptr_t Offset =
+      reinterpret_cast<uintptr_t>(Symbol.getRawPtr()) - getSymbolTable();
+  assert(Offset % getSymbolTableEntrySize() == 0 &&
+         "Symbol did not point to the beginning of a symbol");
+  size_t Index = Offset / getSymbolTableEntrySize();
+  assert(Index < getNumberOfSymbols());
+  return Index;
 }
 
 std::error_code COFFObjectFile::getSectionName(const coff_section *Sec,
@@ -1176,16 +1200,12 @@ COFFObjectFile::getRelocations(const coff_section *Sec) const {
 
 #define LLVM_COFF_SWITCH_RELOC_TYPE_NAME(reloc_type)                           \
   case COFF::reloc_type:                                                       \
-    Res = #reloc_type;                                                         \
-    break;
+    return #reloc_type;
 
-void COFFObjectFile::getRelocationTypeName(
-    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
-  const coff_relocation *Reloc = toRel(Rel);
-  StringRef Res;
+StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
   switch (getMachine()) {
   case COFF::IMAGE_FILE_MACHINE_AMD64:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR64);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_ADDR32);
@@ -1204,11 +1224,11 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_PAIR);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_AMD64_SSPAN32);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_ADDR32NB);
@@ -1225,11 +1245,11 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BRANCH24T);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM_BLX23T);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32NB);
@@ -1248,11 +1268,11 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH19);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_BRANCH14);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_I386:
-    switch (Reloc->Type) {
+    switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_DIR16);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL16);
@@ -1265,19 +1285,31 @@ void COFFObjectFile::getRelocationTypeName(
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_SECREL7);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_I386_REL32);
     default:
-      Res = "Unknown";
+      return "Unknown";
     }
     break;
   default:
-    Res = "Unknown";
+    return "Unknown";
   }
-  Result.append(Res.begin(), Res.end());
 }
 
 #undef LLVM_COFF_SWITCH_RELOC_TYPE_NAME
 
+void COFFObjectFile::getRelocationTypeName(
+    DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
+  const coff_relocation *Reloc = toRel(Rel);
+  StringRef Res = getRelocationTypeName(Reloc->Type);
+  Result.append(Res.begin(), Res.end());
+}
+
 bool COFFObjectFile::isRelocatableObject() const {
   return !DataDirectory;
+}
+
+StringRef COFFObjectFile::mapDebugSectionName(StringRef Name) const {
+  return StringSwitch<StringRef>(Name)
+      .Case("eh_fram", "eh_frame")
+      .Default(Name);
 }
 
 bool ImportDirectoryEntryRef::

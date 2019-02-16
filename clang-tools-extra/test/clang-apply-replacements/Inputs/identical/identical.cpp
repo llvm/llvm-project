@@ -1,2 +1,2 @@
 class MyType {};
-// CHECK: class MyType00 {};
+// CHECK: class MyType0 {};

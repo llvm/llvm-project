@@ -67,11 +67,8 @@
 ; CHECK:       ]
 ; CHECK:       VarName: a
 ; CHECK:     }
-; CHECK:     DefRangeRegisterRelSym {
-; CHECK:       BaseRegister: CVRegEBP (0x16)
-; CHECK:       HasSpilledUDTMember: No
-; CHECK:       OffsetInParent: 0
-; CHECK:       BasePointerOffset: -20
+; CHECK:     DefRangeFramePointerRelSym {
+; CHECK:       Offset: -20
 ; CHECK:       LocalVariableAddrRange {
 ; CHECK:         OffsetStart: .text+0x6
 ; CHECK:         ISectStart: 0x0

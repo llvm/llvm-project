@@ -59,6 +59,14 @@ enum OperandType {
   OPERAND_F32IMM,
   /// 64-bit floating-point immediates.
   OPERAND_F64IMM,
+  /// 8-bit vector lane immediate
+  OPERAND_VEC_I8IMM,
+  /// 16-bit vector lane immediate
+  OPERAND_VEC_I16IMM,
+  /// 32-bit vector lane immediate
+  OPERAND_VEC_I32IMM,
+  /// 64-bit vector lane immediate
+  OPERAND_VEC_I64IMM,
   /// 32-bit unsigned function indices.
   OPERAND_FUNCTION32,
   /// 32-bit unsigned memory offsets.
@@ -69,17 +77,24 @@ enum OperandType {
   OPERAND_SIGNATURE,
   /// type signature immediate for call_indirect.
   OPERAND_TYPEINDEX,
+  /// Event index.
+  OPERAND_EVENT,
+  /// A list of branch targets for br_list.
+  OPERAND_BRLIST,
 };
 } // end namespace WebAssembly
 
 namespace WebAssemblyII {
-enum {
-  // For variadic instructions, this flag indicates whether an operand
-  // in the variable_ops range is an immediate value.
-  VariableOpIsImmediate = (1 << 0),
-  // For immediate values in the variable_ops range, this flag indicates
-  // whether the value represents a control-flow label.
-  VariableOpImmediateIsLabel = (1 << 1)
+
+/// Target Operand Flag enum.
+enum TOF {
+  MO_NO_FLAG = 0,
+
+  // Flags to indicate the type of the symbol being referenced
+  MO_SYMBOL_FUNCTION = 0x1,
+  MO_SYMBOL_GLOBAL = 0x2,
+  MO_SYMBOL_EVENT = 0x4,
+  MO_SYMBOL_MASK = 0x7,
 };
 } // end namespace WebAssemblyII
 
@@ -149,6 +164,10 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW8_U_XCHG_I32_S:
   case WebAssembly::ATOMIC_RMW8_U_XCHG_I64:
   case WebAssembly::ATOMIC_RMW8_U_XCHG_I64_S:
+  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32:
+  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32_S:
+  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64:
+  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64_S:
     return 0;
   case WebAssembly::LOAD16_S_I32:
   case WebAssembly::LOAD16_S_I32_S:
@@ -194,6 +213,10 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW16_U_XCHG_I32_S:
   case WebAssembly::ATOMIC_RMW16_U_XCHG_I64:
   case WebAssembly::ATOMIC_RMW16_U_XCHG_I64_S:
+  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32:
+  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32_S:
+  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64:
+  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64_S:
     return 1;
   case WebAssembly::LOAD_I32:
   case WebAssembly::LOAD_I32_S:
@@ -241,6 +264,14 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW_XCHG_I32_S:
   case WebAssembly::ATOMIC_RMW32_U_XCHG_I64:
   case WebAssembly::ATOMIC_RMW32_U_XCHG_I64_S:
+  case WebAssembly::ATOMIC_RMW_CMPXCHG_I32:
+  case WebAssembly::ATOMIC_RMW_CMPXCHG_I32_S:
+  case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64:
+  case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64_S:
+  case WebAssembly::ATOMIC_NOTIFY:
+  case WebAssembly::ATOMIC_NOTIFY_S:
+  case WebAssembly::ATOMIC_WAIT_I32:
+  case WebAssembly::ATOMIC_WAIT_I32_S:
     return 2;
   case WebAssembly::LOAD_I64:
   case WebAssembly::LOAD_I64_S:
@@ -266,7 +297,36 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::ATOMIC_RMW_XOR_I64_S:
   case WebAssembly::ATOMIC_RMW_XCHG_I64:
   case WebAssembly::ATOMIC_RMW_XCHG_I64_S:
+  case WebAssembly::ATOMIC_RMW_CMPXCHG_I64:
+  case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_S:
+  case WebAssembly::ATOMIC_WAIT_I64:
+  case WebAssembly::ATOMIC_WAIT_I64_S:
     return 3;
+  case WebAssembly::LOAD_v16i8:
+  case WebAssembly::LOAD_v16i8_S:
+  case WebAssembly::LOAD_v8i16:
+  case WebAssembly::LOAD_v8i16_S:
+  case WebAssembly::LOAD_v4i32:
+  case WebAssembly::LOAD_v4i32_S:
+  case WebAssembly::LOAD_v2i64:
+  case WebAssembly::LOAD_v2i64_S:
+  case WebAssembly::LOAD_v4f32:
+  case WebAssembly::LOAD_v4f32_S:
+  case WebAssembly::LOAD_v2f64:
+  case WebAssembly::LOAD_v2f64_S:
+  case WebAssembly::STORE_v16i8:
+  case WebAssembly::STORE_v16i8_S:
+  case WebAssembly::STORE_v8i16:
+  case WebAssembly::STORE_v8i16_S:
+  case WebAssembly::STORE_v4i32:
+  case WebAssembly::STORE_v4i32_S:
+  case WebAssembly::STORE_v2i64:
+  case WebAssembly::STORE_v2i64_S:
+  case WebAssembly::STORE_v4f32:
+  case WebAssembly::STORE_v4f32_S:
+  case WebAssembly::STORE_v2f64:
+  case WebAssembly::STORE_v2f64_S:
+    return 4;
   default:
     llvm_unreachable("Only loads and stores have p2align values");
   }
@@ -282,19 +342,14 @@ static const unsigned StoreP2AlignOperandNo = 0;
 
 /// This is used to indicate block signatures.
 enum class ExprType : unsigned {
-  Void      = 0x40,
-  I32       = 0x7F,
-  I64       = 0x7E,
-  F32       = 0x7D,
-  F64       = 0x7C,
-  I8x16     = 0x7B,
-  I16x8     = 0x7A,
-  I32x4     = 0x79,
-  F32x4     = 0x78,
-  B8x16     = 0x77,
-  B16x8     = 0x76,
-  B32x4     = 0x75,
-  ExceptRef = 0x68
+  Void = 0x40,
+  I32 = 0x7F,
+  I64 = 0x7E,
+  F32 = 0x7D,
+  F64 = 0x7C,
+  V128 = 0x7B,
+  ExceptRef = 0x68,
+  Invalid = 0x00
 };
 
 /// Instruction opcodes emitted via means other than CodeGen.

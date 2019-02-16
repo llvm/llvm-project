@@ -556,13 +556,14 @@ public:
         {return (__state_ & __constructed) || (__exception_ != nullptr);}
 
     _LIBCPP_INLINE_VISIBILITY
-    void __set_future_attached()
-    {
+    void __attach_future() {
         lock_guard<mutex> __lk(__mut_);
+        bool __has_future_attached = (__state_ & __future_attached) != 0;
+        if (__has_future_attached)
+            __throw_future_error(future_errc::future_already_retrieved);
+        this->__add_shared();
         __state_ |= __future_attached;
     }
-    _LIBCPP_INLINE_VISIBILITY
-    bool __has_future_attached() const {return (__state_ & __future_attached) != 0;}
 
     _LIBCPP_INLINE_VISIBILITY
     void __set_deferred() {__state_ |= deferred;}
@@ -1154,10 +1155,7 @@ template <class _Rp>
 future<_Rp>::future(__assoc_state<_Rp>* __state)
     : __state_(__state)
 {
-    if (__state_->__has_future_attached())
-        __throw_future_error(future_errc::future_already_retrieved);
-    __state_->__add_shared();
-    __state_->__set_future_attached();
+    __state_->__attach_future();
 }
 
 struct __release_shared_count
@@ -1257,10 +1255,7 @@ template <class _Rp>
 future<_Rp&>::future(__assoc_state<_Rp&>* __state)
     : __state_(__state)
 {
-    if (__state_->__has_future_attached())
-        __throw_future_error(future_errc::future_already_retrieved);
-    __state_->__add_shared();
-    __state_->__set_future_attached();
+    __state_->__attach_future();
 }
 
 template <class _Rp>

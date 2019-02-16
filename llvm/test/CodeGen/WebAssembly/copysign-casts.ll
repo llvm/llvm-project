@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck %s
 
 ; DAGCombiner oddly folds casts into the rhs of copysign. Test that they get
 ; unfolded.

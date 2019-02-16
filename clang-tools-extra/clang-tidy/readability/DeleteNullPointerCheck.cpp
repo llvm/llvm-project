@@ -55,15 +55,15 @@ void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
 
   auto Diag = diag(
-      IfWithDelete->getLocStart(),
+      IfWithDelete->getBeginLoc(),
       "'if' statement is unnecessary; deleting null pointer has no effect");
   if (IfWithDelete->getElse())
     return;
   // FIXME: generate fixit for this case.
 
   Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-      IfWithDelete->getLocStart(),
-      Lexer::getLocForEndOfToken(IfWithDelete->getCond()->getLocEnd(), 0,
+      IfWithDelete->getBeginLoc(),
+      Lexer::getLocForEndOfToken(IfWithDelete->getCond()->getEndLoc(), 0,
                                  *Result.SourceManager,
                                  Result.Context->getLangOpts())));
   if (Compound) {

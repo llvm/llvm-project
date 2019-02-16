@@ -68,6 +68,9 @@ test_inline_modifier_A:                 // @test_inline_modifier_A
 	//APP
 	adrp x0, :gottprel:var_tlsie
 	//NO_APP
+	//APP
+	ldr x0, :got:var_got
+	//NO_APP
 	ret
 .Ltmp2:
 	.size	test_inline_modifier_A, .Ltmp2-test_inline_modifier_A
@@ -75,6 +78,7 @@ test_inline_modifier_A:                 // @test_inline_modifier_A
 // CHECK: R_AARCH64_ADR_GOT_PAGE var_got
 // CHECK: R_AARCH64_TLSDESC_ADR_PAGE21 var_tlsgd
 // CHECK: R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21 var_tlsie
+// CHECK: R_AARCH64_GOT_LD_PREL19 var_got
 
 	.globl	test_inline_modifier_wx
 	.type	test_inline_modifier_wx,@function

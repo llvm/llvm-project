@@ -903,7 +903,7 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
     case MVT::i8:
     case MVT::i16:
       NeedsExt = true;
-      // Intentional fall-through.
+      LLVM_FALLTHROUGH;
     case MVT::i32:
       if (!UseImm)
         CmpOpc = IsZExt ? PPC::CMPLW : PPC::CMPW;
@@ -2354,7 +2354,8 @@ bool PPCFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
         PPCSubTarget->hasSPE() ? PPC::EVLDD : PPC::LFD))
     return false;
 
-  MI->eraseFromParent();
+  MachineBasicBlock::iterator I(MI);
+  removeDeadCode(I, std::next(I));
   return true;
 }
 

@@ -100,11 +100,12 @@ void function();
 #pragma clang attribute push(__attribute__((annotate("test"))), apply_to = any( variable(unless(is_parameter)), variable(unless(is_parameter)) )) // expected-error {{duplicate attribute subject matcher 'variable(unless(is_parameter))'}}
 #pragma clang attribute push(__attribute__((annotate("test"))), apply_to = any( variable(unless(is_parameter)), variable(unless(is_parameter)), enum, variable(unless(is_parameter)) )) // expected-error 2 {{duplicate attribute subject matcher 'variable(unless(is_parameter))'}}
 
-#pragma clang attribute // expected-error {{expected 'push' or 'pop' after '#pragma clang attribute'}}
-#pragma clang attribute 42 // expected-error {{expected 'push' or 'pop' after '#pragma clang attribute'}}
-#pragma clang attribute pushpop // expected-error {{unexpected argument 'pushpop' to '#pragma clang attribute'; expected 'push' or 'pop'}}
+#pragma clang attribute // expected-error {{expected 'push', 'pop', or '(' after '#pragma clang attribute'}}
+#pragma clang attribute 42 // expected-error {{expected 'push', 'pop', or '(' after '#pragma clang attribute'}}
+#pragma clang attribute pushpop // expected-error {{expected '.' after pragma attribute namespace 'pushpop'}}
 
-#pragma clang attribute push // expected-error {{expected '('}}
+#pragma clang attribute push
+#pragma clang attribute pop
 #pragma clang attribute push ( // expected-error {{expected an attribute after '('}}
 #pragma clang attribute push (__attribute__((annotate)) // expected-error {{expected ')'}}
 #pragma clang attribute push () // expected-error {{expected an attribute after '('}}
@@ -123,7 +124,9 @@ void function();
 #pragma clang attribute push (__attribute__((annotate)), apply_to=function foo) // expected-error {{extra tokens after attribute in a '#pragma clang attribute push'}}
 
 #pragma clang attribute push (__attribute__((objc_bridge_related)), apply_to=function)
-// expected-error@-1 {{attribute 'objc_bridge_related' is not supported by '#pragma clang attribute'}}
+// expected-error@-1 {{attribute 'objc_bridge_related' can't be applied to 'function'}}
+#pragma clang attribute pop
+
 #pragma clang attribute push (__attribute__((objc_bridge_related(1))), apply_to=function) // expected-error {{expected a related ObjectiveC class name, e.g., 'NSColor'}}
 
 #pragma clang attribute push (__attribute__((used)), apply_to=function) // expected-error {{attribute 'used' is not supported by '#pragma clang attribute'}}

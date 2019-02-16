@@ -20,9 +20,6 @@ static uptr internal_syscall(u64 nr) {
   return retval;
 }
 
-#define internal_syscall_ptr internal_syscall
-#define internal_syscall64 internal_syscall
-
 template <typename T1>
 static uptr internal_syscall(u64 nr, T1 arg1) {
   u64 retval;

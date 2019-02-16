@@ -35,7 +35,6 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
 #include <algorithm>
 #define DEBUG_TYPE "predicateinfo"
 using namespace llvm;
@@ -523,7 +522,7 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
       Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
-      if (IF->user_begin() == IF->user_end())
+      if (empty(IF->users()))
         CreatedDeclarations.insert(IF);
       CallInst *PIC =
           B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
@@ -535,7 +534,7 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
              "Should not have gotten here without it being an assume");
       IRBuilder<> B(PAssume->AssumeInst);
       Function *IF = getCopyDeclaration(F.getParent(), Op->getType());
-      if (IF->user_begin() == IF->user_end())
+      if (empty(IF->users()))
         CreatedDeclarations.insert(IF);
       CallInst *PIC = B.CreateCall(IF, Op);
       PredicateMap.insert({PIC, ValInfo});
@@ -570,7 +569,7 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
   auto Comparator = [&](const Value *A, const Value *B) {
     return valueComesBefore(OI, A, B);
   };
-  llvm::sort(OpsToRename.begin(), OpsToRename.end(), Comparator);
+  llvm::sort(OpsToRename, Comparator);
   ValueDFS_Compare Compare(OI);
   // Compute liveness, and rename in O(uses) per Op.
   for (auto *Op : OpsToRename) {

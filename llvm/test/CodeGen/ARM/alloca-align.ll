@@ -12,8 +12,7 @@ declare void @bar(i32*, [20000 x i8]* byval)
 ; And a base pointer getting used.
 ; CHECK: mov r6, sp
 ; Which is passed to the call
-; CHECK: add [[REG:r[0-9]+|lr]], r6, #19456
-; CHECK: add r0, [[REG]], #536
+; CHECK: mov r0, r6
 ; CHECK: bl bar
 define void @foo([20000 x i8]* %addr) {
   %tmp = alloca [4 x i32], align 32

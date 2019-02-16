@@ -58,11 +58,11 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i8, i8* %B, i64 %indvars.iv
-  %l1 = load i8, i8* %arrayidx, align 4, !llvm.mem.parallel_loop_access !3
+  %l1 = load i8, i8* %arrayidx, align 4, !llvm.access.group !13
   %arrayidx2 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv
-  %l2 = load i8, i8* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  %l2 = load i8, i8* %arrayidx2, align 4, !llvm.access.group !13
   %add = add i8 %l1, %l2
-  store i8 %add, i8* %arrayidx2, align 4, !llvm.mem.parallel_loop_access !3
+  store i8 %add, i8* %arrayidx2, align 4, !llvm.access.group !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 16
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !4
@@ -70,5 +70,6 @@ for.body:
 for.end:
   ret void
 }
-!3 = !{!3}
+!3 = !{!3, !{!"llvm.loop.parallel_accesses", !13}}
 !4 = !{!4}
+!13 = distinct !{}

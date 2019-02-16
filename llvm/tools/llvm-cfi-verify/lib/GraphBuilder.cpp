@@ -311,6 +311,24 @@ void GraphBuilder::buildFlowGraphImpl(const FileAnalysis &Analysis,
     Result.ConditionalBranchNodes.push_back(BranchNode);
   }
 
+  // When using cross-DSO, some indirect calls are not guarded by a branch to a
+  // trap but instead follow a call to __cfi_slowpath.  For example:
+  // if (!InlinedFastCheck(f))
+  //    call *f
+  //  else {
+  //    __cfi_slowpath(CallSiteTypeId, f);
+  //    call *f
+  //  }
+  // To mark the second call as protected, we recognize indirect calls that
+  // directly follow calls to functions that will trap on CFI violations.
+  if (CFCrossRefs.empty()) {
+    const Instr *PrevInstr = Analysis.getPrevInstructionSequential(ChildMeta);
+    if (PrevInstr && Analysis.willTrapOnCFIViolation(*PrevInstr)) {
+      Result.IntermediateNodes[PrevInstr->VMAddress] = Address;
+      HasValidCrossRef = true;
+    }
+  }
+
   if (!HasValidCrossRef)
     Result.OrphanedNodes.push_back(Address);
 

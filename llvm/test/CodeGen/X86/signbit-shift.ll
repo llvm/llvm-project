@@ -6,9 +6,9 @@
 define i32 @zext_ifpos(i32 %x) {
 ; CHECK-LABEL: zext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %e = zext i1 %c to i32
@@ -57,9 +57,9 @@ define i32 @sel_ifpos_tval_bigger(i32 %x) {
 define i32 @sext_ifpos(i32 %x) {
 ; CHECK-LABEL: sext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    sarl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    sarl $31, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %e = sext i1 %c to i32
@@ -109,8 +109,8 @@ define i32 @sel_ifpos_fval_bigger(i32 %x) {
 define i32 @zext_ifneg(i32 %x) {
 ; CHECK-LABEL: zext_ifneg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 0
   %r = zext i1 %c to i32
@@ -145,8 +145,8 @@ define i32 @sel_ifneg_tval_bigger(i32 %x) {
 define i32 @sext_ifneg(i32 %x) {
 ; CHECK-LABEL: sext_ifneg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sarl $31, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 0
   %r = sext i1 %c to i32

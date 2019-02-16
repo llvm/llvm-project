@@ -395,7 +395,8 @@ public:
 
   /// Find macro definition active in the specified source location. If
   /// this macro was not defined there, return NULL.
-  const DefInfo findDirectiveAtLoc(SourceLocation L, SourceManager &SM) const;
+  const DefInfo findDirectiveAtLoc(SourceLocation L,
+                                   const SourceManager &SM) const;
 
   void dump() const;
 

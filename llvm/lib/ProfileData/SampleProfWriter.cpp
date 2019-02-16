@@ -22,6 +22,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -61,6 +63,15 @@ SampleProfileWriter::write(const StringMap<FunctionSamples> &ProfileMap) {
     if (std::error_code EC = write(*I.second))
       return EC;
   }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterCompactBinary::write(
+    const StringMap<FunctionSamples> &ProfileMap) {
+  if (std::error_code EC = SampleProfileWriter::write(ProfileMap))
+    return EC;
+  if (std::error_code EC = writeFuncOffsetTable())
+    return EC;
   return sampleprof_error::success;
 }
 
@@ -168,6 +179,30 @@ std::error_code SampleProfileWriterRawBinary::writeNameTable() {
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileWriterCompactBinary::writeFuncOffsetTable() {
+  auto &OS = *OutputStream;
+
+  // Fill the slot remembered by TableOffset with the offset of FuncOffsetTable.
+  auto &OFS = static_cast<raw_fd_ostream &>(OS);
+  uint64_t FuncOffsetTableStart = OS.tell();
+  if (OFS.seek(TableOffset) == (uint64_t)-1)
+    return sampleprof_error::ostream_seek_unsupported;
+  support::endian::Writer Writer(*OutputStream, support::little);
+  Writer.write(FuncOffsetTableStart);
+  if (OFS.seek(FuncOffsetTableStart) == (uint64_t)-1)
+    return sampleprof_error::ostream_seek_unsupported;
+
+  // Write out the table size.
+  encodeULEB128(FuncOffsetTable.size(), OS);
+
+  // Write out FuncOffsetTable.
+  for (auto entry : FuncOffsetTable) {
+    writeNameIdx(entry.first);
+    encodeULEB128(entry.second, OS);
+  }
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileWriterCompactBinary::writeNameTable() {
   auto &OS = *OutputStream;
   std::set<StringRef> V;
@@ -212,6 +247,19 @@ std::error_code SampleProfileWriterBinary::writeHeader(
   }
 
   writeNameTable();
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileWriterCompactBinary::writeHeader(
+    const StringMap<FunctionSamples> &ProfileMap) {
+  support::endian::Writer Writer(*OutputStream, support::little);
+  if (auto EC = SampleProfileWriterBinary::writeHeader(ProfileMap))
+    return EC;
+
+  // Reserve a slot for the offset of function offset table. The slot will
+  // be populated with the offset of FuncOffsetTable later.
+  TableOffset = OutputStream->tell();
+  Writer.write(static_cast<uint64_t>(-2));
   return sampleprof_error::success;
 }
 
@@ -279,6 +327,15 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
 ///
 /// \returns true if the samples were written successfully, false otherwise.
 std::error_code SampleProfileWriterBinary::write(const FunctionSamples &S) {
+  encodeULEB128(S.getHeadSamples(), *OutputStream);
+  return writeBody(S);
+}
+
+std::error_code
+SampleProfileWriterCompactBinary::write(const FunctionSamples &S) {
+  uint64_t Offset = OutputStream->tell();
+  StringRef Name = S.getName();
+  FuncOffsetTable[Name] = Offset;
   encodeULEB128(S.getHeadSamples(), *OutputStream);
   return writeBody(S);
 }

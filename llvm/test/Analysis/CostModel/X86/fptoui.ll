@@ -71,14 +71,14 @@ define i32 @fptoui_double_i32(i32 %arg) {
 ; AVX512F-LABEL: 'fptoui_double_i32'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptoui double undef to i32
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I32 = fptoui <2 x double> undef to <2 x i32>
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = fptoui <8 x double> undef to <8 x i32>
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512DQ-LABEL: 'fptoui_double_i32'
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = fptoui double undef to i32
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I32 = fptoui <2 x double> undef to <2 x i32>
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I32 = fptoui <4 x double> undef to <4 x i32>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I32 = fptoui <8 x double> undef to <8 x i32>
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;

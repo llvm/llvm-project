@@ -21,8 +21,8 @@
 // CHECK-NEXT:  [[T2:%.*]] = bitcast [[WPT]]* [[T0]] to i8*
 // CHECK-NEXT:  [[T3:%.*]] = getelementptr inbounds i8, i8* [[T2]], i64 [[T1]]
 // CHECK-NEXT:  [[T4:%.*]] = bitcast i8* [[T3]] to i8**
-// CHECK-NEXT:  [[T5:%.*]] = call i8* @objc_loadWeakRetained(i8** [[T4]])
-// CHECK-NEXT:  [[T6:%.*]] = tail call i8* @objc_autoreleaseReturnValue(i8* [[T5]])
+// CHECK-NEXT:  [[T5:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T4]])
+// CHECK-NEXT:  [[T6:%.*]] = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* [[T5]])
 // CHECK-NEXT:  ret i8* [[T6]]
 
 // CHECK:     define internal void @"\01-[WeakPropertyTest setPROP:]"
@@ -38,7 +38,7 @@
 // CHECK-NEXT:  [[T2:%.*]] = bitcast [[WPT]]* [[T0]] to i8*
 // CHECK-NEXT:  [[T3:%.*]] = getelementptr inbounds i8, i8* [[T2]], i64 [[T1]]
 // CHECK-NEXT:  [[T4:%.*]] = bitcast i8* [[T3]] to i8**
-// CHECK-NEXT:  call i8* @objc_storeWeak(i8** [[T4]], i8* [[V]])
+// CHECK-NEXT:  call i8* @llvm.objc.storeWeak(i8** [[T4]], i8* [[V]])
 // CHECK-NEXT:  ret void
 
 // CHECK:     define internal void @"\01-[WeakPropertyTest .cxx_destruct]"
@@ -51,5 +51,5 @@
 // CHECK-NEXT:  [[T2:%.*]] = bitcast [[WPT]]* [[T0]] to i8*
 // CHECK-NEXT:  [[T3:%.*]] = getelementptr inbounds i8, i8* [[T2]], i64 [[T1]]
 // CHECK-NEXT:  [[T4:%.*]] = bitcast i8* [[T3]] to i8**
-// CHECK-NEXT:  call void @objc_destroyWeak(i8** [[T4]])
+// CHECK-NEXT:  call void @llvm.objc.destroyWeak(i8** [[T4]])
 // CHECK-NEXT:  ret void

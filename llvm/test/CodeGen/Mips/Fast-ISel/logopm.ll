@@ -245,7 +245,7 @@ entry:
 ; CHECK-DAG:    lw      $[[UC1_ADDR:[0-9]+]], %got(uc1)($[[REG_GP]])
 ; CHECK-DAG:    lbu     $[[UC1:[0-9]+]], 0($[[UC1_ADDR]])
 ; CHECK-DAG:    lbu     $[[UC2:[0-9]+]], 0($[[UC2_ADDR]])
-; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[UC2]], $[[UB1]]
+; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[UC2]], $[[UC1]]
 ; CHECK:        sb      $[[RES]], 0($[[UC_ADDR]])
   ret void
 }
@@ -430,7 +430,7 @@ entry:
 ; CHECK-DAG:    lw      $[[US1_ADDR:[0-9]+]], %got(us1)($[[REG_GP]])
 ; CHECK-DAG:    lhu     $[[US1:[0-9]+]], 0($[[US1_ADDR]])
 ; CHECK-DAG:    lhu     $[[US2:[0-9]+]], 0($[[US2_ADDR]])
-; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[US2]], $[[UB1]]
+; CHECK-DAG:    and     $[[RES:[0-9]+]], $[[US2]], $[[US1]]
 ; CHECK:        sh      $[[RES]], 0($[[US_ADDR]])
 ; CHECK:        .end andUs
   ret void

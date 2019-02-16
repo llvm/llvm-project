@@ -26,7 +26,7 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: define void @gep_2([1000 x i32]* nocapture %a, i32 %i, i32 %j) {
+; CHECK-LABEL: define void @gep_2([1000 x i32]* nocapture %a, i32 %i, i32 %j)
 ; CHECK: call void @__sanitizer_cov_trace_gep(i64 %idxprom1)
 ; CHECK: call void @__sanitizer_cov_trace_gep(i64 %idxprom)
 ; CHECK: ret void

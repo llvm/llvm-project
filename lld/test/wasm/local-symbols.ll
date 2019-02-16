@@ -1,5 +1,6 @@
+; Test that internal symbols can still be GC'd when with --export-dynamic.
 ; RUN: llc -filetype=obj %s -o %t.o
-; RUN: wasm-ld -o %t.wasm %t.o
+; RUN: wasm-ld --export-dynamic -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"

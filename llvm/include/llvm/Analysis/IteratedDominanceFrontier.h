@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Compute iterated dominance frontiers using a linear time algorithm.
 ///
 /// The algorithm used here is based on:
@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFGDiff.h"
 #include "llvm/IR/Dominators.h"
 
 namespace llvm {
@@ -45,17 +46,21 @@ namespace llvm {
 template <class NodeTy, bool IsPostDom>
 class IDFCalculator {
  public:
-  IDFCalculator(DominatorTreeBase<BasicBlock, IsPostDom> &DT)
-      : DT(DT), useLiveIn(false) {}
+   IDFCalculator(DominatorTreeBase<BasicBlock, IsPostDom> &DT)
+       : DT(DT), GD(nullptr), useLiveIn(false) {}
 
-  /// Give the IDF calculator the set of blocks in which the value is
-  /// defined.  This is equivalent to the set of starting blocks it should be
-  /// calculating the IDF for (though later gets pruned based on liveness).
-  ///
-  /// Note: This set *must* live for the entire lifetime of the IDF calculator.
-  void setDefiningBlocks(const SmallPtrSetImpl<BasicBlock *> &Blocks) {
-    DefBlocks = &Blocks;
-  }
+   IDFCalculator(DominatorTreeBase<BasicBlock, IsPostDom> &DT,
+                 const GraphDiff<BasicBlock *, IsPostDom> *GD)
+       : DT(DT), GD(GD), useLiveIn(false) {}
+
+   /// Give the IDF calculator the set of blocks in which the value is
+   /// defined.  This is equivalent to the set of starting blocks it should be
+   /// calculating the IDF for (though later gets pruned based on liveness).
+   ///
+   /// Note: This set *must* live for the entire lifetime of the IDF calculator.
+   void setDefiningBlocks(const SmallPtrSetImpl<BasicBlock *> &Blocks) {
+     DefBlocks = &Blocks;
+   }
 
   /// Give the IDF calculator the set of blocks in which the value is
   /// live on entry to the block.   This is used to prune the IDF calculation to
@@ -85,6 +90,7 @@ class IDFCalculator {
 
 private:
  DominatorTreeBase<BasicBlock, IsPostDom> &DT;
+ const GraphDiff<BasicBlock *, IsPostDom> *GD;
  bool useLiveIn;
  const SmallPtrSetImpl<BasicBlock *> *LiveInBlocks;
  const SmallPtrSetImpl<BasicBlock *> *DefBlocks;

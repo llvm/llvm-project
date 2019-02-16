@@ -154,7 +154,7 @@ void ASTStmtReader::VisitStmt(Stmt *S) {
 void ASTStmtReader::VisitNullStmt(NullStmt *S) {
   VisitStmt(S);
   S->setSemiLoc(ReadSourceLocation());
-  S->HasLeadingEmptyMacro = Record.readInt();
+  S->NullStmtBits.HasLeadingEmptyMacro = Record.readInt();
 }
 
 void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
@@ -164,7 +164,7 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
   S->setStmts(Stmts);
-  S->LBraceLoc = ReadSourceLocation();
+  S->CompoundStmtBits.LBraceLoc = ReadSourceLocation();
   S->RBraceLoc = ReadSourceLocation();
 }
 
@@ -177,10 +177,13 @@ void ASTStmtReader::VisitSwitchCase(SwitchCase *S) {
 
 void ASTStmtReader::VisitCaseStmt(CaseStmt *S) {
   VisitSwitchCase(S);
+  bool CaseStmtIsGNURange = Record.readInt();
   S->setLHS(Record.readSubExpr());
-  S->setRHS(Record.readSubExpr());
   S->setSubStmt(Record.readSubStmt());
-  S->setEllipsisLoc(ReadSourceLocation());
+  if (CaseStmtIsGNURange) {
+    S->setRHS(Record.readSubExpr());
+    S->setEllipsisLoc(ReadSourceLocation());
+  }
 }
 
 void ASTStmtReader::VisitDefaultStmt(DefaultStmt *S) {
@@ -199,38 +202,59 @@ void ASTStmtReader::VisitLabelStmt(LabelStmt *S) {
 
 void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {
   VisitStmt(S);
+  // NumAttrs in AttributedStmt is set when creating an empty
+  // AttributedStmt in AttributedStmt::CreateEmpty, since it is needed
+  // to allocate the right amount of space for the trailing Attr *.
   uint64_t NumAttrs = Record.readInt();
   AttrVec Attrs;
   Record.readAttributes(Attrs);
   (void)NumAttrs;
-  assert(NumAttrs == S->NumAttrs);
+  assert(NumAttrs == S->AttributedStmtBits.NumAttrs);
   assert(NumAttrs == Attrs.size());
   std::copy(Attrs.begin(), Attrs.end(), S->getAttrArrayPtr());
   S->SubStmt = Record.readSubStmt();
-  S->AttrLoc = ReadSourceLocation();
+  S->AttributedStmtBits.AttrLoc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
+
   S->setConstexpr(Record.readInt());
-  S->setInit(Record.readSubStmt());
-  S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+  bool HasElse = Record.readInt();
+  bool HasVar = Record.readInt();
+  bool HasInit = Record.readInt();
+
   S->setCond(Record.readSubExpr());
   S->setThen(Record.readSubStmt());
-  S->setElse(Record.readSubStmt());
+  if (HasElse)
+    S->setElse(Record.readSubStmt());
+  if (HasVar)
+    S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+  if (HasInit)
+    S->setInit(Record.readSubStmt());
+
   S->setIfLoc(ReadSourceLocation());
-  S->setElseLoc(ReadSourceLocation());
+  if (HasElse)
+    S->setElseLoc(ReadSourceLocation());
 }
 
 void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
   VisitStmt(S);
-  S->setInit(Record.readSubStmt());
-  S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
+  bool HasInit = Record.readInt();
+  bool HasVar = Record.readInt();
+  bool AllEnumCasesCovered = Record.readInt();
+  if (AllEnumCasesCovered)
+    S->setAllEnumCasesCovered();
+
   S->setCond(Record.readSubExpr());
   S->setBody(Record.readSubStmt());
+  if (HasInit)
+    S->setInit(Record.readSubStmt());
+  if (HasVar)
+    S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
   S->setSwitchLoc(ReadSourceLocation());
-  if (Record.readInt())
-    S->setAllEnumCasesCovered();
 
   SwitchCase *PrevSC = nullptr;
   for (auto E = Record.size(); Record.getIdx() != E; ) {
@@ -246,10 +270,14 @@ void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
 
 void ASTStmtReader::VisitWhileStmt(WhileStmt *S) {
   VisitStmt(S);
-  S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
+  bool HasVar = Record.readInt();
 
   S->setCond(Record.readSubExpr());
   S->setBody(Record.readSubStmt());
+  if (HasVar)
+    S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
   S->setWhileLoc(ReadSourceLocation());
 }
 
@@ -300,9 +328,14 @@ void ASTStmtReader::VisitBreakStmt(BreakStmt *S) {
 
 void ASTStmtReader::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
+
+  bool HasNRVOCandidate = Record.readInt();
+
   S->setRetValue(Record.readSubExpr());
+  if (HasNRVOCandidate)
+    S->setNRVOCandidate(ReadDeclAs<VarDecl>());
+
   S->setReturnLoc(ReadSourceLocation());
-  S->setNRVOCandidate(ReadDeclAs<VarDecl>());
 }
 
 void ASTStmtReader::VisitDeclStmt(DeclStmt *S) {
@@ -491,11 +524,19 @@ void ASTStmtReader::VisitExpr(Expr *E) {
          "Incorrect expression field count");
 }
 
+void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
+  VisitExpr(E);
+  E->setSubExpr(Record.readSubExpr());
+}
+
 void ASTStmtReader::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
+  bool HasFunctionName = Record.readInt();
+  E->PredefinedExprBits.HasFunctionName = HasFunctionName;
+  E->PredefinedExprBits.Kind = Record.readInt();
   E->setLocation(ReadSourceLocation());
-  E->Type = (PredefinedExpr::IdentType)Record.readInt();
-  E->FnName = cast_or_null<StringLiteral>(Record.readSubExpr());
+  if (HasFunctionName)
+    E->setFunctionName(cast<StringLiteral>(Record.readSubExpr()));
 }
 
 void ASTStmtReader::VisitDeclRefExpr(DeclRefExpr *E) {
@@ -554,22 +595,35 @@ void ASTStmtReader::VisitImaginaryLiteral(ImaginaryLiteral *E) {
 
 void ASTStmtReader::VisitStringLiteral(StringLiteral *E) {
   VisitExpr(E);
-  unsigned Len = Record.readInt();
-  assert(Record.peekInt() == E->getNumConcatenated() &&
+
+  // NumConcatenated, Length and CharByteWidth are set by the empty
+  // ctor since they are needed to allocate storage for the trailing objects.
+  unsigned NumConcatenated = Record.readInt();
+  unsigned Length = Record.readInt();
+  unsigned CharByteWidth = Record.readInt();
+  assert((NumConcatenated == E->getNumConcatenated()) &&
          "Wrong number of concatenated tokens!");
-  Record.skipInts(1);
-  auto kind = static_cast<StringLiteral::StringKind>(Record.readInt());
-  bool isPascal = Record.readInt();
+  assert((Length == E->getLength()) && "Wrong Length!");
+  assert((CharByteWidth == E->getCharByteWidth()) && "Wrong character width!");
+  E->StringLiteralBits.Kind = Record.readInt();
+  E->StringLiteralBits.IsPascal = Record.readInt();
 
-  // Read string data
-  auto B = &Record.peekInt();
-  SmallString<16> Str(B, B + Len);
-  E->setString(Record.getContext(), Str, kind, isPascal);
-  Record.skipInts(Len);
+  // The character width is originally computed via mapCharByteWidth.
+  // Check that the deserialized character width is consistant with the result
+  // of calling mapCharByteWidth.
+  assert((CharByteWidth ==
+          StringLiteral::mapCharByteWidth(Record.getContext().getTargetInfo(),
+                                          E->getKind())) &&
+         "Wrong character width!");
 
-  // Read source locations
-  for (unsigned I = 0, N = E->getNumConcatenated(); I != N; ++I)
+  // Deserialize the trailing array of SourceLocation.
+  for (unsigned I = 0; I < NumConcatenated; ++I)
     E->setStrTokenLoc(I, ReadSourceLocation());
+
+  // Deserialize the trailing array of char holding the string data.
+  char *StrData = E->getStrDataAsChar();
+  for (unsigned I = 0; I < Length * CharByteWidth; ++I)
+    StrData[I] = Record.readInt();
 }
 
 void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
@@ -589,10 +643,9 @@ void ASTStmtReader::VisitParenExpr(ParenExpr *E) {
 void ASTStmtReader::VisitParenListExpr(ParenListExpr *E) {
   VisitExpr(E);
   unsigned NumExprs = Record.readInt();
-  E->Exprs = new (Record.getContext()) Stmt*[NumExprs];
-  for (unsigned i = 0; i != NumExprs; ++i)
-    E->Exprs[i] = Record.readSubStmt();
-  E->NumExprs = NumExprs;
+  assert((NumExprs == E->getNumExprs()) && "Wrong NumExprs!");
+  for (unsigned I = 0; I != NumExprs; ++I)
+    E->getTrailingObjects<Stmt *>()[I] = Record.readSubStmt();
   E->LParenLoc = ReadSourceLocation();
   E->RParenLoc = ReadSourceLocation();
 }
@@ -678,11 +731,13 @@ void ASTStmtReader::VisitOMPArraySectionExpr(OMPArraySectionExpr *E) {
 
 void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   VisitExpr(E);
-  E->setNumArgs(Record.getContext(), Record.readInt());
+  unsigned NumArgs = Record.readInt();
+  assert((NumArgs == E->getNumArgs()) && "Wrong NumArgs!");
   E->setRParenLoc(ReadSourceLocation());
   E->setCallee(Record.readSubExpr());
-  for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+  for (unsigned I = 0; I != NumArgs; ++I)
     E->setArg(I, Record.readSubExpr());
+  E->setADLCallKind(static_cast<CallExpr::ADLCallKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
@@ -1270,6 +1325,7 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   S->CoawaitLoc = ReadSourceLocation();
   S->ColonLoc = ReadSourceLocation();
   S->RParenLoc = ReadSourceLocation();
+  S->setInit(Record.readSubStmt());
   S->setRangeStmt(Record.readSubStmt());
   S->setBeginStmt(Record.readSubStmt());
   S->setEndStmt(Record.readSubStmt());
@@ -1290,27 +1346,29 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
-  E->Operator = (OverloadedOperatorKind)Record.readInt();
+  E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
+  E->CXXOperatorCallExprBits.FPFeatures = Record.readInt();
   E->Range = Record.readSourceRange();
-  E->setFPFeatures(FPOptions(Record.readInt()));
 }
 
 void ASTStmtReader::VisitCXXConstructExpr(CXXConstructExpr *E) {
   VisitExpr(E);
-  E->NumArgs = Record.readInt();
-  if (E->NumArgs)
-    E->Args = new (Record.getContext()) Stmt*[E->NumArgs];
-  for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
-    E->setArg(I, Record.readSubExpr());
-  E->setConstructor(ReadDeclAs<CXXConstructorDecl>());
-  E->setLocation(ReadSourceLocation());
-  E->setElidable(Record.readInt());
-  E->setHadMultipleCandidates(Record.readInt());
-  E->setListInitialization(Record.readInt());
-  E->setStdInitListInitialization(Record.readInt());
-  E->setRequiresZeroInitialization(Record.readInt());
-  E->setConstructionKind((CXXConstructExpr::ConstructionKind)Record.readInt());
+
+  unsigned NumArgs = Record.readInt();
+  assert((NumArgs == E->getNumArgs()) && "Wrong NumArgs!");
+
+  E->CXXConstructExprBits.Elidable = Record.readInt();
+  E->CXXConstructExprBits.HadMultipleCandidates = Record.readInt();
+  E->CXXConstructExprBits.ListInitialization = Record.readInt();
+  E->CXXConstructExprBits.StdInitListInitialization = Record.readInt();
+  E->CXXConstructExprBits.ZeroInitialization = Record.readInt();
+  E->CXXConstructExprBits.ConstructionKind = Record.readInt();
+  E->CXXConstructExprBits.Loc = ReadSourceLocation();
+  E->Constructor = ReadDeclAs<CXXConstructorDecl>();
   E->ParenOrBraceRange = ReadSourceRange();
+
+  for (unsigned I = 0; I != NumArgs; ++I)
+    E->setArg(I, Record.readSubExpr());
 }
 
 void ASTStmtReader::VisitCXXInheritedCtorInitExpr(CXXInheritedCtorInitExpr *E) {
@@ -1323,7 +1381,7 @@ void ASTStmtReader::VisitCXXInheritedCtorInitExpr(CXXInheritedCtorInitExpr *E) {
 
 void ASTStmtReader::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E) {
   VisitCXXConstructExpr(E);
-  E->Type = GetTypeSourceInfo();
+  E->TSI = GetTypeSourceInfo();
 }
 
 void ASTStmtReader::VisitLambdaExpr(LambdaExpr *E) {
@@ -1418,21 +1476,21 @@ void ASTStmtReader::VisitCXXThisExpr(CXXThisExpr *E) {
 
 void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
   VisitExpr(E);
-  E->ThrowLoc = ReadSourceLocation();
-  E->Op = Record.readSubExpr();
-  E->IsThrownVariableInScope = Record.readInt();
+  E->CXXThrowExprBits.ThrowLoc = ReadSourceLocation();
+  E->Operand = Record.readSubExpr();
+  E->CXXThrowExprBits.IsThrownVariableInScope = Record.readInt();
 }
 
 void ASTStmtReader::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   VisitExpr(E);
   E->Param = ReadDeclAs<ParmVarDecl>();
-  E->Loc = ReadSourceLocation();
+  E->CXXDefaultArgExprBits.Loc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   VisitExpr(E);
   E->Field = ReadDeclAs<FieldDecl>();
-  E->Loc = ReadSourceLocation();
+  E->CXXDefaultInitExprBits.Loc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
@@ -1473,13 +1531,13 @@ void ASTStmtReader::VisitCXXNewExpr(CXXNewExpr *E) {
 
 void ASTStmtReader::VisitCXXDeleteExpr(CXXDeleteExpr *E) {
   VisitExpr(E);
-  E->GlobalDelete = Record.readInt();
-  E->ArrayForm = Record.readInt();
-  E->ArrayFormAsWritten = Record.readInt();
-  E->UsualArrayDeleteWantsSize = Record.readInt();
+  E->CXXDeleteExprBits.GlobalDelete = Record.readInt();
+  E->CXXDeleteExprBits.ArrayForm = Record.readInt();
+  E->CXXDeleteExprBits.ArrayFormAsWritten = Record.readInt();
+  E->CXXDeleteExprBits.UsualArrayDeleteWantsSize = Record.readInt();
   E->OperatorDelete = ReadDeclAs<FunctionDecl>();
   E->Argument = Record.readSubExpr();
-  E->Loc = ReadSourceLocation();
+  E->CXXDeleteExprBits.Loc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
@@ -1803,895 +1861,13 @@ void ASTStmtReader::VisitAsTypeExpr(AsTypeExpr *E) {
 }
 
 //===----------------------------------------------------------------------===//
-// OpenMP Clauses.
-//===----------------------------------------------------------------------===//
-
-namespace clang {
-
-class OMPClauseReader : public OMPClauseVisitor<OMPClauseReader> {
-  ASTStmtReader *Reader;
-  ASTContext &Context;
-
-public:
-  OMPClauseReader(ASTStmtReader *R, ASTRecordReader &Record)
-      : Reader(R), Context(Record.getContext()) {}
-
-#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *C);
-#include "clang/Basic/OpenMPKinds.def"
-  OMPClause *readClause();
-  void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
-  void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
-};
-
-} // namespace clang
-
-OMPClause *OMPClauseReader::readClause() {
-  OMPClause *C;
-  switch (Reader->Record.readInt()) {
-  case OMPC_if:
-    C = new (Context) OMPIfClause();
-    break;
-  case OMPC_final:
-    C = new (Context) OMPFinalClause();
-    break;
-  case OMPC_num_threads:
-    C = new (Context) OMPNumThreadsClause();
-    break;
-  case OMPC_safelen:
-    C = new (Context) OMPSafelenClause();
-    break;
-  case OMPC_simdlen:
-    C = new (Context) OMPSimdlenClause();
-    break;
-  case OMPC_collapse:
-    C = new (Context) OMPCollapseClause();
-    break;
-  case OMPC_default:
-    C = new (Context) OMPDefaultClause();
-    break;
-  case OMPC_proc_bind:
-    C = new (Context) OMPProcBindClause();
-    break;
-  case OMPC_schedule:
-    C = new (Context) OMPScheduleClause();
-    break;
-  case OMPC_ordered:
-    C = new (Context) OMPOrderedClause();
-    break;
-  case OMPC_nowait:
-    C = new (Context) OMPNowaitClause();
-    break;
-  case OMPC_untied:
-    C = new (Context) OMPUntiedClause();
-    break;
-  case OMPC_mergeable:
-    C = new (Context) OMPMergeableClause();
-    break;
-  case OMPC_read:
-    C = new (Context) OMPReadClause();
-    break;
-  case OMPC_write:
-    C = new (Context) OMPWriteClause();
-    break;
-  case OMPC_update:
-    C = new (Context) OMPUpdateClause();
-    break;
-  case OMPC_capture:
-    C = new (Context) OMPCaptureClause();
-    break;
-  case OMPC_seq_cst:
-    C = new (Context) OMPSeqCstClause();
-    break;
-  case OMPC_threads:
-    C = new (Context) OMPThreadsClause();
-    break;
-  case OMPC_simd:
-    C = new (Context) OMPSIMDClause();
-    break;
-  case OMPC_nogroup:
-    C = new (Context) OMPNogroupClause();
-    break;
-  case OMPC_private:
-    C = OMPPrivateClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_firstprivate:
-    C = OMPFirstprivateClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_lastprivate:
-    C = OMPLastprivateClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_shared:
-    C = OMPSharedClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_reduction:
-    C = OMPReductionClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_task_reduction:
-    C = OMPTaskReductionClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_in_reduction:
-    C = OMPInReductionClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_linear:
-    C = OMPLinearClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_aligned:
-    C = OMPAlignedClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_copyin:
-    C = OMPCopyinClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_copyprivate:
-    C = OMPCopyprivateClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_flush:
-    C = OMPFlushClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_depend:
-    C = OMPDependClause::CreateEmpty(Context, Reader->Record.readInt());
-    break;
-  case OMPC_device:
-    C = new (Context) OMPDeviceClause();
-    break;
-  case OMPC_map: {
-    unsigned NumVars = Reader->Record.readInt();
-    unsigned NumDeclarations = Reader->Record.readInt();
-    unsigned NumLists = Reader->Record.readInt();
-    unsigned NumComponents = Reader->Record.readInt();
-    C = OMPMapClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                  NumComponents);
-    break;
-  }
-  case OMPC_num_teams:
-    C = new (Context) OMPNumTeamsClause();
-    break;
-  case OMPC_thread_limit:
-    C = new (Context) OMPThreadLimitClause();
-    break;
-  case OMPC_priority:
-    C = new (Context) OMPPriorityClause();
-    break;
-  case OMPC_grainsize:
-    C = new (Context) OMPGrainsizeClause();
-    break;
-  case OMPC_num_tasks:
-    C = new (Context) OMPNumTasksClause();
-    break;
-  case OMPC_hint:
-    C = new (Context) OMPHintClause();
-    break;
-  case OMPC_dist_schedule:
-    C = new (Context) OMPDistScheduleClause();
-    break;
-  case OMPC_defaultmap:
-    C = new (Context) OMPDefaultmapClause();
-    break;
-  case OMPC_to: {
-    unsigned NumVars = Reader->Record.readInt();
-    unsigned NumDeclarations = Reader->Record.readInt();
-    unsigned NumLists = Reader->Record.readInt();
-    unsigned NumComponents = Reader->Record.readInt();
-    C = OMPToClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                 NumComponents);
-    break;
-  }
-  case OMPC_from: {
-    unsigned NumVars = Reader->Record.readInt();
-    unsigned NumDeclarations = Reader->Record.readInt();
-    unsigned NumLists = Reader->Record.readInt();
-    unsigned NumComponents = Reader->Record.readInt();
-    C = OMPFromClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                   NumComponents);
-    break;
-  }
-  case OMPC_use_device_ptr: {
-    unsigned NumVars = Reader->Record.readInt();
-    unsigned NumDeclarations = Reader->Record.readInt();
-    unsigned NumLists = Reader->Record.readInt();
-    unsigned NumComponents = Reader->Record.readInt();
-    C = OMPUseDevicePtrClause::CreateEmpty(Context, NumVars, NumDeclarations,
-                                           NumLists, NumComponents);
-    break;
-  }
-  case OMPC_is_device_ptr: {
-    unsigned NumVars = Reader->Record.readInt();
-    unsigned NumDeclarations = Reader->Record.readInt();
-    unsigned NumLists = Reader->Record.readInt();
-    unsigned NumComponents = Reader->Record.readInt();
-    C = OMPIsDevicePtrClause::CreateEmpty(Context, NumVars, NumDeclarations,
-                                          NumLists, NumComponents);
-    break;
-  }
-  }
-  Visit(C);
-  C->setLocStart(Reader->ReadSourceLocation());
-  C->setLocEnd(Reader->ReadSourceLocation());
-
-  return C;
-}
-
-void OMPClauseReader::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
-  C->setPreInitStmt(Reader->Record.readSubStmt(),
-                    static_cast<OpenMPDirectiveKind>(Reader->Record.readInt()));
-}
-
-void OMPClauseReader::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setPostUpdateExpr(Reader->Record.readSubExpr());
-}
-
-void OMPClauseReader::VisitOMPIfClause(OMPIfClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setNameModifier(static_cast<OpenMPDirectiveKind>(Reader->Record.readInt()));
-  C->setNameModifierLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  C->setCondition(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
-  C->setCondition(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setNumThreads(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPSafelenClause(OMPSafelenClause *C) {
-  C->setSafelen(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
-  C->setSimdlen(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPCollapseClause(OMPCollapseClause *C) {
-  C->setNumForLoops(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
-  C->setDefaultKind(
-       static_cast<OpenMPDefaultClauseKind>(Reader->Record.readInt()));
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setDefaultKindKwLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
-  C->setProcBindKind(
-       static_cast<OpenMPProcBindClauseKind>(Reader->Record.readInt()));
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setProcBindKindKwLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPScheduleClause(OMPScheduleClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setScheduleKind(
-       static_cast<OpenMPScheduleClauseKind>(Reader->Record.readInt()));
-  C->setFirstScheduleModifier(
-      static_cast<OpenMPScheduleClauseModifier>(Reader->Record.readInt()));
-  C->setSecondScheduleModifier(
-      static_cast<OpenMPScheduleClauseModifier>(Reader->Record.readInt()));
-  C->setChunkSize(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setFirstScheduleModifierLoc(Reader->ReadSourceLocation());
-  C->setSecondScheduleModifierLoc(Reader->ReadSourceLocation());
-  C->setScheduleKindLoc(Reader->ReadSourceLocation());
-  C->setCommaLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPOrderedClause(OMPOrderedClause *C) {
-  C->setNumForLoops(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *) {}
-
-void OMPClauseReader::VisitOMPUntiedClause(OMPUntiedClause *) {}
-
-void OMPClauseReader::VisitOMPMergeableClause(OMPMergeableClause *) {}
-
-void OMPClauseReader::VisitOMPReadClause(OMPReadClause *) {}
-
-void OMPClauseReader::VisitOMPWriteClause(OMPWriteClause *) {}
-
-void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *) {}
-
-void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}
-
-void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
-
-void OMPClauseReader::VisitOMPThreadsClause(OMPThreadsClause *) {}
-
-void OMPClauseReader::VisitOMPSIMDClause(OMPSIMDClause *) {}
-
-void OMPClauseReader::VisitOMPNogroupClause(OMPNogroupClause *) {}
-
-void OMPClauseReader::VisitOMPPrivateClause(OMPPrivateClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivateCopies(Vars);
-}
-
-void OMPClauseReader::VisitOMPFirstprivateClause(OMPFirstprivateClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivateCopies(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setInits(Vars);
-}
-
-void OMPClauseReader::VisitOMPLastprivateClause(OMPLastprivateClause *C) {
-  VisitOMPClauseWithPostUpdate(C);
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivateCopies(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setSourceExprs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setDestinationExprs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setAssignmentOps(Vars);
-}
-
-void OMPClauseReader::VisitOMPSharedClause(OMPSharedClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-}
-
-void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
-  VisitOMPClauseWithPostUpdate(C);
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  NestedNameSpecifierLoc NNSL = Reader->Record.readNestedNameSpecifierLoc();
-  DeclarationNameInfo DNI;
-  Reader->ReadDeclarationNameInfo(DNI);
-  C->setQualifierLoc(NNSL);
-  C->setNameInfo(DNI);
-
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivates(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setLHSExprs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setRHSExprs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setReductionOps(Vars);
-}
-
-void OMPClauseReader::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
-  VisitOMPClauseWithPostUpdate(C);
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  NestedNameSpecifierLoc NNSL = Reader->Record.readNestedNameSpecifierLoc();
-  DeclarationNameInfo DNI;
-  Reader->ReadDeclarationNameInfo(DNI);
-  C->setQualifierLoc(NNSL);
-  C->setNameInfo(DNI);
-
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivates(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setLHSExprs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setRHSExprs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setReductionOps(Vars);
-}
-
-void OMPClauseReader::VisitOMPInReductionClause(OMPInReductionClause *C) {
-  VisitOMPClauseWithPostUpdate(C);
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  NestedNameSpecifierLoc NNSL = Reader->Record.readNestedNameSpecifierLoc();
-  DeclarationNameInfo DNI;
-  Reader->ReadDeclarationNameInfo(DNI);
-  C->setQualifierLoc(NNSL);
-  C->setNameInfo(DNI);
-
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivates(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setLHSExprs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setRHSExprs(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setReductionOps(Vars);
-  Vars.clear();
-  for (unsigned I = 0; I != NumVars; ++I)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setTaskgroupDescriptors(Vars);
-}
-
-void OMPClauseReader::VisitOMPLinearClause(OMPLinearClause *C) {
-  VisitOMPClauseWithPostUpdate(C);
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  C->setModifier(static_cast<OpenMPLinearClauseKind>(Reader->Record.readInt()));
-  C->setModifierLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivates(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setInits(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setUpdates(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setFinals(Vars);
-  C->setStep(Reader->Record.readSubExpr());
-  C->setCalcStep(Reader->Record.readSubExpr());
-}
-
-void OMPClauseReader::VisitOMPAlignedClause(OMPAlignedClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  C->setAlignment(Reader->Record.readSubExpr());
-}
-
-void OMPClauseReader::VisitOMPCopyinClause(OMPCopyinClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Exprs;
-  Exprs.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Exprs);
-  Exprs.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setSourceExprs(Exprs);
-  Exprs.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setDestinationExprs(Exprs);
-  Exprs.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setAssignmentOps(Exprs);
-}
-
-void OMPClauseReader::VisitOMPCopyprivateClause(OMPCopyprivateClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Exprs;
-  Exprs.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Exprs);
-  Exprs.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setSourceExprs(Exprs);
-  Exprs.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setDestinationExprs(Exprs);
-  Exprs.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Exprs.push_back(Reader->Record.readSubExpr());
-  C->setAssignmentOps(Exprs);
-}
-
-void OMPClauseReader::VisitOMPFlushClause(OMPFlushClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-}
-
-void OMPClauseReader::VisitOMPDependClause(OMPDependClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setDependencyKind(
-      static_cast<OpenMPDependClauseKind>(Reader->Record.readInt()));
-  C->setDependencyLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  unsigned NumVars = C->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  C->setCounterValue(Reader->Record.readSubExpr());
-}
-
-void OMPClauseReader::VisitOMPDeviceClause(OMPDeviceClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setDevice(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setMapTypeModifier(
-     static_cast<OpenMPMapClauseKind>(Reader->Record.readInt()));
-  C->setMapType(
-     static_cast<OpenMPMapClauseKind>(Reader->Record.readInt()));
-  C->setMapLoc(Reader->ReadSourceLocation());
-  C->setColonLoc(Reader->ReadSourceLocation());
-  auto NumVars = C->varlist_size();
-  auto UniqueDecls = C->getUniqueDeclarationsNum();
-  auto TotalLists = C->getTotalComponentListNum();
-  auto TotalComponents = C->getTotalComponentsNum();
-
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-
-  SmallVector<ValueDecl *, 16> Decls;
-  Decls.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    Decls.push_back(Reader->Record.readDeclAs<ValueDecl>());
-  C->setUniqueDecls(Decls);
-
-  SmallVector<unsigned, 16> ListsPerDecl;
-  ListsPerDecl.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    ListsPerDecl.push_back(Reader->Record.readInt());
-  C->setDeclNumLists(ListsPerDecl);
-
-  SmallVector<unsigned, 32> ListSizes;
-  ListSizes.reserve(TotalLists);
-  for (unsigned i = 0; i < TotalLists; ++i)
-    ListSizes.push_back(Reader->Record.readInt());
-  C->setComponentListSizes(ListSizes);
-
-  SmallVector<OMPClauseMappableExprCommon::MappableComponent, 32> Components;
-  Components.reserve(TotalComponents);
-  for (unsigned i = 0; i < TotalComponents; ++i) {
-    Expr *AssociatedExpr = Reader->Record.readSubExpr();
-    auto *AssociatedDecl = Reader->Record.readDeclAs<ValueDecl>();
-    Components.push_back(OMPClauseMappableExprCommon::MappableComponent(
-        AssociatedExpr, AssociatedDecl));
-  }
-  C->setComponents(Components, ListSizes);
-}
-
-void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setNumTeams(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setThreadLimit(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPPriorityClause(OMPPriorityClause *C) {
-  C->setPriority(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPGrainsizeClause(OMPGrainsizeClause *C) {
-  C->setGrainsize(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPNumTasksClause(OMPNumTasksClause *C) {
-  C->setNumTasks(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPHintClause(OMPHintClause *C) {
-  C->setHint(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPDistScheduleClause(OMPDistScheduleClause *C) {
-  VisitOMPClauseWithPreInit(C);
-  C->setDistScheduleKind(
-      static_cast<OpenMPDistScheduleClauseKind>(Reader->Record.readInt()));
-  C->setChunkSize(Reader->Record.readSubExpr());
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setDistScheduleKindLoc(Reader->ReadSourceLocation());
-  C->setCommaLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
-  C->setDefaultmapKind(
-       static_cast<OpenMPDefaultmapClauseKind>(Reader->Record.readInt()));
-  C->setDefaultmapModifier(
-      static_cast<OpenMPDefaultmapClauseModifier>(Reader->Record.readInt()));
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  C->setDefaultmapModifierLoc(Reader->ReadSourceLocation());
-  C->setDefaultmapKindLoc(Reader->ReadSourceLocation());
-}
-
-void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  auto NumVars = C->varlist_size();
-  auto UniqueDecls = C->getUniqueDeclarationsNum();
-  auto TotalLists = C->getTotalComponentListNum();
-  auto TotalComponents = C->getTotalComponentsNum();
-
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-
-  SmallVector<ValueDecl *, 16> Decls;
-  Decls.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    Decls.push_back(Reader->Record.readDeclAs<ValueDecl>());
-  C->setUniqueDecls(Decls);
-
-  SmallVector<unsigned, 16> ListsPerDecl;
-  ListsPerDecl.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    ListsPerDecl.push_back(Reader->Record.readInt());
-  C->setDeclNumLists(ListsPerDecl);
-
-  SmallVector<unsigned, 32> ListSizes;
-  ListSizes.reserve(TotalLists);
-  for (unsigned i = 0; i < TotalLists; ++i)
-    ListSizes.push_back(Reader->Record.readInt());
-  C->setComponentListSizes(ListSizes);
-
-  SmallVector<OMPClauseMappableExprCommon::MappableComponent, 32> Components;
-  Components.reserve(TotalComponents);
-  for (unsigned i = 0; i < TotalComponents; ++i) {
-    Expr *AssociatedExpr = Reader->Record.readSubExpr();
-    auto *AssociatedDecl = Reader->Record.readDeclAs<ValueDecl>();
-    Components.push_back(OMPClauseMappableExprCommon::MappableComponent(
-        AssociatedExpr, AssociatedDecl));
-  }
-  C->setComponents(Components, ListSizes);
-}
-
-void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  auto NumVars = C->varlist_size();
-  auto UniqueDecls = C->getUniqueDeclarationsNum();
-  auto TotalLists = C->getTotalComponentListNum();
-  auto TotalComponents = C->getTotalComponentsNum();
-
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-
-  SmallVector<ValueDecl *, 16> Decls;
-  Decls.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    Decls.push_back(Reader->Record.readDeclAs<ValueDecl>());
-  C->setUniqueDecls(Decls);
-
-  SmallVector<unsigned, 16> ListsPerDecl;
-  ListsPerDecl.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    ListsPerDecl.push_back(Reader->Record.readInt());
-  C->setDeclNumLists(ListsPerDecl);
-
-  SmallVector<unsigned, 32> ListSizes;
-  ListSizes.reserve(TotalLists);
-  for (unsigned i = 0; i < TotalLists; ++i)
-    ListSizes.push_back(Reader->Record.readInt());
-  C->setComponentListSizes(ListSizes);
-
-  SmallVector<OMPClauseMappableExprCommon::MappableComponent, 32> Components;
-  Components.reserve(TotalComponents);
-  for (unsigned i = 0; i < TotalComponents; ++i) {
-    Expr *AssociatedExpr = Reader->Record.readSubExpr();
-    auto *AssociatedDecl = Reader->Record.readDeclAs<ValueDecl>();
-    Components.push_back(OMPClauseMappableExprCommon::MappableComponent(
-        AssociatedExpr, AssociatedDecl));
-  }
-  C->setComponents(Components, ListSizes);
-}
-
-void OMPClauseReader::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  auto NumVars = C->varlist_size();
-  auto UniqueDecls = C->getUniqueDeclarationsNum();
-  auto TotalLists = C->getTotalComponentListNum();
-  auto TotalComponents = C->getTotalComponentsNum();
-
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setPrivateCopies(Vars);
-  Vars.clear();
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setInits(Vars);
-
-  SmallVector<ValueDecl *, 16> Decls;
-  Decls.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    Decls.push_back(Reader->Record.readDeclAs<ValueDecl>());
-  C->setUniqueDecls(Decls);
-
-  SmallVector<unsigned, 16> ListsPerDecl;
-  ListsPerDecl.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    ListsPerDecl.push_back(Reader->Record.readInt());
-  C->setDeclNumLists(ListsPerDecl);
-
-  SmallVector<unsigned, 32> ListSizes;
-  ListSizes.reserve(TotalLists);
-  for (unsigned i = 0; i < TotalLists; ++i)
-    ListSizes.push_back(Reader->Record.readInt());
-  C->setComponentListSizes(ListSizes);
-
-  SmallVector<OMPClauseMappableExprCommon::MappableComponent, 32> Components;
-  Components.reserve(TotalComponents);
-  for (unsigned i = 0; i < TotalComponents; ++i) {
-    Expr *AssociatedExpr = Reader->Record.readSubExpr();
-    auto *AssociatedDecl = Reader->Record.readDeclAs<ValueDecl>();
-    Components.push_back(OMPClauseMappableExprCommon::MappableComponent(
-        AssociatedExpr, AssociatedDecl));
-  }
-  C->setComponents(Components, ListSizes);
-}
-
-void OMPClauseReader::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
-  C->setLParenLoc(Reader->ReadSourceLocation());
-  auto NumVars = C->varlist_size();
-  auto UniqueDecls = C->getUniqueDeclarationsNum();
-  auto TotalLists = C->getTotalComponentListNum();
-  auto TotalComponents = C->getTotalComponentsNum();
-
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i)
-    Vars.push_back(Reader->Record.readSubExpr());
-  C->setVarRefs(Vars);
-  Vars.clear();
-
-  SmallVector<ValueDecl *, 16> Decls;
-  Decls.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    Decls.push_back(Reader->Record.readDeclAs<ValueDecl>());
-  C->setUniqueDecls(Decls);
-
-  SmallVector<unsigned, 16> ListsPerDecl;
-  ListsPerDecl.reserve(UniqueDecls);
-  for (unsigned i = 0; i < UniqueDecls; ++i)
-    ListsPerDecl.push_back(Reader->Record.readInt());
-  C->setDeclNumLists(ListsPerDecl);
-
-  SmallVector<unsigned, 32> ListSizes;
-  ListSizes.reserve(TotalLists);
-  for (unsigned i = 0; i < TotalLists; ++i)
-    ListSizes.push_back(Reader->Record.readInt());
-  C->setComponentListSizes(ListSizes);
-
-  SmallVector<OMPClauseMappableExprCommon::MappableComponent, 32> Components;
-  Components.reserve(TotalComponents);
-  for (unsigned i = 0; i < TotalComponents; ++i) {
-    Expr *AssociatedExpr = Reader->Record.readSubExpr();
-    auto *AssociatedDecl = Reader->Record.readDeclAs<ValueDecl>();
-    Components.push_back(OMPClauseMappableExprCommon::MappableComponent(
-        AssociatedExpr, AssociatedDecl));
-  }
-  C->setComponents(Components, ListSizes);
-}
-
-//===----------------------------------------------------------------------===//
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
 
 void ASTStmtReader::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   E->setLocStart(ReadSourceLocation());
   E->setLocEnd(ReadSourceLocation());
-  OMPClauseReader ClauseReader(this, Record);
+  OMPClauseReader ClauseReader(Record);
   SmallVector<OMPClause *, 5> Clauses;
   for (unsigned i = 0; i < E->getNumClauses(); ++i)
     Clauses.push_back(ClauseReader.readClause());
@@ -2737,6 +1913,8 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
     D->setCombinedCond(Record.readSubExpr());
     D->setCombinedNextLowerBound(Record.readSubExpr());
     D->setCombinedNextUpperBound(Record.readSubExpr());
+    D->setCombinedDistCond(Record.readSubExpr());
+    D->setCombinedParForInDistCond(Record.readSubExpr());
   }
   SmallVector<Expr *, 4> Sub;
   unsigned CollapsedNum = D->getCollapsedNumber();
@@ -3142,7 +2320,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_CASE:
-      S = new (Context) CaseStmt(Empty);
+      S = CaseStmt::CreateEmpty(
+          Context,
+          /*CaseStmtIsGNURange*/ Record[ASTStmtReader::NumStmtFields + 3]);
       break;
 
     case STMT_DEFAULT:
@@ -3160,15 +2340,24 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_IF:
-      S = new (Context) IfStmt(Empty);
+      S = IfStmt::CreateEmpty(
+          Context,
+          /* HasElse=*/Record[ASTStmtReader::NumStmtFields + 1],
+          /* HasVar=*/Record[ASTStmtReader::NumStmtFields + 2],
+          /* HasInit=*/Record[ASTStmtReader::NumStmtFields + 3]);
       break;
 
     case STMT_SWITCH:
-      S = new (Context) SwitchStmt(Empty);
+      S = SwitchStmt::CreateEmpty(
+          Context,
+          /* HasInit=*/Record[ASTStmtReader::NumStmtFields],
+          /* HasVar=*/Record[ASTStmtReader::NumStmtFields + 1]);
       break;
 
     case STMT_WHILE:
-      S = new (Context) WhileStmt(Empty);
+      S = WhileStmt::CreateEmpty(
+          Context,
+          /* HasVar=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
     case STMT_DO:
@@ -3196,7 +2385,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_RETURN:
-      S = new (Context) ReturnStmt(Empty);
+      S = ReturnStmt::CreateEmpty(
+          Context, /* HasNRVOCandidate=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
     case STMT_DECL:
@@ -3212,12 +2402,18 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_CAPTURED:
-      S = CapturedStmt::CreateDeserialized(Context,
-                                           Record[ASTStmtReader::NumStmtFields]);
+      S = CapturedStmt::CreateDeserialized(
+          Context, Record[ASTStmtReader::NumStmtFields]);
+      break;
+
+    case EXPR_CONSTANT:
+      S = new (Context) ConstantExpr(Empty);
       break;
 
     case EXPR_PREDEFINED:
-      S = new (Context) PredefinedExpr(Empty);
+      S = PredefinedExpr::CreateEmpty(
+          Context,
+          /*HasFunctionName*/ Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_DECL_REF:
@@ -3243,8 +2439,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_STRING_LITERAL:
-      S = StringLiteral::CreateEmpty(Context,
-                                     Record[ASTStmtReader::NumExprFields + 1]);
+      S = StringLiteral::CreateEmpty(
+          Context,
+          /* NumConcatenated=*/Record[ASTStmtReader::NumExprFields],
+          /* Length=*/Record[ASTStmtReader::NumExprFields + 1],
+          /* CharByteWidth=*/Record[ASTStmtReader::NumExprFields + 2]);
       break;
 
     case EXPR_CHARACTER_LITERAL:
@@ -3256,7 +2455,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_PAREN_LIST:
-      S = new (Context) ParenListExpr(Empty);
+      S = ParenListExpr::CreateEmpty(
+          Context,
+          /* NumExprs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_UNARY_OPERATOR:
@@ -3282,7 +2483,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CALL:
-      S = new (Context) CallExpr(Context, Stmt::CallExprClass, Empty);
+      S = CallExpr::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_MEMBER: {
@@ -3872,15 +3074,19 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     }
 
     case EXPR_CXX_OPERATOR_CALL:
-      S = new (Context) CXXOperatorCallExpr(Context, Empty);
+      S = CXXOperatorCallExpr::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_CXX_MEMBER_CALL:
-      S = new (Context) CXXMemberCallExpr(Context, Empty);
+      S = CXXMemberCallExpr::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_CXX_CONSTRUCT:
-      S = new (Context) CXXConstructExpr(Empty);
+      S = CXXConstructExpr::CreateEmpty(
+          Context,
+          /* NumArgs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_CXX_INHERITED_CTOR_INIT:
@@ -3888,7 +3094,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CXX_TEMPORARY_OBJECT:
-      S = new (Context) CXXTemporaryObjectExpr(Empty);
+      S = CXXTemporaryObjectExpr::CreateEmpty(
+          Context,
+          /* NumArgs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_CXX_STATIC_CAST:
@@ -3916,7 +3124,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_USER_DEFINED_LITERAL:
-      S = new (Context) UserDefinedLiteral(Context, Empty);
+      S = UserDefinedLiteral::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_CXX_STD_INITIALIZER_LIST:
@@ -4086,7 +3295,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CUDA_KERNEL_CALL:
-      S = new (Context) CUDAKernelCallExpr(Context, Empty);
+      S = CUDAKernelCallExpr::CreateEmpty(
+          Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
       break;
 
     case EXPR_ASTYPE:

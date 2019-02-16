@@ -142,6 +142,19 @@ private:
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
 };
 
+class GenerateHeaderModuleAction : public GenerateModuleAction {
+  /// The synthesized module input buffer for the current compilation.
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+  std::vector<std::string> ModuleHeaders;
+
+private:
+  bool PrepareToExecuteAction(CompilerInstance &CI) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  std::unique_ptr<raw_pwrite_stream>
+  CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
+};
+
 class SyntaxOnlyAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -244,11 +257,6 @@ protected:
 };
 
 class DumpTokensAction : public PreprocessorFrontendAction {
-protected:
-  void ExecuteAction() override;
-};
-
-class GeneratePTHAction : public PreprocessorFrontendAction {
 protected:
   void ExecuteAction() override;
 };

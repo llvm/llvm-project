@@ -15,6 +15,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#define __KMP_IMP
 #include "omp.h" // omp_* declarations, must be included before "kmp.h"
 #include "kmp.h" // KMP_DEFAULT_STKSIZE
 #include "kmp_stub.h"
@@ -34,6 +35,10 @@
 #define omp_set_num_threads ompc_set_num_threads
 #define omp_set_dynamic ompc_set_dynamic
 #define omp_set_nested ompc_set_nested
+#define omp_set_affinity_format ompc_set_affinity_format
+#define omp_get_affinity_format ompc_get_affinity_format
+#define omp_display_affinity ompc_display_affinity
+#define omp_capture_affinity ompc_capture_affinity
 #define kmp_set_stacksize kmpc_set_stacksize
 #define kmp_set_stacksize_s kmpc_set_stacksize_s
 #define kmp_set_blocktime kmpc_set_blocktime
@@ -46,7 +51,9 @@
 #define kmp_realloc kmpc_realloc
 #define kmp_free kmpc_free
 
+#if KMP_OS_WINDOWS
 static double frequency = 0.0;
+#endif
 
 // Helper functions.
 static size_t __kmps_init() {
@@ -335,5 +342,29 @@ double __kmps_get_wtick(void) {
 #endif
   return wtick;
 } // __kmps_get_wtick
+
+#if OMP_50_ENABLED
+/* OpenMP 5.0 Memory Management */
+const omp_allocator_t *OMP_NULL_ALLOCATOR = NULL;
+const omp_allocator_t *omp_default_mem_alloc = (const omp_allocator_t *)1;
+const omp_allocator_t *omp_large_cap_mem_alloc = (const omp_allocator_t *)2;
+const omp_allocator_t *omp_const_mem_alloc = (const omp_allocator_t *)3;
+const omp_allocator_t *omp_high_bw_mem_alloc = (const omp_allocator_t *)4;
+const omp_allocator_t *omp_low_lat_mem_alloc = (const omp_allocator_t *)5;
+const omp_allocator_t *omp_cgroup_mem_alloc = (const omp_allocator_t *)6;
+const omp_allocator_t *omp_pteam_mem_alloc = (const omp_allocator_t *)7;
+const omp_allocator_t *omp_thread_mem_alloc = (const omp_allocator_t *)8;
+/* OpenMP 5.0 Affinity Format */
+void omp_set_affinity_format(char const *format) { i; }
+size_t omp_get_affinity_format(char *buffer, size_t size) {
+  i;
+  return 0;
+}
+void omp_display_affinity(char const *format) { i; }
+size_t omp_capture_affinity(char *buffer, size_t buf_size, char const *format) {
+  i;
+  return 0;
+}
+#endif /* OMP_50_ENABLED */
 
 // end of file //

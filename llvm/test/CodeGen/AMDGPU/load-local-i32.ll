@@ -265,4 +265,14 @@ define amdgpu_kernel void @local_zextload_v32i32_to_v32i64(<32 x i64> addrspace(
   ret void
 }
 
+; FUNC-LABEL: {{^}}local_load_v32i32:
+; SICIVI: s_mov_b32 m0, -1
+; GFX9-NOT: m0
+
+define amdgpu_kernel void @local_load_v32i32(<32 x i32> addrspace(3)* %out, <32 x i32> addrspace(3)* %in) #0 {
+  %ld = load <32 x i32>, <32 x i32> addrspace(3)* %in
+  store <32 x i32> %ld, <32 x i32> addrspace(3)* %out
+  ret void
+}
+
 attributes #0 = { nounwind }

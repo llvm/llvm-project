@@ -59,16 +59,22 @@
 ; OBJ:   Kind: S_GPROC32_ID (0x1147)
 ; OBJ:   DisplayName: f
 ; OBJ: }
+; OBJ: FrameProcSym {
+; OBJ:   Kind: S_FRAMEPROC (0x1012)
+; OBJ:   TotalFrameBytes: 0x8
+; OBJ:   LocalFramePtrReg: VFRAME (0x7536)
+; OBJ:   ParamFramePtrReg: VFRAME (0x7536)
+; OBJ: }
 ; OBJ: LocalSym {
-; OBJ:   Type: NonTrivial (0x1007)
+; OBJ:   Kind: S_LOCAL (0x113E)
+; OBJ:   Type: NonTrivial (0x{{.*}})
 ; OBJ:   Flags [ (0x1)
 ; OBJ:     IsParameter (0x1)
 ; OBJ:   ]
 ; OBJ:   VarName: a
 ; OBJ: }
-; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: CVRegESP (0x15)
-; OBJ:   BasePointerOffset: 12
+; OBJ: DefRangeFramePointerRelSym {
+; OBJ:   Offset: 4
 ; OBJ: }
 ; OBJ: LocalSym {
 ; OBJ:   Type: int (0x74)
@@ -77,9 +83,8 @@
 ; OBJ:   ]
 ; OBJ:   VarName: b
 ; OBJ: }
-; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: CVRegESP (0x15)
-; OBJ:   BasePointerOffset: 16
+; OBJ: DefRangeFramePointerRelSym {
+; OBJ:   Offset: 8
 ; OBJ: }
 ; FIXME: Retain unused.
 ; OBJ: LocalSym {
@@ -89,9 +94,8 @@
 ; OBJ:   ]
 ; OBJ:   VarName: c
 ; OBJ: }
-; OBJ: DefRangeRegisterRelSym {
-; OBJ:   BaseRegister: CVRegESP (0x15)
-; OBJ:   BasePointerOffset: 24
+; OBJ: DefRangeFramePointerRelSym {
+; OBJ:   Offset: 16
 ; OBJ: }
 ; OBJ-LABEL: ProcEnd {
 ; OBJ: }

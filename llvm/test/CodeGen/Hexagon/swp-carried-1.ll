@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -rdf-opt=0 -disable-hexagon-misched < %s | FileCheck %s
+; RUN: llc -march=hexagon -rdf-opt=0 -disable-hexagon-misched -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; Test that we generate the correct code when a loop carried value
 ; is scheduled one stage earlier than it's use. The code in

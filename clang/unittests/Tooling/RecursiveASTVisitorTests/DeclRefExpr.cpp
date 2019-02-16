@@ -75,11 +75,11 @@ TEST(RecursiveASTVisitor, VisitsUseOfImplicitLambdaCapture) {
 TEST(RecursiveASTVisitor, VisitsImplicitLambdaCaptureInit) {
   DeclRefExprVisitor Visitor;
   Visitor.setShouldVisitImplicitCode(true);
-  // We're expecting the "i" in the lambda to be visited twice:
-  // - Once for the DeclRefExpr in the lambda capture initialization (whose
-  //   source code location is set to the first use of the variable).
-  // - Once for the DeclRefExpr for the use of "i" inside the lambda.
-  Visitor.ExpectMatch("i", 1, 24, /*Times=*/2);
+  // We're expecting "i" to be visited twice: once for the initialization expr
+  // for the captured variable "i" outside of the lambda body, and again for
+  // the use of "i" inside the lambda.
+  Visitor.ExpectMatch("i", 1, 20, /*Times=*/1);
+  Visitor.ExpectMatch("i", 1, 24, /*Times=*/1);
   EXPECT_TRUE(Visitor.runOver(
     "void f() { int i; [=]{ i; }; }",
     DeclRefExprVisitor::Lang_CXX11));

@@ -1,7 +1,6 @@
 // Regression test for
 // https://code.google.com/p/address-sanitizer/issues/detail?id=180
 
-// clang-format off
 // RUN: %clangxx -O0 %s -o %t
 
 // RUN: %env_tool_opts=handle_segv=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
@@ -15,7 +14,6 @@
 // RUN: %env_tool_opts=handle_segv=0:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
 // RUN: %env_tool_opts=handle_segv=1:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
 // RUN: %env_tool_opts=handle_segv=2:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
-// clang-format on
 
 // Flaky errors in debuggerd with "waitpid returned unexpected pid (0)" in logcat.
 // UNSUPPORTED: android && i386-target-arch

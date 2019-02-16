@@ -1,4 +1,7 @@
 // RUN: %libomp-compile-and-run
+
+// REQUIRES: openmp-5.0
+
 #include <omp.h>
 
 int main()

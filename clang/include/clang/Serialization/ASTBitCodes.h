@@ -198,25 +198,6 @@ namespace serialization {
       }
     };
 
-    /// Source range of a skipped preprocessor region
-    struct PPSkippedRange {
-      /// Raw source location of beginning of range.
-      unsigned Begin;
-      /// Raw source location of end of range.
-      unsigned End;
-
-      PPSkippedRange(SourceRange R)
-        : Begin(R.getBegin().getRawEncoding()),
-          End(R.getEnd().getRawEncoding()) { }
-
-      SourceLocation getBegin() const {
-        return SourceLocation::getFromRawEncoding(Begin);
-      }
-      SourceLocation getEnd() const {
-        return SourceLocation::getFromRawEncoding(End);
-      }
-    };
-
     /// Source range/offset of a preprocessed entity.
     struct DeclOffset {
       /// Raw source location.
@@ -365,6 +346,9 @@ namespace serialization {
 
       /// Record code for the diagnostic options table.
       DIAGNOSTIC_OPTIONS,
+
+      /// Record code for the headers search paths.
+      HEADER_SEARCH_PATHS,
 
       /// Record code for \#pragma diagnostic mappings.
       DIAG_PRAGMA_MAPPINGS,
@@ -646,9 +630,6 @@ namespace serialization {
 
       /// The stack of open #ifs/#ifdefs recorded in a preamble.
       PP_CONDITIONAL_STACK = 62,
-
-      /// A table of skipped ranges within the preprocessing record.
-      PPD_SKIPPED_RANGES = 63
     };
 
     /// Record types used within a source manager block.
@@ -1015,6 +996,10 @@ namespace serialization {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
       PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/OpenCLImageTypes.def"
+      /// \brief OpenCL extension types with auto numeration
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+      PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/OpenCLExtensionTypes.def"
     };
 
     /// The number of predefined type IDs that are reserved for
@@ -1516,6 +1501,9 @@ namespace serialization {
       /// An OMPThreadPrivateDecl record.
       DECL_OMP_THREADPRIVATE,
 
+      /// An OMPRequiresDecl record.
+      DECL_OMP_REQUIRES,
+	 
       /// An EmptyDecl record.
       DECL_EMPTY,
 
@@ -1533,6 +1521,8 @@ namespace serialization {
 
       /// An OMPDeclareReductionDecl record.
       DECL_OMP_DECLARE_REDUCTION,
+
+      DECL_LAST = DECL_OMP_DECLARE_REDUCTION
     };
 
     /// Record codes for each kind of statement or expression.
@@ -1545,7 +1535,7 @@ namespace serialization {
     enum StmtCode {
       /// A marker record that indicates that we are at the end
       /// of an expression.
-      STMT_STOP = 128,
+      STMT_STOP = DECL_LAST + 1,
 
       /// A NULL expression.
       STMT_NULL_PTR,
@@ -1612,6 +1602,9 @@ namespace serialization {
 
       /// A MS-style AsmStmt record.
       STMT_MSASM,
+
+      /// A constant expression context.
+      EXPR_CONSTANT,
 
       /// A PredefinedExpr record.
       EXPR_PREDEFINED,

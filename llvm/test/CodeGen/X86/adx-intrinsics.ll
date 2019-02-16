@@ -2,150 +2,131 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 --show-mc-encoding | FileCheck %s --check-prefix=CHECK --check-prefix=NOADX
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=broadwell --show-mc-encoding | FileCheck %s --check-prefix=CHECK --check-prefix=ADX
 
-declare i8 @llvm.x86.addcarryx.u32(i8, i32, i32, i8*)
-
-define i8 @test_addcarryx_u32(i8 %c, i32 %a, i32 %b, i8* %ptr) {
-; NOADX-LABEL: test_addcarryx_u32:
-; NOADX:       ## %bb.0:
-; NOADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; NOADX-NEXT:    adcl %edx, %esi ## encoding: [0x11,0xd6]
-; NOADX-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
-; NOADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; NOADX-NEXT:    retq ## encoding: [0xc3]
-;
-; ADX-LABEL: test_addcarryx_u32:
-; ADX:       ## %bb.0:
-; ADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; ADX-NEXT:    adcxl %edx, %esi ## encoding: [0x66,0x0f,0x38,0xf6,0xf2]
-; ADX-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
-; ADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; ADX-NEXT:    retq ## encoding: [0xc3]
-  %ret = tail call i8 @llvm.x86.addcarryx.u32(i8 %c, i32 %a, i32 %b, i8* %ptr)
-  ret i8 %ret;
+define i8 @test_addcarry_32_load(i8 %c, i32* %aptr, i32 %b, i8* %ptr) {
+; CHECK-LABEL: test_addcarry_32_load:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; CHECK-NEXT:    adcl (%rsi), %edx ## encoding: [0x13,0x16]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    movl %edx, (%rcx) ## encoding: [0x89,0x11]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %a = load i32, i32* %aptr
+  %ret = call { i8, i32 } @llvm.x86.addcarry.32(i8 %c, i32 %a, i32 %b)
+  %1 = extractvalue { i8, i32 } %ret, 1
+  %2 = bitcast i8* %ptr to i32*
+  store i32 %1, i32* %2, align 1
+  %3 = extractvalue { i8, i32 } %ret, 0
+  ret i8 %3
 }
 
-declare i8 @llvm.x86.addcarryx.u64(i8, i64, i64, i8*)
-
-define i8 @test_addcarryx_u64(i8 %c, i64 %a, i64 %b, i8* %ptr) {
-; NOADX-LABEL: test_addcarryx_u64:
-; NOADX:       ## %bb.0:
-; NOADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; NOADX-NEXT:    adcq %rdx, %rsi ## encoding: [0x48,0x11,0xd6]
-; NOADX-NEXT:    movq %rsi, (%rcx) ## encoding: [0x48,0x89,0x31]
-; NOADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; NOADX-NEXT:    retq ## encoding: [0xc3]
-;
-; ADX-LABEL: test_addcarryx_u64:
-; ADX:       ## %bb.0:
-; ADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; ADX-NEXT:    adcxq %rdx, %rsi ## encoding: [0x66,0x48,0x0f,0x38,0xf6,0xf2]
-; ADX-NEXT:    movq %rsi, (%rcx) ## encoding: [0x48,0x89,0x31]
-; ADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; ADX-NEXT:    retq ## encoding: [0xc3]
-  %ret = tail call i8 @llvm.x86.addcarryx.u64(i8 %c, i64 %a, i64 %b, i8* %ptr)
-  ret i8 %ret;
+define i8 @test_addcarry_32_load2(i8 %c, i32 %a, i32* %bptr, i8* %ptr) {
+; CHECK-LABEL: test_addcarry_32_load2:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; CHECK-NEXT:    adcl (%rdx), %esi ## encoding: [0x13,0x32]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %b = load i32, i32* %bptr
+  %ret = call { i8, i32 } @llvm.x86.addcarry.32(i8 %c, i32 %a, i32 %b)
+  %1 = extractvalue { i8, i32 } %ret, 1
+  %2 = bitcast i8* %ptr to i32*
+  store i32 %1, i32* %2, align 1
+  %3 = extractvalue { i8, i32 } %ret, 0
+  ret i8 %3
 }
 
-declare i8 @llvm.x86.addcarry.u32(i8, i32, i32, i8*)
+declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
 
-define i8 @test_addcarry_u32(i8 %c, i32 %a, i32 %b, i8* %ptr) {
-; NOADX-LABEL: test_addcarry_u32:
-; NOADX:       ## %bb.0:
-; NOADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; NOADX-NEXT:    adcl %edx, %esi ## encoding: [0x11,0xd6]
-; NOADX-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
-; NOADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; NOADX-NEXT:    retq ## encoding: [0xc3]
-;
-; ADX-LABEL: test_addcarry_u32:
-; ADX:       ## %bb.0:
-; ADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; ADX-NEXT:    adcxl %edx, %esi ## encoding: [0x66,0x0f,0x38,0xf6,0xf2]
-; ADX-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
-; ADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; ADX-NEXT:    retq ## encoding: [0xc3]
-  %ret = tail call i8 @llvm.x86.addcarry.u32(i8 %c, i32 %a, i32 %b, i8* %ptr)
-  ret i8 %ret;
+define i8 @test_addcarry_32(i8 %c, i32 %a, i32 %b, i8* %ptr) {
+; CHECK-LABEL: test_addcarry_32:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; CHECK-NEXT:    adcl %edx, %esi ## encoding: [0x11,0xd6]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %ret = call { i8, i32 } @llvm.x86.addcarry.32(i8 %c, i32 %a, i32 %b)
+  %1 = extractvalue { i8, i32 } %ret, 1
+  %2 = bitcast i8* %ptr to i32*
+  store i32 %1, i32* %2, align 1
+  %3 = extractvalue { i8, i32 } %ret, 0
+  ret i8 %3
 }
 
-declare i8 @llvm.x86.addcarry.u64(i8, i64, i64, i8*)
+declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64)
 
-define i8 @test_addcarry_u64(i8 %c, i64 %a, i64 %b, i8* %ptr) {
-; NOADX-LABEL: test_addcarry_u64:
-; NOADX:       ## %bb.0:
-; NOADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; NOADX-NEXT:    adcq %rdx, %rsi ## encoding: [0x48,0x11,0xd6]
-; NOADX-NEXT:    movq %rsi, (%rcx) ## encoding: [0x48,0x89,0x31]
-; NOADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; NOADX-NEXT:    retq ## encoding: [0xc3]
-;
-; ADX-LABEL: test_addcarry_u64:
-; ADX:       ## %bb.0:
-; ADX-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
-; ADX-NEXT:    adcxq %rdx, %rsi ## encoding: [0x66,0x48,0x0f,0x38,0xf6,0xf2]
-; ADX-NEXT:    movq %rsi, (%rcx) ## encoding: [0x48,0x89,0x31]
-; ADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; ADX-NEXT:    retq ## encoding: [0xc3]
-  %ret = tail call i8 @llvm.x86.addcarry.u64(i8 %c, i64 %a, i64 %b, i8* %ptr)
-  ret i8 %ret;
+define i8 @test_addcarry_64(i8 %c, i64 %a, i64 %b, i8* %ptr) {
+; CHECK-LABEL: test_addcarry_64:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
+; CHECK-NEXT:    adcq %rdx, %rsi ## encoding: [0x48,0x11,0xd6]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    movq %rsi, (%rcx) ## encoding: [0x48,0x89,0x31]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %ret = call { i8, i64 } @llvm.x86.addcarry.64(i8 %c, i64 %a, i64 %b)
+  %1 = extractvalue { i8, i64 } %ret, 1
+  %2 = bitcast i8* %ptr to i64*
+  store i64 %1, i64* %2, align 1
+  %3 = extractvalue { i8, i64 } %ret, 0
+  ret i8 %3
 }
 
-declare i8 @llvm.x86.subborrow.u32(i8, i32, i32, i8*)
+declare { i8, i32 } @llvm.x86.subborrow.32(i8, i32, i32)
 
-define i8 @test_subborrow_u32(i8 %c, i32 %a, i32 %b, i8* %ptr) {
-; CHECK-LABEL: test_subborrow_u32:
+define i8 @test_subborrow_32(i8 %c, i32 %a, i32 %b, i8* %ptr) {
+; CHECK-LABEL: test_subborrow_32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
 ; CHECK-NEXT:    sbbl %edx, %esi ## encoding: [0x19,0xd6]
-; CHECK-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
 ; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    movl %esi, (%rcx) ## encoding: [0x89,0x31]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %ret = tail call i8 @llvm.x86.subborrow.u32(i8 %c, i32 %a, i32 %b, i8* %ptr)
-  ret i8 %ret;
+  %ret = call { i8, i32 } @llvm.x86.subborrow.32(i8 %c, i32 %a, i32 %b)
+  %1 = extractvalue { i8, i32 } %ret, 1
+  %2 = bitcast i8* %ptr to i32*
+  store i32 %1, i32* %2, align 1
+  %3 = extractvalue { i8, i32 } %ret, 0
+  ret i8 %3
 }
 
-declare i8 @llvm.x86.subborrow.u64(i8, i64, i64, i8*)
+declare { i8, i64 } @llvm.x86.subborrow.64(i8, i64, i64)
 
-define i8 @test_subborrow_u64(i8 %c, i64 %a, i64 %b, i8* %ptr) {
-; CHECK-LABEL: test_subborrow_u64:
+define i8 @test_subborrow_64(i8 %c, i64 %a, i64 %b, i8* %ptr) {
+; CHECK-LABEL: test_subborrow_64:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    addb $-1, %dil ## encoding: [0x40,0x80,0xc7,0xff]
 ; CHECK-NEXT:    sbbq %rdx, %rsi ## encoding: [0x48,0x19,0xd6]
-; CHECK-NEXT:    movq %rsi, (%rcx) ## encoding: [0x48,0x89,0x31]
 ; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    movq %rsi, (%rcx) ## encoding: [0x48,0x89,0x31]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %ret = tail call i8 @llvm.x86.subborrow.u64(i8 %c, i64 %a, i64 %b, i8* %ptr)
-  ret i8 %ret;
+  %ret = call { i8, i64 } @llvm.x86.subborrow.64(i8 %c, i64 %a, i64 %b)
+  %1 = extractvalue { i8, i64 } %ret, 1
+  %2 = bitcast i8* %ptr to i64*
+  store i64 %1, i64* %2, align 1
+  %3 = extractvalue { i8, i64 } %ret, 0
+  ret i8 %3
 }
 
 ; Try a version with loads. Previously we crashed on this.
 define i32 @load_crash(i64* nocapture readonly %a, i64* nocapture readonly %b, i64* %res)  {
-; NOADX-LABEL: load_crash:
-; NOADX:       ## %bb.0:
-; NOADX-NEXT:    movq (%rdi), %rax ## encoding: [0x48,0x8b,0x07]
-; NOADX-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
-; NOADX-NEXT:    addb $-1, %cl ## encoding: [0x80,0xc1,0xff]
-; NOADX-NEXT:    adcq (%rsi), %rax ## encoding: [0x48,0x13,0x06]
-; NOADX-NEXT:    movq %rax, (%rdx) ## encoding: [0x48,0x89,0x02]
-; NOADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; NOADX-NEXT:    movzbl %al, %eax ## encoding: [0x0f,0xb6,0xc0]
-; NOADX-NEXT:    retq ## encoding: [0xc3]
-;
-; ADX-LABEL: load_crash:
-; ADX:       ## %bb.0:
-; ADX-NEXT:    movq (%rdi), %rax ## encoding: [0x48,0x8b,0x07]
-; ADX-NEXT:    xorl %ecx, %ecx ## encoding: [0x31,0xc9]
-; ADX-NEXT:    addb $-1, %cl ## encoding: [0x80,0xc1,0xff]
-; ADX-NEXT:    adcxq (%rsi), %rax ## encoding: [0x66,0x48,0x0f,0x38,0xf6,0x06]
-; ADX-NEXT:    movq %rax, (%rdx) ## encoding: [0x48,0x89,0x02]
-; ADX-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
-; ADX-NEXT:    movzbl %al, %eax ## encoding: [0x0f,0xb6,0xc0]
-; ADX-NEXT:    retq ## encoding: [0xc3]
+; CHECK-LABEL: load_crash:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rcx ## encoding: [0x48,0x8b,0x0f]
+; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
+; CHECK-NEXT:    addq (%rsi), %rcx ## encoding: [0x48,0x03,0x0e]
+; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    movq %rcx, (%rdx) ## encoding: [0x48,0x89,0x0a]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
   %1 = load i64, i64* %a, align 8
   %2 = load i64, i64* %b, align 8
   %3 = bitcast i64* %res to i8*
-  %4 = tail call i8 @llvm.x86.addcarryx.u64(i8 0, i64 %1, i64 %2, i8* %3)
-  %conv = zext i8 %4 to i32
+  %4 = call { i8, i64 } @llvm.x86.addcarry.64(i8 0, i64 %1, i64 %2)
+  %5 = extractvalue { i8, i64 } %4, 1
+  %6 = bitcast i8* %3 to i64*
+  store i64 %5, i64* %6, align 1
+  %7 = extractvalue { i8, i64 } %4, 0
+  %conv = zext i8 %7 to i32
   ret i32 %conv
 }
 
@@ -154,12 +135,13 @@ define void @allzeros() {
 ; CHECK-LABEL: allzeros:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
-; CHECK-NEXT:    addb $-1, %al ## encoding: [0x04,0xff]
-; CHECK-NEXT:    sbbq %rax, %rax ## encoding: [0x48,0x19,0xc0]
-; CHECK-NEXT:    andl $1, %eax ## encoding: [0x83,0xe0,0x01]
+; CHECK-NEXT:    addq $0, %rax ## encoding: [0x48,0x83,0xc0,0x00]
 ; CHECK-NEXT:    movq %rax, 0 ## encoding: [0x48,0x89,0x04,0x25,0x00,0x00,0x00,0x00]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
 entry:
-  %0 = tail call i8 @llvm.x86.addcarryx.u64(i8 0, i64 0, i64 0, i8* null)
+  %0 = call { i8, i64 } @llvm.x86.addcarry.64(i8 0, i64 0, i64 0)
+  %1 = extractvalue { i8, i64 } %0, 1
+  store i64 %1, i64* null, align 1
+  %2 = extractvalue { i8, i64 } %0, 0
   ret void
 }

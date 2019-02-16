@@ -185,3 +185,184 @@ define i64 @test_sdiv_i64(i64 %arg1, i64 %arg2) {
   %res = sdiv i64 %arg1, %arg2
   ret i64 %res
 }
+define float @test_fptrunc(double %in) {
+  ; CHECK-LABEL: name: test_fptrunc
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $xmm0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s128) = COPY $xmm0
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[COPY]](s128)
+  ; CHECK:   [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[TRUNC]](s64)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[FPTRUNC]](s32)
+  ; CHECK:   $xmm0 = COPY [[ANYEXT]](s128)
+  ; CHECK:   RET 0, implicit $xmm0
+  %res = fptrunc double %in to float
+  ret float %res
+}
+
+define i8 @test_srem_i8(i8 %arg1, i8 %arg2) {
+  ; CHECK-LABEL: name: test_srem_i8
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[SREM:%[0-9]+]]:_(s8) = G_SREM [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $al = COPY [[SREM]](s8)
+  ; CHECK:   RET 0, implicit $al
+  %res = srem i8 %arg1, %arg2
+  ret i8 %res
+}
+
+define i16 @test_srem_i16(i16 %arg1, i16 %arg2) {
+  ; CHECK-LABEL: name: test_srem_i16
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[SREM:%[0-9]+]]:_(s16) = G_SREM [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $ax = COPY [[SREM]](s16)
+  ; CHECK:   RET 0, implicit $ax
+  %res = srem i16 %arg1, %arg2
+  ret i16 %res
+}
+
+define i32 @test_srem_i32(i32 %arg1, i32 %arg2) {
+  ; CHECK-LABEL: name: test_srem_i32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[SREM:%[0-9]+]]:_(s32) = G_SREM [[COPY]], [[COPY1]]
+  ; CHECK:   $eax = COPY [[SREM]](s32)
+  ; CHECK:   RET 0, implicit $eax
+  %res = srem i32 %arg1, %arg2
+  ret i32 %res
+}
+
+define i64 @test_srem_i64(i64 %arg1, i64 %arg2) {
+  ; CHECK-LABEL: name: test_srem_i64
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $rdi, $rsi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
+  ; CHECK:   [[SREM:%[0-9]+]]:_(s64) = G_SREM [[COPY]], [[COPY1]]
+  ; CHECK:   $rax = COPY [[SREM]](s64)
+  ; CHECK:   RET 0, implicit $rax
+  %res = srem i64 %arg1, %arg2
+  ret i64 %res
+}
+
+define i8 @test_udiv_i8(i8 %arg1, i8 %arg2) {
+  ; CHECK-LABEL: name: test_udiv_i8
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[UDIV:%[0-9]+]]:_(s8) = G_UDIV [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $al = COPY [[UDIV]](s8)
+  ; CHECK:   RET 0, implicit $al
+  %res = udiv i8 %arg1, %arg2
+  ret i8 %res
+}
+
+define i16 @test_udiv_i16(i16 %arg1, i16 %arg2) {
+  ; CHECK-LABEL: name: test_udiv_i16
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[UDIV:%[0-9]+]]:_(s16) = G_UDIV [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $ax = COPY [[UDIV]](s16)
+  ; CHECK:   RET 0, implicit $ax
+  %res = udiv i16 %arg1, %arg2
+  ret i16 %res
+}
+
+define i32 @test_udiv_i32(i32 %arg1, i32 %arg2) {
+  ; CHECK-LABEL: name: test_udiv_i32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[UDIV:%[0-9]+]]:_(s32) = G_UDIV [[COPY]], [[COPY1]]
+  ; CHECK:   $eax = COPY [[UDIV]](s32)
+  ; CHECK:   RET 0, implicit $eax
+  %res = udiv i32 %arg1, %arg2
+  ret i32 %res
+}
+
+define i64 @test_udiv_i64(i64 %arg1, i64 %arg2) {
+  ; CHECK-LABEL: name: test_udiv_i64
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $rdi, $rsi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
+  ; CHECK:   [[UDIV:%[0-9]+]]:_(s64) = G_UDIV [[COPY]], [[COPY1]]
+  ; CHECK:   $rax = COPY [[UDIV]](s64)
+  ; CHECK:   RET 0, implicit $rax
+  %res = udiv i64 %arg1, %arg2
+  ret i64 %res
+}
+
+define i8 @test_urem_i8(i8 %arg1, i8 %arg2) {
+  ; CHECK-LABEL: name: test_urem_i8
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[UREM:%[0-9]+]]:_(s8) = G_UREM [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $al = COPY [[UREM]](s8)
+  ; CHECK:   RET 0, implicit $al
+  %res = urem i8 %arg1, %arg2
+  ret i8 %res
+}
+
+define i16 @test_urem_i16(i16 %arg1, i16 %arg2) {
+  ; CHECK-LABEL: name: test_urem_i16
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK:   [[UREM:%[0-9]+]]:_(s16) = G_UREM [[TRUNC]], [[TRUNC1]]
+  ; CHECK:   $ax = COPY [[UREM]](s16)
+  ; CHECK:   RET 0, implicit $ax
+  %res = urem i16 %arg1, %arg2
+  ret i16 %res
+}
+
+define i32 @test_urem_i32(i32 %arg1, i32 %arg2) {
+  ; CHECK-LABEL: name: test_urem_i32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $edi, $esi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
+  ; CHECK:   [[UREM:%[0-9]+]]:_(s32) = G_UREM [[COPY]], [[COPY1]]
+  ; CHECK:   $eax = COPY [[UREM]](s32)
+  ; CHECK:   RET 0, implicit $eax
+  %res = urem i32 %arg1, %arg2
+  ret i32 %res
+}
+
+define i64 @test_urem_i64(i64 %arg1, i64 %arg2) {
+  ; CHECK-LABEL: name: test_urem_i64
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $rdi, $rsi
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s64) = COPY $rsi
+  ; CHECK:   [[UREM:%[0-9]+]]:_(s64) = G_UREM [[COPY]], [[COPY1]]
+  ; CHECK:   $rax = COPY [[UREM]](s64)
+  ; CHECK:   RET 0, implicit $rax
+  %res = urem i64 %arg1, %arg2
+  ret i64 %res
+}

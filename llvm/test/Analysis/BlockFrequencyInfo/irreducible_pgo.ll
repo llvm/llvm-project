@@ -146,19 +146,19 @@ indirectgoto:                                     ; preds = %if.then18, %if.then
 ; CHECK-NEXT: block-frequency-info: _Z11irreduciblePh
 ; CHECK-NEXT: - entry: {{.*}} count = 1
 ; CHECK-NEXT: - for.cond1: {{.*}} count = 1
-; CHECK-NEXT: - dispatch_op: {{.*}} count = 201
-; CHECK-NEXT: - dispatch_op.sw.bb6_crit_edge: {{.*}} count = 200
-; CHECK-NEXT: - sw.bb: {{.*}} count = 0
-; CHECK-NEXT: - TARGET_1: {{.*}} count = 299
-; CHECK-NEXT: - sw.bb6: {{.*}} count = 500, irr_loop_header_weight = 501
-; CHECK-NEXT: - if.then: {{.*}} count = 299
-; CHECK-NEXT: - TARGET_2: {{.*}} count = 98
-; CHECK-NEXT: - sw.bb15: {{.*}} count = 99, irr_loop_header_weight = 100
-; CHECK-NEXT: - if.then18: {{.*}} count = 99
+; CHECK-NEXT: - dispatch_op: {{.*}} count = 202
+; CHECK-NEXT: - dispatch_op.sw.bb6_crit_edge: {{.*}} count = 201
+; CHECK-NEXT: - sw.bb: {{.*}} count = 1
+; CHECK-NEXT: - TARGET_1: {{.*}} count = 300
+; CHECK-NEXT: - sw.bb6: {{.*}} count = 501, irr_loop_header_weight = 501
+; CHECK-NEXT: - if.then: {{.*}} count = 300
+; CHECK-NEXT: - TARGET_2: {{.*}} count = 99
+; CHECK-NEXT: - sw.bb15: {{.*}} count = 100, irr_loop_header_weight = 100
+; CHECK-NEXT: - if.then18: {{.*}} count = 100
 ; CHECK-NEXT: - unknown_op: {{.*}} count = 0
 ; CHECK-NEXT: - sw.default: {{.*}} count = 0
 ; CHECK-NEXT: - exit: {{.*}} count = 1
-; CHECK-NEXT: - indirectgoto: {{.*}} count = 399, irr_loop_header_weight = 400
+; CHECK-NEXT: - indirectgoto: {{.*}} count = 400, irr_loop_header_weight = 400
 
 ; Missing some irr loop annotations.
 ; Function Attrs: noinline norecurse nounwind uwtable

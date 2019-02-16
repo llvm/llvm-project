@@ -29,7 +29,7 @@ namespace llvm {
 
 namespace optional_detail {
 /// Storage for any type.
-template <typename T, bool IsPodLike> struct OptionalStorage {
+template <typename T, bool = isPodLike<T>::value> struct OptionalStorage {
   AlignedCharArrayUnion<T> storage;
   bool hasVal = false;
 
@@ -108,6 +108,10 @@ template <typename T, bool IsPodLike> struct OptionalStorage {
   }
 };
 
+// Swift-only: The following partial template specialization was removed
+// from LLVM because of a bug in GCC, but Swift is relying on it.
+// (https://bugs.swift.org/browse/SR-9483)
+
 #if !defined(__GNUC__) || defined(__clang__) // GCC up to GCC7 miscompiles this.
 /// Storage for trivially copyable types only.
 template <typename T> struct OptionalStorage<T, true> {
@@ -129,7 +133,7 @@ template <typename T> struct OptionalStorage<T, true> {
 } // namespace optional_detail
 
 template <typename T> class Optional {
-  optional_detail::OptionalStorage<T, isPodLike<T>::value> Storage;
+  optional_detail::OptionalStorage<T> Storage;
 
 public:
   using value_type = T;

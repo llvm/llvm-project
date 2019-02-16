@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -289,11 +289,11 @@ ProgramStateRef GTestChecker::assumeValuesEqual(SVal Val1, SVal Val2,
 }
 
 void ento::registerGTestChecker(CheckerManager &Mgr) {
-  const LangOptions &LangOpts = Mgr.getLangOpts();
+  Mgr.registerChecker<GTestChecker>();
+}
+
+bool ento::shouldRegisterGTestChecker(const LangOptions &LO) {
   // gtest is a C++ API so there is no sense running the checker
   // if not compiling for C++.
-  if (!LangOpts.CPlusPlus)
-    return;
-
-  Mgr.registerChecker<GTestChecker>();
+  return LO.CPlusPlus;
 }

@@ -15,17 +15,17 @@
 #ifndef LLVM_CLANG_BASIC_ALLDIAGNOSTICS_H
 #define LLVM_CLANG_BASIC_ALLDIAGNOSTICS_H
 
-#include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/CommentDiagnostic.h"
-#include "clang/Analysis/AnalysisDiagnostic.h"
-#include "clang/CrossTU/CrossTUDiagnostic.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Lex/LexDiagnostic.h"
-#include "clang/Parse/ParseDiagnostic.h"
-#include "clang/Sema/SemaDiagnostic.h"
-#include "clang/Serialization/SerializationDiagnostic.h"
-#include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
+#include "clang/Basic/DiagnosticAST.h"
+#include "clang/Basic/DiagnosticAnalysis.h"
+#include "clang/Basic/DiagnosticComment.h"
+#include "clang/Basic/DiagnosticCrossTU.h"
+#include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticLex.h"
+#include "clang/Basic/DiagnosticParse.h"
+#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/DiagnosticSerialization.h"
+#include "clang/Basic/DiagnosticRefactoring.h"
 
 namespace clang {
 template <size_t SizeOfStr, typename FieldType>

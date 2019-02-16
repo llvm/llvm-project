@@ -64,7 +64,7 @@ extension to the protocol.
 | Completion                          | Yes        |   Yes    |
 +-------------------------------------+------------+----------+
 | Diagnostics                         | Yes        |   Yes    |
-+-------------------------------------+------------+----------+ 
++-------------------------------------+------------+----------+
 | Fix-its                             | Yes        |   Yes    |
 +-------------------------------------+------------+----------+
 | Go to Definition                    | Yes        |   Yes    |
@@ -83,7 +83,7 @@ extension to the protocol.
 +-------------------------------------+------------+----------+
 | Document Symbols                    | Yes        |   Yes    |
 +-------------------------------------+------------+----------+
-| Workspace Symbols                   | Yes        |   No     |
+| Workspace Symbols                   | Yes        |   Yes    |
 +-------------------------------------+------------+----------+
 | Syntax and Semantic Coloring        | No         |   No     |
 +-------------------------------------+------------+----------+
@@ -108,10 +108,48 @@ extension to the protocol.
 | Gen. Getters/Setters                | No         |   No     |
 +-------------------------------------+------------+----------+
 
+Editor Integration
+==================
+
+Any full-featured Language Server Protocol Client implementation should work
+with :program:`Clangd`. This `list
+<https://langserver.org/#implementations-client>`_ contains information about
+extensions and plugins that are known to work for different editors.
+
+Vim Integration
+---------------
+
+LanguageClient-neovim
+~~~~~~~~~~~~~~~~~~~~~
+
+One of the options of using :program:`Clangd` in :program:`vim` (or
+:program:`nvim`) is to utilize `LanguageClient-neovim
+<https://github.com/autozimu/LanguageClient-neovim>`_ plugin. Please see the
+`Clangd Wiki page
+<https://github.com/autozimu/LanguageClient-neovim/wiki/Clangd>`_ for
+instructions.
+
+VSCode Integration
+------------------
+
+:program:`VSCode` provides `vscode-clangd
+<https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd>`_
+which is published in Visual Studio Marketplace and can be installed direcetly
+from :program:`VSCode`.
+
+Emacs Integration
+-----------------
+
+:program:`Emacs` provides `lsp-mode <github.com/emacs-lsp/lsp-mode>`_ and
+`Eglot <https://github.com/joaotavora/eglot>`_ plugins for LSP integration.
+
 Getting Involved
 ==================
 
-A good place for interested contributors is the `Clang developer mailing list
+A good place for interested contributors is the `Clangd developer mailing list
+<http://lists.llvm.org/mailman/listinfo/clangd-dev>`_. For discussions with the
+broader community on topics not only related to Clangd, use
+`Clang developer mailing list
 <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
 If you're also interested in contributing patches to :program:`Clangd`, take a
 look at the `LLVM Developer Policy

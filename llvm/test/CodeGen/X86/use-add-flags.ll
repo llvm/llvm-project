@@ -10,16 +10,16 @@
 define i32 @test1(i32* %x, i32 %y, i32 %a, i32 %b) nounwind {
 ; LNX-LABEL: test1:
 ; LNX:       # %bb.0:
-; LNX-NEXT:    addl (%rdi), %esi
-; LNX-NEXT:    cmovnsl %ecx, %edx
 ; LNX-NEXT:    movl %edx, %eax
+; LNX-NEXT:    addl (%rdi), %esi
+; LNX-NEXT:    cmovnsl %ecx, %eax
 ; LNX-NEXT:    retq
 ;
 ; WIN-LABEL: test1:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    addl (%rcx), %edx
-; WIN-NEXT:    cmovnsl %r9d, %r8d
 ; WIN-NEXT:    movl %r8d, %eax
+; WIN-NEXT:    addl (%rcx), %edx
+; WIN-NEXT:    cmovnsl %r9d, %eax
 ; WIN-NEXT:    retq
 	%tmp2 = load i32, i32* %x, align 4		; <i32> [#uses=1]
 	%tmp4 = add i32 %tmp2, %y		; <i32> [#uses=1]

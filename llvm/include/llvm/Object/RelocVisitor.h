@@ -129,6 +129,8 @@ private:
     case ELF::R_X86_64_NONE:
       return 0;
     case ELF::R_X86_64_64:
+    case ELF::R_X86_64_DTPOFF32:
+    case ELF::R_X86_64_DTPOFF64:
       return Value + getELFAddend(R);
     case ELF::R_X86_64_PC32:
       return Value + getELFAddend(R) - R.getOffset();
@@ -333,6 +335,7 @@ private:
       case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
       case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
       case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+      case wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB:
         // For wasm section, its offset at 0 -- ignoring Value
         return 0;
       }

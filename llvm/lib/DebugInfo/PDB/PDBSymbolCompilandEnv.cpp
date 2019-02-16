@@ -18,12 +18,6 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-PDBSymbolCompilandEnv::PDBSymbolCompilandEnv(
-    const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {
-  assert(RawSymbol->getSymTag() == PDB_SymType::CompilandEnv);
-}
-
 std::string PDBSymbolCompilandEnv::getValue() const {
   Variant Value = RawSymbol->getValue();
   if (Value.Type != PDB_VariantType::String)

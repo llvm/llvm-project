@@ -6,9 +6,9 @@ define i32 @bad(double %x) {
   ret i32 %1
 }
 
-; CHECK: fctidz 1, 1
-; CHECK: stfd 1, [[OFF:.*]](1)
+; CHECK: fctidz [[REG0:[0-9]+]], 1
+; CHECK: stfd [[REG0]], [[OFF:.*]](1)
 ; CHECK: lwz {{[0-9]*}}, [[OFF]](1)
-; GENERIC: fctiwuz 1, 1
-; GENERIC: stfd 1, [[OFF:.*]](1)
+; GENERIC: fctiwuz [[REG0:[0-9]+]], 1
+; GENERIC: stfd [[REG0]], [[OFF:.*]](1)
 ; GENERIC: lwz {{[0-9]*}}, [[OFF]](1)

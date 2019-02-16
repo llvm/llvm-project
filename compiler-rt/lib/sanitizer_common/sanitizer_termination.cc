@@ -84,3 +84,12 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 }
 
 } // namespace __sanitizer
+
+using namespace __sanitizer;  // NOLINT
+
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_set_death_callback(void (*callback)(void)) {
+  SetUserDieCallback(callback);
+}
+}  // extern "C"

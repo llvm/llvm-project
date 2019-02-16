@@ -58,7 +58,10 @@ import shutil
 import sys
 import threading
 import time
-import Queue
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 ###############################################################################
 # Helper functions.
@@ -119,7 +122,7 @@ if 'CC' in os.environ:
 else:
     Clang = SATestUtils.which("clang", os.environ['PATH'])
 if not Clang:
-    print "Error: cannot find 'clang' in PATH"
+    print("Error: cannot find 'clang' in PATH")
     sys.exit(1)
 
 # Number of jobs.
@@ -255,7 +258,14 @@ def applyPatch(Dir, PBuildLogFile):
         sys.exit(1)
 
 
-def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
+def generateAnalyzerConfig(Args):
+    Out = "serialize-stats=true,stable-report-filename=true"
+    if Args.extra_analyzer_config:
+        Out += "," + Args.extra_analyzer_config
+    return Out
+
+
+def runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile):
     """
     Build the project with scan-build by reading in the commands and
     prefixing them with the scan-build options.
@@ -277,13 +287,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     SBOptions += "-plist-html -o '%s' " % SBOutputDir
     SBOptions += "-enable-checker " + AllCheckers + " "
     SBOptions += "--keep-empty "
-    AnalyzerConfig = [
-        ("stable-report-filename", "true"),
-        ("serialize-stats", "true"),
-    ]
-
-    SBOptions += "-analyzer-config '%s' " % (
-        ",".join("%s=%s" % (key, value) for (key, value) in AnalyzerConfig))
+    SBOptions += "-analyzer-config '%s' " % generateAnalyzerConfig(Args)
 
     # Always use ccc-analyze to ensure that we can locate the failures
     # directory.
@@ -304,6 +308,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
                 SBPrefix = ""
                 ExtraEnv['OUTPUT'] = SBOutputDir
                 ExtraEnv['CC'] = Clang
+                ExtraEnv['ANALYZER_CONFIG'] = generateAnalyzerConfig(Args)
                 continue
 
             # If using 'make', auto imply a -jX argument
@@ -328,7 +333,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
         sys.exit(1)
 
 
-def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
+def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
     """
     Run analysis on a set of preprocessed files.
     """
@@ -349,6 +354,7 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
     CmdPrefix += "-analyze -analyzer-output=plist -w "
     CmdPrefix += "-analyzer-checker=" + Checkers
     CmdPrefix += " -fcxx-exceptions -fblocks "
+    CmdPrefix += " -analyzer-config %s " % generateAnalyzerConfig(Args)
 
     if (Mode == 2):
         CmdPrefix += "-std=c++11 "
@@ -379,7 +385,7 @@ def runAnalyzePreprocessed(Dir, SBOutputDir, Mode):
             check_call(Command, cwd=Dir, stderr=LogFile,
                        stdout=LogFile,
                        shell=True)
-        except CalledProcessError, e:
+        except CalledProcessError as e:
             Local.stderr.write("Error: Analyzes of %s failed. "
                                "See %s for details."
                                "Error code %d.\n" % (
@@ -407,7 +413,7 @@ def removeLogFile(SBOutputDir):
         check_call(RmCommand, shell=True)
 
 
-def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
+def buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
     TBegin = time.time()
 
     BuildLogPath = getBuildLogPath(SBOutputDir)
@@ -431,9 +437,9 @@ def buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild):
         if (ProjectBuildMode == 1):
             downloadAndPatch(Dir, PBuildLogFile)
             runCleanupScript(Dir, PBuildLogFile)
-            runScanBuild(Dir, SBOutputDir, PBuildLogFile)
+            runScanBuild(Args, Dir, SBOutputDir, PBuildLogFile)
         else:
-            runAnalyzePreprocessed(Dir, SBOutputDir, ProjectBuildMode)
+            runAnalyzePreprocessed(Args, Dir, SBOutputDir, ProjectBuildMode)
 
         if IsReferenceBuild:
             runCleanupScript(Dir, PBuildLogFile)
@@ -564,8 +570,8 @@ def runCmpResults(Dir, Strictness=0):
     NewList.remove(os.path.join(NewDir, LogFolderName))
 
     if len(RefList) != len(NewList):
-        print "Mismatch in number of results folders: %s vs %s" % (
-            RefList, NewList)
+        print("Mismatch in number of results folders: %s vs %s" % (
+            RefList, NewList))
         sys.exit(1)
 
     # There might be more then one folder underneath - one per each scan-build
@@ -577,8 +583,7 @@ def runCmpResults(Dir, Strictness=0):
 
     # Iterate and find the differences.
     NumDiffs = 0
-    PairList = zip(RefList, NewList)
-    for P in PairList:
+    for P in zip(RefList, NewList):
         RefDir = P[0]
         NewDir = P[1]
 
@@ -628,12 +633,13 @@ def cleanupReferenceResults(SBOutputDir):
 
 
 class TestProjectThread(threading.Thread):
-    def __init__(self, TasksQueue, ResultsDiffer, FailureFlag):
+    def __init__(self, Args, TasksQueue, ResultsDiffer, FailureFlag):
         """
         :param ResultsDiffer: Used to signify that results differ from
         the canonical ones.
         :param FailureFlag: Used to signify a failure during the run.
         """
+        self.Args = Args
         self.TasksQueue = TasksQueue
         self.ResultsDiffer = ResultsDiffer
         self.FailureFlag = FailureFlag
@@ -649,7 +655,7 @@ class TestProjectThread(threading.Thread):
                 Logger = logging.getLogger(ProjArgs[0])
                 Local.stdout = StreamToLogger(Logger, logging.INFO)
                 Local.stderr = StreamToLogger(Logger, logging.ERROR)
-                if not testProject(*ProjArgs):
+                if not testProject(Args, *ProjArgs):
                     self.ResultsDiffer.set()
                 self.TasksQueue.task_done()
             except:
@@ -657,7 +663,7 @@ class TestProjectThread(threading.Thread):
                 raise
 
 
-def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
+def testProject(Args, ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
     """
     Test a given project.
     :return TestsPassed: Whether tests have passed according
@@ -675,7 +681,7 @@ def testProject(ID, ProjectBuildMode, IsReferenceBuild=False, Strictness=0):
     RelOutputDir = getSBOutputDirName(IsReferenceBuild)
     SBOutputDir = os.path.join(Dir, RelOutputDir)
 
-    buildProject(Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild)
+    buildProject(Args, Dir, SBOutputDir, ProjectBuildMode, IsReferenceBuild)
 
     checkBuild(SBOutputDir)
 
@@ -712,24 +718,24 @@ def validateProjectFile(PMapFile):
     """
     for I in iterateOverProjects(PMapFile):
         if len(I) != 2:
-            print "Error: Rows in the ProjectMapFile should have 2 entries."
+            print("Error: Rows in the ProjectMapFile should have 2 entries.")
             raise Exception()
         if I[1] not in ('0', '1', '2'):
-            print "Error: Second entry in the ProjectMapFile should be 0" \
-                  " (single file), 1 (project), or 2(single file c++11)."
+            print("Error: Second entry in the ProjectMapFile should be 0" \
+                  " (single file), 1 (project), or 2(single file c++11).")
             raise Exception()
 
-def singleThreadedTestAll(ProjectsToTest):
+def singleThreadedTestAll(Args, ProjectsToTest):
     """
     Run all projects.
     :return: whether tests have passed.
     """
     Success = True
     for ProjArgs in ProjectsToTest:
-        Success &= testProject(*ProjArgs)
+        Success &= testProject(Args, *ProjArgs)
     return Success
 
-def multiThreadedTestAll(ProjectsToTest, Jobs):
+def multiThreadedTestAll(Args, ProjectsToTest, Jobs):
     """
     Run each project in a separate thread.
 
@@ -738,7 +744,7 @@ def multiThreadedTestAll(ProjectsToTest, Jobs):
 
     :return: whether tests have passed.
     """
-    TasksQueue = Queue.Queue()
+    TasksQueue = queue.Queue()
 
     for ProjArgs in ProjectsToTest:
         TasksQueue.put(ProjArgs)
@@ -747,7 +753,7 @@ def multiThreadedTestAll(ProjectsToTest, Jobs):
     FailureFlag = threading.Event()
 
     for i in range(Jobs):
-        T = TestProjectThread(TasksQueue, ResultsDiffer, FailureFlag)
+        T = TestProjectThread(Args, TasksQueue, ResultsDiffer, FailureFlag)
         T.start()
 
     # Required to handle Ctrl-C gracefully.
@@ -772,9 +778,9 @@ def testAll(Args):
                                   Args.regenerate,
                                   Args.strictness))
     if Args.jobs <= 1:
-        return singleThreadedTestAll(ProjectsToTest)
+        return singleThreadedTestAll(Args, ProjectsToTest)
     else:
-        return multiThreadedTestAll(ProjectsToTest, Args.jobs)
+        return multiThreadedTestAll(Args, ProjectsToTest, Args.jobs)
 
 
 if __name__ == '__main__':
@@ -791,9 +797,13 @@ if __name__ == '__main__':
     Parser.add_argument('-j', '--jobs', dest='jobs', type=int,
                         default=0,
                         help='Number of projects to test concurrently')
+    Parser.add_argument('--extra-analyzer-config', dest='extra_analyzer_config',
+                        type=str,
+                        default="",
+                        help="Arguments passed to to -analyzer-config")
     Args = Parser.parse_args()
 
     TestsPassed = testAll(Args)
     if not TestsPassed:
-        print "ERROR: Tests failed."
+        print("ERROR: Tests failed.")
         sys.exit(42)

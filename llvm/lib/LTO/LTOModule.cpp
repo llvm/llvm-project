@@ -73,7 +73,7 @@ bool LTOModule::isBitcodeFile(StringRef Path) {
 bool LTOModule::isThinLTO() {
   Expected<BitcodeLTOInfo> Result = getBitcodeLTOInfo(MBRef);
   if (!Result) {
-    logAllUnhandledErrors(Result.takeError(), errs(), "");
+    logAllUnhandledErrors(Result.takeError(), errs());
     return false;
   }
   return Result->IsThinLTO;

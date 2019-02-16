@@ -61,8 +61,7 @@ INLINE typename T::Type atomic_load(
         "emms;"            // Empty mmx state/Reset FP regs
         : "=m" (v)
         : "m" (a->val_dont_use)
-        : // mark the FP stack and mmx registers as clobbered
-          "st", "st(1)", "st(2)", "st(3)", "st(4)", "st(5)", "st(6)", "st(7)",
+        : // mark the mmx registers as clobbered
 #ifdef __MMX__
           "mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6", "mm7",
 #endif  // #ifdef __MMX__
@@ -100,8 +99,7 @@ INLINE void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
         "emms;"            // Empty mmx state/Reset FP regs
         : "=m" (a->val_dont_use)
         : "m" (v)
-        : // mark the FP stack and mmx registers as clobbered
-          "st", "st(1)", "st(2)", "st(3)", "st(4)", "st(5)", "st(6)", "st(7)",
+        : // mark the mmx registers as clobbered
 #ifdef __MMX__
           "mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6", "mm7",
 #endif  // #ifdef __MMX__

@@ -36,13 +36,20 @@ void DwarfFile::emitUnits(bool UseOffsets) {
 }
 
 void DwarfFile::emitUnit(DwarfUnit *TheU, bool UseOffsets) {
-  DIE &Die = TheU->getUnitDie();
-  MCSection *USection = TheU->getSection();
-  Asm->OutStreamer->SwitchSection(USection);
+  if (TheU->getCUNode()->isDebugDirectivesOnly())
+    return;
 
+  MCSection *S = TheU->getSection();
+
+  if (!S)
+    return;
+
+  Asm->OutStreamer->SwitchSection(S);
   TheU->emitHeader(UseOffsets);
+  Asm->emitDwarfDIE(TheU->getUnitDie());
 
-  Asm->emitDwarfDIE(Die);
+  if (MCSymbol *EndLabel = TheU->getEndLabel())
+    Asm->OutStreamer->EmitLabel(EndLabel);
 }
 
 // Compute the size and offset for each DIE.
@@ -53,6 +60,9 @@ void DwarfFile::computeSizeAndOffsets() {
   // Iterate over each compile unit and set the size and offsets for each
   // DIE within each compile unit. All offsets are CU relative.
   for (const auto &TheU : CUs) {
+    if (TheU->getCUNode()->isDebugDirectivesOnly())
+      continue;
+
     TheU->setDebugSectionOffset(SecOffset);
     SecOffset += computeSizeAndOffsetsForUnit(TheU.get());
   }
@@ -97,4 +107,16 @@ bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
     ScopeVars.Locals.push_back(Var);
   }
   return true;
+}
+
+void DwarfFile::addScopeLabel(LexicalScope *LS, DbgLabel *Label) {
+  SmallVectorImpl<DbgLabel *> &Labels = ScopeLabels[LS];
+  Labels.push_back(Label);
+}
+
+std::pair<uint32_t, RangeSpanList *>
+DwarfFile::addRange(const DwarfCompileUnit &CU, SmallVector<RangeSpan, 2> R) {
+  CURangeLists.push_back(
+      RangeSpanList(Asm->createTempSymbol("debug_ranges"), CU, std::move(R)));
+  return std::make_pair(CURangeLists.size() - 1, &CURangeLists.back());
 }

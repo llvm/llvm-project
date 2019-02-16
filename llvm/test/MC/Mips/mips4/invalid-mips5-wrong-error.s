@@ -25,9 +25,6 @@
         c.ule.ps  $fcc6,$f17,$f3      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         c.ult.ps  $fcc7,$f14,$f0      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         c.un.ps   $fcc4,$f2,$f26      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        cvt.ps.s  $f3,$f18,$f19       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        cvt.s.pl  $f30,$f1            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        cvt.s.pu  $f14,$f25           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         madd.ps   $f22,$f3,$f14,$f3   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         mov.ps    $f22,$f17           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         movf.ps   $f10,$f28,$fcc6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
@@ -39,8 +36,6 @@
         neg.ps    $f19,$f13           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         nmadd.ps  $f27,$f4,$f9,$f25   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         nmsub.ps  $f6,$f12,$f14,$f17  # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        pll.ps    $f25,$f9,$f30       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        plu.ps    $f1,$f26,$f29       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         pul.ps    $f9,$f30,$f26       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         puu.ps    $f24,$f9,$f2        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         sub.ps    $f5,$f14,$f26       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction

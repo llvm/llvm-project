@@ -178,7 +178,7 @@ static bool isRoot(const Instruction *Inst) {
 
   // Terminator instructions (in region statements) are required for control
   // flow.
-  if (isa<TerminatorInst>(Inst))
+  if (Inst->isTerminator())
     return true;
 
   // Writes to memory must be honored.

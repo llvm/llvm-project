@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-rotate -S | FileCheck %s
+; RUN: opt < %s -loop-rotate -enable-mssa-loop-dependency=true -verify-memoryssa -S | FileCheck %s
 
 target triple = "x86_64-pc-windows-msvc"
 

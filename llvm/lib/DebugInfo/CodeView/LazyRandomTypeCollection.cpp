@@ -89,6 +89,8 @@ uint32_t LazyRandomTypeCollection::getOffsetOfType(TypeIndex Index) {
 }
 
 CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
+  assert(!Index.isSimple());
+
   auto EC = ensureTypeExists(Index);
   error(std::move(EC));
   assert(contains(Index));
@@ -97,6 +99,9 @@ CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
 }
 
 Optional<CVType> LazyRandomTypeCollection::tryGetType(TypeIndex Index) {
+  if (Index.isSimple())
+    return None;
+
   if (auto EC = ensureTypeExists(Index)) {
     consumeError(std::move(EC));
     return None;
@@ -151,6 +156,7 @@ Error LazyRandomTypeCollection::ensureTypeExists(TypeIndex TI) {
 }
 
 void LazyRandomTypeCollection::ensureCapacityFor(TypeIndex Index) {
+  assert(!Index.isSimple());
   uint32_t MinSize = Index.toArrayIndex() + 1;
 
   if (MinSize <= capacity())
@@ -163,6 +169,7 @@ void LazyRandomTypeCollection::ensureCapacityFor(TypeIndex Index) {
 }
 
 Error LazyRandomTypeCollection::visitRangeForType(TypeIndex TI) {
+  assert(!TI.isSimple());
   if (PartialOffsets.empty())
     return fullScanForType(TI);
 
@@ -217,6 +224,7 @@ Optional<TypeIndex> LazyRandomTypeCollection::getNext(TypeIndex Prev) {
 }
 
 Error LazyRandomTypeCollection::fullScanForType(TypeIndex TI) {
+  assert(!TI.isSimple());
   assert(PartialOffsets.empty());
 
   TypeIndex CurrentTI = TypeIndex::fromArrayIndex(0);

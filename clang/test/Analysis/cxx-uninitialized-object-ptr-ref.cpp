@@ -257,8 +257,10 @@ void fCharPointerTest() {
 }
 
 struct CyclicPointerTest1 {
-  int *ptr;
-  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {}
+  int *ptr; // expected-note{{object references itself 'this->ptr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicPointerTest1() {
@@ -266,8 +268,10 @@ void fCyclicPointerTest1() {
 }
 
 struct CyclicPointerTest2 {
-  int **pptr; // no-crash
-  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {}
+  int **pptr; // expected-note{{object references itself 'this->pptr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicPointerTest2() {
@@ -353,9 +357,10 @@ void fVoidPointerLRefTest() {
 }
 
 struct CyclicVoidPointerTest {
-  void *vptr; // no-crash
+  void *vptr; // expected-note{{object references itself 'this->vptr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
 
-  CyclicVoidPointerTest() : vptr(&vptr) {}
+  CyclicVoidPointerTest() : vptr(&vptr) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicVoidPointerTest() {
@@ -859,4 +864,45 @@ public:
 void fReferenceTest5() {
   ReferenceTest4::RecordType c, d{37, 38};
   ReferenceTest4(d, c);
+}
+
+//===----------------------------------------------------------------------===//
+// Tests for objects containing multiple references to the same object.
+//===----------------------------------------------------------------------===//
+
+struct IntMultipleReferenceToSameObjectTest {
+  int *iptr; // expected-note{{uninitialized pointee 'this->iptr'}}
+  int &iref; // no-note, pointee of this->iref was already reported
+
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntMultipleReferenceToSameObjectTest(int *i) : iptr(i), iref(*i) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fIntMultipleReferenceToSameObjectTest() {
+  int a;
+  IntMultipleReferenceToSameObjectTest Test(&a);
+}
+
+struct IntReferenceWrapper1 {
+  int &a; // expected-note{{uninitialized pointee 'this->a'}}
+
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntReferenceWrapper1(int &a) : a(a) {} // expected-warning{{1 uninitialized field}}
+};
+
+struct IntReferenceWrapper2 {
+  int &a; // no-note, pointee of this->a was already reported
+
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntReferenceWrapper2(int &a) : a(a) {} // no-warning
+};
+
+void fMultipleObjectsReferencingTheSameObjectTest() {
+  int a;
+
+  IntReferenceWrapper1 T1(a);
+  IntReferenceWrapper2 T2(a);
 }

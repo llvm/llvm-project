@@ -17,10 +17,10 @@
 #ifndef HEADER
 #define HEADER
 
-// HOST: @c = external global i32,
+// HOST-DAG: @c = external global i32,
+// HOST-DAG: @c_decl_tgt_link_ptr = global i32* @c
 // DEVICE-NOT: @c =
 // DEVICE: @c_decl_tgt_link_ptr = common global i32* null
-// HOST: @c_decl_tgt_link_ptr = global i32* @c
 // HOST: [[SIZES:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 4]
 // HOST: [[MAPTYPES:@.+]] = private unnamed_addr constant [2 x i64] [i64 35, i64 531]
 // HOST: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_decl_tgt_link_ptr\00"

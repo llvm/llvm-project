@@ -264,6 +264,71 @@
 // CHECK-YU-SLASH: -include
 // CHECK-YU-SLASH: ".{{[/\\]+}}pchfile.h"
 
+// /Yc without an argument creates a PCH from the code before #pragma hdrstop.
+// /Yu without an argument uses a PCH and starts compiling after the
+// #pragma hdrstop.
+// RUN: %clang_cl -Werror /Yc /Fpycnoarg.pch /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YC-NOARG %s
+// 1. Create .pch file
+// CHECK-YC-NOARG: cc1
+// CHECK-YC-NOARG: -emit-pch
+// CHECK-YC-NOARG: -pch-through-hdrstop-create
+// CHECK-YC-NOARG: -o
+// CHECK-YC-NOARG: ycnoarg.pch
+// CHECK-YC-NOARG: -x
+// CHECK-YC-NOARG: "c++-header"
+// CHECK-YC-NOARG: cl-pch.cpp
+// 2. Use .pch file: Includes ycnoarg.pch
+// CHECK-YC-NOARG: cc1
+// CHECK-YC-NOARG: -emit-obj
+// CHECK-YC-NOARG: -include-pch
+// CHECK-YC-NOARG: ycnoarg.pch
+// CHECK-YC-NOARG: -pch-through-hdrstop-create
+// CHECK-YC-NOARG: -o
+// CHECK-YC-NOARG: cl-pch.obj
+// CHECK-YC-NOARG: -x
+// CHECK-YC-NOARG: "c++"
+// CHECK-YC-NOARG: cl-pch.cpp
+
+// RUN: %clang_cl -Werror /Yu /Fpycnoarg.pch /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YU-NOARG %s
+// Use .pch file, but don't build it.
+// CHECK-YU-NOARG-NOT: -emit-pch
+// CHECK-YU-NOARG: cc1
+// CHECK-YU-NOARG: -emit-obj
+// CHECK-YU-NOARG: -include-pch
+// CHECK-YU-NOARG: ycnoarg.pch
+// CHECK-YU-NOARG: -pch-through-hdrstop-use
+// CHECK-YU-NOARG: -o
+// CHECK-YU-NOARG: cl-pch.obj
+// CHECK-YU-NOARG: -x
+// CHECK-YU-NOARG: "c++"
+// CHECK-YU-NOARG: cl-pch.cpp
+
+// /Yc with no argument and no /FP
+// RUN: %clang_cl -Werror /Yc /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YC-NOARG-NOFP %s
+// 1. Create .pch file
+// CHECK-YC-NOARG-NOFP: cc1
+// CHECK-YC-NOARG-NOFP: -emit-pch
+// CHECK-YC-NOARG-NOFP: -pch-through-hdrstop-create
+// CHECK-YC-NOARG-NOFP: -o
+// CHECK-YC-NOARG-NOFP: cl-pch.pch
+// CHECK-YC-NOARG-NOFP: -x
+// CHECK-YC-NOARG-NOFP: "c++-header"
+// CHECK-YC-NOARG-NOFP: cl-pch.cpp
+// 2. Use .pch file: Includes cl-pch.pch
+// CHECK-YC-NOARG-NOFP: cc1
+// CHECK-YC-NOARG-NOFP: -emit-obj
+// CHECK-YC-NOARG-NOFP: -include-pch
+// CHECK-YC-NOARG-NOFP: cl-pch.pch
+// CHECK-YC-NOARG-NOFP: -pch-through-hdrstop-create
+// CHECK-YC-NOARG-NOFP: -o
+// CHECK-YC-NOARG-NOFP: cl-pch.obj
+// CHECK-YC-NOARG-NOFP: -x
+// CHECK-YC-NOARG-NOFP: "c++"
+// CHECK-YC-NOARG-NOFP: cl-pch.cpp
+
 // cl.exe warns on multiple /Yc, /Yu, /Fp arguments, but clang-cl silently just
 // uses the last one.  This is true for e.g. /Fo too, so not warning on this
 // is self-consistent with clang-cl's flag handling.
@@ -345,3 +410,24 @@
 // CHECK-NoSourceTP: pchfile.pch
 // CHECK-NoSourceTP: -x
 // CHECK-NoSourceTP: "c++"
+
+// If only preprocessing, PCH options are ignored.
+// RUN: %clang_cl /P /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YC-P %s
+// CHECK-YC-P-NOT: -emit-pch
+// CHECK-YC-P-NOT: -include-pch
+
+// RUN: %clang_cl /E /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YC-E %s
+// CHECK-YC-E-NOT: -emit-pch
+// CHECK-YC-E-NOT: -include-pch
+
+// RUN: %clang_cl /P /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YU-P %s
+// CHECK-YU-P-NOT: -emit-pch
+// CHECK-YU-P-NOT: -include-pch
+
+// RUN: %clang_cl /E /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YU-E %s
+// CHECK-YU-E-NOT: -emit-pch
+// CHECK-YU-E-NOT: -include-pch

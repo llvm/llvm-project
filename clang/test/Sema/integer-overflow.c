@@ -172,6 +172,9 @@ void check_integer_overflows_in_function_calls() {
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
   (void)f2(0, f0(4608 * 1024 * 1024));
 }
+void check_integer_overflows_in_array_size() {
+  int arr[4608 * 1024 * 1024]; // expected-warning {{overflow in expression; result is 536870912 with type 'int'}}
+}
 
 struct s {
   unsigned x;

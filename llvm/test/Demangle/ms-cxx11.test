@@ -86,6 +86,10 @@
 ??$templ_fun_with_pack@$S@@YAXXZ
 ; CHECK: void __cdecl templ_fun_with_pack<>(void)
 
+; $$Z is a parameter pack separator.
+??$func@H$$ZH@@YAHAEBU?$Foo@H@@0@Z
+; CHECK: int __cdecl func<int, int>(struct Foo<int> const &, struct Foo<int> const &)
+
 ??$templ_fun_with_ty_pack@$$$V@@YAXXZ
 ; CHECK: void __cdecl templ_fun_with_ty_pack<>(void)
 ??$templ_fun_with_ty_pack@$$V@@YAXXZ
@@ -101,18 +105,16 @@
 ; CHECK: void __cdecl UnnamedType::f(enum UnnamedType::B<int>::<unnamed-type-e> *)
 
 ??$f@W4<unnamed-type-E>@?1??g@PR24651@@YAXXZ@@PR24651@@YAXW4<unnamed-type-E>@?1??g@0@YAXXZ@@Z
-; We have a back-referencing problem here, we print `void __cdecl <unnamed-type-E>::g(void)`
-; for the second occurrence of g.
-; FIXME: void __cdecl PR24651::f<enum `void __cdecl PR24651::g(void)'::`2'::<unnamed-type-E>>(enum `void __cdecl PR24651::g(void)'::`2'::<unnamed-type-E>)
+; CHECK: void __cdecl PR24651::f<enum `void __cdecl PR24651::g(void)'::`2'::<unnamed-type-E>>(enum `void __cdecl PR24651::g(void)'::`2'::<unnamed-type-E>)
 
 ??$f@T<unnamed-type-$S1>@PR18204@@@PR18204@@YAHPAT<unnamed-type-$S1>@0@@Z
-; FIXME: int __cdecl PR18204::f<union PR18204::<unnamed-type-$S1>>(union PR18204::<unnamed-type-$S1> *)
+; CHECK: int __cdecl PR18204::f<union PR18204::<unnamed-type-$S1>>(union PR18204::<unnamed-type-$S1> *)
 
 ??R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z
-; CHECK: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const
+; CHECK: public: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const
 
 ??R<lambda_1>@?0???R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z@QBE@H@Z
-; CHECK: __thiscall `__thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const'::`1'::<lambda_1>::operator()(int) const
+; CHECK: public: __thiscall `public: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const'::`1'::<lambda_1>::operator()(int) const
 
 ?unaligned_foo1@@YAPFAHXZ
 ; CHECK: int __unaligned * __cdecl unaligned_foo1(void)
@@ -142,7 +144,7 @@
 ; CHECK: __thiscall PR31197::A::x::<lambda_1>::operator()(void) const
 
 ?white@?1???R<lambda_1>@x@A@PR31197@@QBE@XZ@4HA
-; CHECK: int `__thiscall PR31197::A::x::<lambda_1>::operator()(void) const'::`2'::white
+; CHECK: int `public: __thiscall PR31197::A::x::<lambda_1>::operator()(void) const'::`2'::white
 
 ?f@@YAXW4<unnamed-enum-enumerator>@@@Z
 ; CHECK: void __cdecl f(enum <unnamed-enum-enumerator>)

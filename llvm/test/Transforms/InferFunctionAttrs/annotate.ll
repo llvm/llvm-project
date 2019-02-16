@@ -1,7 +1,7 @@
 ; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-DARWIN %s
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LINUX %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck -check-prefix=CHECK-NVPTX %s
 
 ; operator new routines
@@ -625,13 +625,13 @@ declare i8* @memchr(i8*, i32, i64)
 ; CHECK: declare i32 @memcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
 declare i32 @memcmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @memcpy(i8*, i8* nocapture readonly, i64) [[G0]]
+; CHECK: declare i8* @memcpy(i8* returned, i8* nocapture readonly, i64) [[G0]]
 declare i8* @memcpy(i8*, i8*, i64)
 
 ; CHECK: declare i8* @mempcpy(i8*, i8* nocapture readonly, i64) [[G0]]
 declare i8* @mempcpy(i8*, i8*, i64)
 
-; CHECK: declare i8* @memmove(i8*, i8* nocapture readonly, i64) [[G0]]
+; CHECK: declare i8* @memmove(i8* returned, i8* nocapture readonly, i64) [[G0]]
 declare i8* @memmove(i8*, i8*, i64)
 
 ; CHECK: declare i8* @memset(i8*, i32, i64)
@@ -829,7 +829,7 @@ declare i8* @stpncpy(i8*, i8*, i64)
 ; CHECK: declare i32 @strcasecmp(i8* nocapture, i8* nocapture) [[G1]]
 declare i32 @strcasecmp(i8*, i8*)
 
-; CHECK: declare i8* @strcat(i8*, i8* nocapture readonly) [[G0]]
+; CHECK: declare i8* @strcat(i8* returned, i8* nocapture readonly) [[G0]]
 declare i8* @strcat(i8*, i8*)
 
 ; CHECK: declare i8* @strchr(i8*, i32) [[G1]]
@@ -841,7 +841,7 @@ declare i32 @strcmp(i8*, i8*)
 ; CHECK: declare i32 @strcoll(i8* nocapture, i8* nocapture) [[G1]]
 declare i32 @strcoll(i8*, i8*)
 
-; CHECK: declare i8* @strcpy(i8*, i8* nocapture readonly) [[G0]]
+; CHECK: declare i8* @strcpy(i8* returned, i8* nocapture readonly) [[G0]]
 declare i8* @strcpy(i8*, i8*)
 
 ; CHECK: declare i64 @strcspn(i8* nocapture, i8* nocapture) [[G1]]
@@ -856,13 +856,13 @@ declare i64 @strlen(i8*)
 ; CHECK: declare i32 @strncasecmp(i8* nocapture, i8* nocapture, i64) [[G1]]
 declare i32 @strncasecmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @strncat(i8*, i8* nocapture readonly, i64) [[G0]]
+; CHECK: declare i8* @strncat(i8* returned, i8* nocapture readonly, i64) [[G0]]
 declare i8* @strncat(i8*, i8*, i64)
 
 ; CHECK: declare i32 @strncmp(i8* nocapture, i8* nocapture, i64) [[G1]]
 declare i32 @strncmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @strncpy(i8*, i8* nocapture readonly, i64) [[G0]]
+; CHECK: declare i8* @strncpy(i8* returned, i8* nocapture readonly, i64) [[G0]]
 declare i8* @strncpy(i8*, i8*, i64)
 
 ; CHECK: declare noalias i8* @strndup(i8* nocapture readonly, i64) [[G0]]

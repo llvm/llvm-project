@@ -10,7 +10,7 @@ int main() {
   getrlimit(RLIMIT_CORE, &lim_core);
   void *p;
   if (sizeof(p) == 8) {
-    assert(0 == lim_core.rlim_max);
+    assert(0 == lim_core.rlim_cur);
   }
   return 0;
 }

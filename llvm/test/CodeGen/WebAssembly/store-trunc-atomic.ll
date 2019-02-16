@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=+atomics,+sign-ext -asm-verbose=false -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -mattr=+atomics,+sign-ext -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test that truncating stores are assembled properly.
 

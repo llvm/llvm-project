@@ -426,8 +426,6 @@ void test() {
   __builtin_HEXAGON_A5_vaddhubs(0, 0);
   // CHECK: @llvm.hexagon.A6.vcmpbeq.notany
   __builtin_HEXAGON_A6_vcmpbeq_notany(0, 0);
-  // CHECK: @llvm.hexagon.A6.vcmpbeq.notany.128B
-  __builtin_HEXAGON_A6_vcmpbeq_notany_128B(0, 0);
   // CHECK: @llvm.hexagon.C2.all8
   __builtin_HEXAGON_C2_all8(0);
   // CHECK: @llvm.hexagon.C2.and
@@ -1400,8 +1398,6 @@ void test() {
   __builtin_HEXAGON_S2_brev(0);
   // CHECK: @llvm.hexagon.S2.brevp
   __builtin_HEXAGON_S2_brevp(0);
-  // CHECK: @llvm.hexagon.S2.cabacencbin
-  __builtin_HEXAGON_S2_cabacencbin(0, 0, 0);
   // CHECK: @llvm.hexagon.S2.cl0
   __builtin_HEXAGON_S2_cl0(0);
   // CHECK: @llvm.hexagon.S2.cl0p

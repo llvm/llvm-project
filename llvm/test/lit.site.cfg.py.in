@@ -37,6 +37,7 @@ config.have_zlib = @HAVE_LIBZ@
 config.have_libxar = @HAVE_LIBXAR@
 config.have_dia_sdk = @LLVM_ENABLE_DIA_SDK@
 config.enable_ffi = @LLVM_ENABLE_FFI@
+config.enable_threads = @LLVM_ENABLE_THREADS@
 config.build_shared_libs = @BUILD_SHARED_LIBS@
 config.link_llvm_dylib = @LLVM_LINK_LLVM_DYLIB@
 config.llvm_libxml2_enabled = "@LLVM_LIBXML2_ENABLED@"
@@ -54,7 +55,8 @@ except KeyError:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
-@LIT_SITE_CFG_IN_FOOTER@
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LLVM_SOURCE_DIR@/test/lit.cfg.py")

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=+atomics -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -mattr=+atomics -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test loads and stores with custom alignment values.
 
@@ -10,8 +10,7 @@ target triple = "wasm32-unknown-unknown"
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: ldi32_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi32_a1 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32_a1(i32 *%p) {
@@ -20,8 +19,7 @@ define i32 @ldi32_a1(i32 *%p) {
 }
 
 ; CHECK-LABEL: ldi32_a2:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi32_a2 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0):p2align=1{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32_a2(i32 *%p) {
@@ -32,8 +30,7 @@ define i32 @ldi32_a2(i32 *%p) {
 ; 4 is the default alignment for i32 so no attribute is needed.
 
 ; CHECK-LABEL: ldi32_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi32_a4 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32_a4(i32 *%p) {
@@ -44,8 +41,7 @@ define i32 @ldi32_a4(i32 *%p) {
 ; The default alignment in LLVM is the same as the defualt alignment in wasm.
 
 ; CHECK-LABEL: ldi32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi32 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32(i32 *%p) {
@@ -56,8 +52,7 @@ define i32 @ldi32(i32 *%p) {
 ; 8 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: ldi32_a8:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi32_a8 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32_a8(i32 *%p) {
@@ -70,8 +65,7 @@ define i32 @ldi32_a8(i32 *%p) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: ldi8_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi8_a1 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load8_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i8 @ldi8_a1(i8 *%p) {
@@ -80,8 +74,7 @@ define i8 @ldi8_a1(i8 *%p) {
 }
 
 ; CHECK-LABEL: ldi8_a2:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi8_a2 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load8_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i8 @ldi8_a2(i8 *%p) {
@@ -90,8 +83,7 @@ define i8 @ldi8_a2(i8 *%p) {
 }
 
 ; CHECK-LABEL: ldi16_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi16_a1 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load16_u $push[[NUM:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i16 @ldi16_a1(i16 *%p) {
@@ -100,8 +92,7 @@ define i16 @ldi16_a1(i16 *%p) {
 }
 
 ; CHECK-LABEL: ldi16_a2:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi16_a2 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load16_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i16 @ldi16_a2(i16 *%p) {
@@ -110,8 +101,7 @@ define i16 @ldi16_a2(i16 *%p) {
 }
 
 ; CHECK-LABEL: ldi16_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi16_a4 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.load16_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i16 @ldi16_a4(i16 *%p) {
@@ -124,7 +114,7 @@ define i16 @ldi16_a4(i16 *%p) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: sti32_a1:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti32_a1 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a1(i32 *%p, i32 %v) {
@@ -133,7 +123,7 @@ define void @sti32_a1(i32 *%p, i32 %v) {
 }
 
 ; CHECK-LABEL: sti32_a2:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti32_a2 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0):p2align=1, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a2(i32 *%p, i32 %v) {
@@ -144,7 +134,7 @@ define void @sti32_a2(i32 *%p, i32 %v) {
 ; 4 is the default alignment for i32 so no attribute is needed.
 
 ; CHECK-LABEL: sti32_a4:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti32_a4 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a4(i32 *%p, i32 %v) {
@@ -155,7 +145,7 @@ define void @sti32_a4(i32 *%p, i32 %v) {
 ; The default alignment in LLVM is the same as the defualt alignment in wasm.
 
 ; CHECK-LABEL: sti32:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti32 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32(i32 *%p, i32 %v) {
@@ -164,7 +154,7 @@ define void @sti32(i32 *%p, i32 %v) {
 }
 
 ; CHECK-LABEL: sti32_a8:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti32_a8 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a8(i32 *%p, i32 %v) {
@@ -177,7 +167,7 @@ define void @sti32_a8(i32 *%p, i32 %v) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: sti8_a1:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti8_a1 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti8_a1(i8 *%p, i8 %v) {
@@ -186,7 +176,7 @@ define void @sti8_a1(i8 *%p, i8 %v) {
 }
 
 ; CHECK-LABEL: sti8_a2:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti8_a2 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti8_a2(i8 *%p, i8 %v) {
@@ -195,7 +185,7 @@ define void @sti8_a2(i8 *%p, i8 %v) {
 }
 
 ; CHECK-LABEL: sti16_a1:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti16_a1 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store16 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a1(i16 *%p, i16 %v) {
@@ -204,7 +194,7 @@ define void @sti16_a1(i16 *%p, i16 %v) {
 }
 
 ; CHECK-LABEL: sti16_a2:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti16_a2 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a2(i16 *%p, i16 %v) {
@@ -213,7 +203,7 @@ define void @sti16_a2(i16 *%p, i16 %v) {
 }
 
 ; CHECK-LABEL: sti16_a4:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti16_a4 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a4(i16 *%p, i16 %v) {
@@ -229,8 +219,7 @@ define void @sti16_a4(i16 *%p, i16 %v) {
 ; natural alignment.
 
 ; CHECK-LABEL: ldi32_atomic_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi32_atomic_a4 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32_atomic_a4(i32 *%p) {
@@ -241,8 +230,7 @@ define i32 @ldi32_atomic_a4(i32 *%p) {
 ; 8 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: ldi32_atomic_a8:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ldi32_atomic_a8 (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @ldi32_atomic_a8(i32 *%p) {
@@ -255,7 +243,7 @@ define i32 @ldi32_atomic_a8(i32 *%p) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: sti32_atomic_a4:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti32_atomic_a4 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_atomic_a4(i32 *%p, i32 %v) {
@@ -266,7 +254,7 @@ define void @sti32_atomic_a4(i32 *%p, i32 %v) {
 ; 8 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: sti32_atomic_a8:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype sti32_atomic_a8 (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_atomic_a8(i32 *%p, i32 %v) {

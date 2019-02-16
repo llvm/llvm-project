@@ -8,9 +8,9 @@ target triple = "hexagon"
 
 ; CHECK-LABEL: danny:
 ; CHECK: vmem
-define void @danny() #0 {
+define void @danny(i16* %a0) #0 {
 b0:
-  %v1 = load i16, i16* undef, align 2
+  %v1 = load i16, i16* %a0, align 2
   %v2 = insertelement <8 x i16> undef, i16 %v1, i32 6
   %v3 = insertelement <8 x i16> %v2, i16 undef, i32 7
   %v4 = sext <8 x i16> %v3 to <8 x i32>
@@ -24,15 +24,15 @@ b0:
   %v12 = sub nsw <8 x i32> zeroinitializer, %v11
   %v13 = trunc <8 x i32> %v12 to <8 x i16>
   %v14 = extractelement <8 x i16> %v13, i32 7
-  store i16 %v14, i16* undef, align 2
-  unreachable
+  store i16 %v14, i16* %a0, align 2
+  ret void
 }
 
 ; CHECK-LABEL: sammy:
 ; CHECK: vmem
-define void @sammy() #1 {
+define void @sammy(i16* %a0) #1 {
 b0:
-  %v1 = load i16, i16* undef, align 2
+  %v1 = load i16, i16* %a0, align 2
   %v2 = insertelement <16 x i16> undef, i16 %v1, i32 14
   %v3 = insertelement <16 x i16> %v2, i16 undef, i32 15
   %v4 = sext <16 x i16> %v3 to <16 x i32>
@@ -46,8 +46,8 @@ b0:
   %v12 = sub nsw <16 x i32> zeroinitializer, %v11
   %v13 = trunc <16 x i32> %v12 to <16 x i16>
   %v14 = extractelement <16 x i16> %v13, i32 15
-  store i16 %v14, i16* undef, align 2
-  unreachable
+  store i16 %v14, i16* %a0, align 2
+  ret void
 }
 
 attributes #0 = { norecurse nounwind "target-cpu"="hexagonv60" "target-features"="+hvx-length64b,+hvxv60" }

@@ -12,7 +12,6 @@
 #include "llvm/ADT/BitVector.h"
 
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
-#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/JamCRC.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -262,13 +262,14 @@ void PDBFileBuilder::commitInjectedSources(WritableBinaryStream &MsfBuffer,
   }
 }
 
-Error PDBFileBuilder::commit(StringRef Filename) {
+Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
   assert(!Filename.empty());
   if (auto EC = finalizeMsfLayout())
     return EC;
 
   MSFLayout Layout;
-  auto ExpectedMsfBuffer = Msf->commit(Filename, Layout);
+  Expected<FileBufferByteStream> ExpectedMsfBuffer =
+      Msf->commit(Filename, Layout);
   if (!ExpectedMsfBuffer)
     return ExpectedMsfBuffer.takeError();
   FileBufferByteStream Buffer = std::move(*ExpectedMsfBuffer);
@@ -330,11 +331,28 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   // Set the build id at the very end, after every other byte of the PDB
   // has been written.
-  // FIXME: Use a hash of the PDB rather than time(nullptr) for the signature.
-  H->Age = Info->getAge();
-  H->Guid = Info->getGuid();
-  Optional<uint32_t> Sig = Info->getSignature();
-  H->Signature = Sig.hasValue() ? *Sig : time(nullptr);
+  if (Info->hashPDBContentsToGUID()) {
+    // Compute a hash of all sections of the output file.
+    uint64_t Digest =
+        xxHash64({Buffer.getBufferStart(), Buffer.getBufferEnd()});
+
+    H->Age = 1;
+
+    memcpy(H->Guid.Guid, &Digest, 8);
+    // xxhash only gives us 8 bytes, so put some fixed data in the other half.
+    memcpy(H->Guid.Guid + 8, "LLD PDB.", 8);
+
+    // Put the hash in the Signature field too.
+    H->Signature = static_cast<uint32_t>(Digest);
+
+    // Return GUID to caller.
+    memcpy(Guid, H->Guid.Guid, 16);
+  } else {
+    H->Age = Info->getAge();
+    H->Guid = Info->getGuid();
+    Optional<uint32_t> Sig = Info->getSignature();
+    H->Signature = Sig.hasValue() ? *Sig : time(nullptr);
+  }
 
   return Buffer.commit();
 }

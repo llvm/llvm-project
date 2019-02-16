@@ -1,6 +1,6 @@
 ; REQUIRES: cxx-shared-library
 ; RUN: %lli -jit-kind=orc-mcjit %s
-; XFAIL: arm, cygwin, win32, mingw
+; XFAIL: arm, cygwin, windows-msvc, windows-gnu
 declare i8* @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(i8*, i8*, i8*)
 declare i32 @__gxx_personality_v0(...)

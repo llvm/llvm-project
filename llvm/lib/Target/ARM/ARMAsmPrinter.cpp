@@ -367,6 +367,18 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
       unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
       unsigned RC;
+      bool FirstHalf;
+      const ARMBaseTargetMachine &ATM =
+        static_cast<const ARMBaseTargetMachine &>(TM);
+
+      // 'Q' should correspond to the low order register and 'R' to the high
+      // order register.  Whether this corresponds to the upper or lower half
+      // depends on the endianess mode.
+      if (ExtraCode[0] == 'Q')
+        FirstHalf = ATM.isLittleEndian();
+      else
+        // ExtraCode[0] == 'R'.
+        FirstHalf = !ATM.isLittleEndian();
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
       if (InlineAsm::hasRegClassConstraint(Flags, RC) &&
           ARM::GPRPairRegClass.hasSubClassEq(TRI->getRegClass(RC))) {
@@ -376,14 +388,14 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         if (!MO.isReg())
           return true;
         const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-        unsigned Reg = TRI->getSubReg(MO.getReg(), ExtraCode[0] == 'Q' ?
+        unsigned Reg = TRI->getSubReg(MO.getReg(), FirstHalf ?
             ARM::gsub_0 : ARM::gsub_1);
         O << ARMInstPrinter::getRegisterName(Reg);
         return false;
       }
       if (NumVals != 2)
         return true;
-      unsigned RegOp = ExtraCode[0] == 'Q' ? OpNum : OpNum + 1;
+      unsigned RegOp = FirstHalf ? OpNum : OpNum + 1;
       if (RegOp >= MI->getNumOperands())
         return true;
       const MachineOperand &MO = MI->getOperand(RegOp);
@@ -815,15 +827,31 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
     assert(Subtarget->isTargetWindows() &&
            "Windows is the only supported COFF target");
 
-    bool IsIndirect = (TargetFlags & ARMII::MO_DLLIMPORT);
+    bool IsIndirect =
+        (TargetFlags & (ARMII::MO_DLLIMPORT | ARMII::MO_COFFSTUB));
     if (!IsIndirect)
       return getSymbol(GV);
 
     SmallString<128> Name;
-    Name = "__imp_";
+    if (TargetFlags & ARMII::MO_DLLIMPORT)
+      Name = "__imp_";
+    else if (TargetFlags & ARMII::MO_COFFSTUB)
+      Name = ".refptr.";
     getNameWithPrefix(Name, GV);
 
-    return OutContext.getOrCreateSymbol(Name);
+    MCSymbol *MCSym = OutContext.getOrCreateSymbol(Name);
+
+    if (TargetFlags & ARMII::MO_COFFSTUB) {
+      MachineModuleInfoCOFF &MMICOFF =
+          MMI->getObjFileInfo<MachineModuleInfoCOFF>();
+      MachineModuleInfoImpl::StubValueTy &StubSym =
+          MMICOFF.getGVStubEntry(MCSym);
+
+      if (!StubSym.getPointer())
+        StubSym = MachineModuleInfoImpl::StubValueTy(getSymbol(GV), true);
+    }
+
+    return MCSym;
   } else if (Subtarget->isTargetELF()) {
     return getSymbol(GV);
   }
@@ -1043,10 +1071,12 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
   const MachineFunction &MF = *MI->getParent()->getParent();
-  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo *TargetRegInfo =
+    MF.getSubtarget().getRegisterInfo();
+  const MachineRegisterInfo &MachineRegInfo = MF.getRegInfo();
   const ARMFunctionInfo &AFI = *MF.getInfo<ARMFunctionInfo>();
 
-  unsigned FramePtr = RegInfo->getFrameRegister(MF);
+  unsigned FramePtr = TargetRegInfo->getFrameRegister(MF);
   unsigned Opc = MI->getOpcode();
   unsigned SrcReg, DstReg;
 
@@ -1103,7 +1133,9 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         if (MO.isUndef()) {
           assert(RegList.empty() &&
                  "Pad registers must come before restored ones");
-          Pad += 4;
+          unsigned Width =
+            TargetRegInfo->getRegSizeInBits(MO.getReg(), MachineRegInfo) / 8;
+          Pad += Width;
           continue;
         }
         RegList.push_back(MO.getReg());

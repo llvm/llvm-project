@@ -235,7 +235,12 @@
 #if defined(__mips__)
 # define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 40)
 #elif defined(__aarch64__)
-# define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 48)
+# if SANITIZER_MAC
+// Darwin iOS/ARM64 has a 36-bit VMA, 64GiB VM
+#  define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 36)
+# else
+#  define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 48)
+# endif
 #else
 # define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 47)
 #endif
@@ -335,6 +340,15 @@
 #define SANITIZER_SYMBOLIZER_MARKUP 1
 #else
 #define SANITIZER_SYMBOLIZER_MARKUP 0
+#endif
+
+// Enable ability to support sanitizer initialization that is
+// compatible with the sanitizer library being loaded via
+// `dlopen()`.
+#if SANITIZER_MAC
+#define SANITIZER_SUPPORTS_INIT_FOR_DLOPEN 1
+#else
+#define SANITIZER_SUPPORTS_INIT_FOR_DLOPEN 0
 #endif
 
 #endif // SANITIZER_PLATFORM_H

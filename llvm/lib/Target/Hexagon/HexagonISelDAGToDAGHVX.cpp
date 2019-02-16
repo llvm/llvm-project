@@ -120,7 +120,7 @@ struct Coloring {
     return Color == ColorKind::Red ? ColorKind::Black : ColorKind::Red;
   }
 
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   ArrayRef<Node> Order;
@@ -267,7 +267,7 @@ bool Coloring::color() {
   return true;
 }
 
-LLVM_DUMP_METHOD
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Coloring::dump() const {
   dbgs() << "{ Order:   {";
   for (unsigned I = 0; I != Order.size(); ++I) {
@@ -309,6 +309,7 @@ void Coloring::dump() const {
     dbgs() << "    " << C.first << " -> " << ColorKindToName(C.second) << "\n";
   dbgs() << "  }\n}\n";
 }
+#endif
 
 namespace {
 // Base class of for reordering networks. They don't strictly need to be
@@ -651,6 +652,7 @@ struct OpRef {
     IndexBits = 28,
   };
 
+  LLVM_DUMP_METHOD
   void print(raw_ostream &OS, const SelectionDAG &G) const;
 
 private:
@@ -663,7 +665,7 @@ struct NodeTemplate {
   MVT Ty = MVT::Other;
   std::vector<OpRef> Ops;
 
-  void print(raw_ostream &OS, const SelectionDAG &G) const;
+  LLVM_DUMP_METHOD void print(raw_ostream &OS, const SelectionDAG &G) const;
 };
 
 struct ResultStack {
@@ -699,10 +701,12 @@ struct ResultStack {
 
   BaseType List;
 
+  LLVM_DUMP_METHOD
   void print(raw_ostream &OS, const SelectionDAG &G) const;
 };
 } // namespace
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void OpRef::print(raw_ostream &OS, const SelectionDAG &G) const {
   if (isValue()) {
     OpV.getNode()->print(OS, &G);
@@ -752,6 +756,7 @@ void ResultStack::print(raw_ostream &OS, const SelectionDAG &G) const {
     OS << '\n';
   }
 }
+#endif
 
 namespace {
 struct ShuffleMask {
@@ -1327,6 +1332,32 @@ OpRef HvxSelector::shuffp2(ShuffleMask SM, OpRef Va, OpRef Vb,
   return vmuxp(Bytes, L, R, Results);
 }
 
+namespace {
+  struct Deleter : public SelectionDAG::DAGNodeDeletedListener {
+    template <typename T>
+    Deleter(SelectionDAG &D, T &C)
+      : SelectionDAG::DAGNodeDeletedListener(D, [&C] (SDNode *N, SDNode *E) {
+                                                  C.erase(N);
+                                                }) {}
+  };
+
+  template <typename T>
+  struct NullifyingVector : public T {
+    DenseMap<SDNode*, SDNode**> Refs;
+    NullifyingVector(T &&V) : T(V) {
+      for (unsigned i = 0, e = T::size(); i != e; ++i) {
+        SDNode *&N = T::operator[](i);
+        Refs[N] = &N;
+      }
+    }
+    void erase(SDNode *N) {
+      auto F = Refs.find(N);
+      if (F != Refs.end())
+        *F->second = nullptr;
+    }
+  };
+}
+
 bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
                                    MVT ResTy, SDValue Va, SDValue Vb,
                                    SDNode *N) {
@@ -1337,10 +1368,30 @@ bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
   bool HavePairs = (2*HwLen == VecLen);
   MVT SingleTy = getSingleVT(MVT::i8);
 
+  // The prior attempts to handle this shuffle may have left a bunch of
+  // dead nodes in the DAG (such as constants). These nodes will be added
+  // at the end of DAG's node list, which at that point had already been
+  // sorted topologically. In the main selection loop, the node list is
+  // traversed backwards from the root node, which means that any new
+  // nodes (from the end of the list) will not be visited.
+  // Scalarization will replace the shuffle node with the scalarized
+  // expression, and if that expression reused any if the leftoever (dead)
+  // nodes, these nodes would not be selected (since the "local" selection
+  // only visits nodes that are not in AllNodes).
+  // To avoid this issue, remove all dead nodes from the DAG now.
+  DAG.RemoveDeadNodes();
+  DenseSet<SDNode*> AllNodes;
+  for (SDNode &S : DAG.allnodes())
+    AllNodes.insert(&S);
+
+  Deleter DUA(DAG, AllNodes);
+
   SmallVector<SDValue,128> Ops;
+  LLVMContext &Ctx = *DAG.getContext();
+  MVT LegalTy = Lower.getTypeToTransformTo(Ctx, ElemTy).getSimpleVT();
   for (int I : Mask) {
     if (I < 0) {
-      Ops.push_back(ISel.selectUndef(dl, ElemTy));
+      Ops.push_back(ISel.selectUndef(dl, LegalTy));
       continue;
     }
     SDValue Vec;
@@ -1360,7 +1411,7 @@ bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
       }
     }
     SDValue Idx = DAG.getConstant(M, dl, MVT::i32);
-    SDValue Ex = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ElemTy, {Vec, Idx});
+    SDValue Ex = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, LegalTy, {Vec, Idx});
     SDValue L = Lower.LowerOperation(Ex, DAG);
     assert(L.getNode());
     Ops.push_back(L);
@@ -1384,32 +1435,55 @@ bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
 
   assert(!N->use_empty());
   ISel.ReplaceNode(N, LV.getNode());
-  DAG.RemoveDeadNodes();
 
-  std::deque<SDNode*> SubNodes;
-  SubNodes.push_back(LV.getNode());
+  if (AllNodes.count(LV.getNode())) {
+    DAG.RemoveDeadNodes();
+    return true;
+  }
+
+  // The lowered build-vector node will now need to be selected. It needs
+  // to be done here because this node and its submodes are not included
+  // in the main selection loop.
+  // Implement essentially the same topological ordering algorithm as is
+  // used in SelectionDAGISel.
+
+  SetVector<SDNode*> SubNodes, TmpQ;
+  std::map<SDNode*,unsigned> NumOps;
+
+  SubNodes.insert(LV.getNode());
   for (unsigned I = 0; I != SubNodes.size(); ++I) {
-    for (SDValue Op : SubNodes[I]->ops())
-      SubNodes.push_back(Op.getNode());
+    unsigned OpN = 0;
+    SDNode *S = SubNodes[I];
+    for (SDValue Op : S->ops()) {
+      if (AllNodes.count(Op.getNode()))
+        continue;
+      SubNodes.insert(Op.getNode());
+      ++OpN;
+    }
+    NumOps.insert({S, OpN});
+    if (OpN == 0)
+      TmpQ.insert(S);
   }
-  while (!SubNodes.empty()) {
-    SDNode *S = SubNodes.front();
-    SubNodes.pop_front();
-    if (S->use_empty())
-      continue;
-    // This isn't great, but users need to be selected before any nodes that
-    // they use. (The reason is to match larger patterns, and avoid nodes that
-    // cannot be matched on their own, e.g. ValueType, TokenFactor, etc.).
-    bool PendingUser = llvm::any_of(S->uses(), [&SubNodes](const SDNode *U) {
-                         return llvm::any_of(SubNodes, [U](const SDNode *T) {
-                           return T == U;
-                         });
-                       });
-    if (PendingUser)
-      SubNodes.push_back(S);
-    else
+
+  for (unsigned I = 0; I != TmpQ.size(); ++I) {
+    SDNode *S = TmpQ[I];
+    for (SDNode *U : S->uses()) {
+      if (!SubNodes.count(U))
+        continue;
+      auto F = NumOps.find(U);
+      assert(F != NumOps.end());
+      assert(F->second > 0);
+      if (!--F->second)
+        TmpQ.insert(F->first);
+    }
+  }
+  assert(SubNodes.size() == TmpQ.size());
+  NullifyingVector<decltype(TmpQ)::vector_type> Queue(TmpQ.takeVector());
+
+  Deleter DUQ(DAG, Queue);
+  for (SDNode *S : reverse(Queue))
+    if (S != nullptr)
       ISel.Select(S);
-  }
 
   DAG.RemoveDeadNodes();
   return true;
@@ -2048,10 +2122,6 @@ void HexagonDAGToDAGISel::SelectHvxVAlign(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
-  if (!HST->usePackets()) {
-    report_fatal_error("Support for gather requires packets, "
-                       "which are disabled");
-  }
   const SDLoc &dl(N);
   SDValue Chain = N->getOperand(0);
   SDValue Address = N->getOperand(2);
@@ -2083,18 +2153,13 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   SDValue Ops[] = { Address, Predicate, Base, Modifier, Offset, Chain };
   SDNode *Result = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MemOp});
 
   ReplaceNode(N, Result);
 }
 
 void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
-  if (!HST->usePackets()) {
-    report_fatal_error("Support for gather requires packets, "
-                       "which are disabled");
-  }
   const SDLoc &dl(N);
   SDValue Chain = N->getOperand(0);
   SDValue Address = N->getOperand(2);
@@ -2125,9 +2190,8 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   SDValue Ops[] = { Address, Base, Modifier, Offset, Chain };
   SDNode *Result = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MemOp});
 
   ReplaceNode(N, Result);
 }

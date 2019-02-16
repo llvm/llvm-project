@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -280,5 +280,10 @@ void ento::registerVirtualCallChecker(CheckerManager &mgr) {
   VirtualCallChecker *checker = mgr.registerChecker<VirtualCallChecker>();
 
   checker->IsPureOnly =
-      mgr.getAnalyzerOptions().getBooleanOption("PureOnly", false, checker);
+      mgr.getAnalyzerOptions().getCheckerBooleanOption("PureOnly", false,
+                                                       checker);
+}
+
+bool ento::shouldRegisterVirtualCallChecker(const LangOptions &LO) {
+  return true;
 }

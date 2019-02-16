@@ -100,7 +100,7 @@ void good_move_find2(std::vector<int> &v1, std::vector<int> &v2, int n) {
 void good_move_find3(std::vector<int> &v1, std::vector<int> &v2, int n) {
   auto i0 = v2.cend();
   v1 = std::move(v2);
-  v2.push_back(n);
+  v2.push_back(n); // expected-warning{{Method called on moved-from object of type 'std::vector'}}
   std::find(v2.cbegin(), i0, n); // no-warning
 }
 
@@ -125,6 +125,7 @@ void bad_move_find1(std::vector<int> &v1, std::vector<int> &v2, int n) {
   auto i0 = v2.cbegin();
   v1 = std::move(v2);
   std::find(i0, v2.cend(), n); // expected-warning{{Iterators of different containers used where the same container is expected}}
+                               // expected-warning@-1{{Method called on moved-from object of type 'std::vector'}}
 }
 
 void bad_insert_find(std::vector<int> &v1, std::vector<int> &v2, int n, int m) {
@@ -144,6 +145,19 @@ void bad_overwrite(std::vector<int> &v1, std::vector<int> &v2, int n) {
   v1.insert(i, n); // expected-warning{{Container accessed using foreign iterator argument}}
 }
 
+template<typename Container, typename Iterator>
+bool is_cend(Container cont, Iterator it) {
+  return it == cont.cend();
+}
+
+void good_empty(std::vector<int> &v) {
+  is_cend(v, v.cbegin()); // no-warning
+}
+
+void bad_empty(std::vector<int> &v1, std::vector<int> &v2) {
+  is_cend(v1, v2.cbegin()); // expected-warning@-8{{Iterators of different containers used where the same container is expected}}
+}
+
 void good_move(std::vector<int> &v1, std::vector<int> &v2) {
   const auto i0 = ++v2.cbegin();
   v1 = std::move(v2);
@@ -154,12 +168,14 @@ void bad_move(std::vector<int> &v1, std::vector<int> &v2) {
   const auto i0 = ++v2.cbegin();
   v1 = std::move(v2);
   v2.erase(i0); // expected-warning{{Container accessed using foreign iterator argument}}
+                // expected-warning@-1{{Method called on moved-from object of type 'std::vector'}}
 }
 
 void bad_move_find2(std::vector<int> &v1, std::vector<int> &v2, int n) {
   auto i0 = --v2.cend();
   v1 = std::move(v2);
   std::find(i0, v2.cend(), n); // expected-warning{{Iterators of different containers used where the same container is expected}}
+                               // expected-warning@-1{{Method called on moved-from object of type 'std::vector'}}
 }
 
 void bad_move_find3(std::vector<int> &v1, std::vector<int> &v2, int n) {

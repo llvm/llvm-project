@@ -19,18 +19,18 @@
 options.  This should get you up and running with the minimum of muss and fuss.
 If you like what you see, please consider <a href="get_involved.html">getting
 involved</a> with the Clang community.  If you run into problems, please file
-bugs in <a href="http://llvm.org/bugs/">LLVM Bugzilla</a>.</p>
+bugs in <a href="https://bugs.llvm.org/">LLVM Bugzilla</a>.</p>
 
 <h2 id="download">Release Clang Versions</h2>
 
-<p>Clang is released as part of regular LLVM releases. You can download the release versions from <a href="http://llvm.org/releases/">http://llvm.org/releases/</a>.</p>
+<p>Clang is released as part of regular LLVM releases. You can download the release versions from <a href="https://llvm.org/releases/">https://llvm.org/releases/</a>.</p>
 <p>Clang is also provided in all major BSD or GNU/Linux distributions as part of their respective packaging systems. From Xcode 4.2, Clang is the default compiler for Mac OS X.</p>
 
 <h2 id="build">Building Clang and Working with the Code</h2>
 
 <h3 id="buildNix">On Unix-like Systems</h3>
 
-<p>Note: as an experimental setup, you can use a <b>single checkout</b> with all the projects, and an <b>easy CMake invocation</b>, see the LLVM Doc "<a href="http://llvm.org/docs/GettingStarted.html#for-developers-to-work-with-a-git-monorepo">For developers to work with a git monorepo</a>"</p>
+<p>Note: as an experimental setup, you can use a <b>single checkout</b> with all the projects, and an <b>easy CMake invocation</b>, see the LLVM Doc "<a href="https://llvm.org/docs/GettingStarted.html#for-developers-to-work-with-a-git-monorepo">For developers to work with a git monorepo</a>"</p>
 
 <p>If you would like to check out and build Clang, the current procedure is as
 follows:</p>
@@ -39,7 +39,7 @@ follows:</p>
   <li>Get the required tools.
   <ul>
     <li>See
-      <a href="http://llvm.org/docs/GettingStarted.html#requirements">
+      <a href="https://llvm.org/docs/GettingStarted.html#requirements">
       Getting Started with the LLVM System - Requirements</a>.</li>
     <li>Note also that Python is needed for running the test suite.
       Get it at: <a href="http://www.python.org/download">
@@ -98,7 +98,7 @@ follows:</p>
     <li>CMake allows you to generate project files for several IDEs: Xcode,
         Eclipse CDT4, CodeBlocks, Qt-Creator (use the CodeBlocks generator),
         KDevelop3. For more details see
-        <a href="http://llvm.org/docs/CMake.html">Building LLVM with CMake</a>
+        <a href="https://llvm.org/docs/CMake.html">Building LLVM with CMake</a>
         page.</li>
   </ul>
   </li>
@@ -127,23 +127,21 @@ follows:</p>
   </li>
 </ol>
 
-<p>If you encounter problems while building Clang, make sure that your LLVM
-checkout is at the same revision as your Clang checkout. LLVM's interfaces
-change over time, and mismatched revisions are not expected to work
-together.</p>
-
 <h3>Simultaneously Building Clang and LLVM:</h3>
 
 <p>Once you have checked out Clang into the llvm source tree it will build along
 with the rest of <tt>llvm</tt>. To build all of LLVM and Clang together all at
 once simply run <tt>make</tt> from the root LLVM directory.</p>
 
-<p><em>Note:</em> Observe that Clang is technically part of a separate
-Subversion repository. As mentioned above, the latest Clang sources are tied to
-the latest sources in the LLVM tree. You can update your toplevel LLVM project
-and all (possibly unrelated) projects inside it with <tt><b>make
-update</b></tt>. This will run <tt>svn update</tt> on all subdirectories related
-to subversion. </p>
+<p>If you encounter problems while building Clang, make sure that your LLVM
+checkout is at the same revision as your Clang checkout. LLVM's interfaces
+change over time, and mismatched revisions are not expected to work
+together. We recommend writing a script to automatically run <tt>svn up</tt> in
+each repository to keep them synchronized. Alternatively, you may consider using
+the unofficial
+<a href="https://llvm.org/docs/GettingStarted.html#for-developers-to-work-with-a-git-monorepo">git monorepo</a>
+which automatically keeps everything in sync at the same revision and lets you
+commit changes atomically across multiple LLVM subprojects.</p>
 
 <h3 id="buildWindows">Using Visual Studio</h3>
 
@@ -154,37 +152,37 @@ Visual Studio:</p>
   <li>Get the required tools:
   <ul>
     <li><b>Subversion</b>.  Source code control program.  Get it from:
-        <a href="http://subversion.apache.org/packages.html">
-        http://subversion.apache.org/packages.html</a></li>
+        <a href="https://subversion.apache.org/packages.html">
+        https://subversion.apache.org/packages.html</a></li>
     <li><b>CMake</b>.  This is used for generating Visual Studio solution and
         project files.  Get it from:
-        <a href="http://www.cmake.org/cmake/resources/software.html">
-        http://www.cmake.org/cmake/resources/software.html</a></li>
-    <li><b>Visual Studio 2013 or later</b></li>
-    <li><b>Python</b>.  This is needed only if you will be running the tests
-        (which is essential, if you will be developing for clang).
-        Get it from:
-        <a href="http://www.python.org/download/">
-        http://www.python.org/download/</a></li>
+        <a href="https://cmake.org/download/">
+        https://cmake.org/download/</a></li>
+    <li><b>Visual Studio 2015 or later</b></li>
+    <li><b>Python</b>.  It is used to run the clang test suite. Get it from:
+        <a href="https://www.python.org/download/">
+        https://www.python.org/download/</a></li>
     <li><b>GnuWin32 tools</b>
-        These are also necessary for running the tests.
-        (Note that the grep from MSYS or Cygwin doesn't work with the tests
-        because of embedded double-quotes in the search strings.  The GNU
-        grep does work in this case.)
-        Get them from <a href="http://getgnuwin32.sourceforge.net/">
+        The Clang and LLVM test suite use various GNU core utilities, such as
+        <tt>grep</tt>, <tt>sed</tt>, and <tt>find</tt>. The gnuwin32 packages
+        are the oldest and most well-tested way to get these tools. However, the
+        MSys utilities provided by git for Windows have been known to work.
+        Cygwin has worked in the past, but is not well tested.
+        If you don't already have the core utilies from some other source, get
+        gnuwin32 from <a href="http://getgnuwin32.sourceforge.net/">
         http://getgnuwin32.sourceforge.net/</a>.</li>
   </ul>
   </li>
 
   <li>Check out LLVM:
   <ul>
-    <li><tt>svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm</tt></li>
+    <li><tt>svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm</tt></li>
   </ul>
   </li>
   <li>Check out Clang:
   <ul>
      <li><tt>cd llvm\tools</tt>
-     <li><tt>svn co http://llvm.org/svn/llvm-project/cfe/trunk clang</tt></li>
+     <li><tt>svn co https://llvm.org/svn/llvm-project/cfe/trunk clang</tt></li>
   </ul>
   <p><em>Note</em>:  Some Clang tests are sensitive to the line endings.  Ensure
      that checking out the files does not convert LF line endings to CR+LF.
@@ -195,12 +193,13 @@ Visual Studio:</p>
     <li><tt>cd ..\..</tt>  (back to where you started)</li>
     <li><tt>mkdir build</tt> (for building without polluting the source dir)</li>
     <li><tt>cd build</tt></li>
-    <li>If you are using Visual Studio 2013:  <tt>cmake -G "Visual Studio 12" ..\llvm</tt></li>
-    <li>By default, the Visual Studio project files generated by CMake use the
-     32-bit toolset. If you are developing on a 64-bit version of Windows and
-     want to use the 64-bit toolset, pass the ``-Thost=x64`` flag when
-     generating the Visual Studio solution. This requires CMake 3.8.0 or later.</li>
-    <li>See the <a href="http://www.llvm.org/docs/CMake.html">LLVM CMake guide</a> for
+    <li>
+      If you are using Visual Studio 2017:
+      <tt>cmake -G "Visual Studio 15 2017" -A x64 -Thost=x64 ..\llvm</tt><br/>
+      <tt>-Thost=x64</tt> is required, since the 32-bit linker will run out of memory.
+    </li>
+    <li>To generate x86 binaries instead of x64, pass <tt>-A Win32</tt>.</li>
+    <li>See the <a href="https://www.llvm.org/docs/CMake.html">LLVM CMake guide</a> for
         more information on other configuration options for CMake.</li>
     <li>The above, if successful, will have created an LLVM.sln file in the
        <tt>build</tt> directory.
@@ -223,6 +222,40 @@ Visual Studio:</p>
 <p>Note that once you have checked out both llvm and clang, to synchronize
 to the latest code base, use the <tt>svn update</tt> command in both the
 llvm and llvm\tools\clang directories, as they are separate repositories.</p>
+
+<h3 id="buildWindowsNinja">Using Ninja alongside Visual Studio</h3>
+
+<p>We recommend that developers who want the fastest incremental builds use the
+<a href="https://ninja-build.org/">Ninja build system</a>. You can use the
+generated Visual Studio project files to edit Clang source code and generate a
+second build directory next to it for running the tests with these steps:</p>
+
+<ol>
+  <li>Check out clang and LLVM as described above</li>
+  <li>Open a developer command prompt with the appropriate environment.
+    <ul>
+      <li>If you open the start menu and search for "Command Prompt", you should
+        see shortcuts created by Visual Studio to do this. To use native x64
+        tools, choose the one titled "x64 Native Tools Command Prompt for VS
+        2017".</li>
+      <li> Alternatively, launch a regular <tt>cmd</tt> prompt and run the
+        appropriate vcvarsall.bat incantation. To get the 2017 x64 tools, this
+        would be:<br/>
+        <tt>"C:\Program Files (x86)\Microsoft Visual
+          Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64</tt>
+      </li>
+    </ul>
+  </li>
+  <li><tt>mkdir build_ninja</tt> (or <tt>build</tt>, or use your own
+    organization)</li>
+  <li><tt>cd build_ninja</tt></li>
+  <li><tt>set CC=cl</tt> (necessary to force CMake to choose MSVC over mingw GCC
+    if you have it installed)</li>
+  <li><tt>set CXX=cl</tt></li>
+  <li><tt>cmake -GNinja ..\llvm</tt></li>
+  <li><tt>ninja clang</tt> This will build just clang.</li>
+  <li><tt>ninja check-clang</tt> This will run the clang tests.</li>
+</ol>
 
 <h2 id="driver">Clang Compiler Driver (Drop-in Substitute for GCC)</h2>
 

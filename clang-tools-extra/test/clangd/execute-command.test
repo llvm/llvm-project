@@ -6,7 +6,7 @@
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
-# CHECK-NEXT:        "message": "using the result of an assignment as a condition without parentheses",
+# CHECK-NEXT:        "message": "Using the result of an assignment as a condition without parentheses",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
 # CHECK-NEXT:            "character": 37,
@@ -62,3 +62,5 @@
 {"jsonrpc":"2.0","id":9,"method":"workspace/executeCommand","params":{"arguments":[{"custom":"foo", "changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":{"start":{"line":0,"character":37},"end":{"line":0,"character":37}},"newText":")"}]}}],"command":"clangd.applyFix"}}
 ---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

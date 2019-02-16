@@ -64,6 +64,7 @@ is_equal(const std::type_info* x, const std::type_info* y, bool use_strcmp)
         return x == y;
     return strcmp(x->name(), y->name()) == 0;
 #else
+    (void) use_strcmp;
     return (x == y) || (strcmp(x->name(), y->name()) == 0);
 #endif
 }
@@ -650,7 +651,7 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
             // We get here only if there is some kind of visibility problem
             //   in client code.
             syslog(LOG_ERR, "dynamic_cast error 1: Both of the following type_info's "
-                    "should have public visibility.  At least one of them is hidden. %s" 
+                    "should have public visibility. At least one of them is hidden. %s"
                     ", %s.\n", static_type->name(), dynamic_type->name());
             // Redo the search comparing type_info's using strcmp
             info = {dst_type, static_ptr, static_type, src2dst_offset, 0};
@@ -673,7 +674,8 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
             info.path_dynamic_ptr_to_static_ptr == unknown)
         {
             syslog(LOG_ERR, "dynamic_cast error 2: One or more of the following type_info's "
-                            "has hidden visibility.  They should all have public visibility.  "
+                            "has hidden visibility or is defined in more than one translation "
+                            "unit. They should all have public visibility. "
                             "%s, %s, %s.\n", static_type->name(), dynamic_type->name(),
                     dst_type->name());
             // Redo the search comparing type_info's using strcmp

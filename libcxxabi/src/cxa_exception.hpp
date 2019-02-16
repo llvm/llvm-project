@@ -24,6 +24,10 @@ static const uint64_t kOurExceptionClass          = 0x434C4E47432B2B00; // CLNGC
 static const uint64_t kOurDependentExceptionClass = 0x434C4E47432B2B01; // CLNGC++\1
 static const uint64_t get_vendor_and_language     = 0xFFFFFFFFFFFFFF00; // mask for CLNGC++
 
+uint64_t __getExceptionClass  (const _Unwind_Exception*);
+void     __setExceptionClass  (      _Unwind_Exception*, uint64_t);
+bool     __isOurExceptionClass(const _Unwind_Exception*);
+
 struct _LIBCXXABI_HIDDEN __cxa_exception {
 #if defined(__LP64__) || defined(_LIBCXXABI_ARM_EHABI)
     // This is a new field to support C++ 0x exception_ptr.

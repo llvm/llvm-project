@@ -17,7 +17,7 @@ FUZZER_FLAG_INT(runs, -1,
 FUZZER_FLAG_INT(max_len, 0, "Maximum length of the test input. "
     "If 0, libFuzzer tries to guess a good value based on the corpus "
     "and reports it. ")
-FUZZER_FLAG_INT(len_control, 1000, "Try generating small inputs first, "
+FUZZER_FLAG_INT(len_control, 100, "Try generating small inputs first, "
   "then try larger inputs over time.  Specifies the rate at which the length "
   "limit is increased (smaller == faster).  If 0, immediately try inputs with "
   "size up to max_len.")
@@ -162,4 +162,3 @@ FUZZER_DEPRECATED_FLAG(use_equivalence_server)
 FUZZER_FLAG_INT(analyze_dict, 0, "Experimental")
 FUZZER_DEPRECATED_FLAG(use_clang_coverage)
 FUZZER_FLAG_STRING(data_flow_trace, "Experimental: use the data flow trace")
-FUZZER_FLAG_INT(print_mutation_stats, 0, "Experimental")

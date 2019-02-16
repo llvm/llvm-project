@@ -31,7 +31,7 @@ template <class T> T unwrapOrError(Expected<T> EO) {
     return *EO;
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(EO.takeError(), OS, "");
+  logAllUnhandledErrors(EO.takeError(), OS);
   OS.flush();
   error(Buf);
 }

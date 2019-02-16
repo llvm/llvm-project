@@ -88,18 +88,23 @@ while_end:
 }
 
 declare %struct_type* @foo()
+declare void @foo2()
 
 define void @test4(i32 %n) personality i32 (...)* @__FrameHandler {
 ; CHECK-LABEL: test4
 entry:
-  %struct = invoke %struct_type* @foo() to label %while_cond unwind label %cleanup
+  br label %while_cond
 
 while_cond:
   %phi = phi i32 [ 0, %entry ], [ %i, %while_body ]
+  %struct = invoke %struct_type* @foo() to label %while_cond_x unwind label %cleanup
+
+while_cond_x:
 ; CHECK:     mov     w{{[0-9]+}}, #40000
 ; CHECK-NOT: mov     w{{[0-9]+}}, #40004
   %gep0 = getelementptr %struct_type, %struct_type* %struct, i64 0, i32 1
   %gep1 = getelementptr %struct_type, %struct_type* %struct, i64 0, i32 2
+  store i32 0, i32* %gep0
   %cmp = icmp slt i32 %phi, %n
   br i1 %cmp, label %while_body, label %while_end
 
@@ -114,8 +119,10 @@ while_end:
   ret void
 
 cleanup:
-  landingpad { i8*, i32 } cleanup
-  unreachable
+  %x10 = landingpad { i8*, i32 }
+          cleanup
+  call void @foo2()
+  resume { i8*, i32 } %x10
 }
 
 declare i32 @__FrameHandler(...)
@@ -145,3 +152,31 @@ while_body:
 while_end:
   ret void
 }
+
+declare i8* @llvm.strip.invariant.group.p0i8(i8*)
+
+define void @test_invariant_group(i32) {
+; CHECK-LABEL: test_invariant_group
+  br i1 undef, label %8, label %7
+
+; <label>:2:                                      ; preds = %8, %2
+  br i1 undef, label %2, label %7
+
+; <label>:3:                                      ; preds = %8
+  %4 = getelementptr inbounds i8, i8* %9, i32 40000
+  %5 = bitcast i8* %4 to i64*
+  br i1 undef, label %7, label %6
+
+; <label>:6:                                      ; preds = %3
+  store i64 1, i64* %5, align 8
+  br label %7
+
+; <label>:7:                                      ; preds = %6, %3, %2, %1
+  ret void
+
+; <label>:8:                                      ; preds = %1
+  %9 = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull undef)
+  %10 = icmp eq i32 %0, 0
+  br i1 %10, label %3, label %2
+}
+

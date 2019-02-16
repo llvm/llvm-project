@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test that basic memory operations assemble as expected with 32-bit addresses.
 
@@ -13,7 +13,7 @@ declare i32 @llvm.wasm.current.memory.i32() nounwind readonly
 declare i32 @llvm.wasm.grow.memory.i32(i32) nounwind
 
 ; CHECK-LABEL: memory_size:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype memory_size () -> (i32){{$}}
 ; CHECK-NEXT: memory.size $push0=, 0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @memory_size() {
@@ -22,8 +22,7 @@ define i32 @memory_size() {
 }
 
 ; CHECK-LABEL: memory_grow:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype memory_grow (i32) -> (i32){{$}}
 ; CHECK: memory.grow $push0=, 0, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @memory_grow(i32 %n) {
@@ -32,7 +31,7 @@ define i32 @memory_grow(i32 %n) {
 }
 
 ; CHECK-LABEL: mem_size:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype mem_size () -> (i32){{$}}
 ; CHECK-NEXT: mem.size $push0=, 0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @mem_size() {
@@ -41,8 +40,7 @@ define i32 @mem_size() {
 }
 
 ; CHECK-LABEL: mem_grow:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype mem_grow (i32) -> (i32){{$}}
 ; CHECK: mem.grow $push0=, 0, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @mem_grow(i32 %n) {
@@ -51,7 +49,7 @@ define i32 @mem_grow(i32 %n) {
 }
 
 ; CHECK-LABEL: current_memory:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype current_memory () -> (i32){{$}}
 ; CHECK-NEXT: current_memory $push0={{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @current_memory() {
@@ -60,8 +58,7 @@ define i32 @current_memory() {
 }
 
 ; CHECK-LABEL: grow_memory:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype grow_memory (i32) -> (i32){{$}}
 ; CHECK: grow_memory $push0=, $0{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @grow_memory(i32 %n) {

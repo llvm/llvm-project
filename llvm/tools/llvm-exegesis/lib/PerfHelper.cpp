@@ -17,6 +17,7 @@
 #endif
 #include <cassert>
 
+namespace llvm {
 namespace exegesis {
 namespace pfm {
 
@@ -136,3 +137,4 @@ int64_t Counter::read() const { return 42; }
 
 } // namespace pfm
 } // namespace exegesis
+} // namespace llvm

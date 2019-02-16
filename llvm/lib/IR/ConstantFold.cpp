@@ -27,6 +27,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -916,13 +917,14 @@ Constant *llvm::ConstantFoldInsertValueInstruction(Constant *Agg,
   return ConstantVector::get(Result);
 }
 
-
-Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
-                                              Constant *C1, Constant *C2) {
+Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
+                                              Constant *C2) {
   assert(Instruction::isBinaryOp(Opcode) && "Non-binary instruction detected");
 
-  // Handle UndefValue up front.
-  if (isa<UndefValue>(C1) || isa<UndefValue>(C2)) {
+  // Handle scalar UndefValue. Vectors are always evaluated per element.
+  bool HasScalarUndef = !C1->getType()->isVectorTy() &&
+                        (isa<UndefValue>(C1) || isa<UndefValue>(C2));
+  if (HasScalarUndef) {
     switch (static_cast<Instruction::BinaryOps>(Opcode)) {
     case Instruction::Xor:
       if (isa<UndefValue>(C1) && isa<UndefValue>(C2))
@@ -1024,9 +1026,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
     }
   }
 
-  // At this point neither constant should be an UndefValue.
-  assert(!isa<UndefValue>(C1) && !isa<UndefValue>(C2) &&
-         "Unexpected UndefValue");
+  // Neither constant should be UndefValue, unless these are vector constants.
+  assert(!HasScalarUndef && "Unexpected UndefValue");
 
   // Handle simplifications when the RHS is a constant int.
   if (ConstantInt *CI2 = dyn_cast<ConstantInt>(C2)) {
@@ -1077,10 +1078,10 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
-          // Functions are at least 4-byte aligned.
-          unsigned GVAlign = GV->getAlignment();
-          if (isa<Function>(GV))
-            GVAlign = std::max(GVAlign, 4U);
+          unsigned GVAlign =
+              GV->getParent()
+                  ? GV->getPointerAlignment(GV->getParent()->getDataLayout())
+                  : 0;
 
           if (GVAlign > 1) {
             unsigned DstWidth = CI2->getType()->getBitWidth();
@@ -1218,7 +1219,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       }
     }
   } else if (VectorType *VTy = dyn_cast<VectorType>(C1->getType())) {
-    // Perform elementwise folding.
+    // Fold each element and create a vector constant from those constants.
     SmallVector<Constant*, 16> Result;
     Type *Ty = IntegerType::get(VTy->getContext(), 32);
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
@@ -2052,7 +2053,7 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
 static bool isIndexInRangeOfArrayType(uint64_t NumElements,
                                       const ConstantInt *CI) {
   // We cannot bounds check the index if it doesn't fit in an int64_t.
-  if (CI->getValue().getActiveBits() > 64)
+  if (CI->getValue().getMinSignedBits() > 64)
     return false;
 
   // A negative index or an index past the end of our sequential type is

@@ -67,42 +67,44 @@
 # CHECK: c %r4, 136(%r3)
 # CHECK: jge [[LABEL]]
 
+from __future__ import print_function
+
 branch_blocks = 10
 main_size = 0xffd8
 
-print '@global = global i32 0'
+print('@global = global i32 0')
 
-print 'define void @f1(i8 *%base, i32 *%stop, i32 %limit) {'
-print 'entry:'
-print '  br label %before0'
-print ''
+print('define void @f1(i8 *%base, i32 *%stop, i32 %limit) {')
+print('entry:')
+print('  br label %before0')
+print('')
 
-for i in xrange(branch_blocks):
+for i in range(branch_blocks):
     next = 'before%d' % (i + 1) if i + 1 < branch_blocks else 'main'
-    print 'before%d:' % i
-    print '  %%bstop%d = getelementptr i32, i32 *%%stop, i64 %d' % (i, i)
-    print '  %%bcur%d = load i32 , i32 *%%bstop%d' % (i, i)
-    print '  %%btest%d = icmp eq i32 %%limit, %%bcur%d' % (i, i)
-    print '  br i1 %%btest%d, label %%after0, label %%%s' % (i, next)
-    print ''
+    print('before%d:' % i)
+    print('  %%bstop%d = getelementptr i32, i32 *%%stop, i64 %d' % (i, i))
+    print('  %%bcur%d = load i32 , i32 *%%bstop%d' % (i, i))
+    print('  %%btest%d = icmp eq i32 %%limit, %%bcur%d' % (i, i))
+    print('  br i1 %%btest%d, label %%after0, label %%%s' % (i, next))
+    print('')
 
-print '%s:' % next
+print('%s:' % next)
 a, b = 1, 1
-for i in xrange(0, main_size, 6):
+for i in range(0, main_size, 6):
     a, b = b, a + b
     offset = 4096 + b % 500000
     value = a % 256
-    print '  %%ptr%d = getelementptr i8, i8 *%%base, i64 %d' % (i, offset)
-    print '  store volatile i8 %d, i8 *%%ptr%d' % (value, i)
+    print('  %%ptr%d = getelementptr i8, i8 *%%base, i64 %d' % (i, offset))
+    print('  store volatile i8 %d, i8 *%%ptr%d' % (value, i))
 
-for i in xrange(branch_blocks):
-    print '  %%astop%d = getelementptr i32, i32 *%%stop, i64 %d' % (i, i + 25)
-    print '  %%acur%d = load i32 , i32 *%%astop%d' % (i, i)
-    print '  %%atest%d = icmp eq i32 %%limit, %%acur%d' % (i, i)
-    print '  br i1 %%atest%d, label %%main, label %%after%d' % (i, i)
-    print ''
-    print 'after%d:' % i
+for i in range(branch_blocks):
+    print('  %%astop%d = getelementptr i32, i32 *%%stop, i64 %d' % (i, i + 25))
+    print('  %%acur%d = load i32 , i32 *%%astop%d' % (i, i))
+    print('  %%atest%d = icmp eq i32 %%limit, %%acur%d' % (i, i))
+    print('  br i1 %%atest%d, label %%main, label %%after%d' % (i, i))
+    print('')
+    print('after%d:' % i)
 
-print '  %dummy = load volatile i32, i32 *@global'
-print '  ret void'
-print '}'
+print('  %dummy = load volatile i32, i32 *@global')
+print('  ret void')
+print('}')

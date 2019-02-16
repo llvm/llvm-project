@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin9 -regalloc=fast -optimize-regalloc=0 -relocation-model=pic
+; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -regalloc=fast -optimize-regalloc=0 -relocation-model=pic | FileCheck %s
 
 	%struct.NSError = type opaque
 	%struct.NSManagedObjectContext = type opaque
@@ -11,6 +11,11 @@
 @"\01L_OBJC_MESSAGE_REF_6" = external global %struct._message_ref_t		; <%struct._message_ref_t*> [#uses=2]
 @NSXMLStoreType = external constant %struct.NSString*		; <%struct.NSString**> [#uses=1]
 @"\01L_OBJC_MESSAGE_REF_4" = external global %struct._message_ref_t		; <%struct._message_ref_t*> [#uses=2]
+
+; TODO: KB: ORiginal test case was just checking it compiles; is this worth keeping?
+; CHECK: managedObjectContextWithModelURL
+; CHECK-NOT: blr
+; CHECK: .cfi_endproc
 
 define %struct.NSManagedObjectContext* @"+[ListGenerator(Private) managedObjectContextWithModelURL:storeURL:]"(%struct.objc_object* %self, %struct._message_ref_t* %_cmd, %struct.NSURL* %modelURL, %struct.NSURL* %storeURL) {
 entry:

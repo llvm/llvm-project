@@ -28,16 +28,16 @@ namespace clang {
 namespace doc {
 namespace serialize {
 
-std::string emitInfo(const NamespaceDecl *D, const FullComment *FC,
-                     int LineNumber, StringRef File, bool PublicOnly);
-std::string emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
-                     StringRef File, bool PublicOnly);
-std::string emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
-                     StringRef File, bool PublicOnly);
-std::string emitInfo(const FunctionDecl *D, const FullComment *FC,
-                     int LineNumber, StringRef File, bool PublicOnly);
-std::string emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-                     int LineNumber, StringRef File, bool PublicOnly);
+std::unique_ptr<Info> emitInfo(const NamespaceDecl *D, const FullComment *FC,
+                               int LineNumber, StringRef File, bool PublicOnly);
+std::unique_ptr<Info> emitInfo(const RecordDecl *D, const FullComment *FC,
+                               int LineNumber, StringRef File, bool PublicOnly);
+std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
+                               int LineNumber, StringRef File, bool PublicOnly);
+std::unique_ptr<Info> emitInfo(const FunctionDecl *D, const FullComment *FC,
+                               int LineNumber, StringRef File, bool PublicOnly);
+std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
+                               int LineNumber, StringRef File, bool PublicOnly);
 
 // Function to hash a given USR value for storage.
 // As USRs (Unified Symbol Resolution) could be large, especially for functions
@@ -45,6 +45,8 @@ std::string emitInfo(const CXXMethodDecl *D, const FullComment *FC,
 // guarantee the uniqueness of symbols while using a relatively small amount of
 // memory (vs storing USRs directly).
 SymbolID hashUSR(llvm::StringRef USR);
+
+std::string serialize(std::unique_ptr<Info> &I);
 
 } // namespace serialize
 } // namespace doc

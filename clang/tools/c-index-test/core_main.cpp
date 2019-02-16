@@ -31,18 +31,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/PrettyStackTrace.h"
-
-#define HAVE_CORESERVICES 0
-
-#if defined(__has_include)
-#if __has_include(<CoreServices/CoreServices.h>)
-
-#include <CoreServices/CoreServices.h>
-#undef HAVE_CORESERVICES
-#define HAVE_CORESERVICES 1
-
-#endif
-#endif
+#include <thread>
 
 using namespace clang;
 using namespace clang::index;
@@ -797,11 +786,10 @@ static int watchDirectory(StringRef dirPath) {
     errs() << "failed creating directory watcher: " << Error << '\n';
     return 1;
   }
-#if HAVE_CORESERVICES
-  dispatch_main();
-#else
-  return 1;
-#endif
+
+  while(1) {
+    std::this_thread::yield();
+  }
 }
 
 //===----------------------------------------------------------------------===//

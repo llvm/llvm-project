@@ -1,0 +1,39 @@
+executable("opt") {
+  deps = [
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/Bitcode/Writer",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Passes",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Transforms/AggressiveInstCombine",
+    "//llvm/lib/Transforms/Coroutines",
+    "//llvm/lib/Transforms/IPO",
+    "//llvm/lib/Transforms/Instrumentation",
+    "//llvm/lib/Transforms/ObjCARC",
+    "//llvm/lib/Transforms/Scalar",
+    "//llvm/lib/Transforms/Utils",
+    "//llvm/lib/Transforms/Vectorize",
+  ]
+  sources = [
+    "AnalysisWrappers.cpp",
+    "BreakpointPrinter.cpp",
+    "Debugify.cpp",
+    "GraphPrinters.cpp",
+    "NewPMDriver.cpp",
+    "PassPrinters.cpp",
+    "PrintSCC.cpp",
+    "opt.cpp",
+  ]
+
+  # Support plugins.
+  # FIXME: Disable dead stripping once other binaries are dead-stripped.
+  if (host_os == "linux") {
+    # Corresponds to export_executable_symbols() in cmake.
+    ldflags = [ "-rdynamic" ]
+  }
+}

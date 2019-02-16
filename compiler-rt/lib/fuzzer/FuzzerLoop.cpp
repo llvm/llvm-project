@@ -275,7 +275,8 @@ NO_SANITIZE_MEMORY
 void Fuzzer::AlarmCallback() {
   assert(Options.UnitTimeoutSec > 0);
   // In Windows Alarm callback is executed by a different thread.
-#if !LIBFUZZER_WINDOWS
+  // NetBSD's current behavior needs this change too.
+#if !LIBFUZZER_WINDOWS && !LIBFUZZER_NETBSD
   if (!InFuzzingThread())
     return;
 #endif
@@ -360,7 +361,6 @@ void Fuzzer::PrintFinalStats() {
     TPC.DumpCoverage();
   if (Options.PrintCorpusStats)
     Corpus.PrintStats();
-  if (Options.PrintMutationStats) MD.PrintMutationStats();
   if (!Options.PrintFinalStats)
     return;
   size_t ExecPerSec = execPerSec();
@@ -465,16 +465,11 @@ void Fuzzer::CheckForUnstableCounters(const uint8_t *Data, size_t Size) {
 
   // First Rerun
   CBSetupAndRun();
-  TPC.UpdateUnstableCounters(Options.HandleUnstable);
-
-  // Second Rerun
-  CBSetupAndRun();
-  TPC.UpdateUnstableCounters(Options.HandleUnstable);
-
-  // Move minimum hit counts back to ModuleInline8bitCounters
-  if (Options.HandleUnstable == TracePC::MinUnstable ||
-      Options.HandleUnstable == TracePC::ZeroUnstable)
-    TPC.ApplyUnstableCounters();
+  if (TPC.UpdateUnstableCounters(Options.HandleUnstable)) {
+    // Second Rerun
+    CBSetupAndRun();
+    TPC.UpdateAndApplyUnstableCounters(Options.HandleUnstable);
+  }
 }
 
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,

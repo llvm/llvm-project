@@ -19,5 +19,5 @@ body: |
   bb.0:
     liveins: $eax
     $ebx = COPY $eax
-    DBG_VALUE debug-use $ebx, debug-use _, !1, !1
+    DBG_VALUE $ebx, _, !1, !1
 ...

@@ -32,4 +32,4 @@ id MMM()
   return 0;
 }
 
-// CHECK-NOT: call i8* @objc_retainAutoreleasedReturnValue
+// CHECK-NOT: call i8* @llvm.objc.retainAutoreleasedReturnValue

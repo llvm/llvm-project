@@ -10,86 +10,107 @@
 ; CHECK: void __cdecl foo(double)
 
 ?foo_pad@@YAXPAD@Z
+; CHECK: void __cdecl foo_pad(char *)
 ?foo_pad@@YAXPEAD@Z
 ; CHECK: void __cdecl foo_pad(char *)
 
 ?foo_pbd@@YAXPBD@Z
+; CHECK: void __cdecl foo_pbd(char const *)
 ?foo_pbd@@YAXPEBD@Z
 ; CHECK: void __cdecl foo_pbd(char const *)
 
 ?foo_pcd@@YAXPCD@Z
+; CHECK: void __cdecl foo_pcd(char volatile *)
 ?foo_pcd@@YAXPECD@Z
 ; CHECK: void __cdecl foo_pcd(char volatile *)
 
 ?foo_qad@@YAXQAD@Z
+; CHECK: void __cdecl foo_qad(char *const)
 ?foo_qad@@YAXQEAD@Z
 ; CHECK: void __cdecl foo_qad(char *const)
 
 ?foo_rad@@YAXRAD@Z
+; CHECK: void __cdecl foo_rad(char *volatile)
 ?foo_rad@@YAXREAD@Z
 ; CHECK: void __cdecl foo_rad(char *volatile)
 
 ?foo_sad@@YAXSAD@Z
+; CHECK: void __cdecl foo_sad(char *const volatile)
 ?foo_sad@@YAXSEAD@Z
 ; CHECK: void __cdecl foo_sad(char *const volatile)
 
 ?foo_piad@@YAXPIAD@Z
+; CHECK: void __cdecl foo_piad(char *__restrict)
 ?foo_piad@@YAXPEIAD@Z
 ; CHECK: void __cdecl foo_piad(char *__restrict)
 
 ?foo_qiad@@YAXQIAD@Z
+; CHECK: void __cdecl foo_qiad(char *const __restrict)
 ?foo_qiad@@YAXQEIAD@Z
 ; CHECK: void __cdecl foo_qiad(char *const __restrict)
 
 ?foo_riad@@YAXRIAD@Z
+; CHECK: void __cdecl foo_riad(char *volatile __restrict)
 ?foo_riad@@YAXREIAD@Z
 ; CHECK: void __cdecl foo_riad(char *volatile __restrict)
 
 ?foo_siad@@YAXSIAD@Z
+; CHECK: void __cdecl foo_siad(char *const volatile __restrict)
 ?foo_siad@@YAXSEIAD@Z
 ; CHECK: void __cdecl foo_siad(char *const volatile __restrict)
 
 ?foo_papad@@YAXPAPAD@Z
+; CHECK: void __cdecl foo_papad(char **)
 ?foo_papad@@YAXPEAPEAD@Z
 ; CHECK: void __cdecl foo_papad(char **)
 
 ?foo_papbd@@YAXPAPBD@Z
+; CHECK: void __cdecl foo_papbd(char const **)
 ?foo_papbd@@YAXPEAPEBD@Z
 ; CHECK: void __cdecl foo_papbd(char const **)
 
 ?foo_papcd@@YAXPAPCD@Z
+; CHECK: void __cdecl foo_papcd(char volatile **)
 ?foo_papcd@@YAXPEAPECD@Z
 ; CHECK: void __cdecl foo_papcd(char volatile **)
 
 ?foo_pbqad@@YAXPBQAD@Z
+; CHECK: void __cdecl foo_pbqad(char *const *)
 ?foo_pbqad@@YAXPEBQEAD@Z
 ; CHECK: void __cdecl foo_pbqad(char *const *)
 
 ?foo_pcrad@@YAXPCRAD@Z
+; CHECK: void __cdecl foo_pcrad(char *volatile *)
 ?foo_pcrad@@YAXPECREAD@Z
 ; CHECK: void __cdecl foo_pcrad(char *volatile *)
 
 ?foo_qapad@@YAXQAPAD@Z
+; CHECK: void __cdecl foo_qapad(char **const)
 ?foo_qapad@@YAXQEAPEAD@Z
 ; CHECK: void __cdecl foo_qapad(char **const)
 
 ?foo_rapad@@YAXRAPAD@Z
+; CHECK: void __cdecl foo_rapad(char **volatile)
 ?foo_rapad@@YAXREAPEAD@Z
 ; CHECK: void __cdecl foo_rapad(char **volatile)
 
 ?foo_pbqbd@@YAXPBQBD@Z
+; CHECK: void __cdecl foo_pbqbd(char const *const *)
 ?foo_pbqbd@@YAXPEBQEBD@Z
 ; CHECK: void __cdecl foo_pbqbd(char const *const *)
 
 ?foo_pbqcd@@YAXPBQCD@Z
+; CHECK: void __cdecl foo_pbqcd(char volatile *const *)
 ?foo_pbqcd@@YAXPEBQECD@Z
 ; CHECK: void __cdecl foo_pbqcd(char volatile *const *)
 
 ?foo_pcrbd@@YAXPCRBD@Z
+; CHECK: void __cdecl foo_pcrbd(char const *volatile *)
 ?foo_pcrbd@@YAXPECREBD@Z
 ; CHECK: void __cdecl foo_pcrbd(char const *volatile *)
 
 ?foo_pcrcd@@YAXPCRCD@Z
+; CHECK: void __cdecl foo_pcrcd(char volatile *volatile *)
 ?foo_pcrcd@@YAXPECRECD@Z
 ; CHECK: void __cdecl foo_pcrcd(char volatile *volatile *)
 
@@ -98,151 +119,183 @@
 ; CHECK: void __cdecl foo_aad(char &)
 
 ?foo_abd@@YAXABD@Z
+; CHECK: void __cdecl foo_abd(char const &)
 ?foo_abd@@YAXAEBD@Z
 ; CHECK: void __cdecl foo_abd(char const &)
 
 ?foo_aapad@@YAXAAPAD@Z
+; CHECK: void __cdecl foo_aapad(char *&)
 ?foo_aapad@@YAXAEAPEAD@Z
 ; CHECK: void __cdecl foo_aapad(char *&)
 
 ?foo_aapbd@@YAXAAPBD@Z
+; CHECK: void __cdecl foo_aapbd(char const *&)
 ?foo_aapbd@@YAXAEAPEBD@Z
 ; CHECK: void __cdecl foo_aapbd(char const *&)
 
 ?foo_abqad@@YAXABQAD@Z
+; CHECK: void __cdecl foo_abqad(char *const &)
 ?foo_abqad@@YAXAEBQEAD@Z
 ; CHECK: void __cdecl foo_abqad(char *const &)
 
 ?foo_abqbd@@YAXABQBD@Z
+; CHECK: void __cdecl foo_abqbd(char const *const &)
 ?foo_abqbd@@YAXAEBQEBD@Z
 ; CHECK: void __cdecl foo_abqbd(char const *const &)
 
 ?foo_aay144h@@YAXAAY144H@Z
+; CHECK: void __cdecl foo_aay144h(int (&)[5][5])
 ?foo_aay144h@@YAXAEAY144H@Z
 ; CHECK: void __cdecl foo_aay144h(int (&)[5][5])
 
 ?foo_aay144cbh@@YAXAAY144$$CBH@Z
+; CHECK: void __cdecl foo_aay144cbh(int const (&)[5][5])
 ?foo_aay144cbh@@YAXAEAY144$$CBH@Z
 ; CHECK: void __cdecl foo_aay144cbh(int const (&)[5][5])
 
-; FIXME: We don't support rvalue references yet
-; ?foo_qay144h@@YAX$$QAY144H@Z
-; ?foo_qay144h@@YAX$$QEAY144H@Z
-; FIXME: void __cdecl foo_qay144h(int (&&)[5][5])
+?foo_qay144h@@YAX$$QAY144H@Z
+; CHECK: void __cdecl foo_qay144h(int (&&)[5][5])
+?foo_qay144h@@YAX$$QEAY144H@Z
+; CHECK: void __cdecl foo_qay144h(int (&&)[5][5])
 
-; FIXME: We don't support rvalue references yet
-; ?foo_qay144cbh@@YAX$$QAY144$$CBH@Z
-; ?foo_qay144cbh@@YAX$$QEAY144$$CBH@Z
-; FIXME: void __cdecl foo_qay144cbh(int const (&&)[5][5])
+?foo_qay144cbh@@YAX$$QAY144$$CBH@Z
+; CHECK: void __cdecl foo_qay144cbh(int const (&&)[5][5])
+?foo_qay144cbh@@YAX$$QEAY144$$CBH@Z
+; CHECK: void __cdecl foo_qay144cbh(int const (&&)[5][5])
 
 ?foo_p6ahxz@@YAXP6AHXZ@Z
+; CHECK: void __cdecl foo_p6ahxz(int (__cdecl *)(void))
 ?foo_p6ahxz@@YAXP6AHXZ@Z
 ; CHECK: void __cdecl foo_p6ahxz(int (__cdecl *)(void))
 
 ?foo_a6ahxz@@YAXA6AHXZ@Z
+; CHECK: void __cdecl foo_a6ahxz(int (__cdecl &)(void))
 ?foo_a6ahxz@@YAXA6AHXZ@Z
 ; CHECK: void __cdecl foo_a6ahxz(int (__cdecl &)(void))
 
-; FIXME: We don't support rvalue references yet
-; ?foo_q6ahxz@@YAX$$Q6AHXZ@Z
-; ?foo_q6ahxz@@YAX$$Q6AHXZ@Z
-; FIXME: void __cdecl foo_q6ahxz(int (__cdecl &&)(void))
+?foo_q6ahxz@@YAX$$Q6AHXZ@Z
+; CHECK: void __cdecl foo_q6ahxz(int (__cdecl &&)(void))
+?foo_q6ahxz@@YAX$$Q6AHXZ@Z
+; CHECK: void __cdecl foo_q6ahxz(int (__cdecl &&)(void))
 
 ?foo_qay04h@@YAXQAY04H@Z
 ?foo_qay04h@@YAXQEAY04H@Z
 ; CHECK: void __cdecl foo_qay04h(int (*const)[5])
 
 ?foo_qay04cbh@@YAXQAY04$$CBH@Z
+; CHECK: void __cdecl foo_qay04cbh(int const (*const)[5])
 ?foo_qay04cbh@@YAXQEAY04$$CBH@Z
 ; CHECK: void __cdecl foo_qay04cbh(int const (*const)[5])
 
 ?foo@@YAXPAY02N@Z
+; CHECK: void __cdecl foo(double (*)[3])
 ?foo@@YAXPEAY02N@Z
 ; CHECK: void __cdecl foo(double (*)[3])
 
 ?foo@@YAXQAN@Z
+; CHECK: void __cdecl foo(double *const)
 ?foo@@YAXQEAN@Z
 ; CHECK: void __cdecl foo(double *const)
 
 ?foo_const@@YAXQBN@Z
+; CHECK: void __cdecl foo_const(double const *const)
 ?foo_const@@YAXQEBN@Z
 ; CHECK: void __cdecl foo_const(double const *const)
 
 ?foo_volatile@@YAXQCN@Z
+; CHECK: void __cdecl foo_volatile(double volatile *const)
 ?foo_volatile@@YAXQECN@Z
 ; CHECK: void __cdecl foo_volatile(double volatile *const)
 
 ?foo@@YAXPAY02NQBNN@Z
+; CHECK: void __cdecl foo(double (*)[3], double const *const, double)
 ?foo@@YAXPEAY02NQEBNN@Z
 ; CHECK: void __cdecl foo(double (*)[3], double const *const, double)
 
 ?foo_fnptrconst@@YAXP6AXQAH@Z@Z
+; CHECK: void __cdecl foo_fnptrconst(void (__cdecl *)(int *const))
 ?foo_fnptrconst@@YAXP6AXQEAH@Z@Z
 ; CHECK: void __cdecl foo_fnptrconst(void (__cdecl *)(int *const))
 
 ?foo_fnptrarray@@YAXP6AXQAH@Z@Z
+; CHECK: void __cdecl foo_fnptrarray(void (__cdecl *)(int *const))
 ?foo_fnptrarray@@YAXP6AXQEAH@Z@Z
 ; CHECK: void __cdecl foo_fnptrarray(void (__cdecl *)(int *const))
 
-; ?foo_fnptrbackref1@@YAXP6AXQAH@Z1@Z
-; ?foo_fnptrbackref1@@YAXP6AXQEAH@Z1@Z
-; FIXME: void __cdecl foo_fnptrbackref1(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
+?foo_fnptrbackref1@@YAXP6AXQAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref1(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
+?foo_fnptrbackref1@@YAXP6AXQEAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref1(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
 
-; ?foo_fnptrbackref2@@YAXP6AXQAH@Z1@Z
-; ?foo_fnptrbackref2@@YAXP6AXQEAH@Z1@Z
-; FIXME: void __cdecl foo_fnptrbackref2(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
+?foo_fnptrbackref2@@YAXP6AXQAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref2(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
+?foo_fnptrbackref2@@YAXP6AXQEAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref2(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
 
-; ?foo_fnptrbackref3@@YAXP6AXQAH@Z1@Z
-; ?foo_fnptrbackref3@@YAXP6AXQEAH@Z1@Z
-; FIXME: void __cdecl foo_fnptrbackref3(void (*)(int *const), void (*)(int *))
+?foo_fnptrbackref3@@YAXP6AXQAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref3(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
+?foo_fnptrbackref3@@YAXP6AXQEAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref3(void (__cdecl *)(int *const), void (__cdecl *)(int *const))
 
-; ?foo_fnptrbackref4@@YAXP6AXPAH@Z1@Z
-; ?foo_fnptrbackref4@@YAXP6AXPEAH@Z1@Z
-; FIXME: void __cdecl foo_fnptrbackref4(void (*)(int *), void (*)(int *const))
+?foo_fnptrbackref4@@YAXP6AXPAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref4(void (__cdecl *)(int *), void (__cdecl *)(int *))
+?foo_fnptrbackref4@@YAXP6AXPEAH@Z1@Z
+; CHECK: void __cdecl foo_fnptrbackref4(void (__cdecl *)(int *), void (__cdecl *)(int *))
 
 ?ret_fnptrarray@@YAP6AXQAH@ZXZ
+; CHECK: void (__cdecl * __cdecl ret_fnptrarray(void))(int *const)
 ?ret_fnptrarray@@YAP6AXQEAH@ZXZ
 ; CHECK: void (__cdecl * __cdecl ret_fnptrarray(void))(int *const)
 
 ; The first argument gets mangled as-if it were written int *const
 ; The second arg should not form a backref because it isn't qualified
 ?mangle_no_backref0@@YAXQAHPAH@Z
+; CHECK: void __cdecl mangle_no_backref0(int *const, int *)
 ?mangle_no_backref0@@YAXQEAHPEAH@Z
 ; CHECK: void __cdecl mangle_no_backref0(int *const, int *)
 
 ?mangle_no_backref1@@YAXQAHQAH@Z
+; CHECK: void __cdecl mangle_no_backref1(int *const, int *const)
 ?mangle_no_backref1@@YAXQEAHQEAH@Z
 ; CHECK: void __cdecl mangle_no_backref1(int *const, int *const)
 
 ; Pointer to function types don't backref with function types
 ?mangle_no_backref2@@YAXP6AXXZP6AXXZ@Z
+; CHECK: void __cdecl mangle_no_backref2(void (__cdecl *)(void), void (__cdecl *)(void))
 ?mangle_no_backref2@@YAXP6AXXZP6AXXZ@Z
 ; CHECK: void __cdecl mangle_no_backref2(void (__cdecl *)(void), void (__cdecl *)(void))
 
 ?mangle_yes_backref0@@YAXQAH0@Z
+; CHECK: void __cdecl mangle_yes_backref0(int *const, int *const)
 ?mangle_yes_backref0@@YAXQEAH0@Z
 ; CHECK: void __cdecl mangle_yes_backref0(int *const, int *const)
 
 ?mangle_yes_backref1@@YAXQAH0@Z
+; CHECK: void __cdecl mangle_yes_backref1(int *const, int *const)
 ?mangle_yes_backref1@@YAXQEAH0@Z
 ; CHECK: void __cdecl mangle_yes_backref1(int *const, int *const)
 
 ?mangle_yes_backref2@@YAXQBQ6AXXZ0@Z
+; CHECK: void __cdecl mangle_yes_backref2(void (__cdecl *const *const)(void), void (__cdecl *const *const)(void))
 ?mangle_yes_backref2@@YAXQEBQ6AXXZ0@Z
 ; CHECK: void __cdecl mangle_yes_backref2(void (__cdecl *const *const)(void), void (__cdecl *const *const)(void))
 
 ?mangle_yes_backref3@@YAXQAP6AXXZ0@Z
+; CHECK: void __cdecl mangle_yes_backref3(void (__cdecl **const)(void), void (__cdecl **const)(void))
 ?mangle_yes_backref3@@YAXQEAP6AXXZ0@Z
 ; CHECK: void __cdecl mangle_yes_backref3(void (__cdecl **const)(void), void (__cdecl **const)(void))
 
 ?mangle_yes_backref4@@YAXQIAH0@Z
+; CHECK: void __cdecl mangle_yes_backref4(int *const __restrict, int *const __restrict)
 ?mangle_yes_backref4@@YAXQEIAH0@Z
 ; CHECK: void __cdecl mangle_yes_backref4(int *const __restrict, int *const __restrict)
 
 ?pr23325@@YAXQBUS@@0@Z
+; CHECK: void __cdecl pr23325(struct S const *const, struct S const *const)
 ?pr23325@@YAXQEBUS@@0@Z
 ; CHECK: void __cdecl pr23325(struct S const *const, struct S const *const)
 
 ; ?vla_arg@@YAXHQAY0A@H@Z
+; FIXME: void __cdecl vla_arg(int i, int (*const)[0])
 ; ?vla_arg@@YAXHQEAY0A@H@Z
 ; FIXME: void __cdecl vla_arg(int i, int (*const)[0])

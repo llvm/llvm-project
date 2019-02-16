@@ -440,7 +440,7 @@ bool polly::isErrorBlock(BasicBlock &BB, const Region &R, LoopInfo &LI,
   return false;
 }
 
-Value *polly::getConditionFromTerminator(TerminatorInst *TI) {
+Value *polly::getConditionFromTerminator(Instruction *TI) {
   if (BranchInst *BR = dyn_cast<BranchInst>(TI)) {
     if (BR->isUnconditional())
       return ConstantInt::getTrue(Type::getInt1Ty(TI->getContext()));

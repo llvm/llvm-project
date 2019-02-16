@@ -73,8 +73,8 @@ void NoMallocCheck::check(const MatchFinder::MatchResult &Result) {
 
   assert(Call && "Unhandled binding in the Matcher");
 
-  diag(Call->getLocStart(), "do not manage memory manually; %0")
-      << Recommendation << SourceRange(Call->getLocStart(), Call->getLocEnd());
+  diag(Call->getBeginLoc(), "do not manage memory manually; %0")
+      << Recommendation << SourceRange(Call->getBeginLoc(), Call->getEndLoc());
 }
 
 } // namespace cppcoreguidelines

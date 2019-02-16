@@ -134,7 +134,7 @@ operator delete[] (void* ptr, size_t) _NOEXCEPT
     ::operator delete[](ptr);
 }
 
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+#if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
 
 _LIBCXXABI_WEAK
 void *
@@ -260,4 +260,4 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) _NOEXCEPT
     ::operator delete[](ptr, alignment);
 }
 
-#endif // !_LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#endif // !_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION

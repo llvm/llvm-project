@@ -27,7 +27,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -206,4 +206,8 @@ void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
 
 void ento::registerAutoreleaseWriteChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCAutoreleaseWriteChecker>();
+}
+
+bool ento::shouldRegisterAutoreleaseWriteChecker(const LangOptions &LO) {
+  return true;
 }

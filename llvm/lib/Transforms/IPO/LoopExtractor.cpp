@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -51,6 +52,7 @@ namespace {
       AU.addRequiredID(LoopSimplifyID);
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
+      AU.addUsedIfAvailable<AssumptionCacheTracker>();
     }
   };
 }
@@ -104,8 +106,8 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &LPM) {
   bool ShouldExtractLoop = false;
 
   // Extract the loop if the entry block doesn't branch to the loop header.
-  TerminatorInst *EntryTI =
-    L->getHeader()->getParent()->getEntryBlock().getTerminator();
+  Instruction *EntryTI =
+      L->getHeader()->getParent()->getEntryBlock().getTerminator();
   if (!isa<BranchInst>(EntryTI) ||
       !cast<BranchInst>(EntryTI)->isUnconditional() ||
       EntryTI->getSuccessor(0) != L->getHeader()) {
@@ -139,7 +141,10 @@ bool LoopExtractor::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (ShouldExtractLoop) {
     if (NumLoops == 0) return Changed;
     --NumLoops;
-    CodeExtractor Extractor(DT, *L);
+    AssumptionCache *AC = nullptr;
+    if (auto *ACT = getAnalysisIfAvailable<AssumptionCacheTracker>())
+      AC = ACT->lookupAssumptionCache(*L->getHeader()->getParent());
+    CodeExtractor Extractor(DT, *L, false, nullptr, nullptr, AC);
     if (Extractor.extractCodeRegion() != nullptr) {
       Changed = true;
       // After extraction, the loop is replaced by a function call, so

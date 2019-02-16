@@ -16,8 +16,8 @@ define void @sample_test(<4 x float>* %source, <2 x float>* %dest) nounwind {
 ; CHECK-NEXT:    movlps %xmm0, (%rsp)
 ; CHECK-NEXT:    movlps %xmm0, (%rsi)
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    callq ext
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq

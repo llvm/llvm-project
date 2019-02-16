@@ -15,7 +15,7 @@
 //   We have a lookup table for common standard library implementations.
 //   libstdc++ puts char_traits in bits/char_traits.h, but we #include <string>.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_CANONICALINCLUDES_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_CANONICALINCLUDES_H
@@ -40,8 +40,10 @@ public:
   /// Adds a string-to-string mapping from \p Path to \p CanonicalPath.
   void addMapping(llvm::StringRef Path, llvm::StringRef CanonicalPath);
 
-  /// Maps all files matching \p RE to \p CanonicalPath
-  void addRegexMapping(llvm::StringRef RE, llvm::StringRef CanonicalPath);
+  /// Maps files with last path components matching \p Suffix to \p
+  /// CanonicalPath.
+  void addPathSuffixMapping(llvm::StringRef Suffix,
+                            llvm::StringRef CanonicalPath);
 
   /// Sets the canonical include for any symbol with \p QualifiedName.
   /// Symbol mappings take precedence over header mappings.
@@ -55,17 +57,15 @@ public:
                             llvm::StringRef QualifiedName) const;
 
 private:
-  // A map from header patterns to header names. This needs to be mutable so
-  // that we can match again a Regex in a const function member.
-  // FIXME(ioeric): All the regexes we have so far are suffix matches. The
-  // performance could be improved by allowing only suffix matches instead of
-  // arbitrary regexes.
-  mutable std::vector<std::pair<llvm::Regex, std::string>>
-      RegexHeaderMappingTable;
-  // A map from fully qualified symbol names to header names.
+  /// A map from full include path to a canonical path.
+  llvm::StringMap<std::string> FullPathMapping;
+  /// A map from a suffix (one or components of a path) to a canonical path.
+  llvm::StringMap<std::string> SuffixHeaderMapping;
+  /// Maximum number of path components stored in a key of SuffixHeaderMapping.
+  /// Used to reduce the number of lookups into SuffixHeaderMapping.
+  int MaxSuffixComponents = 0;
+  /// A map from fully qualified symbol names to header names.
   llvm::StringMap<std::string> SymbolMapping;
-  // Guards Regex matching as it's not thread-safe.
-  mutable std::mutex RegexMutex;
 };
 
 /// Returns a CommentHandler that parses pragma comment on include files to

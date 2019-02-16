@@ -458,12 +458,13 @@ template <class Derived> struct GenFuncBase {
         llvm::Function::Create(FuncTy, llvm::GlobalValue::LinkOnceODRLinkage,
                                FuncName, &CGM.getModule());
     F->setVisibility(llvm::GlobalValue::HiddenVisibility);
-    CGM.SetLLVMFunctionAttributes(nullptr, FI, F);
+    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
     IdentifierInfo *II = &Ctx.Idents.get(FuncName);
     FunctionDecl *FD = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        II, Ctx.VoidTy, nullptr, SC_PrivateExtern, false, false);
+        II, Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {}), nullptr,
+        SC_PrivateExtern, false, false);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
     CGF->StartFunction(FD, Ctx.VoidTy, F, FI, Args);

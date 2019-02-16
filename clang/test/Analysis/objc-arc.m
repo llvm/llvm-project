@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.cocoa.RetainCount,deadcode -verify -fblocks -analyzer-opt-analyze-nested-blocks -fobjc-arc -analyzer-output=plist-multi-file -o %t.plist %s
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/objc-arc.m.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/objc-arc.m.plist -
 
 typedef signed char BOOL;
 typedef struct _NSZone NSZone;
@@ -123,7 +123,7 @@ void rdar9424882() {
 typedef const void *CFTypeRef;
 typedef const struct __CFString *CFStringRef;
 
-@interface NSString
+@interface NSString : NSObject
 - (id) self;
 @end
 
@@ -231,3 +231,31 @@ id rdar14061675() {
   return result;
 }
 
+typedef const void * CFTypeRef;
+typedef const struct __CFString * CFStringRef;
+typedef const struct __CFAllocator * CFAllocatorRef;
+extern const CFAllocatorRef kCFAllocatorDefault;
+
+extern CFTypeRef CFRetain(CFTypeRef cf);
+extern void CFRelease(CFTypeRef cf);
+
+
+void check_bridge_retained_cast() {
+    NSString *nsStr = [[NSString alloc] init];
+    CFStringRef cfStr = (__bridge_retained CFStringRef)nsStr;
+    CFRelease(cfStr); // no-warning
+}
+
+@interface A;
+@end
+
+void check_bridge_to_non_cocoa(CFStringRef s) {
+  A *a = (__bridge_transfer A *) s; // no-crash
+}
+
+struct B;
+
+struct B * check_bridge_to_non_cf() {
+  NSString *s = [[NSString alloc] init];
+  return (__bridge struct B*) s;
+}

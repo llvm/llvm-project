@@ -81,7 +81,7 @@ void RedundantControlFlowCheck::issueDiagnostic(
   SourceLocation Start;
   if (Previous != Block->body_rend())
     Start = Lexer::findLocationAfterToken(
-        dyn_cast<Stmt>(*Previous)->getLocEnd(), tok::semi, SM, getLangOpts(),
+        dyn_cast<Stmt>(*Previous)->getEndLoc(), tok::semi, SM, getLangOpts(),
         /*SkipTrailingWhitespaceAndNewLine=*/true);
   if (!Start.isValid())
     Start = StmtRange.getBegin();

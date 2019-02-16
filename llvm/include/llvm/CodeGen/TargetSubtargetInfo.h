@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 #define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -142,6 +143,43 @@ public:
                                      const MachineInstr *MI,
                                      const TargetSchedModel *SchedModel) const {
     return 0;
+  }
+
+  /// Returns true if MI is a dependency breaking zero-idiom instruction for the
+  /// subtarget.
+  ///
+  /// This function also sets bits in Mask related to input operands that
+  /// are not in a data dependency relationship.  There is one bit for each
+  /// machine operand; implicit operands follow explicit operands in the bit
+  /// representation used for Mask.  An empty (i.e. a mask with all bits
+  /// cleared) means: data dependencies are "broken" for all the explicit input
+  /// machine operands of MI.
+  virtual bool isZeroIdiom(const MachineInstr *MI, APInt &Mask) const {
+    return false;
+  }
+
+  /// Returns true if MI is a dependency breaking instruction for the subtarget.
+  ///
+  /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
+  /// all dependency breaking instructions (i.e. not just zero-idioms).
+  /// 
+  /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
+  /// (See method `isZeroIdiom` for a detailed description of Mask).
+  virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
+    return isZeroIdiom(MI, Mask);
+  }
+
+  /// Returns true if MI is a candidate for move elimination.
+  ///
+  /// A candidate for move elimination may be optimized out at register renaming
+  /// stage. Subtargets can specify the set of optimizable moves by
+  /// instantiating tablegen class `IsOptimizableRegisterMove` (see
+  /// llvm/Target/TargetInstrPredicate.td).
+  ///
+  /// SubtargetEmitter is responsible for processing all the definitions of class
+  /// IsOptimizableRegisterMove, and auto-generate an override for this method.
+  virtual bool isOptimizableRegisterMove(const MachineInstr *MI) const {
+    return false;
   }
 
   /// True if the subtarget should run MachineScheduler after aggressive

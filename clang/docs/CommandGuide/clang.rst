@@ -60,7 +60,7 @@ Linker
 
 The Clang Static Analyzer is a tool that scans source code to try to find bugs
 through code analysis.  This tool uses many parts of Clang and is built into
-the same driver.  Please see <http://clang-analyzer.llvm.org> for more details
+the same driver.  Please see <https://clang-analyzer.llvm.org> for more details
 on how to use the static analyzer.
 
 OPTIONS
@@ -361,7 +361,7 @@ Code Generation Options
     :option:`-Oz` Like :option:`-Os` (and thus :option:`-O2`), but reduces code
     size further.
 
-    :option:`-Og` Like :option:`-O1`. In future versions, this option might 
+    :option:`-Og` Like :option:`-O1`. In future versions, this option might
     disable different optimizations in order to improve debuggability.
 
     :option:`-O` Equivalent to :option:`-O2`.
@@ -625,7 +625,7 @@ ENVIRONMENT
 BUGS
 ----
 
-To report bugs, please visit <http://llvm.org/bugs/>.  Most bug reports should
+To report bugs, please visit <https://bugs.llvm.org/>.  Most bug reports should
 include preprocessed source files (use the :option:`-E` option) and the full
 output of the compiler, along with information to reproduce.
 
@@ -633,4 +633,3 @@ SEE ALSO
 --------
 
 :manpage:`as(1)`, :manpage:`ld(1)`
-

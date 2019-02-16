@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=i386-pc-win32 | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -std=c++11 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -fms-compatibility-version=19 -emit-llvm %s -o - -fms-extensions -fdelayed-template-parsing -triple=x86_64-pc-win32 | FileCheck -check-prefix X64 %s
 
 template<typename T>
 class Class {
@@ -185,13 +187,35 @@ void spam() {
 // Unlike Itanium, there is no character code to indicate an argument pack.
 // Tested with MSVC 2013, the first version which supports variadic templates.
 
-template <typename ...Ts> void variadic_fn_template(const Ts &...args) { }
+template <typename ...Ts> void variadic_fn_template(const Ts &...args);
+template <typename... Ts, typename... Us>
+void multi_variadic_fn(Ts... ts, Us... us);
+template <typename... Ts, typename C, typename... Us>
+void multi_variadic_mixed(Ts... ts, C c, Us... us);
 void variadic_fn_instantiate() {
   variadic_fn_template(0, 1, 3, 4);
   variadic_fn_template(0, 1, 'a', "b");
+
+  // Directlly consecutive packs are separated by $$Z...
+  multi_variadic_fn<int, int>(1, 2, 3, 4, 5);
+  multi_variadic_fn<int, int, int>(1, 2, 3, 4, 5);
+
+  // ...but not if another template parameter is between them.
+  multi_variadic_mixed<int, int>(1, 2, 3);
+  multi_variadic_mixed<int, int>(1, 2, 3, 4);
 }
 // CHECK: "??$variadic_fn_template@HHHH@@YAXABH000@Z"
+// X64:   "??$variadic_fn_template@HHHH@@YAXAEBH000@Z"
 // CHECK: "??$variadic_fn_template@HHD$$BY01D@@YAXABH0ABDAAY01$$CBD@Z"
+// X64:   "??$variadic_fn_template@HHD$$BY01D@@YAXAEBH0AEBDAEAY01$$CBD@Z"
+// CHECK: "??$multi_variadic_fn@HH$$ZHHH@@YAXHHHHH@Z"
+// X64:   "??$multi_variadic_fn@HH$$ZHHH@@YAXHHHHH@Z"
+// CHECK: "??$multi_variadic_fn@HHH$$ZHH@@YAXHHHHH@Z"
+// X64:   "??$multi_variadic_fn@HHH$$ZHH@@YAXHHHHH@Z"
+// CHECK: "??$multi_variadic_mixed@HHH$$V@@YAXHHH@Z"
+// X64:   "??$multi_variadic_mixed@HHH$$V@@YAXHHH@Z"
+// CHECK: "??$multi_variadic_mixed@HHHH@@YAXHHHH@Z"
+// X64:   "??$multi_variadic_mixed@HHHH@@YAXHHHH@Z"
 
 template <typename ...Ts>
 struct VariadicClass {

@@ -212,9 +212,14 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   else
     Add("-alternatename:__image_base__=__ImageBase");
 
+  for (auto *A : Args.filtered(OPT_require_defined))
+    Add("-include:" + StringRef(A->getValue()));
+
   std::vector<StringRef> SearchPaths;
-  for (auto *A : Args.filtered(OPT_L))
+  for (auto *A : Args.filtered(OPT_L)) {
     SearchPaths.push_back(A->getValue());
+    Add("-libpath:" + StringRef(A->getValue()));
+  }
 
   StringRef Prefix = "";
   bool Static = false;

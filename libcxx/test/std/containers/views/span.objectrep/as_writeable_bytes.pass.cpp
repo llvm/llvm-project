@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -38,7 +38,7 @@ void testRuntimeSpan(Span sp)
         assert(spBytes.extent == std::dynamic_extent);
     else
         assert(spBytes.extent == static_cast<std::ptrdiff_t>(sizeof(typename Span::element_type)) * sp.extent);
-        
+
     assert(static_cast<void*>(spBytes.data()) == static_cast<void*>(sp.data()));
     assert(spBytes.size() == sp.size_bytes());
 }

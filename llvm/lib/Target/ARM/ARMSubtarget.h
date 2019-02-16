@@ -68,7 +68,7 @@ protected:
     CortexR5,
     CortexR52,
     CortexR7,
-    ExynosM1,
+    Exynos,
     Krait,
     Kryo,
     Swift
@@ -106,6 +106,7 @@ protected:
     ARMv82a,
     ARMv83a,
     ARMv84a,
+    ARMv85a,
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
@@ -153,6 +154,7 @@ protected:
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
   bool HasV8_4aOps = false;
+  bool HasV8_5aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
 
@@ -226,6 +228,9 @@ protected:
 
   /// HasFullFP16 - True if subtarget supports half-precision FP operations
   bool HasFullFP16 = false;
+
+  /// HasFP16FML - True if subtarget supports half-precision FP fml operations
+  bool HasFP16FML = false;
 
   /// HasD16 - True if subtarget is limited to 16 double precision
   /// FP registers for VFPv3.
@@ -353,6 +358,9 @@ protected:
   /// If true, loading into a D subregister will be penalized.
   bool SlowLoadDSubregister = false;
 
+  /// If true, use a wider stride when allocating VFP registers.
+  bool UseWideStrideVFP = false;
+
   /// If true, the AGU and NEON/FPU units are multiplexed.
   bool HasMuxedUnits = false;
 
@@ -407,6 +415,9 @@ protected:
 
   /// UseSjLjEH - If true, the target uses SjLj exception handling (e.g. iOS).
   bool UseSjLjEH = false;
+
+  /// Has speculation barrier
+  bool HasSB = false;
 
   /// Implicitly convert an instruction to a different one if its immediates
   /// cannot be encoded. For example, ADD r0, r1, #FFFFFFFF -> SUB r0, r1, #1.
@@ -532,6 +543,7 @@ public:
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
   bool hasV8_4aOps() const { return HasV8_4aOps; }
+  bool hasV8_5aOps() const { return HasV8_5aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
 
@@ -599,6 +611,7 @@ public:
   bool hasVMLxHazards() const { return HasVMLxHazards; }
   bool hasSlowOddRegister() const { return SlowOddRegister; }
   bool hasSlowLoadDSubregister() const { return SlowLoadDSubregister; }
+  bool useWideStrideVFP() const { return UseWideStrideVFP; }
   bool hasMuxedUnits() const { return HasMuxedUnits; }
   bool dontWidenVMOVS() const { return DontWidenVMOVS; }
   bool useSplatVFPToNeon() const { return SplatVFPToNeon; }
@@ -615,12 +628,14 @@ public:
   bool hasDSP() const { return HasDSP; }
   bool useNaClTrap() const { return UseNaClTrap; }
   bool useSjLjEH() const { return UseSjLjEH; }
+  bool hasSB() const { return HasSB; }
   bool genLongCalls() const { return GenLongCalls; }
   bool genExecuteOnly() const { return GenExecuteOnly; }
 
   bool hasFP16() const { return HasFP16; }
   bool hasD16() const { return HasD16; }
   bool hasFullFP16() const { return HasFullFP16; }
+  bool hasFP16FML() const { return HasFP16FML; }
 
   bool hasFuseAES() const { return HasFuseAES; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }

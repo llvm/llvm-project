@@ -222,3 +222,46 @@ void f(int a) {
   };
 }
 }
+
+namespace PR34120 {
+struct A {
+  int B; // expected-note 2 {{declared here}}
+};
+
+class C : public A {
+  void D(int B) {} // expected-warning {{parameter 'B' shadows member inherited from type 'A'}}
+  void E() {
+    extern void f(int B); // Ok
+  }
+  void F(int B); // Ok, declaration; not definition.
+  void G(int B);
+};
+
+void C::G(int B) { // expected-warning {{parameter 'B' shadows member inherited from type 'A'}}
+}
+
+class Private {
+  int B;
+};
+class Derived : Private {
+  void D(int B) {} // Ok
+};
+
+struct Static {
+  static int B;
+};
+
+struct Derived2 : Static {
+  void D(int B) {}
+};
+}
+
+int PR24718;
+enum class X { PR24718 }; // Ok, not shadowing
+
+struct PR24718_1;
+struct PR24718_2 {
+  enum {
+    PR24718_1 // Does not shadow a type.
+  };
+};

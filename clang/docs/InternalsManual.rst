@@ -19,7 +19,7 @@ LLVM Support Library
 ====================
 
 The LLVM ``libSupport`` library provides many underlying libraries and
-`data-structures <http://llvm.org/docs/ProgrammersManual.html>`_, including
+`data-structures <https://llvm.org/docs/ProgrammersManual.html>`_, including
 command line option processing, various containers and a system abstraction
 layer, which is used for file system access.
 
@@ -559,13 +559,9 @@ The clang Driver and library are documented :doc:`here <DriverInternals>`.
 Precompiled Headers
 ===================
 
-Clang supports two implementations of precompiled headers.  The default
-implementation, precompiled headers (:doc:`PCH <PCHInternals>`) uses a
+Clang supports precompiled headers (:doc:`PCH <PCHInternals>`), which  uses a
 serialized representation of Clang's internal data structures, encoded with the
-`LLVM bitstream format <http://llvm.org/docs/BitCodeFormat.html>`_.
-Pretokenized headers (:doc:`PTH <PTHInternals>`), on the other hand, contain a
-serialized representation of the tokens encountered when preprocessing a header
-(and anything that header includes).
+`LLVM bitstream format <https://llvm.org/docs/BitCodeFormat.html>`_.
 
 The Frontend Library
 ====================
@@ -1690,7 +1686,7 @@ semantic checking for some attributes, etc.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The first step to adding a new attribute to Clang is to add its definition to
 `include/clang/Basic/Attr.td
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/Attr.td?view=markup>`_.
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/Attr.td?view=markup>`_.
 This tablegen definition must derive from the ``Attr`` (tablegen, not
 semantic) type, or one of its derivatives. Most attributes will derive from the
 ``InheritableAttr`` type, which specifies that the attribute can be inherited by
@@ -1752,10 +1748,10 @@ the ``SubjectList``. The diagnostics generated for subject list violations are
 either ``diag::warn_attribute_wrong_decl_type`` or
 ``diag::err_attribute_wrong_decl_type``, and the parameter enumeration is found
 in `include/clang/Sema/ParsedAttr.h
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Sema/ParsedAttr.h?view=markup>`_
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Sema/ParsedAttr.h?view=markup>`_
 If a previously unused Decl node is added to the ``SubjectList``, the logic used
 to automatically determine the diagnostic parameter in `utils/TableGen/ClangAttrEmitter.cpp
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/utils/TableGen/ClangAttrEmitter.cpp?view=markup>`_
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/utils/TableGen/ClangAttrEmitter.cpp?view=markup>`_
 may need to be updated.
 
 By default, all subjects in the SubjectList must either be a Decl node defined
@@ -1777,7 +1773,7 @@ All attributes must have some form of documentation associated with them.
 Documentation is table generated on the public web server by a server-side
 process that runs daily. Generally, the documentation for an attribute is a
 stand-alone definition in `include/clang/Basic/AttrDocs.td 
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/AttdDocs.td?view=markup>`_
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/AttdDocs.td?view=markup>`_
 that is named after the attribute being documented.
 
 If the attribute is not for public consumption, or is an implicitly-created
@@ -1828,7 +1824,7 @@ All arguments have a name and a flag that specifies whether the argument is
 optional. The associated C++ type of the argument is determined by the argument
 definition type. If the existing argument types are insufficient, new types can
 be created, but it requires modifying `utils/TableGen/ClangAttrEmitter.cpp
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/utils/TableGen/ClangAttrEmitter.cpp?view=markup>`_
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/utils/TableGen/ClangAttrEmitter.cpp?view=markup>`_
 to properly support the type.
 
 Other Properties
@@ -1840,7 +1836,7 @@ document, however a few deserve mention.
 If the parsed form of the attribute is more complex, or differs from the
 semantic form, the ``HasCustomParsing`` bit can be set to ``1`` for the class,
 and the parsing code in `Parser::ParseGNUAttributeArgs()
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/lib/Parse/ParseDecl.cpp?view=markup>`_
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/lib/Parse/ParseDecl.cpp?view=markup>`_
 can be updated for the special case. Note that this only applies to arguments
 with a GNU spelling -- attributes with a __declspec spelling currently ignore
 this flag and are handled by ``Parser::ParseMicrosoftDeclSpec``.
@@ -1903,7 +1899,7 @@ semantic attribute class object, with ``public`` access.
 Boilerplate
 ^^^^^^^^^^^
 All semantic processing of declaration attributes happens in `lib/Sema/SemaDeclAttr.cpp
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/lib/Sema/SemaDeclAttr.cpp?view=markup>`_,
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/lib/Sema/SemaDeclAttr.cpp?view=markup>`_,
 and generally starts in the ``ProcessDeclAttribute()`` function. If the
 attribute is a "simple" attribute -- meaning that it requires no custom semantic
 processing aside from what is automatically  provided, add a call to
@@ -1919,11 +1915,11 @@ correct minimum number of arguments are passed, etc.
 
 If the attribute adds additional warnings, define a ``DiagGroup`` in
 `include/clang/Basic/DiagnosticGroups.td
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/DiagnosticGroups.td?view=markup>`_
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/DiagnosticGroups.td?view=markup>`_
 named after the attribute's ``Spelling`` with "_"s replaced by "-"s. If there
 is only a single diagnostic, it is permissible to use ``InGroup<DiagGroup<"your-attribute">>``
 directly in `DiagnosticSemaKinds.td
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/DiagnosticSemaKinds.td?view=markup>`_
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/include/clang/Basic/DiagnosticSemaKinds.td?view=markup>`_
 
 All semantic diagnostics generated for your attribute, including automatically-
 generated ones (such as subjects and argument counts), should have a
@@ -2075,7 +2071,7 @@ are similar.
      exception-handling directly.
    * Testing is extremely important in IR generation.  Use ``clang -cc1
      -emit-llvm`` and `FileCheck
-     <http://llvm.org/docs/CommandGuide/FileCheck.html>`_ to verify that you're
+     <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ to verify that you're
      generating the right IR.
 
 #. Teach template instantiation how to cope with your AST node, which requires

@@ -1710,19 +1710,25 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
           assert(isa<LoadInst>(StoreVal) && "Not a load of NewGV!");
         }
       }
-      new StoreInst(StoreVal, NewGV, false, 0,
-                    SI->getOrdering(), SI->getSyncScopeID(), SI);
+      StoreInst *NSI =
+          new StoreInst(StoreVal, NewGV, false, 0, SI->getOrdering(),
+                        SI->getSyncScopeID(), SI);
+      NSI->setDebugLoc(SI->getDebugLoc());
     } else {
       // Change the load into a load of bool then a select.
       LoadInst *LI = cast<LoadInst>(UI);
       LoadInst *NLI = new LoadInst(NewGV, LI->getName()+".b", false, 0,
                                    LI->getOrdering(), LI->getSyncScopeID(), LI);
-      Value *NSI;
+      Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI);
       else
         NSI = SelectInst::Create(NLI, OtherVal, InitVal, "", LI);
       NSI->takeName(LI);
+      // Since LI is split into two instructions, NLI and NSI both inherit the
+      // same DebugLoc
+      NLI->setDebugLoc(LI->getDebugLoc());
+      NSI->setDebugLoc(LI->getDebugLoc());
       LI->replaceAllUsesWith(NSI);
     }
     UI->eraseFromParent();
@@ -2105,6 +2111,13 @@ static bool hasChangeableCC(Function *F) {
 
   // FIXME: Is it worth transforming x86_stdcallcc and x86_fastcallcc?
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
+    return false;
+
+  // Don't break the invariant that the inalloca parameter is the only parameter
+  // passed in memory.
+  // FIXME: GlobalOpt should remove inalloca when possible and hoist the dynamic
+  // alloca it uses to the entry block if possible.
+  if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca))
     return false;
 
   // FIXME: Change CC for the whole chain of musttail calls when possible.

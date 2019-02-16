@@ -15,10 +15,12 @@
 
 // unordered_map& operator=(const unordered_map& u);
 
+#include <algorithm>
 #include <unordered_map>
 #include <string>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 #include <cstddef>
 
 #include "test_macros.h"

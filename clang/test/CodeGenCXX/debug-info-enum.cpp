@@ -11,7 +11,7 @@ namespace test1 {
 // CHECK-SAME:                      identifier: "_ZTSN5test11eE"
 // CHECK: [[TEST1]] = !DINamespace(name: "test1"
 // CHECK: [[TEST1_ENUMS]] = !{[[TEST1_E:![0-9]*]]}
-// CHECK: [[TEST1_E]] = !DIEnumerator(name: "E", value: 0)
+// CHECK: [[TEST1_E]] = !DIEnumerator(name: "E", value: 0, isUnsigned: true)
 enum e { E };
 void foo() {
   int v = E;

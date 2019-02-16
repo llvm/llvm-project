@@ -28,7 +28,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/StmtVisitor.h"
@@ -736,12 +736,24 @@ public:
 };
 } // end anonymous namespace
 
+void ento::registerIvarInvalidationModeling(CheckerManager &mgr) {
+  mgr.registerChecker<IvarInvalidationChecker>();
+}
+
+bool ento::shouldRegisterIvarInvalidationModeling(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
     IvarInvalidationChecker *checker =                                         \
-        mgr.registerChecker<IvarInvalidationChecker>();                        \
+        mgr.getChecker<IvarInvalidationChecker>();                             \
     checker->Filter.check_##name = true;                                       \
     checker->Filter.checkName_##name = mgr.getCurrentCheckName();              \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(InstanceVariableInvalidation)

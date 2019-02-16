@@ -1254,6 +1254,12 @@ TEST_F(FormatTestComments, SplitsLongLinesInComments) {
                    " */",
                    getLLVMStyleWithColumns(20)));
 
+  // This reproduces a crashing bug where both adaptStartOfLine and
+  // getCommentSplit were trying to wrap after the "/**".
+  EXPECT_EQ("/** multilineblockcommentwithnowrapopportunity */",
+            format("/** multilineblockcommentwithnowrapopportunity */",
+                   getLLVMStyleWithColumns(20)));
+
   EXPECT_EQ("/*\n"
             "\n"
             "\n"

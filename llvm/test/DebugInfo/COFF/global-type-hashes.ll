@@ -1,7 +1,6 @@
-; RUN: llc -filetype=obj -emit-codeview-ghash-section < %s > %t.obj
+; RUN: llc -filetype=obj < %s > %t.obj
 ; RUN: obj2yaml %t.obj | FileCheck %s --check-prefix=YAML
-; RUN: llc -filetype=asm -emit-codeview-ghash-section < %s \
-; RUN:   | FileCheck %s --check-prefix=ASM
+; RUN: llc -filetype=asm < %s | FileCheck %s --check-prefix=ASM
 
 ; C++ source to regenerate:
 ; $ cat t.cpp
@@ -96,14 +95,16 @@ attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !100}
 !llvm.ident = !{!7}
+
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 6.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "D:\5Csrc\5Cllvmbuild\5Cclang\5CDebug\5Cx86", checksumkind: CSK_MD5, checksum: "6279449503d9075c38e615e8387667c3")
 !2 = !{}
 !3 = !{i32 1, !"NumRegisterParameters", i32 0}
 !4 = !{i32 2, !"CodeView", i32 1}
+!100 = !{i32 2, !"CodeViewGHash", i32 1}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{i32 1, !"wchar_size", i32 2}
 !7 = !{!"clang version 6.0.0 "}
@@ -186,7 +187,7 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:       - Kind:            LF_POINTER
 ; YAML:         Pointer:
 ; YAML:           ReferentType:    4100
-; YAML:           Attrs:           32778
+; YAML:           Attrs:           33802
 ; YAML:       - Kind:            LF_ARGLIST
 ; YAML:         ArgList:
 ; YAML:           ArgIndices:      [ 116, 116 ]
@@ -196,7 +197,7 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:           ClassType:       4100
 ; YAML:           ThisType:        4101
 ; YAML:           CallConv:        ThisCall
-; YAML:           Options:         [ None ]
+; YAML:           Options:         [ None, Constructor ]
 ; YAML:           ParameterCount:  2
 ; YAML:           ArgumentList:    4102
 ; YAML:           ThisPointerAdjustment: 0
@@ -280,17 +281,21 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:         - DF04AA3125BBC50E
 ; YAML:         - 95CEBA304A2C4493
 ; YAML:         - C324F82D24D22283
-; YAML:         - 74698BE366891D3D
+; YAML:         - BB039258F2425BCF
 ; YAML:         - DDE23757322DB7C3
-; YAML:         - 3C458A5105FEA7C1
+; YAML:         - C935E8E1F016CC27
 ; YAML:         - D341E2F9BE57A1C7
-; YAML:         - 243F76AED6D8FB79
-; YAML:         - B038D36C0C67EEEA
-; YAML:         - C0A51CE268B50087
+; YAML:         - DD327744BE6783A4
+; YAML:         - 479521BB013A4AEC
+; YAML:         - 7820AAA31FC8CC67
 ; YAML:         - 0634944401BCC520
-; YAML:         - 8CFC595FACFE1AB2
-; YAML:         - F1795EA10053AC52
-; YAML:         - 17D3CDC3384402DD
+; YAML:         - F380373F5DE8E9A3
+; YAML:         - 2ADB463E9E726E20
+; YAML:         - 74698BE366891D3D
+; YAML:         - 4470750F2E319329
+; YAML:         - 0FB556FD1FAB66D7
+; YAML:         - 5970EFB4874D0F3F
+; YAML:         - EDB1D74C120CF44A
 ; ...
 
 

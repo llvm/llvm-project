@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference -analyzer-output=text -verify
 // RUN: %clang_analyze_cc1 %s -analyzer-checker=core.NullDereference -analyzer-output=plist -o %t
-// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/conditional-path-notes.c.plist
+// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/conditional-path-notes.c.plist -
 
 void testCondOp(int *p) {
   int *x = p ? p : p;

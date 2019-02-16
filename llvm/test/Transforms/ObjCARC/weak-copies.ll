@@ -27,13 +27,13 @@ entry:
   %w = alloca i8*, align 8
   %x = alloca i8*, align 8
   %call = call i8* @bar()
-  %0 = call i8* @objc_initWeak(i8** %w, i8* %call) nounwind
-  %1 = call i8* @objc_loadWeak(i8** %w) nounwind
-  %2 = call i8* @objc_initWeak(i8** %x, i8* %1) nounwind
-  %3 = call i8* @objc_loadWeak(i8** %x) nounwind
+  %0 = call i8* @llvm.objc.initWeak(i8** %w, i8* %call) nounwind
+  %1 = call i8* @llvm.objc.loadWeak(i8** %w) nounwind
+  %2 = call i8* @llvm.objc.initWeak(i8** %x, i8* %1) nounwind
+  %3 = call i8* @llvm.objc.loadWeak(i8** %x) nounwind
   call void @use(i8* %3) nounwind
-  call void @objc_destroyWeak(i8** %x) nounwind
-  call void @objc_destroyWeak(i8** %w) nounwind
+  call void @llvm.objc.destroyWeak(i8** %x) nounwind
+  call void @llvm.objc.destroyWeak(i8** %w) nounwind
   ret void
 }
 
@@ -48,8 +48,8 @@ define void @qux(i8* %me) nounwind {
 entry:
   %w = alloca i8*, align 8
   %block = alloca %1, align 8
-  %0 = call i8* @objc_retain(i8* %me) nounwind
-  %1 = call i8* @objc_initWeak(i8** %w, i8* %0) nounwind
+  %0 = call i8* @llvm.objc.retain(i8* %me) nounwind
+  %1 = call i8* @llvm.objc.initWeak(i8** %w, i8* %0) nounwind
   %block.isa = getelementptr inbounds %1, %1* %block, i64 0, i32 0
   store i8* bitcast (i8** @_NSConcreteStackBlock to i8*), i8** %block.isa, align 8
   %block.flags = getelementptr inbounds %1, %1* %block, i64 0, i32 1
@@ -61,28 +61,28 @@ entry:
   %block.descriptor = getelementptr inbounds %1, %1* %block, i64 0, i32 4
   store %struct.__block_descriptor* bitcast (%0* @__block_descriptor_tmp to %struct.__block_descriptor*), %struct.__block_descriptor** %block.descriptor, align 8
   %block.captured = getelementptr inbounds %1, %1* %block, i64 0, i32 5
-  %2 = call i8* @objc_loadWeak(i8** %w) nounwind
-  %3 = call i8* @objc_initWeak(i8** %block.captured, i8* %2) nounwind
+  %2 = call i8* @llvm.objc.loadWeak(i8** %w) nounwind
+  %3 = call i8* @llvm.objc.initWeak(i8** %block.captured, i8* %2) nounwind
   %4 = bitcast %1* %block to void ()*
   call void @use_block(void ()* %4) nounwind
-  call void @objc_destroyWeak(i8** %block.captured) nounwind
-  call void @objc_destroyWeak(i8** %w) nounwind
-  call void @objc_release(i8* %0) nounwind, !clang.imprecise_release !0
+  call void @llvm.objc.destroyWeak(i8** %block.captured) nounwind
+  call void @llvm.objc.destroyWeak(i8** %w) nounwind
+  call void @llvm.objc.release(i8* %0) nounwind, !clang.imprecise_release !0
   ret void
 }
 
-declare i8* @objc_retain(i8*)
+declare i8* @llvm.objc.retain(i8*)
 declare void @use_block(void ()*) nounwind
 declare void @__qux_block_invoke_0(i8* %.block_descriptor) nounwind
 declare void @__copy_helper_block_(i8*, i8*) nounwind
-declare void @objc_copyWeak(i8**, i8**)
+declare void @llvm.objc.copyWeak(i8**, i8**)
 declare void @__destroy_helper_block_(i8*) nounwind
-declare void @objc_release(i8*)
+declare void @llvm.objc.release(i8*)
 declare i8* @bar()
-declare i8* @objc_initWeak(i8**, i8*)
-declare i8* @objc_loadWeak(i8**)
+declare i8* @llvm.objc.initWeak(i8**, i8*)
+declare i8* @llvm.objc.loadWeak(i8**)
 declare void @use(i8*) nounwind
-declare void @objc_destroyWeak(i8**)
+declare void @llvm.objc.destroyWeak(i8**)
 
 ; CHECK: attributes [[NUW]] = { nounwind }
 

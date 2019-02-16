@@ -539,12 +539,20 @@ static void __kmp_print_team_storage_map(const char *header, kmp_team_t *team,
                                team_id);
 }
 
-static void __kmp_init_allocator() {}
-static void __kmp_fini_allocator() {}
+static void __kmp_init_allocator() {
+#if OMP_50_ENABLED
+  __kmp_init_memkind();
+#endif
+}
+static void __kmp_fini_allocator() {
+#if OMP_50_ENABLED
+  __kmp_fini_memkind();
+#endif
+}
 
 /* ------------------------------------------------------------------------ */
 
-#ifdef KMP_DYNAMIC_LIB
+#if KMP_DYNAMIC_LIB
 #if KMP_OS_WINDOWS
 
 static void __kmp_reset_lock(kmp_bootstrap_lock_t *lck) {
@@ -1084,6 +1092,19 @@ static void __kmp_fork_team_threads(kmp_root_t *root, kmp_team_t *team,
 #endif
   }
 
+#if OMP_50_ENABLED
+  if (__kmp_display_affinity && team->t.t_display_affinity != 1) {
+    for (i = 0; i < team->t.t_nproc; i++) {
+      kmp_info_t *thr = team->t.t_threads[i];
+      if (thr->th.th_prev_num_threads != team->t.t_nproc ||
+          thr->th.th_prev_level != team->t.t_level) {
+        team->t.t_display_affinity = 1;
+        break;
+      }
+    }
+  }
+#endif
+
   KMP_MB();
 }
 
@@ -1201,23 +1222,23 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 #endif /* OMP_40_ENABLED */
 
 #if OMPT_SUPPORT
-  ompt_data_t ompt_parallel_data;
-  ompt_parallel_data.ptr = NULL;
+  ompt_data_t ompt_parallel_data = ompt_data_none;
   ompt_data_t *implicit_task_data;
   void *codeptr = OMPT_LOAD_RETURN_ADDRESS(global_tid);
   if (ompt_enabled.enabled &&
-      this_thr->th.ompt_thread_info.state != omp_state_overhead) {
+      this_thr->th.ompt_thread_info.state != ompt_state_overhead) {
 
     ompt_task_info_t *parent_task_info;
     parent_task_info = OMPT_CUR_TASK_INFO(this_thr);
 
-    parent_task_info->frame.enter_frame = OMPT_GET_FRAME_ADDRESS(1);
+    parent_task_info->frame.enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
     if (ompt_enabled.ompt_callback_parallel_begin) {
       int team_size = 1;
 
       ompt_callbacks.ompt_callback(ompt_callback_parallel_begin)(
           &(parent_task_info->task_data), &(parent_task_info->frame),
-          &ompt_parallel_data, team_size, ompt_invoker_program, codeptr);
+          &ompt_parallel_data, team_size, ompt_parallel_invoker_program,
+          codeptr);
     }
   }
 #endif // OMPT_SUPPORT
@@ -1318,6 +1339,9 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 
     serial_team->t.t_level = serial_team->t.t_parent->t.t_level + 1;
     serial_team->t.t_active_level = serial_team->t.t_parent->t.t_active_level;
+#if OMP_50_ENABLED
+    serial_team->t.t_def_allocator = this_thr->th.th_def_allocator; // save
+#endif
 
     propagateFPControl(serial_team);
 
@@ -1371,13 +1395,27 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   KMP_CHECK_UPDATE(serial_team->t.t_cancel_request, cancel_noreq);
 #endif
 
+#if OMP_50_ENABLED
+  // Perform the display affinity functionality for
+  // serialized parallel regions
+  if (__kmp_display_affinity) {
+    if (this_thr->th.th_prev_level != serial_team->t.t_level ||
+        this_thr->th.th_prev_num_threads != 1) {
+      // NULL means use the affinity-format-var ICV
+      __kmp_aux_display_affinity(global_tid, NULL);
+      this_thr->th.th_prev_level = serial_team->t.t_level;
+      this_thr->th.th_prev_num_threads = 1;
+    }
+  }
+#endif
+
   if (__kmp_env_consistency_check)
     __kmp_push_parallel(global_tid, NULL);
 #if OMPT_SUPPORT
   serial_team->t.ompt_team_info.master_return_address = codeptr;
   if (ompt_enabled.enabled &&
-      this_thr->th.ompt_thread_info.state != omp_state_overhead) {
-    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame = OMPT_GET_FRAME_ADDRESS(1);
+      this_thr->th.ompt_thread_info.state != ompt_state_overhead) {
+    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
 
     ompt_lw_taskteam_t lw_taskteam;
     __ompt_lw_taskteam_init(&lw_taskteam, this_thr, global_tid,
@@ -1397,8 +1435,8 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     }
 
     /* OMPT state */
-    this_thr->th.ompt_thread_info.state = omp_state_work_parallel;
-    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame = OMPT_GET_FRAME_ADDRESS(1);
+    this_thr->th.ompt_thread_info.state = ompt_state_work_parallel;
+    OMPT_CUR_TASK_INFO(this_thr)->frame.exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
   }
 #endif
 }
@@ -1465,10 +1503,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     master_set_numthreads = master_th->th.th_set_nproc;
 
 #if OMPT_SUPPORT
-    ompt_data_t ompt_parallel_data;
-    ompt_parallel_data.ptr = NULL;
+    ompt_data_t ompt_parallel_data = ompt_data_none;
     ompt_data_t *parent_task_data;
-    omp_frame_t *ompt_frame;
+    ompt_frame_t *ompt_frame;
     ompt_data_t *implicit_task_data;
     void *return_address = NULL;
 
@@ -1508,7 +1545,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             parent_task_data, ompt_frame, &ompt_parallel_data, team_size,
             OMPT_INVOKER(call_context), return_address);
       }
-      master_th->th.ompt_thread_info.state = omp_state_overhead;
+      master_th->th.ompt_thread_info.state = ompt_state_overhead;
     }
 #endif
 
@@ -1548,7 +1585,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         if (ompt_enabled.enabled) {
           __ompt_lw_taskteam_init(&lw_taskteam, master_th, gtid,
                                   &ompt_parallel_data, return_address);
-          exit_runtime_p = &(lw_taskteam.ompt_task_info.frame.exit_frame);
+          exit_runtime_p = &(lw_taskteam.ompt_task_info.frame.exit_frame.ptr);
 
           __ompt_lw_taskteam_link(&lw_taskteam, master_th, 0);
           // don't use lw_taskteam after linking. content was swaped
@@ -1564,7 +1601,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           }
 
           /* OMPT state */
-          master_th->th.ompt_thread_info.state = omp_state_work_parallel;
+          master_th->th.ompt_thread_info.state = ompt_state_work_parallel;
         } else {
           exit_runtime_p = &dummy;
         }
@@ -1584,7 +1621,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #if OMPT_SUPPORT
         *exit_runtime_p = NULL;
         if (ompt_enabled.enabled) {
-          OMPT_CUR_TASK_INFO(master_th)->frame.exit_frame = NULL;
+          OMPT_CUR_TASK_INFO(master_th)->frame.exit_frame = ompt_data_none;
           if (ompt_enabled.ompt_callback_implicit_task) {
             ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                 ompt_scope_end, NULL, implicit_task_data, 1,
@@ -1597,7 +1634,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                 OMPT_CUR_TEAM_DATA(master_th), OMPT_CUR_TASK_DATA(master_th),
                 OMPT_INVOKER(call_context), return_address);
           }
-          master_th->th.ompt_thread_info.state = omp_state_overhead;
+          master_th->th.ompt_thread_info.state = ompt_state_overhead;
         }
 #endif
         return TRUE;
@@ -1608,6 +1645,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       KMP_ATOMIC_INC(&root->r.r_in_parallel);
       parent_team->t.t_active_level++;
       parent_team->t.t_level++;
+#if OMP_50_ENABLED
+      parent_team->t.t_def_allocator = master_th->th.th_def_allocator; // save
+#endif
 
       /* Change number of threads in the team if requested */
       if (master_set_numthreads) { // The parallel has num_threads clause
@@ -1763,7 +1803,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             // don't use lw_taskteam after linking. content was swaped
 
             task_info = OMPT_CUR_TASK_INFO(master_th);
-            exit_runtime_p = &(task_info->frame.exit_frame);
+            exit_runtime_p = &(task_info->frame.exit_frame.ptr);
             if (ompt_enabled.ompt_callback_implicit_task) {
               ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
                   ompt_scope_begin, OMPT_CUR_TEAM_DATA(master_th),
@@ -1773,7 +1813,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             }
 
             /* OMPT state */
-            master_th->th.ompt_thread_info.state = omp_state_work_parallel;
+            master_th->th.ompt_thread_info.state = ompt_state_work_parallel;
           } else {
             exit_runtime_p = &dummy;
           }
@@ -1806,7 +1846,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                   OMPT_CUR_TEAM_DATA(master_th), parent_task_data,
                   OMPT_INVOKER(call_context), return_address);
             }
-            master_th->th.ompt_thread_info.state = omp_state_overhead;
+            master_th->th.ompt_thread_info.state = ompt_state_overhead;
           }
 #endif
         } else if (microtask == (microtask_t)__kmp_teams_master) {
@@ -1861,7 +1901,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             __ompt_lw_taskteam_link(&lw_taskteam, master_th, 0);
             // don't use lw_taskteam after linking. content was swaped
             task_info = OMPT_CUR_TASK_INFO(master_th);
-            exit_runtime_p = &(task_info->frame.exit_frame);
+            exit_runtime_p = &(task_info->frame.exit_frame.ptr);
 
             /* OMPT implicit task begin */
             implicit_task_data = OMPT_CUR_TASK_DATA(master_th);
@@ -1874,7 +1914,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             }
 
             /* OMPT state */
-            master_th->th.ompt_thread_info.state = omp_state_work_parallel;
+            master_th->th.ompt_thread_info.state = ompt_state_work_parallel;
           } else {
             exit_runtime_p = &dummy;
           }
@@ -1907,7 +1947,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                   &ompt_parallel_data, parent_task_data,
                   OMPT_INVOKER(call_context), return_address);
             }
-            master_th->th.ompt_thread_info.state = omp_state_overhead;
+            master_th->th.ompt_thread_info.state = ompt_state_overhead;
           }
 #endif
 #if OMP_40_ENABLED
@@ -1919,7 +1959,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         __ompt_lw_taskteam_init(&lwt, master_th, gtid, &ompt_parallel_data,
                                 return_address);
 
-        lwt.ompt_task_info.frame.exit_frame = NULL;
+        lwt.ompt_task_info.frame.exit_frame = ompt_data_none;
         __ompt_lw_taskteam_link(&lwt, master_th, 1);
 // don't use lw_taskteam after linking. content was swaped
 #endif
@@ -1935,7 +1975,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       KA_TRACE(20, ("__kmp_fork_call: T#%d serial exit\n", gtid));
       KMP_MB();
       return FALSE;
-    }
+    } // if (nthreads == 1)
 
     // GEH: only modify the executing flag in the case when not serialized
     //      serialized case is handled in kmpc_serialized_parallel
@@ -2073,6 +2113,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #if OMP_40_ENABLED
     KMP_CHECK_UPDATE(team->t.t_cancel_request, cancel_noreq);
 #endif
+#if OMP_50_ENABLED
+    KMP_CHECK_UPDATE(team->t.t_def_allocator, master_th->th.th_def_allocator);
+#endif
 
     // Update the floating point rounding in the team if required.
     propagateFPControl(team);
@@ -2115,7 +2158,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
             master_th->th.th_task_state;
         master_th->th.th_task_state_top++;
 #if KMP_NESTED_HOT_TEAMS
-        if (team == master_th->th.th_hot_teams[active_level].hot_team) {
+        if (master_th->th.th_hot_teams &&
+            active_level < __kmp_hot_teams_max_level &&
+            team == master_th->th.th_hot_teams[active_level].hot_team) {
           // Restore master's nested state if nested hot team
           master_th->th.th_task_state =
               master_th->th
@@ -2178,7 +2223,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
                          &master_th->th.th_current_task->td_icvs, loc);
 
 #if OMPT_SUPPORT
-    master_th->th.ompt_thread_info.state = omp_state_work_parallel;
+    master_th->th.ompt_thread_info.state = ompt_state_work_parallel;
 #endif
 
     __kmp_release_bootstrap_lock(&__kmp_forkjoin_lock);
@@ -2259,7 +2304,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
-    master_th->th.ompt_thread_info.state = omp_state_overhead;
+    master_th->th.ompt_thread_info.state = ompt_state_overhead;
   }
 #endif
 
@@ -2271,8 +2316,8 @@ static inline void __kmp_join_restore_state(kmp_info_t *thread,
                                             kmp_team_t *team) {
   // restore state outside the region
   thread->th.ompt_thread_info.state =
-      ((team->t.t_serialized) ? omp_state_work_serial
-                              : omp_state_work_parallel);
+      ((team->t.t_serialized) ? ompt_state_work_serial
+                              : ompt_state_work_parallel);
 }
 
 static inline void __kmp_join_ompt(int gtid, kmp_info_t *thread,
@@ -2285,7 +2330,7 @@ static inline void __kmp_join_ompt(int gtid, kmp_info_t *thread,
         codeptr);
   }
 
-  task_info->frame.enter_frame = NULL;
+  task_info->frame.enter_frame = ompt_data_none;
   __kmp_join_restore_state(thread, team);
 }
 #endif
@@ -2320,7 +2365,7 @@ void __kmp_join_call(ident_t *loc, int gtid
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
-    master_th->th.ompt_thread_info.state = omp_state_overhead;
+    master_th->th.ompt_thread_info.state = ompt_state_overhead;
   }
 #endif
 
@@ -2499,7 +2544,7 @@ void __kmp_join_call(ident_t *loc, int gtid
           OMPT_CUR_TASK_INFO(master_th)->thread_num);
     }
 
-    task_info->frame.exit_frame = NULL;
+    task_info->frame.exit_frame = ompt_data_none;
     task_info->task_data = ompt_data_none;
   }
 #endif
@@ -2513,6 +2558,9 @@ void __kmp_join_call(ident_t *loc, int gtid
   master_th->th.th_first_place = team->t.t_first_place;
   master_th->th.th_last_place = team->t.t_last_place;
 #endif /* OMP_40_ENABLED */
+#if OMP_50_ENABLED
+  master_th->th.th_def_allocator = team->t.t_def_allocator;
+#endif
 
   updateHWFPControl(team);
 
@@ -2629,6 +2677,8 @@ void __kmp_set_num_threads(int new_nth, int gtid) {
 
   KMP_COUNT_VALUE(OMP_set_numthreads, new_nth);
   thread = __kmp_threads[gtid];
+  if (thread->th.th_current_task->td_icvs.nproc == new_nth)
+    return; // nothing to do
 
   __kmp_save_internal_controls(thread);
 
@@ -3523,7 +3573,7 @@ static int __kmp_expand_threads(int nNeed) {
 // resizing __kmp_threads does not need additional protection if foreign
 // threads are present
 
-#if KMP_OS_WINDOWS && !defined KMP_DYNAMIC_LIB
+#if KMP_OS_WINDOWS && !KMP_DYNAMIC_LIB
   /* only for Windows static library */
   /* reclaim array entries for root threads that are already dead */
   added = __kmp_reclaim_dead_roots();
@@ -3704,7 +3754,7 @@ int __kmp_register_root(int initial_thread) {
     }
     root_thread->th.th_info.ds.ds_gtid = gtid;
 #if OMPT_SUPPORT
-    root_thread->th.ompt_thread_info.thread_data.ptr = NULL;
+    root_thread->th.ompt_thread_info.thread_data = ompt_data_none;
 #endif
     root_thread->th.th_root = root;
     if (__kmp_env_consistency_check) {
@@ -3790,20 +3840,24 @@ int __kmp_register_root(int initial_thread) {
   root_thread->th.th_first_place = KMP_PLACE_UNDEFINED;
   root_thread->th.th_last_place = KMP_PLACE_UNDEFINED;
 #endif
-
   if (TCR_4(__kmp_init_middle)) {
     __kmp_affinity_set_init_mask(gtid, TRUE);
   }
 #endif /* KMP_AFFINITY_SUPPORTED */
+#if OMP_50_ENABLED
+  root_thread->th.th_def_allocator = __kmp_def_allocator;
+  root_thread->th.th_prev_level = 0;
+  root_thread->th.th_prev_num_threads = 1;
+#endif
 
   __kmp_root_counter++;
 
 #if OMPT_SUPPORT
   if (!initial_thread && ompt_enabled.enabled) {
 
-    ompt_thread_t *root_thread = ompt_get_thread();
+    kmp_info_t *root_thread = ompt_get_thread();
 
-    ompt_set_thread_state(root_thread, omp_state_overhead);
+    ompt_set_thread_state(root_thread, ompt_state_overhead);
 
     if (ompt_enabled.ompt_callback_thread_begin) {
       ompt_callbacks.ompt_callback(ompt_callback_thread_begin)(
@@ -3817,7 +3871,7 @@ int __kmp_register_root(int initial_thread) {
       // initial task has nothing to return to
     }
 
-    ompt_set_thread_state(root_thread, omp_state_work_serial);
+    ompt_set_thread_state(root_thread, ompt_state_work_serial);
   }
 #endif
 
@@ -3956,7 +4010,7 @@ void __kmp_unregister_root_current_thread(int gtid) {
   if (task_team != NULL && task_team->tt.tt_found_proxy_tasks) {
 #if OMPT_SUPPORT
     // the runtime is shutting down so we won't report any events
-    thread->th.ompt_thread_info.state = omp_state_undefined;
+    thread->th.ompt_thread_info.state = ompt_state_undefined;
 #endif
     __kmp_task_team_wait(thread, team USE_ITT_BUILD_ARG(NULL));
   }
@@ -4007,10 +4061,11 @@ void __kmp_task_info() {
   kmp_team_t *steam = this_thr->th.th_serial_team;
   kmp_team_t *team = this_thr->th.th_team;
 
-  __kmp_printf("__kmp_task_info: gtid=%d tid=%d t_thread=%p team=%p curtask=%p "
-               "ptask=%p\n",
-               gtid, tid, this_thr, team, this_thr->th.th_current_task,
-               team->t.t_implicit_task_taskdata[tid].td_parent);
+  __kmp_printf(
+      "__kmp_task_info: gtid=%d tid=%d t_thread=%p team=%p steam=%p curtask=%p "
+      "ptask=%p\n",
+      gtid, tid, this_thr, team, steam, this_thr->th.th_current_task,
+      team->t.t_implicit_task_taskdata[tid].td_parent);
 }
 #endif // KMP_DEBUG
 
@@ -4332,6 +4387,11 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
   new_thr->th.th_first_place = KMP_PLACE_UNDEFINED;
   new_thr->th.th_last_place = KMP_PLACE_UNDEFINED;
 #endif
+#if OMP_50_ENABLED
+  new_thr->th.th_def_allocator = __kmp_def_allocator;
+  new_thr->th.th_prev_level = 0;
+  new_thr->th.th_prev_num_threads = 1;
+#endif
 
   TCW_4(new_thr->th.th_in_pool, FALSE);
   new_thr->th.th_active_in_pool = FALSE;
@@ -4519,6 +4579,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
       th->th.th_first_place = first_place;
       th->th.th_last_place = last_place;
       th->th.th_new_place = masters_place;
+#if OMP_50_ENABLED
+      if (__kmp_display_affinity && masters_place != th->th.th_current_place &&
+          team->t.t_display_affinity != 1) {
+        team->t.t_display_affinity = 1;
+      }
+#endif
 
       KA_TRACE(100, ("__kmp_partition_places: master: T#%d(%d:%d) place %d "
                      "partition = [%d,%d]\n",
@@ -4552,6 +4618,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         th->th.th_first_place = first_place;
         th->th.th_last_place = last_place;
         th->th.th_new_place = place;
+#if OMP_50_ENABLED
+        if (__kmp_display_affinity && place != th->th.th_current_place &&
+            team->t.t_display_affinity != 1) {
+          team->t.t_display_affinity = 1;
+        }
+#endif
 
         KA_TRACE(100, ("__kmp_partition_places: close: T#%d(%d:%d) place %d "
                        "partition = [%d,%d]\n",
@@ -4573,6 +4645,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         th->th.th_first_place = first_place;
         th->th.th_last_place = last_place;
         th->th.th_new_place = place;
+#if OMP_50_ENABLED
+        if (__kmp_display_affinity && place != th->th.th_current_place &&
+            team->t.t_display_affinity != 1) {
+          team->t.t_display_affinity = 1;
+        }
+#endif
         s_count++;
 
         if ((s_count == S) && rem && (gap_ct == gap)) {
@@ -4641,6 +4719,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
 
           th->th.th_first_place = place;
           th->th.th_new_place = place;
+#if OMP_50_ENABLED
+          if (__kmp_display_affinity && place != th->th.th_current_place &&
+              team->t.t_display_affinity != 1) {
+            team->t.t_display_affinity = 1;
+          }
+#endif
           s_count = 1;
           while (s_count < S) {
             if (place == last_place) {
@@ -4732,7 +4816,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
             th->th.th_first_place = first;
             th->th.th_new_place = place;
             th->th.th_last_place = last;
-
+#if OMP_50_ENABLED
+            if (__kmp_display_affinity && place != th->th.th_current_place &&
+                team->t.t_display_affinity != 1) {
+              team->t.t_display_affinity = 1;
+            }
+#endif
             KA_TRACE(100,
                      ("__kmp_partition_places: spread: T#%d(%d:%d) place %d "
                       "partition = [%d,%d], spacing = %.4f\n",
@@ -4761,6 +4850,12 @@ static void __kmp_partition_places(kmp_team_t *team, int update_master_only) {
         th->th.th_first_place = place;
         th->th.th_last_place = place;
         th->th.th_new_place = place;
+#if OMP_50_ENABLED
+        if (__kmp_display_affinity && place != th->th.th_current_place &&
+            team->t.t_display_affinity != 1) {
+          team->t.t_display_affinity = 1;
+        }
+#endif
         s_count++;
 
         if ((s_count == S) && rem && (gap_ct == gap)) {
@@ -5573,9 +5668,9 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
   ompt_data_t *thread_data;
   if (ompt_enabled.enabled) {
     thread_data = &(this_thr->th.ompt_thread_info.thread_data);
-    thread_data->ptr = NULL;
+    *thread_data = ompt_data_none;
 
-    this_thr->th.ompt_thread_info.state = omp_state_overhead;
+    this_thr->th.ompt_thread_info.state = ompt_state_overhead;
     this_thr->th.ompt_thread_info.wait_id = 0;
     this_thr->th.ompt_thread_info.idle_frame = OMPT_GET_FRAME_ADDRESS(0);
     if (ompt_enabled.ompt_callback_thread_begin) {
@@ -5587,7 +5682,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
 
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
-    this_thr->th.ompt_thread_info.state = omp_state_idle;
+    this_thr->th.ompt_thread_info.state = ompt_state_idle;
   }
 #endif
   /* This is the place where threads wait for work */
@@ -5603,7 +5698,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
 
 #if OMPT_SUPPORT
     if (ompt_enabled.enabled) {
-      this_thr->th.ompt_thread_info.state = omp_state_overhead;
+      this_thr->th.ompt_thread_info.state = ompt_state_overhead;
     }
 #endif
 
@@ -5623,7 +5718,7 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
 
 #if OMPT_SUPPORT
         if (ompt_enabled.enabled) {
-          this_thr->th.ompt_thread_info.state = omp_state_work_parallel;
+          this_thr->th.ompt_thread_info.state = ompt_state_work_parallel;
         }
 #endif
 
@@ -5638,9 +5733,9 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
 #if OMPT_SUPPORT
       if (ompt_enabled.enabled) {
         /* no frame set while outside task */
-        __ompt_get_task_info_object(0)->frame.exit_frame = NULL;
+        __ompt_get_task_info_object(0)->frame.exit_frame = ompt_data_none;
 
-        this_thr->th.ompt_thread_info.state = omp_state_overhead;
+        this_thr->th.ompt_thread_info.state = ompt_state_overhead;
       }
 #endif
       /* join barrier after parallel region */
@@ -6168,7 +6263,7 @@ void __kmp_internal_end_thread(int gtid_req) {
       return;
     }
   }
-#if defined KMP_DYNAMIC_LIB
+#if KMP_DYNAMIC_LIB
   // AC: lets not shutdown the Linux* OS dynamic library at the exit of uber
   // thread, because we will better shutdown later in the library destructor.
   // The reason of this change is performance problem when non-openmp thread in
@@ -6293,7 +6388,7 @@ void __kmp_register_library_startup(void) {
       if (tail != NULL) {
         long *flag_addr = 0;
         long flag_val = 0;
-        KMP_SSCANF(flag_addr_str, "%p", &flag_addr);
+        KMP_SSCANF(flag_addr_str, "%p", RCAST(void**, &flag_addr));
         KMP_SSCANF(flag_val_str, "%lx", &flag_val);
         if (flag_addr != 0 && flag_val != 0 && strcmp(file_name, "") != 0) {
           // First, check whether environment-encoded address is mapped into
@@ -6618,7 +6713,7 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_register_atfork();
 #endif
 
-#if !defined KMP_DYNAMIC_LIB
+#if !KMP_DYNAMIC_LIB
   {
     /* Invoke the exit handler when the program finishes, only for static
        library. For dynamic library, we already have _fini and DllMain. */
@@ -6934,7 +7029,7 @@ int __kmp_invoke_task_func(int gtid) {
 
   if (ompt_enabled.enabled) {
     exit_runtime_p = &(
-        team->t.t_implicit_task_taskdata[tid].ompt_task_info.frame.exit_frame);
+        team->t.t_implicit_task_taskdata[tid].ompt_task_info.frame.exit_frame.ptr);
   } else {
     exit_runtime_p = &dummy;
   }
@@ -7174,10 +7269,10 @@ void __kmp_internal_join(ident_t *id, int gtid, kmp_team_t *team) {
   __kmp_join_barrier(gtid); /* wait for everyone */
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled &&
-      this_thr->th.ompt_thread_info.state == omp_state_wait_barrier_implicit) {
+      this_thr->th.ompt_thread_info.state == ompt_state_wait_barrier_implicit) {
     int ds_tid = this_thr->th.th_info.ds.ds_tid;
     ompt_data_t *task_data = OMPT_CUR_TASK_DATA(this_thr);
-    this_thr->th.ompt_thread_info.state = omp_state_overhead;
+    this_thr->th.ompt_thread_info.state = ompt_state_overhead;
 #if OMPT_OPTIONAL
     void *codeptr = NULL;
     if (KMP_MASTER_TID(ds_tid) &&
@@ -7381,6 +7476,12 @@ void __kmp_cleanup(void) {
   __kmp_nested_proc_bind.bind_types = NULL;
   __kmp_nested_proc_bind.size = 0;
   __kmp_nested_proc_bind.used = 0;
+#if OMP_50_ENABLED
+  if (__kmp_affinity_format) {
+    KMP_INTERNAL_FREE(__kmp_affinity_format);
+    __kmp_affinity_format = NULL;
+  }
+#endif
 
   __kmp_i18n_catclose();
 
@@ -7537,6 +7638,339 @@ void __kmp_aux_set_library(enum library_type arg) {
   }
 }
 
+/* Getting team information common for all team API */
+// Returns NULL if not in teams construct
+static kmp_team_t *__kmp_aux_get_team_info(int &teams_serialized) {
+  kmp_info_t *thr = __kmp_entry_thread();
+  teams_serialized = 0;
+  if (thr->th.th_teams_microtask) {
+    kmp_team_t *team = thr->th.th_team;
+    int tlevel = thr->th.th_teams_level; // the level of the teams construct
+    int ii = team->t.t_level;
+    teams_serialized = team->t.t_serialized;
+    int level = tlevel + 1;
+    KMP_DEBUG_ASSERT(ii >= tlevel);
+    while (ii > level) {
+      for (teams_serialized = team->t.t_serialized;
+           (teams_serialized > 0) && (ii > level); teams_serialized--, ii--) {
+      }
+      if (team->t.t_serialized && (!teams_serialized)) {
+        team = team->t.t_parent;
+        continue;
+      }
+      if (ii > level) {
+        team = team->t.t_parent;
+        ii--;
+      }
+    }
+    return team;
+  }
+  return NULL;
+}
+
+int __kmp_aux_get_team_num() {
+  int serialized;
+  kmp_team_t *team = __kmp_aux_get_team_info(serialized);
+  if (team) {
+    if (serialized > 1) {
+      return 0; // teams region is serialized ( 1 team of 1 thread ).
+    } else {
+      return team->t.t_master_tid;
+    }
+  }
+  return 0;
+}
+
+int __kmp_aux_get_num_teams() {
+  int serialized;
+  kmp_team_t *team = __kmp_aux_get_team_info(serialized);
+  if (team) {
+    if (serialized > 1) {
+      return 1;
+    } else {
+      return team->t.t_parent->t.t_nproc;
+    }
+  }
+  return 1;
+}
+
+/* ------------------------------------------------------------------------ */
+
+#if OMP_50_ENABLED
+/*
+ * Affinity Format Parser
+ *
+ * Field is in form of: %[[[0].]size]type
+ * % and type are required (%% means print a literal '%')
+ * type is either single char or long name surrounded by {},
+ * e.g., N or {num_threads}
+ * 0 => leading zeros
+ * . => right justified when size is specified
+ * by default output is left justified
+ * size is the *minimum* field length
+ * All other characters are printed as is
+ *
+ * Available field types:
+ * L {thread_level}      - omp_get_level()
+ * n {thread_num}        - omp_get_thread_num()
+ * h {host}              - name of host machine
+ * P {process_id}        - process id (integer)
+ * T {thread_identifier} - native thread identifier (integer)
+ * N {num_threads}       - omp_get_num_threads()
+ * A {ancestor_tnum}     - omp_get_ancestor_thread_num(omp_get_level()-1)
+ * a {thread_affinity}   - comma separated list of integers or integer ranges
+ *                         (values of affinity mask)
+ *
+ * Implementation-specific field types can be added
+ * If a type is unknown, print "undefined"
+*/
+
+// Structure holding the short name, long name, and corresponding data type
+// for snprintf.  A table of these will represent the entire valid keyword
+// field types.
+typedef struct kmp_affinity_format_field_t {
+  char short_name; // from spec e.g., L -> thread level
+  const char *long_name; // from spec thread_level -> thread level
+  char field_format; // data type for snprintf (typically 'd' or 's'
+  // for integer or string)
+} kmp_affinity_format_field_t;
+
+static const kmp_affinity_format_field_t __kmp_affinity_format_table[] = {
+#if KMP_AFFINITY_SUPPORTED
+    {'A', "thread_affinity", 's'},
+#endif
+    {'t', "team_num", 'd'},
+    {'T', "num_teams", 'd'},
+    {'L', "nesting_level", 'd'},
+    {'n', "thread_num", 'd'},
+    {'N', "num_threads", 'd'},
+    {'a', "ancestor_tnum", 'd'},
+    {'H', "host", 's'},
+    {'P', "process_id", 'd'},
+    {'i', "native_thread_id", 'd'}};
+
+// Return the number of characters it takes to hold field
+static int __kmp_aux_capture_affinity_field(int gtid, const kmp_info_t *th,
+                                            const char **ptr,
+                                            kmp_str_buf_t *field_buffer) {
+  int rc, format_index, field_value;
+  const char *width_left, *width_right;
+  bool pad_zeros, right_justify, parse_long_name, found_valid_name;
+  static const int FORMAT_SIZE = 20;
+  char format[FORMAT_SIZE] = {0};
+  char absolute_short_name = 0;
+
+  KMP_DEBUG_ASSERT(gtid >= 0);
+  KMP_DEBUG_ASSERT(th);
+  KMP_DEBUG_ASSERT(**ptr == '%');
+  KMP_DEBUG_ASSERT(field_buffer);
+
+  __kmp_str_buf_clear(field_buffer);
+
+  // Skip the initial %
+  (*ptr)++;
+
+  // Check for %% first
+  if (**ptr == '%') {
+    __kmp_str_buf_cat(field_buffer, "%", 1);
+    (*ptr)++; // skip over the second %
+    return 1;
+  }
+
+  // Parse field modifiers if they are present
+  pad_zeros = false;
+  if (**ptr == '0') {
+    pad_zeros = true;
+    (*ptr)++; // skip over 0
+  }
+  right_justify = false;
+  if (**ptr == '.') {
+    right_justify = true;
+    (*ptr)++; // skip over .
+  }
+  // Parse width of field: [width_left, width_right)
+  width_left = width_right = NULL;
+  if (**ptr >= '0' && **ptr <= '9') {
+    width_left = *ptr;
+    SKIP_DIGITS(*ptr);
+    width_right = *ptr;
+  }
+
+  // Create the format for KMP_SNPRINTF based on flags parsed above
+  format_index = 0;
+  format[format_index++] = '%';
+  if (!right_justify)
+    format[format_index++] = '-';
+  if (pad_zeros)
+    format[format_index++] = '0';
+  if (width_left && width_right) {
+    int i = 0;
+    // Only allow 8 digit number widths.
+    // This also prevents overflowing format variable
+    while (i < 8 && width_left < width_right) {
+      format[format_index++] = *width_left;
+      width_left++;
+      i++;
+    }
+  }
+
+  // Parse a name (long or short)
+  // Canonicalize the name into absolute_short_name
+  found_valid_name = false;
+  parse_long_name = (**ptr == '{');
+  if (parse_long_name)
+    (*ptr)++; // skip initial left brace
+  for (size_t i = 0; i < sizeof(__kmp_affinity_format_table) /
+                             sizeof(__kmp_affinity_format_table[0]);
+       ++i) {
+    char short_name = __kmp_affinity_format_table[i].short_name;
+    const char *long_name = __kmp_affinity_format_table[i].long_name;
+    char field_format = __kmp_affinity_format_table[i].field_format;
+    if (parse_long_name) {
+      int length = KMP_STRLEN(long_name);
+      if (strncmp(*ptr, long_name, length) == 0) {
+        found_valid_name = true;
+        (*ptr) += length; // skip the long name
+      }
+    } else if (**ptr == short_name) {
+      found_valid_name = true;
+      (*ptr)++; // skip the short name
+    }
+    if (found_valid_name) {
+      format[format_index++] = field_format;
+      format[format_index++] = '\0';
+      absolute_short_name = short_name;
+      break;
+    }
+  }
+  if (parse_long_name) {
+    if (**ptr != '}') {
+      absolute_short_name = 0;
+    } else {
+      (*ptr)++; // skip over the right brace
+    }
+  }
+
+  // Attempt to fill the buffer with the requested
+  // value using snprintf within __kmp_str_buf_print()
+  switch (absolute_short_name) {
+  case 't':
+    rc = __kmp_str_buf_print(field_buffer, format, __kmp_aux_get_team_num());
+    break;
+  case 'T':
+    rc = __kmp_str_buf_print(field_buffer, format, __kmp_aux_get_num_teams());
+    break;
+  case 'L':
+    rc = __kmp_str_buf_print(field_buffer, format, th->th.th_team->t.t_level);
+    break;
+  case 'n':
+    rc = __kmp_str_buf_print(field_buffer, format, __kmp_tid_from_gtid(gtid));
+    break;
+  case 'H': {
+    static const int BUFFER_SIZE = 256;
+    char buf[BUFFER_SIZE];
+    __kmp_expand_host_name(buf, BUFFER_SIZE);
+    rc = __kmp_str_buf_print(field_buffer, format, buf);
+  } break;
+  case 'P':
+    rc = __kmp_str_buf_print(field_buffer, format, getpid());
+    break;
+  case 'i':
+    rc = __kmp_str_buf_print(field_buffer, format, __kmp_gettid());
+    break;
+  case 'N':
+    rc = __kmp_str_buf_print(field_buffer, format, th->th.th_team->t.t_nproc);
+    break;
+  case 'a':
+    field_value =
+        __kmp_get_ancestor_thread_num(gtid, th->th.th_team->t.t_level - 1);
+    rc = __kmp_str_buf_print(field_buffer, format, field_value);
+    break;
+#if KMP_AFFINITY_SUPPORTED
+  case 'A': {
+    kmp_str_buf_t buf;
+    __kmp_str_buf_init(&buf);
+    __kmp_affinity_str_buf_mask(&buf, th->th.th_affin_mask);
+    rc = __kmp_str_buf_print(field_buffer, format, buf.str);
+    __kmp_str_buf_free(&buf);
+  } break;
+#endif
+  default:
+    // According to spec, If an implementation does not have info for field
+    // type, then "undefined" is printed
+    rc = __kmp_str_buf_print(field_buffer, "%s", "undefined");
+    // Skip the field
+    if (parse_long_name) {
+      SKIP_TOKEN(*ptr);
+      if (**ptr == '}')
+        (*ptr)++;
+    } else {
+      (*ptr)++;
+    }
+  }
+
+  KMP_ASSERT(format_index <= FORMAT_SIZE);
+  return rc;
+}
+
+/*
+ * Return number of characters needed to hold the affinity string
+ * (not including null byte character)
+ * The resultant string is printed to buffer, which the caller can then
+ * handle afterwards
+*/
+size_t __kmp_aux_capture_affinity(int gtid, const char *format,
+                                  kmp_str_buf_t *buffer) {
+  const char *parse_ptr;
+  size_t retval;
+  const kmp_info_t *th;
+  kmp_str_buf_t field;
+
+  KMP_DEBUG_ASSERT(buffer);
+  KMP_DEBUG_ASSERT(gtid >= 0);
+
+  __kmp_str_buf_init(&field);
+  __kmp_str_buf_clear(buffer);
+
+  th = __kmp_threads[gtid];
+  retval = 0;
+
+  // If format is NULL or zero-length string, then we use
+  // affinity-format-var ICV
+  parse_ptr = format;
+  if (parse_ptr == NULL || *parse_ptr == '\0') {
+    parse_ptr = __kmp_affinity_format;
+  }
+  KMP_DEBUG_ASSERT(parse_ptr);
+
+  while (*parse_ptr != '\0') {
+    // Parse a field
+    if (*parse_ptr == '%') {
+      // Put field in the buffer
+      int rc = __kmp_aux_capture_affinity_field(gtid, th, &parse_ptr, &field);
+      __kmp_str_buf_catbuf(buffer, &field);
+      retval += rc;
+    } else {
+      // Put literal character in buffer
+      __kmp_str_buf_cat(buffer, parse_ptr, 1);
+      retval++;
+      parse_ptr++;
+    }
+  }
+  __kmp_str_buf_free(&field);
+  return retval;
+}
+
+// Displays the affinity string to stdout
+void __kmp_aux_display_affinity(int gtid, const char *format) {
+  kmp_str_buf_t buf;
+  __kmp_str_buf_init(&buf);
+  __kmp_aux_capture_affinity(gtid, format, &buf);
+  __kmp_fprintf(kmp_out, "%s" KMP_END_OF_LINE, buf.str);
+  __kmp_str_buf_free(&buf);
+}
+#endif // OMP_50_ENABLED
+
 /* ------------------------------------------------------------------------ */
 
 void __kmp_aux_set_blocktime(int arg, kmp_info_t *thread, int tid) {
@@ -7638,12 +8072,11 @@ __kmp_determine_reduction_method(
   } else {
 
     int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
-    int tree_available = FAST_REDUCTION_TREE_METHOD_GENERATED;
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_WINDOWS ||       \
-    KMP_OS_DARWIN
+#if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
+    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD
 
     int teamsize_cutoff = 4;
 
@@ -7652,6 +8085,7 @@ __kmp_determine_reduction_method(
       teamsize_cutoff = 8;
     }
 #endif
+    int tree_available = FAST_REDUCTION_TREE_METHOD_GENERATED;
     if (tree_available) {
       if (team_size <= teamsize_cutoff) {
         if (atomic_available) {
@@ -7665,12 +8099,12 @@ __kmp_determine_reduction_method(
     }
 #else
 #error "Unknown or unsupported OS"
-#endif // KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_WINDOWS ||
-// KMP_OS_DARWIN
+#endif // KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||
+       // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD
 
 #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS
 
-#if KMP_OS_LINUX || KMP_OS_WINDOWS
+#if KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_HURD
 
     // basic tuning
 
@@ -7682,6 +8116,7 @@ __kmp_determine_reduction_method(
 
 #elif KMP_OS_DARWIN
 
+    int tree_available = FAST_REDUCTION_TREE_METHOD_GENERATED;
     if (atomic_available && (num_vars <= 3)) {
       retval = atomic_reduce_block;
     } else if (tree_available) {

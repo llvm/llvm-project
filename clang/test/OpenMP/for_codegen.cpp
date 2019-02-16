@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=CHECK --check-prefix=LIFETIME
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - -fsanitize-address-use-after-scope | FileCheck %s --check-prefix=CHECK --check-prefix=LIFETIME
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap %s
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=TERM_DEBUG
-// RUN: %clang_cc1 -main-file-name for_codegen.cpp %s -o - -emit-llvm -fprofile-instrument=clang -fprofile-instrument-path=for_codegen-test.profraw | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=PROF-INSTR-PATH
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -main-file-name for_codegen.cpp %s -o - -emit-llvm -fprofile-instrument=clang -fprofile-instrument-path=for_codegen-test.profraw | FileCheck %s --check-prefix=PROF-INSTR-PATH
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -main-file-name for_codegen.cpp %s -o - -emit-llvm -fprofile-instrument=clang -fprofile-instrument-path=for_codegen-test.profraw | FileCheck -allow-deprecated-dag-overlap --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -main-file-name for_codegen.cpp %s -o - -emit-llvm -fprofile-instrument=clang -fprofile-instrument-path=for_codegen-test.profraw | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 //
 // expected-no-diagnostics
@@ -17,8 +17,8 @@
 // PROF-INSTR-PATH: constant [25 x i8] c"for_codegen-test.profraw\00"
 
 // CHECK: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
-// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
-// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 514, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
+// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 514, i32 0, i32 0, i8*
 // CHECK-DAG: [[I:@.+]] = global i8 1,
 // CHECK-DAG: [[J:@.+]] = global i8 2,
 // CHECK-DAG: [[K:@.+]] = global i8 3,
@@ -73,7 +73,7 @@ void without_schedule_clause(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
     a[i] = b[i] * c[i] * d[i];
 // CHECK: [[IV1_2:%.+]] = load i32, i32* [[OMP_IV]]{{.*}}
 // CHECK-NEXT: [[ADD1_2:%.+]] = add nsw i32 [[IV1_2]], 1
@@ -114,7 +114,7 @@ void static_not_chunked(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
     a[i] = b[i] * c[i] * d[i];
 // CHECK: [[IV1_2:%.+]] = load i32, i32* [[OMP_IV]]{{.*}}
 // CHECK-NEXT: [[ADD1_2:%.+]] = add nsw i32 [[IV1_2]], 1
@@ -163,7 +163,7 @@ void static_chunked(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
     a[i] = b[i] * c[i] * d[i];
 // CHECK: [[IV1_2:%.+]] = load i32, i32* [[OMP_IV]]{{.*}}
 // CHECK-NEXT: [[ADD1_2:%.+]] = add i32 [[IV1_2]], 1
@@ -215,7 +215,7 @@ void dynamic1(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: store i64 [[CALC_I_2]], i64* [[LC_I:.+]]
 // ... loop body ...
 // End of body: store into a[i]:
-// CHECK: store float [[RESULT:%.+]], float* {{%.+}}!llvm.mem.parallel_loop_access
+// CHECK: store float [[RESULT:%.+]], float* {{%.+}}!llvm.access.group
     a[i] = b[i] * c[i] * d[i];
 // CHECK: [[IV1_2:%.+]] = load i64, i64* [[OMP_IV]]{{.*}}
 // CHECK-NEXT: [[ADD1_2:%.+]] = add i64 [[IV1_2]], 1
@@ -256,7 +256,7 @@ void guided7(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: store i64 [[CALC_I_2]], i64* [[LC_I:.+]]
 // ... loop body ...
 // End of body: store into a[i]:
-// CHECK: store float [[RESULT:%.+]], float* {{%.+}}!llvm.mem.parallel_loop_access
+// CHECK: store float [[RESULT:%.+]], float* {{%.+}}!llvm.access.group
     a[i] = b[i] * c[i] * d[i];
 // CHECK: [[IV1_2:%.+]] = load i64, i64* [[OMP_IV]]{{.*}}
 // CHECK-NEXT: [[ADD1_2:%.+]] = add i64 [[IV1_2]], 1
@@ -301,7 +301,7 @@ void test_auto(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
     a[i] = b[i] * c[i] * d[i];
 // CHECK: [[IV1_2:%.+]] = load i64, i64* [[OMP_IV]]{{.*}}
 // CHECK-NEXT: [[ADD1_2:%.+]] = add nsw i64 [[IV1_2]], 1
@@ -343,7 +343,7 @@ void runtime(float *a, float *b, float *c, float *d) {
 // ... loop body ...
 // End of body: store into a[i]:
 // CHECK: store float [[RESULT:%.+]], float* {{%.+}}
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
     a[i] = b[i] * c[i] * d[i];
 // CHECK: [[IV1_2:%.+]] = load i32, i32* [[OMP_IV]]{{.*}}
 // CHECK-NEXT: [[ADD1_2:%.+]] = add nsw i32 [[IV1_2]], 1
@@ -385,12 +385,12 @@ void parallel_for(float *a) {
 #pragma omp parallel
 #pragma omp for schedule(static, 5)
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
-  // TERM_DEBUG:     call void @__kmpc_for_static_init_4u({{.+}}), !dbg [[DBG_LOC_START:![0-9]+]]
+  // TERM_DEBUG:     call void @__kmpc_for_static_init_4u({{.+}}), !dbg [[DBG_LOC:![0-9]+]]
   // TERM_DEBUG:     invoke i32 {{.*}}foo{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
-  // TERM_DEBUG:     call void @__kmpc_for_static_fini({{.+}}), !dbg [[DBG_LOC_END:![0-9]+]]
-  // TERM_DEBUG:     call {{.+}} @__kmpc_barrier({{.+}}), !dbg [[DBG_LOC_CANCEL:![0-9]+]]
+  // TERM_DEBUG:     call void @__kmpc_for_static_fini({{.+}}), !dbg [[DBG_LOC]]
+  // TERM_DEBUG:     call {{.+}} @__kmpc_barrier({{.+}}), !dbg [[DBG_LOC]]
   // TERM_DEBUG:     [[TERM_LPAD]]
   // TERM_DEBUG:     call void @__clang_call_terminate
   // TERM_DEBUG:     unreachable
@@ -398,9 +398,7 @@ void parallel_for(float *a) {
     a[i] += foo();
 }
 // Check source line corresponds to "#pragma omp for schedule(static, 5)" above:
-// TERM_DEBUG-DAG: [[DBG_LOC_START]] = !DILocation(line: [[@LINE-15]],
-// TERM_DEBUG-DAG: [[DBG_LOC_END]] = !DILocation(line: [[@LINE-16]],
-// TERM_DEBUG-DAG: [[DBG_LOC_CANCEL]] = !DILocation(line: [[@LINE-17]],
+// TERM_DEBUG: [[DBG_LOC]] = !DILocation(line: [[@LINE-15]],
 
 char i = 1, j = 2, k = 3;
 // CHECK-LABEL: for_with_global_lcv

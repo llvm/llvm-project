@@ -15,3 +15,14 @@ struct AnonBitfieldQualifiers {
   const volatile unsigned i3 : 1;
 };
 }
+
+#if __cplusplus >= 201103L
+namespace dr2211 { // dr2211: 8
+void f() {
+  int a;
+  auto f = [a](int a) { (void)a; }; // expected-error {{a lambda parameter cannot shadow an explicitly captured entity}}
+  // expected-note@-1{{variable 'a' is explicitly captured here}}
+  auto g = [=](int a) { (void)a; };
+}
+}
+#endif

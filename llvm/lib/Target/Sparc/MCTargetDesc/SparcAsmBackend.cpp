@@ -100,6 +100,20 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   }
 }
 
+/// getFixupKindNumBytes - The number of bytes the fixup may change.
+static unsigned getFixupKindNumBytes(unsigned Kind) {
+    switch (Kind) {
+  default:
+    return 4;
+  case FK_Data_1:
+    return 1;
+  case FK_Data_2:
+    return 2;
+  case FK_Data_8:
+    return 8;
+  }
+}
+
 namespace {
   class SparcAsmBackend : public MCAsmBackend {
   protected:
@@ -290,13 +304,13 @@ namespace {
       Value = adjustFixupValue(Fixup.getKind(), Value);
       if (!Value) return;           // Doesn't change encoding.
 
+      unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
       unsigned Offset = Fixup.getOffset();
-
       // For each byte of the fragment that the fixup touches, mask in the bits
       // from the fixup value. The Value has been "split up" into the
       // appropriate bitfields above.
-      for (unsigned i = 0; i != 4; ++i) {
-        unsigned Idx = Endian == support::little ? i : 3 - i;
+      for (unsigned i = 0; i != NumBytes; ++i) {
+        unsigned Idx = Endian == support::little ? i : (NumBytes - 1) - i;
         Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
       }
     }

@@ -65,7 +65,7 @@ kmp_int32 __kmpc_cancel(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
             if (cncl_kind == cancel_parallel)
               type = ompt_cancel_parallel;
             else if (cncl_kind == cancel_loop)
-              type = ompt_cancel_do;
+              type = ompt_cancel_loop;
             else if (cncl_kind == cancel_sections)
               type = ompt_cancel_sections;
             ompt_callbacks.ompt_callback(ompt_callback_cancel)(
@@ -172,7 +172,7 @@ kmp_int32 __kmpc_cancellationpoint(ident_t *loc_ref, kmp_int32 gtid,
               if (cncl_kind == cancel_parallel)
                 type = ompt_cancel_parallel;
               else if (cncl_kind == cancel_loop)
-                type = ompt_cancel_do;
+                type = ompt_cancel_loop;
               else if (cncl_kind == cancel_sections)
                 type = ompt_cancel_sections;
               ompt_callbacks.ompt_callback(ompt_callback_cancel)(

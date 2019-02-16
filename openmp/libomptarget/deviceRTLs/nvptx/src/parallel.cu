@@ -76,7 +76,7 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
   else
     *NumLanes = ConvergentSize;
   ASSERT(LT_FUSSY, *NumLanes > 0, "bad thread request of %d threads",
-         *NumLanes);
+         (int)*NumLanes);
 
   // Set to true for lanes participating in the simd region.
   bool isActive = false;
@@ -152,7 +152,7 @@ EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer, uint32_t Mask,
   else
     NumThreads = ConvergentSize;
   ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
-         NumThreads);
+         (int)NumThreads);
 
   // Set to true for workers participating in the parallel region.
   bool isActive = false;
@@ -193,33 +193,45 @@ EXTERN void __kmpc_kernel_end_convergent_parallel(void *buffer) {
 // support for parallel that goes parallel (1 static level only)
 ////////////////////////////////////////////////////////////////////////////////
 
-// return number of cuda threads that participate to parallel
-// calculation has to consider simd implementation in nvptx
-// i.e. (num omp threads * num lanes)
-//
-// cudathreads =
-//    if(num_threads != 0) {
-//      if(thread_limit > 0) {
-//        min (num_threads*numLanes ; thread_limit*numLanes);
-//      } else {
-//        min (num_threads*numLanes; blockDim.x)
-//      }
-//    } else {
-//      if (thread_limit != 0) {
-//        min (thread_limit*numLanes; blockDim.x)
-//      } else { // no thread_limit, no num_threads, use all cuda threads
-//        blockDim.x;
-//      }
-//    }
-//
+static INLINE uint16_t determineNumberOfThreads(uint16_t NumThreadsClause,
+                                                uint16_t NThreadsICV,
+                                                uint16_t ThreadLimit) {
+  uint16_t ThreadsRequested = NThreadsICV;
+  if (NumThreadsClause != 0) {
+    ThreadsRequested = NumThreadsClause;
+  }
+
+  uint16_t ThreadsAvailable = GetNumberOfWorkersInTeam();
+  if (ThreadLimit != 0 && ThreadLimit < ThreadsAvailable) {
+    ThreadsAvailable = ThreadLimit;
+  }
+
+  uint16_t NumThreads = ThreadsAvailable;
+  if (ThreadsRequested != 0 && ThreadsRequested < NumThreads) {
+    NumThreads = ThreadsRequested;
+  }
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+  // On Volta and newer architectures we require that all lanes in
+  // a warp participate in the parallel region.  Round down to a
+  // multiple of WARPSIZE since it is legal to do so in OpenMP.
+  if (NumThreads < WARPSIZE) {
+    NumThreads = 1;
+  } else {
+    NumThreads = (NumThreads & ~((uint16_t)WARPSIZE - 1));
+  }
+#endif
+
+  return NumThreads;
+}
+
 // This routine is always called by the team master..
 EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
                                            int16_t IsOMPRuntimeInitialized) {
   PRINT0(LD_IO, "call to __kmpc_kernel_prepare_parallel\n");
-  omptarget_nvptx_workFn = WorkFn;
+  ASSERT0(LT_FUSSY, IsOMPRuntimeInitialized, "Expected initialized runtime.");
 
-  if (!IsOMPRuntimeInitialized)
-    return;
+  omptarget_nvptx_workFn = WorkFn;
 
   // This routine is only called by the team master.  The team master is
   // the first thread of the last warp.  It always has the logical thread
@@ -235,80 +247,26 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
     return;
   }
 
-  uint16_t CudaThreadsForParallel = 0;
-  uint16_t NumThreadsClause =
+  uint16_t &NumThreadsClause =
       omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId);
 
-  // we cannot have more than block size
-  uint16_t CudaThreadsAvail = GetNumberOfWorkersInTeam();
+  uint16_t NumThreads =
+      determineNumberOfThreads(NumThreadsClause, currTaskDescr->NThreads(),
+                               currTaskDescr->ThreadLimit());
 
-  // currTaskDescr->ThreadLimit(): If non-zero, this is the limit as
-  // specified by the thread_limit clause on the target directive.
-  // GetNumberOfWorkersInTeam(): This is the number of workers available
-  // in this kernel instance.
-  //
-  // E.g: If thread_limit is 33, the kernel is launched with 33+32=65
-  // threads.  The last warp is the master warp so in this case
-  // GetNumberOfWorkersInTeam() returns 64.
-
-  // this is different from ThreadAvail of OpenMP because we may be
-  // using some of the CUDA threads as SIMD lanes
-  int NumLanes = 1;
   if (NumThreadsClause != 0) {
-    // reset request to avoid propagating to successive #parallel
-    omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(threadId) =
-        0;
-
-    // assume that thread_limit*numlanes is already <= CudaThreadsAvail
-    // because that is already checked on the host side (CUDA offloading rtl)
-    if (currTaskDescr->ThreadLimit() != 0)
-      CudaThreadsForParallel =
-          NumThreadsClause * NumLanes < currTaskDescr->ThreadLimit() * NumLanes
-              ? NumThreadsClause * NumLanes
-              : currTaskDescr->ThreadLimit() * NumLanes;
-    else {
-      CudaThreadsForParallel = (NumThreadsClause * NumLanes > CudaThreadsAvail)
-                                   ? CudaThreadsAvail
-                                   : NumThreadsClause * NumLanes;
-    }
-  } else {
-    if (currTaskDescr->ThreadLimit() != 0) {
-      CudaThreadsForParallel =
-          (currTaskDescr->ThreadLimit() * NumLanes > CudaThreadsAvail)
-              ? CudaThreadsAvail
-              : currTaskDescr->ThreadLimit() * NumLanes;
-    } else
-      CudaThreadsForParallel = CudaThreadsAvail;
+    // Reset request to avoid propagating to successive #parallel
+    NumThreadsClause = 0;
   }
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-  // On Volta and newer architectures we require that all lanes in
-  // a warp participate in the parallel region.  Round down to a
-  // multiple of WARPSIZE since it is legal to do so in OpenMP.
-  // CudaThreadsAvail is the number of workers available in this
-  // kernel instance and is greater than or equal to
-  // currTaskDescr->ThreadLimit().
-  if (CudaThreadsForParallel < CudaThreadsAvail) {
-    CudaThreadsForParallel =
-        (CudaThreadsForParallel < WARPSIZE)
-            ? 1
-            : CudaThreadsForParallel & ~((uint16_t)WARPSIZE - 1);
-  }
-#endif
-
-  ASSERT(LT_FUSSY, CudaThreadsForParallel > 0,
-         "bad thread request of %d threads", CudaThreadsForParallel);
+  ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
+         (int)NumThreads);
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "only team master can create parallel");
 
-  // set number of threads on work descriptor
-  // this is different from the number of cuda threads required for the parallel
-  // region
+  // Set number of threads on work descriptor.
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
-  workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr,
-                                             CudaThreadsForParallel / NumLanes);
-  // init counters (copy start to init)
-  workDescr.CounterGroup().Reset();
+  workDescr.WorkTaskDescr()->CopyToWorkDescr(currTaskDescr, NumThreads);
 }
 
 // All workers call this function.  Deactivate those not needed.
@@ -320,15 +278,16 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
                                    int16_t IsOMPRuntimeInitialized) {
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_parallel\n");
 
+  ASSERT0(LT_FUSSY, IsOMPRuntimeInitialized, "Expected initialized runtime.");
+
   // Work function and arguments for L1 parallel region.
   *WorkFn = omptarget_nvptx_workFn;
 
-  if (!IsOMPRuntimeInitialized)
-    return true;
-
   // If this is the termination signal from the master, quit early.
-  if (!*WorkFn)
+  if (!*WorkFn) {
+    PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_parallel finished\n");
     return false;
+  }
 
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
@@ -347,12 +306,10 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
     omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
                                                                newTaskDescr);
     // init private from int value
-    workDescr.CounterGroup().Init(
-        omptarget_nvptx_threadPrivateContext->Priv(threadId));
     PRINT(LD_PAR,
           "thread will execute parallel region with id %d in a team of "
           "%d threads\n",
-          newTaskDescr->ThreadId(), newTaskDescr->NThreads());
+          (int)newTaskDescr->ThreadId(), (int)newTaskDescr->NThreads());
 
     isActive = true;
   }
@@ -363,6 +320,8 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
 EXTERN void __kmpc_kernel_end_parallel() {
   // pop stack
   PRINT0(LD_IO | LD_PAR, "call to __kmpc_kernel_end_parallel\n");
+  ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Expected initialized runtime.");
+
   // Only the worker threads call this routine and the master warp
   // never arrives here.  Therefore, use the nvptx thread id.
   int threadId = GetThreadIdInBlock();
@@ -375,8 +334,15 @@ EXTERN void __kmpc_kernel_end_parallel() {
 // support for parallel that goes sequential
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_serialized_parallel(kmp_Indent *loc, uint32_t global_tid) {
+EXTERN void __kmpc_serialized_parallel(kmp_Ident *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_serialized_parallel\n");
+
+  if (checkRuntimeUninitialized(loc)) {
+    ASSERT0(LT_FUSSY, checkSPMDMode(loc),
+            "Expected SPMD mode with uninitialized runtime.");
+    omptarget_nvptx_simpleThreadPrivateContext->IncParLevel();
+    return;
+  }
 
   // assume this is only called for nested parallel
   int threadId = GetLogicalThreadIdInBlock();
@@ -392,7 +358,7 @@ EXTERN void __kmpc_serialized_parallel(kmp_Indent *loc, uint32_t global_tid) {
   // it
   omptarget_nvptx_TaskDescr *newTaskDescr =
       (omptarget_nvptx_TaskDescr *)SafeMalloc(sizeof(omptarget_nvptx_TaskDescr),
-                                              (char *)"new seq parallel task");
+                                              "new seq parallel task");
   newTaskDescr->CopyParent(currTaskDescr);
 
   // tweak values for serialized parallel case:
@@ -406,9 +372,16 @@ EXTERN void __kmpc_serialized_parallel(kmp_Indent *loc, uint32_t global_tid) {
                                                              newTaskDescr);
 }
 
-EXTERN void __kmpc_end_serialized_parallel(kmp_Indent *loc,
+EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
                                            uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_end_serialized_parallel\n");
+
+  if (checkRuntimeUninitialized(loc)) {
+    ASSERT0(LT_FUSSY, checkSPMDMode(loc),
+            "Expected SPMD mode with uninitialized runtime.");
+    omptarget_nvptx_simpleThreadPrivateContext->DecParLevel();
+    return;
+  }
 
   // pop stack
   int threadId = GetLogicalThreadIdInBlock();
@@ -422,8 +395,14 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Indent *loc,
   currTaskDescr->RestoreLoopData();
 }
 
-EXTERN uint16_t __kmpc_parallel_level(kmp_Indent *loc, uint32_t global_tid) {
+EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_parallel_level\n");
+
+  if (checkRuntimeUninitialized(loc)) {
+    ASSERT0(LT_FUSSY, checkSPMDMode(loc),
+            "Expected SPMD mode with uninitialized runtime.");
+    return omptarget_nvptx_simpleThreadPrivateContext->GetParallelLevel();
+  }
 
   int threadId = GetLogicalThreadIdInBlock();
   omptarget_nvptx_TaskDescr *currTaskDescr =
@@ -440,25 +419,29 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Indent *loc, uint32_t global_tid) {
 // cached by the compiler and used when calling the runtime. On nvptx
 // it's cheap to recalculate this value so we never use the result
 // of this call.
-EXTERN int32_t __kmpc_global_thread_num(kmp_Indent *loc) {
-  return GetLogicalThreadIdInBlock();
+EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
+  int tid = GetLogicalThreadIdInBlock();
+  return GetOmpThreadId(tid, checkSPMDMode(loc),
+                        checkRuntimeUninitialized(loc));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // push params
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_push_num_threads(kmp_Indent *loc, int32_t tid,
+EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
                                     int32_t num_threads) {
   PRINT(LD_IO, "call kmpc_push_num_threads %d\n", num_threads);
+  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
   tid = GetLogicalThreadIdInBlock();
   omptarget_nvptx_threadPrivateContext->NumThreadsForNextParallel(tid) =
       num_threads;
 }
 
-EXTERN void __kmpc_push_simd_limit(kmp_Indent *loc, int32_t tid,
+EXTERN void __kmpc_push_simd_limit(kmp_Ident *loc, int32_t tid,
                                    int32_t simd_limit) {
-  PRINT(LD_IO, "call kmpc_push_simd_limit %d\n", simd_limit);
+  PRINT(LD_IO, "call kmpc_push_simd_limit %d\n", (int)simd_limit);
+  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
   tid = GetLogicalThreadIdInBlock();
   omptarget_nvptx_threadPrivateContext->SimdLimitForNextSimd(tid) = simd_limit;
 }
@@ -466,14 +449,14 @@ EXTERN void __kmpc_push_simd_limit(kmp_Indent *loc, int32_t tid,
 // Do nothing. The host guarantees we started the requested number of
 // teams and we only need inspection of gridDim.
 
-EXTERN void __kmpc_push_num_teams(kmp_Indent *loc, int32_t tid,
+EXTERN void __kmpc_push_num_teams(kmp_Ident *loc, int32_t tid,
                                   int32_t num_teams, int32_t thread_limit) {
-  PRINT(LD_IO, "call kmpc_push_num_teams %d\n", num_teams);
+  PRINT(LD_IO, "call kmpc_push_num_teams %d\n", (int)num_teams);
   ASSERT0(LT_FUSSY, FALSE,
           "should never have anything with new teams on device");
 }
 
-EXTERN void __kmpc_push_proc_bind(kmp_Indent *loc, uint32_t tid,
+EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t tid,
                                   int proc_bind) {
-  PRINT(LD_IO, "call kmpc_push_proc_bind %d\n", proc_bind);
+  PRINT(LD_IO, "call kmpc_push_proc_bind %d\n", (int)proc_bind);
 }

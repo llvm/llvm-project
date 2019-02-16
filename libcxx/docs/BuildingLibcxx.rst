@@ -316,6 +316,15 @@ libc++ Feature Options
   Build the libc++ benchmark tests and the Google Benchmark library needed
   to support them.
 
+.. option:: LIBCXX_BENCHMARK_TEST_ARGS:STRING
+
+  **Default**: ``--benchmark_min_time=0.01``
+
+  A semicolon list of arguments to pass when running the libc++ benchmarks using the
+  ``check-cxx-benchmarks`` rule. By default we run the benchmarks for a very short amount of time,
+  since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
+  get accurate measurements.
+
 .. option:: LIBCXX_BENCHMARK_NATIVE_STDLIB:STRING
 
   **Default**:: ``""``
@@ -359,6 +368,20 @@ The following options allow building libc++ for a different ABI version.
 
   Build the "unstable" ABI version of libc++. Includes all ABI changing features
   on top of the current stable version.
+
+.. option:: LIBCXX_ABI_NAMESPACE:STRING
+
+  **Default**: ``__n`` where ``n`` is the current ABI version.
+
+  This option defines the name of the inline ABI versioning namespace. It can be used for building
+  custom versions of libc++ with unique symbol names in order to prevent conflicts or ODR issues
+  with other libc++ versions.
+
+  .. warning::
+    When providing a custom namespace, it's the users responsibility to ensure the name won't cause
+    conflicts with other names defined by libc++, both now and in the future. In particular, inline
+    namespaces of the form ``__[0-9]+`` are strictly reserved by libc++ and may not be used by users.
+    Doing otherwise could cause conflicts and hinder libc++ ABI evolution.
 
 .. option:: LIBCXX_ABI_DEFINES:STRING
 

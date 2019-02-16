@@ -129,16 +129,9 @@ namespace Chunk {
             computeChecksum(Ptr, &NewUnpackedHeader));
   }
 
-  // Nulls out a chunk header. When returning the chunk to the backend, there
-  // is no need to store a valid ChunkAvailable header, as this would be
-  // computationally expensive. Zeroing out serves the same purpose by making
-  // the header invalid. In the extremely rare event where 0 would be a valid
-  // checksum for the chunk, the state of the chunk is ChunkAvailable anyway.
+  // Ensure that ChunkAvailable is 0, so that if a 0 checksum is ever valid
+  // for a fully nulled out header, its state will be available anyway.
   COMPILER_CHECK(ChunkAvailable == 0);
-  static INLINE void eraseHeader(void *Ptr) {
-    const PackedHeader NullPackedHeader = 0;
-    atomic_store_relaxed(getAtomicHeader(Ptr), NullPackedHeader);
-  }
 
   // Loads and unpacks the header, verifying the checksum in the process.
   static INLINE
@@ -185,7 +178,9 @@ struct QuarantineCallback {
     Chunk::loadHeader(Ptr, &Header);
     if (UNLIKELY(Header.State != ChunkQuarantine))
       dieWithMessage("invalid chunk state when recycling address %p\n", Ptr);
-    Chunk::eraseHeader(Ptr);
+    UnpackedHeader NewHeader = Header;
+    NewHeader.State = ChunkAvailable;
+    Chunk::compareExchangeHeader(Ptr, &NewHeader, &Header);
     void *BackendPtr = Chunk::getBackendPtr(Ptr, &Header);
     if (Header.ClassId)
       getBackend().deallocatePrimary(Cache_, BackendPtr, Header.ClassId);
@@ -264,7 +259,8 @@ struct Allocator {
     Quarantine.Init(
         static_cast<uptr>(getFlags()->QuarantineSizeKb) << 10,
         static_cast<uptr>(getFlags()->ThreadLocalQuarantineSizeKb) << 10);
-    QuarantineChunksUpToSize = getFlags()->QuarantineChunksUpToSize;
+    QuarantineChunksUpToSize = (Quarantine.GetCacheSize() == 0) ? 0 :
+        getFlags()->QuarantineChunksUpToSize;
     DeallocationTypeMismatch = getFlags()->DeallocationTypeMismatch;
     DeleteSizeMismatch = getFlags()->DeleteSizeMismatch;
     ZeroContents = getFlags()->ZeroContents;
@@ -389,10 +385,11 @@ struct Allocator {
   // quarantine chunk size threshold.
   void quarantineOrDeallocateChunk(void *Ptr, UnpackedHeader *Header,
                                    uptr Size) {
-    const bool BypassQuarantine = (Quarantine.GetCacheSize() == 0) ||
-        (Size > QuarantineChunksUpToSize);
+    const bool BypassQuarantine = !Size || (Size > QuarantineChunksUpToSize);
     if (BypassQuarantine) {
-      Chunk::eraseHeader(Ptr);
+      UnpackedHeader NewHeader = *Header;
+      NewHeader.State = ChunkAvailable;
+      Chunk::compareExchangeHeader(Ptr, &NewHeader, Header);
       void *BackendPtr = Chunk::getBackendPtr(Ptr, Header);
       if (Header->ClassId) {
         bool UnlockRequired;
@@ -675,7 +672,7 @@ void *scudoValloc(uptr Size) {
 }
 
 void *scudoPvalloc(uptr Size) {
-  uptr PageSize = GetPageSizeCached();
+  const uptr PageSize = GetPageSizeCached();
   if (UNLIKELY(CheckForPvallocOverflow(Size, PageSize))) {
     errno = ENOMEM;
     if (Instance.canReturnNull())

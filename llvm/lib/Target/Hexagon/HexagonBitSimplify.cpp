@@ -1985,6 +1985,10 @@ bool BitSimplification::genStoreImmediate(MachineInstr *MI) {
     case Hexagon::S2_storeri_io:
       V = int32_t(U);
       break;
+    default:
+      // Opc is already checked above to be one of the three store instructions.
+      // This silences a -Wuninitialized false positive on GCC 5.4.
+      llvm_unreachable("Unexpected store opcode");
   }
   if (!isInt<8>(V))
     return false;
@@ -2223,6 +2227,10 @@ bool BitSimplification::genBitSplit(MachineInstr *MI,
   for (unsigned S = AVs.find_first(); S; S = AVs.find_next(S)) {
     // The number of leading zeros here should be the number of trailing
     // non-zeros in RC.
+    unsigned SRC = MRI.getRegClass(S)->getID();
+    if (SRC != Hexagon::IntRegsRegClassID &&
+        SRC != Hexagon::DoubleRegsRegClassID)
+      continue;
     if (!BT.has(S))
       continue;
     const BitTracker::RegisterCell &SC = BT.lookup(S);

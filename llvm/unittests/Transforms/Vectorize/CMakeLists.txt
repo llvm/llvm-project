@@ -10,4 +10,5 @@ add_llvm_unittest(VectorizeTests
   VPlanLoopInfoTest.cpp
   VPlanTest.cpp
   VPlanHCFGTest.cpp
+  VPlanSlpTest.cpp
   )

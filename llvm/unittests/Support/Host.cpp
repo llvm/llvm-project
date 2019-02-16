@@ -170,6 +170,83 @@ CPU architecture: 8
                                               "CPU variant     : 0x4\n"
                                               "CPU part        : 0x001"),
             "exynos-m2");
+
+  const std::string ThunderX2T99ProcCpuInfo = R"(
+processor	: 0
+BogoMIPS	: 400.00
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics
+CPU implementer	: 0x43
+CPU architecture: 8
+CPU variant	: 0x1
+CPU part	: 0x0af
+)";
+
+  // Verify different versions of ThunderX2T99.
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x42\n"
+                                              "CPU part	: 0x516"),
+            "thunderx2t99");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x42\n"
+                                              "CPU part	: 0x0516"),
+            "thunderx2t99");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x43\n"
+                                              "CPU part	: 0x516"),
+            "thunderx2t99");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x43\n"
+                                              "CPU part	: 0x0516"),
+            "thunderx2t99");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x42\n"
+                                              "CPU part	: 0xaf"),
+            "thunderx2t99");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x42\n"
+                                              "CPU part	: 0x0af"),
+            "thunderx2t99");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x43\n"
+                                              "CPU part	: 0xaf"),
+            "thunderx2t99");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderX2T99ProcCpuInfo +
+                                              "CPU implementer	: 0x43\n"
+                                              "CPU part	: 0x0af"),
+            "thunderx2t99");
+
+  // Verify ThunderXT88.
+  const std::string ThunderXT88ProcCpuInfo = R"(
+processor	: 0
+BogoMIPS	: 200.00
+Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32
+CPU implementer	: 0x43
+CPU architecture: 8
+CPU variant	: 0x1
+CPU part	: 0x0a1
+)";
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderXT88ProcCpuInfo +
+                                              "CPU implementer	: 0x43\n"
+                                              "CPU part	: 0x0a1"),
+            "thunderxt88");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(ThunderXT88ProcCpuInfo +
+                                              "CPU implementer	: 0x43\n"
+                                              "CPU part	: 0xa1"),
+            "thunderxt88");
+
+  // Verify HiSilicon processors.
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x48\n"
+                                              "CPU part        : 0xd01"),
+            "tsv110");
 }
 
 #if defined(__APPLE__)

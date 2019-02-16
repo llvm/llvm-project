@@ -12,6 +12,8 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <unordered_map>
 
 namespace llvm {
@@ -24,6 +26,7 @@ using TagStats = std::unordered_map<PDB_SymType, int>;
 
 raw_ostream &operator<<(raw_ostream &OS, const PDB_VariantType &Value);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_CallingConv &Conv);
+raw_ostream &operator<<(raw_ostream &OS, const PDB_BuiltinType &Type);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_DataKind &Data);
 raw_ostream &operator<<(raw_ostream &OS, const codeview::RegisterId &Reg);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_LocType &Loc);
@@ -40,6 +43,15 @@ raw_ostream &operator<<(raw_ostream &OS,
 raw_ostream &operator<<(raw_ostream &OS, const Variant &Value);
 raw_ostream &operator<<(raw_ostream &OS, const VersionInfo &Version);
 raw_ostream &operator<<(raw_ostream &OS, const TagStats &Stats);
+
+
+template <typename T>
+void dumpSymbolField(raw_ostream &OS, StringRef Name, T Value, int Indent) {
+  OS << "\n";
+  OS.indent(Indent);
+  OS << Name << ": " << Value;
+}
+
 
 } // end namespace pdb
 

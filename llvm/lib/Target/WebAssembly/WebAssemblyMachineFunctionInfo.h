@@ -17,7 +17,9 @@
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYMACHINEFUNCTIONINFO_H
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/MC/MCSymbolWasm.h"
 
 namespace llvm {
 
@@ -50,7 +52,7 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   // overaligned values on the user stack.
   unsigned BasePtrVreg = -1U;
 
- public:
+public:
   explicit WebAssemblyFunctionInfo(MachineFunction &MF) : MF(MF) {}
   ~WebAssemblyFunctionInfo() override;
 
@@ -60,7 +62,10 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   void addResult(MVT VT) { Results.push_back(VT); }
   const std::vector<MVT> &getResults() const { return Results; }
 
-  void clearParamsAndResults() { Params.clear(); Results.clear(); }
+  void clearParamsAndResults() {
+    Params.clear();
+    Results.clear();
+  }
 
   void setNumLocals(size_t NumLocals) { Locals.resize(NumLocals, MVT::i32); }
   void setLocal(size_t i, MVT VT) { Locals[i] = VT; }
@@ -115,12 +120,21 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   }
 };
 
-void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM,
-                          Type *Ty, SmallVectorImpl<MVT> &ValueVTs);
+void ComputeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
+                          SmallVectorImpl<MVT> &ValueVTs);
 
-void ComputeSignatureVTs(const Function &F, const TargetMachine &TM,
-                         SmallVectorImpl<MVT> &Params,
+// Compute the signature for a given FunctionType (Ty). Note that it's not the
+// signature for F (F is just used to get varous context)
+void ComputeSignatureVTs(const FunctionType *Ty, const Function &F,
+                         const TargetMachine &TM, SmallVectorImpl<MVT> &Params,
                          SmallVectorImpl<MVT> &Results);
+
+void ValTypesFromMVTs(const ArrayRef<MVT> &In,
+                      SmallVectorImpl<wasm::ValType> &Out);
+
+std::unique_ptr<wasm::WasmSignature>
+SignatureFromMVTs(const SmallVectorImpl<MVT> &Results,
+                  const SmallVectorImpl<MVT> &Params);
 
 } // end namespace llvm
 

@@ -19,27 +19,35 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
+namespace llvm {
 namespace exegesis {
 
-LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
+LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName,
+                     const std::string &Features) {
   std::string Error;
   const llvm::Target *const TheTarget =
       llvm::TargetRegistry::lookupTarget(Triple, Error);
   assert(TheTarget && "unknown target for host");
   const llvm::TargetOptions Options;
-  TargetMachine.reset(static_cast<llvm::LLVMTargetMachine *>(
-      TheTarget->createTargetMachine(Triple, CpuName, /*Features*/ "", Options,
-                                     llvm::Reloc::Model::Static)));
+  TargetMachine.reset(
+      static_cast<llvm::LLVMTargetMachine *>(TheTarget->createTargetMachine(
+          Triple, CpuName, Features, Options, llvm::Reloc::Model::Static)));
   TheExegesisTarget = ExegesisTarget::lookup(TargetMachine->getTargetTriple());
   if (!TheExegesisTarget) {
     llvm::errs() << "no exegesis target for " << Triple << ", using default\n";
     TheExegesisTarget = &ExegesisTarget::getDefault();
   }
+  PfmCounters = &TheExegesisTarget->getPfmCounters(CpuName);
+
+  RATC.reset(new RegisterAliasingTrackerCache(
+      getRegInfo(), getFunctionReservedRegs(getTargetMachine())));
+  IC.reset(new InstructionsCache(getInstrInfo(), getRATC()));
 }
 
-LLVMState::LLVMState()
+LLVMState::LLVMState(const std::string &CpuName)
     : LLVMState(llvm::sys::getProcessTriple(),
-                llvm::sys::getHostCPUName().str()) {}
+                CpuName.empty() ? llvm::sys::getHostCPUName().str() : CpuName,
+                "") {}
 
 std::unique_ptr<llvm::LLVMTargetMachine>
 LLVMState::createTargetMachine() const {
@@ -69,3 +77,4 @@ bool LLVMState::canAssemble(const llvm::MCInst &Inst) const {
 }
 
 } // namespace exegesis
+} // namespace llvm

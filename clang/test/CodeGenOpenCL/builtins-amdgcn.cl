@@ -1,6 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown-opencl -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
@@ -20,17 +19,40 @@ void test_div_scale_f64(global double* out, global int* flagout, double a, doubl
   *flagout = flag;
 }
 
-// CHECK-LABEL: @test_div_scale_f32
+// CHECK-LABEL: @test_div_scale_f32(
 // CHECK: call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true)
 // CHECK-DAG: [[FLAG:%.+]] = extractvalue { float, i1 } %{{.+}}, 1
 // CHECK-DAG: [[VAL:%.+]] = extractvalue { float, i1 } %{{.+}}, 0
-// CHECK: [[FLAGEXT:%.+]] = zext i1 [[FLAG]] to i32
-// CHECK: store i32 [[FLAGEXT]]
-void test_div_scale_f32(global float* out, global int* flagout, float a, float b)
+// CHECK: [[FLAGEXT:%.+]] = zext i1 [[FLAG]] to i8
+// CHECK: store i8 [[FLAGEXT]]
+void test_div_scale_f32(global float* out, global bool* flagout, float a, float b)
 {
   bool flag;
   *out = __builtin_amdgcn_div_scalef(a, b, true, &flag);
   *flagout = flag;
+}
+
+// CHECK-LABEL: @test_div_scale_f32_global_ptr(
+// CHECK: call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true)
+// CHECK-DAG: [[FLAG:%.+]] = extractvalue { float, i1 } %{{.+}}, 1
+// CHECK-DAG: [[VAL:%.+]] = extractvalue { float, i1 } %{{.+}}, 0
+// CHECK: [[FLAGEXT:%.+]] = zext i1 [[FLAG]] to i8
+// CHECK: store i8 [[FLAGEXT]]
+void test_div_scale_f32_global_ptr(global float* out, global int* flagout, float a, float b, global bool* flag)
+{
+  *out = __builtin_amdgcn_div_scalef(a, b, true, flag);
+}
+
+// CHECK-LABEL: @test_div_scale_f32_generic_ptr(
+// CHECK: call { float, i1 } @llvm.amdgcn.div.scale.f32(float %a, float %b, i1 true)
+// CHECK-DAG: [[FLAG:%.+]] = extractvalue { float, i1 } %{{.+}}, 1
+// CHECK-DAG: [[VAL:%.+]] = extractvalue { float, i1 } %{{.+}}, 0
+// CHECK: [[FLAGEXT:%.+]] = zext i1 [[FLAG]] to i8
+// CHECK: store i8 [[FLAGEXT]]
+void test_div_scale_f32_generic_ptr(global float* out, global int* flagout, float a, float b, global bool* flag_arg)
+{
+  generic bool* flag = flag_arg;
+  *out = __builtin_amdgcn_div_scalef(a, b, true, flag);
 }
 
 // CHECK-LABEL: @test_div_fmas_f32
@@ -414,42 +436,49 @@ void test_cubema(global float* out, float a, float b, float c) {
 }
 
 // CHECK-LABEL: @test_read_exec(
-// CHECK: call i64 @llvm.read_register.i64(metadata ![[EXEC:[0-9]+]]) #[[READ_EXEC_ATTRS:[0-9]+]]
+// CHECK: call i64 @llvm.read_register.i64(metadata ![[$EXEC:[0-9]+]]) #[[$READ_EXEC_ATTRS:[0-9]+]]
 void test_read_exec(global ulong* out) {
   *out = __builtin_amdgcn_read_exec();
 }
 
-// CHECK: declare i64 @llvm.read_register.i64(metadata) #[[NOUNWIND_READONLY:[0-9]+]]
+// CHECK: declare i64 @llvm.read_register.i64(metadata) #[[$NOUNWIND_READONLY:[0-9]+]]
 
 // CHECK-LABEL: @test_read_exec_lo(
-// CHECK: call i32 @llvm.read_register.i32(metadata ![[EXEC_LO:[0-9]+]]) #[[READ_EXEC_ATTRS]]
+// CHECK: call i32 @llvm.read_register.i32(metadata ![[$EXEC_LO:[0-9]+]]) #[[$READ_EXEC_ATTRS]]
 void test_read_exec_lo(global uint* out) {
   *out = __builtin_amdgcn_read_exec_lo();
 }
 
 // CHECK-LABEL: @test_read_exec_hi(
-// CHECK: call i32 @llvm.read_register.i32(metadata ![[EXEC_HI:[0-9]+]]) #[[READ_EXEC_ATTRS]]
+// CHECK: call i32 @llvm.read_register.i32(metadata ![[$EXEC_HI:[0-9]+]]) #[[$READ_EXEC_ATTRS]]
 void test_read_exec_hi(global uint* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
 
 // CHECK-LABEL: @test_dispatch_ptr
 // CHECK: call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
-void test_dispatch_ptr(__attribute__((address_space(4))) unsigned char ** out)
+void test_dispatch_ptr(__constant unsigned char ** out)
 {
   *out = __builtin_amdgcn_dispatch_ptr();
 }
 
+// CHECK-LABEL: @test_queue_ptr
+// CHECK: call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
+void test_queue_ptr(__constant unsigned char ** out)
+{
+  *out = __builtin_amdgcn_queue_ptr();
+}
+
 // CHECK-LABEL: @test_kernarg_segment_ptr
 // CHECK: call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-void test_kernarg_segment_ptr(__attribute__((address_space(4))) unsigned char ** out)
+void test_kernarg_segment_ptr(__constant unsigned char ** out)
 {
   *out = __builtin_amdgcn_kernarg_segment_ptr();
 }
 
 // CHECK-LABEL: @test_implicitarg_ptr
 // CHECK: call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-void test_implicitarg_ptr(__attribute__((address_space(4))) unsigned char ** out)
+void test_implicitarg_ptr(__constant unsigned char ** out)
 {
   *out = __builtin_amdgcn_implicitarg_ptr();
 }
@@ -480,9 +509,9 @@ void test_s_getreg(volatile global uint *out)
 }
 
 // CHECK-LABEL: @test_get_local_id(
-// CHECK: tail call i32 @llvm.amdgcn.workitem.id.x(), !range [[WI_RANGE:![0-9]*]]
-// CHECK: tail call i32 @llvm.amdgcn.workitem.id.y(), !range [[WI_RANGE]]
-// CHECK: tail call i32 @llvm.amdgcn.workitem.id.z(), !range [[WI_RANGE]]
+// CHECK: tail call i32 @llvm.amdgcn.workitem.id.x(), !range [[$WI_RANGE:![0-9]*]]
+// CHECK: tail call i32 @llvm.amdgcn.workitem.id.y(), !range [[$WI_RANGE]]
+// CHECK: tail call i32 @llvm.amdgcn.workitem.id.z(), !range [[$WI_RANGE]]
 void test_get_local_id(int d, global int *out)
 {
 	switch (d) {
@@ -507,9 +536,9 @@ void test_s_getpc(global ulong* out)
   *out = __builtin_amdgcn_s_getpc();
 }
 
-// CHECK-DAG: [[WI_RANGE]] = !{i32 0, i32 1024}
-// CHECK-DAG: attributes #[[NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
-// CHECK-DAG: attributes #[[READ_EXEC_ATTRS]] = { convergent }
-// CHECK-DAG: ![[EXEC]] = !{!"exec"}
-// CHECK-DAG: ![[EXEC_LO]] = !{!"exec_lo"}
-// CHECK-DAG: ![[EXEC_HI]] = !{!"exec_hi"}
+// CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
+// CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
+// CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }
+// CHECK-DAG: ![[$EXEC]] = !{!"exec"}
+// CHECK-DAG: ![[$EXEC_LO]] = !{!"exec_lo"}
+// CHECK-DAG: ![[$EXEC_HI]] = !{!"exec_hi"}

@@ -7,34 +7,56 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
+#include "TestIndex.h"
+#include "TestTU.h"
+#include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using testing::UnorderedElementsAre;
+using testing::_;
+using testing::AllOf;
+using testing::ElementsAre;
+using testing::Pair;
 using testing::Pointee;
+using testing::UnorderedElementsAre;
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
 
-Symbol symbol(llvm::StringRef QName) {
-  Symbol Sym;
-  Sym.ID = SymbolID(QName.str());
-  size_t Pos = QName.rfind("::");
-  if (Pos == llvm::StringRef::npos) {
-    Sym.Name = QName;
-    Sym.Scope = "";
-  } else {
-    Sym.Name = QName.substr(Pos + 2);
-    Sym.Scope = QName.substr(0, Pos + 2);
-  }
-  return Sym;
-}
-
 MATCHER_P(Named, N, "") { return arg.Name == N; }
+MATCHER_P(RefRange, Range, "") {
+  return std::make_tuple(arg.Location.Start.line(), arg.Location.Start.column(),
+                         arg.Location.End.line(), arg.Location.End.column()) ==
+         std::make_tuple(Range.start.line, Range.start.character,
+                         Range.end.line, Range.end.character);
+}
+MATCHER_P(FileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
+
+TEST(SymbolLocation, Position) {
+  using Position = SymbolLocation::Position;
+  Position Pos;
+
+  Pos.setLine(1);
+  EXPECT_EQ(1u, Pos.line());
+  Pos.setColumn(2);
+  EXPECT_EQ(2u, Pos.column());
+  EXPECT_FALSE(Pos.hasOverflow());
+
+  Pos.setLine(Position::MaxLine + 1); // overflow
+  EXPECT_TRUE(Pos.hasOverflow());
+  EXPECT_EQ(Pos.line(), Position::MaxLine);
+  Pos.setLine(1); // reset the overflowed line.
+
+  Pos.setColumn(Position::MaxColumn + 1); // overflow
+  EXPECT_TRUE(Pos.hasOverflow());
+  EXPECT_EQ(Pos.column(), Position::MaxColumn);
+}
 
 TEST(SymbolSlab, FindAndIterate) {
   SymbolSlab::Builder B;
@@ -52,256 +74,167 @@ TEST(SymbolSlab, FindAndIterate) {
     EXPECT_THAT(*S.find(SymbolID(Sym)), Named(Sym));
 }
 
-struct SlabAndPointers {
-  SymbolSlab Slab;
-  std::vector<const Symbol *> Pointers;
-};
+TEST(SwapIndexTest, OldIndexRecycled) {
+  auto Token = std::make_shared<int>();
+  std::weak_ptr<int> WeakToken = Token;
 
-// Create a slab of symbols with the given qualified names as both IDs and
-// names. The life time of the slab is managed by the returned shared pointer.
-// If \p WeakSymbols is provided, it will be pointed to the managed object in
-// the returned shared pointer.
-std::shared_ptr<std::vector<const Symbol *>>
-generateSymbols(std::vector<std::string> QualifiedNames,
-                std::weak_ptr<SlabAndPointers> *WeakSymbols = nullptr) {
-  SymbolSlab::Builder Slab;
-  for (llvm::StringRef QName : QualifiedNames)
-    Slab.insert(symbol(QName));
-
-  auto Storage = std::make_shared<SlabAndPointers>();
-  Storage->Slab = std::move(Slab).build();
-  for (const auto &Sym : Storage->Slab)
-    Storage->Pointers.push_back(&Sym);
-  if (WeakSymbols)
-    *WeakSymbols = Storage;
-  auto *Pointers = &Storage->Pointers;
-  return {std::move(Storage), Pointers};
-}
-
-// Create a slab of symbols with IDs and names [Begin, End], otherwise identical
-// to the `generateSymbols` above.
-std::shared_ptr<std::vector<const Symbol *>>
-generateNumSymbols(int Begin, int End,
-                   std::weak_ptr<SlabAndPointers> *WeakSymbols = nullptr) {
-  std::vector<std::string> Names;
-  for (int i = Begin; i <= End; i++)
-    Names.push_back(std::to_string(i));
-  return generateSymbols(Names, WeakSymbols);
-}
-
-std::string getQualifiedName(const Symbol &Sym) {
-  return (Sym.Scope + Sym.Name).str();
-}
-
-std::vector<std::string> match(const SymbolIndex &I,
-                               const FuzzyFindRequest &Req,
-                               bool *Incomplete = nullptr) {
-  std::vector<std::string> Matches;
-  bool IsIncomplete = I.fuzzyFind(Req, [&](const Symbol &Sym) {
-    Matches.push_back(getQualifiedName(Sym));
-  });
-  if (Incomplete)
-    *Incomplete = IsIncomplete;
-  return Matches;
-}
-
-TEST(MemIndexTest, MemIndexSymbolsRecycled) {
-  MemIndex I;
-  std::weak_ptr<SlabAndPointers> Symbols;
-  I.build(generateNumSymbols(0, 10, &Symbols));
-  FuzzyFindRequest Req;
-  Req.Query = "7";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("7"));
-
-  EXPECT_FALSE(Symbols.expired());
-  // Release old symbols.
-  I.build(generateNumSymbols(0, 0));
-  EXPECT_TRUE(Symbols.expired());
+  SwapIndex S(llvm::make_unique<MemIndex>(
+      SymbolSlab(), RefSlab(), std::move(Token), /*BackingDataSize=*/0));
+  EXPECT_FALSE(WeakToken.expired());      // Current MemIndex keeps it alive.
+  S.reset(llvm::make_unique<MemIndex>()); // Now the MemIndex is destroyed.
+  EXPECT_TRUE(WeakToken.expired());       // So the token is too.
 }
 
 TEST(MemIndexTest, MemIndexDeduplicate) {
-  auto Symbols = generateNumSymbols(0, 10);
-
-  // Inject some duplicates and make sure we only match the same symbol once.
-  auto Sym = symbol("7");
-  Symbols->push_back(&Sym);
-  Symbols->push_back(&Sym);
-  Symbols->push_back(&Sym);
-
+  std::vector<Symbol> Symbols = {symbol("1"), symbol("2"), symbol("3"),
+                                 symbol("2") /* duplicate */};
   FuzzyFindRequest Req;
-  Req.Query = "7";
-  MemIndex I;
-  I.build(std::move(Symbols));
-  auto Matches = match(I, Req);
-  EXPECT_EQ(Matches.size(), 1u);
+  Req.Query = "2";
+  Req.AnyScope = true;
+  MemIndex I(Symbols, RefSlab());
+  EXPECT_THAT(match(I, Req), ElementsAre("2"));
 }
 
 TEST(MemIndexTest, MemIndexLimitedNumMatches) {
-  MemIndex I;
-  I.build(generateNumSymbols(0, 100));
+  auto I = MemIndex::build(generateNumSymbols(0, 100), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "5";
-  Req.MaxCandidateCount = 3;
+  Req.AnyScope = true;
+  Req.Limit = 3;
   bool Incomplete;
-  auto Matches = match(I, Req, &Incomplete);
-  EXPECT_EQ(Matches.size(), Req.MaxCandidateCount);
+  auto Matches = match(*I, Req, &Incomplete);
+  EXPECT_TRUE(Req.Limit);
+  EXPECT_EQ(Matches.size(), *Req.Limit);
   EXPECT_TRUE(Incomplete);
 }
 
 TEST(MemIndexTest, FuzzyMatch) {
-  MemIndex I;
-  I.build(
-      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}));
+  auto I = MemIndex::build(
+      generateSymbols({"LaughingOutLoud", "LionPopulation", "LittleOldLady"}),
+      RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "lol";
-  Req.MaxCandidateCount = 2;
-  EXPECT_THAT(match(I, Req),
+  Req.AnyScope = true;
+  Req.Limit = 2;
+  EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  auto I =
+      MemIndex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
+  Req.AnyScope = true;
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithGlobalScope) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "b::y2", "y3"}));
+  auto I =
+      MemIndex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {""};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("y3"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithOneScope) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}));
+  auto I = MemIndex::build(
+      generateSymbols({"a::y1", "a::y2", "a::x", "b::y2", "y3"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "a::y2"));
 }
 
 TEST(MemIndexTest, MatchQualifiedNamesWithMultipleScopes) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}));
+  auto I = MemIndex::build(
+      generateSymbols({"a::y1", "a::y2", "a::x", "b::y3", "y3"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::", "b::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "a::y2", "b::y3"));
 }
 
 TEST(MemIndexTest, NoMatchNestedScopes) {
-  MemIndex I;
-  I.build(generateSymbols({"a::y1", "a::b::y2"}));
+  auto I = MemIndex::build(generateSymbols({"a::y1", "a::b::y2"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
   Req.Scopes = {"a::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("a::y1"));
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1"));
 }
 
 TEST(MemIndexTest, IgnoreCases) {
-  MemIndex I;
-  I.build(generateSymbols({"ns::ABC", "ns::abc"}));
+  auto I = MemIndex::build(generateSymbols({"ns::ABC", "ns::abc"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "AB";
   Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
-}
-
-// Returns qualified names of symbols with any of IDs in the index.
-std::vector<std::string> lookup(const SymbolIndex &I,
-                                llvm::ArrayRef<SymbolID> IDs) {
-  LookupRequest Req;
-  Req.IDs.insert(IDs.begin(), IDs.end());
-  std::vector<std::string> Results;
-  I.lookup(Req, [&](const Symbol &Sym) {
-    Results.push_back(getQualifiedName(Sym));
-  });
-  return Results;
+  EXPECT_THAT(match(*I, Req), UnorderedElementsAre("ns::ABC", "ns::abc"));
 }
 
 TEST(MemIndexTest, Lookup) {
-  MemIndex I;
-  I.build(generateSymbols({"ns::abc", "ns::xyz"}));
-  EXPECT_THAT(lookup(I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
+  auto I = MemIndex::build(generateSymbols({"ns::abc", "ns::xyz"}), RefSlab());
+  EXPECT_THAT(lookup(*I, SymbolID("ns::abc")), UnorderedElementsAre("ns::abc"));
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::abc"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::abc", "ns::xyz"));
-  EXPECT_THAT(lookup(I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
+  EXPECT_THAT(lookup(*I, {SymbolID("ns::nonono"), SymbolID("ns::xyz")}),
               UnorderedElementsAre("ns::xyz"));
-  EXPECT_THAT(lookup(I, SymbolID("ns::nonono")), UnorderedElementsAre());
+  EXPECT_THAT(lookup(*I, SymbolID("ns::nonono")), UnorderedElementsAre());
 }
 
 TEST(MergeIndexTest, Lookup) {
-  MemIndex I, J;
-  I.build(generateSymbols({"ns::A", "ns::B"}));
-  J.build(generateSymbols({"ns::B", "ns::C"}));
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::A")),
-              UnorderedElementsAre("ns::A"));
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::B")),
-              UnorderedElementsAre("ns::B"));
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::C")),
-              UnorderedElementsAre("ns::C"));
-  EXPECT_THAT(
-      lookup(*mergeIndex(&I, &J), {SymbolID("ns::A"), SymbolID("ns::B")}),
-      UnorderedElementsAre("ns::A", "ns::B"));
-  EXPECT_THAT(
-      lookup(*mergeIndex(&I, &J), {SymbolID("ns::A"), SymbolID("ns::C")}),
-      UnorderedElementsAre("ns::A", "ns::C"));
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), SymbolID("ns::D")),
-              UnorderedElementsAre());
-  EXPECT_THAT(lookup(*mergeIndex(&I, &J), {}), UnorderedElementsAre());
+  auto I = MemIndex::build(generateSymbols({"ns::A", "ns::B"}), RefSlab()),
+       J = MemIndex::build(generateSymbols({"ns::B", "ns::C"}), RefSlab());
+  MergedIndex M(I.get(), J.get());
+  EXPECT_THAT(lookup(M, SymbolID("ns::A")), UnorderedElementsAre("ns::A"));
+  EXPECT_THAT(lookup(M, SymbolID("ns::B")), UnorderedElementsAre("ns::B"));
+  EXPECT_THAT(lookup(M, SymbolID("ns::C")), UnorderedElementsAre("ns::C"));
+  EXPECT_THAT(lookup(M, {SymbolID("ns::A"), SymbolID("ns::B")}),
+              UnorderedElementsAre("ns::A", "ns::B"));
+  EXPECT_THAT(lookup(M, {SymbolID("ns::A"), SymbolID("ns::C")}),
+              UnorderedElementsAre("ns::A", "ns::C"));
+  EXPECT_THAT(lookup(M, SymbolID("ns::D")), UnorderedElementsAre());
+  EXPECT_THAT(lookup(M, {}), UnorderedElementsAre());
 }
 
 TEST(MergeIndexTest, FuzzyFind) {
-  MemIndex I, J;
-  I.build(generateSymbols({"ns::A", "ns::B"}));
-  J.build(generateSymbols({"ns::B", "ns::C"}));
+  auto I = MemIndex::build(generateSymbols({"ns::A", "ns::B"}), RefSlab()),
+       J = MemIndex::build(generateSymbols({"ns::B", "ns::C"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Scopes = {"ns::"};
-  EXPECT_THAT(match(*mergeIndex(&I, &J), Req),
+  EXPECT_THAT(match(MergedIndex(I.get(), J.get()), Req),
               UnorderedElementsAre("ns::A", "ns::B", "ns::C"));
 }
 
 TEST(MergeTest, Merge) {
   Symbol L, R;
   L.ID = R.ID = SymbolID("hello");
-  L.Name = R.Name = "Foo";                    // same in both
+  L.Name = R.Name = "Foo";                           // same in both
   L.CanonicalDeclaration.FileURI = "file:///left.h"; // differs
   R.CanonicalDeclaration.FileURI = "file:///right.h";
   L.References = 1;
   R.References = 2;
   L.Signature = "()";                   // present in left only
   R.CompletionSnippetSuffix = "{$1:0}"; // present in right only
-  Symbol::Details DetL, DetR;
-  DetL.ReturnType = "DetL";
-  DetR.ReturnType = "DetR";
-  DetR.Documentation = "--doc--";
-  L.Detail = &DetL;
-  R.Detail = &DetR;
+  R.Documentation = "--doc--";
   L.Origin = SymbolOrigin::Dynamic;
   R.Origin = SymbolOrigin::Static;
+  R.Type = "expectedType";
 
-  Symbol::Details Scratch;
-  Symbol M = mergeSymbol(L, R, &Scratch);
+  Symbol M = mergeSymbol(L, R);
   EXPECT_EQ(M.Name, "Foo");
-  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:///left.h");
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:///left.h");
   EXPECT_EQ(M.References, 3u);
   EXPECT_EQ(M.Signature, "()");
   EXPECT_EQ(M.CompletionSnippetSuffix, "{$1:0}");
-  ASSERT_TRUE(M.Detail);
-  EXPECT_EQ(M.Detail->ReturnType, "DetL");
-  EXPECT_EQ(M.Detail->Documentation, "--doc--");
+  EXPECT_EQ(M.Documentation, "--doc--");
+  EXPECT_EQ(M.Type, "expectedType");
   EXPECT_EQ(M.Origin,
             SymbolOrigin::Dynamic | SymbolOrigin::Static | SymbolOrigin::Merge);
 }
 
 TEST(MergeTest, PreferSymbolWithDefn) {
   Symbol L, R;
-  Symbol::Details Scratch;
 
   L.ID = R.ID = SymbolID("hello");
   L.CanonicalDeclaration.FileURI = "file:/left.h";
@@ -309,16 +242,105 @@ TEST(MergeTest, PreferSymbolWithDefn) {
   L.Name = "left";
   R.Name = "right";
 
-  Symbol M = mergeSymbol(L, R, &Scratch);
-  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/left.h");
-  EXPECT_EQ(M.Definition.FileURI, "");
+  Symbol M = mergeSymbol(L, R);
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/left.h");
+  EXPECT_EQ(StringRef(M.Definition.FileURI), "");
   EXPECT_EQ(M.Name, "left");
 
   R.Definition.FileURI = "file:/right.cpp"; // Now right will be favored.
-  M = mergeSymbol(L, R, &Scratch);
-  EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/right.h");
-  EXPECT_EQ(M.Definition.FileURI, "file:/right.cpp");
+  M = mergeSymbol(L, R);
+  EXPECT_EQ(StringRef(M.CanonicalDeclaration.FileURI), "file:/right.h");
+  EXPECT_EQ(StringRef(M.Definition.FileURI), "file:/right.cpp");
   EXPECT_EQ(M.Name, "right");
+}
+
+TEST(MergeIndexTest, Refs) {
+  FileIndex Dyn;
+  FileIndex StaticIndex;
+  MergedIndex Merge(&Dyn, &StaticIndex);
+
+  const char *HeaderCode = "class Foo;";
+  auto HeaderSymbols = TestTU::withHeaderCode("class Foo;").headerSymbols();
+  auto Foo = findSymbol(HeaderSymbols, "Foo");
+
+  // Build dynamic index for test.cc.
+  Annotations Test1Code(R"(class $Foo[[Foo]];)");
+  TestTU Test;
+  Test.HeaderCode = HeaderCode;
+  Test.Code = Test1Code.code();
+  Test.Filename = "test.cc";
+  auto AST = Test.build();
+  Dyn.updateMain(Test.Filename, AST);
+
+  // Build static index for test.cc.
+  Test.HeaderCode = HeaderCode;
+  Test.Code = "// static\nclass Foo {};";
+  Test.Filename = "test.cc";
+  auto StaticAST = Test.build();
+  // Add stale refs for test.cc.
+  StaticIndex.updateMain(Test.Filename, StaticAST);
+
+  // Add refs for test2.cc
+  Annotations Test2Code(R"(class $Foo[[Foo]] {};)");
+  TestTU Test2;
+  Test2.HeaderCode = HeaderCode;
+  Test2.Code = Test2Code.code();
+  Test2.Filename = "test2.cc";
+  StaticAST = Test2.build();
+  StaticIndex.updateMain(Test2.Filename, StaticAST);
+
+  RefsRequest Request;
+  Request.IDs = {Foo.ID};
+  RefSlab::Builder Results;
+  Merge.refs(Request, [&](const Ref &O) { Results.insert(Foo.ID, O); });
+
+  EXPECT_THAT(
+      std::move(Results).build(),
+      ElementsAre(Pair(
+          _, UnorderedElementsAre(AllOf(RefRange(Test1Code.range("Foo")),
+                                        FileURI("unittest:///test.cc")),
+                                  AllOf(RefRange(Test2Code.range("Foo")),
+                                        FileURI("unittest:///test2.cc"))))));
+}
+
+MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
+  return (arg.IncludeHeader == IncludeHeader) && (arg.References == References);
+}
+
+TEST(MergeTest, MergeIncludesOnDifferentDefinitions) {
+  Symbol L, R;
+  L.Name = "left";
+  R.Name = "right";
+  L.ID = R.ID = SymbolID("hello");
+  L.IncludeHeaders.emplace_back("common", 1);
+  R.IncludeHeaders.emplace_back("common", 1);
+  R.IncludeHeaders.emplace_back("new", 1);
+
+  // Both have no definition.
+  Symbol M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
+                                   IncludeHeaderWithRef("new", 1u)));
+
+  // Only merge references of the same includes but do not merge new #includes.
+  L.Definition.FileURI = "file:/left.h";
+  M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u)));
+
+  // Definitions are the same.
+  R.Definition.FileURI = "file:/right.h";
+  M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
+                                   IncludeHeaderWithRef("new", 1u)));
+
+  // Definitions are different.
+  R.Definition.FileURI = "file:/right.h";
+  M = mergeSymbol(L, R);
+  EXPECT_THAT(M.IncludeHeaders,
+              UnorderedElementsAre(IncludeHeaderWithRef("common", 2u),
+                                   IncludeHeaderWithRef("new", 1u)));
 }
 
 } // namespace

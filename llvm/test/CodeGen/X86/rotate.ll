@@ -43,8 +43,9 @@ define i64 @rotl64(i64 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotl64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rolq %cl, %rax
 ; X64-NEXT:    retq
 	%shift.upgrd.1 = zext i8 %Amt to i64
 	%B = shl i64 %A, %shift.upgrd.1
@@ -96,8 +97,9 @@ define i64 @rotr64(i64 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotr64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorq %cl, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorq %cl, %rax
 ; X64-NEXT:    retq
 	%shift.upgrd.3 = zext i8 %Amt to i64
 	%B = lshr i64 %A, %shift.upgrd.3
@@ -120,8 +122,8 @@ define i64 @rotli64(i64 %A) nounwind {
 ;
 ; X64-LABEL: rotli64:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolq $5, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    rolq $5, %rax
 ; X64-NEXT:    retq
 	%B = shl i64 %A, 5
 	%C = lshr i64 %A, 59
@@ -141,8 +143,8 @@ define i64 @rotri64(i64 %A) nounwind {
 ;
 ; X64-LABEL: rotri64:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolq $59, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    rolq $59, %rax
 ; X64-NEXT:    retq
 	%B = lshr i64 %A, 5
 	%C = shl i64 %A, 59
@@ -162,8 +164,8 @@ define i64 @rotl1_64(i64 %A) nounwind {
 ;
 ; X64-LABEL: rotl1_64:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolq %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    rolq %rax
 ; X64-NEXT:    retq
 	%B = shl i64 %A, 1
 	%C = lshr i64 %A, 63
@@ -183,8 +185,8 @@ define i64 @rotr1_64(i64 %A) nounwind {
 ;
 ; X64-LABEL: rotr1_64:
 ; X64:       # %bb.0:
-; X64-NEXT:    rorq %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    rorq %rax
 ; X64-NEXT:    retq
 	%B = shl i64 %A, 63
 	%C = lshr i64 %A, 1
@@ -203,8 +205,9 @@ define i32 @rotl32(i32 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotl32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    roll %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
 	%shift.upgrd.1 = zext i8 %Amt to i32
 	%B = shl i32 %A, %shift.upgrd.1
@@ -226,8 +229,9 @@ define i32 @rotr32(i32 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotr32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorl %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorl %cl, %eax
 ; X64-NEXT:    retq
 	%shift.upgrd.3 = zext i8 %Amt to i32
 	%B = lshr i32 %A, %shift.upgrd.3
@@ -247,8 +251,8 @@ define i32 @rotli32(i32 %A) nounwind {
 ;
 ; X64-LABEL: rotli32:
 ; X64:       # %bb.0:
-; X64-NEXT:    roll $5, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    roll $5, %eax
 ; X64-NEXT:    retq
 	%B = shl i32 %A, 5
 	%C = lshr i32 %A, 27
@@ -265,8 +269,8 @@ define i32 @rotri32(i32 %A) nounwind {
 ;
 ; X64-LABEL: rotri32:
 ; X64:       # %bb.0:
-; X64-NEXT:    roll $27, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    roll $27, %eax
 ; X64-NEXT:    retq
 	%B = lshr i32 %A, 5
 	%C = shl i32 %A, 27
@@ -283,8 +287,8 @@ define i32 @rotl1_32(i32 %A) nounwind {
 ;
 ; X64-LABEL: rotl1_32:
 ; X64:       # %bb.0:
-; X64-NEXT:    roll %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    roll %eax
 ; X64-NEXT:    retq
 	%B = shl i32 %A, 1
 	%C = lshr i32 %A, 31
@@ -301,8 +305,8 @@ define i32 @rotr1_32(i32 %A) nounwind {
 ;
 ; X64-LABEL: rotr1_32:
 ; X64:       # %bb.0:
-; X64-NEXT:    rorl %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rorl %eax
 ; X64-NEXT:    retq
 	%B = shl i32 %A, 31
 	%C = lshr i32 %A, 1
@@ -321,8 +325,10 @@ define i16 @rotl16(i16 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotl16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolw %cl, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rolw %cl, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%shift.upgrd.5 = zext i8 %Amt to i16
 	%B = shl i16 %A, %shift.upgrd.5
@@ -344,8 +350,10 @@ define i16 @rotr16(i16 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotr16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorw %cl, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorw %cl, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%shift.upgrd.7 = zext i8 %Amt to i16
 	%B = lshr i16 %A, %shift.upgrd.7
@@ -365,8 +373,9 @@ define i16 @rotli16(i16 %A) nounwind {
 ;
 ; X64-LABEL: rotli16:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolw $5, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolw $5, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%B = shl i16 %A, 5
 	%C = lshr i16 %A, 11
@@ -383,8 +392,9 @@ define i16 @rotri16(i16 %A) nounwind {
 ;
 ; X64-LABEL: rotri16:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolw $11, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolw $11, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%B = lshr i16 %A, 5
 	%C = shl i16 %A, 11
@@ -401,8 +411,9 @@ define i16 @rotl1_16(i16 %A) nounwind {
 ;
 ; X64-LABEL: rotl1_16:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolw %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolw %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%B = shl i16 %A, 1
 	%C = lshr i16 %A, 15
@@ -419,8 +430,9 @@ define i16 @rotr1_16(i16 %A) nounwind {
 ;
 ; X64-LABEL: rotr1_16:
 ; X64:       # %bb.0:
-; X64-NEXT:    rorw %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rorw %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%B = lshr i16 %A, 1
 	%C = shl i16 %A, 15
@@ -439,8 +451,10 @@ define i8 @rotl8(i8 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotl8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolb %cl, %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rolb %cl, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 	%B = shl i8 %A, %Amt
 	%Amt2 = sub i8 8, %Amt
@@ -460,8 +474,10 @@ define i8 @rotr8(i8 %A, i8 %Amt) nounwind {
 ; X64-LABEL: rotr8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorb %cl, %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorb %cl, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 	%B = lshr i8 %A, %Amt
 	%Amt2 = sub i8 8, %Amt
@@ -479,8 +495,9 @@ define i8 @rotli8(i8 %A) nounwind {
 ;
 ; X64-LABEL: rotli8:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolb $5, %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolb $5, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 	%B = shl i8 %A, 5
 	%C = lshr i8 %A, 3
@@ -497,8 +514,9 @@ define i8 @rotri8(i8 %A) nounwind {
 ;
 ; X64-LABEL: rotri8:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolb $3, %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolb $3, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 	%B = lshr i8 %A, 5
 	%C = shl i8 %A, 3
@@ -515,8 +533,9 @@ define i8 @rotl1_8(i8 %A) nounwind {
 ;
 ; X64-LABEL: rotl1_8:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolb %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolb %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 	%B = shl i8 %A, 1
 	%C = lshr i8 %A, 7
@@ -533,8 +552,9 @@ define i8 @rotr1_8(i8 %A) nounwind {
 ;
 ; X64-LABEL: rotr1_8:
 ; X64:       # %bb.0:
-; X64-NEXT:    rorb %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rorb %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 	%B = lshr i8 %A, 1
 	%C = shl i8 %A, 7
@@ -633,29 +653,29 @@ define i64 @truncated_rot(i64 %x, i32 %amt) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    movl $0, %ebx
+; X86-NEXT:    movl $0, %edi
 ; X86-NEXT:    jne .LBB28_2
 ; X86-NEXT:  # %bb.1: # %entry
-; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:  .LBB28_2: # %entry
-; X86-NEXT:    movl $64, %edx
-; X86-NEXT:    subl %ecx, %edx
-; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    movb $64, %dl
+; X86-NEXT:    subb %cl, %dl
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    shrdl %cl, %edi, %esi
+; X86-NEXT:    shrdl %cl, %ebx, %esi
 ; X86-NEXT:    testb $32, %dl
 ; X86-NEXT:    jne .LBB28_4
 ; X86-NEXT:  # %bb.3: # %entry
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:  .LBB28_4: # %entry
-; X86-NEXT:    orl %ebx, %eax
+; X86-NEXT:    orl %edi, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -665,6 +685,7 @@ define i64 @truncated_rot(i64 %x, i32 %amt) nounwind {
 ; X64-LABEL: truncated_rot:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    rolq %cl, %rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    retq

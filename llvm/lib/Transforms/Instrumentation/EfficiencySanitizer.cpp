@@ -144,21 +144,6 @@ OverrideOptionsFromCL(EfficiencySanitizerOptions Options) {
   return Options;
 }
 
-// Create a constant for Str so that we can pass it to the run-time lib.
-static GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
-                                                    bool AllowMerging) {
-  Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
-  // We use private linkage for module-local strings. If they can be merged
-  // with another one, we set the unnamed_addr attribute.
-  GlobalVariable *GV =
-    new GlobalVariable(M, StrConst->getType(), true,
-                       GlobalValue::PrivateLinkage, StrConst, "");
-  if (AllowMerging)
-    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(1);  // Strings may not be merged w/o setting align 1.
-  return GV;
-}
-
 /// EfficiencySanitizer: instrument each module to find performance issues.
 class EfficiencySanitizer : public ModulePass {
 public:
@@ -902,7 +887,7 @@ bool EfficiencySanitizer::instrumentFastpathWorkingSet(
   Value *OldValue = IRB.CreateLoad(IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy));
   // The AND and CMP will be turned into a TEST instruction by the compiler.
   Value *Cmp = IRB.CreateICmpNE(IRB.CreateAnd(OldValue, ValueMask), ValueMask);
-  TerminatorInst *CmpTerm = SplitBlockAndInsertIfThen(Cmp, I, false);
+  Instruction *CmpTerm = SplitBlockAndInsertIfThen(Cmp, I, false);
   // FIXME: do I need to call SetCurrentDebugLocation?
   IRB.SetInsertPoint(CmpTerm);
   // We use OR to set the shadow bits to avoid corrupting the middle 6 bits,

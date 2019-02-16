@@ -6,22 +6,22 @@
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=NOGLOBALS,CUDANOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
-// RUN:     -fcuda-rdc -fcuda-include-gpubinary %t -o - \
+// RUN:     -fgpu-rdc -fcuda-include-gpubinary %t -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,RDC,CUDA,CUDARDC
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
-// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,NORDC,HIP
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,NORDC,HIP,HIPEF
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS -x hip \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=NOGLOBALS,HIPNOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
-// RUN:     -fcuda-rdc -fcuda-include-gpubinary %t -o - -x hip \
-// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,NORDC,HIP
+// RUN:     -fgpu-rdc -fcuda-include-gpubinary %t -o - -x hip \
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,NORDC,HIP,HIPEF
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
-// RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,NORDC,HIP,HIPNEF
 
 #include "Inputs/cuda.h"
 
@@ -42,12 +42,19 @@ int host_var;
 // ALL-DAG: @ext_host_var = external global i32
 extern int ext_host_var;
 
-// Shadows for external device-side variables are *definitions* of
-// those variables.
-// ALL-DAG: @ext_device_var = internal global i32
+// external device-side variables -> extern references to their shadows.
+// ALL-DAG: @ext_device_var = external global i32
 extern __device__ int ext_device_var;
-// ALL-DAG: @ext_device_var = internal global i32
+// ALL-DAG: @ext_device_var = external global i32
 extern __constant__ int ext_constant_var;
+
+// external device-side variables with definitions should generate
+// definitions for the shadows.
+// ALL-DAG: @ext_device_var_def = internal global i32 undef,
+extern __device__ int ext_device_var_def;
+__device__ int ext_device_var_def = 1;
+// ALL-DAG: @ext_device_var_def = internal global i32 undef,
+__constant__ int ext_constant_var_def = 2;
 
 void use_pointers() {
   int *p;
@@ -64,8 +71,9 @@ void use_pointers() {
 // * constant unnamed string with the kernel name
 // ALL: private unnamed_addr constant{{.*}}kernelfunc{{.*}}\00"
 // * constant unnamed string with GPU binary
-// HIP: @[[FATBIN:__hip_fatbin]] = external constant i8, section ".hip_fatbin"
 // CUDA: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",
+// HIPEF: @[[FATBIN:.*]] = private constant{{.*GPU binary would be here.*}}\00",
+// HIPNEF: @[[FATBIN:__hip_fatbin]] = external constant i8, section ".hip_fatbin"
 // CUDANORDC-SAME: section ".nv_fatbin", align 8
 // CUDARDC-SAME: section "__nv_relfatbin", align 8
 // * constant struct that wraps GPU binary
@@ -74,13 +82,14 @@ void use_pointers() {
 // CUDA-SAME: { i32 1180844977, i32 1,
 // HIP-SAME: { i32 1212764230, i32 1,
 // CUDA-SAME: i8* getelementptr inbounds ({{.*}}@[[FATBIN]], i64 0, i64 0),
-// HIP-SAME:  i8* @[[FATBIN]],
+// HIPEF-SAME: i8* getelementptr inbounds ({{.*}}@[[FATBIN]], i64 0, i64 0),
+// HIPNEF-SAME:  i8* @[[FATBIN]],
 // ALL-SAME: i8* null }
 // CUDA-SAME: section ".nvFatBinSegment"
 // HIP-SAME: section ".hipFatBinSegment"
 // * variable to save GPU binary handle after initialization
 // CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global i8** null
-// HIP: @__[[PREFIX]]_gpubin_handle = linkonce global i8** null
+// HIPNEF: @__[[PREFIX]]_gpubin_handle = linkonce hidden global i8** null
 // * constant unnamed string with NVModuleID
 // RDC: [[MODULE_ID_GLOBAL:@.*]] = private constant
 // CUDARDC-SAME: c"[[MODULE_ID:.+]]\00", section "__nv_module_id", align 32
@@ -112,8 +121,8 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // ALL: call{{.*}}[[PREFIX]]RegisterFunction(i8** %0, {{.*}}kernelfunc
 // ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}device_var{{.*}}i32 0, i32 4, i32 0, i32 0
 // ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}constant_var{{.*}}i32 0, i32 4, i32 1, i32 0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var{{.*}}i32 1, i32 4, i32 0, i32 0
-// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var{{.*}}i32 1, i32 4, i32 1, i32 0
+// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_device_var_def{{.*}}i32 0, i32 4, i32 0, i32 0
+// ALL-DAG: call{{.*}}[[PREFIX]]RegisterVar(i8** %0, {{.*}}ext_constant_var_def{{.*}}i32 0, i32 4, i32 1, i32 0
 // ALL: ret void
 
 // Test that we've built a constructor.
@@ -157,7 +166,7 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // device-side globals, but we still need to register GPU binary.
 // Skip GPU binary string first.
 // CUDANOGLOBALS: @{{.*}} = private constant{{.*}}
-// HIPNOGLOBALS: @{{.*}} = external constant{{.*}}
+// HIPNOGLOBALS: @{{.*}} = internal constant{{.*}}
 // NOGLOBALS-NOT: define internal void @__{{.*}}_register_globals
 // NOGLOBALS: define internal void @__[[PREFIX:cuda|hip]]_module_ctor
 // NOGLOBALS: call{{.*}}[[PREFIX]]RegisterFatBinary{{.*}}__[[PREFIX]]_fatbin_wrapper

@@ -11,18 +11,18 @@ define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X86-NEXT:  .LBB0_2:
-; X86-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select00:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    cmpl $255, %edi
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    je .LBB0_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X64-NEXT:  .LBB0_2:
-; X64-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255
   %selres = select i1 %cmpres, <16 x i32> zeroinitializer, <16 x i32> %b
@@ -44,8 +44,8 @@ define <8 x i64> @select01(i32 %a, <8 x i64> %b) nounwind {
 ;
 ; X64-LABEL: select01:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    cmpl $255, %edi
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    je .LBB1_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    vmovdqa64 %zmm0, %zmm1
@@ -135,8 +135,9 @@ define i8 @select05(i8 %a.0, i8 %m) {
 ;
 ; X64-LABEL: select05:
 ; X64:       # %bb.0:
-; X64-NEXT:    orl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>
@@ -185,8 +186,9 @@ define i8 @select06(i8 %a.0, i8 %m) {
 ;
 ; X64-LABEL: select06:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>
@@ -263,13 +265,13 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 define i64 @pr30249() {
 ; X86-LABEL: pr30249:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $2, %eax
+; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr30249:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $2, %eax
+; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
   %v = select i1 undef , i64 1, i64 2
   ret i64 %v
@@ -316,27 +318,19 @@ define float @pr30561_f32(float %b, float %a, i1 %c) {
 define <16 x i16> @pr31515(<16 x i1> %a, <16 x i1> %b, <16 x i16> %c) nounwind {
 ; X86-LABEL: pr31515:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbd %xmm1, %zmm1
-; X86-NEXT:    vpslld $31, %zmm1, %zmm1
-; X86-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X86-NEXT:    vpslld $31, %zmm0, %zmm0
-; X86-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; X86-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
-; X86-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; X86-NEXT:    vpmovdw %zmm0, %ymm0
+; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X86-NEXT:    vpsllw $15, %ymm0, %ymm0
+; X86-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; X86-NEXT:    vpandn %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr31515:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovsxbd %xmm1, %zmm1
-; X64-NEXT:    vpslld $31, %zmm1, %zmm1
-; X64-NEXT:    vpmovsxbd %xmm0, %zmm0
-; X64-NEXT:    vpslld $31, %zmm0, %zmm0
-; X64-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; X64-NEXT:    vptestmd %zmm1, %zmm1, %k1 {%k1}
-; X64-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; X64-NEXT:    vpmovdw %zmm0, %ymm0
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; X64-NEXT:    vpsllw $15, %ymm0, %ymm0
+; X64-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; X64-NEXT:    vpandn %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %mask = and <16 x i1> %a, %b

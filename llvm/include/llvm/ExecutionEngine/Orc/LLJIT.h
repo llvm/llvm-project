@@ -19,9 +19,11 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "llvm/Support/ThreadPool.h"
 
 namespace llvm {
 namespace orc {
@@ -29,44 +31,68 @@ namespace orc {
 /// A pre-fabricated ORC JIT stack that can serve as an alternative to MCJIT.
 class LLJIT {
 public:
-  /// Create an LLJIT instance.
-  static Expected<std::unique_ptr<LLJIT>>
-  Create(std::unique_ptr<ExecutionSession> ES,
-         std::unique_ptr<TargetMachine> TM, DataLayout DL);
 
-  /// Returns a reference to the ExecutionSession for this JIT instance.
+  /// Destruct this instance. If a multi-threaded instance, waits for all
+  /// compile threads to complete.
+  ~LLJIT();
+
+  /// Create an LLJIT instance.
+  /// If NumCompileThreads is not equal to zero, creates a multi-threaded
+  /// LLJIT with the given number of compile threads.
+  static Expected<std::unique_ptr<LLJIT>>
+  Create(JITTargetMachineBuilder JTMB, DataLayout DL,
+         unsigned NumCompileThreads = 0);
+
+  /// Returns the ExecutionSession for this instance.
   ExecutionSession &getExecutionSession() { return *ES; }
 
-  /// Returns a reference to the VSO representing the JIT'd main program.
-  VSO &getMainVSO() { return Main; }
+  /// Returns a reference to the JITDylib representing the JIT'd main program.
+  JITDylib &getMainJITDylib() { return Main; }
+
+  /// Create a new JITDylib with the given name and return a reference to it.
+  JITDylib &createJITDylib(std::string Name) {
+    return ES->createJITDylib(std::move(Name));
+  }
 
   /// Convenience method for defining an absolute symbol.
   Error defineAbsolute(StringRef Name, JITEvaluatedSymbol Address);
 
-  /// Adds an IR module to the given VSO.
-  Error addIRModule(VSO &V, std::unique_ptr<Module> M);
+  /// Convenience method for defining an
 
-  /// Adds an IR module to the Main VSO.
-  Error addIRModule(std::unique_ptr<Module> M) {
-    return addIRModule(Main, std::move(M));
+  /// Adds an IR module to the given JITDylib.
+  Error addIRModule(JITDylib &JD, ThreadSafeModule TSM);
+
+  /// Adds an IR module to the Main JITDylib.
+  Error addIRModule(ThreadSafeModule TSM) {
+    return addIRModule(Main, std::move(TSM));
   }
 
-  /// Look up a symbol in VSO V by the symbol's linker-mangled name (to look up
-  /// symbols based on their IR name use the lookup function instead).
-  Expected<JITEvaluatedSymbol> lookupLinkerMangled(VSO &V, StringRef Name);
+  /// Adds an object file to the given JITDylib.
+  Error addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj);
 
-  /// Look up a symbol in the main VSO by the symbol's linker-mangled name (to
+  /// Adds an object file to the given JITDylib.
+  Error addObjectFile(std::unique_ptr<MemoryBuffer> Obj) {
+    return addObjectFile(Main, std::move(Obj));
+  }
+
+  /// Look up a symbol in JITDylib JD by the symbol's linker-mangled name (to
   /// look up symbols based on their IR name use the lookup function instead).
+  Expected<JITEvaluatedSymbol> lookupLinkerMangled(JITDylib &JD,
+                                                   StringRef Name);
+
+  /// Look up a symbol in the main JITDylib by the symbol's linker-mangled name
+  /// (to look up symbols based on their IR name use the lookup function
+  /// instead).
   Expected<JITEvaluatedSymbol> lookupLinkerMangled(StringRef Name) {
     return lookupLinkerMangled(Main, Name);
   }
 
-  /// Look up a symbol in VSO V based on its IR symbol name.
-  Expected<JITEvaluatedSymbol> lookup(VSO &V, StringRef UnmangledName) {
-    return lookupLinkerMangled(V, mangle(UnmangledName));
+  /// Look up a symbol in JITDylib JD based on its IR symbol name.
+  Expected<JITEvaluatedSymbol> lookup(JITDylib &JD, StringRef UnmangledName) {
+    return lookupLinkerMangled(JD, mangle(UnmangledName));
   }
 
-  /// Look up a symbol in the main VSO based on its IR symbol name.
+  /// Look up a symbol in the main JITDylib based on its IR symbol name.
   Expected<JITEvaluatedSymbol> lookup(StringRef UnmangledName) {
     return lookup(Main, UnmangledName);
   }
@@ -77,11 +103,18 @@ public:
   /// Runs all not-yet-run static destructors.
   Error runDestructors() { return DtorRunner.run(); }
 
+  /// Returns a reference to the ObjLinkingLayer
+  RTDyldObjectLinkingLayer &getObjLinkingLayer() { return ObjLinkingLayer; }
+
 protected:
+
+  /// Create an LLJIT instance with a single compile thread.
   LLJIT(std::unique_ptr<ExecutionSession> ES, std::unique_ptr<TargetMachine> TM,
         DataLayout DL);
 
-  std::shared_ptr<RuntimeDyld::MemoryManager> getMemoryManager(VModuleKey K);
+  /// Create an LLJIT instance with multiple compile threads.
+  LLJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
+        DataLayout DL, unsigned NumCompileThreads);
 
   std::string mangle(StringRef UnmangledName);
 
@@ -90,51 +123,68 @@ protected:
   void recordCtorDtors(Module &M);
 
   std::unique_ptr<ExecutionSession> ES;
-  VSO &Main;
+  JITDylib &Main;
 
-  std::unique_ptr<TargetMachine> TM;
   DataLayout DL;
+  std::unique_ptr<ThreadPool> CompileThreads;
 
-  RTDyldObjectLinkingLayer2 ObjLinkingLayer;
-  IRCompileLayer2 CompileLayer;
+  RTDyldObjectLinkingLayer ObjLinkingLayer;
+  IRCompileLayer CompileLayer;
 
-  CtorDtorRunner2 CtorRunner, DtorRunner;
+  CtorDtorRunner CtorRunner, DtorRunner;
 };
 
 /// An extended version of LLJIT that supports lazy function-at-a-time
 /// compilation of LLVM IR.
 class LLLazyJIT : public LLJIT {
 public:
+
   /// Create an LLLazyJIT instance.
+  /// If NumCompileThreads is not equal to zero, creates a multi-threaded
+  /// LLLazyJIT with the given number of compile threads.
   static Expected<std::unique_ptr<LLLazyJIT>>
-  Create(std::unique_ptr<ExecutionSession> ES,
-         std::unique_ptr<TargetMachine> TM, DataLayout DL, LLVMContext &Ctx);
+  Create(JITTargetMachineBuilder JTMB, DataLayout DL,
+         JITTargetAddress ErrorAddr, unsigned NumCompileThreads = 0);
 
   /// Set an IR transform (e.g. pass manager pipeline) to run on each function
   /// when it is compiled.
-  void setLazyCompileTransform(IRTransformLayer2::TransformFunction Transform) {
+  void setLazyCompileTransform(IRTransformLayer::TransformFunction Transform) {
     TransformLayer.setTransform(std::move(Transform));
   }
 
-  /// Add a module to be lazily compiled to VSO V.
-  Error addLazyIRModule(VSO &V, std::unique_ptr<Module> M);
+  /// Sets the partition function.
+  void
+  setPartitionFunction(CompileOnDemandLayer::PartitionFunction Partition) {
+    CODLayer.setPartitionFunction(std::move(Partition));
+  }
 
-  /// Add a module to be lazily compiled to the main VSO.
-  Error addLazyIRModule(std::unique_ptr<Module> M) {
+  /// Add a module to be lazily compiled to JITDylib JD.
+  Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
+
+  /// Add a module to be lazily compiled to the main JITDylib.
+  Error addLazyIRModule(ThreadSafeModule M) {
     return addLazyIRModule(Main, std::move(M));
   }
 
 private:
+
+  // Create a single-threaded LLLazyJIT instance.
   LLLazyJIT(std::unique_ptr<ExecutionSession> ES,
-            std::unique_ptr<TargetMachine> TM, DataLayout DL, LLVMContext &Ctx,
-            std::unique_ptr<JITCompileCallbackManager> CCMgr,
+            std::unique_ptr<TargetMachine> TM, DataLayout DL,
+            std::unique_ptr<LazyCallThroughManager> LCTMgr,
             std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder);
 
-  std::unique_ptr<JITCompileCallbackManager> CCMgr;
+  // Create a multi-threaded LLLazyJIT instance.
+  LLLazyJIT(std::unique_ptr<ExecutionSession> ES, JITTargetMachineBuilder JTMB,
+            DataLayout DL, unsigned NumCompileThreads,
+            std::unique_ptr<LazyCallThroughManager> LCTMgr,
+            std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder);
+
+  std::unique_ptr<LazyCallThroughManager> LCTMgr;
   std::function<std::unique_ptr<IndirectStubsManager>()> ISMBuilder;
 
-  IRTransformLayer2 TransformLayer;
-  CompileOnDemandLayer2 CODLayer;
+  IRTransformLayer TransformLayer;
+  CompileOnDemandLayer CODLayer;
 };
 
 } // End namespace orc

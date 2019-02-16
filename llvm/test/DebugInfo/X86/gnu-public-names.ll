@@ -65,11 +65,11 @@
 ; }
 
 ; ASM: .section        .debug_gnu_pubnames
-; ASM: .byte   32                      # Kind: VARIABLE, EXTERNAL
+; ASM: .byte   32                      # Attributes: VARIABLE, EXTERNAL
 ; ASM-NEXT: .asciz  "global_variable"       # External Name
 
 ; ASM: .section        .debug_gnu_pubtypes
-; ASM: .byte   16                      # Kind: TYPE, EXTERNAL
+; ASM: .byte   16                      # Attributes: TYPE, EXTERNAL
 ; ASM-NEXT: .asciz  "C"                     # External Name
 
 ; CHECK: .debug_info contents:
@@ -302,7 +302,7 @@ attributes #1 = { nounwind readnone }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "static_member_variable", linkageName: "_ZN1C22static_member_variableE", scope: !2, file: !3, line: 7, type: !9, isLocal: false, isDefinition: true, declaration: !8)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.7.0 (trunk 234897) (llvm/trunk 234911)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !21, imports: !44, gnuPubnames: true)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.7.0 (trunk 234897) (llvm/trunk 234911)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !21, imports: !44, nameTableKind: GNU)
 !3 = !DIFile(filename: "gnu-public-names.cpp", directory: "/tmp/dbginfo")
 !4 = !{}
 !5 = !{!6, !17}

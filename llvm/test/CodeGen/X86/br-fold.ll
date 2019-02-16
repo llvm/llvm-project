@@ -14,7 +14,8 @@
 ; X64_WINDOWS: orq %rax, %rcx
 ; X64_WINDOWS-NEXT: ud2
 
-; X64_WINDOWS_GNU: orq %rax, %rcx
+; X64_WINDOWS_GNU: movq .refptr._ZN11xercesc_2_513SchemaSymbols21fgURI_SCHEMAFORSCHEMAE(%rip), %rax
+; X64_WINDOWS_GNU: orq .refptr._ZN11xercesc_2_56XMLUni16fgNotationStringE(%rip), %rax
 ; X64_WINDOWS_GNU-NEXT: ud2
 
 ; PS4: orq %rax, %rcx

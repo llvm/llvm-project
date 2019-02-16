@@ -28,7 +28,7 @@ for.body.lr.ph:                                   ; preds = %entry
 for.cond.cleanup:                                 ; preds = %for.body, %entry
 ; CHECK-LABEL: bb.{{.*}}.for.cond.cleanup:
 ; CHECK:      [[REG1:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE debug-use [[REG1]]
+; CHECK-NEXT: DBG_VALUE [[REG1]]
   %x.0.lcssa = phi i32 [ 9, %entry ], [ %add, %for.body ]
   call void @llvm.dbg.value(metadata i32 %x.0.lcssa, metadata !15, metadata !DIExpression()), !dbg !26
   %2 = bitcast [80 x i32]* %arr to i8*, !dbg !37
@@ -42,16 +42,16 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 ; CHECK:      [[REG2:%[0-9]+]]:gr32 = PHI
 ; CHECK-NEXT: [[REG3:%[0-9]+]]:gr32 = PHI
 ; CHECK-NEXT: [[REG4:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE debug-use [[REG3]], debug-use $noreg, !16
-; CHECK-NEXT: DBG_VALUE 555, debug-use $noreg, !17
+; CHECK-NEXT: DBG_VALUE [[REG3]], $noreg, !16
+; CHECK-NEXT: DBG_VALUE 555, $noreg, !17
 ; XXX: Shouldn't the following DBG_VALUE be placed after the add (ADD32rr).
-; CHECK-NEXT: DBG_VALUE debug-use [[REG2]], debug-use $noreg, !17
+; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !17
 ; CHECK-NEXT: ADD32rr
 ; XXX: Shouldn't the following DBG_VALUE be placed after the mul (LEA etc).
-; CHECK-NEXT: DBG_VALUE 777, debug-use $noreg, !17
+; CHECK-NEXT: DBG_VALUE 777, $noreg, !17
 ; CHECK:      INC32r
 ; XXX: Shouldn't the following DBG_VALUE be placed after the icmp (the non-dead implicit def of $eflags)
-; CHECK:      DBG_VALUE debug-use [[REG4]]
+; CHECK:      DBG_VALUE [[REG4]]
 ; CHECK-NEXT: implicit-def $eflags
   %u.023 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %y.022 = phi i32 [ 13, %for.body.lr.ph ], [ %mul, %for.body ]

@@ -1,4 +1,4 @@
-; RUN: llc -O0 %s -mtriple=aarch64 -o - | FileCheck %s
+; RUN: llc -O0 %s -mtriple=aarch64 -stop-after=phi-node-elimination -o - -global-isel | FileCheck %s
 
 ; Test that a DEBUG_VALUE node is create for variable c after the phi has been
 ; converted to a ldr.    The DEBUG_VALUE must be *after* the ldr and not before it.
@@ -15,25 +15,34 @@
 ; }
 ;
 ; Function Attrs: nounwind
-define i32 @func(i32) #0 !dbg !8 {
-  call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !12, metadata !13), !dbg !14
+; CHECK: !14 = !DILocalVariable(name: "c"
+; CHECK-LABEL: name: func
+define i32 @func(i32 %a0) #0 !dbg !8 {
+entry:
+  call void @llvm.dbg.value(metadata i32 %a0, i64 0, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !15, metadata !13), !dbg !16
-  %2 = icmp slt i32 %0, 0, !dbg !17
-  br i1 %2, label %3, label %4, !dbg !19
+  %v2 = icmp slt i32 %a0, 0, !dbg !17
+  br i1 %v2, label %bb2, label %bb3, !dbg !19
 
-; <label>:3:                                      ; preds = %1
+bb2:
   call void @llvm.dbg.value(metadata i32 12, i64 0, metadata !15, metadata !13), !dbg !16
-  br label %4, !dbg !20
+  br label %bb3, !dbg !20
 
-; <label>:4:                                      ; preds = %3, %1
-  %.0 = phi i32 [ 12, %3 ], [ 1, %1 ]
-; CHECK: ldr     w[[REG:[0-9]+]], [sp, #8]
-; CHECK-NEXT: .Ltmp
+; CHECK: bb.2.bb2:
+; CHECK:  [[REG0:%[0-9]+]]:gpr32 = MOVi32imm 12
+; CHECK:  [[PHIREG:%[0-9]+]]:gpr32 = COPY [[REG0]]
+
+bb3:
+; CHECK: bb.3.bb3:
+; CHECK:   [[PHIDEST:%[0-9]+]]:gpr32 = COPY [[PHIREG]]
+; CHECK-NEXT:   DBG_VALUE [[PHIDEST]]
+  %.0 = phi i32 [ 12, %bb2 ], [ 1, %entry ]
   call void @llvm.dbg.value(metadata i32 %.0, i64 0, metadata !15, metadata !13), !dbg !16
-; CHECK-NEXT:  //DEBUG_VALUE: func:c <- $w[[REG]]
-  %5 = add nsw i32 %.0, %0, !dbg !22
-  call void @llvm.dbg.value(metadata i32 %5, i64 0, metadata !15, metadata !13), !dbg !16
-  ret i32 %5, !dbg !23
+; CHECK: [[ADD:%[0-9]+]]:gpr32 = nsw ADDWrr [[PHIDEST]]
+; CHECK-NEXT: DBG_VALUE [[ADD]]
+  %v5 = add nsw i32 %.0, %a0, !dbg !22
+  call void @llvm.dbg.value(metadata i32 %v5, i64 0, metadata !15, metadata !13), !dbg !16
+  ret i32 %v5, !dbg !23
 }
 
 ; Function Attrs: nounwind readnone

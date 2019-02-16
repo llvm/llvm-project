@@ -35,8 +35,8 @@ private:
 
 
 // CHECK: !DISubprogram(name: "free",
-// CHECK-SAME:          isDefinition: true
 // CHECK-SAME:          flags: DIFlagPrototyped,
+// CHECK-SAME:          spFlags: DISPFlagDefinition
 void free() {}
 
 U u;

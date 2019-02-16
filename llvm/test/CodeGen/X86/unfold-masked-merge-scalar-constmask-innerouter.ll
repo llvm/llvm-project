@@ -10,18 +10,20 @@
 define i8 @out8_constmask(i8 %x, i8 %y) {
 ; CHECK-NOBMI-LABEL: out8_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    andb $60, %dil
-; CHECK-NOBMI-NEXT:    andb $-61, %sil
-; CHECK-NOBMI-NEXT:    orb %dil, %sil
 ; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    andb $60, %dil
+; CHECK-NOBMI-NEXT:    andb $-61, %al
+; CHECK-NOBMI-NEXT:    orb %dil, %al
+; CHECK-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: out8_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andb $60, %dil
-; CHECK-BMI-NEXT:    andb $-61, %sil
-; CHECK-BMI-NEXT:    orb %dil, %sil
 ; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    andb $60, %dil
+; CHECK-BMI-NEXT:    andb $-61, %al
+; CHECK-BMI-NEXT:    orb %dil, %al
+; CHECK-BMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-BMI-NEXT:    retq
   %mx = and i8 %x, 60
   %my = and i8 %y, -61
@@ -110,18 +112,20 @@ define i64 @out64_constmask(i64 %x, i64 %y) {
 define i8 @in8_constmask(i8 %x, i8 %y) {
 ; CHECK-NOBMI-LABEL: in8_constmask:
 ; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    movl %esi, %eax
 ; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    andb $60, %dil
-; CHECK-NOBMI-NEXT:    xorb %dil, %sil
-; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    xorb %dil, %al
+; CHECK-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in8_constmask:
 ; CHECK-BMI:       # %bb.0:
+; CHECK-BMI-NEXT:    movl %esi, %eax
 ; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    andb $60, %dil
-; CHECK-BMI-NEXT:    xorb %dil, %sil
-; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    xorb %dil, %al
+; CHECK-BMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i8 %x, %y
   %n1 = and i8 %n0, 60
@@ -132,18 +136,20 @@ define i8 @in8_constmask(i8 %x, i8 %y) {
 define i16 @in16_constmask(i16 %x, i16 %y) {
 ; CHECK-NOBMI-LABEL: in16_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
-; CHECK-NOBMI-NEXT:    andl $4080, %edi # imm = 0xFF0
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    andl $4080, %eax # imm = 0xFF0
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in16_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %esi, %edi
-; CHECK-BMI-NEXT:    andl $4080, %edi # imm = 0xFF0
-; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorl %esi, %eax
+; CHECK-BMI-NEXT:    andl $4080, %eax # imm = 0xFF0
+; CHECK-BMI-NEXT:    xorl %esi, %eax
+; CHECK-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i16 %x, %y
   %n1 = and i16 %n0, 4080
@@ -154,18 +160,18 @@ define i16 @in16_constmask(i16 %x, i16 %y) {
 define i32 @in32_constmask(i32 %x, i32 %y) {
 ; CHECK-NOBMI-LABEL: in32_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
-; CHECK-NOBMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in32_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %esi, %edi
-; CHECK-BMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorl %esi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    xorl %esi, %eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i32 %x, %y
   %n1 = and i32 %n0, 16776960
@@ -202,18 +208,18 @@ define i64 @in64_constmask(i64 %x, i64 %y) {
 define i32 @in_constmask_commutativity_0_1(i32 %x, i32 %y) {
 ; CHECK-NOBMI-LABEL: in_constmask_commutativity_0_1:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
-; CHECK-NOBMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in_constmask_commutativity_0_1:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %esi, %edi
-; CHECK-BMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorl %esi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    xorl %esi, %eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i32 %x, %y
   %n1 = and i32 %n0, 16776960
@@ -224,18 +230,18 @@ define i32 @in_constmask_commutativity_0_1(i32 %x, i32 %y) {
 define i32 @in_constmask_commutativity_1_0(i32 %x, i32 %y) {
 ; CHECK-NOBMI-LABEL: in_constmask_commutativity_1_0:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %edi, %esi
-; CHECK-NOBMI-NEXT:    andl $16776960, %esi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    xorl %edi, %esi
 ; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    xorl %edi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    xorl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in_constmask_commutativity_1_0:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %edi, %esi
-; CHECK-BMI-NEXT:    andl $16776960, %esi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    xorl %edi, %esi
 ; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    xorl %edi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    xorl %edi, %eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i32 %x, %y
   %n1 = and i32 %n0, 16776960
@@ -246,18 +252,18 @@ define i32 @in_constmask_commutativity_1_0(i32 %x, i32 %y) {
 define i32 @in_constmask_commutativity_1_1(i32 %x, i32 %y) {
 ; CHECK-NOBMI-LABEL: in_constmask_commutativity_1_1:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %edi, %esi
-; CHECK-NOBMI-NEXT:    andl $16776960, %esi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    xorl %edi, %esi
 ; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    xorl %edi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    xorl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in_constmask_commutativity_1_1:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %edi, %esi
-; CHECK-BMI-NEXT:    andl $16776960, %esi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    xorl %edi, %esi
 ; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    xorl %edi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    xorl %edi, %eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i32 %x, %y
   %n1 = and i32 %n0, 16776960
@@ -272,20 +278,20 @@ define i32 @in_constmask_commutativity_1_1(i32 %x, i32 %y) {
 define i32 @in_complex_y0_constmask(i32 %x, i32 %y_hi, i32 %y_low) {
 ; CHECK-NOBMI-LABEL: in_complex_y0_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    andl %edx, %esi
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
-; CHECK-NOBMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    andl %edx, %esi
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in_complex_y0_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andl %edx, %esi
-; CHECK-BMI-NEXT:    xorl %esi, %edi
-; CHECK-BMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    andl %edx, %esi
+; CHECK-BMI-NEXT:    xorl %esi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    xorl %esi, %eax
 ; CHECK-BMI-NEXT:    retq
   %y = and i32 %y_hi, %y_low
   %n0 = xor i32 %x, %y
@@ -297,20 +303,20 @@ define i32 @in_complex_y0_constmask(i32 %x, i32 %y_hi, i32 %y_low) {
 define i32 @in_complex_y1_constmask(i32 %x, i32 %y_hi, i32 %y_low) {
 ; CHECK-NOBMI-LABEL: in_complex_y1_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    andl %edx, %esi
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
-; CHECK-NOBMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    andl %edx, %esi
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in_complex_y1_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andl %edx, %esi
-; CHECK-BMI-NEXT:    xorl %esi, %edi
-; CHECK-BMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    andl %edx, %esi
+; CHECK-BMI-NEXT:    xorl %esi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    xorl %esi, %eax
 ; CHECK-BMI-NEXT:    retq
   %y = and i32 %y_hi, %y_low
   %n0 = xor i32 %x, %y
@@ -416,18 +422,18 @@ define i32 @in_multiuse_B_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 define i32 @n0_badconstmask(i32 %x, i32 %y) {
 ; CHECK-NOBMI-LABEL: n0_badconstmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    andl $-16776960, %esi # imm = 0xFF000100
-; CHECK-NOBMI-NEXT:    orl %edi, %esi
 ; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    andl $-16776960, %eax # imm = 0xFF000100
+; CHECK-NOBMI-NEXT:    orl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: n0_badconstmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    andl $-16776960, %esi # imm = 0xFF000100
-; CHECK-BMI-NEXT:    orl %edi, %esi
 ; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    andl $-16776960, %eax # imm = 0xFF000100
+; CHECK-BMI-NEXT:    orl %edi, %eax
 ; CHECK-BMI-NEXT:    retq
   %mx = and i32 %x, 16776960
   %my = and i32 %y, -16776960 ; instead of -16776961
@@ -438,18 +444,18 @@ define i32 @n0_badconstmask(i32 %x, i32 %y) {
 define i32 @n1_thirdvar_constmask(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NOBMI-LABEL: n1_thirdvar_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %esi, %edi
-; CHECK-NOBMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-NOBMI-NEXT:    xorl %edx, %edi
 ; CHECK-NOBMI-NEXT:    movl %edi, %eax
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
+; CHECK-NOBMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-NOBMI-NEXT:    xorl %edx, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: n1_thirdvar_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %esi, %edi
-; CHECK-BMI-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
-; CHECK-BMI-NEXT:    xorl %edx, %edi
 ; CHECK-BMI-NEXT:    movl %edi, %eax
+; CHECK-BMI-NEXT:    xorl %esi, %eax
+; CHECK-BMI-NEXT:    andl $16776960, %eax # imm = 0xFFFF00
+; CHECK-BMI-NEXT:    xorl %edx, %eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i32 %x, %y
   %n1 = and i32 %n0, 16776960

@@ -4,18 +4,18 @@
 void test_objc_object_pseudo_dtor(__strong id *ptr, __weak id *wptr) {
   // CHECK: load i8**, i8***
   // CHECK-NEXT: load i8*, i8**
-  // CHECK-NEXT: call void @objc_release
+  // CHECK-NEXT: call void @llvm.objc.release
   ptr->~id();
 
-  // CHECK: call void @objc_destroyWeak(i8** {{%.*}})
+  // CHECK: call void @llvm.objc.destroyWeak(i8** {{%.*}})
   wptr->~id();
 
   // CHECK: load i8**, i8***
   // CHECK-NEXT: load i8*, i8**
-  // CHECK-NEXT: call void @objc_release
+  // CHECK-NEXT: call void @llvm.objc.release
   (*ptr).~id();
 
-  // CHECK: call void @objc_destroyWeak(i8** {{%.*}})
+  // CHECK: call void @llvm.objc.destroyWeak(i8** {{%.*}})
   (*wptr).~id();
   // CHECK: ret void
 }

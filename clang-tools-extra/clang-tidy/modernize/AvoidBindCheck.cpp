@@ -59,7 +59,7 @@ buildBindArguments(const MatchFinder::MatchResult &Result, const CallExpr *C) {
     }
 
     B.Tokens = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(E->getLocStart(), E->getLocEnd()),
+        CharSourceRange::getTokenRange(E->getBeginLoc(), E->getEndLoc()),
         *Result.SourceManager, Result.Context->getLangOpts());
 
     SmallVector<StringRef, 2> Matches;
@@ -131,7 +131,7 @@ void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
 
 void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CallExpr>("bind");
-  auto Diag = diag(MatchedDecl->getLocStart(), "prefer a lambda to std::bind");
+  auto Diag = diag(MatchedDecl->getBeginLoc(), "prefer a lambda to std::bind");
 
   const auto Args = buildBindArguments(Result, MatchedDecl);
 

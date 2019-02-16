@@ -30,6 +30,6 @@ int main()
         typedef double T;
         typedef std::array<T, 3> C;
         std::tuple_element<3, C> foo; // expected-note {{requested here}}
-        // expected-error@array:* {{static_assert failed "Index out of bounds in std::tuple_element<> (std::array)"}}
+        // expected-error-re@array:* {{static_assert failed{{( due to requirement '3U[L]{0,2} < 3U[L]{0,2}')?}} "Index out of bounds in std::tuple_element<> (std::array)"}}
     }
 }

@@ -10,14 +10,14 @@ target triple = "x86_64-apple-darwin13.2.0"
 define internal i8* @foo() {
 entry:
   %call = call i8* @bar()
-; CHECK: %retained1 = call i8* @objc_retainAutoreleasedReturnValue(i8* %call)
-  %retained1 = call i8* @objc_retain(i8* %call)
+; CHECK: %retained1 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call)
+  %retained1 = call i8* @llvm.objc.retain(i8* %call)
   %isnull = icmp eq i8* %retained1, null
   br i1 %isnull, label %cleanup, label %if.end
 
 if.end:
-; CHECK: %retained2 = call i8* @objc_retain(i8* %retained1)
-  %retained2 = call i8* @objc_retain(i8* %retained1)
+; CHECK: %retained2 = call i8* @llvm.objc.retain(i8* %retained1)
+  %retained2 = call i8* @llvm.objc.retain(i8* %retained1)
   br label %cleanup
 
 cleanup:
@@ -27,4 +27,4 @@ cleanup:
 
 declare i8* @bar()
 
-declare extern_weak i8* @objc_retain(i8*)
+declare extern_weak i8* @llvm.objc.retain(i8*)

@@ -78,6 +78,19 @@ define double @fdiv_cos_sin_reassoc(double %a) {
   ret double %div
 }
 
+define half @fdiv_cosf16_sinf16_reassoc(half %a) {
+; CHECK-LABEL: @fdiv_cosf16_sinf16_reassoc(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc half @llvm.cos.f16(half [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc half @llvm.sin.f16(half [[A]])
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc half [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret half [[DIV]]
+;
+  %1 = call reassoc half @llvm.cos.f16(half %a)
+  %2 = call reassoc half @llvm.sin.f16(half %a)
+  %div = fdiv reassoc half %1, %2
+  ret half %div
+}
+
 define float @fdiv_cosf_sinf_reassoc(float %a) {
 ; CHECK-LABEL: @fdiv_cosf_sinf_reassoc(
 ; CHECK-NEXT:    [[TANF:%.*]] = call reassoc float @tanf(float [[A:%.*]]) #1
@@ -102,12 +115,14 @@ define fp128 @fdiv_cosfp128_sinfp128_reassoc(fp128 %a) {
   ret fp128 %div
 }
 
-declare double @llvm.cos.f64(double) #1
+declare half @llvm.cos.f16(half) #1
 declare float @llvm.cos.f32(float) #1
+declare double @llvm.cos.f64(double) #1
 declare fp128 @llvm.cos.fp128(fp128) #1
 
-declare double @llvm.sin.f64(double) #1
+declare half @llvm.sin.f16(half) #1
 declare float @llvm.sin.f32(float) #1
+declare double @llvm.sin.f64(double) #1
 declare fp128 @llvm.sin.fp128(fp128) #1
 
 declare void @use(double)

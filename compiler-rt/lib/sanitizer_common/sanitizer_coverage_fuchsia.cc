@@ -31,6 +31,7 @@
 #include "sanitizer_atomic.h"
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_symbolizer_fuchsia.h"
 
 #include <zircon/process.h>
 #include <zircon/sanitizer.h>
@@ -101,7 +102,7 @@ class TracePcGuardController final {
       // uses the `dumpfile` symbolizer markup element to highlight the
       // dump.  See the explanation for this in:
       // https://fuchsia.googlesource.com/zircon/+/master/docs/symbolizer_markup.md
-      Printf("SanitizerCoverage: {{{dumpfile:%s:%s}}} with up to %u PCs\n",
+      Printf("SanitizerCoverage: " FORMAT_DUMPFILE " with up to %u PCs\n",
              kSancovSinkName, vmo_name_, next_index_ - 1);
     }
   }
@@ -146,9 +147,9 @@ class TracePcGuardController final {
       // indices, but we'll never move the mapping address so we don't have
       // any multi-thread synchronization issues with that.
       uintptr_t mapping;
-      status = _zx_vmar_map_old(_zx_vmar_root_self(), 0, vmo_, 0, MappingSize,
-                                ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-                                &mapping);
+      status =
+          _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                       0, vmo_, 0, MappingSize, &mapping);
       CHECK_EQ(status, ZX_OK);
 
       // Hereafter other threads are free to start storing into

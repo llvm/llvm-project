@@ -64,15 +64,13 @@ void test2 ( const CharT *s, size_t len ) {
 }
 
 int main () {
-    typedef std::string_view    string_view;
-    typedef std::u16string_view u16string_view;
-    typedef std::u32string_view u32string_view;
-    typedef std::wstring_view   wstring_view;
-
-    test1<string_view> ();
-    test1<u16string_view> ();
-    test1<u32string_view> ();
-    test1<wstring_view> ();
+    test1<std::string_view> ();
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    test1<std::u8string_view> ();
+#endif
+    test1<std::u16string_view> ();
+    test1<std::u32string_view> ();
+    test1<std::wstring_view> ();
 
     test2 ( "ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
     test2 ( "ABCDE", 5 );
@@ -83,6 +81,13 @@ int main () {
     test2 ( L"ABCDE", 5 );
     test2 ( L"a", 1 );
     test2 ( L"", 0 );
+
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    test2 ( u8"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
+    test2 ( u8"ABCDE", 5 );
+    test2 ( u8"a", 1 );
+    test2 ( u8"", 0 );
+#endif
 
 #if TEST_STD_VER >= 11
     test2 ( u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );

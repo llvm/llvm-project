@@ -145,20 +145,18 @@ static void CloneNodeWithValues(SDNode *N, SelectionDAG *DAG, ArrayRef<EVT> VTs,
     Ops.push_back(ExtraOper);
 
   SDVTList VTList = DAG->getVTList(VTs);
-  MachineSDNode::mmo_iterator Begin = nullptr, End = nullptr;
   MachineSDNode *MN = dyn_cast<MachineSDNode>(N);
 
   // Store memory references.
-  if (MN) {
-    Begin = MN->memoperands_begin();
-    End = MN->memoperands_end();
-  }
+  SmallVector<MachineMemOperand *, 2> MMOs;
+  if (MN)
+    MMOs.assign(MN->memoperands_begin(), MN->memoperands_end());
 
   DAG->MorphNodeTo(N, N->getOpcode(), VTList, Ops);
 
   // Reset the memory references
   if (MN)
-    MN->setMemRefs(Begin, End);
+    DAG->setNodeMemRefs(MN, MMOs);
 }
 
 static bool AddGlue(SDNode *N, SDValue Glue, bool AddGlue, SelectionDAG *DAG) {
@@ -244,7 +242,7 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
     return;
 
   // Sort them in increasing order.
-  llvm::sort(Offsets.begin(), Offsets.end());
+  llvm::sort(Offsets);
 
   // Check if the loads are close enough.
   SmallVector<SDNode*, 4> Loads;
@@ -724,7 +722,7 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
   MachineBasicBlock *BB = Emitter.getBlock();
   MachineBasicBlock::iterator InsertPos = Emitter.getInsertPos();
   for (auto DV : DAG->GetDbgValues(N)) {
-    if (DV->isInvalidated())
+    if (DV->isEmitted())
       continue;
     unsigned DVOrder = DV->getOrder();
     if (!Order || DVOrder == Order) {
@@ -733,7 +731,6 @@ ProcessSDDbgValues(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
         Orders.push_back({DVOrder, DbgMI});
         BB->insert(InsertPos, DbgMI);
       }
-      DV->setIsInvalidated();
     }
   }
 }
@@ -824,8 +821,12 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     SDDbgInfo::DbgIterator PDE = DAG->ByvalParmDbgEnd();
     for (; PDI != PDE; ++PDI) {
       MachineInstr *DbgMI= Emitter.EmitDbgValue(*PDI, VRBaseMap);
-      if (DbgMI)
+      if (DbgMI) {
         BB->insert(InsertPos, DbgMI);
+        // We re-emit the dbg_value closer to its use, too, after instructions
+        // are emitted to the BB.
+        (*PDI)->clearIsEmitted();
+      }
     }
   }
 
@@ -891,7 +892,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       for (; DI != DE; ++DI) {
         if ((*DI)->getOrder() < LastOrder || (*DI)->getOrder() >= Order)
           break;
-        if ((*DI)->isInvalidated())
+        if ((*DI)->isEmitted())
           continue;
 
         MachineInstr *DbgMI = Emitter.EmitDbgValue(*DI, VRBaseMap);
@@ -913,7 +914,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     // some of them before one or more conditional branches?
     SmallVector<MachineInstr*, 8> DbgMIs;
     for (; DI != DE; ++DI) {
-      if ((*DI)->isInvalidated())
+      if ((*DI)->isEmitted())
         continue;
       assert((*DI)->getOrder() >= LastOrder &&
              "emitting DBG_VALUE out of order");

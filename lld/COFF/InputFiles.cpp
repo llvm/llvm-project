@@ -54,8 +54,16 @@ std::vector<BitcodeFile *> BitcodeFile::Instances;
 static void checkAndSetWeakAlias(SymbolTable *Symtab, InputFile *F,
                                  Symbol *Source, Symbol *Target) {
   if (auto *U = dyn_cast<Undefined>(Source)) {
-    if (U->WeakAlias && U->WeakAlias != Target)
+    if (U->WeakAlias && U->WeakAlias != Target) {
+      // Weak aliases as produced by GCC are named in the form
+      // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
+      // of another symbol emitted near the weak symbol.
+      // Just use the definition from the first object file that defined
+      // this weak symbol.
+      if (Config->MinGW)
+        return;
       Symtab->reportDuplicate(Source, F);
+    }
     U->WeakAlias = Target;
   }
 }
@@ -158,6 +166,11 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
     ArrayRef<uint8_t> Data;
     COFFObj->getSectionContents(Sec, Data);
     Directives = std::string((const char *)Data.data(), Data.size());
+    return nullptr;
+  }
+
+  if (Name == ".llvm_addrsig") {
+    AddrsigSec = Sec;
     return nullptr;
   }
 
@@ -267,6 +280,13 @@ Symbol *ObjFile::createRegular(COFFSymbolRef Sym) {
     COFFObj->getSymbolName(Sym, Name);
     if (SC)
       return Symtab->addRegular(this, Name, Sym.getGeneric(), SC);
+    // For MinGW symbols named .weak.* that point to a discarded section,
+    // don't create an Undefined symbol. If nothing ever refers to the symbol,
+    // everything should be fine. If something actually refers to the symbol
+    // (e.g. the undefined weak alias), linking will fail due to undefined
+    // references at the end.
+    if (Config->MinGW && Name.startswith(".weak."))
+      return nullptr;
     return Symtab->addUndefined(Name, this, false);
   }
   if (SC)
@@ -481,6 +501,10 @@ void ImportFile::parse() {
   ExternalName = ExtName;
 
   ImpSym = Symtab->addImportData(ImpName, this);
+  // If this was a duplicate, we logged an error but may continue;
+  // in this case, ImpSym is nullptr.
+  if (!ImpSym)
+    return;
 
   if (Hdr->getType() == llvm::COFF::IMPORT_CONST)
     static_cast<void>(Symtab->addImportData(Name, this));

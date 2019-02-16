@@ -107,6 +107,11 @@ external add_partially_inline_lib_calls
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_partially_inline_lib_calls"
 
+(** See the [llvm::createLowerAtomicPass] function. *)
+external add_lower_atomic
+  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
+  = "llvm_add_lower_atomic"
+
 (** See the [llvm::createLowerSwitchPass] function. *)
 external add_lower_switch
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
@@ -196,3 +201,8 @@ external add_scoped_no_alias_alias_analysis
 external add_basic_alias_analysis
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_basic_alias_analysis"
+
+(** See the [llvm::createUnifyFunctionExitNodesPass] function. *)
+external add_unify_function_exit_nodes
+  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
+  = "llvm_add_unify_function_exit_nodes"

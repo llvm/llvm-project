@@ -33,7 +33,24 @@ enum UnwindOpcodes {
   UOP_SaveNonVolBig,
   UOP_SaveXMM128 = 8,
   UOP_SaveXMM128Big,
-  UOP_PushMachFrame
+  UOP_PushMachFrame,
+  // The following set of unwind opcodes is for ARM64.  They are documented at
+  // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
+  UOP_AllocMedium,
+  UOP_SaveFPLRX,
+  UOP_SaveFPLR,
+  UOP_SaveReg,
+  UOP_SaveRegX,
+  UOP_SaveRegP,
+  UOP_SaveRegPX,
+  UOP_SaveFReg,
+  UOP_SaveFRegX,
+  UOP_SaveFRegP,
+  UOP_SaveFRegPX,
+  UOP_SetFP,
+  UOP_AddFP,
+  UOP_Nop,
+  UOP_End
 };
 
 /// UnwindCode - This union describes a single operation in a function prolog,

@@ -1,4 +1,5 @@
 ;RUN: opt %s -passes='adce,loop(rotate),adce' -S -debug-pass-manager -debug-only=loop-rotate 2>&1 | FileCheck %s
+;RUN: opt %s -passes='adce,loop(rotate),adce' -S -debug-pass-manager -debug-only=loop-rotate -enable-mssa-loop-dependency=true -verify-memoryssa 2>&1 | FileCheck %s --check-prefix=MSSA
 ;REQUIRES: asserts
 
 ; This test is to make sure we invalidate the post dominator pass after loop rotate simplifies the loop latch.
@@ -6,12 +7,12 @@
 
 ; CHECK: Starting llvm::Function pass manager run.
 ; CHECK-NEXT: Running pass: ADCEPass on f
-; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on f
 ; CHECK-NEXT: Running pass: FunctionToLoopPassAdaptor{{.*}} on f
 ; CHECK-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-NEXT: Running pass: LoopSimplifyPass on f
 ; CHECK-NEXT: Running analysis: LoopAnalysis on f
+; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; CHECK-NEXT: Running analysis: AssumptionAnalysis on f
 ; CHECK-NEXT: Running pass: LCSSAPass on f
 ; CHECK-NEXT: Finished llvm::Function pass manager run.
@@ -21,6 +22,7 @@
 ; CHECK-NEXT: Running analysis: TargetIRAnalysis on f
 ; CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
 ; CHECK-NEXT: Starting Loop pass manager run.
+; CHECK-NEXT: Running analysis: PassInstrumentationAnalysis on bb
 ; CHECK-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; CHECK-NEXT: Folding loop latch bb4 into bb
 ; CHECK-NEXT: Invalidating all non-preserved analyses for: bb
@@ -30,6 +32,36 @@
 ; CHECK-NEXT: Running pass: ADCEPass on f
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on f
 ; CHECK-NEXT: Finished llvm::Function pass manager run.
+
+; MSSA: Starting llvm::Function pass manager run.
+; MSSA-NEXT: Running pass: ADCEPass on f
+; MSSA-NEXT: Running analysis: PostDominatorTreeAnalysis on f
+; MSSA-NEXT: Running pass: FunctionToLoopPassAdaptor{{.*}} on f
+; MSSA-NEXT: Starting llvm::Function pass manager run.
+; MSSA-NEXT: Running pass: LoopSimplifyPass on f
+; MSSA-NEXT: Running analysis: LoopAnalysis on f
+; MSSA-NEXT: Running analysis: DominatorTreeAnalysis on f
+; MSSA-NEXT: Running analysis: AssumptionAnalysis on f
+; MSSA-NEXT: Running pass: LCSSAPass on f
+; MSSA-NEXT: Finished llvm::Function pass manager run.
+; MSSA-NEXT: Running analysis: MemorySSAAnalysis on f
+; MSSA-NEXT: Running analysis: AAManager on f
+; MSSA-NEXT: Running analysis: TargetLibraryAnalysis on f
+; MSSA-NEXT: Running analysis: ScalarEvolutionAnalysis on f
+; MSSA-NEXT: Running analysis: TargetIRAnalysis on f
+; MSSA-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
+; MSSA-NEXT: Starting Loop pass manager run.
+; MSSA-NEXT: Running analysis: PassInstrumentationAnalysis on bb
+; MSSA-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
+; MSSA-NEXT: Folding loop latch bb4 into bb
+; MSSA-NEXT: Invalidating all non-preserved analyses for: bb
+; MSSA-NEXT: Finished Loop pass manager run.
+; MSSA-NEXT: Invalidating all non-preserved analyses for: f
+; MSSA-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
+; MSSA-NEXT: Running pass: ADCEPass on f
+; MSSA-NEXT: Running analysis: PostDominatorTreeAnalysis on f
+; MSSA-NEXT: Finished llvm::Function pass manager run.
+
 
 ; CHECK-LABEL: define i8 @f() {
 ; CHECK-NEXT : entry:
@@ -50,6 +82,26 @@
 ; CHECK-NEXT : declare void @raise_exception() #0
 ; CHECK-NEXT :
 ; CHECK-NEXT : attributes #0 = { noreturn }
+
+; MSSA-LABEL: define i8 @f() {
+; MSSA-NEXT : entry:
+; MSSA-NEXT :   br label %bb
+; MSSA-NEXT :
+; MSSA-NEXT : bb:                                               ; preds = %bb, %entry
+; MSSA-NEXT :   %mode.0 = phi i8 [ 0, %entry ], [ %indvar.next, %bb ]
+; MSSA-NEXT :   %tmp5 = icmp eq i8 %mode.0, 1
+; MSSA-NEXT :   %indvar.next = add i8 %mode.0, 1
+; MSSA-NEXT :   br i1 %tmp5, label %bb5, label %bb
+; MSSA-NEXT :
+; MSSA-NEXT : bb5:                                              ; preds = %bb
+; MSSA-NEXT :   tail call void @raise_exception() #0
+; MSSA-NEXT :   unreachable
+; MSSA-NEXT : }
+; MSSA-NEXT :
+; MSSA-NEXT : ; Function Attrs: noreturn
+; MSSA-NEXT : declare void @raise_exception() #0
+; MSSA-NEXT :
+; MSSA-NEXT : attributes #0 = { noreturn }
 
 define i8 @f() {
 entry:

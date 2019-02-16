@@ -60,6 +60,11 @@ runs just before the pass that we are trying to test:
 
    ``llc -stop-after=machine-cp bug-trigger.ll > test.mir``
 
+If the same pass is run multiple times, a run index can be included
+after the name with a comma.
+
+   ``llc -stop-after=dead-mi-elimination,1 bug-trigger.ll > test.mir``
+
 After generating the input MIR file, you'll have to add a run line that uses
 the ``-run-pass`` option to it. In order to test the post register allocation
 pseudo instruction expansion pass on X86-64, a run line like the one shown
@@ -135,7 +140,7 @@ can serialize:
 - The target-specific ``MachineConstantPoolValue`` subclasses (in the ARM and
   SystemZ backends) aren't serialized at the moment.
 
-- The ``MCSymbol`` machine operands are only printed, they can't be parsed.
+- The ``MCSymbol`` machine operands don't support temporary or local symbols.
 
 - A lot of the state in ``MachineModuleInfo`` isn't serialized - only the CFI
   instructions and the variable debug information from MMI is serialized right
@@ -143,9 +148,9 @@ can serialize:
 
 These limitations impose restrictions on what you can test with the MIR format.
 For now, tests that would like to test some behaviour that depends on the state
-of certain ``MCSymbol``  operands or the exception handling state in MMI, can't
-use the MIR format. As well as that, tests that test some behaviour that
-depends on the state of the target specific ``MachineFunctionInfo`` or
+of temporary or local ``MCSymbol``  operands or the exception handling state in
+MMI, can't use the MIR format. As well as that, tests that test some behaviour
+that depends on the state of the target specific ``MachineFunctionInfo`` or
 ``MachineConstantPoolValue`` subclasses can't use the MIR format at the moment.
 
 High Level Structure
@@ -439,9 +444,8 @@ is preferred.
 Machine Operands
 ----------------
 
-There are seventeen different kinds of machine operands, and all of them, except
-the ``MCSymbol`` operand, can be serialized. The ``MCSymbol`` operands are
-just printed out - they can't be parsed back yet.
+There are seventeen different kinds of machine operands, and all of them can be
+serialized.
 
 Immediate Operands
 ^^^^^^^^^^^^^^^^^^

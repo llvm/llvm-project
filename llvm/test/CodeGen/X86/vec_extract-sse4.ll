@@ -25,17 +25,13 @@ define void @t1(float* %R, <4 x float>* %P1) nounwind {
 define float @t2(<4 x float>* %P1) nounwind {
 ; X32-LABEL: t2:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
-; X32-NEXT:    movss %xmm0, (%esp)
-; X32-NEXT:    flds (%esp)
-; X32-NEXT:    popl %eax
+; X32-NEXT:    flds 8(%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
   %X = load <4 x float>, <4 x float>* %P1
   %tmp = extractelement <4 x float> %X, i32 2

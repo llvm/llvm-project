@@ -28,7 +28,9 @@
 #include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <vector>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -44,22 +46,31 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
 
     [[deprecated]]
     int _f() { return _X; }
+
+    #define DECL_NAME(x, y) x##_##y##_Decl
+    #define DECL(x, y) class DECL_NAME(x, y) {};
+    DECL(X, Y); // X_Y_Decl
   )cpp");
+
   auto Symbols = Header.headerSymbols();
   auto AST = Header.build();
 
   SymbolQualitySignals Quality;
   Quality.merge(findSymbol(Symbols, "_X"));
   EXPECT_FALSE(Quality.Deprecated);
+  EXPECT_FALSE(Quality.ImplementationDetail);
   EXPECT_TRUE(Quality.ReservedName);
   EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
+
+  Quality.merge(findSymbol(Symbols, "X_Y_Decl"));
+  EXPECT_TRUE(Quality.ImplementationDetail);
 
   Symbol F = findSymbol(Symbols, "_f");
   F.References = 24; // TestTU doesn't count references, so fake it.
   Quality = {};
   Quality.merge(F);
-  EXPECT_FALSE(Quality.Deprecated); // FIXME: Include deprecated bit in index.
+  EXPECT_TRUE(Quality.Deprecated);
   EXPECT_FALSE(Quality.ReservedName);
   EXPECT_EQ(Quality.References, 24u);
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Function);
@@ -117,28 +128,25 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "main"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f) << "Decl in current file";
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
+      << "Decl in current file";
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "header"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 0.6f) << "Decl from header";
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 0.6f) << "Decl from header";
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "header_main"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Current file and header";
 
   auto constructShadowDeclCompletionResult = [&](const std::string DeclName) {
     auto *Shadow =
-        *dyn_cast<UsingDecl>(
-             &findAnyDecl(AST,
-                          [&](const NamedDecl &ND) {
-                            if (const UsingDecl *Using =
-                                    dyn_cast<UsingDecl>(&ND))
-                              if (Using->shadow_size() &&
-                                  Using->getQualifiedNameAsString() == DeclName)
-                                return true;
-                            return false;
-                          }))
-             ->shadow_begin();
+        *dyn_cast<UsingDecl>(&findDecl(AST, [&](const NamedDecl &ND) {
+           if (const UsingDecl *Using = dyn_cast<UsingDecl>(&ND))
+             if (Using->shadow_size() &&
+                 Using->getQualifiedNameAsString() == DeclName)
+               return true;
+           return false;
+         }))->shadow_begin();
     CodeCompletionResult Result(Shadow->getTargetDecl(), 42);
     Result.ShadowDecl = Shadow;
     return Result;
@@ -146,25 +154,32 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   Relevance = {};
   Relevance.merge(constructShadowDeclCompletionResult("Bar"));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Using declaration in main file";
   Relevance.merge(constructShadowDeclCompletionResult("FLAGS_FOO"));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+  EXPECT_FLOAT_EQ(Relevance.SemaFileProximityScore, 1.0f)
       << "Using declaration in main file";
 
   Relevance = {};
-  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "X"), 42));
+  Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "X"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
   Relevance = {};
-  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "y"), 42));
+  Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "y"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::ClassScope);
   Relevance = {};
-  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "z"), 42));
+  Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "z"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FunctionScope);
   // The injected class name is treated as the outer class name.
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "S::S"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::GlobalScope);
+
+  Relevance = {};
+  EXPECT_FALSE(Relevance.InBaseClass);
+  auto BaseMember = CodeCompletionResult(&findUnqualifiedDecl(AST, "y"), 42);
+  BaseMember.InBaseClass = true;
+  Relevance.merge(BaseMember);
+  EXPECT_TRUE(Relevance.InBaseClass);
 }
 
 // Do the signals move the scores in the direction we expect?
@@ -180,22 +195,32 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   ReservedName.ReservedName = true;
   EXPECT_LT(ReservedName.evaluate(), Default.evaluate());
 
+  SymbolQualitySignals ImplementationDetail;
+  ImplementationDetail.ImplementationDetail = true;
+  EXPECT_LT(ImplementationDetail.evaluate(), Default.evaluate());
+
   SymbolQualitySignals WithReferences, ManyReferences;
   WithReferences.References = 20;
   ManyReferences.References = 1000;
   EXPECT_GT(WithReferences.evaluate(), Default.evaluate());
   EXPECT_GT(ManyReferences.evaluate(), WithReferences.evaluate());
 
-  SymbolQualitySignals Keyword, Variable, Macro, Constructor, Function;
+  SymbolQualitySignals Keyword, Variable, Macro, Constructor, Function,
+      Destructor, Operator;
   Keyword.Category = SymbolQualitySignals::Keyword;
   Variable.Category = SymbolQualitySignals::Variable;
   Macro.Category = SymbolQualitySignals::Macro;
   Constructor.Category = SymbolQualitySignals::Constructor;
+  Destructor.Category = SymbolQualitySignals::Destructor;
+  Destructor.Category = SymbolQualitySignals::Destructor;
+  Operator.Category = SymbolQualitySignals::Operator;
   Function.Category = SymbolQualitySignals::Function;
   EXPECT_GT(Variable.evaluate(), Default.evaluate());
   EXPECT_GT(Keyword.evaluate(), Variable.evaluate());
   EXPECT_LT(Macro.evaluate(), Default.evaluate());
+  EXPECT_LT(Operator.evaluate(), Default.evaluate());
   EXPECT_LT(Constructor.evaluate(), Function.evaluate());
+  EXPECT_LT(Destructor.evaluate(), Constructor.evaluate());
 }
 
 TEST(QualityTests, SymbolRelevanceSignalsSanity) {
@@ -210,13 +235,25 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   PoorNameMatch.NameMatch = 0.2f;
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
 
-  SymbolRelevanceSignals WithSemaProximity;
-  WithSemaProximity.SemaProximityScore = 0.2f;
-  EXPECT_GT(WithSemaProximity.evaluate(), Default.evaluate());
+  SymbolRelevanceSignals WithSemaFileProximity;
+  WithSemaFileProximity.SemaFileProximityScore = 0.2f;
+  EXPECT_GT(WithSemaFileProximity.evaluate(), Default.evaluate());
+
+  ScopeDistance ScopeProximity({"x::y::"});
+
+  SymbolRelevanceSignals WithSemaScopeProximity;
+  WithSemaScopeProximity.ScopeProximityMatch = &ScopeProximity;
+  WithSemaScopeProximity.SemaSaysInScope = true;
+  EXPECT_GT(WithSemaScopeProximity.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals WithIndexScopeProximity;
+  WithIndexScopeProximity.ScopeProximityMatch = &ScopeProximity;
+  WithIndexScopeProximity.SymbolScope = "x::";
+  EXPECT_GT(WithSemaScopeProximity.evaluate(), Default.evaluate());
 
   SymbolRelevanceSignals IndexProximate;
   IndexProximate.SymbolURI = "unittest:/foo/bar.h";
-  llvm::StringMap<SourceParams> ProxSources;
+  StringMap<SourceParams> ProxSources;
   ProxSources.try_emplace(testPath("foo/baz.h"));
   URIDistance Distance(ProxSources);
   IndexProximate.FileProximityMatch = &Distance;
@@ -240,6 +277,39 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   EXPECT_LT(Instance.evaluate(), Default.evaluate());
   Instance.IsInstanceMember = true;
   EXPECT_EQ(Instance.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals InBaseClass;
+  InBaseClass.InBaseClass = true;
+  EXPECT_LT(InBaseClass.evaluate(), Default.evaluate());
+}
+
+TEST(QualityTests, ScopeProximity) {
+  SymbolRelevanceSignals Relevance;
+  ScopeDistance ScopeProximity({"x::y::z::", "x::", "llvm::", ""});
+  Relevance.ScopeProximityMatch = &ScopeProximity;
+
+  Relevance.SymbolScope = "other::";
+  float NotMatched = Relevance.evaluate();
+
+  Relevance.SymbolScope = "";
+  float Global = Relevance.evaluate();
+  EXPECT_GT(Global, NotMatched);
+
+  Relevance.SymbolScope = "llvm::";
+  float NonParent = Relevance.evaluate();
+  EXPECT_GT(NonParent, Global);
+
+  Relevance.SymbolScope = "x::";
+  float GrandParent = Relevance.evaluate();
+  EXPECT_GT(GrandParent, Global);
+
+  Relevance.SymbolScope = "x::y::";
+  float Parent = Relevance.evaluate();
+  EXPECT_GT(Parent, GrandParent);
+
+  Relevance.SymbolScope = "x::y::z::";
+  float Enclosing = Relevance.evaluate();
+  EXPECT_GT(Enclosing, Parent);
 }
 
 TEST(QualityTests, SortText) {
@@ -269,9 +339,9 @@ TEST(QualityTests, NoBoostForClassConstructor) {
   SymbolRelevanceSignals Cls;
   Cls.merge(CodeCompletionResult(Foo, /*Priority=*/0));
 
-  const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
+  const NamedDecl *CtorDecl = &findDecl(AST, [](const NamedDecl &ND) {
     return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
-           llvm::isa<CXXConstructorDecl>(&ND);
+           isa<CXXConstructorDecl>(&ND);
   });
   SymbolRelevanceSignals Ctor;
   Ctor.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
@@ -301,7 +371,7 @@ TEST(QualityTests, IsInstanceMember) {
   Rel.merge(BarSym);
   EXPECT_TRUE(Rel.IsInstanceMember);
 
-  Rel.IsInstanceMember =false;
+  Rel.IsInstanceMember = false;
   const Symbol &TplSym = findSymbol(Symbols, "Foo::tpl");
   Rel.merge(TplSym);
   EXPECT_TRUE(Rel.IsInstanceMember);
@@ -321,29 +391,80 @@ TEST(QualityTests, IsInstanceMember) {
   EXPECT_TRUE(Rel.IsInstanceMember);
 }
 
-TEST(QualityTests, ConstructorQuality) {
+TEST(QualityTests, ConstructorDestructor) {
   auto Header = TestTU::withHeaderCode(R"cpp(
     class Foo {
     public:
       Foo(int);
+      ~Foo();
     };
   )cpp");
   auto Symbols = Header.headerSymbols();
   auto AST = Header.build();
 
-  const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
+  const NamedDecl *CtorDecl = &findDecl(AST, [](const NamedDecl &ND) {
     return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
-           llvm::isa<CXXConstructorDecl>(&ND);
+           isa<CXXConstructorDecl>(&ND);
+  });
+  const NamedDecl *DtorDecl = &findDecl(AST, [](const NamedDecl &ND) {
+    return (ND.getQualifiedNameAsString() == "Foo::~Foo") &&
+           isa<CXXDestructorDecl>(&ND);
   });
 
-  SymbolQualitySignals Q;
-  Q.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
-  EXPECT_EQ(Q.Category, SymbolQualitySignals::Constructor);
+  SymbolQualitySignals CtorQ;
+  CtorQ.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
+  EXPECT_EQ(CtorQ.Category, SymbolQualitySignals::Constructor);
 
-  Q.Category = SymbolQualitySignals::Unknown;
+  CtorQ.Category = SymbolQualitySignals::Unknown;
   const Symbol &CtorSym = findSymbol(Symbols, "Foo::Foo");
-  Q.merge(CtorSym);
-  EXPECT_EQ(Q.Category, SymbolQualitySignals::Constructor);
+  CtorQ.merge(CtorSym);
+  EXPECT_EQ(CtorQ.Category, SymbolQualitySignals::Constructor);
+
+  SymbolQualitySignals DtorQ;
+  DtorQ.merge(CodeCompletionResult(DtorDecl, /*Priority=*/0));
+  EXPECT_EQ(DtorQ.Category, SymbolQualitySignals::Destructor);
+}
+
+TEST(QualityTests, Operator) {
+  auto Header = TestTU::withHeaderCode(R"cpp(
+    class Foo {
+    public:
+      bool operator<(const Foo& f1);
+    };
+  )cpp");
+  auto AST = Header.build();
+
+  const NamedDecl *Operator = &findDecl(AST, [](const NamedDecl &ND) {
+    if (const auto *OD = dyn_cast<FunctionDecl>(&ND))
+      if (OD->isOverloadedOperator())
+        return true;
+    return false;
+  });
+  SymbolQualitySignals Q;
+  Q.merge(CodeCompletionResult(Operator, /*Priority=*/0));
+  EXPECT_EQ(Q.Category, SymbolQualitySignals::Operator);
+}
+
+TEST(QualityTests, ItemWithFixItsRankedDown) {
+  CodeCompleteOptions Opts;
+  Opts.IncludeFixIts = true;
+
+  auto Header = TestTU::withHeaderCode(R"cpp(
+        int x;
+      )cpp");
+  auto AST = Header.build();
+
+  SymbolRelevanceSignals RelevanceWithFixIt;
+  RelevanceWithFixIt.merge(CodeCompletionResult(&findDecl(AST, "x"), 0, nullptr,
+                                                false, true, {FixItHint{}}));
+  EXPECT_TRUE(RelevanceWithFixIt.NeedsFixIts);
+
+  SymbolRelevanceSignals RelevanceWithoutFixIt;
+  RelevanceWithoutFixIt.merge(
+      CodeCompletionResult(&findDecl(AST, "x"), 0, nullptr, false, true, {}));
+  EXPECT_FALSE(RelevanceWithoutFixIt.NeedsFixIts);
+
+  EXPECT_LT(RelevanceWithFixIt.evaluate(), RelevanceWithoutFixIt.evaluate());
 }
 
 } // namespace

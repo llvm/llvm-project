@@ -30,11 +30,12 @@ For later versions of Visual Studio, no setup is required.
     <DisplayString IncludeView ="elt2" Condition="Size == 2"></DisplayString>
     <DisplayString IncludeView ="elt2">, {(($T1*)BeginX)[2]}{*this,view(elt3)}</DisplayString>
     <DisplayString IncludeView ="elt3" Condition="Size == 3"></DisplayString>
-    <DisplayString IncludeView ="elt3">, {(($T1*)BeginX)[2]}{*this,view(elt4)}</DisplayString>
+    <DisplayString IncludeView ="elt3">, {(($T1*)BeginX)[3]}{*this,view(elt4)}</DisplayString>
     <DisplayString IncludeView ="elt4" Condition="Size == 4"></DisplayString>
     <DisplayString IncludeView ="elt4">, /* {Size - 4} more*/ </DisplayString>
     <DisplayString Condition="Size == 0">empty</DisplayString>
     <DisplayString Condition="Size != 0">{{{*this,view(elt0)}}}</DisplayString>
+    <DisplayString>Uninitialized</DisplayString>
     <Expand>
       <Item Name="[size]">Size</Item>
       <Item Name="[capacity]">Capacity</Item>
@@ -85,43 +86,72 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::PointerIntPair&lt;*,*,*,*&gt;">
-    <DisplayString>{IntMask}: {($T1)(Value &amp; PointerBitMask)} [{($T3)((Value &gt;&gt; IntShift) &amp; IntMask)}]</DisplayString>
+    <DisplayString>{$T5::IntMask}: {($T1)(Value &amp; $T5::PointerBitMask)} [{($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}]</DisplayString>
     <Expand>
-      <Item Name="[ptr]">($T1)(Value &amp; PointerBitMask)</Item>
-      <Item Name="[int]">($T3)((Value &gt;&gt; IntShift) &amp; IntMask)</Item>
+      <Item Name="[ptr]">($T1)(Value &amp; $T5::PointerBitMask)</Item>
+      <Item Name="[int]">($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)</Item>
     </Expand>
   </Type>
 
   <Type Name="llvm::PointerUnion&lt;*,*&gt;">
-    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
-    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
+    <DisplayString Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)}</DisplayString>
     <Expand>
-      <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">($T1)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
-      <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">($T2)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
+      <Item Name="[Holds]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">"$T1", s8b</Item>
+      <Item Name="[Ptr]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) == 0">($T1)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
+      <Item Name="[Holds]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">"$T2", s8b</Item>
+      <Item Name="[Ptr]" Condition="((Val.Value &gt;&gt; ValTy::InfoTy::IntShift) &amp; ValTy::InfoTy::IntMask) != 0">($T2)(Val.Value &amp; ValTy::InfoTy::PointerBitMask)</Item>
     </Expand>
   </Type>
 
   <Type Name="llvm::PointerUnion3&lt;*,*,*&gt;">
-    <DisplayString Condition="(Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b}: {($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 2) == 2">{"$T2", s8b}: {($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 1) == 1">{"$T3", s8b}: {($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1">{"$T3", s8b}: {($T3)(Val.Val.Value &amp; ValTy::ValTy::InfoTy::PointerBitMask)}</DisplayString>
+    <DisplayString>{*(InnerUnion*)&amp;Val.Val.Value}</DisplayString>
     <Expand>
-      <ExpandedItem Condition="(Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
-      <ExpandedItem Condition="(Val.Val.Value &amp; 2) == 2">($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
-      <ExpandedItem Condition="(Val.Val.Value &amp; 1) == 1">($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+      <Item Name="[Holds]" Condition="(Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1">"$T3", s8b</Item>
+      <Item Name="[Ptr]" Condition="(Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1">($T3)(Val.Val.Value &amp; ValTy::ValTy::InfoTy::PointerBitMask)</Item>
+      <ExpandedItem Condition="!((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1)">*(InnerUnion*)&amp;Val.Val.Value</ExpandedItem>
     </Expand>
   </Type>
 
   <Type Name="llvm::PointerUnion4&lt;*,*,*,*&gt;">
-    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b}: {($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) == 2">{"$T2", s8b}: {($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 1) == 1">{"$T3", s8b}: {($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
-    <DisplayString Condition="(Val.Val.Value &amp; 3) == 3">{"$T4", s8b}: {($T4)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+      {"$T1", s8b}: {($T1)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
+    <DisplayString Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+      {"$T2", s8b}: {($T2)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
+    <DisplayString Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+      {"$T3", s8b}: {($T3)(Val.Val.Value &amp; InnerUnion2::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
+    <DisplayString Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+      {"$T4", s8b}: {($T4)(Val.Val.Value &amp; InnerUnion2::ValTy::InfoTy::PointerBitMask)}
+    </DisplayString>
     <Expand>
-      <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
-      <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) == 2">($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
-      <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 1) == 1">($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
-      <ExpandedItem Condition="(Val.Val.Value &amp; 3) == 3">($T4)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+      <Item Name="[Holds]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+        "$T1", s8b
+      </Item>
+      <Item Name="[Ptr]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+        ($T1)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)
+      </Item>
+      <Item Name="[Holds]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+        "$T2", s8b
+      </Item>
+      <Item Name="[Ptr]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 0 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion1::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+        ($T2)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)
+      </Item>
+      <Item Name="[Holds]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+        "$T3", s8b
+      </Item>
+      <Item Name="[Ptr]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 0">
+        ($T3)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)
+      </Item>
+      <Item Name="[Holds]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+        "$T4", s8b
+      </Item>
+      <Item Name="[Ptr]" Condition="((Val.Val.Value &gt;&gt; ValTy::ValTy::InfoTy::IntShift) &amp; 1) == 1 &amp;&amp; ((Val.Val.Value &gt;&gt; InnerUnion2::ValTy::InfoTy::IntShift) &amp; 1) == 1">
+        ($T4)(Val.Val.Value &amp; InnerUnion1::ValTy::InfoTy::PointerBitMask)
+      </Item>
     </Expand>
   </Type>
 

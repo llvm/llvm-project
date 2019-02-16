@@ -118,7 +118,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
     libomptarget_say("Building CUDA LLVM bitcode offloading device RTL.")
 
     # Set flags for LLVM Bitcode compilation.
-    set(bc_flags ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER_FLAGS} -DOMPTARGET_NVPTX_TEST=0)
+    set(bc_flags ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER_FLAGS})
     if(${LIBOMPTARGET_NVPTX_DEBUG})
       set(bc_flags ${bc_flags} -DOMPTARGET_NVPTX_DEBUG=-1)
     else()
@@ -131,6 +131,9 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
     if(CUDA_VERSION_MAJOR GREATER 8)
       set(bc_flags ${bc_flags} -Dnv_weak=weak)
     endif()
+
+    # Create target to build all Bitcode libraries.
+    add_custom_target(omptarget-nvptx-bc)
 
     # Generate a Bitcode library for all the compute capabilities the user requested.
     foreach(sm ${nvptx_sm_list})
@@ -165,6 +168,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES libomptarget-nvptx-sm_${sm}.bc)
 
       add_custom_target(omptarget-nvptx-${sm}-bc ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-nvptx-sm_${sm}.bc)
+      add_dependencies(omptarget-nvptx-bc omptarget-nvptx-${sm}-bc)
 
       # Copy library to destination.
       add_custom_command(TARGET omptarget-nvptx-${sm}-bc POST_BUILD
@@ -176,6 +180,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
     endforeach()
   endif()
 
+  add_subdirectory(test)
 else()
   libomptarget_say("Not building CUDA offloading device RTL: CUDA tools not found in the system.")
 endif()

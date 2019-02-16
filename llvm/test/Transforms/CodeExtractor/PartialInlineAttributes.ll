@@ -55,9 +55,9 @@ if.end:
   ret i32 %add
 }
 ; CHECK-LABEL: @caller
-; CHECK: call void @callee_most.2_if.then(i32 %v
+; CHECK: call void @callee_most.2.if.then(i32 %v
 ; CHECK: call i32 @callee_noinline(i32 %v)
-; CHECK: call void @callee_writeonly.1_if.then(i32 %v
+; CHECK: call void @callee_writeonly.1.if.then(i32 %v
 define i32 @caller(i32 %v) {
 entry:
   %c1 = call i32 @callee_most(i32 %v)
@@ -66,8 +66,8 @@ entry:
   ret i32 %c3
 }
 
-; CHECK: define internal void @callee_writeonly.1_if.then(i32 %v, i32* %sub.out) { 
-; CHECK: define internal void @callee_most.2_if.then(i32 %v, i32* %sub.out)  [[FN_ATTRS:#[0-9]+]]
+; CHECK: define internal void @callee_writeonly.1.if.then(i32 %v, i32* %sub.out) { 
+; CHECK: define internal void @callee_most.2.if.then(i32 %v, i32* %sub.out)  [[FN_ATTRS:#[0-9]+]]
 
 ; attributes to preserve
 attributes #0 = {

@@ -1,0 +1,214 @@
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=regbankselect -global-isel %s -verify-machineinstrs -o - -regbankselect-fast | FileCheck --check-prefixes=GCN,FAST %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=regbankselect -global-isel %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck --check-prefixes=GCN,GREEDY %s
+
+# REQUIRES: global-isel
+
+--- |
+  define void @select_sss() { ret void }
+  define void @select_ssv() { ret void }
+  define void @select_svs() { ret void }
+  define void @select_svv() { ret void }
+  define void @select_vss() { ret void }
+  define void @select_vsv() { ret void }
+  define void @select_vvs() { ret void }
+  define void @select_vvv() { ret void }
+...
+
+---
+name: select_sss
+legalized: true
+
+# GCN-LABEL: name: select_sss
+# GCN: [[SGPR0:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+# GCN: [[SGPR1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+# GCN: [[SGPR2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+# GCN: [[SGPR3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
+# GCN: [[SCC:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[SGPR0]](s32), [[SGPR1]]
+# GCN: {{%[0-9]+}}:sgpr(s32) = G_SELECT [[SCC]](s1), [[SGPR2]], [[SGPR3]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $sgpr2
+    %3:_(s32) = COPY $sgpr3
+    %4:_(s1) = G_ICMP intpred(ne), %0, %1
+    %5:_(s32) = G_SELECT %4, %2, %3
+...
+
+---
+name: select_ssv
+legalized: true
+
+# GCN-LABEL: name: select_ssv
+# GCN: [[SGPR0:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+# GCN: [[SGPR1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+# GCN: [[SGPR2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+# GCN: [[VGPR0:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+# GCN: [[SCC:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[SGPR0]](s32), [[SGPR1]]
+# GCN: [[SCC_S:%[0-9]+]]:sgpr(s1) = COPY [[SCC]]
+# FAST:   [[SGPR2_V:%[0-9]+]]:vgpr(s32) = COPY [[SGPR2]]
+# FAST:   {{%[0-9]+}}:vgpr(s32) = G_SELECT [[SCC_S]](s1), [[SGPR2_V]], [[VGPR0]]
+# GREEDY: {{%[0-9]+}}:vgpr(s32) = G_SELECT [[SCC_S]](s1), [[SGPR2]], [[VGPR0]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $sgpr2 
+    %3:_(s32) = COPY $vgpr0
+    %4:_(s1) = G_ICMP intpred(ne), %0, %1
+    %5:_(s32) = G_SELECT %4, %2, %3
+
+...
+
+---
+name: select_svs
+legalized: true
+
+# GCN-LABEL: name: select_svs
+# GCN: [[SGPR0:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+# GCN: [[SGPR1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+# GCN: [[SGPR2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
+# GCN: [[VGPR0:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+# GCN: [[SCC:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[SGPR0]](s32), [[SGPR1]]
+# GCN: [[SCC_S:%[0-9]+]]:sgpr(s1) = COPY [[SCC]]
+# FAST:   [[SGPR2_V:%[0-9]+]]:vgpr(s32) = COPY [[SGPR2]]
+# FAST:   {{%[0-9]+}}:vgpr(s32) = G_SELECT [[SCC_S]](s1), [[VGPR0]], [[SGPR2_V]]
+# GREEDY: {{%[0-9]+}}:vgpr(s32) = G_SELECT [[SCC_S]](s1), [[VGPR0]], [[SGPR2]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $sgpr2
+    %3:_(s32) = COPY $vgpr0
+    %4:_(s1) = G_ICMP intpred(ne), %0, %1
+    %5:_(s32) = G_SELECT %4, %3, %2
+...
+
+---
+name: select_svv
+legalized: true
+
+# GCN-LABEL: name: select_svv
+# GCN: [[SGPR0:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+# GCN: [[SGPR1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+# GCN: [[VGPR0:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+# GCN: [[VGPR1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+# GCN: [[SCC:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[SGPR0]](s32), [[SGPR1]]
+# GCN: [[SCC_S:%[0-9]+]]:sgpr(s1) = COPY [[SCC]]
+# GCN: {{%[0-9]+}}:vgpr(s32) = G_SELECT [[SCC_S]](s1), [[VGPR0]], [[VGPR1]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $vgpr0
+    %3:_(s32) = COPY $vgpr1
+    %4:_(s1) = G_ICMP intpred(ne), %0, %1
+    %5:_(s32) = G_SELECT %4, %2, %3
+...
+
+---
+name: select_vss
+legalized: true
+
+# GCN-LABEL: name: select_vss
+# GCN:  [[SGPR0:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+# GCN:  [[SGPR1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+# GCN:  [[VGPR0:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+# GCN:  [[VGPR1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+# GCN:  [[VCC:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[VGPR0]](s32), [[VGPR1]]
+# FAST:  [[SGPR0_V:%[0-9]+]]:vgpr(s32) = COPY [[SGPR0]]
+# GCN:  [[SGPR1_V:%[0-9]+]]:vgpr(s32) = COPY [[SGPR1]]
+# FAST:  {{%[0-9]+}}:vgpr(s32) = G_SELECT [[VCC]](s1), [[SGPR0_V]], [[SGPR1_V]]
+# GREDY: {{%[0-9]+}}:vgpr(s32) = G_SELECT [[VCC]](s1), [[SGPR0]], [[SGPR1_V]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = COPY $vgpr0
+    %3:_(s32) = COPY $vgpr1
+    %4:_(s1) = G_ICMP intpred(ne), %2, %3
+    %5:_(s32) = G_SELECT %4, %0, %1
+...
+
+---
+name: select_vsv
+legalized: true
+
+# GCN-LABEL: name: select_vsv
+# GCN:  [[SGPR0:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+# GCN:  [[VGPR0:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+# GCN:  [[VGPR1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+# GCN:  [[VGPR2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
+# GCN:  [[VCC:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[VGPR0]](s32), [[VGPR1]]
+# FAST:   [[SGPR0_V:%[0-9]+]]:vgpr(s32) = COPY [[SGPR0]]
+# FAST:   {{%[0-9]+}}:vgpr(s32) = G_SELECT [[VCC]](s1), [[SGPR0_V]], [[VGPR2]]
+# GREEDY: {{%[0-9]+}}:vgpr(s32) = G_SELECT [[VCC]](s1), [[SGPR0]], [[VGPR2]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $vgpr0
+    %2:_(s32) = COPY $vgpr1
+    %3:_(s32) = COPY $vgpr2
+    %4:_(s1) = G_ICMP intpred(ne), %1, %2
+    %5:_(s32) = G_SELECT %4, %0, %3
+...
+
+---
+name: select_vvs
+legalized: true
+
+# GCN-LABEL: name: select_vvs
+# GCN:  [[SGPR0:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+# GCN:  [[VGPR0:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+# GCN:  [[VGPR1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+# GCN:  [[VGPR2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
+# GCN:  [[VCC:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[VGPR0]](s32), [[VGPR1]]
+# FAST:   [[SGPR0_V:%[0-9]+]]:vgpr(s32) = COPY [[SGPR0]]
+# FAST:   {{%[0-9]+}}:vgpr(s32) = G_SELECT [[VCC]](s1), [[VGPR2]], [[SGPR0_V]]
+# GREEDY: {{%[0-9]+}}:vgpr(s32) = G_SELECT [[VCC]](s1), [[VGPR2]], [[SGPR0]]
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $vgpr0
+    %2:_(s32) = COPY $vgpr1
+    %3:_(s32) = COPY $vgpr2
+    %4:_(s1) = G_ICMP intpred(ne), %1, %2
+    %5:_(s32) = G_SELECT %4, %3, %0
+...
+
+---
+name: select_vvv
+legalized: true
+
+# GCN-LABEL: name: select_vvv
+# GCN: [[VGPR0:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+# GCN: [[VGPR1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+# GCN: [[VGPR2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
+# GCN: [[VGPR3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
+# GCN: [[VCC:%[0-9]+]]:sgpr(s1) = G_ICMP intpred(ne), [[VGPR0]](s32), [[VGPR1]]
+# GCN: {{%[0-9]+}}:vgpr(s32) = G_SELECT [[VCC]](s1), [[VGPR2]], [[VGPR3]]
+
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s32) = COPY $vgpr3
+    %4:_(s1) = G_ICMP intpred(ne), %0, %1
+    %5:_(s32) = G_SELECT %4, %2, %3
+...

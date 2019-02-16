@@ -295,8 +295,10 @@ public:
   bool inMips16HardFloat() const {
     return inMips16Mode() && InMips16HardFloat;
   }
-  bool inMicroMipsMode() const { return InMicroMipsMode; }
-  bool inMicroMips32r6Mode() const { return InMicroMipsMode && hasMips32r6(); }
+  bool inMicroMipsMode() const { return InMicroMipsMode && !InMips16Mode; }
+  bool inMicroMips32r6Mode() const {
+    return inMicroMipsMode() && hasMips32r6();
+  }
   bool hasDSP() const { return HasDSP; }
   bool hasDSPR2() const { return HasDSPR2; }
   bool hasDSPR3() const { return HasDSPR3; }
@@ -312,14 +314,14 @@ public:
   }
   bool useSmallSection() const { return UseSmallSection; }
 
-  bool hasStandardEncoding() const { return !inMips16Mode(); }
+  bool hasStandardEncoding() const { return !InMips16Mode && !InMicroMipsMode; }
 
   bool useSoftFloat() const { return IsSoftFloat; }
 
   bool useLongCalls() const { return UseLongCalls; }
 
   bool enableLongBranchPass() const {
-    return hasStandardEncoding() || allowMixed16_32();
+    return hasStandardEncoding() || inMicroMipsMode() || allowMixed16_32();
   }
 
   /// Features related to the presence of specific instructions.

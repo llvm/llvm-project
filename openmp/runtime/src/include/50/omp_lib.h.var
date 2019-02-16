@@ -11,63 +11,131 @@
 !//===----------------------------------------------------------------------===//
 !
 
-!***
-!*** Some of the directives for the following routine extend past column 72,
-!*** so process this file in 132-column mode.
-!***
+      integer omp_integer_kind
+      parameter(omp_integer_kind=4)
+      integer omp_logical_kind
+      parameter(omp_logical_kind=4)
+      integer omp_real_kind
+      parameter(omp_real_kind=4)
+      integer omp_lock_kind
+      parameter(omp_lock_kind=int_ptr_kind())
+      integer omp_nest_lock_kind
+      parameter(omp_nest_lock_kind=int_ptr_kind())
+      integer omp_sched_kind
+      parameter(omp_sched_kind=omp_integer_kind)
+      integer omp_proc_bind_kind
+      parameter(omp_proc_bind_kind=omp_integer_kind)
+      integer kmp_pointer_kind
+      parameter(kmp_pointer_kind=int_ptr_kind())
+      integer kmp_size_t_kind
+      parameter(kmp_size_t_kind=int_ptr_kind())
+      integer kmp_affinity_mask_kind
+      parameter(kmp_affinity_mask_kind=int_ptr_kind())
+      integer omp_sync_hint_kind
+      parameter(omp_sync_hint_kind=omp_integer_kind)
+      integer omp_lock_hint_kind
+      parameter(omp_lock_hint_kind=omp_sync_hint_kind)
+      integer omp_control_tool_kind
+      parameter(omp_control_tool_kind=omp_integer_kind)
+      integer omp_control_tool_result_kind
+      parameter(omp_control_tool_result_kind=omp_integer_kind)
+      integer omp_allocator_kind
+      parameter(omp_allocator_kind=int_ptr_kind())
 
-!DIR$ fixedformlinesize:132
+      integer(kind=omp_integer_kind)openmp_version
+      parameter(openmp_version=@LIBOMP_OMP_YEAR_MONTH@)
+      integer(kind=omp_integer_kind)kmp_version_major
+      parameter(kmp_version_major=@LIBOMP_VERSION_MAJOR@)
+      integer(kind=omp_integer_kind)kmp_version_minor
+      parameter(kmp_version_minor=@LIBOMP_VERSION_MINOR@)
+      integer(kind=omp_integer_kind)kmp_version_build
+      parameter(kmp_version_build=@LIBOMP_VERSION_BUILD@)
+      character(*)kmp_build_date
+      parameter(kmp_build_date='@LIBOMP_BUILD_DATE@')
 
-      integer, parameter :: omp_integer_kind       = 4
-      integer, parameter :: omp_logical_kind       = 4
-      integer, parameter :: omp_real_kind          = 4
-      integer, parameter :: omp_lock_kind          = int_ptr_kind()
-      integer, parameter :: omp_nest_lock_kind     = int_ptr_kind()
-      integer, parameter :: omp_sched_kind         = omp_integer_kind
-      integer, parameter :: omp_proc_bind_kind     = omp_integer_kind
-      integer, parameter :: kmp_pointer_kind       = int_ptr_kind()
-      integer, parameter :: kmp_size_t_kind        = int_ptr_kind()
-      integer, parameter :: kmp_affinity_mask_kind = int_ptr_kind()
-      integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
-      integer, parameter :: omp_control_tool_kind  = omp_integer_kind
-      integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
+      integer(kind=omp_sched_kind)omp_sched_static
+      parameter(omp_sched_static=1)
+      integer(kind=omp_sched_kind)omp_sched_dynamic
+      parameter(omp_sched_dynamic=2)
+      integer(kind=omp_sched_kind)omp_sched_guided
+      parameter(omp_sched_guided=3)
+      integer(kind=omp_sched_kind)omp_sched_auto
+      parameter(omp_sched_auto=4)
 
-      integer (kind=omp_integer_kind), parameter :: openmp_version    = @LIBOMP_OMP_YEAR_MONTH@
-      integer (kind=omp_integer_kind), parameter :: kmp_version_major = @LIBOMP_VERSION_MAJOR@
-      integer (kind=omp_integer_kind), parameter :: kmp_version_minor = @LIBOMP_VERSION_MINOR@
-      integer (kind=omp_integer_kind), parameter :: kmp_version_build = @LIBOMP_VERSION_BUILD@
-      character(*)               kmp_build_date
-      parameter( kmp_build_date = '@LIBOMP_BUILD_DATE@' )
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_false
+      parameter(omp_proc_bind_false=0)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_true
+      parameter(omp_proc_bind_true=1)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_master
+      parameter(omp_proc_bind_master=2)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_close
+      parameter(omp_proc_bind_close=3)
+      integer(kind=omp_proc_bind_kind)omp_proc_bind_spread
+      parameter(omp_proc_bind_spread=4)
 
-      integer(kind=omp_sched_kind), parameter :: omp_sched_static  = 1
-      integer(kind=omp_sched_kind), parameter :: omp_sched_dynamic = 2
-      integer(kind=omp_sched_kind), parameter :: omp_sched_guided  = 3
-      integer(kind=omp_sched_kind), parameter :: omp_sched_auto    = 4
+      integer(kind=omp_sync_hint_kind)omp_sync_hint_none
+      parameter(omp_sync_hint_none=0)
+      integer(kind=omp_sync_hint_kind)omp_sync_hint_uncontended
+      parameter(omp_sync_hint_uncontended=1)
+      integer(kind=omp_sync_hint_kind)omp_sync_hint_contended
+      parameter(omp_sync_hint_contended=2)
+      integer(kind=omp_sync_hint_kind)omp_sync_hint_nonspeculative
+      parameter(omp_sync_hint_nonspeculative=4)
+      integer(kind=omp_sync_hint_kind)omp_sync_hint_speculative
+      parameter(omp_sync_hint_speculative=8)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_none
+      parameter(omp_lock_hint_none=omp_sync_hint_none)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_uncontended
+      parameter(omp_lock_hint_uncontended=omp_sync_hint_uncontended)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_contended
+      parameter(omp_lock_hint_contended=omp_sync_hint_contended)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_nonspeculative
+      parameter(omp_lock_hint_nonspeculative=4)
+      integer(kind=omp_lock_hint_kind)omp_lock_hint_speculative
+      parameter(omp_lock_hint_speculative=omp_sync_hint_speculative)
+      integer(kind=omp_lock_hint_kind)kmp_lock_hint_hle
+      parameter(kmp_lock_hint_hle=65536)
+      integer(kind=omp_lock_hint_kind)kmp_lock_hint_rtm
+      parameter(kmp_lock_hint_rtm=131072)
+      integer(kind=omp_lock_hint_kind)kmp_lock_hint_adaptive
+      parameter(kmp_lock_hint_adaptive=262144)
 
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_false = 0
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_true = 1
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_master = 2
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_close = 3
-      integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_spread = 4
+      integer(kind=omp_control_tool_kind)omp_control_tool_start
+      parameter(omp_control_tool_start=1)
+      integer(kind=omp_control_tool_kind)omp_control_tool_pause
+      parameter(omp_control_tool_pause=2)
+      integer(kind=omp_control_tool_kind)omp_control_tool_flush
+      parameter(omp_control_tool_flush=3)
+      integer(kind=omp_control_tool_kind)omp_control_tool_end
+      parameter(omp_control_tool_end=4)
 
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none           = 0
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended    = 1
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended      = 2
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = 4
-      integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative    = 8
-      integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
-      integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
-      integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
+      integer(omp_control_tool_result_kind)omp_control_tool_notool
+      parameter(omp_control_tool_notool=-2)
+      integer(omp_control_tool_result_kind)omp_control_tool_nocallback
+      parameter(omp_control_tool_nocallback=-1)
+      integer(omp_control_tool_result_kind)omp_control_tool_success
+      parameter(omp_control_tool_success=0)
+      integer(omp_control_tool_result_kind)omp_control_tool_ignored
+      parameter(omp_control_tool_ignored=1)
 
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_start = 1
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_pause = 2
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_flush = 3
-      integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_end = 4
-
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_notool = -2
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_nocallback = -1
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_success = 0
-      integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_ignored = 1
+      integer(kind=omp_allocator_kind)omp_null_allocator
+      parameter(omp_null_allocator=0)
+      integer(kind=omp_allocator_kind)omp_default_mem_alloc
+      parameter(omp_default_mem_alloc=1)
+      integer(kind=omp_allocator_kind)omp_large_cap_mem_alloc
+      parameter(omp_large_cap_mem_alloc=2)
+      integer(kind=omp_allocator_kind)omp_const_mem_alloc
+      parameter(omp_const_mem_alloc=3)
+      integer(kind=omp_allocator_kind)omp_high_bw_mem_alloc
+      parameter(omp_high_bw_mem_alloc=4)
+      integer(kind=omp_allocator_kind)omp_low_lat_mem_alloc
+      parameter(omp_low_lat_mem_alloc=5)
+      integer(kind=omp_allocator_kind)omp_cgroup_mem_alloc
+      parameter(omp_cgroup_mem_alloc=6)
+      integer(kind=omp_allocator_kind)omp_pteam_mem_alloc
+      parameter(omp_pteam_mem_alloc=7)
+      integer(kind=omp_allocator_kind)omp_thread_mem_alloc
+      parameter(omp_thread_mem_alloc=8)
 
       interface
 
@@ -259,6 +327,11 @@
           integer (kind=omp_integer_kind) omp_get_initial_device
         end function omp_get_initial_device
 
+        function omp_get_device_num() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_device_num
+        end function omp_get_device_num
+
         subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock
@@ -345,6 +418,37 @@
           import
           integer (kind=omp_integer_kind) omp_get_max_task_priority
         end function omp_get_max_task_priority
+
+        subroutine omp_set_default_allocator(svar) bind(c)
+          import
+          integer (kind=omp_allocator_kind), value :: svar
+        end subroutine omp_set_default_allocator
+
+        function omp_get_default_allocator() bind(c)
+          import
+          integer (kind=omp_allocator_kind) omp_get_default_allocator
+        end function omp_get_default_allocator
+
+        subroutine omp_set_affinity_format(format)
+          character (len=*) :: format
+        end subroutine omp_set_affinity_format
+
+        function omp_get_affinity_format(buffer)
+          import
+          character (len=*) :: buffer
+          integer (kind=kmp_size_t_kind) :: omp_get_affinity_format
+        end function omp_get_affinity_format
+
+        subroutine omp_display_affinity(format)
+          character (len=*) :: format
+        end subroutine omp_display_affinity
+
+        function omp_capture_affinity(buffer, format)
+          import
+          character (len=*) :: format
+          character (len=*) :: buffer
+          integer (kind=kmp_size_t_kind) :: omp_capture_affinity
+        end function omp_capture_affinity
 
 !       ***
 !       *** kmp_* entry points
@@ -506,16 +610,19 @@
           integer (kind=omp_lock_hint_kind), value :: hint
         end subroutine omp_init_nest_lock_with_hint
 
-        function omp_control_tool(command, modifier) bind(c)
+        function omp_control_tool(command, modifier, arg) bind(c)
           import
           integer (kind=omp_integer_kind) omp_control_tool
           integer (kind=omp_control_tool_kind), value :: command
           integer (kind=omp_control_tool_kind), value :: modifier
+          integer (kind=kmp_pointer_kind), optional :: arg
         end function omp_control_tool
 
       end interface
 
 !DIR$ IF DEFINED (__INTEL_OFFLOAD)
+
+!DIR$ IF(__INTEL_COMPILER.LT.1900)
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_num_threads
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_dynamic
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_nested
@@ -542,7 +649,9 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_is_initial_device
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_initial_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_devices
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_device_num
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_teams
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_team_num
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_lock
@@ -556,6 +665,10 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_unset_nest_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_test_nest_lock
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_max_task_priority
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_affinity_format
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_affinity_format
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_display_affinity
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_capture_affinity
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_stacksize
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_stacksize_s
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_blocktime
@@ -586,6 +699,7 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: kmp_set_warnings_off
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_lock_with_hint
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_nest_lock_with_hint
+!DIR$ ENDIF
 
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !$omp declare target(omp_set_num_threads )
@@ -614,7 +728,9 @@
 !$omp declare target(omp_get_default_device )
 !$omp declare target(omp_set_default_device )
 !$omp declare target(omp_is_initial_device )
+!$omp declare target(omp_get_initial_device )
 !$omp declare target(omp_get_num_devices )
+!$omp declare target(omp_get_device_num )
 !$omp declare target(omp_get_num_teams )
 !$omp declare target(omp_get_team_num )
 !$omp declare target(omp_init_lock )
@@ -628,6 +744,10 @@
 !$omp declare target(omp_unset_nest_lock )
 !$omp declare target(omp_test_nest_lock )
 !$omp declare target(omp_get_max_task_priority )
+!$omp declare target(omp_set_affinity_format )
+!$omp declare target(omp_get_affinity_format )
+!$omp declare target(omp_display_affinity )
+!$omp declare target(omp_capture_affinity )
 !$omp declare target(kmp_set_stacksize )
 !$omp declare target(kmp_set_stacksize_s )
 !$omp declare target(kmp_set_blocktime )
@@ -660,4 +780,3 @@
 !$omp declare target(omp_init_nest_lock_with_hint )
 !DIR$ ENDIF
 !DIR$ ENDIF
-

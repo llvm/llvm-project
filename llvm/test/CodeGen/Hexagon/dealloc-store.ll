@@ -22,7 +22,7 @@ target triple = "hexagon"
 define void @f0(%s.6* %a0, i8 zeroext %a1) {
 ;  look for a dealloc_return in a packet with nothing else.
 ;
-; CHECK: if (p{{[0-3]}}) memw(
+; CHECK: memw(r1+#0) = r0
 ; CHECK: }
 ; CHECK: {
 ; CHECK-NEXT: dealloc_return

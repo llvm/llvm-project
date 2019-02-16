@@ -143,13 +143,28 @@ void __kmp_str_buf_cat(kmp_str_buf_t *buffer, char const *str, int len) {
   KMP_STR_BUF_INVARIANT(buffer);
 } // __kmp_str_buf_cat
 
-void __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
-                          va_list args) {
+void __kmp_str_buf_catbuf(kmp_str_buf_t *dest, const kmp_str_buf_t *src) {
+  KMP_DEBUG_ASSERT(dest);
+  KMP_DEBUG_ASSERT(src);
+  KMP_STR_BUF_INVARIANT(dest);
+  KMP_STR_BUF_INVARIANT(src);
+  if (!src->str || !src->used)
+    return;
+  __kmp_str_buf_reserve(dest, dest->used + src->used + 1);
+  KMP_MEMCPY(dest->str + dest->used, src->str, src->used);
+  dest->str[dest->used + src->used] = 0;
+  dest->used += src->used;
+  KMP_STR_BUF_INVARIANT(dest);
+} // __kmp_str_buf_catbuf
+
+// Return the number of characters written
+int __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
+                         va_list args) {
+  int rc;
   KMP_STR_BUF_INVARIANT(buffer);
 
   for (;;) {
     int const free = buffer->size - buffer->used;
-    int rc;
     int size;
 
     // Try to format string.
@@ -198,13 +213,17 @@ void __kmp_str_buf_vprint(kmp_str_buf_t *buffer, char const *format,
 
   KMP_DEBUG_ASSERT(buffer->size > 0);
   KMP_STR_BUF_INVARIANT(buffer);
+  return rc;
 } // __kmp_str_buf_vprint
 
-void __kmp_str_buf_print(kmp_str_buf_t *buffer, char const *format, ...) {
+// Return the number of characters written
+int __kmp_str_buf_print(kmp_str_buf_t *buffer, char const *format, ...) {
+  int rc;
   va_list args;
   va_start(args, format);
-  __kmp_str_buf_vprint(buffer, format, args);
+  rc = __kmp_str_buf_vprint(buffer, format, args);
   va_end(args);
+  return rc;
 } // __kmp_str_buf_print
 
 /* The function prints specified size to buffer. Size is expressed using biggest
@@ -452,7 +471,8 @@ int __kmp_str_match_false(char const *data) {
   int result =
       __kmp_str_match("false", 1, data) || __kmp_str_match("off", 2, data) ||
       __kmp_str_match("0", 1, data) || __kmp_str_match(".false.", 2, data) ||
-      __kmp_str_match(".f.", 2, data) || __kmp_str_match("no", 1, data);
+      __kmp_str_match(".f.", 2, data) || __kmp_str_match("no", 1, data) ||
+      __kmp_str_match("disabled", 0, data);
   return result;
 } // __kmp_str_match_false
 
@@ -460,7 +480,8 @@ int __kmp_str_match_true(char const *data) {
   int result =
       __kmp_str_match("true", 1, data) || __kmp_str_match("on", 2, data) ||
       __kmp_str_match("1", 1, data) || __kmp_str_match(".true.", 2, data) ||
-      __kmp_str_match(".t.", 2, data) || __kmp_str_match("yes", 1, data);
+      __kmp_str_match(".t.", 2, data) || __kmp_str_match("yes", 1, data) ||
+      __kmp_str_match("enabled", 0, data);
   return result;
 } // __kmp_str_match_true
 

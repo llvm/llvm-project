@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fcuda-is-device -verify %s
 
-// RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fcuda-rdc -verify=rdc %s
-// RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fcuda-is-device -fcuda-rdc -verify=rdc %s
+// RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fgpu-rdc -verify=rdc %s
+// RUN: %clang_cc1 -fsyntax-only -Wundefined-internal -fcuda-is-device -fgpu-rdc -verify=rdc %s
 
 // Most of these declarations are fine in separate compilation mode.
 

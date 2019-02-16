@@ -1,0 +1,65 @@
+# RUN: yaml2obj %s > %t.o
+
+# Create an archive, specifying U so that timestamps/etc. are preserved.
+# We only test timestamps as a proxy for full deterministic writing; i.e. we
+# assume UID/GIDs are preserved if timestamps are preserved.
+# RUN: touch -t 199505050555.55 %t.o
+# RUN: rm -f %t.a
+# RUN: llvm-ar crsU %t.a %t.o
+
+# Test short flags.
+# RUN: llvm-objcopy -D %t.a %t.2D.a
+# RUN: env TZ=GMT llvm-ar tv %t.2D.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+# RUN: llvm-objcopy -U %t.a %t.2U.a
+# RUN: env TZ=GMT llvm-ar tv %t.2U.a | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+
+# RUN: llvm-strip -D %t.a -o %t.3D.a
+# RUN: env TZ=GMT llvm-ar tv %t.3D.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+# RUN: llvm-strip -U %t.a -o %t.3U.a
+# RUN: env TZ=GMT llvm-ar tv %t.3U.a | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+
+# Test long flags.
+# RUN: llvm-objcopy --enable-deterministic-archives %t.a %t.4D.a
+# RUN: env TZ=GMT llvm-ar tv %t.4D.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+# RUN: llvm-objcopy --disable-deterministic-archives %t.a %t.4U.a
+# RUN: env TZ=GMT llvm-ar tv %t.4U.a | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+
+# RUN: llvm-strip --enable-deterministic-archives %t.a -o %t.5D.a
+# RUN: env TZ=GMT llvm-ar tv %t.5D.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+# RUN: llvm-strip --disable-deterministic-archives %t.a -o %t.5U.a
+# RUN: env TZ=GMT llvm-ar tv %t.5U.a | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+
+# If unspecified, verify that deterministic is the default.
+# RUN: llvm-objcopy %t.a %t.6.a
+# RUN: env TZ=GMT llvm-ar tv %t.6.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+# RUN: llvm-strip %t.a -o %t.7.a
+# RUN: env TZ=GMT llvm-ar tv %t.7.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+
+# If both are specified, last one wins.
+# RUN: llvm-objcopy -U -D %t.a %t.8.a
+# RUN: env TZ=GMT llvm-ar tv %t.8.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+# RUN: llvm-objcopy -D -U %t.a %t.9.a
+# RUN: env TZ=GMT llvm-ar tv %t.9.a | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+# RUN: llvm-objcopy -D -U -D -U --enable-deterministic-archives %t.a %t.10.a
+# RUN: env TZ=GMT llvm-ar tv %t.10.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+
+# RUN: llvm-strip -U -D %t.a -o %t.11.a
+# RUN: env TZ=GMT llvm-ar tv %t.11.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+# RUN: llvm-strip -D -U %t.a -o %t.12.a
+# RUN: env TZ=GMT llvm-ar tv %t.12.a | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+# RUN: llvm-strip -D -U -D -U --enable-deterministic-archives %t.a -o %t.13.a
+# RUN: env TZ=GMT llvm-ar tv %t.13.a | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+
+# CHECK-DETERMINISTIC: {{[[:space:]]1970[[:space:]]}}
+# CHECK-NONDETERMINISTIC:  {{[[:space:]]1995[[:space:]]}}
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]

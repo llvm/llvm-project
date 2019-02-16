@@ -8,6 +8,9 @@
 
    XFAIL: FreeBSD
    UNSUPPORTED: powerpc
+
+   // Reports use-of-uninitialized-value, not analyzed
+   XFAIL: netbsd
 */
 
 #ifndef BUILD_SO

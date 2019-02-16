@@ -395,7 +395,7 @@ define void @test12() nounwind {
 ; SSE-LABEL: test12:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd 0, %xmm0
-; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00]
+; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE-NEXT:    xorps %xmm2, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
@@ -416,7 +416,7 @@ define void @test12() nounwind {
 ; AVX512-LABEL: test12:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps 0, %xmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
@@ -574,10 +574,8 @@ define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocap
 ; X86-AVX-LABEL: test16:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovaps 96(%eax), %ymm0
-; X86-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X86-AVX-NEXT:    vzeroupper
+; X86-AVX-NEXT:    vmovaps 96(%eax), %xmm0
+; X86-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test16:
@@ -588,10 +586,8 @@ define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocap
 ;
 ; X64-AVX-LABEL: test16:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps 96(%rdi), %ymm0
-; X64-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovaps 96(%rdi), %xmm0
+; X64-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X64-AVX-NEXT:    retq
   %i5 = getelementptr inbounds <4 x double>, <4 x double>* %srcA, i32 3
   %i6 = load <4 x double>, <4 x double>* %i5, align 32

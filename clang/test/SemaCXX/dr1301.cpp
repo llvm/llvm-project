@@ -6,7 +6,7 @@ struct A { // expected-note 2{{candidate}}
 int a = A().n; // expected-error {{no matching constructor}}
 
 struct B {
-  B() = delete; // expected-note 3{{here}}
+  B() = delete; // expected-note 4{{here}}
   int n;
 };
 int b = B().n; // expected-error {{call to deleted}}
@@ -17,8 +17,8 @@ struct C {
 int c = C().b.n; // expected-error {{call to implicitly-deleted default}}
 
 struct D {
-  D() = default; // expected-note {{here}}
-  B b; // expected-note {{'b' has a deleted default constructor}}
+  D() = default; // expected-note {{here}} expected-warning {{implicitly deleted}}
+  B b; // expected-note 2{{'b' has a deleted default constructor}}
 };
 int d = D().b.n; // expected-error {{call to implicitly-deleted default}}
 

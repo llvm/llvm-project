@@ -1,3 +1,13 @@
+//===-- RegisterAliasingTest.cpp --------------------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+
 #include "RegisterAliasing.h"
 
 #include <cassert>
@@ -9,6 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 namespace {
 
@@ -89,3 +100,4 @@ TEST_F(RegisterAliasingTest, TrackRegisterClassCache) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

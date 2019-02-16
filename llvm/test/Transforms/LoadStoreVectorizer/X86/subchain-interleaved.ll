@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S -o - %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 

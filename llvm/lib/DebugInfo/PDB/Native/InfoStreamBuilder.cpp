@@ -32,15 +32,20 @@ InfoStreamBuilder::InfoStreamBuilder(msf::MSFBuilder &Msf,
 
 void InfoStreamBuilder::setVersion(PdbRaw_ImplVer V) { Ver = V; }
 
+void InfoStreamBuilder::addFeature(PdbRaw_FeatureSig Sig) {
+  Features.push_back(Sig);
+}
+
+void InfoStreamBuilder::setHashPDBContentsToGUID(bool B) {
+  HashPDBContentsToGUID = B;
+}
+
 void InfoStreamBuilder::setAge(uint32_t A) { Age = A; }
 
 void InfoStreamBuilder::setSignature(uint32_t S) { Signature = S; }
 
 void InfoStreamBuilder::setGuid(GUID G) { Guid = G; }
 
-void InfoStreamBuilder::addFeature(PdbRaw_FeatureSig Sig) {
-  Features.push_back(Sig);
-}
 
 Error InfoStreamBuilder::finalizeMsfLayout() {
   uint32_t Length = sizeof(InfoStreamHeader) +

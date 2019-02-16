@@ -180,7 +180,7 @@ define void @cxcccc() {
   ; 32R1:       sra     $7, $[[R]], 24
   ; 32R2:       seb     $7, $[[R]]
 
-  ; ALL:        lw      $25, %got(xcccc)($2)
+  ; ALL:        lw      $25, %got(xcccc)(${{[0-9]+}})
   ; ALL:        jalr    $25
   ; ALL:        jr      $ra
   call void @xcccc(i8 88, i8 44, i8 11, i8 33)
@@ -209,7 +209,7 @@ define void @cxhhhh() {
   ; 32R1:       sra     $7, $[[R]], 16
   ; 32R2:       seh     $7, $[[R]]
 
-  ; ALL:        lw      $25, %got(xhhhh)($2)
+  ; ALL:        lw      $25, %got(xhhhh)(${{[0-9]+}})
   ; ALL:        jalr    $25
   ; ALL:        jr      $ra
 

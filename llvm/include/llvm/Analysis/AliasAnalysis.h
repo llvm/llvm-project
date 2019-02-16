@@ -335,8 +335,7 @@ public:
 
   /// A convenience wrapper around the primary \c alias interface.
   AliasResult alias(const Value *V1, const Value *V2) {
-    return alias(V1, MemoryLocation::UnknownSize, V2,
-                 MemoryLocation::UnknownSize);
+    return alias(V1, LocationSize::unknown(), V2, LocationSize::unknown());
   }
 
   /// A trivial helper function to check to see if the specified pointers are
@@ -364,7 +363,8 @@ public:
 
   /// A convenience wrapper around the \c isMustAlias helper interface.
   bool isMustAlias(const Value *V1, const Value *V2) {
-    return alias(V1, 1, V2, 1) == MustAlias;
+    return alias(V1, LocationSize::precise(1), V2, LocationSize::precise(1)) ==
+           MustAlias;
   }
 
   /// Checks whether the given location points to constant memory, or if
@@ -569,7 +569,7 @@ public:
 
   /// getModRefInfo (for cmpxchges) - A convenience wrapper.
   ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX, const Value *P,
-                           unsigned Size) {
+                           LocationSize Size) {
     return getModRefInfo(CX, MemoryLocation(P, Size));
   }
 
@@ -579,7 +579,7 @@ public:
 
   /// getModRefInfo (for atomicrmws) - A convenience wrapper.
   ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const Value *P,
-                           unsigned Size) {
+                           LocationSize Size) {
     return getModRefInfo(RMW, MemoryLocation(P, Size));
   }
 
@@ -1073,6 +1073,29 @@ public:
   bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
+/// A wrapper pass for external alias analyses. This just squirrels away the
+/// callback used to run any analyses and register their results.
+struct ExternalAAWrapperPass : ImmutablePass {
+  using CallbackT = std::function<void(Pass &, Function &, AAResults &)>;
+
+  CallbackT CB;
+
+  static char ID;
+
+  ExternalAAWrapperPass() : ImmutablePass(ID) {
+    initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  explicit ExternalAAWrapperPass(CallbackT CB)
+      : ImmutablePass(ID), CB(std::move(CB)) {
+    initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
 };
 
 FunctionPass *createAAResultsWrapperPass();

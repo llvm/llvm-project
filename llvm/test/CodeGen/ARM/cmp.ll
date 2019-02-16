@@ -39,15 +39,11 @@ define i1 @f6(i32 %a, i32 %b) {
 
 define i1 @f7(i32 %a, i32 %b) {
 ; CHECK-LABEL: f7:
-; CHECK: sub     r2, r0, r1, lsr #6
-; CHECK: cmp     r0, r1, lsr #6
-; CHECK: movwne  r2, #1
-; CHECK: mov     r0, r2
-; CHECK-T2: sub.w   r2, r0, r1, lsr #6
-; CHECK-T2: cmp.w   r0, r1, lsr #6
+; CHECK: subs    r0, r0, r1, lsr #6
+; CHECK: movwne  r0, #1
+; CHECK-T2: subs.w   r0, r0, r1, lsr #6
 ; CHECK-T2: it      ne
-; CHECK-T2: movne   r2, #1
-; CHECK-T2: mov     r0, r2
+; CHECK-T2: movne   r0, #1
     %tmp = lshr i32 %b, 6
     %tmp1 = icmp ne i32 %a, %tmp
     ret i1 %tmp1
@@ -68,15 +64,11 @@ define i1 @f8(i32 %a, i32 %b) {
 
 define i1 @f9(i32 %a) {
 ; CHECK-LABEL: f9:
-; CHECK: sub     r1, r0, r0, ror #8
-; CHECK: cmp     r0, r0, ror #8
-; CHECK: movwne  r1, #1
-; CHECK: mov     r0, r1
-; CHECK-T2: sub.w   r1, r0, r0, ror #8
-; CHECK-T2: cmp.w   r0, r0, ror #8
+; CHECK: subs    r0, r0, r0, ror #8
+; CHECK: movwne  r0, #1
+; CHECK-T2: subs.w   r0, r0, r0, ror #8
 ; CHECK-T2: it      ne
-; CHECK-T2: movne   r1, #1
-; CHECK-T2: mov     r0, r1
+; CHECK-T2: movne   r0, #1
     %l8 = shl i32 %a, 24
     %r8 = lshr i32 %a, 8
     %tmp = or i32 %l8, %r8

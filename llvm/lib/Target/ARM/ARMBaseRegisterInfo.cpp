@@ -209,6 +209,11 @@ getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool ARMBaseRegisterInfo::
+isAsmClobberable(const MachineFunction &MF, unsigned PhysReg) const {
+  return !getReservedRegs(MF).test(PhysReg);
+}
+
 const TargetRegisterClass *
 ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                                const MachineFunction &) const {

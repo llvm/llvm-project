@@ -13,6 +13,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -73,6 +74,8 @@ public:
     switch (OSType) {
       case Triple::CloudABI:
         return ELF::ELFOSABI_CLOUDABI;
+      case Triple::HermitCore:
+        return ELF::ELFOSABI_STANDALONE;
       case Triple::PS4:
       case Triple::FreeBSD:
         return ELF::ELFOSABI_FREEBSD;
@@ -89,6 +92,8 @@ public:
 
   virtual void sortRelocs(const MCAssembler &Asm,
                           std::vector<ELFRelocationEntry> &Relocs);
+
+  virtual void addTargetSectionFlags(MCContext &Ctx, MCSectionELF &Sec);
 
   /// \name Accessors
   /// @{

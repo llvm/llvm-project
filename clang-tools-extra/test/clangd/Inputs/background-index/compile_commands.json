@@ -1,0 +1,5 @@
+[{
+  "directory": "DIRECTORY",
+  "command": "clang foo.cpp",
+  "file": "DIRECTORY/foo.cpp"
+}]

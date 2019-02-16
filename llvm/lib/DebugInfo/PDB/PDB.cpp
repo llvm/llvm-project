@@ -29,7 +29,7 @@ Error llvm::pdb::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
         MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
                                      /*RequiresNullTerminator=*/false);
     if (!ErrorOrBuffer)
-      return make_error<GenericError>(generic_error_code::invalid_path, Path);
+      return errorCodeToError(ErrorOrBuffer.getError());
 
     return NativeSession::createFromPdb(std::move(*ErrorOrBuffer), Session);
   }
@@ -37,7 +37,7 @@ Error llvm::pdb::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
 #if LLVM_ENABLE_DIA_SDK
   return DIASession::createFromPdb(Path, Session);
 #else
-  return make_error<GenericError>("DIA is not installed on the system");
+  return make_error<PDBError>(pdb_error_code::dia_sdk_not_present);
 #endif
 }
 
@@ -50,6 +50,6 @@ Error llvm::pdb::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
 #if LLVM_ENABLE_DIA_SDK
   return DIASession::createFromExe(Path, Session);
 #else
-  return make_error<GenericError>("DIA is not installed on the system");
+  return make_error<PDBError>(pdb_error_code::dia_sdk_not_present);
 #endif
 }

@@ -248,11 +248,14 @@ public:
 
   void getUnitNameFromOutputPath(StringRef outputPath, llvm::SmallVectorImpl<char> &nameBuf) {
     llvm::SmallString<256> buf = outputPath;
-    size_t nameLen = indexstore_store_get_unit_name_from_output_path(obj, buf.c_str(), nameBuf.data(), nameBuf.size());
-    if (nameLen+1 > nameBuf.size()) {
-      nameBuf.resize(nameLen+1);
-      indexstore_store_get_unit_name_from_output_path(obj, buf.c_str(), nameBuf.data(), nameBuf.size());
+    llvm::SmallString<64> unitName;
+    unitName.resize(64);
+    size_t nameLen = indexstore_store_get_unit_name_from_output_path(obj, buf.c_str(), unitName.data(), unitName.size());
+    if (nameLen+1 > unitName.size()) {
+      unitName.resize(nameLen+1);
+      indexstore_store_get_unit_name_from_output_path(obj, buf.c_str(), unitName.data(), unitName.size());
     }
+    nameBuf.append(unitName.begin(), unitName.begin()+nameLen);
   }
 
   llvm::Optional<timespec>

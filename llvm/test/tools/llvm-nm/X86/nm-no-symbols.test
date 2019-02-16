@@ -1,0 +1,14 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-nm %t.o 2>&1 | FileCheck %s
+# RUN: llvm-nm --print-file-name %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-PRINT-FILE-NAME
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+
+# CHECK: {{^}}no symbols{{$}}
+
+# CHECK-PRINT-FILE-NAME: nm-no-symbols.test{{.*}}.o: no symbols{{$}}

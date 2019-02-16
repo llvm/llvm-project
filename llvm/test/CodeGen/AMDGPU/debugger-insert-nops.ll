@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa-amdgiz -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa-amdgiz -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECKNOP
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=+amdgpu-debugger-insert-nops -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECKNOP
 target datalayout = "A5"
 
 ; This test expects that we have one instance for each line in some order with "s_nop 0" instances after each.

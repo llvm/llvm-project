@@ -11,6 +11,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+from __future__ import absolute_import, division, print_function
 import sys, os
 from datetime import date
 
@@ -233,14 +234,14 @@ for name in os.listdir(command_guide_path):
         header = f.readline().rstrip('\n')
 
         if len(header) != len(title):
-            print >>sys.stderr, (
+            print((
                 "error: invalid header in %r (does not match title)" % (
-                    file_subpath,))
+                    file_subpath,)), file=sys.stderr)
         if ' - ' not in title:
-            print >>sys.stderr, (
+            print((
                 ("error: invalid title in %r "
                  "(expected '<name> - <description>')") % (
-                    file_subpath,))
+                    file_subpath,)), file=sys.stderr)
 
         # Split the name out of the title.
         name,description = title.split(' - ', 1)

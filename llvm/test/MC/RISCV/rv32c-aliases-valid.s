@@ -60,3 +60,6 @@ li x12, -0x80000000
 li x12, 0x80000000
 # CHECK-EXPAND: c.li a2, -1
 li x12, 0xFFFFFFFF
+
+# CHECK-EXPAND: c.mv sp, sp
+addi x2, x2, 0

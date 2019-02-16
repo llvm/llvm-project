@@ -1,5 +1,6 @@
 ; RUN: llc -O0 %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
+; CHECK: "version":1
 
 ; int GlobalConst = 42;
 ; int Global;
@@ -26,6 +27,9 @@
 ; CHECK-NOT: "scope bytes covered":0
 ; CHECK-NOT "scope bytes covered":[[BYTES]]
 ; CHECK: "scope bytes covered":
+; CHECK: "total function size":[[FUNCSIZE:[0-9]+]]
+; CHECK: "total inlined function size":[[INLINESIZE:[0-9]+]]
+
 
 ; ModuleID = '/tmp/quality.cpp'
 source_filename = "/tmp/quality.cpp"

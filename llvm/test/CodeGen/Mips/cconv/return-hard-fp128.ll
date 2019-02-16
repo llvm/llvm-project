@@ -18,14 +18,10 @@ entry:
 }
 
 ; ALL-LABEL: retldouble:
-; N32-DAG:           ld [[R2:\$[0-9]+]], %lo(fp128)([[R1:\$[0-9]+]])
+; N32-DAG:           ldc1 $f0, %lo(fp128)([[R1:\$[0-9]+]])
 ; N32-DAG:           addiu [[R3:\$[0-9]+]], [[R1]], %lo(fp128)
-; N32-DAG:           ld [[R4:\$[0-9]+]], 8([[R3]])
-; N32-DAG:           dmtc1 [[R2]], $f0
-; N32-DAG:           dmtc1 [[R4]], $f2
+; N32-DAG:           ldc1 $f2, 8([[R3]])
 
 ; N64-DAG:           lui [[R2:\$[0-9]+]], %highest(fp128)
-; N64-DAG:           ld [[R3:\$[0-9]+]], %lo(fp128)([[R2]])
-; N64-DAG:           ld [[R4:\$[0-9]+]], 8([[R2]])
-; N64-DAG:           dmtc1 [[R3]], $f0
-; N64-DAG:           dmtc1 [[R4]], $f2
+; N64-DAG:           ldc1 $f0, %lo(fp128)([[R2]])
+; N64-DAG:           ldc1 $f2, 8([[R2]])

@@ -23,11 +23,11 @@ static void ReplaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
   const Expr *Arg = Call->getArg(0);
 
   CharSourceRange BeforeArgumentsRange = Lexer::makeFileCharRange(
-      CharSourceRange::getCharRange(Call->getLocStart(), Arg->getLocStart()),
+      CharSourceRange::getCharRange(Call->getBeginLoc(), Arg->getBeginLoc()),
       SM, LangOpts);
   CharSourceRange AfterArgumentsRange = Lexer::makeFileCharRange(
-      CharSourceRange::getCharRange(Call->getLocEnd(),
-                                    Call->getLocEnd().getLocWithOffset(1)),
+      CharSourceRange::getCharRange(Call->getEndLoc(),
+                                    Call->getEndLoc().getLocWithOffset(1)),
       SM, LangOpts);
 
   if (BeforeArgumentsRange.isValid() && AfterArgumentsRange.isValid()) {

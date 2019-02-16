@@ -534,6 +534,62 @@ TEST_F(PatternMatchTest, VectorOps) {
   EXPECT_TRUE(A == Val);
 }
 
+TEST_F(PatternMatchTest, VectorUndefInt) {
+  Type *ScalarTy = IRB.getInt8Ty();
+  Type *VectorTy = VectorType::get(ScalarTy, 4);
+  Constant *ScalarUndef = UndefValue::get(ScalarTy);
+  Constant *VectorUndef = UndefValue::get(VectorTy);
+  Constant *ScalarZero = Constant::getNullValue(ScalarTy);
+  Constant *VectorZero = Constant::getNullValue(VectorTy);
+
+  SmallVector<Constant *, 4> Elems;
+  Elems.push_back(ScalarUndef);
+  Elems.push_back(ScalarZero);
+  Elems.push_back(ScalarUndef);
+  Elems.push_back(ScalarZero);
+  Constant *VectorZeroUndef = ConstantVector::get(Elems);
+
+  EXPECT_TRUE(match(ScalarUndef, m_Undef()));
+  EXPECT_TRUE(match(VectorUndef, m_Undef()));
+  EXPECT_FALSE(match(ScalarZero, m_Undef()));
+  EXPECT_FALSE(match(VectorZero, m_Undef()));
+  EXPECT_FALSE(match(VectorZeroUndef, m_Undef()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_Zero()));
+  EXPECT_FALSE(match(VectorUndef, m_Zero()));
+  EXPECT_TRUE(match(ScalarZero, m_Zero()));
+  EXPECT_TRUE(match(VectorZero, m_Zero()));
+  EXPECT_TRUE(match(VectorZeroUndef, m_Zero()));
+}
+
+TEST_F(PatternMatchTest, VectorUndefFloat) {
+  Type *ScalarTy = IRB.getFloatTy();
+  Type *VectorTy = VectorType::get(ScalarTy, 4);
+  Constant *ScalarUndef = UndefValue::get(ScalarTy);
+  Constant *VectorUndef = UndefValue::get(VectorTy);
+  Constant *ScalarZero = Constant::getNullValue(ScalarTy);
+  Constant *VectorZero = Constant::getNullValue(VectorTy);
+
+  SmallVector<Constant *, 4> Elems;
+  Elems.push_back(ScalarUndef);
+  Elems.push_back(ScalarZero);
+  Elems.push_back(ScalarUndef);
+  Elems.push_back(ScalarZero);
+  Constant *VectorZeroUndef = ConstantVector::get(Elems);
+
+  EXPECT_TRUE(match(ScalarUndef, m_Undef()));
+  EXPECT_TRUE(match(VectorUndef, m_Undef()));
+  EXPECT_FALSE(match(ScalarZero, m_Undef()));
+  EXPECT_FALSE(match(VectorZero, m_Undef()));
+  EXPECT_FALSE(match(VectorZeroUndef, m_Undef()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_AnyZeroFP()));
+  EXPECT_FALSE(match(VectorUndef, m_AnyZeroFP()));
+  EXPECT_TRUE(match(ScalarZero, m_AnyZeroFP()));
+  EXPECT_TRUE(match(VectorZero, m_AnyZeroFP()));
+  EXPECT_TRUE(match(VectorZeroUndef, m_AnyZeroFP()));
+}
+
 template <typename T> struct MutableConstTest : PatternMatchTest { };
 
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,

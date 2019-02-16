@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=x86_64-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64
-; RUN: llc -mtriple=x86_64-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64FAST
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64FAST
 
-; RUN: llc -mtriple=i686-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86
-; RUN: llc -mtriple=i686-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86FAST
+; RUN: llc -verify-machineinstrs -mtriple=i686-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86
+; RUN: llc -verify-machineinstrs -mtriple=i686-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86FAST
 
 declare void @bar(i32)
 
@@ -156,7 +156,7 @@ define void @direct_tail() #0 {
 ; X86FAST:   jmp direct_callee # TAILCALL
 
 
-declare void @nonlazybind_callee() #1
+declare void @nonlazybind_callee() #2
 
 define void @nonlazybind_caller() #0 {
   call void @nonlazybind_callee()
@@ -183,6 +183,153 @@ define void @nonlazybind_caller() #0 {
 ; X86FAST:   jmp nonlazybind_callee@PLT # TAILCALL
 
 
+; Check that a switch gets lowered using a jump table when retpolines are only
+; enabled for calls.
+define void @switch_jumptable(i32* %ptr, i64* %sink) #0 {
+; X64-LABEL: switch_jumptable:
+; X64:         jmpq *
+; X86-LABEL: switch_jumptable:
+; X86:         jmpl *
+entry:
+  br label %header
+
+header:
+  %i = load volatile i32, i32* %ptr
+  switch i32 %i, label %bb0 [
+    i32 1, label %bb1
+    i32 2, label %bb2
+    i32 3, label %bb3
+    i32 4, label %bb4
+    i32 5, label %bb5
+    i32 6, label %bb6
+    i32 7, label %bb7
+    i32 8, label %bb8
+    i32 9, label %bb9
+  ]
+
+bb0:
+  store volatile i64 0, i64* %sink
+  br label %header
+
+bb1:
+  store volatile i64 1, i64* %sink
+  br label %header
+
+bb2:
+  store volatile i64 2, i64* %sink
+  br label %header
+
+bb3:
+  store volatile i64 3, i64* %sink
+  br label %header
+
+bb4:
+  store volatile i64 4, i64* %sink
+  br label %header
+
+bb5:
+  store volatile i64 5, i64* %sink
+  br label %header
+
+bb6:
+  store volatile i64 6, i64* %sink
+  br label %header
+
+bb7:
+  store volatile i64 7, i64* %sink
+  br label %header
+
+bb8:
+  store volatile i64 8, i64* %sink
+  br label %header
+
+bb9:
+  store volatile i64 9, i64* %sink
+  br label %header
+}
+
+
+@indirectbr_preserved.targets = constant [10 x i8*] [i8* blockaddress(@indirectbr_preserved, %bb0),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb1),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb2),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb3),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb4),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb5),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb6),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb7),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb8),
+                                                     i8* blockaddress(@indirectbr_preserved, %bb9)]
+
+; Check that we preserve indirectbr when only calls are retpolined.
+define void @indirectbr_preserved(i64* readonly %p, i64* %sink) #0 {
+; X64-LABEL: indirectbr_preserved:
+; X64:         jmpq *
+; X86-LABEL: indirectbr_preserved:
+; X86:         jmpl *
+entry:
+  %i0 = load i64, i64* %p
+  %target.i0 = getelementptr [10 x i8*], [10 x i8*]* @indirectbr_preserved.targets, i64 0, i64 %i0
+  %target0 = load i8*, i8** %target.i0
+  indirectbr i8* %target0, [label %bb1, label %bb3]
+
+bb0:
+  store volatile i64 0, i64* %sink
+  br label %latch
+
+bb1:
+  store volatile i64 1, i64* %sink
+  br label %latch
+
+bb2:
+  store volatile i64 2, i64* %sink
+  br label %latch
+
+bb3:
+  store volatile i64 3, i64* %sink
+  br label %latch
+
+bb4:
+  store volatile i64 4, i64* %sink
+  br label %latch
+
+bb5:
+  store volatile i64 5, i64* %sink
+  br label %latch
+
+bb6:
+  store volatile i64 6, i64* %sink
+  br label %latch
+
+bb7:
+  store volatile i64 7, i64* %sink
+  br label %latch
+
+bb8:
+  store volatile i64 8, i64* %sink
+  br label %latch
+
+bb9:
+  store volatile i64 9, i64* %sink
+  br label %latch
+
+latch:
+  %i.next = load i64, i64* %p
+  %target.i.next = getelementptr [10 x i8*], [10 x i8*]* @indirectbr_preserved.targets, i64 0, i64 %i.next
+  %target.next = load i8*, i8** %target.i.next
+  ; Potentially hit a full 10 successors here so that even if we rewrite as
+  ; a switch it will try to be lowered with a jump table.
+  indirectbr i8* %target.next, [label %bb0,
+                                label %bb1,
+                                label %bb2,
+                                label %bb3,
+                                label %bb4,
+                                label %bb5,
+                                label %bb6,
+                                label %bb7,
+                                label %bb8,
+                                label %bb9]
+}
+
 @indirectbr_rewrite.targets = constant [10 x i8*] [i8* blockaddress(@indirectbr_rewrite, %bb0),
                                                    i8* blockaddress(@indirectbr_rewrite, %bb1),
                                                    i8* blockaddress(@indirectbr_rewrite, %bb2),
@@ -194,10 +341,10 @@ define void @nonlazybind_caller() #0 {
                                                    i8* blockaddress(@indirectbr_rewrite, %bb8),
                                                    i8* blockaddress(@indirectbr_rewrite, %bb9)]
 
-; Check that when retpolines are enabled a function with indirectbr gets
-; rewritten to use switch, and that in turn doesn't get lowered as a jump
-; table.
-define void @indirectbr_rewrite(i64* readonly %p, i64* %sink) #0 {
+; Check that when retpolines are enabled for indirect branches the indirectbr
+; instruction gets rewritten to use switch, and that in turn doesn't get lowered
+; as a jump table.
+define void @indirectbr_rewrite(i64* readonly %p, i64* %sink) #1 {
 ; X64-LABEL: indirectbr_rewrite:
 ; X64-NOT:     jmpq
 ; X86-LABEL: indirectbr_rewrite:
@@ -281,8 +428,9 @@ latch:
 ; X64-NEXT:          lfence
 ; X64-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X64-NEXT:          .p2align        4, 0x90
-; X64-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X64-NEXT:  {{.*}}                                  # Block address taken
 ; X64-NEXT:                                          # %entry
+; X64-NEXT:  [[CALL_TARGET]]:
 ; X64-NEXT:          movq    %r11, (%rsp)
 ; X64-NEXT:          retq
 ;
@@ -299,8 +447,9 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %eax, (%esp)
 ; X86-NEXT:          retl
 ;
@@ -317,8 +466,9 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %ecx, (%esp)
 ; X86-NEXT:          retl
 ;
@@ -335,8 +485,9 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %edx, (%esp)
 ; X86-NEXT:          retl
 ;
@@ -353,11 +504,13 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %edi, (%esp)
 ; X86-NEXT:          retl
 
 
-attributes #0 = { "target-features"="+retpoline" }
-attributes #1 = { nonlazybind }
+attributes #0 = { "target-features"="+retpoline-indirect-calls" }
+attributes #1 = { "target-features"="+retpoline-indirect-calls,+retpoline-indirect-branches" }
+attributes #2 = { nonlazybind }

@@ -1,0 +1,664 @@
+#!/bin/sh
+# Copyright 2009 The Go Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# Using all the *_test.go files in the current directory, write out a file
+# _testmain.go that runs all its tests. Compile everything and run the
+# tests.
+# If files are named on the command line, use them instead of *_test.go.
+
+# Makes egrep,grep work better in general if we put them
+# in ordinary C mode instead of what the current language is.
+unset LANG
+export LC_ALL=C
+export LC_CTYPE=C
+
+GC=${GC:-gccgo}
+GL=${GL:-${GC-gccgo}}
+GOLIBS=${GOLIBS:-}
+export GC GL GOLIBS
+
+NM=${NM:-nm}
+
+# srcdir is where the source files are found.  basedir is where the
+# source file paths are relative to.
+# gofiles are the test files.  pkgfiles are the source files.
+srcdir=.
+basedir=.
+goarch=""
+gofiles=""
+goos=""
+pkgfiles=""
+loop=true
+keep=false
+pkgpath=
+prefix=
+dejagnu=no
+timeout=240
+testname=""
+bench=""
+trace=false
+while $loop; do
+	case "x$1" in
+        x--srcdir)
+		srcdir=$2
+		shift
+		shift
+		;;
+	x--srcdir=*)
+		srcdir=`echo $1 | sed -e 's/^--srcdir=//'`
+		shift
+		;;
+        x--basedir)
+		basedir=$2
+		shift
+		shift
+		;;
+	x--basedir=*)
+		basedir=`echo $1 | sed -e 's/^--basedir=//'`
+		shift
+		;;
+	x--goarch)
+		goarch=$2
+		shift
+		shift
+		;;
+	x--goarch=*)
+		goarch=`echo $1 | sed -e 's/^--goarch=//'`
+		shift
+		;;
+	x--goos)
+		goos=$2
+		shift
+		shift
+		;;
+	x--goos=*)
+		goos=`echo $1 | sed -e 's/^--goos=//'`
+		shift
+		;;
+	x--pkgpath)
+		pkgpath=$2
+		shift
+		shift
+		;;
+	x--pkgpath=*)
+		pkgpath=`echo $1 | sed -e 's/^--pkgpath=//'`
+		shift
+		;;
+	x--prefix)
+		prefix=$2
+		shift
+		shift
+		;;
+	x--prefix=*)
+		prefix=`echo $1 | sed -e 's/^--prefix=//'`
+		shift
+		;;
+	x--keep)
+		keep=true
+                shift
+		;;
+	x--pkgfiles)
+		pkgfiles=$2
+		shift
+		shift
+		;;
+	x--pkgfiles=*)
+		pkgfiles=`echo $1 | sed -e 's/^--pkgfiles=//'`
+		shift
+		;;
+	x--dejagnu)
+		dejagnu=$2
+		shift
+		shift
+		;;
+	x--dejagnu=*)
+		dejagnu=`echo $1 | sed -e 's/^--dejagnu=//'`
+		shift
+		;;
+	x--timeout)
+		timeout=$2
+		shift
+		shift
+		;;
+	x--timeout=*)
+		timeout=`echo $1 | sed -e 's/^--timeout=//'`
+		shift
+		;;
+	x--testname)
+		testname=$2
+		shift
+		shift
+		;;
+	x--testname=*)
+		testname=`echo $1 | sed -e 's/^--testname=//'`
+		shift
+		;;
+	x--bench)
+		bench=$2
+		shift
+		shift
+		;;
+	x--bench=*)
+		bench=`echo $1 | sed -e 's/^--bench=//'`
+		shift
+		;;
+	x--trace)
+		trace=true
+		shift
+		;;
+	x-*)
+		loop=false
+		;;
+	x)
+		loop=false
+		;;
+	*)
+		gofiles="$gofiles $1"
+		shift
+		;;
+	esac
+done
+
+DIR=gotest$$
+rm -rf $DIR
+mkdir $DIR
+
+cd $DIR
+mkdir test
+cd test
+
+if test $keep = false; then
+  trap "cd ../..; rm -rf $DIR" 0 1 2 3 14 15
+else
+  trap "cd ../..; echo Keeping $DIR" 0 1 2 3 14 15
+fi
+
+case "$srcdir" in
+	/*)
+		;;
+	*)
+		srcdir="../../$srcdir"
+                ;;
+esac
+
+SRCDIR=$srcdir
+export SRCDIR
+
+case "$basedir" in
+	/*)
+		;;
+	*)
+		basedir="../../$basedir"
+                ;;
+esac
+
+# Link all the files/directories in srcdir into our working directory,
+# so that the tests do not have to refer to srcdir to find test data.
+ln -s $srcdir/* .
+
+# Some tests refer to a ../testdata directory.
+if test -e $srcdir/../testdata; then
+  rm -f ../testdata
+  abssrcdir=`cd $srcdir && pwd`
+  ln -s $abssrcdir/../testdata ../testdata
+fi
+
+# Copy the .go files because io/utils_test.go expects a regular file.
+case "x$gofiles" in
+x)
+	case "x$pkgfiles" in
+	x)
+		for f in `cd $srcdir; ls *.go`; do
+		    rm -f $f;
+		    cp $srcdir/$f .
+		done
+		;;
+	*)
+		for f in $pkgfiles; do
+		    if test -f $basedir/$f; then
+			b=`basename $f`
+			rm -f $b
+			cp $basedir/$f $b
+		    elif test -f ../../$f; then
+			b=`basename $f`
+			rm -f $b
+			cp ../../$f $b
+		    else
+			echo "file $f not found" 1>&2
+			exit 1
+		    fi
+		done
+		for f in `cd $srcdir; ls *_test.go`; do
+		    rm -f $f
+		    cp $srcdir/$f .
+		done
+		;;
+	esac
+	;;
+*)
+	for f in $gofiles; do
+	    b=`basename $f`
+	    rm -f $b
+	    cp $basedir/$f $b
+	done
+	case "x$pkgfiles" in
+	x)
+		for f in `cd $srcdir; ls *.go | grep -v *_test.go`; do
+		    rm -f $f
+		    cp $srcdir/$f .
+		done
+		;;
+	*)
+		for f in $pkgfiles; do
+		    if test -f $basedir/$f; then
+			b=`basename $f`
+			rm -f $b
+			cp $basedir/$f $b
+		    elif test -f ../../$f; then
+			b=`basename $f`
+			rm -f $b
+			cp ../../$f $b
+		    else
+			echo "file $f not found" 1>&2
+			exit 1
+		    fi
+		done
+		;;
+	esac
+	;;
+esac
+
+# Some tests expect the _obj directory created by the gc Makefiles.
+mkdir _obj
+
+# Some tests expect the _test directory created by the gc Makefiles.
+mkdir _test
+
+case "x$gofiles" in
+x)
+	for f in `ls *_test.go`; do
+	    tag1=`echo $f | sed -e 's/^.*_\([^_]*\)_test.go$/\1/'`
+	    tag2=`echo $f | sed -e 's/^.*_\([^_]*\)_[^_]*_test.go$/\1/'`
+	    if test x$tag1 = x$f; then
+		tag1=
+	    fi
+	    if test x$tag2 = x$f; then
+		tag2=
+	    fi
+
+	    case "$tag1" in
+	    "") ;;
+	    $goarch) ;;
+	    $goos) ;;
+	    android | darwin | dragonfly | freebsd | linux | nacl | netbsd | openbsd | plan9 | solaris | windows)
+		tag1=nonmatchingtag
+		;;
+	    386 | amd64 | amd64p32 | arm | armbe | arm64 | arm64be | alpha | m68k | ppc64 | ppc64le | mips | mipsle | mips64 | mips64le | mips64p32 | mips64p32le | mipso32 | mipsn32 | mipsn64 | mipso64 | ppc | s390 | s390x | sparc | sparc64)
+		tag1=nonmatchingtag
+		;;
+	    esac
+
+	    case "$tag2" in
+	    "") ;;
+	    $goarch) ;;
+	    $goos) ;;
+	    android | darwin | dragonfly | freebsd | linux | nacl | netbsd | openbsd | plan9 | solaris | windows)
+		tag2=nonmatchingtag
+		;;
+	    386 | amd64 | amd64p32 | arm | armbe | arm64 | arm64be | alpha | m68k | ppc64 | ppc64le | mips | mipsle | mips64 | mips64le | mips64p32 | mips64p32le | mipso32 | mipsn32 | mipsn64 | mipso64 | ppc | s390 | s390x | sparc | sparc64)
+		tag2=nonmatchingtag
+		;;
+	    esac
+
+	    if test x$tag1 != xnonmatchingtag -a x$tag2 != xnonmatchingtag; then
+		taglines=`sed '/^package /q' < $f | fgrep '// +build '`
+		if test "$taglines" = ""; then
+		    omatch=true
+		else
+		    omatch=false
+		fi
+		for tags in $taglines; do
+		    match=false
+		    for tag in $tags; do
+			reverse=false
+			case $tag in
+			"!"*)
+			    reverse=true
+			    tag=`echo $tag | sed -e 's/^!//'`
+			    ;;
+			esac
+
+			case $tag in
+			"//" | "+build")
+			    ;;
+			$goos | $goarch | cgo)
+			    match=true
+			    ;;
+			*,*)
+			    match=true
+			    for ctag in `echo $tag | sed -e 's/,/ /g'`; do
+				case $ctag in
+				$goos | $goarch | cgo)
+				    ;;
+				*)
+				    match=false
+				    ;;
+				esac
+			    done
+			    ;;
+			esac
+
+			if test "$reverse" = true; then
+			    if test "$match" = true; then
+				match=false
+			    else
+				match=true
+			    fi
+			fi
+		    done
+		    if test "$match" = "true"; then
+			omatch=true
+		    fi
+		done
+
+		if test "$omatch" = "true"; then
+		    gofiles="$gofiles $f"
+		fi
+	    fi
+	done
+	;;
+*)
+	xgofiles=$gofiles
+	gofiles=
+	for f in $xgofiles; do
+	    gofiles="$gofiles `basename $f`"
+	done
+esac
+
+case "x$gofiles" in
+x)
+	echo 'no test files found' 1>&2
+	exit 1
+	;;
+esac
+
+# Run any commands given in sources, like
+#   // gotest: $GC foo.go
+# to build any test-only dependencies.
+holdGC="$GC"
+GC="$GC -g -c -I ."
+sed -n 's/^\/\/ gotest: //p' $gofiles | sh
+GC="$holdGC"
+
+case "x$pkgfiles" in
+x)
+	pkgbasefiles=`ls *.go | grep -v _test.go 2>/dev/null`
+	;;
+*)
+	for f in $pkgfiles; do
+	    pkgbasefiles="$pkgbasefiles `basename $f`"
+	done
+	;;
+esac
+
+case "x$pkgfiles" in
+x)
+	echo 'no source files found' 1>&2
+	exit 1
+	;;
+esac
+
+# Split $gofiles into external gofiles (those in *_test packages)
+# and internal ones (those in the main package).
+xgofiles=
+for f in $gofiles; do
+    package=`grep '^package[ 	]' $f | sed 1q`
+    case "$package" in
+    *_test)
+	xgofiles="$xgofiles $f"
+	;;
+    *)
+	ngofiles="$ngofiles $f"
+	;;
+    esac
+done
+gofiles=$ngofiles
+
+# External $O file
+xofile=""
+havex=false
+if [ "x$xgofiles" != "x" ]; then
+	xofile="_xtest_.o"
+	havex=true
+fi
+
+testmain=
+if $havex && fgrep 'func TestMain(' $xgofiles >/dev/null 2>&1; then
+  package=`grep '^package[ 	]' $xgofiles | sed 1q | sed -e 's/.* //'`
+  testmain="${package}.TestMain"
+elif test -n "$gofiles" && fgrep 'func TestMain(' $gofiles >/dev/null 2>&1; then
+  package=`grep '^package[ 	]' $gofiles | sed 1q | sed -e 's/.* //'`
+  testmain="${package}.TestMain"
+fi
+
+set -e
+
+package=`echo ${srcdir} | sed -e 's|^.*libgo/go/||'`
+
+pkgpatharg=
+xpkgpatharg=
+prefixarg=
+if test -n "$pkgpath"; then
+	pkgpatharg="-fgo-pkgpath=$pkgpath"
+	xpkgpatharg="-fgo-pkgpath=${pkgpath}_test"
+elif test -n "$prefix"; then
+	prefixarg="-fgo-prefix=$prefix"
+fi
+
+if test "$trace" = "true"; then
+  echo $GC -g $pkgpatharg $prefixarg -c -I . -fno-toplevel-reorder -o _gotest_.o $gofiles $pkgbasefiles
+fi
+$GC -g $pkgpatharg $prefixarg -c -I . -fno-toplevel-reorder -o _gotest_.o $gofiles $pkgbasefiles
+
+if $havex; then
+	mkdir -p `dirname $package`
+	cp _gotest_.o `dirname $package`/lib`basename $package`.a
+	if test "$trace" = "true"; then
+	    echo $GC -g $xpkgpatharg -c -I . -fno-toplevel-reorder -o $xofile $xgofiles
+	fi
+	$GC -g $xpkgpatharg -c -I . -fno-toplevel-reorder -o $xofile $xgofiles
+fi
+
+# They all compile; now generate the code to call them.
+
+testname() {
+	# Remove the package from the name used with the -test option.
+	echo $1 | sed 's/^.*\.//'
+}
+
+localname() {
+	# The package main has been renamed to __main__ when imported.
+	# Adjust its uses.
+	echo $1 | sed 's/^main\./__main__./'
+}
+
+{
+	text="T"
+	case "$goarch" in
+	ppc64*) text="[TD]" ;;
+	esac
+
+	symtogo='sed -e s/_test/XXXtest/ -e s/.*_\([^_]*\.\)/\1/ -e s/XXXtest/_test/'
+
+	# test functions are named TestFoo
+	# the grep -v eliminates methods and other special names
+	# that have multiple dots.
+	pattern='Test([^a-z].*)?'
+	# The -p option tells GNU nm not to sort.
+	# The -v option tells Solaris nm to sort by value.
+	tests=$($NM -p -v _gotest_.o $xofile | egrep " $text .*\."$pattern'$' | grep -v '\..*\..*\.' | fgrep -v '$' | fgrep -v ' __go_' | sed 's/.* //' | $symtogo)
+	if [ "x$tests" = x ]; then
+		echo 'gotest: warning: no tests matching '$pattern in _gotest_.o $xofile 1>&2
+		exit 2
+	fi
+	# benchmarks are named BenchmarkFoo.
+	pattern='Benchmark([^a-z].*)?'
+	benchmarks=$($NM -p -v _gotest_.o $xofile | egrep " $text .*\."$pattern'$' | grep -v '\..*\..*\.' | fgrep -v '$' | fgrep -v ' __go_' | sed 's/.* //' | $symtogo)
+
+	# examples are named ExampleFoo
+	pattern='Example([^a-z].*)?'
+	examples=$($NM -p -v _gotest_.o $xofile | egrep " $text .*\."$pattern'$' | grep -v '\..*\..*\.' | fgrep -v '$' | fgrep -v ' __go_' | sed 's/.* //' | $symtogo)
+
+	# package spec
+	echo 'package main'
+	echo
+	# imports
+	if echo "$tests" | egrep -v '_test\.' >/dev/null; then
+		echo 'import "./_gotest_"'
+	fi
+	if $havex; then
+		echo 'import "./_xtest_"'
+	fi
+	echo 'import "testing"'
+	echo 'import __regexp__ "regexp"' # rename in case tested package is called regexp
+	if ! test -n "$testmain"; then
+		echo 'import __os__ "os"'
+	fi
+	# test array
+	echo
+	echo 'var tests = []testing.InternalTest {'
+	for i in $tests
+	do
+		n=$(testname $i)
+		if test "$n" != "TestMain"; then
+			j=$(localname $i)
+			echo '	{"'$n'", '$j'},'
+		fi
+	done
+	echo '}'
+
+	# benchmark array
+	# The comment makes the multiline declaration
+	# gofmt-safe even when there are no benchmarks.
+	echo 'var benchmarks = []testing.InternalBenchmark{ //'
+	for i in $benchmarks
+	do
+		n=$(testname $i)
+		j=$(localname $i)
+		echo '	{"'$n'", '$j'},'
+	done
+	echo '}'
+
+	# examples array
+	echo 'var examples = []testing.InternalExample{ //'
+	# This doesn't work because we don't pick up the output.
+	#for i in $examples
+	#do
+	#	n=$(testname $i)
+	#	j=$(localname $i)
+	#	echo '	{"'$n'", '$j', ""},'
+	#done
+	echo '}'
+
+	# body
+	echo \
+'
+var matchPat string
+var matchRe *__regexp__.Regexp
+
+func matchString(pat, str string) (result bool, err error) {
+	if matchRe == nil || matchPat != pat {
+		matchPat = pat
+		matchRe, err = __regexp__.Compile(matchPat)
+		if err != nil {
+			return
+		}
+	}
+	return matchRe.MatchString(str), nil
+}
+
+func main() {
+	m := testing.MainStart(matchString, tests, benchmarks, examples)
+'
+	if test -n "$testmain"; then
+		echo "	${testmain}(m)"
+	else
+		echo '	__os__.Exit(m.Run())'
+	fi
+
+	echo '}'
+}>_testmain.go
+
+case "x$dejagnu" in
+xno)
+	if test "$trace" = "true"; then
+	    echo ${GC} -g -c _testmain.go
+	fi
+	${GC} -g -c _testmain.go
+
+	if test "$trace" = "true"; then
+	    echo ${GL} *.o ${GOLIBS}
+	fi
+	${GL} *.o ${GOLIBS}
+
+	set +e
+	if test "$bench" = ""; then
+		if test "$trace" = "true"; then
+		    echo ./a.out -test.short -test.timeout=${timeout}s "$@"
+		fi
+		./a.out -test.short -test.timeout=${timeout}s "$@" &
+		pid=$!
+		(sleep `expr $timeout + 10`
+		    echo > gotest-timeout
+		    echo "timed out in gotest" 1>&2
+		    kill -9 $pid) &
+		alarmpid=$!
+		wait $pid
+		status=$?
+		if ! test -f gotest-timeout; then
+		    sleeppid=`ps -o pid,ppid,cmd | grep " $alarmpid " | grep sleep | sed -e 's/ *\([0-9]*\) .*$/\1/'`
+		    kill $alarmpid
+		    wait $alarmpid
+		    if test "$sleeppid" != ""; then
+			kill $sleeppid
+		    fi
+		fi
+	else
+		if test "$trace" = "true"; then
+		    echo ./a.out -test.run=^\$ -test.bench="${bench}" "$@"
+		fi
+		./a.out -test.run=^\$ -test.bench="${bench}" "$@"
+		status=$?
+	fi
+	exit $status
+	;;
+xyes)
+	rm -rf ../../testsuite/*.o
+	files=`echo *`
+	for f in $files; do
+		if test "$f" = "_obj" || test "$f" = "_test"; then
+			continue
+		fi
+		rm -rf ../../testsuite/$f
+		if test -f $f; then
+			cp $f ../../testsuite/
+		else
+			ln -s ../$DIR/test/$f ../../testsuite/
+		fi
+	done
+	cd ../../testsuite
+	rm -rf _obj _test
+	mkdir _obj _test
+	if test "$testname" != ""; then
+	    GOTESTNAME="$testname"
+	    export GOTESTNAME
+	fi
+	$MAKE check RUNTESTFLAGS="$RUNTESTFLAGS GOTEST_TMPDIR=$DIR/test"
+	# Useful when using make check-target-libgo
+	cat libgo.log >> libgo-all.log
+	cat libgo.sum >> libgo-all.sum
+	rm -rf $files
+	;;
+esac

@@ -7,13 +7,15 @@
 
 target triple = "hexagon"
 
+@g0 = global double zeroinitializer, align 8
+
 define hidden i32 @fred([101 x double]* %a0, i32 %a1, i32* %a2, i32* %a3) #0 {
 b4:
   br label %b5
 
 b5:                                               ; preds = %b5, %b4
   %v6 = call double @fabs(double undef) #1
-  store double %v6, double* undef, align 8
+  store double %v6, double* @g0, align 8
   br label %b5
 }
 

@@ -21,10 +21,10 @@ entry:
   %0 = call float @llvm.cos.f32(float 1.500000e+00), !dbg !13
   ; CHECK: $xmm1 = MOVAPSrr $xmm0
   call void @llvm.dbg.value(metadata float %0, metadata !15, metadata !DIExpression()), !dbg !13
-  ; CHECK: DBG_VALUE debug-use {{.*}}$xmm1, {{.*}}, ![[RSIN]], !DIExpression(),
+  ; CHECK: DBG_VALUE {{.*}}$xmm1, {{.*}}, ![[RSIN]], !DIExpression(),
   %1 = call float @llvm.sin.f32(float 1.500000e+00), !dbg !13
   call void @llvm.dbg.value(metadata float %1, metadata !11, metadata !DIExpression()), !dbg !13
-  ; CHECK: DBG_VALUE debug-use {{.*}}$xmm0, {{.*}}, ![[RCOS]], !DIExpression(),
+  ; CHECK: DBG_VALUE {{.*}}$xmm0, {{.*}}, ![[RCOS]], !DIExpression(),
   call void @g(float %0, float %1), !dbg !13
   ret void, !dbg !13
 }

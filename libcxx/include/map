@@ -167,6 +167,15 @@ public:
     iterator  erase(const_iterator first, const_iterator last);
     void clear() noexcept;
 
+    template<class C2>
+      void merge(map<Key, T, C2, Allocator>& source);         // C++17
+    template<class C2>
+      void merge(map<Key, T, C2, Allocator>&& source);        // C++17
+    template<class C2>
+      void merge(multimap<Key, T, C2, Allocator>& source);    // C++17
+    template<class C2>
+      void merge(multimap<Key, T, C2, Allocator>&& source);   // C++17
+
     void swap(map& m)
         noexcept(allocator_traits<allocator_type>::is_always_equal::value &&
             is_nothrow_swappable<key_compare>::value); // C++17
@@ -244,6 +253,10 @@ template <class Key, class T, class Compare, class Allocator>
 void
 swap(map<Key, T, Compare, Allocator>& x, map<Key, T, Compare, Allocator>& y)
     noexcept(noexcept(x.swap(y)));
+
+template <class Key, class T, class Compare, class Allocator, class Predicate>
+  void erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
+
 
 template <class Key, class T, class Compare = less<Key>,
           class Allocator = allocator<pair<const Key, T>>>
@@ -368,6 +381,15 @@ public:
     iterator  erase(const_iterator first, const_iterator last);
     void clear() noexcept;
 
+    template<class C2>
+      void merge(multimap<Key, T, C2, Allocator>& source);    // C++17
+    template<class C2>
+      void merge(multimap<Key, T, C2, Allocator>&& source);   // C++17
+    template<class C2>
+      void merge(map<Key, T, C2, Allocator>& source);         // C++17
+    template<class C2>
+      void merge(map<Key, T, C2, Allocator>&& source);        // C++17
+
     void swap(multimap& m)
         noexcept(allocator_traits<allocator_type>::is_always_equal::value &&
             is_nothrow_swappable<key_compare>::value); // C++17
@@ -447,6 +469,9 @@ swap(multimap<Key, T, Compare, Allocator>& x,
      multimap<Key, T, Compare, Allocator>& y)
     noexcept(noexcept(x.swap(y)));
 
+template <class Key, class T, class Compare, class Allocator, class Predicate>
+  void erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
+
 }  // std
 
 */
@@ -460,6 +485,7 @@ swap(multimap<Key, T, Compare, Allocator>& x,
 #include <functional>
 #include <initializer_list>
 #include <type_traits>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -467,7 +493,8 @@ swap(multimap<Key, T, Compare, Allocator>& x,
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key, class _CP, class _Compare, bool _IsSmall>
+template <class _Key, class _CP, class _Compare,
+          bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
 class __map_value_compare
     : private _Compare
 {
@@ -881,6 +908,7 @@ public:
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
+    static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), "");
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
@@ -924,6 +952,11 @@ public:
     typedef __map_node_handle<typename __base::__node, allocator_type> node_type;
     typedef __insert_return_type<iterator, node_type> insert_return_type;
 #endif
+
+    template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS map;
+    template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS multimap;
 
     _LIBCPP_INLINE_VISIBILITY
     map()
@@ -1299,6 +1332,38 @@ public:
     {
         return __tree_.template __node_handle_extract<node_type>(__it.__i_);
     }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1471,10 +1536,8 @@ map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k)
 {
     __parent_pointer __parent;
     __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__child == nullptr)
-        throw out_of_range("map::at:  key not found");
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_out_of_range("map::at:  key not found");
     return static_cast<__node_pointer>(__child)->__value_.__get_value().second;
 }
 
@@ -1484,10 +1547,8 @@ map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const
 {
     __parent_pointer __parent;
     __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
-#ifndef _LIBCPP_NO_EXCEPTIONS
     if (__child == nullptr)
-        throw out_of_range("map::at:  key not found");
-#endif  // _LIBCPP_NO_EXCEPTIONS
+        __throw_out_of_range("map::at:  key not found");
     return static_cast<__node_pointer>(__child)->__value_.__get_value().second;
 }
 
@@ -1556,6 +1617,14 @@ swap(map<_Key, _Tp, _Compare, _Allocator>& __x,
     __x.swap(__y);
 }
 
+#if _LIBCPP_STD_VER > 17
+template <class _Key, class _Tp, class _Compare, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(map<_Key, _Tp, _Compare, _Allocator>& __c, _Predicate __pred)
+{ __libcpp_erase_if_container(__c, __pred); }
+#endif
+
+
 template <class _Key, class _Tp, class _Compare = less<_Key>,
           class _Allocator = allocator<pair<const _Key, _Tp> > >
 class _LIBCPP_TEMPLATE_VIS multimap
@@ -1570,6 +1639,7 @@ public:
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
+    static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), "");
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
@@ -1613,6 +1683,11 @@ public:
 #if _LIBCPP_STD_VER > 14
     typedef __map_node_handle<typename __base::__node, allocator_type> node_type;
 #endif
+
+    template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS map;
+    template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS multimap;
 
     _LIBCPP_INLINE_VISIBILITY
     multimap()
@@ -1881,10 +1956,42 @@ public:
         return __tree_.template __node_handle_extract<node_type>(
             __it.__i_);
     }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __tree_.__node_handle_merge_multi(__source.__tree_);
+    }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __tree_.__node_handle_merge_multi(__source.__tree_);
+    }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __tree_.__node_handle_merge_multi(__source.__tree_);
+    }
+    template <class _Compare2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __tree_.__node_handle_merge_multi(__source.__tree_);
+    }
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
-    void clear() {__tree_.clear();}
+    void clear() _NOEXCEPT {__tree_.clear();}
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(multimap& __m)
@@ -2054,6 +2161,13 @@ swap(multimap<_Key, _Tp, _Compare, _Allocator>& __x,
 {
     __x.swap(__y);
 }
+
+#if _LIBCPP_STD_VER > 17
+template <class _Key, class _Tp, class _Compare, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(multimap<_Key, _Tp, _Compare, _Allocator>& __c, _Predicate __pred)
+{ __libcpp_erase_if_container(__c, __pred); }
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -273,6 +273,21 @@ void ARMInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
   case ARM::t2TSB:
     O << "\ttsb\tcsync";
     return;
+  case ARM::t2DSB:
+    switch (MI->getOperand(0).getImm()) {
+    default:
+      if (!printAliasInstr(MI, STI, O))
+        printInstruction(MI, STI, O);
+      break;
+    case 0:
+      O << "\tssbb";
+      break;
+    case 4:
+      O << "\tpssbb";
+      break;
+    }
+    printAnnotation(O, Annot);
+    return;
   }
 
   if (!printAliasInstr(MI, STI, O))

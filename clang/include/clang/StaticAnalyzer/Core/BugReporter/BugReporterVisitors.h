@@ -345,12 +345,11 @@ public:
 
 namespace bugreporter {
 
-/// Attempts to add visitors to trace a null or undefined value back to its
-/// point of origin, whether it is a symbol constrained to null or an explicit
-/// assignment.
+/// Attempts to add visitors to track expression value back to its point of
+/// origin.
 ///
 /// \param N A node "downstream" from the evaluation of the statement.
-/// \param S The statement whose value is null or undefined.
+/// \param E The expression value which we are tracking
 /// \param R The bug report to which visitors should be attached.
 /// \param EnableNullFPSuppression Whether we should employ false positive
 ///         suppression (inlined defensive checks, returned null).
@@ -358,13 +357,10 @@ namespace bugreporter {
 /// \return Whether or not the function was able to add visitors for this
 ///         statement. Note that returning \c true does not actually imply
 ///         that any visitors were added.
-bool trackNullOrUndefValue(const ExplodedNode *N, const Stmt *S, BugReport &R,
-                           bool EnableNullFPSuppression = true);
+bool trackExpressionValue(const ExplodedNode *N, const Expr *E, BugReport &R,
+                          bool EnableNullFPSuppression = true);
 
 const Expr *getDerefExpr(const Stmt *S);
-const Stmt *GetDenomExpr(const ExplodedNode *N);
-const Stmt *GetRetValExpr(const ExplodedNode *N);
-bool isDeclRefExprToReference(const Expr *E);
 
 } // namespace bugreporter
 

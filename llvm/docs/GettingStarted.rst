@@ -1205,15 +1205,6 @@ because they are code generators for parts of the infrastructure.
   line. This is an efficient way of searching the source base for a
   particular regular expression.
 
-``makellvm``
-
-  Compiles all files in the current directory, then
-  compiles and links the tool that is the first argument. For example, assuming
-  you are in  ``llvm/lib/Target/Sparc``, if ``makellvm`` is in your
-  path,  running ``makellvm llc`` will make a build of the current
-  directory, switch to directory ``llvm/tools/llc`` and build it, causing a
-  re-linking of LLC.
-
 ``TableGen/``
 
   Contains the tool used to generate register

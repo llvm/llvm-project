@@ -95,6 +95,10 @@ BitVector SparcRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     }
   }
 
+  // Reserve ASR1-ASR31
+  for (unsigned n = 0; n < 31; n++)
+    Reserved.set(SP::ASR1 + n);
+
   return Reserved;
 }
 

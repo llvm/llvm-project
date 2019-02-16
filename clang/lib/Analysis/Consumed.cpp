@@ -64,7 +64,7 @@ static SourceLocation getFirstStmtLoc(const CFGBlock *Block) {
   // is not empty.
   for (const auto &B : *Block)
     if (Optional<CFGStmt> CS = B.getAs<CFGStmt>())
-      return CS->getStmt()->getLocStart();
+      return CS->getStmt()->getBeginLoc();
 
   // Block is empty.
   // If we have one successor, return the first statement in that block
@@ -78,12 +78,12 @@ static SourceLocation getLastStmtLoc(const CFGBlock *Block) {
   // Find the source location of the last statement in the block, if the block
   // is not empty.
   if (const Stmt *StmtNode = Block->getTerminator()) {
-    return StmtNode->getLocStart();
+    return StmtNode->getBeginLoc();
   } else {
     for (CFGBlock::const_reverse_iterator BI = Block->rbegin(),
          BE = Block->rend(); BI != BE; ++BI) {
       if (Optional<CFGStmt> CS = BI->getAs<CFGStmt>())
-        return CS->getStmt()->getLocStart();
+        return CS->getStmt()->getBeginLoc();
     }
   }
 
@@ -893,7 +893,7 @@ void ConsumedStmtVisitor::VisitReturnStmt(const ReturnStmt *Ret) {
     }
   }
 
-  StateMap->checkParamsForReturnTypestate(Ret->getLocStart(),
+  StateMap->checkParamsForReturnTypestate(Ret->getBeginLoc(),
                                           Analyzer.WarningsHandler);
 }
 
@@ -1363,7 +1363,7 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
 
       case CFGElement::AutomaticObjectDtor: {
         const CFGAutomaticObjDtor &DTor = B.castAs<CFGAutomaticObjDtor>();
-        SourceLocation Loc = DTor.getTriggerStmt()->getLocEnd();
+        SourceLocation Loc = DTor.getTriggerStmt()->getEndLoc();
         const VarDecl *Var = DTor.getVarDecl();
 
         Visitor.checkCallability(PropagationInfo(Var),

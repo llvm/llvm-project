@@ -25,9 +25,9 @@
 }
 @end
 
-// CHECK: call i8* @objc_autoreleasePoolPush
+// CHECK: call i8* @llvm.objc.autoreleasePoolPush
 // CHECK: [[T:%.*]] = load i8*, i8** [[A:%.*]]
-// CHECK: call void @objc_autoreleasePoolPop
+// CHECK: call void @llvm.objc.autoreleasePoolPop
 
 // rdar://13660038
 int tryTo(int (*f)(void)) {
@@ -41,7 +41,7 @@ int tryTo(int (*f)(void)) {
 }
 // CHECK-LABEL:    define i32 @tryTo(i32 ()*
 // CHECK:      [[RET:%.*]] = alloca i32,
-// CHECK:      [[T0:%.*]] = call i8* @objc_autoreleasePoolPush()
+// CHECK:      [[T0:%.*]] = call i8* @llvm.objc.autoreleasePoolPush()
 // CHECK-NEXT: [[T1:%.*]] = load i32 ()*, i32 ()** {{%.*}},
 // CHECK-NEXT: [[T2:%.*]] = invoke i32 [[T1]]()
 // CHECK:      store i32 [[T2]], i32* [[RET]]

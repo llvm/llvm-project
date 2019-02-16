@@ -44,10 +44,9 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X32-AVX2-NEXT:    vcmpltps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vmovups (%eax), %ymm2
 ; X32-AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; X32-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vmovaps %ymm0, (%eax)
+; X32-AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vmovdqa %ymm0, (%eax)
 ; X32-AVX2-NEXT:    vzeroupper
 ; X32-AVX2-NEXT:    retl
 ;
@@ -58,10 +57,9 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X64-AVX2-NEXT:    vcmpltps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vmovups (%rdx), %ymm2
 ; X64-AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; X64-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vmovaps %ymm0, (%rax)
+; X64-AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vmovdqa %ymm0, (%rax)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
   %v0 = load <8 x float>, <8 x float>* %a, align 16
@@ -133,12 +131,8 @@ define <8 x i32> @and_mask_constant(<8 x i32> %v0, <8 x i32> %v1) {
 ; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
 ; X32-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpand LCPI2_0, %xmm0, %xmm0
-; X32-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-NEXT:    vandps LCPI2_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: and_mask_constant:
@@ -147,12 +141,8 @@ define <8 x i32> @and_mask_constant(<8 x i32> %v0, <8 x i32> %v1) {
 ; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: and_mask_constant:

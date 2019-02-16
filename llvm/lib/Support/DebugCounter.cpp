@@ -49,7 +49,17 @@ static DebugCounterList DebugCounterOption(
     cl::desc("Comma separated list of debug counter skip and count"),
     cl::CommaSeparated, cl::ZeroOrMore, cl::location(DebugCounter::instance()));
 
+static cl::opt<bool> PrintDebugCounter(
+    "print-debug-counter", cl::Hidden, cl::init(false), cl::Optional,
+    cl::desc("Print out debug counter info after all counters accumulated"));
+
 static ManagedStatic<DebugCounter> DC;
+
+// Print information when destroyed, iff command line option is specified.
+DebugCounter::~DebugCounter() {
+  if (isCountingEnabled() && PrintDebugCounter)
+    print(dbgs());
+}
 
 DebugCounter &DebugCounter::instance() { return *DC; }
 
@@ -82,8 +92,11 @@ void DebugCounter::push_back(const std::string &Val) {
              << " is not a registered counter\n";
       return;
     }
-    Counters[CounterID].Skip = CounterVal;
-    Counters[CounterID].IsSet = true;
+    enableAllCounters();
+
+    CounterInfo &Counter = Counters[CounterID];
+    Counter.Skip = CounterVal;
+    Counter.IsSet = true;
   } else if (CounterPair.first.endswith("-count")) {
     auto CounterName = CounterPair.first.drop_back(6);
     unsigned CounterID = getCounterId(CounterName);
@@ -92,8 +105,11 @@ void DebugCounter::push_back(const std::string &Val) {
              << " is not a registered counter\n";
       return;
     }
-    Counters[CounterID].StopAfter = CounterVal;
-    Counters[CounterID].IsSet = true;
+    enableAllCounters();
+
+    CounterInfo &Counter = Counters[CounterID];
+    Counter.StopAfter = CounterVal;
+    Counter.IsSet = true;
   } else {
     errs() << "DebugCounter Error: " << CounterPair.first
            << " does not end with -skip or -count\n";
@@ -101,11 +117,18 @@ void DebugCounter::push_back(const std::string &Val) {
 }
 
 void DebugCounter::print(raw_ostream &OS) const {
+  SmallVector<StringRef, 16> CounterNames(RegisteredCounters.begin(),
+                                          RegisteredCounters.end());
+  sort(CounterNames.begin(), CounterNames.end());
+
+  auto &Us = instance();
   OS << "Counters and values:\n";
-  for (const auto &KV : Counters)
-    OS << left_justify(RegisteredCounters[KV.first], 32) << ": {"
-       << KV.second.Count << "," << KV.second.Skip << ","
-       << KV.second.StopAfter << "}\n";
+  for (auto &CounterName : CounterNames) {
+    unsigned CounterID = getCounterId(CounterName);
+    OS << left_justify(RegisteredCounters[CounterID], 32) << ": {"
+       << Us.Counters[CounterID].Count << "," << Us.Counters[CounterID].Skip
+       << "," << Us.Counters[CounterID].StopAfter << "}\n";
+  }
 }
 
 LLVM_DUMP_METHOD void DebugCounter::dump() const {

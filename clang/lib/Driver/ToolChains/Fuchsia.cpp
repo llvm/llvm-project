@@ -76,10 +76,11 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (Args.hasArg(options::OPT_shared))
     CmdArgs.push_back("-shared");
 
+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
+
   if (!Args.hasArg(options::OPT_shared)) {
     std::string Dyld = D.DyldPrefix;
-    if (ToolChain.getSanitizerArgs().needsAsanRt() &&
-        ToolChain.getSanitizerArgs().needsSharedRt())
+    if (SanArgs.needsAsanRt() && SanArgs.needsSharedRt())
       Dyld += "asan/";
     Dyld += "ld.so.1";
     CmdArgs.push_back("-dynamic-linker");
@@ -98,6 +99,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_u);
 
+  addSanitizerPathLibArgs(ToolChain, Args, CmdArgs);
+
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   if (D.isUsingLTO()) {
@@ -106,8 +109,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  addSanitizerRuntimes(ToolChain, Args, CmdArgs);
-
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
   ToolChain.addProfileRTLibs(Args, CmdArgs);
 
@@ -119,14 +122,23 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (ToolChain.ShouldLinkCXXStdlib(Args)) {
         bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                    !Args.hasArg(options::OPT_static);
+        CmdArgs.push_back("--push-state");
+        CmdArgs.push_back("--as-needed");
         if (OnlyLibstdcxxStatic)
           CmdArgs.push_back("-Bstatic");
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
         if (OnlyLibstdcxxStatic)
           CmdArgs.push_back("-Bdynamic");
+        CmdArgs.push_back("-lm");
+        CmdArgs.push_back("--pop-state");
       }
-      CmdArgs.push_back("-lm");
     }
+
+    if (NeedsSanitizerDeps)
+      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+
+    if (NeedsXRayDeps)
+      linkXRayRuntimeDeps(ToolChain, CmdArgs);
 
     AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 

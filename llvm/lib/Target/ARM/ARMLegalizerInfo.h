@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_ARM_ARMMACHINELEGALIZER_H
 
 #include "llvm/ADT/IndexedMap.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/IR/Instructions.h"
@@ -29,7 +30,8 @@ public:
   ARMLegalizerInfo(const ARMSubtarget &ST);
 
   bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &MIRBuilder) const override;
+                      MachineIRBuilder &MIRBuilder,
+                      GISelChangeObserver &Observer) const override;
 
 private:
   void setFCmpLibcallsGNU();

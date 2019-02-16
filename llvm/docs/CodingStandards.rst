@@ -305,6 +305,21 @@ useful to use C style (``/* */``) comments however:
 #. When writing a source file that is used by a tool that only accepts C style
    comments.
 
+#. When documenting the significance of constants used as actual parameters in
+   a call. This is most helpful for ``bool`` parameters, or passing ``0`` or
+   ``nullptr``. Typically you add the formal parameter name, which ought to be
+   meaningful. For example, it's not clear what the parameter means in this call:
+
+   .. code-block:: c++
+
+     Object.emitName(nullptr);
+
+   An in-line C-style comment makes the intent obvious:
+
+   .. code-block:: c++
+
+     Object.emitName(/*Prefix=*/nullptr);
+
 Commenting out large blocks of code is discouraged, but if you really have to do
 this (for documentation purposes or as a suggestion for debug printing), use
 ``#if 0`` and ``#endif``. These nest properly and are better behaved in general
@@ -494,8 +509,8 @@ for it (vs something else, like 90 columns).
 This is one of many contentious issues in coding standards, but it is not up for
 debate.
 
-Use Spaces Instead of Tabs
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Whitespace
+^^^^^^^^^^
 
 In all cases, prefer spaces to tabs in source files.  People have different
 preferred indentation levels, and different styles of indentation that they
@@ -508,6 +523,12 @@ existing code if you are modifying and extending it.  If you like four spaces of
 indentation, **DO NOT** do that in the middle of a chunk of code with two spaces
 of indentation.  Also, do not reindent a whole source file: it makes for
 incredible diffs that are absolutely worthless.
+
+Do not commit changes that include trailing whitespace. If you find trailing
+whitespace in a file, do not remove it unless you're otherwise changing that
+line of code. Some common editors will automatically remove trailing whitespace
+when saving a file which causes unrelated changes to appear in diffs and
+commits.
 
 Indent Code Consistently
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -949,7 +970,7 @@ exit from a function, consider this "bad" code:
 .. code-block:: c++
 
   Value *doSomething(Instruction *I) {
-    if (!isa<TerminatorInst>(I) &&
+    if (!I->isTerminator() &&
         I->hasOneUse() && doOtherThing(I)) {
       ... some long code ....
     }
@@ -974,7 +995,7 @@ It is much preferred to format the code like this:
 
   Value *doSomething(Instruction *I) {
     // Terminators never need 'something' done to them because ... 
-    if (isa<TerminatorInst>(I))
+    if (I->isTerminator())
       return 0;
 
     // We conservatively avoid transforming instructions with multiple uses

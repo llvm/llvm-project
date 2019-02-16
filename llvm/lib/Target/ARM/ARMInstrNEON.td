@@ -4305,17 +4305,29 @@ def : Pat<(v4f32 (fmul (v4f32 QPR:$src1),
                            (v2f32 (EXTRACT_SUBREG QPR:$src2,
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>;
-
+def : Pat<(v8f16 (fmul (v8f16 QPR:$src1),
+                       (v8f16 (NEONvduplane (v8f16 QPR:$src2), imm:$lane)))),
+          (v8f16 (VMULslhq(v8f16 QPR:$src1),
+                           (v4f16 (EXTRACT_SUBREG QPR:$src2,
+                                   (DSubReg_i16_reg imm:$lane))),
+                           (SubReg_i16_lane imm:$lane)))>;
 
 def : Pat<(v2f32 (fmul DPR:$Rn, (NEONvdup (f32 SPR:$Rm)))),
           (VMULslfd DPR:$Rn,
             (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)), SPR:$Rm, ssub_0),
             (i32 0))>;
+def : Pat<(v4f16 (fmul DPR:$Rn, (NEONvdup (f16 HPR:$Rm)))),
+          (VMULslhd DPR:$Rn,
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (i32 0))>;
 def : Pat<(v4f32 (fmul QPR:$Rn, (NEONvdup (f32 SPR:$Rm)))),
           (VMULslfq QPR:$Rn,
             (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)), SPR:$Rm, ssub_0),
             (i32 0))>;
-
+def : Pat<(v8f16 (fmul QPR:$Rn, (NEONvdup (f16 HPR:$Rm)))),
+          (VMULslhq QPR:$Rn,
+            (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)), HPR:$Rm, ssub_0),
+            (i32 0))>;
 
 //   VQDMULH  : Vector Saturating Doubling Multiply Returning High Half
 defm VQDMULH  : N3VInt_HS<0, 0, 0b1011, 0, N3RegFrm, IIC_VMULi16D, IIC_VMULi32D,
@@ -4390,16 +4402,16 @@ defm VMLA     : N3VMulOp_QHS<0, 0, 0b1001, 0, IIC_VMACi16D, IIC_VMACi32D,
                              IIC_VMACi16Q, IIC_VMACi32Q, "vmla", "i", add>;
 def  VMLAfd   : N3VDMulOp<0, 0, 0b00, 0b1101, 1, IIC_VMACD, "vmla", "f32",
                           v2f32, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLAfq   : N3VQMulOp<0, 0, 0b00, 0b1101, 1, IIC_VMACQ, "vmla", "f32",
                           v4f32, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLAhd   : N3VDMulOp<0, 0, 0b01, 0b1101, 1, IIC_VMACD, "vmla", "f16",
                           v4f16, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 def  VMLAhq   : N3VQMulOp<0, 0, 0b01, 0b1101, 1, IIC_VMACQ, "vmla", "f16",
                           v8f16, fmul_su, fadd_mlx>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 defm VMLAsl   : N3VMulOpSL_HS<0b0000, IIC_VMACi16D, IIC_VMACi32D,
                               IIC_VMACi16Q, IIC_VMACi32Q, "vmla", "i", add>;
 def  VMLAslfd : N3VDMulOpSL<0b10, 0b0001, IIC_VMACD, "vmla", "f32",
@@ -4620,16 +4632,16 @@ defm VMLS     : N3VMulOp_QHS<1, 0, 0b1001, 0, IIC_VMACi16D, IIC_VMACi32D,
                              IIC_VMACi16Q, IIC_VMACi32Q, "vmls", "i", sub>;
 def  VMLSfd   : N3VDMulOp<0, 0, 0b10, 0b1101, 1, IIC_VMACD, "vmls", "f32",
                           v2f32, fmul_su, fsub_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLSfq   : N3VQMulOp<0, 0, 0b10, 0b1101, 1, IIC_VMACQ, "vmls", "f32",
                           v4f32, fmul_su, fsub_mlx>,
-                Requires<[HasNEON, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, UseFPVMLx]>;
 def  VMLShd   : N3VDMulOp<0, 0, 0b11, 0b1101, 1, IIC_VMACD, "vmls", "f16",
                           v4f16, fmul, fsub>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 def  VMLShq   : N3VQMulOp<0, 0, 0b11, 0b1101, 1, IIC_VMACQ, "vmls", "f16",
                           v8f16, fmul, fsub>,
-                Requires<[HasNEON, HasFullFP16, UseFPVMLx, DontUseFusedMAC]>;
+                Requires<[HasNEON, HasFullFP16, UseFPVMLx]>;
 defm VMLSsl   : N3VMulOpSL_HS<0b0100, IIC_VMACi16D, IIC_VMACi32D,
                               IIC_VMACi16Q, IIC_VMACi32Q, "vmls", "i", sub>;
 def  VMLSslfd : N3VDMulOpSL<0b10, 0b0101, IIC_VMACD, "vmls", "f32",
@@ -4734,6 +4746,12 @@ def  VFMShq   : N3VQMulOp<0, 0, 0b11, 0b1100, 1, IIC_VFMACQ, "vfms", "f16",
                 Requires<[HasNEON,HasFullFP16,UseFusedMAC]>;
 
 // Match @llvm.fma.* intrinsics
+def : Pat<(v4f16 (fma DPR:$Vn, DPR:$Vm, DPR:$src1)),
+          (VFMAhd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
+          Requires<[HasNEON,HasFullFP16]>;
+def : Pat<(v8f16 (fma QPR:$Vn, QPR:$Vm, QPR:$src1)),
+          (VFMAhq QPR:$src1, QPR:$Vn, QPR:$Vm)>,
+          Requires<[HasNEON,HasFullFP16]>;
 def : Pat<(v2f32 (fma DPR:$Vn, DPR:$Vm, DPR:$src1)),
           (VFMAfd DPR:$src1, DPR:$Vn, DPR:$Vm)>,
           Requires<[HasVFP4]>;
@@ -5066,7 +5084,7 @@ def  VACGThd   : N3VDInt<1, 0, 0b11, 0b1110, 1, N3RegFrm, IIC_VBIND, "vacgt",
                         "f16", v4i16, v4f16, int_arm_neon_vacgt, 0>,
                  Requires<[HasNEON, HasFullFP16]>;
 def  VACGThq   : N3VQInt<1, 0, 0b11, 0b1110, 1, N3RegFrm, IIC_VBINQ, "vacgt",
-                        "f16", v8f16, v8f16, int_arm_neon_vacgt, 0>,
+                        "f16", v8i16, v8f16, int_arm_neon_vacgt, 0>,
                  Requires<[HasNEON, HasFullFP16]>;
 //   VTST     : Vector Test Bits
 defm VTST     : N3V_QHS<0, 0, 0b1000, 1, IIC_VBINi4D, IIC_VBINi4D, IIC_VBINi4Q,
@@ -5090,6 +5108,54 @@ def: NEONInstAlias<"vacle${p}.f16 $Vd, $Vn, $Vm",
 def: NEONInstAlias<"vacle${p}.f16 $Vd, $Vn, $Vm",
                    (VACGEhq QPR:$Vd, QPR:$Vm, QPR:$Vn, pred:$p)>;
 }
+
+// +fp16fml Floating Point Multiplication Variants
+let Predicates = [HasNEON, HasFP16FML], DecoderNamespace= "VFPV8" in {
+
+class N3VCP8F16Q1<string asm, RegisterClass Td, RegisterClass Tn,
+                RegisterClass Tm, bits<2> op1, bits<2> op2, bit op3>
+  : N3VCP8<op1, op2, 1, op3, (outs Td:$Vd), (ins Tn:$Vn, Tm:$Vm), NoItinerary,
+           asm, "f16", "$Vd, $Vn, $Vm", "", []>;
+
+class N3VCP8F16Q0<string asm, RegisterClass Td, RegisterClass Tn,
+                RegisterClass Tm, bits<2> op1, bits<2> op2, bit op3>
+  : N3VCP8Q0<op1, op2, 0, op3, (outs Td:$Vd), (ins Tn:$Vn, Tm:$Vm), NoItinerary,
+           asm, "f16", "$Vd, $Vn, $Vm", "", []>;
+
+class VFMQ0<string opc, bits<2> S>
+  : N3VLaneCP8<0, S, 0, 1, (outs DPR:$Vd),
+               (ins SPR:$Vn, SPR:$Vm, VectorIndex32:$idx),
+               IIC_VMACD, opc, "f16", "$Vd, $Vn, $Vm$idx", "", []> {
+  bit idx;
+  let Inst{3} = idx;
+  let Inst{19-16} = Vn{4-1};
+  let Inst{7}     = Vn{0};
+  let Inst{5}     = Vm{0};
+  let Inst{2-0}   = Vm{3-1};
+}
+
+class VFMQ1<string opc, bits<2> S>
+  : N3VLaneCP8<0, S, 1, 1, (outs QPR:$Vd),
+               (ins DPR:$Vn, DPR:$Vm, VectorIndex16:$idx),
+               IIC_VMACD, opc, "f16", "$Vd, $Vn, $Vm$idx", "", []> {
+  bits<2> idx;
+  let Inst{5} = idx{1};
+  let Inst{3} = idx{0};
+}
+
+let hasNoSchedulingInfo = 1 in {
+//                                                op1   op2   op3
+def VFMALD  : N3VCP8F16Q0<"vfmal", DPR, SPR, SPR, 0b00, 0b10, 1>;
+def VFMSLD  : N3VCP8F16Q0<"vfmsl", DPR, SPR, SPR, 0b01, 0b10, 1>;
+def VFMALQ  : N3VCP8F16Q1<"vfmal", QPR, DPR, DPR, 0b00, 0b10, 1>;
+def VFMSLQ  : N3VCP8F16Q1<"vfmsl", QPR, DPR, DPR, 0b01, 0b10, 1>;
+def VFMALDI : VFMQ0<"vfmal", 0b00>;
+def VFMSLDI : VFMQ0<"vfmsl", 0b01>;
+def VFMALQI : VFMQ1<"vfmal", 0b00>;
+def VFMSLQI : VFMQ1<"vfmsl", 0b01>;
+}
+} // HasNEON, HasFP16FML
+
 
 def: NEONInstAlias<"vaclt${p}.f32 $Vd, $Vm",
                    (VACGTfd DPR:$Vd, DPR:$Vm, DPR:$Vd, pred:$p)>;
@@ -5455,17 +5521,17 @@ defm VMAXu    : N3VInt_QHS<1, 0, 0b0110, 0, N3RegFrm,
                            "vmax", "u", umax, 1>;
 def  VMAXfd   : N3VDInt<0, 0, 0b00, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmax", "f32",
-                        v2f32, v2f32, fmaxnan, 1>;
+                        v2f32, v2f32, fmaximum, 1>;
 def  VMAXfq   : N3VQInt<0, 0, 0b00, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmax", "f32",
-                        v4f32, v4f32, fmaxnan, 1>;
+                        v4f32, v4f32, fmaximum, 1>;
 def  VMAXhd   : N3VDInt<0, 0, 0b01, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmax", "f16",
-                        v4f16, v4f16, fmaxnan, 1>,
+                        v4f16, v4f16, fmaximum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 def  VMAXhq   : N3VQInt<0, 0, 0b01, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmax", "f16",
-                        v8f16, v8f16, fmaxnan, 1>,
+                        v8f16, v8f16, fmaximum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 
 // VMAXNM
@@ -5497,17 +5563,17 @@ defm VMINu    : N3VInt_QHS<1, 0, 0b0110, 1, N3RegFrm,
                            "vmin", "u", umin, 1>;
 def  VMINfd   : N3VDInt<0, 0, 0b10, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmin", "f32",
-                        v2f32, v2f32, fminnan, 1>;
+                        v2f32, v2f32, fminimum, 1>;
 def  VMINfq   : N3VQInt<0, 0, 0b10, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmin", "f32",
-                        v4f32, v4f32, fminnan, 1>;
+                        v4f32, v4f32, fminimum, 1>;
 def  VMINhd   : N3VDInt<0, 0, 0b11, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmin", "f16",
-                        v4f16, v4f16, fminnan, 1>,
+                        v4f16, v4f16, fminimum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 def  VMINhq   : N3VQInt<0, 0, 0b11, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmin", "f16",
-                        v8f16, v8f16, fminnan, 1>,
+                        v8f16, v8f16, fminimum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 
 // VMINNM
@@ -6318,6 +6384,9 @@ def VDUPLN32q : VDUPLNQ<{?,1,0,0}, "vdup", "32", v4i32, v2i32, VectorIndex32> {
   let Inst{19} = lane{0};
 }
 
+def : Pat<(v4f16 (NEONvduplane (v4f16 DPR:$Vm), imm:$lane)),
+          (VDUPLN32d DPR:$Vm, imm:$lane)>;
+
 def : Pat<(v2f32 (NEONvduplane (v2f32 DPR:$Vm), imm:$lane)),
           (VDUPLN32d DPR:$Vm, imm:$lane)>;
 
@@ -6332,6 +6401,10 @@ def : Pat<(v8i16 (NEONvduplane (v8i16 QPR:$src), imm:$lane)),
           (v8i16 (VDUPLN16q (v4i16 (EXTRACT_SUBREG QPR:$src,
                                     (DSubReg_i16_reg imm:$lane))),
                             (SubReg_i16_lane imm:$lane)))>;
+def : Pat<(v8f16 (NEONvduplane (v8f16 QPR:$src), imm:$lane)),
+          (v8f16 (VDUPLN16q (v4f16 (EXTRACT_SUBREG QPR:$src,
+                                    (DSubReg_i16_reg imm:$lane))),
+                            (SubReg_i16_lane imm:$lane)))>;
 def : Pat<(v4i32 (NEONvduplane (v4i32 QPR:$src), imm:$lane)),
           (v4i32 (VDUPLN32q (v2i32 (EXTRACT_SUBREG QPR:$src,
                                     (DSubReg_i32_reg imm:$lane))),
@@ -6341,12 +6414,18 @@ def : Pat<(v4f32 (NEONvduplane (v4f32 QPR:$src), imm:$lane)),
                                    (DSubReg_i32_reg imm:$lane))),
                            (SubReg_i32_lane imm:$lane)))>;
 
+def : Pat<(v4f16 (NEONvdup HPR:$src)),
+          (v4f16 (VDUPLN16d (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
+                             HPR:$src, ssub_0), (i32 0)))>;
 def : Pat<(v2f32 (NEONvdup (f32 SPR:$src))),
           (v2f32 (VDUPLN32d (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
 def : Pat<(v4f32 (NEONvdup (f32 SPR:$src))),
           (v4f32 (VDUPLN32q (INSERT_SUBREG (v2f32 (IMPLICIT_DEF)),
                              SPR:$src, ssub_0), (i32 0)))>;
+def : Pat<(v8f16 (NEONvdup HPR:$src)),
+          (v8f16 (VDUPLN16q (INSERT_SUBREG (v4f16 (IMPLICIT_DEF)),
+                             HPR:$src, ssub_0), (i32 0)))>;
 
 //   VMOVN    : Vector Narrowing Move
 defm VMOVN    : N2VN_HSD<0b11,0b11,0b10,0b00100,0,0, IIC_VMOVN,
@@ -6558,6 +6637,8 @@ def VREV64q8  : VREV64Q<0b00, "vrev64", "8", v16i8>;
 def VREV64q16 : VREV64Q<0b01, "vrev64", "16", v8i16>;
 def VREV64q32 : VREV64Q<0b10, "vrev64", "32", v4i32>;
 def : Pat<(v4f32 (NEONvrev64 (v4f32 QPR:$Vm))), (VREV64q32 QPR:$Vm)>;
+def : Pat<(v8f16 (NEONvrev64 (v8f16 QPR:$Vm))), (VREV64q16 QPR:$Vm)>;
+def : Pat<(v4f16 (NEONvrev64 (v4f16 DPR:$Vm))), (VREV64d16 DPR:$Vm)>;
 
 //   VREV32   : Vector Reverse elements within 32-bit words
 
@@ -6647,13 +6728,14 @@ def VEXTd16 : VEXTd<"vext", "16", v4i16, imm0_3> {
   let Inst{10-9} = index{1-0};
   let Inst{8}    = 0b0;
 }
+def : Pat<(v4f16 (NEONvext (v4f16 DPR:$Vn), (v4f16 DPR:$Vm), (i32 imm:$index))),
+          (VEXTd16 DPR:$Vn, DPR:$Vm, imm:$index)>;
+
 def VEXTd32 : VEXTd<"vext", "32", v2i32, imm0_1> {
   let Inst{10}     = index{0};
   let Inst{9-8}    = 0b00;
 }
-def : Pat<(v2f32 (NEONvext (v2f32 DPR:$Vn),
-                           (v2f32 DPR:$Vm),
-                           (i32 imm:$index))),
+def : Pat<(v2f32 (NEONvext (v2f32 DPR:$Vn), (v2f32 DPR:$Vm), (i32 imm:$index))),
           (VEXTd32 DPR:$Vn, DPR:$Vm, imm:$index)>;
 
 def VEXTq8  : VEXTq<"vext", "8",  v16i8, imm0_15> {
@@ -6663,6 +6745,9 @@ def VEXTq16 : VEXTq<"vext", "16", v8i16, imm0_7> {
   let Inst{11-9} = index{2-0};
   let Inst{8}    = 0b0;
 }
+def : Pat<(v8f16 (NEONvext (v8f16 QPR:$Vn), (v8f16 QPR:$Vm), (i32 imm:$index))),
+          (VEXTq16 QPR:$Vn, QPR:$Vm, imm:$index)>;
+
 def VEXTq32 : VEXTq<"vext", "32", v4i32, imm0_3> {
   let Inst{11-10} = index{1-0};
   let Inst{9-8}    = 0b00;
@@ -6671,9 +6756,7 @@ def VEXTq64 : VEXTq<"vext", "64", v2i64, imm0_1> {
   let Inst{11} = index{0};
   let Inst{10-8}    = 0b000;
 }
-def : Pat<(v4f32 (NEONvext (v4f32 QPR:$Vn),
-                           (v4f32 QPR:$Vm),
-                           (i32 imm:$index))),
+def : Pat<(v4f32 (NEONvext (v4f32 QPR:$Vn), (v4f32 QPR:$Vm), (i32 imm:$index))),
           (VEXTq32 QPR:$Vn, QPR:$Vm, imm:$index)>;
 
 //   VTRN     : Vector Transpose
@@ -7001,19 +7084,19 @@ def : N3VSPat<fadd, VADDfd>;
 def : N3VSPat<fsub, VSUBfd>;
 def : N3VSPat<fmul, VMULfd>;
 def : N3VSMulOpPat<fmul, fadd, VMLAfd>,
-      Requires<[HasNEON, UseNEONForFP, UseFPVMLx, DontUseFusedMAC]>;
+      Requires<[HasNEON, UseNEONForFP, UseFPVMLx]>;
 def : N3VSMulOpPat<fmul, fsub, VMLSfd>,
-      Requires<[HasNEON, UseNEONForFP, UseFPVMLx, DontUseFusedMAC]>;
+      Requires<[HasNEON, UseNEONForFP, UseFPVMLx]>;
 def : N3VSMulOpPat<fmul, fadd, VFMAfd>,
       Requires<[HasVFP4, UseNEONForFP, UseFusedMAC]>;
 def : N3VSMulOpPat<fmul, fsub, VFMSfd>,
       Requires<[HasVFP4, UseNEONForFP, UseFusedMAC]>;
 def : N2VSPat<fabs, VABSfd>;
 def : N2VSPat<fneg, VNEGfd>;
-def : N3VSPatFP16<fmaxnan, VMAXhd>, Requires<[HasFullFP16]>;
-def : N3VSPatFP16<fminnan, VMINhd>, Requires<[HasFullFP16]>;
-def : N3VSPat<fmaxnan, VMAXfd>, Requires<[HasNEON]>;
-def : N3VSPat<fminnan, VMINfd>, Requires<[HasNEON]>;
+def : N3VSPatFP16<fmaximum, VMAXhd>, Requires<[HasFullFP16]>;
+def : N3VSPatFP16<fminimum, VMINhd>, Requires<[HasFullFP16]>;
+def : N3VSPat<fmaximum, VMAXfd>, Requires<[HasNEON]>;
+def : N3VSPat<fminimum, VMINfd>, Requires<[HasNEON]>;
 def : NVCVTFIPat<fp_to_sint, VCVTf2sd>;
 def : NVCVTFIPat<fp_to_uint, VCVTf2ud>;
 def : NVCVTIFPat<sint_to_fp, VCVTs2fd>;

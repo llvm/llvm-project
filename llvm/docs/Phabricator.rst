@@ -94,6 +94,12 @@ them to participate. Many people will see the email notification on cfe-commits
 or llvm-commits, and if the subject line suggests the patch is something they
 should look at, they will.
 
+
+.. _finding-potential-reviewers:
+
+Finding potential reviewers
+---------------------------
+
 Here are a couple of ways to pick the initial reviewer(s):
 
 * Use ``svn blame`` and the commit log to find names of people who have

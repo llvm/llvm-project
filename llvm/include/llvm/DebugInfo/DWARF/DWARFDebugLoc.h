@@ -73,19 +73,21 @@ public:
                                               uint32_t *Offset);
 };
 
-class DWARFDebugLocDWO {
+class DWARFDebugLoclists {
 public:
   struct Entry {
-    uint64_t Start;
-    uint32_t Length;
+    uint8_t Kind;
+    uint64_t Value0;
+    uint64_t Value1;
     SmallVector<char, 4> Loc;
   };
 
   struct LocationList {
     unsigned Offset;
     SmallVector<Entry, 2> Entries;
-    void dump(raw_ostream &OS, bool IsLittleEndian, unsigned AddressSize,
-              const MCRegisterInfo *RegInfo, unsigned Indent) const;
+    void dump(raw_ostream &OS, uint64_t BaseAddr, bool IsLittleEndian,
+              unsigned AddressSize, const MCRegisterInfo *RegInfo,
+              unsigned Indent) const;
   };
 
 private:
@@ -98,15 +100,15 @@ private:
   bool IsLittleEndian;
 
 public:
-  void parse(DataExtractor data);
-  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo,
+  void parse(DataExtractor data, unsigned Version);
+  void dump(raw_ostream &OS, uint64_t BaseAddr, const MCRegisterInfo *RegInfo,
             Optional<uint64_t> Offset) const;
 
   /// Return the location list at the given offset or nullptr.
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
-  static Optional<LocationList> parseOneLocationList(DataExtractor Data,
-                                                     uint32_t *Offset);
+  static Optional<LocationList>
+  parseOneLocationList(DataExtractor Data, unsigned *Offset, unsigned Version);
 };
 
 } // end namespace llvm

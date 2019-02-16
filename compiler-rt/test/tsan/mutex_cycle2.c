@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan %s -o %t
-// RUN:                                 not %run %t 2>&1 | FileCheck %s
+// RUN:                                   not %run %t 2>&1 | FileCheck %s
 // RUN: %env_tsan_opts=detect_deadlocks=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_tsan_opts=detect_deadlocks=0     %run %t 2>&1 | FileCheck %s --check-prefix=DISABLED
 // RUN: echo "deadlock:main" > %t.supp

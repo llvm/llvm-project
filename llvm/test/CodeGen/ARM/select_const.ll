@@ -314,9 +314,8 @@ define i64 @opaque_constant2(i1 %cond, i64 %x) {
 ; CHECK-NEXT:    mov r1, #1
 ; CHECK-NEXT:    tst r0, #1
 ; CHECK-NEXT:    orr r1, r1, #65536
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    moveq r0, #23
-; CHECK-NEXT:    and r0, r0, r1
+; CHECK-NEXT:    moveq r1, #23
+; CHECK-NEXT:    bic r0, r1, #22
 ; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    mov pc, lr
   %sel = select i1 %cond, i64 65537, i64 23

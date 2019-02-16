@@ -29,7 +29,7 @@ StringRef getARMCPUForMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
 StringRef getLLVMArchSuffixForARM(llvm::StringRef CPU, llvm::StringRef Arch,
                                   const llvm::Triple &Triple);
 
-void appendEBLinkFlags(const llvm::opt::ArgList &Args,
+void appendBE8LinkFlag(const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs,
                        const llvm::Triple &Triple);
 enum class ReadTPMode {

@@ -49,6 +49,9 @@ int main()
   int i;
   int num_failed=0;
 
+  if (omp_get_max_threads() < 2)
+    omp_set_num_threads(8);
+
   for(i = 0; i < REPETITIONS; i++) {
     if(!test_omp_taskyield()) {
       num_failed++;

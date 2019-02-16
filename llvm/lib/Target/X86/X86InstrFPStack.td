@@ -592,10 +592,13 @@ def UCOM_Fpr80 : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
 let SchedRW = [WriteFCom] in {
 // CC = ST(0) cmp ST(i)
 let Defs = [EFLAGS, FPSW] in {
+let Predicates = [FPStackf32, HasCMov] in
 def UCOM_FpIr32: FpIf32<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
                   [(set EFLAGS, (X86cmp RFP32:$lhs, RFP32:$rhs))]>;
+let Predicates = [FPStackf64, HasCMov] in
 def UCOM_FpIr64: FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
                   [(set EFLAGS, (X86cmp RFP64:$lhs, RFP64:$rhs))]>;
+let Predicates = [HasCMov] in
 def UCOM_FpIr80: FpI_<(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
                   [(set EFLAGS, (X86cmp RFP80:$lhs, RFP80:$rhs))]>;
 }

@@ -54,52 +54,52 @@
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED1
-; CHECK-UNBALANCED1: unable to parse pass pipeline description
+; CHECK-UNBALANCED1: invalid pipeline 'no-op-module)'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='module(no-op-module))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED2
-; CHECK-UNBALANCED2: unable to parse pass pipeline description
+; CHECK-UNBALANCED2: invalid pipeline 'module(no-op-module))'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='module(no-op-module' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED3
-; CHECK-UNBALANCED3: unable to parse pass pipeline description
+; CHECK-UNBALANCED3: invalid pipeline 'module(no-op-module'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-function)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED4
-; CHECK-UNBALANCED4: unable to parse pass pipeline description
+; CHECK-UNBALANCED4: invalid pipeline 'no-op-function)'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='function(no-op-function))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED5
-; CHECK-UNBALANCED5: unable to parse pass pipeline description
+; CHECK-UNBALANCED5: invalid pipeline 'function(no-op-function))'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='function(function(no-op-function)))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED6
-; CHECK-UNBALANCED6: unable to parse pass pipeline description
+; CHECK-UNBALANCED6: invalid pipeline 'function(function(no-op-function)))'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='function(no-op-function' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED7
-; CHECK-UNBALANCED7: unable to parse pass pipeline description
+; CHECK-UNBALANCED7: invalid pipeline 'function(no-op-function'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='function(function(no-op-function)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED8
-; CHECK-UNBALANCED8: unable to parse pass pipeline description
+; CHECK-UNBALANCED8: invalid pipeline 'function(function(no-op-function)'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-module,)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED9
-; CHECK-UNBALANCED9: unable to parse pass pipeline description
+; CHECK-UNBALANCED9: invalid pipeline 'no-op-module,)'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-function,)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-UNBALANCED10
-; CHECK-UNBALANCED10: unable to parse pass pipeline description
+; CHECK-UNBALANCED10: invalid pipeline 'no-op-function,)'
 
 ; RUN: opt -disable-output -debug-pass-manager \
 ; RUN:     -passes=no-op-cgscc,no-op-cgscc %s 2>&1 \
@@ -176,37 +176,86 @@
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='function(no-op-function)function(no-op-function)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MISSING-COMMA1
-; CHECK-MISSING-COMMA1: unable to parse pass pipeline description
+; CHECK-MISSING-COMMA1: invalid pipeline 'function(no-op-function)function(no-op-function)'
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='function()' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-EMPTY-INNER-PIPELINE
-; CHECK-EMPTY-INNER-PIPELINE: unable to parse pass pipeline description
+; CHECK-EMPTY-INNER-PIPELINE: unknown function pass ''
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-module(no-op-module,whatever)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-MODULE-PASS
-; CHECK-PIPELINE-ON-MODULE-PASS: unable to parse pass pipeline description
+; CHECK-PIPELINE-ON-MODULE-PASS: invalid use of 'no-op-module' pass as module pipeline
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-cgscc(no-op-cgscc,whatever)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-CGSCC-PASS
-; CHECK-PIPELINE-ON-CGSCC-PASS: unable to parse pass pipeline description
+; CHECK-PIPELINE-ON-CGSCC-PASS: invalid use of 'no-op-cgscc' pass as cgscc pipeline
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-function(no-op-function,whatever)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-FUNCTION-PASS
-; CHECK-PIPELINE-ON-FUNCTION-PASS: unable to parse pass pipeline description
+; CHECK-PIPELINE-ON-FUNCTION-PASS: invalid use of 'no-op-function' pass as function pipeline
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-loop(no-op-loop,whatever)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-PIPELINE-ON-LOOP-PASS
-; CHECK-PIPELINE-ON-LOOP-PASS: unable to parse pass pipeline description
+; CHECK-PIPELINE-ON-LOOP-PASS: invalid use of 'no-op-loop' pass as loop pipeline
 
 ; RUN: not opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='no-op-function()' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-EMPTY-PIPELINE-ON-PASS
-; CHECK-EMPTY-PIPELINE-ON-PASS: unable to parse pass pipeline description
+; CHECK-EMPTY-PIPELINE-ON-PASS: invalid use of 'no-op-function' pass as function pipeline
+
+; RUN: not opt -passes='no-op-module,bad' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-MODULE
+; CHECK-UNKNOWN-MODULE: unknown module pass 'bad'
+
+; RUN: not opt -passes='no-op-loop,bad' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-LOOP
+; CHECK-UNKNOWN-LOOP: unknown loop pass 'bad'
+
+; RUN: not opt -passes='no-op-cgscc,bad' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-CGSCC
+; CHECK-UNKNOWN-CGSCC: unknown cgscc pass 'bad'
+
+; RUN: not opt -passes='no-op-function,bad' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
+; RUN: not opt -passes='function(bad,pipeline,text)' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
+; RUN: not opt -passes='module(no-op-module,function(bad,pipeline,text))' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
+; RUN: not opt -passes='no-op-module,function(bad,pipeline,text)' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
+; RUN: not opt -passes='module(cgscc(function(bad,pipeline,text)))' \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-UNKNOWN-FUNCTION
+; CHECK-UNKNOWN-FUNCTION: unknown function pass 'bad'
+
+; RUN: not opt -aa-pipeline=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=AA-PIPELINE-ERR
+; AA-PIPELINE-ERR: unknown alias analysis name 'bad'
+; RUN: opt -passes-ep-peephole=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-PEEPHOLE-ERR
+; PASSES-EP-PEEPHOLE-ERR: Could not parse -passes-ep-peephole pipeline: unknown function pass 'bad'
+; RUN: opt -passes-ep-late-loop-optimizations=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-LATELOOPOPT-ERR
+; PASSES-EP-LATELOOPOPT-ERR: Could not parse -passes-ep-late-loop-optimizations pipeline: unknown loop pass 'bad'
+; RUN: opt -passes-ep-loop-optimizer-end=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-LOOPOPTEND-ERR
+; PASSES-EP-LOOPOPTEND-ERR: Could not parse -passes-ep-loop-optimizer-end pipeline: unknown loop pass 'bad'
+; RUN: opt -passes-ep-scalar-optimizer-late=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-SCALAROPTLATE-ERR
+; PASSES-EP-SCALAROPTLATE-ERR: Could not parse -passes-ep-scalar-optimizer-late pipeline: unknown function pass 'bad'
+; RUN: opt -passes-ep-cgscc-optimizer-late=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-CGSCCOPTLATE-ERR
+; PASSES-EP-CGSCCOPTLATE-ERR: Could not parse -passes-ep-cgscc-optimizer-late pipeline: unknown cgscc pass 'bad'
+; RUN: opt -passes-ep-vectorizer-start=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-VECTORIZERSTART-ERR
+; PASSES-EP-VECTORIZERSTART-ERR: Could not parse -passes-ep-vectorizer-start pipeline: unknown function pass 'bad'
+; RUN: opt -passes-ep-pipeline-start=bad -passes=no-op-function \
+; RUN:       /dev/null -disable-output 2>&1 | FileCheck %s -check-prefix=PASSES-EP-PIPELINESTART-ERR
+; PASSES-EP-PIPELINESTART-ERR: Could not parse -passes-ep-pipeline-start pipeline: unknown pass name 'bad'
 
 define void @f() {
 entry:

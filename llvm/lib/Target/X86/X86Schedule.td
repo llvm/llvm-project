@@ -14,6 +14,9 @@
 // but other register operands don't have to be read until the load is ready.
 // These operands are marked with ReadAfterLd.
 def ReadAfterLd : SchedRead;
+def ReadAfterVecLd : SchedRead;
+def ReadAfterVecXLd : SchedRead;
+def ReadAfterVecYLd : SchedRead;
 
 // Instructions with both a load and a store folded are modeled as a folded
 // load + WriteRMW.
@@ -37,15 +40,19 @@ multiclass X86WriteRes<SchedWrite SchedRW,
 class X86FoldableSchedWrite : SchedWrite {
   // The SchedWrite to use when a load is folded into the instruction.
   SchedWrite Folded;
+  // The SchedRead to tag register operands than don't need to be ready
+  // until the folded load has completed.
+  SchedRead ReadAfterFold;
 }
 
 // Multiclass that produces a linked pair of SchedWrites.
-multiclass X86SchedWritePair {
+multiclass X86SchedWritePair<SchedRead ReadAfter = ReadAfterLd> {
   // Register-Memory operation.
   def Ld : SchedWrite;
   // Register-Register operation.
   def NAME : X86FoldableSchedWrite {
     let Folded = !cast<SchedWrite>(NAME#"Ld");
+    let ReadAfterFold = ReadAfter;
   }
 }
 
@@ -107,19 +114,33 @@ def WriteLoad    : SchedWrite;
 def WriteStore   : SchedWrite;
 def WriteStoreNT : SchedWrite;
 def WriteMove    : SchedWrite;
+def WriteCopy    : WriteSequence<[WriteLoad, WriteStore]>; // mem->mem copy
 
 // Arithmetic.
 defm WriteALU    : X86SchedWritePair; // Simple integer ALU op.
 defm WriteADC    : X86SchedWritePair; // Integer ALU + flags op.
-def  WriteALURMW : WriteSequence<[WriteALULd, WriteStore]>;
-def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteStore]>;
-defm WriteIMul   : X86SchedWritePair; // Integer multiplication.
-defm WriteIMul64 : X86SchedWritePair; // Integer 64-bit multiplication.
-def  WriteIMulH  : SchedWrite;        // Integer multiplication, high part.
+def  WriteALURMW : WriteSequence<[WriteALULd, WriteRMW]>;
+def  WriteADCRMW : WriteSequence<[WriteADCLd, WriteRMW]>;
 def  WriteLEA    : SchedWrite;        // LEA instructions can't fold loads.
+
+// Integer multiplication
+defm WriteIMul8     : X86SchedWritePair; // Integer 8-bit multiplication.
+defm WriteIMul16    : X86SchedWritePair; // Integer 16-bit multiplication.
+defm WriteIMul16Imm : X86SchedWritePair; // Integer 16-bit multiplication by immediate.
+defm WriteIMul16Reg : X86SchedWritePair; // Integer 16-bit multiplication by register.
+defm WriteIMul32    : X86SchedWritePair; // Integer 32-bit multiplication.
+defm WriteIMul32Imm : X86SchedWritePair; // Integer 32-bit multiplication by immediate.
+defm WriteIMul32Reg : X86SchedWritePair; // Integer 32-bit multiplication by register.
+defm WriteIMul64    : X86SchedWritePair; // Integer 64-bit multiplication.
+defm WriteIMul64Imm : X86SchedWritePair; // Integer 64-bit multiplication by immediate.
+defm WriteIMul64Reg : X86SchedWritePair; // Integer 64-bit multiplication by register.
+def  WriteIMulH     : SchedWrite;        // Integer multiplication, high part.
 
 def  WriteBSWAP32 : SchedWrite; // Byte Order (Endianness) 32-bit Swap.
 def  WriteBSWAP64 : SchedWrite; // Byte Order (Endianness) 64-bit Swap.
+defm WriteCMPXCHG : X86SchedWritePair; // Compare and set, compare and swap.
+def  WriteCMPXCHGRMW : SchedWrite;     // Compare and set, compare and swap.
+def  WriteXCHG    : SchedWrite;        // Compare+Exchange - TODO RMW support.
 
 // Integer division.
 defm WriteDiv8   : X86SchedWritePair;
@@ -142,18 +163,32 @@ def  WriteFCMOV : SchedWrite; // X87 conditional move.
 def  WriteSETCC : SchedWrite; // Set register based on condition code.
 def  WriteSETCCStore : SchedWrite;
 def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
-def  WriteBitTest  : SchedWrite; // Bit Test - TODO add memory folding support
+
+def  WriteBitTest      : SchedWrite; // Bit Test
+def  WriteBitTestImmLd : SchedWrite;
+def  WriteBitTestRegLd : SchedWrite;
+
+def  WriteBitTestSet       : SchedWrite; // Bit Test + Set
+def  WriteBitTestSetImmLd  : SchedWrite;
+def  WriteBitTestSetRegLd  : SchedWrite;
+def  WriteBitTestSetImmRMW : WriteSequence<[WriteBitTestSetImmLd, WriteRMW]>;
+def  WriteBitTestSetRegRMW : WriteSequence<[WriteBitTestSetRegLd, WriteRMW]>;
 
 // Integer shifts and rotates.
-defm WriteShift : X86SchedWritePair;
+defm WriteShift    : X86SchedWritePair;
+defm WriteShiftCL  : X86SchedWritePair;
+defm WriteRotate   : X86SchedWritePair;
+defm WriteRotateCL : X86SchedWritePair;
+
 // Double shift instructions.
 def  WriteSHDrri  : SchedWrite;
 def  WriteSHDrrcl : SchedWrite;
 def  WriteSHDmri  : SchedWrite;
 def  WriteSHDmrcl : SchedWrite;
 
-// BMI1 BEXTR, BMI2 BZHI
+// BMI1 BEXTR/BLS, BMI2 BZHI
 defm WriteBEXTR : X86SchedWritePair;
+defm WriteBLS   : X86SchedWritePair;
 defm WriteBZHI  : X86SchedWritePair;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
@@ -185,98 +220,98 @@ def  WriteFMove         : SchedWrite;
 def  WriteFMoveX        : SchedWrite;
 def  WriteFMoveY        : SchedWrite;
 
-defm WriteFAdd    : X86SchedWritePair; // Floating point add/sub.
-defm WriteFAddX   : X86SchedWritePair; // Floating point add/sub (XMM).
-defm WriteFAddY   : X86SchedWritePair; // Floating point add/sub (YMM).
-defm WriteFAddZ   : X86SchedWritePair; // Floating point add/sub (ZMM).
-defm WriteFAdd64  : X86SchedWritePair; // Floating point double add/sub.
-defm WriteFAdd64X : X86SchedWritePair; // Floating point double add/sub (XMM).
-defm WriteFAdd64Y : X86SchedWritePair; // Floating point double add/sub (YMM).
-defm WriteFAdd64Z : X86SchedWritePair; // Floating point double add/sub (ZMM).
-defm WriteFCmp    : X86SchedWritePair; // Floating point compare.
-defm WriteFCmpX   : X86SchedWritePair; // Floating point compare (XMM).
-defm WriteFCmpY   : X86SchedWritePair; // Floating point compare (YMM).
-defm WriteFCmpZ   : X86SchedWritePair; // Floating point compare (ZMM).
-defm WriteFCmp64  : X86SchedWritePair; // Floating point double compare.
-defm WriteFCmp64X : X86SchedWritePair; // Floating point double compare (XMM).
-defm WriteFCmp64Y : X86SchedWritePair; // Floating point double compare (YMM).
-defm WriteFCmp64Z : X86SchedWritePair; // Floating point double compare (ZMM).
-defm WriteFCom    : X86SchedWritePair; // Floating point compare to flags.
-defm WriteFMul    : X86SchedWritePair; // Floating point multiplication.
-defm WriteFMulX   : X86SchedWritePair; // Floating point multiplication (XMM).
-defm WriteFMulY   : X86SchedWritePair; // Floating point multiplication (YMM).
-defm WriteFMulZ   : X86SchedWritePair; // Floating point multiplication (YMM).
-defm WriteFMul64  : X86SchedWritePair; // Floating point double multiplication.
-defm WriteFMul64X : X86SchedWritePair; // Floating point double multiplication (XMM).
-defm WriteFMul64Y : X86SchedWritePair; // Floating point double multiplication (YMM).
-defm WriteFMul64Z : X86SchedWritePair; // Floating point double multiplication (ZMM).
-defm WriteFDiv    : X86SchedWritePair; // Floating point division.
-defm WriteFDivX   : X86SchedWritePair; // Floating point division (XMM).
-defm WriteFDivY   : X86SchedWritePair; // Floating point division (YMM).
-defm WriteFDivZ   : X86SchedWritePair; // Floating point division (ZMM).
-defm WriteFDiv64  : X86SchedWritePair; // Floating point double division.
-defm WriteFDiv64X : X86SchedWritePair; // Floating point double division (XMM).
-defm WriteFDiv64Y : X86SchedWritePair; // Floating point double division (YMM).
-defm WriteFDiv64Z : X86SchedWritePair; // Floating point double division (ZMM).
-defm WriteFSqrt  : X86SchedWritePair; // Floating point square root.
-defm WriteFSqrtX : X86SchedWritePair; // Floating point square root (XMM).
-defm WriteFSqrtY : X86SchedWritePair; // Floating point square root (YMM).
-defm WriteFSqrtZ : X86SchedWritePair; // Floating point square root (ZMM).
-defm WriteFSqrt64  : X86SchedWritePair; // Floating point double square root.
-defm WriteFSqrt64X : X86SchedWritePair; // Floating point double square root (XMM).
-defm WriteFSqrt64Y : X86SchedWritePair; // Floating point double square root (YMM).
-defm WriteFSqrt64Z : X86SchedWritePair; // Floating point double square root (ZMM).
-defm WriteFSqrt80  : X86SchedWritePair; // Floating point long double square root.
-defm WriteFRcp   : X86SchedWritePair; // Floating point reciprocal estimate.
-defm WriteFRcpX  : X86SchedWritePair; // Floating point reciprocal estimate (XMM).
-defm WriteFRcpY  : X86SchedWritePair; // Floating point reciprocal estimate (YMM).
-defm WriteFRcpZ  : X86SchedWritePair; // Floating point reciprocal estimate (ZMM).
-defm WriteFRsqrt : X86SchedWritePair; // Floating point reciprocal square root estimate.
-defm WriteFRsqrtX: X86SchedWritePair; // Floating point reciprocal square root estimate (XMM).
-defm WriteFRsqrtY: X86SchedWritePair; // Floating point reciprocal square root estimate (YMM).
-defm WriteFRsqrtZ: X86SchedWritePair; // Floating point reciprocal square root estimate (ZMM).
-defm WriteFMA    : X86SchedWritePair; // Fused Multiply Add.
-defm WriteFMAX   : X86SchedWritePair; // Fused Multiply Add (XMM).
-defm WriteFMAY   : X86SchedWritePair; // Fused Multiply Add (YMM).
-defm WriteFMAZ   : X86SchedWritePair; // Fused Multiply Add (ZMM).
-defm WriteDPPD   : X86SchedWritePair; // Floating point double dot product.
-defm WriteDPPS   : X86SchedWritePair; // Floating point single dot product.
-defm WriteDPPSY  : X86SchedWritePair; // Floating point single dot product (YMM).
-defm WriteDPPSZ  : X86SchedWritePair; // Floating point single dot product (ZMM).
-defm WriteFSign  : X86SchedWritePair; // Floating point fabs/fchs.
-defm WriteFRnd   : X86SchedWritePair; // Floating point rounding.
-defm WriteFRndY  : X86SchedWritePair; // Floating point rounding (YMM).
-defm WriteFRndZ  : X86SchedWritePair; // Floating point rounding (ZMM).
-defm WriteFLogic  : X86SchedWritePair; // Floating point and/or/xor logicals.
-defm WriteFLogicY : X86SchedWritePair; // Floating point and/or/xor logicals (YMM).
-defm WriteFLogicZ : X86SchedWritePair; // Floating point and/or/xor logicals (ZMM).
-defm WriteFTest   : X86SchedWritePair; // Floating point TEST instructions.
-defm WriteFTestY  : X86SchedWritePair; // Floating point TEST instructions (YMM).
-defm WriteFTestZ  : X86SchedWritePair; // Floating point TEST instructions (ZMM).
-defm WriteFShuffle  : X86SchedWritePair; // Floating point vector shuffles.
-defm WriteFShuffleY : X86SchedWritePair; // Floating point vector shuffles (YMM).
-defm WriteFShuffleZ : X86SchedWritePair; // Floating point vector shuffles (ZMM).
-defm WriteFVarShuffle  : X86SchedWritePair; // Floating point vector variable shuffles.
-defm WriteFVarShuffleY : X86SchedWritePair; // Floating point vector variable shuffles (YMM).
-defm WriteFVarShuffleZ : X86SchedWritePair; // Floating point vector variable shuffles (ZMM).
-defm WriteFBlend  : X86SchedWritePair; // Floating point vector blends.
-defm WriteFBlendY : X86SchedWritePair; // Floating point vector blends (YMM).
-defm WriteFBlendZ : X86SchedWritePair; // Floating point vector blends (ZMM).
-defm WriteFVarBlend  : X86SchedWritePair; // Fp vector variable blends.
-defm WriteFVarBlendY : X86SchedWritePair; // Fp vector variable blends (YMM).
-defm WriteFVarBlendZ : X86SchedWritePair; // Fp vector variable blends (YMZMM).
+defm WriteFAdd    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point add/sub.
+defm WriteFAddX   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point add/sub (XMM).
+defm WriteFAddY   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point add/sub (YMM).
+defm WriteFAddZ   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point add/sub (ZMM).
+defm WriteFAdd64  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point double add/sub.
+defm WriteFAdd64X : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double add/sub (XMM).
+defm WriteFAdd64Y : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double add/sub (YMM).
+defm WriteFAdd64Z : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double add/sub (ZMM).
+defm WriteFCmp    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point compare.
+defm WriteFCmpX   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point compare (XMM).
+defm WriteFCmpY   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point compare (YMM).
+defm WriteFCmpZ   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point compare (ZMM).
+defm WriteFCmp64  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point double compare.
+defm WriteFCmp64X : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double compare (XMM).
+defm WriteFCmp64Y : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double compare (YMM).
+defm WriteFCmp64Z : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double compare (ZMM).
+defm WriteFCom    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point compare to flags.
+defm WriteFMul    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point multiplication.
+defm WriteFMulX   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point multiplication (XMM).
+defm WriteFMulY   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point multiplication (YMM).
+defm WriteFMulZ   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point multiplication (YMM).
+defm WriteFMul64  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point double multiplication.
+defm WriteFMul64X : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double multiplication (XMM).
+defm WriteFMul64Y : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double multiplication (YMM).
+defm WriteFMul64Z : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double multiplication (ZMM).
+defm WriteFDiv    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point division.
+defm WriteFDivX   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point division (XMM).
+defm WriteFDivY   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point division (YMM).
+defm WriteFDivZ   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point division (ZMM).
+defm WriteFDiv64  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point double division.
+defm WriteFDiv64X : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double division (XMM).
+defm WriteFDiv64Y : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double division (YMM).
+defm WriteFDiv64Z : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double division (ZMM).
+defm WriteFSqrt  : X86SchedWritePair<ReadAfterVecLd>;   // Floating point square root.
+defm WriteFSqrtX : X86SchedWritePair<ReadAfterVecXLd>;  // Floating point square root (XMM).
+defm WriteFSqrtY : X86SchedWritePair<ReadAfterVecYLd>;  // Floating point square root (YMM).
+defm WriteFSqrtZ : X86SchedWritePair<ReadAfterVecYLd>;  // Floating point square root (ZMM).
+defm WriteFSqrt64  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point double square root.
+defm WriteFSqrt64X : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double square root (XMM).
+defm WriteFSqrt64Y : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double square root (YMM).
+defm WriteFSqrt64Z : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double square root (ZMM).
+defm WriteFSqrt80  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point long double square root.
+defm WriteFRcp   : X86SchedWritePair<ReadAfterVecLd>;  // Floating point reciprocal estimate.
+defm WriteFRcpX  : X86SchedWritePair<ReadAfterVecXLd>; // Floating point reciprocal estimate (XMM).
+defm WriteFRcpY  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point reciprocal estimate (YMM).
+defm WriteFRcpZ  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point reciprocal estimate (ZMM).
+defm WriteFRsqrt : X86SchedWritePair<ReadAfterVecLd>;  // Floating point reciprocal square root estimate.
+defm WriteFRsqrtX: X86SchedWritePair<ReadAfterVecXLd>; // Floating point reciprocal square root estimate (XMM).
+defm WriteFRsqrtY: X86SchedWritePair<ReadAfterVecYLd>; // Floating point reciprocal square root estimate (YMM).
+defm WriteFRsqrtZ: X86SchedWritePair<ReadAfterVecYLd>; // Floating point reciprocal square root estimate (ZMM).
+defm WriteFMA    : X86SchedWritePair<ReadAfterVecLd>;  // Fused Multiply Add.
+defm WriteFMAX   : X86SchedWritePair<ReadAfterVecXLd>; // Fused Multiply Add (XMM).
+defm WriteFMAY   : X86SchedWritePair<ReadAfterVecYLd>; // Fused Multiply Add (YMM).
+defm WriteFMAZ   : X86SchedWritePair<ReadAfterVecYLd>; // Fused Multiply Add (ZMM).
+defm WriteDPPD   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double dot product.
+defm WriteDPPS   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point single dot product.
+defm WriteDPPSY  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point single dot product (YMM).
+defm WriteDPPSZ  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point single dot product (ZMM).
+defm WriteFSign  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point fabs/fchs.
+defm WriteFRnd   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point rounding.
+defm WriteFRndY  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point rounding (YMM).
+defm WriteFRndZ  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point rounding (ZMM).
+defm WriteFLogic  : X86SchedWritePair<ReadAfterVecXLd>; // Floating point and/or/xor logicals.
+defm WriteFLogicY : X86SchedWritePair<ReadAfterVecYLd>; // Floating point and/or/xor logicals (YMM).
+defm WriteFLogicZ : X86SchedWritePair<ReadAfterVecYLd>; // Floating point and/or/xor logicals (ZMM).
+defm WriteFTest   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point TEST instructions.
+defm WriteFTestY  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point TEST instructions (YMM).
+defm WriteFTestZ  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point TEST instructions (ZMM).
+defm WriteFShuffle  : X86SchedWritePair<ReadAfterVecXLd>; // Floating point vector shuffles.
+defm WriteFShuffleY : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector shuffles (YMM).
+defm WriteFShuffleZ : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector shuffles (ZMM).
+defm WriteFVarShuffle  : X86SchedWritePair<ReadAfterVecXLd>; // Floating point vector variable shuffles.
+defm WriteFVarShuffleY : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector variable shuffles (YMM).
+defm WriteFVarShuffleZ : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector variable shuffles (ZMM).
+defm WriteFBlend  : X86SchedWritePair<ReadAfterVecXLd>; // Floating point vector blends.
+defm WriteFBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector blends (YMM).
+defm WriteFBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector blends (ZMM).
+defm WriteFVarBlend  : X86SchedWritePair<ReadAfterVecXLd>; // Fp vector variable blends.
+defm WriteFVarBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Fp vector variable blends (YMM).
+defm WriteFVarBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Fp vector variable blends (YMZMM).
 
 // FMA Scheduling helper class.
 class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
 
 // Horizontal Add/Sub (float and integer)
-defm WriteFHAdd  : X86SchedWritePair;
-defm WriteFHAddY : X86SchedWritePair;
-defm WriteFHAddZ : X86SchedWritePair;
-defm WritePHAdd  : X86SchedWritePair;
-defm WritePHAddX : X86SchedWritePair;
-defm WritePHAddY : X86SchedWritePair;
-defm WritePHAddZ : X86SchedWritePair;
+defm WriteFHAdd  : X86SchedWritePair<ReadAfterVecXLd>;
+defm WriteFHAddY : X86SchedWritePair<ReadAfterVecYLd>;
+defm WriteFHAddZ : X86SchedWritePair<ReadAfterVecYLd>;
+defm WritePHAdd  : X86SchedWritePair<ReadAfterVecLd>;
+defm WritePHAddX : X86SchedWritePair<ReadAfterVecXLd>;
+defm WritePHAddY : X86SchedWritePair<ReadAfterVecYLd>;
+defm WritePHAddZ : X86SchedWritePair<ReadAfterVecYLd>;
 
 // Vector integer operations.
 def  WriteVecLoad         : SchedWrite;
@@ -299,54 +334,54 @@ def  WriteVecMoveY        : SchedWrite;
 def  WriteVecMoveToGpr    : SchedWrite;
 def  WriteVecMoveFromGpr  : SchedWrite;
 
-defm WriteVecALU    : X86SchedWritePair; // Vector integer ALU op, no logicals.
-defm WriteVecALUX   : X86SchedWritePair; // Vector integer ALU op, no logicals (XMM).
-defm WriteVecALUY   : X86SchedWritePair; // Vector integer ALU op, no logicals (YMM).
-defm WriteVecALUZ   : X86SchedWritePair; // Vector integer ALU op, no logicals (ZMM).
-defm WriteVecLogic  : X86SchedWritePair; // Vector integer and/or/xor logicals.
-defm WriteVecLogicX : X86SchedWritePair; // Vector integer and/or/xor logicals (XMM).
-defm WriteVecLogicY : X86SchedWritePair; // Vector integer and/or/xor logicals (YMM).
-defm WriteVecLogicZ : X86SchedWritePair; // Vector integer and/or/xor logicals (ZMM).
-defm WriteVecTest  : X86SchedWritePair; // Vector integer TEST instructions.
-defm WriteVecTestY : X86SchedWritePair; // Vector integer TEST instructions (YMM).
-defm WriteVecTestZ : X86SchedWritePair; // Vector integer TEST instructions (ZMM).
-defm WriteVecShift  : X86SchedWritePair; // Vector integer shifts (default).
-defm WriteVecShiftX : X86SchedWritePair; // Vector integer shifts (XMM).
-defm WriteVecShiftY : X86SchedWritePair; // Vector integer shifts (YMM).
-defm WriteVecShiftZ : X86SchedWritePair; // Vector integer shifts (ZMM).
-defm WriteVecShiftImm : X86SchedWritePair; // Vector integer immediate shifts (default).
-defm WriteVecShiftImmX: X86SchedWritePair; // Vector integer immediate shifts (XMM).
-defm WriteVecShiftImmY: X86SchedWritePair; // Vector integer immediate shifts (YMM).
-defm WriteVecShiftImmZ: X86SchedWritePair; // Vector integer immediate shifts (ZMM).
-defm WriteVecIMul  : X86SchedWritePair; // Vector integer multiply (default).
-defm WriteVecIMulX : X86SchedWritePair; // Vector integer multiply (XMM).
-defm WriteVecIMulY : X86SchedWritePair; // Vector integer multiply (YMM).
-defm WriteVecIMulZ : X86SchedWritePair; // Vector integer multiply (ZMM).
-defm WritePMULLD   : X86SchedWritePair; // Vector PMULLD.
-defm WritePMULLDY   : X86SchedWritePair; // Vector PMULLD (YMM).
-defm WritePMULLDZ   : X86SchedWritePair; // Vector PMULLD (ZMM).
-defm WriteShuffle  : X86SchedWritePair; // Vector shuffles.
-defm WriteShuffleX : X86SchedWritePair; // Vector shuffles (XMM).
-defm WriteShuffleY : X86SchedWritePair; // Vector shuffles (YMM).
-defm WriteShuffleZ : X86SchedWritePair; // Vector shuffles (ZMM).
-defm WriteVarShuffle  : X86SchedWritePair; // Vector variable shuffles.
-defm WriteVarShuffleX : X86SchedWritePair; // Vector variable shuffles (XMM).
-defm WriteVarShuffleY : X86SchedWritePair; // Vector variable shuffles (YMM).
-defm WriteVarShuffleZ : X86SchedWritePair; // Vector variable shuffles (ZMM).
-defm WriteBlend  : X86SchedWritePair; // Vector blends.
-defm WriteBlendY : X86SchedWritePair; // Vector blends (YMM).
-defm WriteBlendZ : X86SchedWritePair; // Vector blends (ZMM).
-defm WriteVarBlend  : X86SchedWritePair; // Vector variable blends.
-defm WriteVarBlendY : X86SchedWritePair; // Vector variable blends (YMM).
-defm WriteVarBlendZ : X86SchedWritePair; // Vector variable blends (ZMM).
-defm WritePSADBW  : X86SchedWritePair; // Vector PSADBW.
-defm WritePSADBWX : X86SchedWritePair; // Vector PSADBW (XMM).
-defm WritePSADBWY : X86SchedWritePair; // Vector PSADBW (YMM).
-defm WritePSADBWZ : X86SchedWritePair; // Vector PSADBW (ZMM).
-defm WriteMPSAD  : X86SchedWritePair; // Vector MPSAD.
-defm WriteMPSADY : X86SchedWritePair; // Vector MPSAD (YMM).
-defm WriteMPSADZ : X86SchedWritePair; // Vector MPSAD (ZMM).
-defm WritePHMINPOS : X86SchedWritePair; // Vector PHMINPOS.
+defm WriteVecALU    : X86SchedWritePair<ReadAfterVecLd>;  // Vector integer ALU op, no logicals.
+defm WriteVecALUX   : X86SchedWritePair<ReadAfterVecXLd>; // Vector integer ALU op, no logicals (XMM).
+defm WriteVecALUY   : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer ALU op, no logicals (YMM).
+defm WriteVecALUZ   : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer ALU op, no logicals (ZMM).
+defm WriteVecLogic  : X86SchedWritePair<ReadAfterVecLd>;  // Vector integer and/or/xor logicals.
+defm WriteVecLogicX : X86SchedWritePair<ReadAfterVecXLd>; // Vector integer and/or/xor logicals (XMM).
+defm WriteVecLogicY : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer and/or/xor logicals (YMM).
+defm WriteVecLogicZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer and/or/xor logicals (ZMM).
+defm WriteVecTest  : X86SchedWritePair<ReadAfterVecXLd>;  // Vector integer TEST instructions.
+defm WriteVecTestY : X86SchedWritePair<ReadAfterVecYLd>;  // Vector integer TEST instructions (YMM).
+defm WriteVecTestZ : X86SchedWritePair<ReadAfterVecYLd>;  // Vector integer TEST instructions (ZMM).
+defm WriteVecShift  : X86SchedWritePair<ReadAfterVecLd>;  // Vector integer shifts (default).
+defm WriteVecShiftX : X86SchedWritePair<ReadAfterVecXLd>; // Vector integer shifts (XMM).
+defm WriteVecShiftY : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer shifts (YMM).
+defm WriteVecShiftZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer shifts (ZMM).
+defm WriteVecShiftImm : X86SchedWritePair<ReadAfterVecLd>;  // Vector integer immediate shifts (default).
+defm WriteVecShiftImmX: X86SchedWritePair<ReadAfterVecXLd>; // Vector integer immediate shifts (XMM).
+defm WriteVecShiftImmY: X86SchedWritePair<ReadAfterVecYLd>; // Vector integer immediate shifts (YMM).
+defm WriteVecShiftImmZ: X86SchedWritePair<ReadAfterVecYLd>; // Vector integer immediate shifts (ZMM).
+defm WriteVecIMul  : X86SchedWritePair<ReadAfterVecLd>;  // Vector integer multiply (default).
+defm WriteVecIMulX : X86SchedWritePair<ReadAfterVecXLd>; // Vector integer multiply (XMM).
+defm WriteVecIMulY : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer multiply (YMM).
+defm WriteVecIMulZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector integer multiply (ZMM).
+defm WritePMULLD   : X86SchedWritePair<ReadAfterVecXLd>; // Vector PMULLD.
+defm WritePMULLDY  : X86SchedWritePair<ReadAfterVecYLd>; // Vector PMULLD (YMM).
+defm WritePMULLDZ  : X86SchedWritePair<ReadAfterVecYLd>; // Vector PMULLD (ZMM).
+defm WriteShuffle  : X86SchedWritePair<ReadAfterVecLd>;  // Vector shuffles.
+defm WriteShuffleX : X86SchedWritePair<ReadAfterVecXLd>; // Vector shuffles (XMM).
+defm WriteShuffleY : X86SchedWritePair<ReadAfterVecYLd>; // Vector shuffles (YMM).
+defm WriteShuffleZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector shuffles (ZMM).
+defm WriteVarShuffle  : X86SchedWritePair<ReadAfterVecLd>;  // Vector variable shuffles.
+defm WriteVarShuffleX : X86SchedWritePair<ReadAfterVecXLd>; // Vector variable shuffles (XMM).
+defm WriteVarShuffleY : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable shuffles (YMM).
+defm WriteVarShuffleZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable shuffles (ZMM).
+defm WriteBlend  : X86SchedWritePair<ReadAfterVecXLd>; // Vector blends.
+defm WriteBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Vector blends (YMM).
+defm WriteBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector blends (ZMM).
+defm WriteVarBlend  : X86SchedWritePair<ReadAfterVecXLd>; // Vector variable blends.
+defm WriteVarBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable blends (YMM).
+defm WriteVarBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable blends (ZMM).
+defm WritePSADBW  : X86SchedWritePair<ReadAfterVecLd>;  // Vector PSADBW.
+defm WritePSADBWX : X86SchedWritePair<ReadAfterVecXLd>; // Vector PSADBW (XMM).
+defm WritePSADBWY : X86SchedWritePair<ReadAfterVecYLd>; // Vector PSADBW (YMM).
+defm WritePSADBWZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector PSADBW (ZMM).
+defm WriteMPSAD  : X86SchedWritePair<ReadAfterVecXLd>; // Vector MPSAD.
+defm WriteMPSADY : X86SchedWritePair<ReadAfterVecYLd>; // Vector MPSAD (YMM).
+defm WriteMPSADZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector MPSAD (ZMM).
+defm WritePHMINPOS : X86SchedWritePair<ReadAfterVecXLd>;  // Vector PHMINPOS.
 
 // Vector insert/extract operations.
 defm WriteVecInsert : X86SchedWritePair; // Insert gpr to vector element.
@@ -360,39 +395,39 @@ def WriteVecMOVMSKY : SchedWrite;
 def WriteMMXMOVMSK  : SchedWrite;
 
 // Conversion between integer and float.
-defm WriteCvtSD2I  : X86SchedWritePair; // Double -> Integer.
-defm WriteCvtPD2I  : X86SchedWritePair; // Double -> Integer (XMM).
-defm WriteCvtPD2IY : X86SchedWritePair; // Double -> Integer (YMM).
-defm WriteCvtPD2IZ : X86SchedWritePair; // Double -> Integer (ZMM).
+defm WriteCvtSD2I  : X86SchedWritePair<ReadAfterVecLd>;  // Double -> Integer.
+defm WriteCvtPD2I  : X86SchedWritePair<ReadAfterVecXLd>; // Double -> Integer (XMM).
+defm WriteCvtPD2IY : X86SchedWritePair<ReadAfterVecYLd>; // Double -> Integer (YMM).
+defm WriteCvtPD2IZ : X86SchedWritePair<ReadAfterVecYLd>; // Double -> Integer (ZMM).
 
-defm WriteCvtSS2I  : X86SchedWritePair; // Float -> Integer.
-defm WriteCvtPS2I  : X86SchedWritePair; // Float -> Integer (XMM).
-defm WriteCvtPS2IY : X86SchedWritePair; // Float -> Integer (YMM).
-defm WriteCvtPS2IZ : X86SchedWritePair; // Float -> Integer (ZMM).
+defm WriteCvtSS2I  : X86SchedWritePair<ReadAfterVecLd>;  // Float -> Integer.
+defm WriteCvtPS2I  : X86SchedWritePair<ReadAfterVecXLd>; // Float -> Integer (XMM).
+defm WriteCvtPS2IY : X86SchedWritePair<ReadAfterVecYLd>; // Float -> Integer (YMM).
+defm WriteCvtPS2IZ : X86SchedWritePair<ReadAfterVecYLd>; // Float -> Integer (ZMM).
 
-defm WriteCvtI2SD  : X86SchedWritePair; // Integer -> Double.
-defm WriteCvtI2PD  : X86SchedWritePair; // Integer -> Double (XMM).
-defm WriteCvtI2PDY : X86SchedWritePair; // Integer -> Double (YMM).
-defm WriteCvtI2PDZ : X86SchedWritePair; // Integer -> Double (ZMM).
+defm WriteCvtI2SD  : X86SchedWritePair<ReadAfterVecLd>;  // Integer -> Double.
+defm WriteCvtI2PD  : X86SchedWritePair<ReadAfterVecXLd>; // Integer -> Double (XMM).
+defm WriteCvtI2PDY : X86SchedWritePair<ReadAfterVecYLd>; // Integer -> Double (YMM).
+defm WriteCvtI2PDZ : X86SchedWritePair<ReadAfterVecYLd>; // Integer -> Double (ZMM).
 
-defm WriteCvtI2SS  : X86SchedWritePair; // Integer -> Float.
-defm WriteCvtI2PS  : X86SchedWritePair; // Integer -> Float (XMM).
-defm WriteCvtI2PSY : X86SchedWritePair; // Integer -> Float (YMM).
-defm WriteCvtI2PSZ : X86SchedWritePair; // Integer -> Float (ZMM).
+defm WriteCvtI2SS  : X86SchedWritePair<ReadAfterVecLd>;  // Integer -> Float.
+defm WriteCvtI2PS  : X86SchedWritePair<ReadAfterVecXLd>; // Integer -> Float (XMM).
+defm WriteCvtI2PSY : X86SchedWritePair<ReadAfterVecYLd>; // Integer -> Float (YMM).
+defm WriteCvtI2PSZ : X86SchedWritePair<ReadAfterVecYLd>; // Integer -> Float (ZMM).
 
-defm WriteCvtSS2SD  : X86SchedWritePair; // Float -> Double size conversion.
-defm WriteCvtPS2PD  : X86SchedWritePair; // Float -> Double size conversion (XMM).
-defm WriteCvtPS2PDY : X86SchedWritePair; // Float -> Double size conversion (YMM).
-defm WriteCvtPS2PDZ : X86SchedWritePair; // Float -> Double size conversion (ZMM).
+defm WriteCvtSS2SD  : X86SchedWritePair<ReadAfterVecLd>;  // Float -> Double size conversion.
+defm WriteCvtPS2PD  : X86SchedWritePair<ReadAfterVecXLd>; // Float -> Double size conversion (XMM).
+defm WriteCvtPS2PDY : X86SchedWritePair<ReadAfterVecYLd>; // Float -> Double size conversion (YMM).
+defm WriteCvtPS2PDZ : X86SchedWritePair<ReadAfterVecYLd>; // Float -> Double size conversion (ZMM).
 
-defm WriteCvtSD2SS  : X86SchedWritePair; // Double -> Float size conversion.
-defm WriteCvtPD2PS  : X86SchedWritePair; // Double -> Float size conversion (XMM).
-defm WriteCvtPD2PSY : X86SchedWritePair; // Double -> Float size conversion (YMM).
-defm WriteCvtPD2PSZ : X86SchedWritePair; // Double -> Float size conversion (ZMM).
+defm WriteCvtSD2SS  : X86SchedWritePair<ReadAfterVecLd>;  // Double -> Float size conversion.
+defm WriteCvtPD2PS  : X86SchedWritePair<ReadAfterVecXLd>; // Double -> Float size conversion (XMM).
+defm WriteCvtPD2PSY : X86SchedWritePair<ReadAfterVecYLd>; // Double -> Float size conversion (YMM).
+defm WriteCvtPD2PSZ : X86SchedWritePair<ReadAfterVecYLd>; // Double -> Float size conversion (ZMM).
 
-defm WriteCvtPH2PS    : X86SchedWritePair; // Half -> Float size conversion.
-defm WriteCvtPH2PSY   : X86SchedWritePair; // Half -> Float size conversion (YMM).
-defm WriteCvtPH2PSZ   : X86SchedWritePair; // Half -> Float size conversion (ZMM).
+defm WriteCvtPH2PS  : X86SchedWritePair<ReadAfterVecXLd>; // Half -> Float size conversion.
+defm WriteCvtPH2PSY : X86SchedWritePair<ReadAfterVecYLd>; // Half -> Float size conversion (YMM).
+defm WriteCvtPH2PSZ : X86SchedWritePair<ReadAfterVecYLd>; // Half -> Float size conversion (ZMM).
 
 def  WriteCvtPS2PH    : SchedWrite; // // Float -> Half size conversion.
 def  WriteCvtPS2PHY   : SchedWrite; // // Float -> Half size conversion (YMM).
@@ -402,25 +437,25 @@ def  WriteCvtPS2PHYSt : SchedWrite; // // Float -> Half + store size conversion 
 def  WriteCvtPS2PHZSt : SchedWrite; // // Float -> Half + store size conversion (ZMM).
 
 // CRC32 instruction.
-defm WriteCRC32 : X86SchedWritePair;
+defm WriteCRC32 : X86SchedWritePair<ReadAfterLd>;
 
 // Strings instructions.
 // Packed Compare Implicit Length Strings, Return Mask
-defm WritePCmpIStrM : X86SchedWritePair;
+defm WritePCmpIStrM : X86SchedWritePair<ReadAfterVecXLd>;
 // Packed Compare Explicit Length Strings, Return Mask
-defm WritePCmpEStrM : X86SchedWritePair;
+defm WritePCmpEStrM : X86SchedWritePair<ReadAfterVecXLd>;
 // Packed Compare Implicit Length Strings, Return Index
-defm WritePCmpIStrI : X86SchedWritePair;
+defm WritePCmpIStrI : X86SchedWritePair<ReadAfterVecXLd>;
 // Packed Compare Explicit Length Strings, Return Index
-defm WritePCmpEStrI : X86SchedWritePair;
+defm WritePCmpEStrI : X86SchedWritePair<ReadAfterVecXLd>;
 
 // AES instructions.
-defm WriteAESDecEnc : X86SchedWritePair; // Decryption, encryption.
-defm WriteAESIMC : X86SchedWritePair; // InvMixColumn.
-defm WriteAESKeyGen : X86SchedWritePair; // Key Generation.
+defm WriteAESDecEnc : X86SchedWritePair<ReadAfterVecXLd>; // Decryption, encryption.
+defm WriteAESIMC : X86SchedWritePair<ReadAfterVecXLd>; // InvMixColumn.
+defm WriteAESKeyGen : X86SchedWritePair<ReadAfterVecXLd>; // Key Generation.
 
 // Carry-less multiplication instructions.
-defm WriteCLMul : X86SchedWritePair;
+defm WriteCLMul : X86SchedWritePair<ReadAfterVecXLd>;
 
 // EMMS/FEMMS
 def WriteEMMS : SchedWrite;
@@ -433,13 +468,13 @@ def WriteSTMXCSR : SchedWrite;
 def WriteSystem : SchedWrite;
 
 // AVX2.
-defm WriteFShuffle256 : X86SchedWritePair; // Fp 256-bit width vector shuffles.
-defm WriteFVarShuffle256 : X86SchedWritePair; // Fp 256-bit width variable shuffles.
-defm WriteShuffle256 : X86SchedWritePair; // 256-bit width vector shuffles.
-defm WriteVarShuffle256 : X86SchedWritePair; // 256-bit width vector variable shuffles.
-defm WriteVarVecShift  : X86SchedWritePair; // Variable vector shifts.
-defm WriteVarVecShiftY : X86SchedWritePair; // Variable vector shifts (YMM).
-defm WriteVarVecShiftZ : X86SchedWritePair; // Variable vector shifts (ZMM).
+defm WriteFShuffle256 : X86SchedWritePair<ReadAfterVecYLd>; // Fp 256-bit width vector shuffles.
+defm WriteFVarShuffle256 : X86SchedWritePair<ReadAfterVecYLd>; // Fp 256-bit width variable shuffles.
+defm WriteShuffle256 : X86SchedWritePair<ReadAfterVecYLd>; // 256-bit width vector shuffles.
+defm WriteVarShuffle256 : X86SchedWritePair<ReadAfterVecYLd>; // 256-bit width vector variable shuffles.
+defm WriteVarVecShift  : X86SchedWritePair<ReadAfterVecXLd>; // Variable vector shifts.
+defm WriteVarVecShiftY : X86SchedWritePair<ReadAfterVecYLd>; // Variable vector shifts (YMM).
+defm WriteVarVecShiftZ : X86SchedWritePair<ReadAfterVecYLd>; // Variable vector shifts (ZMM).
 
 // Old microcoded instructions that nobody use.
 def WriteMicrocoded : SchedWrite;

@@ -392,7 +392,7 @@ bool Sema::DiagnoseUnexpandedParameterPack(Expr *E,
   SmallVector<UnexpandedParameterPack, 2> Unexpanded;
   CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseStmt(E);
   assert(!Unexpanded.empty() && "Unable to find unexpanded parameter packs");
-  return DiagnoseUnexpandedParameterPacks(E->getLocStart(), UPPC, Unexpanded);
+  return DiagnoseUnexpandedParameterPacks(E->getBeginLoc(), UPPC, Unexpanded);
 }
 
 bool Sema::DiagnoseUnexpandedParameterPack(const CXXScopeSpec &SS,
@@ -976,6 +976,7 @@ ExprResult Sema::ActOnSizeofParameterPackExpr(Scope *S,
                    PDiag(diag::note_parameter_pack_here));
       ParameterPack = Corrected.getCorrectionDecl();
     }
+    break;
 
   case LookupResult::FoundOverloaded:
   case LookupResult::FoundUnresolvedValue:
@@ -1125,8 +1126,8 @@ static void CheckFoldOperand(Sema &S, Expr *E) {
       isa<AbstractConditionalOperator>(E)) {
     S.Diag(E->getExprLoc(), diag::err_fold_expression_bad_operand)
         << E->getSourceRange()
-        << FixItHint::CreateInsertion(E->getLocStart(), "(")
-        << FixItHint::CreateInsertion(E->getLocEnd(), ")");
+        << FixItHint::CreateInsertion(E->getBeginLoc(), "(")
+        << FixItHint::CreateInsertion(E->getEndLoc(), ")");
   }
 }
 

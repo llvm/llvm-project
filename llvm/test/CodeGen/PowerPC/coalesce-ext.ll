@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mcpu=g5 -mtriple=powerpc64-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=g5 -mtriple=powerpc64-unknown-linux-gnu -ppc-asm-full-reg-names < %s | FileCheck %s
 ; Check that the peephole optimizer knows about sext and zext instructions.
 ; CHECK: test1sext
 define i32 @test1sext(i64 %A, i64 %B, i32* %P, i64 *%P2) nounwind {

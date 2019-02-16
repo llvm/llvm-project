@@ -1,7 +1,10 @@
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -amdgpu-promote-alloca < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -amdgpu-promote-alloca -disable-promote-alloca-to-lds< %s | FileCheck -check-prefix=NOLDS %s
 
 ; This normally would be fixed by instcombine to be compare to the GEP
 ; indices
+
+; NOLDS-NOT: addrspace(3)
 
 ; CHECK-LABEL: @lds_promoted_alloca_icmp_same_derived_pointer(
 ; CHECK: [[ARRAYGEP:%[0-9]+]] = getelementptr inbounds [256 x [16 x i32]], [256 x [16 x i32]] addrspace(3)* @lds_promoted_alloca_icmp_same_derived_pointer.alloca, i32 0, i32 %{{[0-9]+}}

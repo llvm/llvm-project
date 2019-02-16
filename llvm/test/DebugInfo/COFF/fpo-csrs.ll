@@ -78,11 +78,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =
 ; OBJ-NEXT:   PrologSize: 0x1
 ; OBJ-NEXT:   SavedRegsSize: 0x0
 ; OBJ-NEXT:   Flags [ (0x4)
 ; OBJ-NEXT:     IsFunctionStart (0x4)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -91,10 +95,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $esi $T0 4 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x0
 ; OBJ-NEXT:   SavedRegsSize: 0x4
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $esi $T0 4 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NOT: FrameData
@@ -136,11 +145,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =
 ; OBJ-NEXT:   PrologSize: 0x2
 ; OBJ-NEXT:   SavedRegsSize: 0x0
 ; OBJ-NEXT:   Flags [ (0x4)
 ; OBJ-NEXT:     IsFunctionStart (0x4)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -149,10 +162,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $edi $T0 4 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x1
 ; OBJ-NEXT:   SavedRegsSize: 0x4
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $edi $T0 4 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -161,10 +179,16 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $edi $T0 4 - ^ = $esi $T0 8 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x0
 ; OBJ-NEXT:   SavedRegsSize: 0x8
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $edi $T0 4 - ^ =
+; OBJ-NEXT:     $esi $T0 8 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NOT: FrameData
@@ -207,11 +231,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =
 ; OBJ-NEXT:   PrologSize: 0x3
 ; OBJ-NEXT:   SavedRegsSize: 0x0
 ; OBJ-NEXT:   Flags [ (0x4)
 ; OBJ-NEXT:     IsFunctionStart (0x4)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -220,10 +248,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebx $T0 4 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x2
 ; OBJ-NEXT:   SavedRegsSize: 0x4
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebx $T0 4 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -232,10 +265,16 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebx $T0 4 - ^ = $edi $T0 8 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x1
 ; OBJ-NEXT:   SavedRegsSize: 0x8
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebx $T0 4 - ^ =
+; OBJ-NEXT:     $edi $T0 8 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -244,10 +283,17 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebx $T0 4 - ^ = $edi $T0 8 - ^ = $esi $T0 12 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x0
 ; OBJ-NEXT:   SavedRegsSize: 0xC
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebx $T0 4 - ^ =
+; OBJ-NEXT:     $edi $T0 8 - ^ =
+; OBJ-NEXT:     $esi $T0 12 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NOT: FrameData
@@ -295,11 +341,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =
 ; OBJ-NEXT:   PrologSize: 0x4
 ; OBJ-NEXT:   SavedRegsSize: 0x0
 ; OBJ-NEXT:   Flags [ (0x4)
 ; OBJ-NEXT:     IsFunctionStart (0x4)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -308,10 +358,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x3
 ; OBJ-NEXT:   SavedRegsSize: 0x4
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -320,10 +375,16 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = $ebx $T0 8 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x2
 ; OBJ-NEXT:   SavedRegsSize: 0x8
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
+; OBJ-NEXT:     $ebx $T0 8 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -332,10 +393,17 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = $ebx $T0 8 - ^ = $edi $T0 12 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x1
 ; OBJ-NEXT:   SavedRegsSize: 0xC
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
+; OBJ-NEXT:     $ebx $T0 8 - ^ =
+; OBJ-NEXT:     $edi $T0 12 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -344,10 +412,18 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = $ebx $T0 8 - ^ = $edi $T0 12 - ^ = $esi $T0 16 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x0
 ; OBJ-NEXT:   SavedRegsSize: 0x10
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
+; OBJ-NEXT:     $ebx $T0 8 - ^ =
+; OBJ-NEXT:     $edi $T0 12 - ^ =
+; OBJ-NEXT:     $esi $T0 16 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NOT: FrameData
@@ -395,11 +471,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =
 ; OBJ-NEXT:   PrologSize: 0x7
 ; OBJ-NEXT:   SavedRegsSize: 0x0
 ; OBJ-NEXT:   Flags [ (0x4)
 ; OBJ-NEXT:     IsFunctionStart (0x4)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -408,10 +488,15 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x6
 ; OBJ-NEXT:   SavedRegsSize: 0x4
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -420,10 +505,16 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = $ebx $T0 8 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x5
 ; OBJ-NEXT:   SavedRegsSize: 0x8
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
+; OBJ-NEXT:     $ebx $T0 8 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -432,10 +523,17 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = $ebx $T0 8 - ^ = $edi $T0 12 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x4
 ; OBJ-NEXT:   SavedRegsSize: 0xC
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
+; OBJ-NEXT:     $ebx $T0 8 - ^ =
+; OBJ-NEXT:     $edi $T0 12 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -444,10 +542,18 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = $ebx $T0 8 - ^ = $edi $T0 12 - ^ = $esi $T0 16 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x3
 ; OBJ-NEXT:   SavedRegsSize: 0x10
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
+; OBJ-NEXT:     $ebx $T0 8 - ^ =
+; OBJ-NEXT:     $edi $T0 12 - ^ =
+; OBJ-NEXT:     $esi $T0 16 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
@@ -456,10 +562,18 @@ entry:
 ; OBJ-NEXT:   LocalSize: 0x8
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   FrameFunc: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + = $ebp $T0 4 - ^ = $ebx $T0 8 - ^ = $edi $T0 12 - ^ = $esi $T0 16 - ^ =
 ; OBJ-NEXT:   PrologSize: 0x0
 ; OBJ-NEXT:   SavedRegsSize: 0x10
 ; OBJ-NEXT:   Flags [ (0x0)
+; OBJ-NEXT:   ]
+; OBJ-NEXT:   FrameFunc [
+; OBJ-NEXT:     $T0 .raSearch =
+; OBJ-NEXT:     $eip $T0 ^ =
+; OBJ-NEXT:     $esp $T0 4 + =
+; OBJ-NEXT:     $ebp $T0 4 - ^ =
+; OBJ-NEXT:     $ebx $T0 8 - ^ =
+; OBJ-NEXT:     $edi $T0 12 - ^ =
+; OBJ-NEXT:     $esi $T0 16 - ^ =
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NOT: FrameData

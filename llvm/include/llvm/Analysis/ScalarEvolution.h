@@ -1833,6 +1833,10 @@ private:
   const SCEV *getOrCreateMulExpr(SmallVectorImpl<const SCEV *> &Ops,
                                  SCEV::NoWrapFlags Flags);
 
+  // Get addrec expr already created or create a new one.
+  const SCEV *getOrCreateAddRecExpr(SmallVectorImpl<const SCEV *> &Ops,
+                                    const Loop *L, SCEV::NoWrapFlags Flags);
+
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;
 

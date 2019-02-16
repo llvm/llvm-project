@@ -39,7 +39,8 @@ USEVAR(GlobalRedecl2)
 
 // NB: MSVC issues a warning and makes GlobalRedecl3 dllexport. We follow GCC
 // and drop the dllimport with a warning.
-// CHECK: @GlobalRedecl3 = external dso_local global i32
+// MS: @GlobalRedecl3 = external dso_local global i32
+// GNU: @GlobalRedecl3 = external global i32
 __declspec(dllimport) extern int GlobalRedecl3;
                       extern int GlobalRedecl3; // dllimport ignored
 USEVAR(GlobalRedecl3)

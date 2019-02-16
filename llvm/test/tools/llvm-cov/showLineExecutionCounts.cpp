@@ -35,10 +35,6 @@ int main() {                              // TEXT: [[@LINE]]|   161|int main(
 // RUN: FileCheck -check-prefixes=TEXT,WHOLE-FILE -input-file %t.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
 // RUN: FileCheck -check-prefixes=TEXT,FILTER -input-file %t.filtered.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
 //
-// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -name=main 2>/dev/null > %t.export.json
-// RUN: FileCheck -input-file %t.export.json %S/Inputs/lineExecutionCounts.json
-// RUN: cat %t.export.json | "%python" -c "import json, sys; json.loads(sys.stdin.read())"
-//
 // RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata 2>/dev/null -summary-only > %t.export-summary.json
 // RUN: not grep '"name":"main"' %t.export-summary.json
 //

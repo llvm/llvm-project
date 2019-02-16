@@ -1,7 +1,0 @@
-# This test checks to see that a .symtab_shndx section is added to any binary
-# that needs it, even if the original was removed.
-RUN: '%python' %p/Inputs/ungzip.py %p/Inputs/many-sections.o.gz > %t
-RUN: llvm-objcopy -R .symtab_shndx %t %t2
-RUN: llvm-readobj -sections %t2 | FileCheck %s
-
-CHECK: Name: .symtab_shndx (

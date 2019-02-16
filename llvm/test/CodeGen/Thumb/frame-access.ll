@@ -126,10 +126,9 @@ entry:
 ; CHECK-NEXT:  lsls r4, r4, #4
 ; CHECK-NEXT:  mov  sp, r4
 ; Incoming register varargs stored via FP
-; CHECK:       str r3, [r7, #16]
-; CHECK-NEXT:  str r2, [r7, #12]
-; CHECK-NEXT:  str r1, [r7, #8]
-
+; CHECK: mov	r0, r7
+; CHECK-NEXT: adds r0, #8
+; CHECK-NEXT: stm r0!, {r1, r2, r3}
 ; VLAs present, access via FP
 ; int test_args_vla(int a, int b, int c, int d, int e) {
 ;   int v[a];

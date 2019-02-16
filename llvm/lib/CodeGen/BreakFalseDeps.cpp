@@ -162,7 +162,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
 }
 
 bool BreakFalseDeps::shouldBreakDependence(MachineInstr *MI, unsigned OpIdx,
-  unsigned Pref) {
+                                           unsigned Pref) {
   unsigned reg = MI->getOperand(OpIdx).getReg();
   unsigned Clearance = RDA->getClearance(MI, reg);
   LLVM_DEBUG(dbgs() << "Clearance: " << Clearance << ", want " << Pref);

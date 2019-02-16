@@ -69,16 +69,16 @@ public:
   /// Check if the instruction or the bundle of instructions has
   /// load from stack slots. Return the frameindex and machine memory operand
   /// if true.
-  bool hasLoadFromStackSlot(const MachineInstr &MI,
-                           const MachineMemOperand *&MMO,
-                           int &FrameIndex) const override;
+  bool hasLoadFromStackSlot(
+      const MachineInstr &MI,
+      SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
 
   /// Check if the instruction or the bundle of instructions has
   /// store to stack slots. Return the frameindex and machine memory operand
   /// if true.
-  bool hasStoreToStackSlot(const MachineInstr &MI,
-                           const MachineMemOperand *&MMO,
-                           int &FrameIndex) const override;
+  bool hasStoreToStackSlot(
+      const MachineInstr &MI,
+      SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
 
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't
@@ -216,9 +216,9 @@ public:
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   /// Get the base register and byte offset of a load/store instr.
-  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
-                             int64_t &Offset,
-                             const TargetRegisterInfo *TRI) const override;
+  bool getMemOperandWithOffset(MachineInstr &LdSt, MachineOperand *&BaseOp,
+                               int64_t &Offset,
+                               const TargetRegisterInfo *TRI) const override;
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
@@ -436,8 +436,8 @@ public:
   bool predOpcodeHasNot(ArrayRef<MachineOperand> Cond) const;
 
   unsigned getAddrMode(const MachineInstr &MI) const;
-  unsigned getBaseAndOffset(const MachineInstr &MI, int &Offset,
-                            unsigned &AccessSize) const;
+  MachineOperand *getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
+                                   unsigned &AccessSize) const;
   SmallVector<MachineInstr*,2> getBranchingInstrs(MachineBasicBlock& MBB) const;
   unsigned getCExtOpNum(const MachineInstr &MI) const;
   HexagonII::CompoundGroup
@@ -471,6 +471,8 @@ public:
   unsigned getSize(const MachineInstr &MI) const;
   uint64_t getType(const MachineInstr &MI) const;
   unsigned getUnits(const MachineInstr &MI) const;
+
+  MachineBasicBlock::instr_iterator expandVGatherPseudo(MachineInstr &MI) const;
 
   /// getInstrTimingClassLatency - Compute the instruction latency of a given
   /// instruction using Timing Class information, if available.

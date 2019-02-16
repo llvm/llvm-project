@@ -81,13 +81,12 @@ public:
       return error;
     }
     int get_proc_group() const override {
-      int i;
       int group = -1;
 #if KMP_OS_WINDOWS
       if (__kmp_num_proc_groups == 1) {
         return 1;
       }
-      for (i = 0; i < __kmp_num_proc_groups; i++) {
+      for (int i = 0; i < __kmp_num_proc_groups; i++) {
         // On windows, the long type is always 32 bits
         unsigned long first_32_bits = hwloc_bitmap_to_ith_ulong(mask, i * 2);
         unsigned long second_32_bits =
@@ -333,7 +332,7 @@ class KMPNativeAffinity : public KMPAffinity {
   void deallocate_mask(KMPAffinity::Mask *m) override {
     KMPNativeAffinity::Mask *native_mask =
         static_cast<KMPNativeAffinity::Mask *>(m);
-    delete m;
+    delete native_mask;
   }
   KMPAffinity::Mask *allocate_mask_array(int num) override {
     return new Mask[num];
@@ -376,26 +375,26 @@ class KMPNativeAffinity : public KMPAffinity {
       mask[i / BITS_PER_MASK_T] &= ~((mask_t)1 << (i % BITS_PER_MASK_T));
     }
     void zero() override {
-      for (size_t i = 0; i < __kmp_num_proc_groups; ++i)
+      for (int i = 0; i < __kmp_num_proc_groups; ++i)
         mask[i] = 0;
     }
     void copy(const KMPAffinity::Mask *src) override {
       const Mask *convert = static_cast<const Mask *>(src);
-      for (size_t i = 0; i < __kmp_num_proc_groups; ++i)
+      for (int i = 0; i < __kmp_num_proc_groups; ++i)
         mask[i] = convert->mask[i];
     }
     void bitwise_and(const KMPAffinity::Mask *rhs) override {
       const Mask *convert = static_cast<const Mask *>(rhs);
-      for (size_t i = 0; i < __kmp_num_proc_groups; ++i)
+      for (int i = 0; i < __kmp_num_proc_groups; ++i)
         mask[i] &= convert->mask[i];
     }
     void bitwise_or(const KMPAffinity::Mask *rhs) override {
       const Mask *convert = static_cast<const Mask *>(rhs);
-      for (size_t i = 0; i < __kmp_num_proc_groups; ++i)
+      for (int i = 0; i < __kmp_num_proc_groups; ++i)
         mask[i] |= convert->mask[i];
     }
     void bitwise_not() override {
-      for (size_t i = 0; i < __kmp_num_proc_groups; ++i)
+      for (int i = 0; i < __kmp_num_proc_groups; ++i)
         mask[i] = ~(mask[i]);
     }
     int begin() const override {

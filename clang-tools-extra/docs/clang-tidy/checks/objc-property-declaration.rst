@@ -47,23 +47,8 @@ Options
 
 .. option:: Acronyms
 
-   Semicolon-separated list of custom acronyms that can be used as a prefix
-   or a suffix of property names.
-
-   By default, appends to the list of default acronyms (
-   ``IncludeDefaultAcronyms`` set to ``1``).
-   If ``IncludeDefaultAcronyms`` is set to ``0``, instead replaces the
-   default list of acronyms.
+   This option is deprecated and ignored.
 
 .. option:: IncludeDefaultAcronyms
 
-   Integer value (defaults to ``1``) to control whether the default
-   acronyms are included in the list of acronyms.
-
-   If set to ``1``, the value in ``Acronyms`` is appended to the
-   default list of acronyms:
-
-   ``ACL;API;ARGB;ASCII;BGRA;CMYK;DNS;FPS;FTP;GIF;GPS;HD;HDR;HTML;HTTP;HTTPS;HUD;ID;JPG;JS;LAN;LZW;MDNS;MIDI;OS;PDF;PIN;PNG;POI;PSTN;PTR;QA;QOS;RGB;RGBA;RGBX;ROM;RPC;RTF;RTL;SDK;SSO;TCP;TIFF;TTS;UI;URI;URL;VC;VOIP;VPN;VR;WAN;XML``.
-
-   If set to ``0``, the value in ``Acronyms`` replaces the default list
-   of acronyms.
+   This option is deprecated and ignored.

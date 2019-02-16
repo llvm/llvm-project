@@ -209,11 +209,13 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
   if (!tag || tag->isDependentContext())
     return false;
 
+  // Grab the tag definition, if there is one.
+  QualType type = Context.getTypeDeclType(tag);
+  tag = type->getAsTagDecl();
+
   // If we're currently defining this type, then lookup into the
   // type is okay: don't complain that it isn't complete yet.
-  QualType type = Context.getTypeDeclType(tag);
-  const TagType *tagType = type->getAs<TagType>();
-  if (tagType && tagType->isBeingDefined())
+  if (tag->isBeingDefined())
     return false;
 
   SourceLocation loc = SS.getLastQualifierNameLoc();
@@ -229,13 +231,13 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
   // Fixed enum types are complete, but they aren't valid as scopes
   // until we see a definition, so awkwardly pull out this special
   // case.
-  const EnumType *enumType = dyn_cast_or_null<EnumType>(tagType);
-  if (!enumType)
+  auto *EnumD = dyn_cast<EnumDecl>(tag);
+  if (!EnumD)
     return false;
-  if (enumType->getDecl()->isCompleteDefinition()) {
+  if (EnumD->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasVisibleDefinition(enumType->getDecl(), &SuggestedDef,
+    if (!hasVisibleDefinition(EnumD, &SuggestedDef,
                               /*OnlyNeedComplete*/false)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.
@@ -249,11 +251,11 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 
   // Try to instantiate the definition, if this is a specialization of an
   // enumeration temploid.
-  EnumDecl *ED = enumType->getDecl();
-  if (EnumDecl *Pattern = ED->getInstantiatedFromMemberEnum()) {
-    MemberSpecializationInfo *MSI = ED->getMemberSpecializationInfo();
+  if (EnumDecl *Pattern = EnumD->getInstantiatedFromMemberEnum()) {
+    MemberSpecializationInfo *MSI = EnumD->getMemberSpecializationInfo();
     if (MSI->getTemplateSpecializationKind() != TSK_ExplicitSpecialization) {
-      if (InstantiateEnum(loc, ED, Pattern, getTemplateInstantiationArgs(ED),
+      if (InstantiateEnum(loc, EnumD, Pattern,
+                          getTemplateInstantiationArgs(EnumD),
                           TSK_ImplicitInstantiation)) {
         SS.SetInvalid(SS.getRange());
         return true;

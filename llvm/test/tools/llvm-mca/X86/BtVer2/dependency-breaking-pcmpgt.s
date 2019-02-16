@@ -16,7 +16,10 @@ vpcmpgtq %xmm3, %xmm3, %xmm0
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      6000
 # CHECK-NEXT: Total Cycles:      3001
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        6000
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    2.00
 # CHECK-NEXT: IPC:               2.00
 # CHECK-NEXT: Block RThroughput: 2.0
 

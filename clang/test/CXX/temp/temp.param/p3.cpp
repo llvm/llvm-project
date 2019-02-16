@@ -16,7 +16,7 @@ template<template<class T> class Y> struct X1 {
 // [Note: because of the name lookup rules, a template-parameter that
 // could be interpreted as either a non-type template-parameter or a
 // type-parameter (because its identifier is the name of an already
-// existing class) is taken as a type-parameter. For example, 
+// existing class) is taken as a type-parameter. For example,
 class T { /* ... */ };  // expected-note{{candidate constructor (the implicit copy constructor) not viable}}
 #if __cplusplus >= 201103L // C++11 or later
 // expected-note@-2 {{candidate constructor (the implicit move constructor) not viable}}
@@ -27,7 +27,7 @@ int i;
 template<class T, T i> struct X2 {
   void f(T t) 
   { 
-    T t1 = i; //template-parameters T and i 
+    T t1 = i; // template-parameters T and i
     ::T t2 = ::i; // global namespace members T and i  \
     // expected-error{{no viable conversion}}
   } 

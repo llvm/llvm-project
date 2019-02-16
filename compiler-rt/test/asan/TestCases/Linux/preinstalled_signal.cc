@@ -1,4 +1,3 @@
-// clang-format off
 // RUN: %clangxx -std=c++11 %s -o %t
 // RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=1 not %run %t 2>&1 | FileCheck %s
 // RUN: env LD_PRELOAD=%shared_libasan %env_asan_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s
@@ -17,7 +16,6 @@
 
 // This way of setting LD_PRELOAD does not work with Android test runner.
 // REQUIRES: !android
-// clang-format on
 
 #include <assert.h>
 #include <signal.h>

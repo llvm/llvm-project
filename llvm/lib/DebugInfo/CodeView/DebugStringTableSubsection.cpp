@@ -91,7 +91,7 @@ std::vector<uint32_t> DebugStringTableSubsection::sortedIds() const {
   Result.reserve(IdToString.size());
   for (const auto &Entry : IdToString)
     Result.push_back(Entry.first);
-  llvm::sort(Result.begin(), Result.end());
+  llvm::sort(Result);
   return Result;
 }
 

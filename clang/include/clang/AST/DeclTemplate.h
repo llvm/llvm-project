@@ -759,6 +759,7 @@ class RedeclarableTemplateDecl : public TemplateDecl,
     return getMostRecentDecl();
   }
 
+  void anchor() override;
 protected:
   template <typename EntryType> struct SpecEntryTraits {
     using DeclType = EntryType;
@@ -1101,7 +1102,7 @@ public:
   /// template.
   ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
-  /// Merge our RedeclarableTemplateDecl::Common with \param Prev.
+  /// Merge \p Prev with our RedeclarableTemplateDecl::Common.
   void mergePrevDecl(FunctionTemplateDecl *Prev);
 
   /// Create a function template node.

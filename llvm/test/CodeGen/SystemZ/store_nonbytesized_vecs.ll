@@ -60,8 +60,7 @@ define i16 @fun1(<16 x i1> %src)
 ; CHECK-NEXT:    rosbg %r0, %r1, 62, 62, 1
 ; CHECK-NEXT:    vlgvb %r1, %v24, 15
 ; CHECK-NEXT:    rosbg %r0, %r1, 63, 63, 0
-; CHECK-NEXT:    sth %r0, 160(%r15)
-; CHECK-NEXT:    lh %r2, 160(%r15)
+; CHECK-NEXT:    llhr %r2, %r0
 ; CHECK-NEXT:    aghi %r15, 168
 ; CHECK-NEXT:    br %r14
 {

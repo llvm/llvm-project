@@ -601,17 +601,17 @@ define <8 x i64> @orq_broadcast(<8 x i64> %a) nounwind {
 define <16 x i32> @andd512fold(<16 x i32> %y, <16 x i32>* %x) {
 ; AVX512F-LABEL: andd512fold:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; AVX512F-NEXT:    vpandd (%rdi), %zmm0, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: andd512fold:
 ; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpandd (%rdi), %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: andd512fold:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandd (%rdi), %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: andd512fold:
@@ -904,9 +904,9 @@ define <8 x double> @test_broadcast_vaddpd(<8 x double> %i, double* %j) nounwind
 define <8 x double> @test_mask_broadcast_vaddpd(<8 x double> %dst, <8 x double> %i,
 ; CHECK-LABEL: test_mask_broadcast_vaddpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vptestmq %zmm2, %zmm2, %k1
-; CHECK-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0
+; CHECK-NEXT:    vptestmq %zmm2, %zmm2, %k1
+; CHECK-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
                                       double* %j, <8 x i64> %mask1) nounwind {
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
@@ -969,7 +969,7 @@ define <16 x float>  @test_fxor(<16 x float> %a) {
 define <8 x float>  @test_fxor_8f32(<8 x float> %a) {
 ; AVX512F-LABEL: test_fxor_8f32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0,-0,-0,-0,-0,-0,-0,-0]
+; AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX512F-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
@@ -980,13 +980,13 @@ define <8 x float>  @test_fxor_8f32(<8 x float> %a) {
 ;
 ; AVX512BW-LABEL: test_fxor_8f32:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0,-0,-0,-0,-0,-0,-0,-0]
+; AVX512BW-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX512BW-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_fxor_8f32:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0,-0,-0,-0,-0,-0,-0,-0]
+; AVX512DQ-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX512DQ-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    retq
 ;

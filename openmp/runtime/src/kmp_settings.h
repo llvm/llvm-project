@@ -31,9 +31,11 @@ int __kmp_default_tp_capacity(int, int, int);
   __kmp_str_buf_print(buffer, "  %s %s", KMP_I18N_STR(Device), name)
 #define KMP_STR_BUF_PRINT_NAME_EX(x)                                           \
   __kmp_str_buf_print(buffer, "  %s %s='", KMP_I18N_STR(Device), x)
+#define KMP_STR_BUF_PRINT_BOOL_EX(n, v, t, f)                                  \
+  __kmp_str_buf_print(buffer, "  %s %s='%s'\n", KMP_I18N_STR(Device), n,       \
+                      (v) ? t : f)
 #define KMP_STR_BUF_PRINT_BOOL                                                 \
-  __kmp_str_buf_print(buffer, "  %s %s='%s'\n", KMP_I18N_STR(Device), name,    \
-                      value ? "TRUE" : "FALSE");
+  KMP_STR_BUF_PRINT_BOOL_EX(name, value, "TRUE", "FALSE")
 #define KMP_STR_BUF_PRINT_INT                                                  \
   __kmp_str_buf_print(buffer, "  %s %s='%d'\n", KMP_I18N_STR(Device), name,    \
                       value)
@@ -48,9 +50,11 @@ int __kmp_default_tp_capacity(int, int, int);
   __kmp_str_buf_print(buffer, "  %s %s", KMP_I18N_STR(Host), name)
 #define KMP_STR_BUF_PRINT_NAME_EX(x)                                           \
   __kmp_str_buf_print(buffer, "  %s %s='", KMP_I18N_STR(Host), x)
+#define KMP_STR_BUF_PRINT_BOOL_EX(n, v, t, f)                                  \
+  __kmp_str_buf_print(buffer, "  %s %s='%s'\n", KMP_I18N_STR(Host), n,         \
+                      (v) ? t : f)
 #define KMP_STR_BUF_PRINT_BOOL                                                 \
-  __kmp_str_buf_print(buffer, "  %s %s='%s'\n", KMP_I18N_STR(Host), name,      \
-                      value ? "TRUE" : "FALSE");
+  KMP_STR_BUF_PRINT_BOOL_EX(name, value, "TRUE", "FALSE")
 #define KMP_STR_BUF_PRINT_INT                                                  \
   __kmp_str_buf_print(buffer, "  %s %s='%d'\n", KMP_I18N_STR(Host), name, value)
 #define KMP_STR_BUF_PRINT_UINT64                                               \

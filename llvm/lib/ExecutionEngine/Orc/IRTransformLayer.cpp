@@ -13,20 +13,20 @@
 namespace llvm {
 namespace orc {
 
-IRTransformLayer2::IRTransformLayer2(ExecutionSession &ES,
+IRTransformLayer::IRTransformLayer(ExecutionSession &ES,
                                      IRLayer &BaseLayer,
                                      TransformFunction Transform)
     : IRLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
-void IRTransformLayer2::emit(MaterializationResponsibility R, VModuleKey K,
-                             std::unique_ptr<Module> M) {
-  assert(M && "Module must not be null");
+void IRTransformLayer::emit(MaterializationResponsibility R,
+                            ThreadSafeModule TSM) {
+  assert(TSM.getModule() && "Module must not be null");
 
-  if (auto TransformedMod = Transform(std::move(M)))
-    BaseLayer.emit(std::move(R), std::move(K), std::move(*TransformedMod));
+  if (auto TransformedTSM = Transform(std::move(TSM), R))
+    BaseLayer.emit(std::move(R), std::move(*TransformedTSM));
   else {
     R.failMaterialization();
-    getExecutionSession().reportError(TransformedMod.takeError());
+    getExecutionSession().reportError(TransformedTSM.takeError());
   }
 }
 

@@ -42,7 +42,7 @@ int main() {
     int omp_nums[omp_nums_size];
     omp_get_partition_place_nums(omp_nums);
     print_list("omp_get_partition_place_nums", omp_nums_size, omp_nums);
-    int ompt_nums_size = ompt_get_partition_place_nums(0, NULL);
+    int ompt_nums_size = ompt_get_partition_place_nums(0, omp_nums);
     int ompt_nums[ompt_nums_size];
     ompt_get_partition_place_nums(ompt_nums_size, ompt_nums);
     print_list("ompt_get_partition_place_nums", ompt_nums_size, ompt_nums);

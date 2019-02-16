@@ -49,6 +49,7 @@ vector unsigned int res_vui;
 vector bool long long res_vbll;
 vector signed long long res_vsll;
 vector unsigned long long res_vull;
+vector signed __int128 res_vslll;
 
 double res_d;
 float res_af[4];
@@ -1637,51 +1638,51 @@ res_vsll = vec_slo(vsll, vsc);
 // CHECK-LE: @llvm.ppc.altivec.vsro
 
 res_vsll = vec_xl(sll, asll);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 
 res_vull = vec_xl(sll, aull);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 
 res_vd = vec_xl(sll, ad);
-// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
-// CHECK-LE: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
+// CHECK-LE: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
 
 vec_xst(vsll, sll, asll);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 
 vec_xst(vull, sll, aull);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 
 vec_xst(vd, sll, ad);
-// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
-// CHECK-LE: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 1
+// CHECK-LE: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 1
 
 res_vsll = vec_xl_be(sll, asll);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
 
 res_vull = vec_xl_be(sll, aull);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
 
 res_vd = vec_xl_be(sll, ad);
-// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
 
 vec_xst_be(vsll, sll, asll);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
 
 vec_xst_be(vull, sll, aull);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
 
 vec_xst_be(vd, sll, ad);
-// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
 
   res_vf = vec_neg(vf);
@@ -1802,4 +1803,32 @@ vector double xxsldwi_should_not_assert(vector double a, vector double b) {
 // CHECK-NEXT-LE:  bitcast <2 x double> %{{[0-9]+}} to <4 x i32>
 // CHECK-NEXT-LE:  shufflevector <4 x i32> %{{[0-9]+}}, <4 x i32> %{{[0-9]+}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT-LE:  bitcast <4 x i32> %{{[0-9]+}} to <2 x double>
+}
+
+void testVectorInt128Pack(){
+// CHECK-LABEL: testVectorInt128Pack
+// CHECK-LABEL-LE: testVectorInt128Pack
+  res_vslll = __builtin_pack_vector_int128(aull[0], aull[1]);
+// CHECK: %[[V1:[0-9]+]] = insertelement <2 x i64> undef, i64 %{{[0-9]+}}, i64 0
+// CHECK-NEXT: %[[V2:[0-9]+]] = insertelement <2 x i64> %[[V1]], i64 %{{[0-9]+}}, i64 1
+// CHECK-NEXT:  bitcast <2 x i64> %[[V2]] to <1 x i128>
+
+// CHECK-LE: %[[V1:[0-9]+]] = insertelement <2 x i64> undef, i64 %{{[0-9]+}}, i64 1
+// CHECK-NEXT-LE: %[[V2:[0-9]+]] = insertelement <2 x i64> %[[V1]], i64 %{{[0-9]+}}, i64 0
+// CHECK-NEXT-LE:  bitcast <2 x i64> %[[V2]] to <1 x i128>
+
+  __builtin_unpack_vector_int128(res_vslll, 0);
+// CHECK:  %[[V1:[0-9]+]] = bitcast <1 x i128> %{{[0-9]+}} to <2 x i64>
+// CHECK-NEXT: %{{[0-9]+}} = extractelement <2 x i64> %[[V1]], i32 0
+
+// CHECK-LE:  %[[V1:[0-9]+]] = bitcast <1 x i128> %{{[0-9]+}} to <2 x i64>
+// CHECK-NEXT-LE: %{{[0-9]+}} = extractelement <2 x i64> %[[V1]], i32 1
+
+  __builtin_unpack_vector_int128(res_vslll, 1);
+// CHECK:  %[[V1:[0-9]+]] = bitcast <1 x i128> %{{[0-9]+}} to <2 x i64>
+// CHECK-NEXT: %{{[0-9]+}} = extractelement <2 x i64> %[[V1]], i32 1
+
+// CHECK-LE:  %[[V1:[0-9]+]] = bitcast <1 x i128> %{{[0-9]+}} to <2 x i64>
+// CHECK-NEXT-LE: %{{[0-9]+}} = extractelement <2 x i64> %[[V1]], i32 0
+
 }

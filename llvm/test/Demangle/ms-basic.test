@@ -65,14 +65,11 @@
 ?x@@3PEATty@@EA
 ; CHECK: union ty *x
 
-?x@@3PEAUty@@EA
-; CHECK: struct ty *x
+?x@@3PEAVty@@EA
+; CHECK: class ty *x
 
 ?x@@3PEAW4ty@@EA
 ; CHECK: enum ty *x
-
-?x@@3PEAVty@@EA
-; CHECK: class ty *x
 
 ?x@@3PEAV?$tmpl@H@@EA
 ; CHECK: class tmpl<int> *x
@@ -228,3 +225,5 @@
 ??_V@YAXPEAXAEAVklass@@@Z
 ; CHECK: void __cdecl operator delete[](void *, class klass &)
 
+; ?A@?A0x43583946@@3VB@@B
+class B const `anonymous namespace'::A

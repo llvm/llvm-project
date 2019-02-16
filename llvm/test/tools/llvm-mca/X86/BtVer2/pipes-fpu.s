@@ -20,7 +20,10 @@ vsqrtps     %ymm0, %ymm2
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      800
 # CHECK-NEXT: Total Cycles:      6306
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        1200
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.19
 # CHECK-NEXT: IPC:               0.13
 # CHECK-NEXT: Block RThroughput: 63.0
 
@@ -103,6 +106,6 @@ vsqrtps     %ymm0, %ymm2
 # CHECK-NEXT: 2.     2     1.0    1.0    28.0      vcvttps2dq	%xmm0, %xmm2
 # CHECK-NEXT: 3.     2     1.0    1.0    29.5      vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 4.     2     1.0    1.0    28.0      vaddps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT: 5.     1     1.0    1.0    0.0       vsqrtps	%xmm0, %xmm2
-# CHECK-NEXT: 6.     1     1.0    1.0    17.0      vaddps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT: 7.     1     20.0   20.0   0.0       vsqrtps	%ymm0, %ymm2
+# CHECK-NEXT: 5.     2     29.5   29.5   0.0       vsqrtps	%xmm0, %xmm2
+# CHECK-NEXT: 6.     2     1.0    1.0    45.5      vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT: 7.     2     48.5   48.5   0.0       vsqrtps	%ymm0, %ymm2

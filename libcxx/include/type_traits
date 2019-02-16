@@ -75,6 +75,10 @@ namespace std
     template <class T> struct remove_pointer;
     template <class T> struct add_pointer;
 
+    template<class T> struct type_identity;                     // C++20
+    template<class T>
+      using type_identity_t = typename type_identity<T>::type;  // C++20
+
     // Integral properties:
     template <class T> struct is_signed;
     template <class T> struct is_unsigned;
@@ -400,6 +404,7 @@ namespace std
 */
 #include <__config>
 #include <cstddef>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -704,6 +709,9 @@ template <>          struct __libcpp_is_integral<char>               : public tr
 template <>          struct __libcpp_is_integral<signed char>        : public true_type {};
 template <>          struct __libcpp_is_integral<unsigned char>      : public true_type {};
 template <>          struct __libcpp_is_integral<wchar_t>            : public true_type {};
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+template <>          struct __libcpp_is_integral<char8_t>            : public true_type {};
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 template <>          struct __libcpp_is_integral<char16_t>           : public true_type {};
 template <>          struct __libcpp_is_integral<char32_t>           : public true_type {};
@@ -733,12 +741,6 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_integral_v
 // is_floating_point
 
 template <class _Tp> struct __libcpp_is_floating_point              : public false_type {};
-#ifdef __clang__
-template <>          struct __libcpp_is_floating_point<__fp16>      : public true_type {};
-#endif
-#ifdef __FLT16_MANT_DIG__
-template <>          struct __libcpp_is_floating_point<_Float16>    : public true_type {};
-#endif
 template <>          struct __libcpp_is_floating_point<float>       : public true_type {};
 template <>          struct __libcpp_is_floating_point<double>      : public true_type {};
 template <>          struct __libcpp_is_floating_point<long double> : public true_type {};
@@ -1224,6 +1226,12 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_pointer
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_pointer_t = typename add_pointer<_Tp>::type;
+#endif
+
+// type_identity
+#if _LIBCPP_STD_VER > 17
+template<class _Tp> struct type_identity { typedef _Tp type; };
+template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
 #endif
 
 // is_signed
@@ -4748,7 +4756,6 @@ struct __has_operator_addressof
 
 #if _LIBCPP_STD_VER > 14
 
-#define __cpp_lib_void_t 201411
 template <class...> using void_t = void;
 
 # ifndef _LIBCPP_HAS_NO_VARIADICS

@@ -70,7 +70,7 @@ vec_int1 lax_vector_compare1(int x, vec_int1 y) {
 }
 
 // CHECK: define i32 @lax_vector_compare1(i32 {{.*}}, i32 {{.*}})
-// CHECK: icmp eq <1 x i32>
+// CHECK: icmp eq i32
 
 typedef int vec_int2 __attribute__((vector_size(8)));
 vec_int2 lax_vector_compare2(long long x, vec_int2 y) {

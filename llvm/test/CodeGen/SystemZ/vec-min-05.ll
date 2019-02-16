@@ -42,7 +42,7 @@ define double @f3(double %dummy, double %val) {
   ret double %ret
 }
 
-; Test a f64 constant compare/select resulting in minnan.
+; Test a f64 constant compare/select resulting in minimum.
 define double @f4(double %dummy, double %val) {
 ; CHECK-LABEL: f4:
 ; CHECK: lzdr [[REG:%f[0-9]+]]
@@ -92,7 +92,7 @@ define float @f13(float %dummy, float %val) {
   ret float %ret
 }
 
-; Test a f32 constant compare/select resulting in minnan.
+; Test a f32 constant compare/select resulting in minimum.
 define float @f14(float %dummy, float %val) {
 ; CHECK-LABEL: f14:
 ; CHECK: lzer [[REG:%f[0-9]+]]
@@ -158,7 +158,7 @@ define void @f23(fp128 *%ptr, fp128 *%dst) {
   ret void
 }
 
-; Test a f128 constant compare/select resulting in minnan.
+; Test a f128 constant compare/select resulting in minimum.
 define void @f24(fp128 *%ptr, fp128 *%dst) {
 ; CHECK-LABEL: f24:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)

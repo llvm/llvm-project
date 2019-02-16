@@ -82,9 +82,12 @@ LANGSTANDARD(c17, "c17",
              C, "ISO C 2017",
              LineComment | C99 | C11 | C17 | Digraphs | HexFloat)
 LANGSTANDARD_ALIAS(c17, "iso9899:2017")
+LANGSTANDARD_ALIAS(c17, "c18")
+LANGSTANDARD_ALIAS(c17, "iso9899:2018")
 LANGSTANDARD(gnu17, "gnu17",
              C, "ISO C 2017 with GNU extensions",
              LineComment | C99 | C11 | C17 | Digraphs | GNUMode | HexFloat)
+LANGSTANDARD_ALIAS(gnu17, "gnu18")
 
 // C++ modes
 LANGSTANDARD(cxx98, "c++98",

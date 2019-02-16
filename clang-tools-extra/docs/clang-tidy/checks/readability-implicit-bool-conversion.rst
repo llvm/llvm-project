@@ -66,13 +66,16 @@ example:
 
 In general, the following conversion types are checked:
 
-- integer expression/literal to boolean,
+- integer expression/literal to boolean (conversion from a single bit bitfield
+  to boolean is explicitly allowed, since there's no ambiguity / information
+  loss in this case),
 
 - floating expression/literal to boolean,
 
 - pointer/pointer to member/``nullptr``/``NULL`` to boolean,
 
-- boolean expression/literal to integer,
+- boolean expression/literal to integer (conversion from boolean to a single
+  bit bitfield is explicitly allowed),
 
 - boolean expression/literal to floating.
 

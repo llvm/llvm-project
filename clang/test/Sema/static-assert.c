@@ -38,5 +38,5 @@ struct A {
 
 typedef UNION(unsigned, struct A) U1;
 UNION(char[2], short) u2 = { .one = { 'a', 'b' } };
-typedef UNION(char, short) U3; // expected-error {{static_assert failed "type size mismatch"}}
+typedef UNION(char, short) U3; // expected-error {{static_assert failed due to requirement 'sizeof(char) == sizeof(short)' "type size mismatch"}}
 typedef UNION(float, 0.5f) U4; // expected-error {{expected a type}}

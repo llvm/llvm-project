@@ -62,6 +62,11 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
   case BuiltinType::OCLReserveID:
     return llvm::PointerType::get(
         llvm::StructType::create(Ctx, "opencl.reserve_id_t"), AddrSpc);
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  case BuiltinType::Id: \
+    return llvm::PointerType::get( \
+        llvm::StructType::create(Ctx, "opencl." #ExtType), AddrSpc);
+#include "clang/Basic/OpenCLExtensionTypes.def"
   }
 }
 
@@ -118,25 +123,6 @@ llvm::PointerType *CGOpenCLRuntime::getGenericVoidPointerType() {
       CGM.getContext().getTargetAddressSpace(LangAS::opencl_generic));
 }
 
-// Get the block literal from an expression derived from the block expression.
-// OpenCL v2.0 s6.12.5:
-// Block variable declarations are implicitly qualified with const. Therefore
-// all block variables must be initialized at declaration time and may not be
-// reassigned.
-static const BlockExpr *getBlockExpr(const Expr *E) {
-  if (auto Cast = dyn_cast<CastExpr>(E)) {
-    E = Cast->getSubExpr();
-  }
-  if (auto DR = dyn_cast<DeclRefExpr>(E)) {
-    E = cast<VarDecl>(DR->getDecl())->getInit();
-  }
-  E = E->IgnoreImplicit();
-  if (auto Cast = dyn_cast<CastExpr>(E)) {
-    E = Cast->getSubExpr();
-  }
-  return cast<BlockExpr>(E);
-}
-
 /// Record emitted llvm invoke function and llvm block literal for the
 /// corresponding block expression.
 void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
@@ -151,15 +137,21 @@ void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
   EnqueuedBlockMap[E].Kernel = nullptr;
 }
 
-llvm::Function *CGOpenCLRuntime::getInvokeFunction(const Expr *E) {
-  return EnqueuedBlockMap[getBlockExpr(E)].InvokeFunc;
-}
-
 CGOpenCLRuntime::EnqueuedBlockInfo
 CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
   CGF.EmitScalarExpr(E);
 
-  const BlockExpr *Block = getBlockExpr(E);
+  // The block literal may be assigned to a const variable. Chasing down
+  // to get the block literal.
+  if (auto DR = dyn_cast<DeclRefExpr>(E)) {
+    E = cast<VarDecl>(DR->getDecl())->getInit();
+  }
+  E = E->IgnoreImplicit();
+  if (auto Cast = dyn_cast<CastExpr>(E)) {
+    E = Cast->getSubExpr();
+  }
+  auto *Block = cast<BlockExpr>(E);
+
   assert(EnqueuedBlockMap.find(Block) != EnqueuedBlockMap.end() &&
          "Block expression not emitted");
 

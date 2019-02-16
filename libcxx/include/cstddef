@@ -35,6 +35,7 @@ Types:
 */
 
 #include <__config>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -50,7 +51,7 @@ using ::ptrdiff_t;
 using ::size_t;
 
 #if defined(__CLANG_MAX_ALIGN_T_DEFINED) || defined(_GCC_MAX_ALIGN_T) || \
-    defined(__DEFINED_max_align_t)
+    defined(__DEFINED_max_align_t) || defined(__NetBSD__)
 // Re-use the compiler's <stddef.h> max_align_t where possible.
 using ::max_align_t;
 #else
@@ -66,10 +67,10 @@ enum class byte : unsigned char {};
 
 constexpr byte  operator| (byte  __lhs, byte __rhs) noexcept
 {
-	return static_cast<byte>(
-	  static_cast<unsigned char>(
-	     static_cast<unsigned int>(__lhs) | static_cast<unsigned int>(__rhs)
-	));
+    return static_cast<byte>(
+      static_cast<unsigned char>(
+         static_cast<unsigned int>(__lhs) | static_cast<unsigned int>(__rhs)
+    ));
 }
 
 constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept
@@ -77,10 +78,10 @@ constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept
 
 constexpr byte  operator& (byte  __lhs, byte __rhs) noexcept
 {
-	return static_cast<byte>(
-	  static_cast<unsigned char>(
-	     static_cast<unsigned int>(__lhs) & static_cast<unsigned int>(__rhs)
-	));
+    return static_cast<byte>(
+      static_cast<unsigned char>(
+         static_cast<unsigned int>(__lhs) & static_cast<unsigned int>(__rhs)
+    ));
 }
 
 constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept
@@ -88,13 +89,13 @@ constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept
 
 constexpr byte  operator^ (byte  __lhs, byte __rhs) noexcept
 {
-	return static_cast<byte>(
-	  static_cast<unsigned char>(
-	     static_cast<unsigned int>(__lhs) ^ static_cast<unsigned int>(__rhs)
-	));
+    return static_cast<byte>(
+      static_cast<unsigned char>(
+         static_cast<unsigned int>(__lhs) ^ static_cast<unsigned int>(__rhs)
+    ));
 }
 
-constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept 
+constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept
 { return __lhs = __lhs ^ __rhs; }
 
 constexpr byte  operator~ (byte __b) noexcept

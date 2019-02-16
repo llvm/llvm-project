@@ -356,6 +356,14 @@ namespace compound_assign {
     if (a != 13) return false;
     a &= 14;
     if (a != 12) return false;
+    a += -1.2;
+    if (a != 10) return false;
+    a -= 3.1;
+    if (a != 6) return false;
+    a *= 2.2;
+    if (a != 13) return false;
+    if (&(a /= 1.5) != &a) return false;
+    if (a != 8) return false;
     return true;
   }
   static_assert(test_int(), "");
@@ -373,6 +381,30 @@ namespace compound_assign {
     return true;
   }
   static_assert(test_float(), "");
+
+  constexpr bool test_bool() {
+    bool b = false;
+    b |= 2;
+    if (b != true) return false;
+    b <<= 1;
+    if (b != true) return false;
+    b *= 2;
+    if (b != true) return false;
+    b -= 1;
+    if (b != false) return false;
+    b -= 1;
+    if (b != true) return false;
+    b += -1;
+    if (b != false) return false;
+    b += 1;
+    if (b != true) return false;
+    b += 1;
+    if (b != true) return false;
+    b ^= b;
+    if (b != false) return false;
+    return true;
+  }
+  static_assert(test_bool(), "");
 
   constexpr bool test_ptr() {
     int arr[123] = {};
@@ -420,7 +452,7 @@ namespace compound_assign {
   static_assert(test_bounds("foo", 0)[0] == 'f', "");
   static_assert(test_bounds("foo", 3)[0] == 0, "");
   static_assert(test_bounds("foo", 4)[-3] == 'o', "");
-  static_assert(test_bounds("foo" + 4, -4)[0] == 'f', "");
+  static_assert(test_bounds(&"foo"[4], -4)[0] == 'f', "");
   static_assert(test_bounds("foo", 5) != 0, ""); // expected-error {{constant}} expected-note {{call}}
   static_assert(test_bounds("foo", -1) != 0, ""); // expected-error {{constant}} expected-note {{call}}
   static_assert(test_bounds("foo", 1000) != 0, ""); // expected-error {{constant}} expected-note {{call}}
@@ -879,7 +911,7 @@ namespace Bitfields {
     --a.n;
     --a.u;
     a.n = -a.n * 3;
-    return a.b == false && a.n == 3 && a.u == 31;
+    return a.b == true && a.n == 3 && a.u == 31;
   }
   static_assert(test(), "");
 }
@@ -1098,3 +1130,8 @@ constexpr E e2 = E{0};
 static_assert(e2.x != e2.y, "");
 
 } // namespace IndirectFields
+
+constexpr bool indirect_builtin_constant_p(const char *__s) {
+  return __builtin_constant_p(*__s);
+}
+constexpr bool n = indirect_builtin_constant_p("a");

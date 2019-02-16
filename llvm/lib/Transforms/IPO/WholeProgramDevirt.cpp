@@ -58,6 +58,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -406,6 +407,7 @@ void VTableSlotInfo::addCallSite(Value *VTable, CallSite CS,
 struct DevirtModule {
   Module &M;
   function_ref<AAResults &(Function &)> AARGetter;
+  function_ref<DominatorTree &(Function &)> LookupDomTree;
 
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
@@ -433,10 +435,12 @@ struct DevirtModule {
 
   DevirtModule(Module &M, function_ref<AAResults &(Function &)> AARGetter,
                function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
+               function_ref<DominatorTree &(Function &)> LookupDomTree,
                ModuleSummaryIndex *ExportSummary,
                const ModuleSummaryIndex *ImportSummary)
-      : M(M), AARGetter(AARGetter), ExportSummary(ExportSummary),
-        ImportSummary(ImportSummary), Int8Ty(Type::getInt8Ty(M.getContext())),
+      : M(M), AARGetter(AARGetter), LookupDomTree(LookupDomTree),
+        ExportSummary(ExportSummary), ImportSummary(ImportSummary),
+        Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(Type::getInt8PtrTy(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())),
         Int64Ty(Type::getInt64Ty(M.getContext())),
@@ -533,9 +537,10 @@ struct DevirtModule {
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool runForTesting(
-      Module &M, function_ref<AAResults &(Function &)> AARGetter,
-      function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
+  static bool
+  runForTesting(Module &M, function_ref<AAResults &(Function &)> AARGetter,
+                function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
+                function_ref<DominatorTree &(Function &)> LookupDomTree);
 };
 
 struct WholeProgramDevirt : public ModulePass {
@@ -572,17 +577,23 @@ struct WholeProgramDevirt : public ModulePass {
       return *ORE;
     };
 
-    if (UseCommandLine)
-      return DevirtModule::runForTesting(M, LegacyAARGetter(*this), OREGetter);
+    auto LookupDomTree = [this](Function &F) -> DominatorTree & {
+      return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+    };
 
-    return DevirtModule(M, LegacyAARGetter(*this), OREGetter, ExportSummary,
-                        ImportSummary)
+    if (UseCommandLine)
+      return DevirtModule::runForTesting(M, LegacyAARGetter(*this), OREGetter,
+                                         LookupDomTree);
+
+    return DevirtModule(M, LegacyAARGetter(*this), OREGetter, LookupDomTree,
+                        ExportSummary, ImportSummary)
         .run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
   }
 };
 
@@ -592,6 +603,7 @@ INITIALIZE_PASS_BEGIN(WholeProgramDevirt, "wholeprogramdevirt",
                       "Whole program devirtualization", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(WholeProgramDevirt, "wholeprogramdevirt",
                     "Whole program devirtualization", false, false)
 char WholeProgramDevirt::ID = 0;
@@ -611,7 +623,11 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
     return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
   };
-  if (!DevirtModule(M, AARGetter, OREGetter, ExportSummary, ImportSummary)
+  auto LookupDomTree = [&FAM](Function &F) -> DominatorTree & {
+    return FAM.getResult<DominatorTreeAnalysis>(F);
+  };
+  if (!DevirtModule(M, AARGetter, OREGetter, LookupDomTree, ExportSummary,
+                    ImportSummary)
            .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
@@ -619,7 +635,8 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
 
 bool DevirtModule::runForTesting(
     Module &M, function_ref<AAResults &(Function &)> AARGetter,
-    function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
+    function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
+    function_ref<DominatorTree &(Function &)> LookupDomTree) {
   ModuleSummaryIndex Summary(/*HaveGVs=*/false);
 
   // Handle the command-line summary arguments. This code is for testing
@@ -637,7 +654,7 @@ bool DevirtModule::runForTesting(
 
   bool Changed =
       DevirtModule(
-          M, AARGetter, OREGetter,
+          M, AARGetter, OREGetter, LookupDomTree,
           ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
           ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
           .run();
@@ -665,7 +682,7 @@ void DevirtModule::buildTypeIdentifierMap(
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();
     GV.getMetadata(LLVMContext::MD_type, Types);
-    if (Types.empty())
+    if (GV.isDeclaration() || Types.empty())
       continue;
 
     VTableBits *&BitsPtr = GVToBits[&GV];
@@ -755,7 +772,8 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
   auto Apply = [&](CallSiteInfo &CSInfo) {
     for (auto &&VCallSite : CSInfo.CallSites) {
       if (RemarksEnabled)
-        VCallSite.emitRemark("single-impl", TheFn->getName(), OREGetter);
+        VCallSite.emitRemark("single-impl",
+                             TheFn->stripPointerCasts()->getName(), OREGetter);
       VCallSite.CS.setCalledFunction(ConstantExpr::getBitCast(
           TheFn, VCallSite.CS.getCalledValue()->getType()));
       // This use is no longer unsafe.
@@ -846,10 +864,13 @@ void DevirtModule::tryICallBranchFunnel(
   Function *JT;
   if (isa<MDString>(Slot.TypeID)) {
     JT = Function::Create(FT, Function::ExternalLinkage,
+                          M.getDataLayout().getProgramAddressSpace(),
                           getGlobalName(Slot, {}, "branch_funnel"), &M);
     JT->setVisibility(GlobalValue::HiddenVisibility);
   } else {
-    JT = Function::Create(FT, Function::InternalLinkage, "branch_funnel", &M);
+    JT = Function::Create(FT, Function::InternalLinkage,
+                          M.getDataLayout().getProgramAddressSpace(),
+                          "branch_funnel", &M);
   }
   JT->addAttribute(1, Attribute::Nest);
 
@@ -891,7 +912,8 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
         continue;
 
       if (RemarksEnabled)
-        VCallSite.emitRemark("branch-funnel", JT->getName(), OREGetter);
+        VCallSite.emitRemark("branch-funnel",
+                             JT->stripPointerCasts()->getName(), OREGetter);
 
       // Pass the address of the vtable in the nest register, which is r10 on
       // x86_64.
@@ -1323,15 +1345,14 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 
 bool DevirtModule::areRemarksEnabled() {
   const auto &FL = M.getFunctionList();
-  if (FL.empty())
-    return false;
-  const Function &Fn = FL.front();
-
-  const auto &BBL = Fn.getBasicBlockList();
-  if (BBL.empty())
-    return false;
-  auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &BBL.front());
-  return DI.isEnabled();
+  for (const Function &Fn : FL) {
+    const auto &BBL = Fn.getBasicBlockList();
+    if (BBL.empty())
+      continue;
+    auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &BBL.front());
+    return DI.isEnabled();
+  }
+  return false;
 }
 
 void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc,
@@ -1341,7 +1362,7 @@ void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc,
   // points to a member of the type identifier %md. Group calls by (type ID,
   // offset) pair (effectively the identity of the virtual function) and store
   // to CallSlots.
-  DenseSet<Value *> SeenPtrs;
+  DenseSet<CallSite> SeenCallSites;
   for (auto I = TypeTestFunc->use_begin(), E = TypeTestFunc->use_end();
        I != E;) {
     auto CI = dyn_cast<CallInst>(I->getUser());
@@ -1352,19 +1373,22 @@ void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc,
     // Search for virtual calls based on %p and add them to DevirtCalls.
     SmallVector<DevirtCallSite, 1> DevirtCalls;
     SmallVector<CallInst *, 1> Assumes;
-    findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI);
+    auto &DT = LookupDomTree(*CI->getFunction());
+    findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI, DT);
 
-    // If we found any, add them to CallSlots. Only do this if we haven't seen
-    // the vtable pointer before, as it may have been CSE'd with pointers from
-    // other call sites, and we don't want to process call sites multiple times.
+    // If we found any, add them to CallSlots.
     if (!Assumes.empty()) {
       Metadata *TypeId =
           cast<MetadataAsValue>(CI->getArgOperand(1))->getMetadata();
       Value *Ptr = CI->getArgOperand(0)->stripPointerCasts();
-      if (SeenPtrs.insert(Ptr).second) {
-        for (DevirtCallSite Call : DevirtCalls) {
+      for (DevirtCallSite Call : DevirtCalls) {
+        // Only add this CallSite if we haven't seen it before. The vtable
+        // pointer may have been CSE'd with pointers from other call sites,
+        // and we don't want to process call sites multiple times. We can't
+        // just skip the vtable Ptr if it has been seen before, however, since
+        // it may be shared by type tests that dominate different calls.
+        if (SeenCallSites.insert(Call.CS).second)
           CallSlots[{TypeId, Call.Offset}].addCallSite(Ptr, Call.CS, nullptr);
-        }
       }
     }
 
@@ -1398,8 +1422,9 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
     SmallVector<Instruction *, 1> LoadedPtrs;
     SmallVector<Instruction *, 1> Preds;
     bool HasNonCallUses = false;
+    auto &DT = LookupDomTree(*CI->getFunction());
     findDevirtualizableCallsForTypeCheckedLoad(DevirtCalls, LoadedPtrs, Preds,
-                                               HasNonCallUses, CI);
+                                               HasNonCallUses, CI, DT);
 
     // Start by generating "pessimistic" code that explicitly loads the function
     // pointer from the vtable and performs the type check. If possible, we will

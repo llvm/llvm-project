@@ -86,7 +86,7 @@ namespace Test4 {
     };
   }
   void C::c() {}
-// CHECK-DAG: DISubprogram{{.*}}linkageName: "?f@C@?A@Test4@@W7EAAXXZ"{{.*}} flags: {{.*}}DIFlagThunk
+// CHECK-DAG: DISubprogram{{.*}}linkageName: "?f@C@?A0x{{[^@]*}}@Test4@@W7EAAXXZ"{{.*}} flags: {{.*}}DIFlagThunk
   void C::f() {}
 
   // Force C::f to be used.
@@ -268,9 +268,9 @@ namespace Test12 {
   //
   // ITANIUM: ![[SP]] = distinct !DISubprogram(linkageName: "_ZThn{{[48]}}_N6Test121C1fEv"
   // ITANIUM-SAME:          line: 261
-  // ITANIUM-SAME:          isDefinition: true
   // ITANIUM-SAME:          DIFlagArtificial
   // ITANIUM-SAME:          DIFlagThunk
+  // ITANIUM-SAME:          DISPFlagDefinition
   // ITANIUM-SAME:          ){{$}}
   //
   // ITANIUM: ![[DBG]] = !DILocation(line: 0

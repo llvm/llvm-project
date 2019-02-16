@@ -77,5 +77,10 @@ void printDynamicTypeInfo(ProgramStateRef State, raw_ostream &Out,
   }
 }
 
+void *ProgramStateTrait<DynamicTypeMap>::GDMIndex() {
+  static int index = 0;
+  return &index;
+}
+
 } // namespace ento
 } // namespace clang

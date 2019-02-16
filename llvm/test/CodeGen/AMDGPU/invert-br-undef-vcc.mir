@@ -55,7 +55,7 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0_sgpr1
 
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc

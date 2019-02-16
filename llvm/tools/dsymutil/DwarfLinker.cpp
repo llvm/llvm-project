@@ -484,7 +484,7 @@ bool DwarfLinker::RelocationManager::findValidRelocs(
   // the file, this allows us to just keep an index in the relocation
   // array that we advance during our walk, rather than resorting to
   // some associative container. See DwarfLinker::NextValidReloc.
-  llvm::sort(ValidRelocs.begin(), ValidRelocs.end());
+  llvm::sort(ValidRelocs);
   return true;
 }
 
@@ -1701,10 +1701,12 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   DWARFDataExtractor LineExtractor(
       OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
+  if (Options.Translator)
+    return Streamer->translateLineTable(LineExtractor, StmtOffset, Options);
 
   Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
-                              &Unit.getOrigUnit());
-  DWARFDebugLine::warn(std::move(Err));
+                              &Unit.getOrigUnit(), DWARFContext::dumpWarning);
+  DWARFContext::dumpWarning(std::move(Err));
 
   // This vector is the output line table.
   std::vector<DWARFDebugLine::Row> NewRows;
@@ -2245,17 +2247,16 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
     if (Linker.Options.NoOutput)
       continue;
 
-    if (LLVM_LIKELY(!Linker.Options.Update)) {
-      // FIXME: for compatibility with the classic dsymutil, we emit an empty
-      // line table for the unit, even if the unit doesn't actually exist in
-      // the DIE tree.
+    // FIXME: for compatibility with the classic dsymutil, we emit
+    // an empty line table for the unit, even if the unit doesn't
+    // actually exist in the DIE tree.
+    if (LLVM_LIKELY(!Linker.Options.Update) || Linker.Options.Translator)
       Linker.patchLineTableForUnit(*CurrentUnit, DwarfContext, Ranges, DMO);
-      Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
-      Linker.patchRangesForUnit(*CurrentUnit, DwarfContext, DMO);
-      Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
-    } else {
-      Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
-    }
+    Linker.emitAcceleratorEntriesForUnit(*CurrentUnit);
+    if (Linker.Options.Update)
+      continue;
+    Linker.patchRangesForUnit(*CurrentUnit, DwarfContext, DMO);
+    Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
   }
 
   if (Linker.Options.NoOutput)
@@ -2380,7 +2381,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool OffsetsStringPool;
+  OffsetsStringPool OffsetsStringPool(Options.Translator);
 
   // ODR Contexts for the link.
   DeclContextTree ODRContexts;
@@ -2417,15 +2418,20 @@ bool DwarfLinker::link(const DebugMap &Map) {
         warn(Err.message());
         continue;
       }
-      if (!Options.NoTimestamp &&
-          Stat.getLastModificationTime() !=
-              sys::TimePoint<>(LinkContext.DMO.getTimestamp())) {
-        // Not using the helper here as we can easily stream TimePoint<>.
-        WithColor::warning()
-            << "Timestamp mismatch for " << File << ": "
-            << Stat.getLastModificationTime() << " and "
-            << sys::TimePoint<>(LinkContext.DMO.getTimestamp()) << "\n";
-        continue;
+      if (!Options.NoTimestamp) {
+        // The modification can have sub-second precision so we need to cast
+        // away the extra precision that's not present in the debug map.
+        auto ModificationTime =
+            std::chrono::time_point_cast<std::chrono::seconds>(
+                Stat.getLastModificationTime());
+        if (ModificationTime != LinkContext.DMO.getTimestamp()) {
+          // Not using the helper here as we can easily stream TimePoint<>.
+          WithColor::warning()
+              << "Timestamp mismatch for " << File << ": "
+              << Stat.getLastModificationTime() << " and "
+              << sys::TimePoint<>(LinkContext.DMO.getTimestamp()) << "\n";
+          continue;
+        }
       }
 
       // Copy the module into the .swift_ast section.
@@ -2644,7 +2650,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
     pool.wait();
   }
 
-  return Options.NoOutput ? true : Streamer->finish(Map);
+  return Options.NoOutput ? true : Streamer->finish(Map, Options.Translator);
 } // namespace dsymutil
 
 bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,

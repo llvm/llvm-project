@@ -54,6 +54,16 @@ public:
   /// definitions and expansions.
   bool DetailedRecord = false;
 
+  /// When true, we are creating or using a PCH where a #pragma hdrstop is
+  /// expected to indicate the beginning or end of the PCH.
+  bool PCHWithHdrStop = false;
+
+  /// When true, we are creating a PCH or creating the PCH object while
+  /// expecting a #pragma hdrstop to separate the two.  Allow for a
+  /// missing #pragma hdrstop, which generates a PCH for the whole file,
+  /// and creates an empty PCH object.
+  bool PCHWithHdrStopCreate = false;
+
   /// If non-empty, the filename used in an #include directive in the primary
   /// source file (or command-line preinclude) that is used to implement
   /// MSVC-style precompiled headers. When creating a PCH, after the #include
@@ -99,13 +109,6 @@ public:
   /// Reading the comments from the PCH can be a performance hit even if the
   /// clients don't use them.
   bool WriteCommentListToPCH = true;
-
-  /// The implicit PTH input included at the start of the translation unit, or
-  /// empty.
-  std::string ImplicitPTHInclude;
-
-  /// If given, a PTH cache file to use for speeding up header parsing.
-  std::string TokenCache;
 
   /// When enabled, preprocessor is in a mode for parsing a single file only.
   ///
@@ -194,8 +197,6 @@ public:
     ChainedIncludes.clear();
     DumpDeserializedPCHDecls = false;
     ImplicitPCHInclude.clear();
-    ImplicitPTHInclude.clear();
-    TokenCache.clear();
     SingleFileParseMode = false;
     LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;

@@ -1,4 +1,3 @@
-// REQUIRES: rdar42833777
 // Test host codegen.
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CHECK --check-prefix CHECK-64
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
@@ -40,7 +39,7 @@
 #define HEADER
 // CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
@@ -368,7 +367,7 @@ int foo(int n) {
 // CHECK-64:    [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i32*
 // CHECK-64:    [[AA:%.+]] = load i32, i32* [[AA_CADDR]], align
 // CHECK-32:    [[AA:%.+]] = load i32, i32* [[AA_ADDR]], align
-// CHECK:       !llvm.mem.parallel_loop_access
+// CHECK:       !llvm.access.group
 // CHECK:       !llvm.loop
 // CHECK:       ret void
 // CHECK-NEXT:  }
@@ -556,12 +555,7 @@ int bar(int n){
 // CHECK-64:       store i32 %{{.+}}, i32* [[B_ADDR]],
 // CHECK-64:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_CADDR]],
 
-<<<<<<< HEAD
 // CHECK-32:       store i32 %{{.+}}, i32* %__vla_expr
-||||||| 87815378b0e... Recommit rL323952: [DebugInfo] Enable debug information for C99 VLA types.
-// CHECK-32:       store i32 %{{.+}}, i32* %vla_expr
-=======
->>>>>>> parent of 87815378b0e... Recommit rL323952: [DebugInfo] Enable debug information for C99 VLA types.
 // CHECK-32:       store i32 %{{.+}}, i32* [[B_ADDR:%.+]],
 // CHECK-32:       [[B_CVAL:%.+]] = load i[[SZ]], i[[SZ]]* [[B_ADDR]],
 

@@ -531,3 +531,107 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
   ret <4 x i32> %add
 }
 
+; The 'ashr' guarantees that we have a bitmask, so this is select with truncated condition.
+
+define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
+; CHECK-LABEL: @allSignBits(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[COND:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[TVAL:%.*]], i32 [[FVAL:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %bitmask = ashr i32 %cond, 31
+  %not_bitmask = xor i32 %bitmask, -1
+  %a1 = and i32 %tval, %bitmask
+  %a2 = and i32 %not_bitmask, %fval
+  %sel = or i32 %a1, %a2
+  ret i32 %sel
+}
+
+define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval) {
+; CHECK-LABEL: @allSignBits_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i8> [[COND:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> [[FVAL:%.*]], <4 x i8> [[TVAL:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[TMP2]]
+;
+  %bitmask = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>
+  %not_bitmask = xor <4 x i8> %bitmask, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %a1 = and <4 x i8> %tval, %bitmask
+  %a2 = and <4 x i8> %fval, %not_bitmask
+  %sel = or <4 x i8> %a2, %a1
+  ret <4 x i8> %sel
+}
+
+; Negative test - make sure that bitcasts from FP do not cause a crash.
+
+define <2 x i64> @fp_bitcast(<4 x i1> %cmp, <2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @fp_bitcast(
+; CHECK-NEXT:    [[SIA:%.*]] = fptosi <2 x double> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[SIB:%.*]] = fptosi <2 x double> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[SIA]], [[BC1]]
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[SIB]], [[BC2]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND2]], [[AND1]]
+; CHECK-NEXT:    ret <2 x i64> [[OR]]
+;
+  %sia = fptosi <2 x double> %a to <2 x i64>
+  %sib = fptosi <2 x double> %b to <2 x i64>
+  %bc1 = bitcast <2 x double> %a to <2 x i64>
+  %and1 = and <2 x i64> %sia, %bc1
+  %bc2 = bitcast <2 x double> %b to <2 x i64>
+  %and2 = and <2 x i64> %sib, %bc2
+  %or = or <2 x i64> %and2, %and1
+  ret <2 x i64> %or
+}
+
+define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
+; CHECK-LABEL: @computesignbits_through_shuffles(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole <4 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x i32> [[SEXT]], <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[SHUF_OR1:%.*]] = or <4 x i32> [[S1]], [[S2]]
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <4 x i32> [[SHUF_OR1]], <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[SHUF_OR2:%.*]] = or <4 x i32> [[S3]], [[S4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[SHUF_OR2]] to <4 x i1>
+; CHECK-NEXT:    [[DOTV:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[Z:%.*]], <4 x float> [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[DOTV]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %cmp = fcmp ole <4 x float> %x, %y
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %s1 = shufflevector <4 x i32> %sext, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %s2 = shufflevector <4 x i32> %sext, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+  %shuf_or1 = or <4 x i32> %s1, %s2
+  %s3 = shufflevector <4 x i32> %shuf_or1, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+  %s4 = shufflevector <4 x i32> %shuf_or1, <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 3, i32 3>
+  %shuf_or2 = or <4 x i32> %s3, %s4
+  %not_or2 = xor <4 x i32> %shuf_or2, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %xbc = bitcast <4 x float> %x to <4 x i32>
+  %zbc = bitcast <4 x float> %z to <4 x i32>
+  %and1 = and <4 x i32> %not_or2, %xbc
+  %and2 = and <4 x i32> %shuf_or2, %zbc
+  %sel = or <4 x i32> %and1, %and2
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @computesignbits_through_two_input_shuffle(<4 x i32> %x, <4 x i32> %y, <4 x i1> %cond1, <4 x i1> %cond2) {
+; CHECK-LABEL: @computesignbits_through_two_input_shuffle(
+; CHECK-NEXT:    [[SEXT1:%.*]] = sext <4 x i1> [[COND1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[SEXT2:%.*]] = sext <4 x i1> [[COND2:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i32> [[SEXT1]], <4 x i32> [[SEXT2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i32> [[COND]] to <4 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %sext1 = sext <4 x i1> %cond1 to <4 x i32>
+  %sext2 = sext <4 x i1> %cond2 to <4 x i32>
+  %cond = shufflevector <4 x i32> %sext1, <4 x i32> %sext2, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %notcond = xor <4 x i32> %cond, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %and1 = and <4 x i32> %notcond, %x
+  %and2 = and <4 x i32> %cond, %y
+  %sel = or <4 x i32> %and1, %and2
+  ret <4 x i32> %sel
+}
+

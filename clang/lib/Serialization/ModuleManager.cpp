@@ -16,12 +16,11 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/MemoryBufferCache.h"
-#include "clang/Basic/VirtualFileSystem.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/Module.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -33,6 +32,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -150,7 +150,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
   if (NewModule->Kind == MK_ImplicitModule) {
     std::string TimestampFilename = NewModule->getTimestampFilename();
-    vfs::Status Status;
+    llvm::vfs::Status Status;
     // A cached stat value would be fine as well.
     if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
       NewModule->InputFilesValidationTimestamp =
@@ -175,9 +175,13 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     if (FileName == "-") {
       Buf = llvm::MemoryBuffer::getSTDIN();
     } else {
-      // Get a buffer of the file and close the file descriptor when done.
+      // Get a buffer of the file and close the file descriptor when done. Use
+      // IsVolatile=true since PCMs with same signature can have different sizes
+      // due to different content in the unhashed control block (e.g. diagnostic
+      // options). Tha said, concurrent creation & access of the same PCM
+      // filename can lead to reading past the buffer size otherwise.
       Buf = FileMgr.getBufferForFile(NewModule->File,
-                                     /*IsVolatile=*/false,
+                                     /*IsVolatile=*/true,
                                      /*ShouldClose=*/true);
     }
 

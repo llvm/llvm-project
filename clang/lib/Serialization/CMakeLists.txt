@@ -17,6 +17,7 @@ add_clang_library(clangSerialization
   Module.cpp
   ModuleFileExtension.cpp
   ModuleManager.cpp
+  PCHContainerOperations.cpp
 
   ADDITIONAL_HEADERS
   ASTCommon.h

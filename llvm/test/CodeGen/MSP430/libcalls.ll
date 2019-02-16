@@ -433,9 +433,10 @@ entry:
 
 ; CHECK: call #__mspabi_divi
   %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = sdiv i16 %0, %0
+  %1 = load volatile i16, i16* @g_i16, align 8
+  %2 = sdiv i16 %0, %1
 
-  ret i16 %1
+  ret i16 %2
 }
 
 define i32 @divli() #0 {
@@ -444,9 +445,10 @@ entry:
 
 ; CHECK: call #__mspabi_divli
   %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = sdiv i32 %0, %0
+  %1 = load volatile i32, i32* @g_i32, align 8
+  %2 = sdiv i32 %0, %1
 
-  ret i32 %1
+  ret i32 %2
 }
 
 define i64 @divlli() #0 {
@@ -455,9 +457,10 @@ entry:
 
 ; CHECK: call #__mspabi_divlli
   %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = sdiv i64 %0, %0
+  %1 = load volatile i64, i64* @g_i64, align 8
+  %2 = sdiv i64 %0, %1
 
-  ret i64 %1
+  ret i64 %2
 }
 
 define i16 @divu() #0 {
@@ -466,9 +469,10 @@ entry:
 
 ; CHECK: call #__mspabi_divu
   %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = udiv i16 %0, %0
+  %1 = load volatile i16, i16* @g_i16, align 8
+  %2 = udiv i16 %0, %1
 
-  ret i16 %1
+  ret i16 %2
 }
 
 define i32 @divul() #0 {
@@ -477,9 +481,10 @@ entry:
 
 ; CHECK: call #__mspabi_divul
   %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = udiv i32 %0, %0
+  %1 = load volatile i32, i32* @g_i32, align 8
+  %2 = udiv i32 %0, %1
 
-  ret i32 %1
+  ret i32 %2
 }
 
 define i64 @divull() #0 {
@@ -488,9 +493,10 @@ entry:
 
 ; CHECK: call #__mspabi_divull
   %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = udiv i64 %0, %0
+  %1 = load volatile i64, i64* @g_i64, align 8
+  %2 = udiv i64 %0, %1
 
-  ret i64 %1
+  ret i64 %2
 }
 
 define i16 @remi() #0 {
@@ -499,9 +505,10 @@ entry:
 
 ; CHECK: call #__mspabi_remi
   %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = srem i16 %0, %0
+  %1 = load volatile i16, i16* @g_i16, align 8
+  %2 = srem i16 %0, %1
 
-  ret i16 %1
+  ret i16 %2
 }
 
 define i32 @remli() #0 {
@@ -510,9 +517,10 @@ entry:
 
 ; CHECK: call #__mspabi_remli
   %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = srem i32 %0, %0
+  %1 = load volatile i32, i32* @g_i32, align 8
+  %2 = srem i32 %0, %1
 
-  ret i32 %1
+  ret i32 %2
 }
 
 define i64 @remlli() #0 {
@@ -521,9 +529,10 @@ entry:
 
 ; CHECK: call #__mspabi_remlli
   %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = srem i64 %0, %0
+  %1 = load volatile i64, i64* @g_i64, align 8
+  %2 = srem i64 %0, %1
 
-  ret i64 %1
+  ret i64 %2
 }
 
 define i16 @remu() #0 {
@@ -532,9 +541,10 @@ entry:
 
 ; CHECK: call #__mspabi_remu
   %0 = load volatile i16, i16* @g_i16, align 8
-  %1 = urem i16 %0, %0
+  %1 = load volatile i16, i16* @g_i16, align 8
+  %2 = urem i16 %0, %1
 
-  ret i16 %1
+  ret i16 %2
 }
 
 define i32 @remul() #0 {
@@ -543,9 +553,10 @@ entry:
 
 ; CHECK: call #__mspabi_remul
   %0 = load volatile i32, i32* @g_i32, align 8
-  %1 = urem i32 %0, %0
+  %1 = load volatile i32, i32* @g_i32, align 8
+  %2 = urem i32 %0, %1
 
-  ret i32 %1
+  ret i32 %2
 }
 
 define i64 @remull() #0 {
@@ -554,9 +565,10 @@ entry:
 
 ; CHECK: call #__mspabi_remull
   %0 = load volatile i64, i64* @g_i64, align 8
-  %1 = urem i64 %0, %0
+  %1 = load volatile i64, i64* @g_i64, align 8
+  %2 = urem i64 %0, %1
 
-  ret i64 %1
+  ret i64 %2
 }
 
 define i16 @mpyi() #0 {
@@ -590,6 +602,41 @@ entry:
   %1 = mul i64 %0, %0
 
   ret i64 %1
+}
+
+@i = external global i32, align 2
+
+define i32 @srll() #0 {
+entry:
+; CHECK-LABEL: srll:
+; CHECK: call #__mspabi_srll
+  %0 = load volatile i32, i32* @g_i32, align 2
+  %1 = load volatile i32, i32* @i, align 2
+  %shr = lshr i32 %0, %1
+
+  ret i32 %shr
+}
+
+define i32 @sral() #0 {
+entry:
+; CHECK-LABEL: sral:
+; CHECK: call #__mspabi_sral
+  %0 = load volatile i32, i32* @g_i32, align 2
+  %1 = load volatile i32, i32* @i, align 2
+  %shr = ashr i32 %0, %1
+
+  ret i32 %shr
+}
+
+define i32 @slll() #0 {
+entry:
+; CHECK-LABEL: slll:
+; CHECK: call #__mspabi_slll
+  %0 = load volatile i32, i32* @g_i32, align 2
+  %1 = load volatile i32, i32* @i, align 2
+  %shr = shl i32 %0, %1
+
+  ret i32 %shr
 }
 
 attributes #0 = { nounwind }

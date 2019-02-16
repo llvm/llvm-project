@@ -122,15 +122,14 @@ def : GISelVop2CommutePat <sra, V_ASHRREV_I32_e32, i32>;
 }
 def : GISelVop3Pat2CommutePat <sra, V_ASHRREV_I32_e64, i32>;
 
-// FIXME: Select directly to _e32 so we don't need to deal with modifiers.
 // FIXME: We can't re-use SelectionDAG patterns here because they match
 // against a custom SDNode and we would need to create a generic machine
 // instruction that is equivalent to the custom SDNode.  This would also require
 // us to custom legalize the intrinsic to the new generic machine instruction,
 // but I can't get custom legalizing of intrinsic to work and I'm not sure if
 // this is even supported yet.
-defm : GISelVop2IntrPat <
-  int_amdgcn_cvt_pkrtz, V_CVT_PKRTZ_F16_F32_e32, v2f16, f32>;
+def : GISelVop3Pat2ModsPat <
+  int_amdgcn_cvt_pkrtz, V_CVT_PKRTZ_F16_F32_e64, v2f16, f32>;
 
 defm : GISelVop2IntrPat <int_maxnum, V_MAX_F32_e32, f32>;
 def : GISelVop3Pat2ModsPat <int_maxnum, V_MAX_F64, f64>;

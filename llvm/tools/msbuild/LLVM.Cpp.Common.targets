@@ -7,7 +7,8 @@
          selected via the settings UI appear in the vcxproj (which is imported
          before the targets file but after the props file) and we need the path
          that the user may have overridden in the UI. -->
-    <CLToolExe>$(ClangClExecutable)</CLToolExe>
+    <CLToolExe Condition="$(UseClangCl)">$(ClangClExecutable)</CLToolExe>
+    <LinkToolExe Condition="$(UseLldLink)">$(LldLinkExecutable)</LinkToolExe>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +16,20 @@
       <Context>Project</Context>
     </PropertyPageSchema>
   </ItemGroup>
+
+  <!-- Take any clang-specific options that the user wants to pass and stick them onto the
+       general purpose list of command line flags. -->
+  <ItemDefinitionGroup Condition="$(UseClangCl)">
+    <ClCompile>
+      <AdditionalOptions>-m$(PlatformArchitecture) $(ClangClAdditionalOptions) %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="$(UseLldLink)">
+    <Link>
+      <AdditionalOptions>$(LldLinkAdditionalOptions) %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
 
   <!-- We hook up a target to run every time ClCompile is about to run, the
        purpose of which is to sanitize the command line before it gets passed to
@@ -39,75 +54,7 @@
        benefit of making command lines shorter which is always nice when trying
        to look at the tool output.
       -->
-  <Target Name="BeforeClCompile" BeforeTargets="ClCompile">
-    <!-- Warn on /Zi and /ZI, then map them both to /Z7. -->
-    <Warning Condition="'%(ClCompile.DebugInformationFormat)' == 'ProgramDatabase'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support /Zi (Program Database).  The file will be compiled as if /Z7 (C7 Compatible Debug Info) had been passed.  Update the Debug Information Format in project settings to silence this warning."/>
-    <Warning Condition="'%(ClCompile.DebugInformationFormat)' == 'EditAndContinue'"
-             File="@(ClCompile)(0,0)"
-           Text="clang-cl does not support /ZI (Program Database for Edit and Continue).  The file will be compiled as if /Z7 (C7 Compatible Debug Info) had been passed.  Update the Debug Information Format in project settings to silence this warning."/>
-
-    <!-- Warn if Fiber Safe Optimizations are enabled, and then ignore them. -->
-    <Warning Condition="'%(ClCompile.EnableFiberSafeOptimizations)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support fiber safe optimizations (/GT).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if Whole Program Optimization is enabled, and then ignore it. -->
-    <Warning Condition="'%(ClCompile.WholeProgramOptimization)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support MSVC Link Time Optimization.  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if Ignore Standard Include Paths is non-empty, then ignore it. -->
-    <Warning Condition="'%(ClCompile.IgnoreStandardIncludePath)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support Ignore Standard Include Path (/X).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if Smaller Type Check is enabled, then ignore it.-->
-    <Warning Condition="'%(ClCompile.SmallerTypeCheck)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support Smaller Type Check (/RTCc).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if Runtime Checks are enabled, then ignore them.-->
-    <Warning Condition="'%(ClCompile.BasicRuntimeChecks)' != 'Default'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support Basic Runtime Checks (/RTCu, /RTC1, /RTCs).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if parallel code generation on #pragma loop is enabled, then ignore. -->
-    <Warning Condition="'(ClCompile.EnableParallelCodeGeneration)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support parallel code generation with #pragma loop(hint) (/Qpar).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if hotpatchable images are turned on -->
-    <Warning Condition="'%(ClCompile.CreateHotpatchableImage)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support creating hotpatchable images (/hotpatch).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if /Zc:forScope- is specified, and then ignore it. -->
-    <Warning Condition="'%(ClCompile.ForceConformanceInForLoopScope)' == 'false'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support disabling for loop scope conformance (/Zc:forScope-).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if /Zc:wchar_t- is specified, and then ignore it. -->
-    <Warning Condition="'%(ClCompile.TreatWChar_tAsBuiltInType)' == 'false'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support treating wchar_t as a non builtin type (/Zc:wchar_t-).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if XML Documentation is generated, and then ignore it. -->
-    <Warning Condition="'%(ClCompile.GenerateXMLDocumentationFiles)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support generating xml documentation comment files (/doc).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if Browse Information is generated, and then ignore it. -->
-    <Warning Condition="'%(ClCompile.BrowseInformation)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support generating browse information (/FR).  Disable this option in compatibility settings to silence this warning."/>
-
-    <!-- Warn if /analyze is passed, then ignore it. -->
-    <Warning Condition="'%(ClCompile.EnablePREfast)' == 'true'"
-             File="@(ClCompile)(0,0)"
-             Text="clang-cl does not support MSVC code analysis functionality (/analyze).  Disable this option in compatibility settings to silence this warning."/>
-
+  <Target Name="BeforeClCompile" BeforeTargets="ClCompile" Condition="$(UseClangCl)">
     <!-- Error if they're trying to compile this file as managed code. -->
     <Error Condition="('%(ClCompile.CompileAsManaged)' != 'false') AND ('%(ClCompile.CompileAsManaged)' != '')"
            File="@(ClCompile)(0,0)"

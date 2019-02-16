@@ -14,3 +14,4 @@ int main() {
 }
 
 // CHECK: AddressSanitizer: alloc-dealloc-mismatch (operator new [] vs operator delete) on 0x
+// CHECK: is located 0 bytes inside of 10-byte region

@@ -48,7 +48,7 @@ public:
   /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
-    if (MAI->getAssemblerDialect() == 0)
+    if (!MAI || MAI->getAssemblerDialect() == 0)
       OS << '%';
     OS << X86ATTInstPrinter::getRegisterName(RegNo);
   }
@@ -59,6 +59,11 @@ public:
   }
   // Register values should be inlined as they are not valid .set expressions.
   bool inlineAssignedExpr() const override { return true; }
+  bool isEqualTo(const MCExpr *X) const override {
+    if (auto *E = dyn_cast<X86MCExpr>(X))
+      return getRegNo() == E->getRegNo();
+    return false;
+  }
   void visitUsedExpr(MCStreamer &Streamer) const override{};
   MCFragment *findAssociatedFragment() const override { return nullptr; }
 

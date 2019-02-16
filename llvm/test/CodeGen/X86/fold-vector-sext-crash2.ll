@@ -28,6 +28,7 @@ define <2 x i256> @test_sext1() {
 ;
 ; X64-LABEL: test_sext1:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
@@ -35,7 +36,6 @@ define <2 x i256> @test_sext1() {
 ; X64-NEXT:    movq $-1, 48(%rdi)
 ; X64-NEXT:    movq $-1, 40(%rdi)
 ; X64-NEXT:    movq $-99, 32(%rdi)
-; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %Se = sext <2 x i8> <i8 -100, i8 -99> to <2 x i256>
   %Shuff = shufflevector <2 x i256> zeroinitializer, <2 x i256> %Se, <2 x i32> <i32 1, i32 3>
@@ -66,6 +66,7 @@ define <2 x i256> @test_sext2() {
 ;
 ; X64-LABEL: test_sext2:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
@@ -73,7 +74,6 @@ define <2 x i256> @test_sext2() {
 ; X64-NEXT:    movq $-1, 48(%rdi)
 ; X64-NEXT:    movq $-1, 40(%rdi)
 ; X64-NEXT:    movq $-1999, 32(%rdi) # imm = 0xF831
-; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %Se = sext <2 x i128> <i128 -2000, i128 -1999> to <2 x i256>
   %Shuff = shufflevector <2 x i256> zeroinitializer, <2 x i256> %Se, <2 x i32> <i32 1, i32 3>
@@ -104,13 +104,13 @@ define <2 x i256> @test_zext1() {
 ;
 ; X64-LABEL: test_zext1:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 48(%rdi)
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    movq $0, 40(%rdi)
 ; X64-NEXT:    movq $254, 32(%rdi)
-; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %Se = zext <2 x i8> <i8 -1, i8 -2> to <2 x i256>
   %Shuff = shufflevector <2 x i256> zeroinitializer, <2 x i256> %Se, <2 x i32> <i32 1, i32 3>
@@ -141,13 +141,13 @@ define <2 x i256> @test_zext2() {
 ;
 ; X64-LABEL: test_zext2:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 48(%rdi)
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    movq $-1, 40(%rdi)
 ; X64-NEXT:    movq $-2, 32(%rdi)
-; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
   %Se = zext <2 x i128> <i128 -1, i128 -2> to <2 x i256>
   %Shuff = shufflevector <2 x i256> zeroinitializer, <2 x i256> %Se, <2 x i32> <i32 1, i32 3>

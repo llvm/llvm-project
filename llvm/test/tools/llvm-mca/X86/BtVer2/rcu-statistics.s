@@ -21,7 +21,10 @@
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      16
 # CHECK-NEXT: Total Cycles:      31
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        16
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.52
 # CHECK-NEXT: IPC:               0.52
 # CHECK-NEXT: Block RThroughput: 21.0
 
@@ -55,3 +58,7 @@
 # CHECK-NEXT: [# retired], [# cycles]
 # CHECK-NEXT:  0,           23  (74.2%)
 # CHECK-NEXT:  2,           8  (25.8%)
+
+# CHECK:      Total ROB Entries:                64
+# CHECK-NEXT: Max Used ROB Entries:             16  ( 25.0% )
+# CHECK-NEXT: Average Used ROB Entries per cy:  11  ( 17.2% )

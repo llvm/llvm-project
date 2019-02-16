@@ -22,15 +22,11 @@ using namespace clang;
 using namespace llvm::opt;
 
 wasm::Linker::Linker(const ToolChain &TC)
-  : GnuTool("wasm::Linker", "lld", TC) {}
+    : GnuTool("wasm::Linker", "lld", TC) {}
 
-bool wasm::Linker::isLinkJob() const {
-  return true;
-}
+bool wasm::Linker::isLinkJob() const { return true; }
 
-bool wasm::Linker::hasIntegratedCPP() const {
-  return false;
-}
+bool wasm::Linker::hasIntegratedCPP() const { return false; }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
@@ -41,8 +37,6 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const ToolChain &ToolChain = getToolChain();
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   ArgStringList CmdArgs;
-  CmdArgs.push_back("-flavor");
-  CmdArgs.push_back("wasm");
 
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
@@ -75,7 +69,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
                          const llvm::opt::ArgList &Args)
-  : ToolChain(D, Triple, Args) {
+    : ToolChain(D, Triple, Args) {
 
   assert(Triple.isArch32Bit() != Triple.isArch64Bit());
 
@@ -117,7 +111,8 @@ ToolChain::RuntimeLibType WebAssembly::GetDefaultRuntimeLibType() const {
   return ToolChain::RLT_CompilerRT;
 }
 
-ToolChain::CXXStdlibType WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
+ToolChain::CXXStdlibType
+WebAssembly::GetCXXStdlibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
     StringRef Value = A->getValue();
     if (Value != "libc++")

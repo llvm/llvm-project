@@ -414,6 +414,8 @@ void DIEInteger::EmitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_GNU_addr_index:
   case dwarf::DW_FORM_ref_udata:
   case dwarf::DW_FORM_strx:
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_rnglistx:
   case dwarf::DW_FORM_udata:
     Asm->EmitULEB128(Integer);
     return;
@@ -440,6 +442,8 @@ unsigned DIEInteger::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
   case dwarf::DW_FORM_GNU_addr_index:
   case dwarf::DW_FORM_ref_udata:
   case dwarf::DW_FORM_strx:
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_rnglistx:
   case dwarf::DW_FORM_udata:
     return getULEB128Size(Integer);
   case dwarf::DW_FORM_sdata:
@@ -461,7 +465,7 @@ void DIEInteger::print(raw_ostream &O) const {
 /// EmitValue - Emit expression value.
 ///
 void DIEExpr::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
-  AP->EmitDebugThreadLocal(Expr, SizeOf(AP, Form));
+  AP->EmitDebugValue(Expr, SizeOf(AP, Form));
 }
 
 /// SizeOf - Determine size of expression value in bytes.
@@ -585,8 +589,7 @@ void DIEString::print(raw_ostream &O) const {
 //===----------------------------------------------------------------------===//
 void DIEInlineString::EmitValue(const AsmPrinter *AP, dwarf::Form Form) const {
   if (Form == dwarf::DW_FORM_string) {
-    for (char ch : S)
-      AP->emitInt8(ch);
+    AP->OutStreamer->EmitBytes(S);
     AP->emitInt8(0);
     return;
   }

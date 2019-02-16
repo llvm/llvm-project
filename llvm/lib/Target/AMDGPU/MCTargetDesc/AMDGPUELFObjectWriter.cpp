@@ -46,11 +46,9 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   if (const auto *SymA = Target.getSymA()) {
     // SCRATCH_RSRC_DWORD[01] is a special global variable that represents
     // the scratch buffer.
-    if (SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD0")
+    if (SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD0" ||
+        SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD1")
       return ELF::R_AMDGPU_ABS32_LO;
-
-    if (SymA->getSymbol().getName() == "SCRATCH_RSRC_DWORD1")
-      return ELF::R_AMDGPU_ABS32_HI;
   }
 
   switch (Target.getAccessVariant()) {

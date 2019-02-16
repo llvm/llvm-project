@@ -62,13 +62,6 @@ def M1UnitNALU : ProcResGroup<[M1UnitNAL0,
                                M1UnitNAL1]>; // All simple vector
 
 //===----------------------------------------------------------------------===//
-// Predicates.
-
-def M1BranchLinkFastPred : SchedPredicate<[{MI->getOpcode() == AArch64::BLR &&
-                                            MI->getOperand(0).getReg() != AArch64::LR}]>;
-def M1ShiftLeftFastPred  : SchedPredicate<[{TII->isExynosShiftLeftFast(*MI)}]>;
-
-//===----------------------------------------------------------------------===//
 // Coarse scheduling model.
 
 def M1WriteA1 : SchedWriteRes<[M1UnitALU]> { let Latency = 1; }
@@ -85,14 +78,16 @@ def M1WriteAC : SchedWriteRes<[M1UnitALU,
 def M1WriteAD : SchedWriteRes<[M1UnitALU,
                                M1UnitC]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
-def M1WriteAX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteA1]>,
-                                   SchedVar<NoSchedPred,         [M1WriteAA]>]>;
+def M1WriteAX : SchedWriteVariant<[SchedVar<ExynosExtPred, [M1WriteA1]>,
+                                   SchedVar<NoSchedPred,   [M1WriteAA]>]>;
+def M1WriteAY : SchedWriteVariant<[SchedVar<ExynosShiftPred, [M1WriteA1]>,
+                                   SchedVar<NoSchedPred,     [M1WriteAA]>]>;
 def M1WriteC1 : SchedWriteRes<[M1UnitC]>   { let Latency = 1; }
 def M1WriteC2 : SchedWriteRes<[M1UnitC]>   { let Latency = 2; }
 
 def M1WriteB1 : SchedWriteRes<[M1UnitB]> { let Latency = 1; }
-def M1WriteBX : SchedWriteVariant<[SchedVar<M1BranchLinkFastPred, [M1WriteAB]>,
-                                   SchedVar<NoSchedPred,          [M1WriteAC]>]>;
+def M1WriteBX : SchedWriteVariant<[SchedVar<ExynosBranchLinkLRPred, [M1WriteAC]>,
+                                   SchedVar<NoSchedPred,            [M1WriteAB]>]>;
 
 def M1WriteL5 : SchedWriteRes<[M1UnitL]> { let Latency = 5; }
 def M1WriteL6 : SchedWriteRes<[M1UnitL]> { let Latency = 6; }
@@ -110,40 +105,27 @@ def M1WriteLD : SchedWriteRes<[M1UnitL,
                                            let ResourceCycles = [2, 1]; }
 def M1WriteLH : SchedWriteRes<[]>        { let Latency = 5;
                                            let NumMicroOps = 0; }
-def M1WriteLX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteL5]>,
-                                   SchedVar<NoSchedPred,         [M1WriteLC]>]>;
-def M1WriteLY : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteL5]>,
-                                   SchedVar<NoSchedPred,         [M1WriteLD]>]>;
+def M1WriteLX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M1WriteLC]>,
+                                   SchedVar<NoSchedPred,   [M1WriteL5]>]>;
 
 def M1WriteS1 : SchedWriteRes<[M1UnitS]>   { let Latency = 1; }
 def M1WriteS3 : SchedWriteRes<[M1UnitS]>   { let Latency = 3; }
 def M1WriteS4 : SchedWriteRes<[M1UnitS]>   { let Latency = 4; }
 def M1WriteSA : SchedWriteRes<[M1UnitS,
                                M1UnitFST,
-                               M1UnitS,
-                               M1UnitFST]> { let Latency = 1;
-                                             let NumMicroOps = 2; }
-def M1WriteSB : SchedWriteRes<[M1UnitS,
-                               M1UnitFST,
                                M1UnitA]>   { let Latency = 3;
                                              let NumMicroOps = 2; }
-def M1WriteSC : SchedWriteRes<[M1UnitS,
+def M1WriteSB : SchedWriteRes<[M1UnitS,
                                M1UnitFST,
                                M1UnitS,
                                M1UnitFST,
                                M1UnitA]>   { let Latency = 3;
                                              let NumMicroOps = 3; }
-def M1WriteSD : SchedWriteRes<[M1UnitS,
-                               M1UnitFST,
-                               M1UnitA]>   { let Latency = 1;
-                                             let NumMicroOps = 2; }
-def M1WriteSE : SchedWriteRes<[M1UnitS,
+def M1WriteSC : SchedWriteRes<[M1UnitS,
                                M1UnitA]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
-def M1WriteSX : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteS1]>,
-                                   SchedVar<NoSchedPred,         [M1WriteSE]>]>;
-def M1WriteSY : SchedWriteVariant<[SchedVar<M1ShiftLeftFastPred, [M1WriteS1]>,
-                                   SchedVar<NoSchedPred,         [M1WriteSB]>]>;
+def M1WriteSX : SchedWriteVariant<[SchedVar<ScaledIdxPred, [M1WriteSC]>,
+                                   SchedVar<NoSchedPred,   [M1WriteS1]>]>;
 
 def M1ReadAdrBase : SchedReadVariant<[SchedVar<ScaledIdxPred, [ReadDefault]>,
                                       SchedVar<NoSchedPred,   [ReadDefault]>]>;
@@ -414,9 +396,9 @@ def M1WriteVSTH    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitS,
                                     M1UnitFST,
                                     M1UnitFST,
-                                    M1UnitFST]>      { let Latency = 14;
-                                                       let NumMicroOps = 4;
-                                                       let ResourceCycles = [1, 7, 1, 7, 1]; }
+                                    M1UnitFST]>     { let Latency = 14;
+                                                      let NumMicroOps = 4;
+                                                      let ResourceCycles = [1, 7, 1, 7, 1]; }
 def M1WriteVSTI    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitS,
                                     M1UnitFST,
@@ -427,9 +409,17 @@ def M1WriteVSTI    : SchedWriteRes<[M1UnitNALU,
                                     M1UnitS,
                                     M1UnitFST,
                                     M1UnitFST,
-                                    M1UnitFST]>      { let Latency = 17;
-                                                       let NumMicroOps = 7;
-                                                       let ResourceCycles = [1, 7, 1, 7, 1, 1, 1, 1, 1, 1, 1]; }
+                                    M1UnitFST]>     { let Latency = 17;
+                                                      let NumMicroOps = 7;
+                                                      let ResourceCycles = [1, 7, 1, 7, 1, 1, 1, 1, 1, 1, 1]; }
+
+// Special cases.
+def M1WriteAES  : SchedWriteRes<[M1UnitNCRYPT]>     { let Latency = 1; }
+def M1WriteCOPY : SchedWriteVariant<[SchedVar<ExynosFPPred, [M1WriteNALU1]>,
+                                     SchedVar<NoSchedPred,  [M1WriteA1]>]>;
+
+// Fast forwarding.
+def M1ReadAES : SchedReadAdvance<1, [M1WriteAES]>;
 
 // Branch instructions
 def : InstRW<[M1WriteB1], (instrs Bcc)>;
@@ -439,8 +429,11 @@ def : InstRW<[M1WriteC1], (instregex "^CBN?Z[WX]")>;
 def : InstRW<[M1WriteAD], (instregex "^TBN?Z[WX]")>;
 
 // Arithmetic and logical integer instructions.
-def : InstRW<[M1WriteA1], (instrs COPY)>;
-def : InstRW<[M1WriteAX], (instregex ".+r[sx](64)?$")>;
+def : InstRW<[M1WriteAX], (instregex ".+rx(64)?$")>;
+def : InstRW<[M1WriteAY], (instregex ".+rs$")>;
+
+// Move instructions.
+def : InstRW<[M1WriteCOPY], (instrs COPY)>;
 
 // Divide and multiply instructions.
 
@@ -450,10 +443,20 @@ def : InstRW<[M1WriteAX], (instregex ".+r[sx](64)?$")>;
 def : InstRW<[M1WriteLB,
               WriteLDHi,
               WriteAdr],    (instregex "^LDP(SW|W|X)(post|pre)")>;
-def : InstRW<[M1WriteLX,
-              ReadAdrBase], (instregex "^PRFMro[WX]")>;
+def : InstRW<[M1WriteLC,
+              ReadAdrBase], (instregex "^LDR(BB|SBW|SBX|HH|SHW|SHX|SW|W|X)roW")>;
+def : InstRW<[M1WriteL5,
+              ReadAdrBase], (instregex "^LDR(BB|SBW|SBX|HH|SHW|SHX|SW|W|X)roX")>;
+def : InstRW<[M1WriteLC,
+              ReadAdrBase], (instrs PRFMroW)>;
+def : InstRW<[M1WriteL5,
+              ReadAdrBase], (instrs PRFMroX)>;
 
 // Store instructions.
+def : InstRW<[M1WriteSC,
+              ReadAdrBase], (instregex "^STR(BB|HH|W|X)roW")>;
+def : InstRW<[WriteST,
+              ReadAdrBase], (instregex "^STR(BB|HH|W|X)roX")>;
 
 // FP data instructions.
 def : InstRW<[M1WriteNALU1],  (instregex "^F(ABS|NEG)[DS]r")>;
@@ -487,8 +490,10 @@ def : InstRW<[WriteVLD],    (instregex "^LDUR[BDHSQ]i")>;
 def : InstRW<[WriteVLD,
               WriteAdr],    (instregex "^LDR[BDHSQ](post|pre)")>;
 def : InstRW<[WriteVLD],    (instregex "^LDR[BDHSQ]ui")>;
-def : InstRW<[M1WriteLY,
-              ReadAdrBase], (instregex "^LDR[BDHS]ro[WX]")>;
+def : InstRW<[M1WriteLD,
+              ReadAdrBase], (instregex "^LDR[BDHS]roW")>;
+def : InstRW<[WriteVLD,
+              ReadAdrBase], (instregex "^LDR[BDHS]roX")>;
 def : InstRW<[M1WriteLD,
               ReadAdrBase], (instregex "^LDRQro[WX]")>;
 def : InstRW<[WriteVLD,
@@ -507,14 +512,16 @@ def : InstRW<[WriteVST],    (instregex "^STUR[BDHSQ]i")>;
 def : InstRW<[WriteVST,
               WriteAdr],    (instregex "^STR[BDHSQ](post|pre)")>;
 def : InstRW<[WriteVST],    (instregex "^STR[BDHSQ]ui")>;
-def : InstRW<[M1WriteSY,
-              ReadAdrBase], (instregex "^STR[BDHS]ro[WX]")>;
-def : InstRW<[M1WriteSB,
+def : InstRW<[M1WriteSA,
+              ReadAdrBase], (instregex "^STR[BDHS]roW")>;
+def : InstRW<[WriteVST,
+              ReadAdrBase], (instregex "^STR[BDHS]roX")>;
+def : InstRW<[M1WriteSA,
               ReadAdrBase], (instregex "^STRQro[WX]")>;
 def : InstRW<[WriteVST],    (instregex "^STN?P[DSQ]i")>;
 def : InstRW<[WriteVST,
               WriteAdr],    (instregex "^STP[DS](post|pre)")>;
-def : InstRW<[M1WriteSC,
+def : InstRW<[M1WriteSB,
               WriteAdr],    (instregex "^STPQ(post|pre)")>;
 
 // ASIMD instructions.
@@ -608,21 +615,21 @@ def : InstRW<[M1WriteVLDE],   (instregex "LD1i(64)$")>;
 def : InstRW<[M1WriteVLDE,
               WriteAdr],      (instregex "LD1i(64)_POST$")>;
 
-def : InstRW<[M1WriteL5],     (instregex "LD1Rv(8b|4h|2s)$")>;
-def : InstRW<[M1WriteL5,
+def : InstRW<[WriteVLD],      (instregex "LD1Rv(8b|4h|2s)$")>;
+def : InstRW<[WriteVLD,
               WriteAdr],      (instregex "LD1Rv(8b|4h|2s)_POST$")>;
-def : InstRW<[M1WriteL5],     (instregex "LD1Rv(1d)$")>;
-def : InstRW<[M1WriteL5,
+def : InstRW<[WriteVLD],      (instregex "LD1Rv(1d)$")>;
+def : InstRW<[WriteVLD,
               WriteAdr],      (instregex "LD1Rv(1d)_POST$")>;
-def : InstRW<[M1WriteL5],     (instregex "LD1Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[M1WriteL5,
+def : InstRW<[WriteVLD],      (instregex "LD1Rv(16b|8h|4s|2d)$")>;
+def : InstRW<[WriteVLD,
               WriteAdr],      (instregex "LD1Rv(16b|8h|4s|2d)_POST$")>;
 
-def : InstRW<[M1WriteL5],     (instregex "LD1Onev(8b|4h|2s|1d)$")>;
-def : InstRW<[M1WriteL5,
+def : InstRW<[WriteVLD],      (instregex "LD1Onev(8b|4h|2s|1d)$")>;
+def : InstRW<[WriteVLD,
               WriteAdr],      (instregex "LD1Onev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[M1WriteL5],     (instregex "LD1Onev(16b|8h|4s|2d)$")>;
-def : InstRW<[M1WriteL5,
+def : InstRW<[WriteVLD],      (instregex "LD1Onev(16b|8h|4s|2d)$")>;
+def : InstRW<[WriteVLD,
               WriteAdr],      (instregex "LD1Onev(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[M1WriteVLDA],   (instregex "LD1Twov(8b|4h|2s|1d)$")>;
 def : InstRW<[M1WriteVLDA,
@@ -830,8 +837,6 @@ def : InstRW<[M1WriteVSTI,
               WriteAdr],      (instregex "ST4Fourv(2d)_POST$")>;
 
 // Cryptography instructions.
-def M1WriteAES : SchedWriteRes<[M1UnitNCRYPT]> { let Latency = 1; }
-def M1ReadAES  : SchedReadAdvance<1, [M1WriteAES]>;
 def : InstRW<[M1WriteAES], (instregex "^AES[DE]")>;
 def : InstRW<[M1WriteAES, M1ReadAES], (instregex "^AESI?MC")>;
 

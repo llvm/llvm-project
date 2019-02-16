@@ -247,10 +247,11 @@ public:
     void clear();
 
     /// Parse prologue and all rows.
-    Error parse(DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
-                const DWARFContext &Ctx, const DWARFUnit *U,
-                std::function<void(Error)> RecoverableErrorCallback = warn,
-                raw_ostream *OS = nullptr);
+    Error parse(
+        DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
+        const DWARFContext &Ctx, const DWARFUnit *U,
+        std::function<void(Error)> RecoverableErrorCallback,
+        raw_ostream *OS = nullptr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -273,7 +274,7 @@ public:
   Expected<const LineTable *> getOrParseLineTable(
       DWARFDataExtractor &DebugLineData, uint32_t Offset,
       const DWARFContext &Ctx, const DWARFUnit *U,
-      std::function<void(Error)> RecoverableErrorCallback = warn);
+      std::function<void(Error)> RecoverableErrorCallback);
 
   /// Helper to allow for parsing of an entire .debug_line section in sequence.
   class SectionParser {
@@ -295,16 +296,17 @@ public:
     /// \param OS - if not null, the parser will print information about the
     /// table as it parses it.
     LineTable
-    parseNext(function_ref<void(Error)> RecoverableErrorCallback = warn,
-              function_ref<void(Error)> UnrecoverableErrorCallback = warn,
-              raw_ostream *OS = nullptr);
+    parseNext(
+        function_ref<void(Error)> RecoverableErrorCallback,
+        function_ref<void(Error)> UnrecoverableErrorCallback,
+        raw_ostream *OS = nullptr);
 
     /// Skip the current line table and go to the following line table (if
     /// present) immediately.
     ///
     /// \param ErrorCallback - report any prologue parsing issues via this
     /// callback.
-    void skip(function_ref<void(Error)> ErrorCallback = warn);
+    void skip(function_ref<void(Error)> ErrorCallback);
 
     /// Indicates if the parser has parsed as much as possible.
     ///
@@ -326,12 +328,6 @@ public:
     uint32_t Offset = 0;
     bool Done = false;
   };
-
-  /// Helper function for DWARFDebugLine parse functions, to report issues
-  /// identified during parsing.
-  ///
-  /// \param Err The Error to report.
-  static void warn(Error Err);
 
 private:
   struct ParsingState {

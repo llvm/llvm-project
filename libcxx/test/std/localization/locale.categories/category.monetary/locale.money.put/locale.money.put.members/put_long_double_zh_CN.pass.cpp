@@ -6,6 +6,9 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// NetBSD does not support LC_MONETARY at the moment
+// XFAIL: netbsd
 
 // REQUIRES: locale.zh_CN.UTF-8
 

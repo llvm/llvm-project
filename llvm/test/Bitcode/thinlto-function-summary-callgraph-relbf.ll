@@ -13,7 +13,7 @@
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; CHECK-NEXT:    <VERSION
 ; See if the call to func is registered.
-; CHECK-NEXT:    <PERMODULE_RELBF {{.*}} op4=1 {{.*}} op7=256
+; CHECK-NEXT:    <PERMODULE_RELBF {{.*}} op4=1 {{.*}} op8=256
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK: <STRTAB_BLOCK
 ; CHECK-NEXT: blob data = 'undefinedglobmainfunc{{.*}}'
@@ -38,5 +38,5 @@ declare void @func(...) #1
 
 ; DIS: ^0 = module: (path: "{{.*}}", hash: (0, 0, 0, 0, 0))
 ; DIS: ^1 = gv: (name: "func") ; guid = 7289175272376759421
-; DIS: ^2 = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 3, calls: ((callee: ^1, relbf: 256)), refs: (^3)))) ; guid = 15822663052811949562
+; DIS: ^2 = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 3, calls: ((callee: ^1, relbf: 256)), refs: (readonly ^3)))) ; guid = 15822663052811949562
 ; DIS: ^3 = gv: (name: "undefinedglob") ; guid = 18036901804029949403

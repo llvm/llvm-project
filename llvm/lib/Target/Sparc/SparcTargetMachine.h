@@ -40,10 +40,6 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-
-  bool isMachineVerifierClean() const override {
-    return false;
-  }
 };
 
 /// Sparc 32-bit target machine

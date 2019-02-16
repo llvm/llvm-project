@@ -121,7 +121,6 @@ void test_ctor_under_alloc() {
   int arr2[] = {1, 101, 42};
   {
     using C = TCT::vector<>;
-    using T = typename C::value_type;
     using It = forward_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);
@@ -134,7 +133,6 @@ void test_ctor_under_alloc() {
   }
   {
     using C = TCT::vector<>;
-    using T = typename C::value_type;
     using It = input_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);
@@ -148,9 +146,40 @@ void test_ctor_under_alloc() {
 #endif
 }
 
+// Initialize a vector with a different value type.
+void test_ctor_with_different_value_type() {
+  {
+    // Make sure initialization is performed with each element value, not with
+    // a memory blob.
+    float array[3] = {0.0f, 1.0f, 2.0f};
+    std::vector<int> v(array, array + 3);
+    assert(v[0] == 0);
+    assert(v[1] == 1);
+    assert(v[2] == 2);
+  }
+  struct X { int x; };
+  struct Y { int y; };
+  struct Z : X, Y { int z; };
+  {
+    Z z;
+    Z *array[1] = { &z };
+    // Though the types Z* and Y* are very similar, initialization still cannot
+    // be done with `memcpy`.
+    std::vector<Y*> v(array, array + 1);
+    assert(v[0] == &z);
+  }
+  {
+    // Though the types are different, initialization can be done with `memcpy`.
+    int32_t array[1] = { -1 };
+    std::vector<uint32_t> v(array, array + 1);
+    assert(v[0] == 4294967295);
+  }
+}
+
 
 int main() {
   basic_test_cases();
   emplaceable_concept_tests(); // See PR34898
   test_ctor_under_alloc();
+  test_ctor_with_different_value_type();
 }

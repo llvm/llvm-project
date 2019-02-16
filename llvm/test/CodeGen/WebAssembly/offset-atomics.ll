@@ -1,5 +1,5 @@
 ; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -mattr=+atomics,+sign-ext | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+atomics,+sign-ext | FileCheck %s
 
 ; Test that atomic loads are assembled properly.
 
@@ -181,7 +181,7 @@ define i64 @load_i64_with_unfolded_gep_offset(i64* %p) {
 ; Basic store.
 
 ; CHECK-LABEL: store_i32_no_offset:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype store_i32_no_offset (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i32_no_offset(i32 *%p, i32 %v) {
@@ -252,7 +252,7 @@ define void @store_i32_with_unfolded_gep_offset(i32* %p) {
 ; When storing from a fixed address, materialize a zero.
 
 ; CHECK-LABEL: store_i32_to_numeric_address:
-; CHECK-NEXT: i32.const $push0=, 0{{$}}
+; CHECK:      i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.const $push1=, 0{{$}}
 ; CHECK-NEXT: i32.atomic.store 42($pop0), $pop1{{$}}
 define void @store_i32_to_numeric_address() {
@@ -277,7 +277,7 @@ define void @store_i32_to_global_address() {
 ; Basic store.
 
 ; CHECK-LABEL: store_i64_no_offset:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype store_i64_no_offset (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i64_no_offset(i64 *%p, i64 %v) {
@@ -663,7 +663,7 @@ define void @store_i8_i64_with_folded_or_offset(i32 %x, i64 %v) {
 ; Basic RMW.
 
 ; CHECK-LABEL: rmw_add_i32_no_offset:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype rmw_add_i32_no_offset (i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @rmw_add_i32_no_offset(i32* %p, i32 %v) {
@@ -757,7 +757,7 @@ define i32 @rmw_add_i32_from_global_address(i32 %v) {
 ; Basic RMW.
 
 ; CHECK-LABEL: rmw_add_i64_no_offset:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype rmw_add_i64_no_offset (i32, i64) -> (i64){{$}}
 ; CHECK: i64.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @rmw_add_i64_no_offset(i64* %p, i64 %v) {
@@ -1069,4 +1069,725 @@ define i8 @rmw_add_i8_i32_retvalue(i8 *%p, i32 %v) {
   %t = trunc i32 %v to i8
   %old = atomicrmw add i8* %p, i8 %t seq_cst
   ret i8 %old
+}
+
+;===----------------------------------------------------------------------------
+; Atomic ternary read-modify-writes: 32-bit
+;===----------------------------------------------------------------------------
+
+; Basic RMW.
+
+; CHECK-LABEL: cmpxchg_i32_no_offset:
+; CHECK-NEXT: .functype cmpxchg_i32_no_offset (i32, i32, i32) -> (i32){{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @cmpxchg_i32_no_offset(i32* %p, i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* %p, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; With an nuw add, we can fold an offset.
+
+; CHECK-LABEL: cmpxchg_i32_with_folded_offset:
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 24($0), $1, $2{{$}}
+define i32 @cmpxchg_i32_with_folded_offset(i32* %p, i32 %exp, i32 %new) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %pair = cmpxchg i32* %s, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; With an inbounds gep, we can fold an offset.
+
+; CHECK-LABEL: cmpxchg_i32_with_folded_gep_offset:
+; CHECK: i32.atomic.rmw.cmpxchg $push0=, 24($0), $1, $2{{$}}
+define i32 @cmpxchg_i32_with_folded_gep_offset(i32* %p, i32 %exp, i32 %new) {
+  %s = getelementptr inbounds i32, i32* %p, i32 6
+  %pair = cmpxchg i32* %s, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; We can't fold a negative offset though, even with an inbounds gep.
+
+; CHECK-LABEL: cmpxchg_i32_with_unfolded_gep_negative_offset:
+; CHECK: i32.const $push0=, -24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push2=, 0($pop1), $1, $2{{$}}
+define i32 @cmpxchg_i32_with_unfolded_gep_negative_offset(i32* %p, i32 %exp, i32 %new) {
+  %s = getelementptr inbounds i32, i32* %p, i32 -6
+  %pair = cmpxchg i32* %s, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; Without nuw, and even with nsw, we can't fold an offset.
+
+; CHECK-LABEL: cmpxchg_i32_with_unfolded_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push2=, 0($pop1), $1, $2{{$}}
+define i32 @cmpxchg_i32_with_unfolded_offset(i32* %p, i32 %exp, i32 %new) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nsw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %pair = cmpxchg i32* %s, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; Without inbounds, we can't fold a gep offset.
+
+; CHECK-LABEL: cmpxchg_i32_with_unfolded_gep_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push2=, 0($pop1), $1, $2{{$}}
+define i32 @cmpxchg_i32_with_unfolded_gep_offset(i32* %p, i32 %exp, i32 %new) {
+  %s = getelementptr i32, i32* %p, i32 6
+  %pair = cmpxchg i32* %s, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; When loading from a fixed address, materialize a zero.
+
+; CHECK-LABEL: cmpxchg_i32_from_numeric_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push1=, 42($pop0), $0, $1{{$}}
+define i32 @cmpxchg_i32_from_numeric_address(i32 %exp, i32 %new) {
+  %s = inttoptr i32 42 to i32*
+  %pair = cmpxchg i32* %s, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+; CHECK-LABEL: cmpxchg_i32_from_global_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.rmw.cmpxchg $push1=, gv($pop0), $0, $1{{$}}
+define i32 @cmpxchg_i32_from_global_address(i32 %exp, i32 %new) {
+  %pair = cmpxchg i32* @gv, i32 %exp, i32 %new seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+;===----------------------------------------------------------------------------
+; Atomic ternary read-modify-writes: 64-bit
+;===----------------------------------------------------------------------------
+
+; Basic RMW.
+
+; CHECK-LABEL: cmpxchg_i64_no_offset:
+; CHECK-NEXT: .functype cmpxchg_i64_no_offset (i32, i64, i64) -> (i64){{$}}
+; CHECK: i64.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i64 @cmpxchg_i64_no_offset(i64* %p, i64 %exp, i64 %new) {
+  %pair = cmpxchg i64* %p, i64 %exp, i64 %new seq_cst seq_cst
+  %old = extractvalue { i64, i1 } %pair, 0
+  ret i64 %old
+}
+
+; With an nuw add, we can fold an offset.
+
+; CHECK-LABEL: cmpxchg_i64_with_folded_offset:
+; CHECK: i64.atomic.rmw.cmpxchg $push0=, 24($0), $1, $2{{$}}
+define i64 @cmpxchg_i64_with_folded_offset(i64* %p, i64 %exp, i64 %new) {
+  %q = ptrtoint i64* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i64*
+  %pair = cmpxchg i64* %s, i64 %exp, i64 %new seq_cst seq_cst
+  %old = extractvalue { i64, i1 } %pair, 0
+  ret i64 %old
+}
+
+; With an inbounds gep, we can fold an offset.
+
+; CHECK-LABEL: cmpxchg_i64_with_folded_gep_offset:
+; CHECK: i64.atomic.rmw.cmpxchg $push0=, 24($0), $1, $2{{$}}
+define i64 @cmpxchg_i64_with_folded_gep_offset(i64* %p, i64 %exp, i64 %new) {
+  %s = getelementptr inbounds i64, i64* %p, i32 3
+  %pair = cmpxchg i64* %s, i64 %exp, i64 %new seq_cst seq_cst
+  %old = extractvalue { i64, i1 } %pair, 0
+  ret i64 %old
+}
+
+; We can't fold a negative offset though, even with an inbounds gep.
+
+; CHECK-LABEL: cmpxchg_i64_with_unfolded_gep_negative_offset:
+; CHECK: i32.const $push0=, -24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i64.atomic.rmw.cmpxchg $push2=, 0($pop1), $1, $2{{$}}
+define i64 @cmpxchg_i64_with_unfolded_gep_negative_offset(i64* %p, i64 %exp, i64 %new) {
+  %s = getelementptr inbounds i64, i64* %p, i32 -3
+  %pair = cmpxchg i64* %s, i64 %exp, i64 %new seq_cst seq_cst
+  %old = extractvalue { i64, i1 } %pair, 0
+  ret i64 %old
+}
+
+; Without nuw, and even with nsw, we can't fold an offset.
+
+; CHECK-LABEL: cmpxchg_i64_with_unfolded_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i64.atomic.rmw.cmpxchg $push2=, 0($pop1), $1, $2{{$}}
+define i64 @cmpxchg_i64_with_unfolded_offset(i64* %p, i64 %exp, i64 %new) {
+  %q = ptrtoint i64* %p to i32
+  %r = add nsw i32 %q, 24
+  %s = inttoptr i32 %r to i64*
+  %pair = cmpxchg i64* %s, i64 %exp, i64 %new seq_cst seq_cst
+  %old = extractvalue { i64, i1 } %pair, 0
+  ret i64 %old
+}
+
+; Without inbounds, we can't fold a gep offset.
+
+; CHECK-LABEL: cmpxchg_i64_with_unfolded_gep_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i64.atomic.rmw.cmpxchg $push2=, 0($pop1), $1, $2{{$}}
+define i64 @cmpxchg_i64_with_unfolded_gep_offset(i64* %p, i64 %exp, i64 %new) {
+  %s = getelementptr i64, i64* %p, i32 3
+  %pair = cmpxchg i64* %s, i64 %exp, i64 %new seq_cst seq_cst
+  %old = extractvalue { i64, i1 } %pair, 0
+  ret i64 %old
+}
+
+;===----------------------------------------------------------------------------
+; Atomic truncating & sign-extending ternary RMWs
+;===----------------------------------------------------------------------------
+
+; Fold an offset into a sign-extending rmw.
+
+; CHECK-LABEL: cmpxchg_i8_i32_s_with_folded_offset:
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+; CHECK-NEXT: i32.extend8_s $push1=, $pop0
+define i32 @cmpxchg_i8_i32_s_with_folded_offset(i8* %p, i32 %exp, i32 %new) {
+  %q = ptrtoint i8* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i8*
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* %s, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %u = sext i8 %old to i32
+  ret i32 %u
+}
+
+; 32->64 sext rmw gets selected as i32.atomic.rmw.cmpxchg, i64_extend_s/i32
+; CHECK-LABEL: cmpxchg_i32_i64_s_with_folded_offset:
+; CHECK: i32.wrap/i64 $push1=, $1
+; CHECK-NEXT: i32.wrap/i64 $push0=, $2
+; CHECK-NEXT: i32.atomic.rmw.cmpxchg $push2=, 24($0), $pop1, $pop0{{$}}
+; CHECK-NEXT: i64.extend_s/i32 $push3=, $pop2{{$}}
+define i64 @cmpxchg_i32_i64_s_with_folded_offset(i32* %p, i64 %exp, i64 %new) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %exp_t = trunc i64 %exp to i32
+  %new_t = trunc i64 %new to i32
+  %pair = cmpxchg i32* %s, i32 %exp_t, i32 %new_t seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  %u = sext i32 %old to i64
+  ret i64 %u
+}
+
+; Fold a gep offset into a sign-extending rmw.
+
+; CHECK-LABEL: cmpxchg_i8_i32_s_with_folded_gep_offset:
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+; CHECK-NEXT: i32.extend8_s $push1=, $pop0
+define i32 @cmpxchg_i8_i32_s_with_folded_gep_offset(i8* %p, i32 %exp, i32 %new) {
+  %s = getelementptr inbounds i8, i8* %p, i32 24
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* %s, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %u = sext i8 %old to i32
+  ret i32 %u
+}
+
+; CHECK-LABEL: cmpxchg_i16_i32_s_with_folded_gep_offset:
+; CHECK: i32.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+; CHECK-NEXT: i32.extend16_s $push1=, $pop0
+define i32 @cmpxchg_i16_i32_s_with_folded_gep_offset(i16* %p, i32 %exp, i32 %new) {
+  %s = getelementptr inbounds i16, i16* %p, i32 24
+  %exp_t = trunc i32 %exp to i16
+  %new_t = trunc i32 %new to i16
+  %pair = cmpxchg i16* %s, i16 %exp_t, i16 %new_t seq_cst seq_cst
+  %old = extractvalue { i16, i1 } %pair, 0
+  %u = sext i16 %old to i32
+  ret i32 %u
+}
+
+; CHECK-LABEL: cmpxchg_i16_i64_s_with_folded_gep_offset:
+; CHECK: i64.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+; CHECK-NEXT: i64.extend16_s $push1=, $pop0
+define i64 @cmpxchg_i16_i64_s_with_folded_gep_offset(i16* %p, i64 %exp, i64 %new) {
+  %s = getelementptr inbounds i16, i16* %p, i32 24
+  %exp_t = trunc i64 %exp to i16
+  %new_t = trunc i64 %new to i16
+  %pair = cmpxchg i16* %s, i16 %exp_t, i16 %new_t seq_cst seq_cst
+  %old = extractvalue { i16, i1 } %pair, 0
+  %u = sext i16 %old to i64
+  ret i64 %u
+}
+
+; 'add' in this code becomes 'or' after DAG optimization. Treat an 'or' node as
+; an 'add' if the or'ed bits are known to be zero.
+
+; CHECK-LABEL: cmpxchg_i8_i32_s_with_folded_or_offset:
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+; CHECK-NEXT: i32.extend8_s $push{{[0-9]+}}=, $pop[[R1]]{{$}}
+define i32 @cmpxchg_i8_i32_s_with_folded_or_offset(i32 %x, i32 %exp, i32 %new) {
+  %and = and i32 %x, -4
+  %t0 = inttoptr i32 %and to i8*
+  %arrayidx = getelementptr inbounds i8, i8* %t0, i32 2
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* %arrayidx, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %conv = sext i8 %old to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: cmpxchg_i8_i64_s_with_folded_or_offset:
+; CHECK: i64.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+; CHECK-NEXT: i64.extend8_s $push{{[0-9]+}}=, $pop[[R1]]{{$}}
+define i64 @cmpxchg_i8_i64_s_with_folded_or_offset(i32 %x, i64 %exp, i64 %new) {
+  %and = and i32 %x, -4
+  %t0 = inttoptr i32 %and to i8*
+  %arrayidx = getelementptr inbounds i8, i8* %t0, i32 2
+  %exp_t = trunc i64 %exp to i8
+  %new_t = trunc i64 %new to i8
+  %pair = cmpxchg i8* %arrayidx, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %conv = sext i8 %old to i64
+  ret i64 %conv
+}
+
+; When loading from a fixed address, materialize a zero.
+
+; CHECK-LABEL: cmpxchg_i16_i32_s_from_numeric_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.rmw16_u.cmpxchg $push1=, 42($pop0), $0, $1{{$}}
+; CHECK-NEXT: i32.extend16_s $push2=, $pop1
+define i32 @cmpxchg_i16_i32_s_from_numeric_address(i32 %exp, i32 %new) {
+  %s = inttoptr i32 42 to i16*
+  %exp_t = trunc i32 %exp to i16
+  %new_t = trunc i32 %new to i16
+  %pair = cmpxchg i16* %s, i16 %exp_t, i16 %new_t seq_cst seq_cst
+  %old = extractvalue { i16, i1 } %pair, 0
+  %u = sext i16 %old to i32
+  ret i32 %u
+}
+
+; CHECK-LABEL: cmpxchg_i8_i32_s_from_global_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push1=, gv8($pop0), $0, $1{{$}}
+; CHECK-NEXT: i32.extend8_s $push2=, $pop1{{$}}
+define i32 @cmpxchg_i8_i32_s_from_global_address(i32 %exp, i32 %new) {
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* @gv8, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %u = sext i8 %old to i32
+  ret i32 %u
+}
+
+;===----------------------------------------------------------------------------
+; Atomic truncating & zero-extending ternary RMWs
+;===----------------------------------------------------------------------------
+
+; Fold an offset into a sign-extending rmw.
+
+; CHECK-LABEL: cmpxchg_i8_i32_z_with_folded_offset:
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+define i32 @cmpxchg_i8_i32_z_with_folded_offset(i8* %p, i32 %exp, i32 %new) {
+  %q = ptrtoint i8* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i8*
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* %s, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %u = zext i8 %old to i32
+  ret i32 %u
+}
+
+; CHECK-LABEL: cmpxchg_i32_i64_z_with_folded_offset:
+; CHECK: i64.atomic.rmw32_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+define i64 @cmpxchg_i32_i64_z_with_folded_offset(i32* %p, i64 %exp, i64 %new) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %exp_t = trunc i64 %exp to i32
+  %new_t = trunc i64 %new to i32
+  %pair = cmpxchg i32* %s, i32 %exp_t, i32 %new_t seq_cst seq_cst
+  %old = extractvalue { i32, i1 } %pair, 0
+  %u = zext i32 %old to i64
+  ret i64 %u
+}
+
+; Fold a gep offset into a sign-extending rmw.
+
+; CHECK-LABEL: cmpxchg_i8_i32_z_with_folded_gep_offset:
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push0=, 24($0), $1, $2{{$}}
+define i32 @cmpxchg_i8_i32_z_with_folded_gep_offset(i8* %p, i32 %exp, i32 %new) {
+  %s = getelementptr inbounds i8, i8* %p, i32 24
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* %s, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %u = zext i8 %old to i32
+  ret i32 %u
+}
+
+; CHECK-LABEL: cmpxchg_i16_i32_z_with_folded_gep_offset:
+; CHECK: i32.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+define i32 @cmpxchg_i16_i32_z_with_folded_gep_offset(i16* %p, i32 %exp, i32 %new) {
+  %s = getelementptr inbounds i16, i16* %p, i32 24
+  %exp_t = trunc i32 %exp to i16
+  %new_t = trunc i32 %new to i16
+  %pair = cmpxchg i16* %s, i16 %exp_t, i16 %new_t seq_cst seq_cst
+  %old = extractvalue { i16, i1 } %pair, 0
+  %u = zext i16 %old to i32
+  ret i32 %u
+}
+
+; CHECK-LABEL: cmpxchg_i16_i64_z_with_folded_gep_offset:
+; CHECK: i64.atomic.rmw16_u.cmpxchg $push0=, 48($0), $1, $2{{$}}
+define i64 @cmpxchg_i16_i64_z_with_folded_gep_offset(i16* %p, i64 %exp, i64 %new) {
+  %s = getelementptr inbounds i16, i16* %p, i32 24
+  %exp_t = trunc i64 %exp to i16
+  %new_t = trunc i64 %new to i16
+  %pair = cmpxchg i16* %s, i16 %exp_t, i16 %new_t seq_cst seq_cst
+  %old = extractvalue { i16, i1 } %pair, 0
+  %u = zext i16 %old to i64
+  ret i64 %u
+}
+
+; 'add' in this code becomes 'or' after DAG optimization. Treat an 'or' node as
+; an 'add' if the or'ed bits are known to be zero.
+
+; CHECK-LABEL: cmpxchg_i8_i32_z_with_folded_or_offset:
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+define i32 @cmpxchg_i8_i32_z_with_folded_or_offset(i32 %x, i32 %exp, i32 %new) {
+  %and = and i32 %x, -4
+  %t0 = inttoptr i32 %and to i8*
+  %arrayidx = getelementptr inbounds i8, i8* %t0, i32 2
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* %arrayidx, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %conv = zext i8 %old to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: cmpxchg_i8_i64_z_with_folded_or_offset:
+; CHECK: i64.atomic.rmw8_u.cmpxchg $push[[R1:[0-9]+]]=, 2($pop{{[0-9]+}}), $1, $2{{$}}
+define i64 @cmpxchg_i8_i64_z_with_folded_or_offset(i32 %x, i64 %exp, i64 %new) {
+  %and = and i32 %x, -4
+  %t0 = inttoptr i32 %and to i8*
+  %arrayidx = getelementptr inbounds i8, i8* %t0, i32 2
+  %exp_t = trunc i64 %exp to i8
+  %new_t = trunc i64 %new to i8
+  %pair = cmpxchg i8* %arrayidx, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %conv = zext i8 %old to i64
+  ret i64 %conv
+}
+
+; When loading from a fixed address, materialize a zero.
+
+; CHECK-LABEL: cmpxchg_i16_i32_z_from_numeric_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.rmw16_u.cmpxchg $push1=, 42($pop0), $0, $1{{$}}
+define i32 @cmpxchg_i16_i32_z_from_numeric_address(i32 %exp, i32 %new) {
+  %s = inttoptr i32 42 to i16*
+  %exp_t = trunc i32 %exp to i16
+  %new_t = trunc i32 %new to i16
+  %pair = cmpxchg i16* %s, i16 %exp_t, i16 %new_t seq_cst seq_cst
+  %old = extractvalue { i16, i1 } %pair, 0
+  %u = zext i16 %old to i32
+  ret i32 %u
+}
+
+; CHECK-LABEL: cmpxchg_i8_i32_z_from_global_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.rmw8_u.cmpxchg $push1=, gv8($pop0), $0, $1{{$}}
+define i32 @cmpxchg_i8_i32_z_from_global_address(i32 %exp, i32 %new) {
+  %exp_t = trunc i32 %exp to i8
+  %new_t = trunc i32 %new to i8
+  %pair = cmpxchg i8* @gv8, i8 %exp_t, i8 %new_t seq_cst seq_cst
+  %old = extractvalue { i8, i1 } %pair, 0
+  %u = zext i8 %old to i32
+  ret i32 %u
+}
+
+;===----------------------------------------------------------------------------
+; Waits: 32-bit
+;===----------------------------------------------------------------------------
+
+declare i32 @llvm.wasm.atomic.wait.i32(i32*, i32, i64)
+
+; Basic wait.
+
+; CHECK-LABEL: wait_i32_no_offset:
+; CHECK: i32.atomic.wait $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @wait_i32_no_offset(i32* %p, i32 %exp, i64 %timeout) {
+  %v = call i32 @llvm.wasm.atomic.wait.i32(i32* %p, i32 %exp, i64 %timeout)
+  ret i32 %v
+}
+
+; With an nuw add, we can fold an offset.
+
+; CHECK-LABEL: wait_i32_with_folded_offset:
+; CHECK: i32.atomic.wait $push0=, 24($0), $1, $2{{$}}
+define i32 @wait_i32_with_folded_offset(i32* %p, i32 %exp, i64 %timeout) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %t = call i32 @llvm.wasm.atomic.wait.i32(i32* %s, i32 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; With an inbounds gep, we can fold an offset.
+
+; CHECK-LABEL: wait_i32_with_folded_gep_offset:
+; CHECK: i32.atomic.wait $push0=, 24($0), $1, $2{{$}}
+define i32 @wait_i32_with_folded_gep_offset(i32* %p, i32 %exp, i64 %timeout) {
+  %s = getelementptr inbounds i32, i32* %p, i32 6
+  %t = call i32 @llvm.wasm.atomic.wait.i32(i32* %s, i32 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; We can't fold a negative offset though, even with an inbounds gep.
+
+; CHECK-LABEL: wait_i32_with_unfolded_gep_negative_offset:
+; CHECK: i32.const $push0=, -24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i32.atomic.wait $push2=, 0($pop1), $1, $2{{$}}
+define i32 @wait_i32_with_unfolded_gep_negative_offset(i32* %p, i32 %exp, i64 %timeout) {
+  %s = getelementptr inbounds i32, i32* %p, i32 -6
+  %t = call i32 @llvm.wasm.atomic.wait.i32(i32* %s, i32 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; Without nuw, and even with nsw, we can't fold an offset.
+
+; CHECK-LABEL: wait_i32_with_unfolded_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i32.atomic.wait $push2=, 0($pop1), $1, $2{{$}}
+define i32 @wait_i32_with_unfolded_offset(i32* %p, i32 %exp, i64 %timeout) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nsw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %t = call i32 @llvm.wasm.atomic.wait.i32(i32* %s, i32 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; Without inbounds, we can't fold a gep offset.
+
+; CHECK-LABEL: wait_i32_with_unfolded_gep_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i32.atomic.wait $push2=, 0($pop1), $1, $2{{$}}
+define i32 @wait_i32_with_unfolded_gep_offset(i32* %p, i32 %exp, i64 %timeout) {
+  %s = getelementptr i32, i32* %p, i32 6
+  %t = call i32 @llvm.wasm.atomic.wait.i32(i32* %s, i32 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; When waiting from a fixed address, materialize a zero.
+
+; CHECK-LABEL: wait_i32_from_numeric_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.wait $push1=, 42($pop0), $0, $1{{$}}
+define i32 @wait_i32_from_numeric_address(i32 %exp, i64 %timeout) {
+  %s = inttoptr i32 42 to i32*
+  %t = call i32 @llvm.wasm.atomic.wait.i32(i32* %s, i32 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; CHECK-LABEL: wait_i32_from_global_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: i32.atomic.wait $push1=, gv($pop0), $0, $1{{$}}
+define i32 @wait_i32_from_global_address(i32 %exp, i64 %timeout) {
+  %t = call i32 @llvm.wasm.atomic.wait.i32(i32* @gv, i32 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+;===----------------------------------------------------------------------------
+; Waits: 64-bit
+;===----------------------------------------------------------------------------
+
+declare i32 @llvm.wasm.atomic.wait.i64(i64*, i64, i64)
+
+; Basic wait.
+
+; CHECK-LABEL: wait_i64_no_offset:
+; CHECK: i64.atomic.wait $push0=, 0($0), $1, $2{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @wait_i64_no_offset(i64* %p, i64 %exp, i64 %timeout) {
+  %v = call i32 @llvm.wasm.atomic.wait.i64(i64* %p, i64 %exp, i64 %timeout)
+  ret i32 %v
+}
+
+; With an nuw add, we can fold an offset.
+
+; CHECK-LABEL: wait_i64_with_folded_offset:
+; CHECK: i64.atomic.wait $push0=, 24($0), $1, $2{{$}}
+define i32 @wait_i64_with_folded_offset(i64* %p, i64 %exp, i64 %timeout) {
+  %q = ptrtoint i64* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i64*
+  %t = call i32 @llvm.wasm.atomic.wait.i64(i64* %s, i64 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; With an inbounds gep, we can fold an offset.
+
+; CHECK-LABEL: wait_i64_with_folded_gep_offset:
+; CHECK: i64.atomic.wait $push0=, 24($0), $1, $2{{$}}
+define i32 @wait_i64_with_folded_gep_offset(i64* %p, i64 %exp, i64 %timeout) {
+  %s = getelementptr inbounds i64, i64* %p, i32 3
+  %t = call i32 @llvm.wasm.atomic.wait.i64(i64* %s, i64 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; We can't fold a negative offset though, even with an inbounds gep.
+
+; CHECK-LABEL: wait_i64_with_unfolded_gep_negative_offset:
+; CHECK: i32.const $push0=, -24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i64.atomic.wait $push2=, 0($pop1), $1, $2{{$}}
+define i32 @wait_i64_with_unfolded_gep_negative_offset(i64* %p, i64 %exp, i64 %timeout) {
+  %s = getelementptr inbounds i64, i64* %p, i32 -3
+  %t = call i32 @llvm.wasm.atomic.wait.i64(i64* %s, i64 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; Without nuw, and even with nsw, we can't fold an offset.
+
+; CHECK-LABEL: wait_i64_with_unfolded_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i64.atomic.wait $push2=, 0($pop1), $1, $2{{$}}
+define i32 @wait_i64_with_unfolded_offset(i64* %p, i64 %exp, i64 %timeout) {
+  %q = ptrtoint i64* %p to i32
+  %r = add nsw i32 %q, 24
+  %s = inttoptr i32 %r to i64*
+  %t = call i32 @llvm.wasm.atomic.wait.i64(i64* %s, i64 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+; Without inbounds, we can't fold a gep offset.
+
+; CHECK-LABEL: wait_i64_with_unfolded_gep_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: i64.atomic.wait $push2=, 0($pop1), $1, $2{{$}}
+define i32 @wait_i64_with_unfolded_gep_offset(i64* %p, i64 %exp, i64 %timeout) {
+  %s = getelementptr i64, i64* %p, i32 3
+  %t = call i32 @llvm.wasm.atomic.wait.i64(i64* %s, i64 %exp, i64 %timeout)
+  ret i32 %t
+}
+
+;===----------------------------------------------------------------------------
+; Notifies
+;===----------------------------------------------------------------------------
+
+declare i32 @llvm.wasm.atomic.notify(i32*, i32)
+
+; Basic notify.
+
+; CHECK-LABEL: notify_no_offset:
+; CHECK: atomic.notify $push0=, 0($0), $1{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @notify_no_offset(i32* %p, i32 %notify_count) {
+  %v = call i32 @llvm.wasm.atomic.notify(i32* %p, i32 %notify_count)
+  ret i32 %v
+}
+
+; With an nuw add, we can fold an offset.
+
+; CHECK-LABEL: notify_with_folded_offset:
+; CHECK: atomic.notify $push0=, 24($0), $1{{$}}
+define i32 @notify_with_folded_offset(i32* %p, i32 %notify_count) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
+}
+
+; With an inbounds gep, we can fold an offset.
+
+; CHECK-LABEL: notify_with_folded_gep_offset:
+; CHECK: atomic.notify $push0=, 24($0), $1{{$}}
+define i32 @notify_with_folded_gep_offset(i32* %p, i32 %notify_count) {
+  %s = getelementptr inbounds i32, i32* %p, i32 6
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
+}
+
+; We can't fold a negative offset though, even with an inbounds gep.
+
+; CHECK-LABEL: notify_with_unfolded_gep_negative_offset:
+; CHECK: i32.const $push0=, -24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: atomic.notify $push2=, 0($pop1), $1{{$}}
+define i32 @notify_with_unfolded_gep_negative_offset(i32* %p, i32 %notify_count) {
+  %s = getelementptr inbounds i32, i32* %p, i32 -6
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
+}
+
+; Without nuw, and even with nsw, we can't fold an offset.
+
+; CHECK-LABEL: notify_with_unfolded_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: atomic.notify $push2=, 0($pop1), $1{{$}}
+define i32 @notify_with_unfolded_offset(i32* %p, i32 %notify_count) {
+  %q = ptrtoint i32* %p to i32
+  %r = add nsw i32 %q, 24
+  %s = inttoptr i32 %r to i32*
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
+}
+
+; Without inbounds, we can't fold a gep offset.
+
+; CHECK-LABEL: notify_with_unfolded_gep_offset:
+; CHECK: i32.const $push0=, 24{{$}}
+; CHECK: i32.add $push1=, $0, $pop0{{$}}
+; CHECK: atomic.notify $push2=, 0($pop1), $1{{$}}
+define i32 @notify_with_unfolded_gep_offset(i32* %p, i32 %notify_count) {
+  %s = getelementptr i32, i32* %p, i32 6
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
+}
+
+; When notifying from a fixed address, materialize a zero.
+
+; CHECK-LABEL: notify_from_numeric_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: atomic.notify $push1=, 42($pop0), $0{{$}}
+define i32 @notify_from_numeric_address(i32 %notify_count) {
+  %s = inttoptr i32 42 to i32*
+  %t = call i32 @llvm.wasm.atomic.notify(i32* %s, i32 %notify_count)
+  ret i32 %t
+}
+
+; CHECK-LABEL: notify_from_global_address
+; CHECK: i32.const $push0=, 0{{$}}
+; CHECK: atomic.notify $push1=, gv($pop0), $0{{$}}
+define i32 @notify_from_global_address(i32 %notify_count) {
+  %t = call i32 @llvm.wasm.atomic.notify(i32* @gv, i32 %notify_count)
+  ret i32 %t
 }

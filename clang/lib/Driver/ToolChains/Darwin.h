@@ -11,8 +11,10 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
 #include "Cuda.h"
+#include "clang/Driver/DarwinSDKInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Driver/XRayArgs.h"
 
 namespace clang {
 namespace driver {
@@ -189,9 +191,9 @@ public:
 
   /// Add a runtime library to the list of items to link.
   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
-                         llvm::opt::ArgStringList &CmdArgs,
-                         StringRef DarwinLibName,
-                         RuntimeLinkOptions Opts = RuntimeLinkOptions()) const;
+                         llvm::opt::ArgStringList &CmdArgs, StringRef Component,
+                         RuntimeLinkOptions Opts = RuntimeLinkOptions(),
+                         bool IsShared = false) const;
 
   /// Add any profiling runtime libraries that are needed. This is essentially a
   /// MachO specific version of addProfileRT in Tools.cpp.
@@ -252,6 +254,10 @@ public:
     return llvm::ExceptionHandling::None;
   }
 
+  virtual StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const {
+    return "";
+  }
+
   /// }
 };
 
@@ -282,6 +288,9 @@ public:
 
   /// The OS version we are targeting.
   mutable VersionTuple TargetVersion;
+
+  /// The information about the darwin SDK that was used.
+  mutable Optional<DarwinSDKInfo> SDKInfo;
 
   CudaInstallationDetector CudaInstallation;
 
@@ -418,7 +427,7 @@ protected:
                              Action::OffloadKind DeviceOffloadKind) const override;
 
   StringRef getPlatformFamily() const;
-  StringRef getOSLibraryNameSuffix() const;
+  StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const override;
 
 public:
   static StringRef getSDKName(StringRef isysroot);
@@ -488,6 +497,10 @@ public:
 
   void AddLinkRuntimeLibArgs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const override;
+
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
 
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;

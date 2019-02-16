@@ -96,20 +96,31 @@ public:
 
   explicit VarStreamArray(const Extractor &E) : E(E) {}
 
-  explicit VarStreamArray(BinaryStreamRef Stream) : Stream(Stream) {}
+  explicit VarStreamArray(BinaryStreamRef Stream, uint32_t Skew = 0)
+      : Stream(Stream), Skew(Skew) {}
 
-  VarStreamArray(BinaryStreamRef Stream, const Extractor &E)
-      : Stream(Stream), E(E) {}
+  VarStreamArray(BinaryStreamRef Stream, const Extractor &E, uint32_t Skew = 0)
+      : Stream(Stream), E(E), Skew(Skew) {}
 
   Iterator begin(bool *HadError = nullptr) const {
-    return Iterator(*this, E, HadError);
+    return Iterator(*this, E, Skew, nullptr);
   }
 
   bool valid() const { return Stream.valid(); }
 
+  uint32_t skew() const { return Skew; }
   Iterator end() const { return Iterator(E); }
 
   bool empty() const { return Stream.getLength() == 0; }
+
+  VarStreamArray<ValueType, Extractor> substream(uint32_t Begin,
+                                                 uint32_t End) const {
+    assert(Begin >= Skew);
+    // We should never cut off the beginning of the stream since it might be
+    // skewed, meaning the initial bytes are important.
+    BinaryStreamRef NewStream = Stream.slice(0, End);
+    return {NewStream, E, Begin};
+  }
 
   /// given an offset into the array's underlying stream, return an
   /// iterator to the record at that offset.  This is considered unsafe
@@ -123,11 +134,17 @@ public:
   Extractor &getExtractor() { return E; }
 
   BinaryStreamRef getUnderlyingStream() const { return Stream; }
-  void setUnderlyingStream(BinaryStreamRef S) { Stream = S; }
+  void setUnderlyingStream(BinaryStreamRef S, uint32_t Skew = 0) {
+    Stream = S;
+    this->Skew = Skew;
+  }
+
+  void drop_front() { Skew += begin()->length(); }
 
 private:
   BinaryStreamRef Stream;
   Extractor E;
+  uint32_t Skew;
 };
 
 template <typename ValueType, typename Extractor>
@@ -138,10 +155,6 @@ class VarStreamArrayIterator
   typedef VarStreamArray<ValueType, Extractor> ArrayType;
 
 public:
-  VarStreamArrayIterator(const ArrayType &Array, const Extractor &E,
-                         bool *HadError)
-      : VarStreamArrayIterator(Array, E, 0, HadError) {}
-
   VarStreamArrayIterator(const ArrayType &Array, const Extractor &E,
                          uint32_t Offset, bool *HadError)
       : IterRef(Array.Stream.drop_front(Offset)), Extract(E),

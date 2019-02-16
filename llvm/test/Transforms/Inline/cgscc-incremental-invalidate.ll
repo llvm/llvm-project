@@ -33,7 +33,8 @@
 ; CHECK-NEXT: Running pass: DominatorTreeVerifierPass on test1_g
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on test1_g
 ; CHECK-NEXT: Finished llvm::Function pass manager run.
-; CHECK-NEXT: Starting llvm::Function pass manager run.
+; CHECK-NOT: Invalidating analysis:
+; CHECK: Starting llvm::Function pass manager run.
 ; CHECK-NEXT: Running pass: DominatorTreeVerifierPass on test1_h
 ; CHECK-NEXT: Running analysis: DominatorTreeAnalysis on test1_h
 ; CHECK-NEXT: Finished llvm::Function pass manager run.

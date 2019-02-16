@@ -15,16 +15,13 @@ add_clang_library(clangAnalysis
   Consumed.cpp
   CodeInjector.cpp
   Dominators.cpp
-  FormatString.cpp
+  ExprMutationAnalyzer.cpp
   LiveVariables.cpp
-  OSLog.cpp
   ObjCNoReturn.cpp
   PostOrderCFGView.cpp
-  PrintfFormatString.cpp
   ProgramPoint.cpp
-  PseudoConstantAnalysis.cpp
   ReachableCode.cpp
-  ScanfFormatString.cpp
+  RetainSummaryManager.cpp
   ThreadSafety.cpp
   ThreadSafetyCommon.cpp
   ThreadSafetyLogical.cpp
@@ -33,6 +30,7 @@ add_clang_library(clangAnalysis
 
   LINK_LIBS
   clangAST
+  clangASTMatchers
   clangBasic
   clangLex
   )

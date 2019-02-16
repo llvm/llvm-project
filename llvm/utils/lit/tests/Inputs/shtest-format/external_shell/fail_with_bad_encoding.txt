@@ -1,5 +1,5 @@
 # Run a command that fails with error on stdout.
 #
-# RUN: "%{python}" %S/write-bad-encoding.py
+# RUN: %{python} %S/write-bad-encoding.py
 # RUN: false
 

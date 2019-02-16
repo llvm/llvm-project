@@ -582,6 +582,7 @@ enum {
   EF_HEXAGON_MACH_V60 = 0x00000060, // Hexagon V60
   EF_HEXAGON_MACH_V62 = 0x00000062, // Hexagon V62
   EF_HEXAGON_MACH_V65 = 0x00000065, // Hexagon V65
+  EF_HEXAGON_MACH_V66 = 0x00000066, // Hexagon V66
 
   // Highest ISA version flags
   EF_HEXAGON_ISA_MACH = 0x00000000, // Same as specified in bits[11:0]
@@ -594,6 +595,7 @@ enum {
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
   EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
   EF_HEXAGON_ISA_V65 = 0x00000065,  // Hexagon V65 ISA
+  EF_HEXAGON_ISA_V66 = 0x00000066,  // Hexagon V66 ISA
 };
 
 // Hexagon-specific section indexes for common small data
@@ -701,6 +703,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX902 = 0x02d,
   EF_AMDGPU_MACH_AMDGCN_GFX904 = 0x02e,
   EF_AMDGPU_MACH_AMDGCN_GFX906 = 0x02f,
+  EF_AMDGPU_MACH_AMDGCN_GFX909 = 0x031,
 
   // Reserved for AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_RESERVED0 = 0x027,
@@ -708,11 +711,14 @@ enum : unsigned {
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX906,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX909,
 
-  // Indicates if the xnack target feature is enabled for all code contained in
-  // the object.
+  // Indicates if the "xnack" target feature is enabled for all code contained
+  // in the object.
   EF_AMDGPU_XNACK = 0x100,
+  // Indicates if the "sram-ecc" target feature is enabled for all code
+  // contained in the object.
+  EF_AMDGPU_SRAM_ECC = 0x200,
 };
 
 // ELF Relocation types for AMDGPU
@@ -723,6 +729,38 @@ enum {
 // ELF Relocation types for BPF
 enum {
 #include "ELFRelocs/BPF.def"
+};
+
+// MSP430 specific e_flags
+enum : unsigned {
+  EF_MSP430_MACH_MSP430x11 = 11,
+  EF_MSP430_MACH_MSP430x11x1 = 110,
+  EF_MSP430_MACH_MSP430x12 = 12,
+  EF_MSP430_MACH_MSP430x13 = 13,
+  EF_MSP430_MACH_MSP430x14 = 14,
+  EF_MSP430_MACH_MSP430x15 = 15,
+  EF_MSP430_MACH_MSP430x16 = 16,
+  EF_MSP430_MACH_MSP430x20 = 20,
+  EF_MSP430_MACH_MSP430x22 = 22,
+  EF_MSP430_MACH_MSP430x23 = 23,
+  EF_MSP430_MACH_MSP430x24 = 24,
+  EF_MSP430_MACH_MSP430x26 = 26,
+  EF_MSP430_MACH_MSP430x31 = 31,
+  EF_MSP430_MACH_MSP430x32 = 32,
+  EF_MSP430_MACH_MSP430x33 = 33,
+  EF_MSP430_MACH_MSP430x41 = 41,
+  EF_MSP430_MACH_MSP430x42 = 42,
+  EF_MSP430_MACH_MSP430x43 = 43,
+  EF_MSP430_MACH_MSP430x44 = 44,
+  EF_MSP430_MACH_MSP430X = 45,
+  EF_MSP430_MACH_MSP430x46 = 46,
+  EF_MSP430_MACH_MSP430x47 = 47,
+  EF_MSP430_MACH_MSP430x54 = 54,
+};
+
+// ELF Relocation types for MSP430
+enum {
+#include "ELFRelocs/MSP430.def"
 };
 
 #undef ELF_RELOC
@@ -828,6 +866,8 @@ enum : unsigned {
   SHT_MIPS_OPTIONS = 0x7000000d,        // General options
   SHT_MIPS_DWARF = 0x7000001e,          // DWARF debugging section.
   SHT_MIPS_ABIFLAGS = 0x7000002a,       // ABI information.
+
+  SHT_MSP430_ATTRIBUTES = 0x70000003U,
 
   SHT_HIPROC = 0x7fffffff,              // Highest processor arch-specific type.
   SHT_LOUSER = 0x80000000,              // Lowest type reserved for applications.
@@ -1321,12 +1361,18 @@ enum {
   GNU_PROPERTY_X86_FEATURE_1_SHSTK = 1 << 1
 };
 
-// AMDGPU specific notes.
+// AMD specific notes. (Code Object V2)
 enum {
   // Note types with values between 0 and 9 (inclusive) are reserved.
   NT_AMD_AMDGPU_HSA_METADATA = 10,
   NT_AMD_AMDGPU_ISA = 11,
   NT_AMD_AMDGPU_PAL_METADATA = 12
+};
+
+// AMDGPU specific notes. (Code Object V3)
+enum {
+  // Note types with values between 0 and 31 (inclusive) are reserved.
+  NT_AMDGPU_METADATA = 32
 };
 
 enum {
@@ -1338,6 +1384,8 @@ enum {
   GNU_ABI_TAG_SYLLABLE = 5,
   GNU_ABI_TAG_NACL = 6,
 };
+
+constexpr const char *ELF_NOTE_GNU = "GNU";
 
 // Android packed relocation group flags.
 enum {

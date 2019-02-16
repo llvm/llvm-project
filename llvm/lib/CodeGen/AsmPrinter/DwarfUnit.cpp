@@ -234,15 +234,23 @@ void DwarfUnit::addSInt(DIELoc &Die, Optional<dwarf::Form> Form,
 
 void DwarfUnit::addString(DIE &Die, dwarf::Attribute Attribute,
                           StringRef String) {
+  if (CUNode->isDebugDirectivesOnly())
+    return;
+
   if (DD->useInlineStrings()) {
     Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_string,
                  new (DIEValueAllocator)
                      DIEInlineString(String, DIEValueAllocator));
     return;
   }
-  auto StringPoolEntry = DU->getStringPool().getEntry(*Asm, String);
   dwarf::Form IxForm =
       isDwoUnit() ? dwarf::DW_FORM_GNU_str_index : dwarf::DW_FORM_strp;
+
+  auto StringPoolEntry =
+      useSegmentedStringOffsetsTable() || IxForm == dwarf::DW_FORM_GNU_str_index
+          ? DU->getStringPool().getIndexedEntry(*Asm, String)
+          : DU->getStringPool().getEntry(*Asm, String);
+
   // For DWARF v5 and beyond, use the smallest strx? form possible.
   if (useSegmentedStringOffsetsTable()) {
     IxForm = dwarf::DW_FORM_strx1;
@@ -307,14 +315,21 @@ unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
 }
 
 void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
-  if (!DD->useSplitDwarf()) {
-    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addr);
-    addLabel(Die, dwarf::DW_FORM_udata, Sym);
-  } else {
+  if (DD->getDwarfVersion() >= 5) {
+    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addrx);
+    addUInt(Die, dwarf::DW_FORM_addrx, DD->getAddressPool().getIndex(Sym));
+    return;
+  }
+
+  if (DD->useSplitDwarf()) {
     addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_addr_index);
     addUInt(Die, dwarf::DW_FORM_GNU_addr_index,
             DD->getAddressPool().getIndex(Sym));
+    return;
   }
+
+  addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addr);
+  addLabel(Die, dwarf::DW_FORM_udata, Sym);
 }
 
 void DwarfUnit::addLabelDelta(DIE &Die, dwarf::Attribute Attribute,
@@ -399,6 +414,12 @@ void DwarfUnit::addSourceLine(DIE &Die, const DISubprogram *SP) {
   assert(SP);
 
   addSourceLine(Die, SP->getLine(), SP->getFile());
+}
+
+void DwarfUnit::addSourceLine(DIE &Die, const DILabel *L) {
+  assert(L);
+
+  addSourceLine(Die, L->getLine(), L->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIType *Ty) {
@@ -657,7 +678,7 @@ void DwarfUnit::updateAcceleratorTables(const DIScope *Context,
       IsImplementation = CT->getRuntimeLang() == 0 || CT->isObjcClassComplete();
     }
     unsigned Flags = IsImplementation ? dwarf::DW_FLAG_type_implementation : 0;
-    DD->addAccelType(Ty->getName(), TyDIE, Flags);
+    DD->addAccelType(*CUNode, Ty->getName(), TyDIE, Flags);
 
     if (!Context || isa<DICompileUnit>(Context) || isa<DIFile>(Context) ||
         isa<DINamespace>(Context))
@@ -721,6 +742,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
 
   uint64_t Size = BTy->getSizeInBits() >> 3;
   addUInt(Buffer, dwarf::DW_AT_byte_size, None, Size);
+
+  if (BTy->isBigEndian())
+    addUInt(Buffer, dwarf::DW_AT_endianity, None, dwarf::DW_END_big);
+  else if (BTy->isLittleEndian())
+    addUInt(Buffer, dwarf::DW_AT_endianity, None, dwarf::DW_END_little);
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
@@ -1031,7 +1057,7 @@ DIE *DwarfUnit::getOrCreateNameSpace(const DINamespace *NS) {
     addString(NDie, dwarf::DW_AT_name, NS->getName());
   else
     Name = "(anonymous namespace)";
-  DD->addAccelNamespace(Name, NDie);
+  DD->addAccelNamespace(*CUNode, Name, NDie);
   addGlobalName(Name, NDie, NS->getScope());
   if (NS->getExportSymbols())
     addFlag(NDie, dwarf::DW_AT_export_symbols);
@@ -1280,7 +1306,7 @@ DIE *DwarfUnit::getIndexTyDie() {
   addUInt(*IndexTyDie, dwarf::DW_AT_byte_size, None, sizeof(int64_t));
   addUInt(*IndexTyDie, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
           dwarf::DW_ATE_unsigned);
-  DD->addAccelType(Name, *IndexTyDie, /*Flags*/ 0);
+  DD->addAccelType(*CUNode, Name, *IndexTyDie, /*Flags*/ 0);
   return IndexTyDie;
 }
 
@@ -1535,7 +1561,14 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
   Asm->OutStreamer->AddComment("Length of Unit");
-  Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
+  if (!DD->useSectionsAsReferences()) {
+    StringRef Prefix = isDwoUnit() ? "debug_info_dwo_" : "debug_info_";
+    MCSymbol *BeginLabel = Asm->createTempSymbol(Prefix + "start");
+    EndLabel = Asm->createTempSymbol(Prefix + "end");
+    Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
+    Asm->OutStreamer->EmitLabel(BeginLabel);
+  } else
+    Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
 
   Asm->OutStreamer->AddComment("DWARF version number");
   unsigned Version = DD->getDwarfVersion();
@@ -1636,4 +1669,13 @@ void DwarfUnit::addRnglistsBase() {
   addSectionLabel(getUnitDie(), dwarf::DW_AT_rnglists_base,
                   DU->getRnglistsTableBaseSym(),
                   TLOF.getDwarfRnglistsSection()->getBeginSymbol());
+}
+
+void DwarfUnit::addLoclistsBase() {
+  assert(DD->getDwarfVersion() >= 5 &&
+         "DW_AT_loclists_base requires DWARF version 5 or later");
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
+  addSectionLabel(getUnitDie(), dwarf::DW_AT_loclists_base,
+                  DU->getLoclistsTableBaseSym(),
+                  TLOF.getDwarfLoclistsSection()->getBeginSymbol());
 }

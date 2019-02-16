@@ -12,3 +12,16 @@ _main:
 	.cfi_endproc
 
 // CHECK:    Name: .eh_frame
+// CHECK-NEXT:    VirtualSize:
+// CHECK-NEXT:    VirtualAddress:
+// CHECK-NEXT:    RawDataSize:
+// CHECK-NEXT:    PointerToRawData:
+// CHECK-NEXT:    PointerToRelocations:
+// CHECK-NEXT:    PointerToLineNumbers:
+// CHECK-NEXT:    RelocationCount:
+// CHECK-NEXT:    LineNumberCount:
+// CHECK-NEXT:    Characteristics [
+// CHECK-NEXT:      IMAGE_SCN_ALIGN_4BYTES
+// CHECK-NEXT:      IMAGE_SCN_CNT_INITIALIZED_DATA
+// CHECK-NEXT:      IMAGE_SCN_MEM_READ
+// CHECK-NEXT:    ]

@@ -19,6 +19,7 @@ target_link_libraries(FindAllSymbolsTests
   clangBasic
   clangFrontend
   clangLex
+  clangSerialization
   clangTooling
   findAllSymbols
   )

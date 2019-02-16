@@ -14,6 +14,7 @@
 #include <cassert>
 
 #include "hexfloat.h"
+#include "truncate_fp.h"
 
 // convertible to int/float/double/etc
 template <class T, int N=0>
@@ -807,23 +808,31 @@ void test_atanh()
     assert(atanh(0) == 0);
 }
 
-void test_cbrt()
-{
-    static_assert((std::is_same<decltype(cbrt((float)0)), float>::value), "");
-    static_assert((std::is_same<decltype(cbrt((bool)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((unsigned short)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((int)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((unsigned int)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((unsigned long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((long long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((unsigned long long)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((double)0)), double>::value), "");
-    static_assert((std::is_same<decltype(cbrt((long double)0)), long double>::value), "");
+void test_cbrt() {
+    static_assert((std::is_same<decltype(cbrt((float) 0)), float>::value), "");
+    static_assert((std::is_same<decltype(cbrt((bool) 0)), double>::value), "");
+    static_assert((std::is_same<decltype(cbrt((unsigned short) 0)),
+                                double>::value), "");
+    static_assert((std::is_same<decltype(cbrt((int) 0)), double>::value), "");
+    static_assert((std::is_same<decltype(cbrt((unsigned int) 0)),
+                                double>::value), "");
+    static_assert((std::is_same<decltype(cbrt((long) 0)), double>::value), "");
+    static_assert((std::is_same<decltype(cbrt((unsigned long) 0)),
+                                double>::value), "");
+    static_assert((std::is_same<decltype(cbrt((long long) 0)), double>::value),
+                  "");
+    static_assert((std::is_same<decltype(cbrt((unsigned long long) 0)),
+                                double>::value), "");
+    static_assert((std::is_same<decltype(cbrt((double) 0)), double>::value),
+                  "");
+    static_assert((std::is_same<decltype(cbrt((long double) 0)),
+                                long double>::value), "");
     static_assert((std::is_same<decltype(cbrtf(0)), float>::value), "");
     static_assert((std::is_same<decltype(cbrtl(0)), long double>::value), "");
-    static_assert((std::is_same<decltype(cbrt(Ambiguous())), Ambiguous>::value), "");
-    assert(cbrt(1) == 1);
+    static_assert((std::is_same<decltype(cbrt(Ambiguous())), Ambiguous>::value),
+                  "");
+    assert(truncate_fp(cbrt(1)) == 1);
+
 }
 
 void test_copysign()

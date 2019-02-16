@@ -33,7 +33,6 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -44,6 +43,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <string>
 #include <utility>
@@ -190,7 +190,7 @@ bool runToolOnCodeWithArgs(
 // Similar to the overload except this takes a VFS.
 bool runToolOnCodeWithArgs(
     FrontendAction *ToolAction, const Twine &Code,
-    llvm::IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
     const std::vector<std::string> &Args, const Twine &FileName = "input.cc",
     const Twine &ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
@@ -319,8 +319,8 @@ public:
             ArrayRef<std::string> SourcePaths,
             std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                 std::make_shared<PCHContainerOperations>(),
-            IntrusiveRefCntPtr<vfs::FileSystem> BaseFS =
-                vfs::getRealFileSystem());
+            IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS =
+                llvm::vfs::getRealFileSystem());
 
   ~ClangTool();
 
@@ -356,6 +356,11 @@ public:
   /// append them to ASTs.
   int buildASTs(std::vector<std::unique_ptr<ASTUnit>> &ASTs);
 
+  /// Sets whether working directory should be restored after calling run(). By
+  /// default, working directory is restored. However, it could be useful to
+  /// turn this off when running on multiple threads to avoid the raciness.
+  void setRestoreWorkingDir(bool RestoreCWD);
+
   /// Returns the file manager used in the tool.
   ///
   /// The file manager is shared between all translation units.
@@ -368,8 +373,8 @@ private:
   std::vector<std::string> SourcePaths;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
 
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> OverlayFileSystem;
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   llvm::IntrusiveRefCntPtr<FileManager> Files;
 
   // Contains a list of pairs (<file name>, <file content>).
@@ -380,6 +385,8 @@ private:
   ArgumentsAdjuster ArgsAdjuster;
 
   DiagnosticConsumer *DiagConsumer = nullptr;
+
+  bool RestoreCWD = true;
 };
 
 template <typename T>
@@ -458,6 +465,10 @@ inline std::unique_ptr<FrontendActionFactory> newFrontendActionFactory(
 ///
 /// \param File Either an absolute or relative path.
 std::string getAbsolutePath(StringRef File);
+
+/// An overload of getAbsolutePath that works over the provided \p FS.
+llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
+                                            StringRef File);
 
 /// Changes CommandLine to contain implicit flags that would have been
 /// defined had the compiler driver been invoked through the path InvokedAs.

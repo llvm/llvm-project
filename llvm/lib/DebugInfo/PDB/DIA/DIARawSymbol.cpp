@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSymbols.h"
 #include "llvm/DebugInfo/PDB/DIA/DIALineNumber.h"
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
+#include "llvm/DebugInfo/PDB/DIA/DIAUtils.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypePointer.h"
@@ -115,16 +116,7 @@ RetType PrivateGetDIAValue(IDiaSymbol *Symbol,
 std::string
 PrivateGetDIAValue(IDiaSymbol *Symbol,
                    HRESULT (__stdcall IDiaSymbol::*Method)(BSTR *)) {
-  CComBSTR Result16;
-  if (S_OK != (Symbol->*Method)(&Result16))
-    return std::string();
-
-  const char *SrcBytes = reinterpret_cast<const char *>(Result16.m_str);
-  llvm::ArrayRef<char> SrcByteArray(SrcBytes, Result16.ByteLength());
-  std::string Result8;
-  if (!llvm::convertUTF16ToUTF8String(SrcByteArray, Result8))
-    return std::string();
-  return Result8;
+  return invokeBstrMethod(*Symbol, Method);
 }
 
 codeview::GUID
@@ -141,16 +133,33 @@ PrivateGetDIAValue(IDiaSymbol *Symbol,
   return IdResult;
 }
 
+template <typename PrintType, typename ArgType>
+void DumpDIAValueAs(llvm::raw_ostream &OS, int Indent, StringRef Name,
+                    IDiaSymbol *Symbol,
+                    HRESULT (__stdcall IDiaSymbol::*Method)(ArgType *)) {
+  ArgType Value;
+  if (S_OK == (Symbol->*Method)(&Value))
+    dumpSymbolField(OS, Name, static_cast<PrintType>(Value), Indent);
+}
+
+void DumpDIAIdValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
+                    IDiaSymbol *Symbol,
+                    HRESULT (__stdcall IDiaSymbol::*Method)(DWORD *),
+                    const IPDBSession &Session, PdbSymbolIdField FieldId,
+                    PdbSymbolIdField ShowFlags, PdbSymbolIdField RecurseFlags) {
+  DWORD Value;
+  if (S_OK == (Symbol->*Method)(&Value))
+    dumpSymbolIdField(OS, Name, Value, Indent, Session, FieldId, ShowFlags,
+                      RecurseFlags);
+}
+
 template <typename ArgType>
 void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
                   IDiaSymbol *Symbol,
                   HRESULT (__stdcall IDiaSymbol::*Method)(ArgType *)) {
   ArgType Value;
-  if (S_OK == (Symbol->*Method)(&Value)) {
-    OS << "\n";
-    OS.indent(Indent);
-    OS << Name << ": " << Value;
-  }
+  if (S_OK == (Symbol->*Method)(&Value))
+    dumpSymbolField(OS, Name, Value, Indent);
 }
 
 void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
@@ -162,11 +171,8 @@ void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
   const char *Bytes = reinterpret_cast<const char *>(Value);
   ArrayRef<char> ByteArray(Bytes, ::SysStringByteLen(Value));
   std::string Result;
-  if (llvm::convertUTF16ToUTF8String(ByteArray, Result)) {
-    OS << "\n";
-    OS.indent(Indent);
-    OS << Name << ": " << Result;
-  }
+  if (llvm::convertUTF16ToUTF8String(ByteArray, Result))
+    dumpSymbolField(OS, Name, Result, Indent);
   ::SysFreeString(Value);
 }
 
@@ -177,12 +183,11 @@ void DumpDIAValue(llvm::raw_ostream &OS, int Indent, StringRef Name,
   Value.vt = VT_EMPTY;
   if (S_OK != (Symbol->*Method)(&Value))
     return;
-  OS << "\n";
-  OS.indent(Indent);
   Variant V = VariantFromVARIANT(Value);
-  OS << Name << ": " << V;
+
+  dumpSymbolField(OS, Name, V, Indent);
 }
-}
+} // namespace
 
 namespace llvm {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GUID &G) {
@@ -191,182 +196,203 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GUID &G) {
   A.format(OS, "");
   return OS;
 }
-}
+} // namespace llvm
 
 DIARawSymbol::DIARawSymbol(const DIASession &PDBSession,
                            CComPtr<IDiaSymbol> DiaSymbol)
     : Session(PDBSession), Symbol(DiaSymbol) {}
 
-#define RAW_METHOD_DUMP(Stream, Method)                                        \
-  DumpDIAValue(Stream, Indent, StringRef(#Method), Symbol, &IDiaSymbol::Method);
+#define RAW_ID_METHOD_DUMP(Stream, Method, Session, FieldId, ShowFlags,        \
+                           RecurseFlags)                                       \
+  DumpDIAIdValue(Stream, Indent, StringRef{#Method}, Symbol,                   \
+                 &IDiaSymbol::get_##Method, Session, FieldId, ShowFlags,       \
+                 RecurseFlags);
 
-void DIARawSymbol::dump(raw_ostream &OS, int Indent) const {
-  RAW_METHOD_DUMP(OS, get_access)
-  RAW_METHOD_DUMP(OS, get_addressOffset)
-  RAW_METHOD_DUMP(OS, get_addressSection)
-  RAW_METHOD_DUMP(OS, get_age)
-  RAW_METHOD_DUMP(OS, get_arrayIndexTypeId)
-  RAW_METHOD_DUMP(OS, get_backEndMajor)
-  RAW_METHOD_DUMP(OS, get_backEndMinor)
-  RAW_METHOD_DUMP(OS, get_backEndBuild)
-  RAW_METHOD_DUMP(OS, get_backEndQFE)
-  RAW_METHOD_DUMP(OS, get_baseDataOffset)
-  RAW_METHOD_DUMP(OS, get_baseDataSlot)
-  RAW_METHOD_DUMP(OS, get_baseSymbolId)
-  RAW_METHOD_DUMP(OS, get_baseType)
-  RAW_METHOD_DUMP(OS, get_bitPosition)
-  RAW_METHOD_DUMP(OS, get_callingConvention)
-  RAW_METHOD_DUMP(OS, get_classParentId)
-  RAW_METHOD_DUMP(OS, get_compilerName)
-  RAW_METHOD_DUMP(OS, get_count)
-  RAW_METHOD_DUMP(OS, get_countLiveRanges)
-  RAW_METHOD_DUMP(OS, get_frontEndMajor)
-  RAW_METHOD_DUMP(OS, get_frontEndMinor)
-  RAW_METHOD_DUMP(OS, get_frontEndBuild)
-  RAW_METHOD_DUMP(OS, get_frontEndQFE)
-  RAW_METHOD_DUMP(OS, get_lexicalParentId)
-  RAW_METHOD_DUMP(OS, get_libraryName)
-  RAW_METHOD_DUMP(OS, get_liveRangeStartAddressOffset)
-  RAW_METHOD_DUMP(OS, get_liveRangeStartAddressSection)
-  RAW_METHOD_DUMP(OS, get_liveRangeStartRelativeVirtualAddress)
-  RAW_METHOD_DUMP(OS, get_localBasePointerRegisterId)
-  RAW_METHOD_DUMP(OS, get_lowerBoundId)
-  RAW_METHOD_DUMP(OS, get_memorySpaceKind)
-  RAW_METHOD_DUMP(OS, get_name)
-  RAW_METHOD_DUMP(OS, get_numberOfAcceleratorPointerTags)
-  RAW_METHOD_DUMP(OS, get_numberOfColumns)
-  RAW_METHOD_DUMP(OS, get_numberOfModifiers)
-  RAW_METHOD_DUMP(OS, get_numberOfRegisterIndices)
-  RAW_METHOD_DUMP(OS, get_numberOfRows)
-  RAW_METHOD_DUMP(OS, get_objectFileName)
-  RAW_METHOD_DUMP(OS, get_oemId)
-  RAW_METHOD_DUMP(OS, get_oemSymbolId)
-  RAW_METHOD_DUMP(OS, get_offsetInUdt)
-  RAW_METHOD_DUMP(OS, get_platform)
-  RAW_METHOD_DUMP(OS, get_rank)
-  RAW_METHOD_DUMP(OS, get_registerId)
-  RAW_METHOD_DUMP(OS, get_registerType)
-  RAW_METHOD_DUMP(OS, get_relativeVirtualAddress)
-  RAW_METHOD_DUMP(OS, get_samplerSlot)
-  RAW_METHOD_DUMP(OS, get_signature)
-  RAW_METHOD_DUMP(OS, get_sizeInUdt)
-  RAW_METHOD_DUMP(OS, get_slot)
-  RAW_METHOD_DUMP(OS, get_sourceFileName)
-  RAW_METHOD_DUMP(OS, get_stride)
-  RAW_METHOD_DUMP(OS, get_subTypeId)
-  RAW_METHOD_DUMP(OS, get_symbolsFileName)
-  RAW_METHOD_DUMP(OS, get_symIndexId)
-  RAW_METHOD_DUMP(OS, get_targetOffset)
-  RAW_METHOD_DUMP(OS, get_targetRelativeVirtualAddress)
-  RAW_METHOD_DUMP(OS, get_targetVirtualAddress)
-  RAW_METHOD_DUMP(OS, get_targetSection)
-  RAW_METHOD_DUMP(OS, get_textureSlot)
-  RAW_METHOD_DUMP(OS, get_timeStamp)
-  RAW_METHOD_DUMP(OS, get_token)
-  RAW_METHOD_DUMP(OS, get_typeId)
-  RAW_METHOD_DUMP(OS, get_uavSlot)
-  RAW_METHOD_DUMP(OS, get_undecoratedName)
-  RAW_METHOD_DUMP(OS, get_unmodifiedTypeId)
-  RAW_METHOD_DUMP(OS, get_upperBoundId)
-  RAW_METHOD_DUMP(OS, get_virtualBaseDispIndex)
-  RAW_METHOD_DUMP(OS, get_virtualBaseOffset)
-  RAW_METHOD_DUMP(OS, get_virtualTableShapeId)
-  RAW_METHOD_DUMP(OS, get_dataKind)
-  RAW_METHOD_DUMP(OS, get_symTag)
-  RAW_METHOD_DUMP(OS, get_guid)
-  RAW_METHOD_DUMP(OS, get_offset)
-  RAW_METHOD_DUMP(OS, get_thisAdjust)
-  RAW_METHOD_DUMP(OS, get_virtualBasePointerOffset)
-  RAW_METHOD_DUMP(OS, get_locationType)
-  RAW_METHOD_DUMP(OS, get_machineType)
-  RAW_METHOD_DUMP(OS, get_thunkOrdinal)
-  RAW_METHOD_DUMP(OS, get_length)
-  RAW_METHOD_DUMP(OS, get_liveRangeLength)
-  RAW_METHOD_DUMP(OS, get_virtualAddress)
-  RAW_METHOD_DUMP(OS, get_udtKind)
-  RAW_METHOD_DUMP(OS, get_constructor)
-  RAW_METHOD_DUMP(OS, get_customCallingConvention)
-  RAW_METHOD_DUMP(OS, get_farReturn)
-  RAW_METHOD_DUMP(OS, get_code)
-  RAW_METHOD_DUMP(OS, get_compilerGenerated)
-  RAW_METHOD_DUMP(OS, get_constType)
-  RAW_METHOD_DUMP(OS, get_editAndContinueEnabled)
-  RAW_METHOD_DUMP(OS, get_function)
-  RAW_METHOD_DUMP(OS, get_stride)
-  RAW_METHOD_DUMP(OS, get_noStackOrdering)
-  RAW_METHOD_DUMP(OS, get_hasAlloca)
-  RAW_METHOD_DUMP(OS, get_hasAssignmentOperator)
-  RAW_METHOD_DUMP(OS, get_isCTypes)
-  RAW_METHOD_DUMP(OS, get_hasCastOperator)
-  RAW_METHOD_DUMP(OS, get_hasDebugInfo)
-  RAW_METHOD_DUMP(OS, get_hasEH)
-  RAW_METHOD_DUMP(OS, get_hasEHa)
-  RAW_METHOD_DUMP(OS, get_hasInlAsm)
-  RAW_METHOD_DUMP(OS, get_framePointerPresent)
-  RAW_METHOD_DUMP(OS, get_inlSpec)
-  RAW_METHOD_DUMP(OS, get_interruptReturn)
-  RAW_METHOD_DUMP(OS, get_hasLongJump)
-  RAW_METHOD_DUMP(OS, get_hasManagedCode)
-  RAW_METHOD_DUMP(OS, get_hasNestedTypes)
-  RAW_METHOD_DUMP(OS, get_noInline)
-  RAW_METHOD_DUMP(OS, get_noReturn)
-  RAW_METHOD_DUMP(OS, get_optimizedCodeDebugInfo)
-  RAW_METHOD_DUMP(OS, get_overloadedOperator)
-  RAW_METHOD_DUMP(OS, get_hasSEH)
-  RAW_METHOD_DUMP(OS, get_hasSecurityChecks)
-  RAW_METHOD_DUMP(OS, get_hasSetJump)
-  RAW_METHOD_DUMP(OS, get_strictGSCheck)
-  RAW_METHOD_DUMP(OS, get_isAcceleratorGroupSharedLocal)
-  RAW_METHOD_DUMP(OS, get_isAcceleratorPointerTagLiveRange)
-  RAW_METHOD_DUMP(OS, get_isAcceleratorStubFunction)
-  RAW_METHOD_DUMP(OS, get_isAggregated)
-  RAW_METHOD_DUMP(OS, get_intro)
-  RAW_METHOD_DUMP(OS, get_isCVTCIL)
-  RAW_METHOD_DUMP(OS, get_isConstructorVirtualBase)
-  RAW_METHOD_DUMP(OS, get_isCxxReturnUdt)
-  RAW_METHOD_DUMP(OS, get_isDataAligned)
-  RAW_METHOD_DUMP(OS, get_isHLSLData)
-  RAW_METHOD_DUMP(OS, get_isHotpatchable)
-  RAW_METHOD_DUMP(OS, get_indirectVirtualBaseClass)
-  RAW_METHOD_DUMP(OS, get_isInterfaceUdt)
-  RAW_METHOD_DUMP(OS, get_intrinsic)
-  RAW_METHOD_DUMP(OS, get_isLTCG)
-  RAW_METHOD_DUMP(OS, get_isLocationControlFlowDependent)
-  RAW_METHOD_DUMP(OS, get_isMSILNetmodule)
-  RAW_METHOD_DUMP(OS, get_isMatrixRowMajor)
-  RAW_METHOD_DUMP(OS, get_managed)
-  RAW_METHOD_DUMP(OS, get_msil)
-  RAW_METHOD_DUMP(OS, get_isMultipleInheritance)
-  RAW_METHOD_DUMP(OS, get_isNaked)
-  RAW_METHOD_DUMP(OS, get_nested)
-  RAW_METHOD_DUMP(OS, get_isOptimizedAway)
-  RAW_METHOD_DUMP(OS, get_packed)
-  RAW_METHOD_DUMP(OS, get_isPointerBasedOnSymbolValue)
-  RAW_METHOD_DUMP(OS, get_isPointerToDataMember)
-  RAW_METHOD_DUMP(OS, get_isPointerToMemberFunction)
-  RAW_METHOD_DUMP(OS, get_pure)
-  RAW_METHOD_DUMP(OS, get_RValueReference)
-  RAW_METHOD_DUMP(OS, get_isRefUdt)
-  RAW_METHOD_DUMP(OS, get_reference)
-  RAW_METHOD_DUMP(OS, get_restrictedType)
-  RAW_METHOD_DUMP(OS, get_isReturnValue)
-  RAW_METHOD_DUMP(OS, get_isSafeBuffers)
-  RAW_METHOD_DUMP(OS, get_scoped)
-  RAW_METHOD_DUMP(OS, get_isSdl)
-  RAW_METHOD_DUMP(OS, get_isSingleInheritance)
-  RAW_METHOD_DUMP(OS, get_isSplitted)
-  RAW_METHOD_DUMP(OS, get_isStatic)
-  RAW_METHOD_DUMP(OS, get_isStripped)
-  RAW_METHOD_DUMP(OS, get_unalignedType)
-  RAW_METHOD_DUMP(OS, get_notReached)
-  RAW_METHOD_DUMP(OS, get_isValueUdt)
-  RAW_METHOD_DUMP(OS, get_virtual)
-  RAW_METHOD_DUMP(OS, get_virtualBaseClass)
-  RAW_METHOD_DUMP(OS, get_isVirtualInheritance)
-  RAW_METHOD_DUMP(OS, get_volatileType)
-  RAW_METHOD_DUMP(OS, get_wasInlined)
-  RAW_METHOD_DUMP(OS, get_unused)
-  RAW_METHOD_DUMP(OS, get_value)
+#define RAW_METHOD_DUMP(Stream, Method)                                        \
+  DumpDIAValue(Stream, Indent, StringRef{#Method}, Symbol,                     \
+               &IDiaSymbol::get_##Method);
+
+#define RAW_METHOD_DUMP_AS(Stream, Method, Type)                               \
+  DumpDIAValueAs<Type>(Stream, Indent, StringRef{#Method}, Symbol,             \
+                       &IDiaSymbol::get_##Method);
+
+void DIARawSymbol::dump(raw_ostream &OS, int Indent,
+                        PdbSymbolIdField ShowIdFields,
+                        PdbSymbolIdField RecurseIdFields) const {
+  RAW_ID_METHOD_DUMP(OS, symIndexId, Session, PdbSymbolIdField::SymIndexId,
+                     ShowIdFields, RecurseIdFields);
+  RAW_METHOD_DUMP_AS(OS, symTag, PDB_SymType);
+
+  RAW_METHOD_DUMP(OS, access);
+  RAW_METHOD_DUMP(OS, addressOffset);
+  RAW_METHOD_DUMP(OS, addressSection);
+  RAW_METHOD_DUMP(OS, age);
+  RAW_METHOD_DUMP(OS, arrayIndexTypeId);
+  RAW_METHOD_DUMP(OS, backEndMajor);
+  RAW_METHOD_DUMP(OS, backEndMinor);
+  RAW_METHOD_DUMP(OS, backEndBuild);
+  RAW_METHOD_DUMP(OS, backEndQFE);
+  RAW_METHOD_DUMP(OS, baseDataOffset);
+  RAW_METHOD_DUMP(OS, baseDataSlot);
+  RAW_METHOD_DUMP(OS, baseSymbolId);
+  RAW_METHOD_DUMP_AS(OS, baseType, PDB_BuiltinType);
+  RAW_METHOD_DUMP(OS, bitPosition);
+  RAW_METHOD_DUMP_AS(OS, callingConvention, PDB_CallingConv);
+  RAW_ID_METHOD_DUMP(OS, classParentId, Session, PdbSymbolIdField::ClassParent,
+                     ShowIdFields, RecurseIdFields);
+  RAW_METHOD_DUMP(OS, compilerName);
+  RAW_METHOD_DUMP(OS, count);
+  RAW_METHOD_DUMP(OS, countLiveRanges);
+  RAW_METHOD_DUMP(OS, frontEndMajor);
+  RAW_METHOD_DUMP(OS, frontEndMinor);
+  RAW_METHOD_DUMP(OS, frontEndBuild);
+  RAW_METHOD_DUMP(OS, frontEndQFE);
+  RAW_ID_METHOD_DUMP(OS, lexicalParentId, Session,
+                     PdbSymbolIdField::LexicalParent, ShowIdFields,
+                     RecurseIdFields);
+  RAW_METHOD_DUMP(OS, libraryName);
+  RAW_METHOD_DUMP(OS, liveRangeStartAddressOffset);
+  RAW_METHOD_DUMP(OS, liveRangeStartAddressSection);
+  RAW_METHOD_DUMP(OS, liveRangeStartRelativeVirtualAddress);
+  RAW_METHOD_DUMP(OS, localBasePointerRegisterId);
+  RAW_METHOD_DUMP(OS, lowerBoundId);
+  RAW_METHOD_DUMP(OS, memorySpaceKind);
+  RAW_METHOD_DUMP(OS, name);
+  RAW_METHOD_DUMP(OS, numberOfAcceleratorPointerTags);
+  RAW_METHOD_DUMP(OS, numberOfColumns);
+  RAW_METHOD_DUMP(OS, numberOfModifiers);
+  RAW_METHOD_DUMP(OS, numberOfRegisterIndices);
+  RAW_METHOD_DUMP(OS, numberOfRows);
+  RAW_METHOD_DUMP(OS, objectFileName);
+  RAW_METHOD_DUMP(OS, oemId);
+  RAW_METHOD_DUMP(OS, oemSymbolId);
+  RAW_METHOD_DUMP(OS, offsetInUdt);
+  RAW_METHOD_DUMP(OS, platform);
+  RAW_METHOD_DUMP(OS, rank);
+  RAW_METHOD_DUMP(OS, registerId);
+  RAW_METHOD_DUMP(OS, registerType);
+  RAW_METHOD_DUMP(OS, relativeVirtualAddress);
+  RAW_METHOD_DUMP(OS, samplerSlot);
+  RAW_METHOD_DUMP(OS, signature);
+  RAW_METHOD_DUMP(OS, sizeInUdt);
+  RAW_METHOD_DUMP(OS, slot);
+  RAW_METHOD_DUMP(OS, sourceFileName);
+  RAW_METHOD_DUMP(OS, stride);
+  RAW_METHOD_DUMP(OS, subTypeId);
+  RAW_METHOD_DUMP(OS, symbolsFileName);
+  RAW_METHOD_DUMP(OS, targetOffset);
+  RAW_METHOD_DUMP(OS, targetRelativeVirtualAddress);
+  RAW_METHOD_DUMP(OS, targetVirtualAddress);
+  RAW_METHOD_DUMP(OS, targetSection);
+  RAW_METHOD_DUMP(OS, textureSlot);
+  RAW_METHOD_DUMP(OS, timeStamp);
+  RAW_METHOD_DUMP(OS, token);
+  RAW_ID_METHOD_DUMP(OS, typeId, Session, PdbSymbolIdField::Type, ShowIdFields,
+                     RecurseIdFields);
+  RAW_METHOD_DUMP(OS, uavSlot);
+  RAW_METHOD_DUMP(OS, undecoratedName);
+  RAW_ID_METHOD_DUMP(OS, unmodifiedTypeId, Session,
+                     PdbSymbolIdField::UnmodifiedType, ShowIdFields,
+                     RecurseIdFields);
+  RAW_METHOD_DUMP(OS, upperBoundId);
+  RAW_METHOD_DUMP(OS, virtualBaseDispIndex);
+  RAW_METHOD_DUMP(OS, virtualBaseOffset);
+  RAW_METHOD_DUMP(OS, virtualTableShapeId);
+  RAW_METHOD_DUMP_AS(OS, dataKind, PDB_DataKind);
+  RAW_METHOD_DUMP(OS, guid);
+  RAW_METHOD_DUMP(OS, offset);
+  RAW_METHOD_DUMP(OS, thisAdjust);
+  RAW_METHOD_DUMP(OS, virtualBasePointerOffset);
+  RAW_METHOD_DUMP_AS(OS, locationType, PDB_LocType);
+  RAW_METHOD_DUMP(OS, machineType);
+  RAW_METHOD_DUMP(OS, thunkOrdinal);
+  RAW_METHOD_DUMP(OS, length);
+  RAW_METHOD_DUMP(OS, liveRangeLength);
+  RAW_METHOD_DUMP(OS, virtualAddress);
+  RAW_METHOD_DUMP_AS(OS, udtKind, PDB_UdtType);
+  RAW_METHOD_DUMP(OS, constructor);
+  RAW_METHOD_DUMP(OS, customCallingConvention);
+  RAW_METHOD_DUMP(OS, farReturn);
+  RAW_METHOD_DUMP(OS, code);
+  RAW_METHOD_DUMP(OS, compilerGenerated);
+  RAW_METHOD_DUMP(OS, constType);
+  RAW_METHOD_DUMP(OS, editAndContinueEnabled);
+  RAW_METHOD_DUMP(OS, function);
+  RAW_METHOD_DUMP(OS, stride);
+  RAW_METHOD_DUMP(OS, noStackOrdering);
+  RAW_METHOD_DUMP(OS, hasAlloca);
+  RAW_METHOD_DUMP(OS, hasAssignmentOperator);
+  RAW_METHOD_DUMP(OS, isCTypes);
+  RAW_METHOD_DUMP(OS, hasCastOperator);
+  RAW_METHOD_DUMP(OS, hasDebugInfo);
+  RAW_METHOD_DUMP(OS, hasEH);
+  RAW_METHOD_DUMP(OS, hasEHa);
+  RAW_METHOD_DUMP(OS, hasInlAsm);
+  RAW_METHOD_DUMP(OS, framePointerPresent);
+  RAW_METHOD_DUMP(OS, inlSpec);
+  RAW_METHOD_DUMP(OS, interruptReturn);
+  RAW_METHOD_DUMP(OS, hasLongJump);
+  RAW_METHOD_DUMP(OS, hasManagedCode);
+  RAW_METHOD_DUMP(OS, hasNestedTypes);
+  RAW_METHOD_DUMP(OS, noInline);
+  RAW_METHOD_DUMP(OS, noReturn);
+  RAW_METHOD_DUMP(OS, optimizedCodeDebugInfo);
+  RAW_METHOD_DUMP(OS, overloadedOperator);
+  RAW_METHOD_DUMP(OS, hasSEH);
+  RAW_METHOD_DUMP(OS, hasSecurityChecks);
+  RAW_METHOD_DUMP(OS, hasSetJump);
+  RAW_METHOD_DUMP(OS, strictGSCheck);
+  RAW_METHOD_DUMP(OS, isAcceleratorGroupSharedLocal);
+  RAW_METHOD_DUMP(OS, isAcceleratorPointerTagLiveRange);
+  RAW_METHOD_DUMP(OS, isAcceleratorStubFunction);
+  RAW_METHOD_DUMP(OS, isAggregated);
+  RAW_METHOD_DUMP(OS, intro);
+  RAW_METHOD_DUMP(OS, isCVTCIL);
+  RAW_METHOD_DUMP(OS, isConstructorVirtualBase);
+  RAW_METHOD_DUMP(OS, isCxxReturnUdt);
+  RAW_METHOD_DUMP(OS, isDataAligned);
+  RAW_METHOD_DUMP(OS, isHLSLData);
+  RAW_METHOD_DUMP(OS, isHotpatchable);
+  RAW_METHOD_DUMP(OS, indirectVirtualBaseClass);
+  RAW_METHOD_DUMP(OS, isInterfaceUdt);
+  RAW_METHOD_DUMP(OS, intrinsic);
+  RAW_METHOD_DUMP(OS, isLTCG);
+  RAW_METHOD_DUMP(OS, isLocationControlFlowDependent);
+  RAW_METHOD_DUMP(OS, isMSILNetmodule);
+  RAW_METHOD_DUMP(OS, isMatrixRowMajor);
+  RAW_METHOD_DUMP(OS, managed);
+  RAW_METHOD_DUMP(OS, msil);
+  RAW_METHOD_DUMP(OS, isMultipleInheritance);
+  RAW_METHOD_DUMP(OS, isNaked);
+  RAW_METHOD_DUMP(OS, nested);
+  RAW_METHOD_DUMP(OS, isOptimizedAway);
+  RAW_METHOD_DUMP(OS, packed);
+  RAW_METHOD_DUMP(OS, isPointerBasedOnSymbolValue);
+  RAW_METHOD_DUMP(OS, isPointerToDataMember);
+  RAW_METHOD_DUMP(OS, isPointerToMemberFunction);
+  RAW_METHOD_DUMP(OS, pure);
+  RAW_METHOD_DUMP(OS, RValueReference);
+  RAW_METHOD_DUMP(OS, isRefUdt);
+  RAW_METHOD_DUMP(OS, reference);
+  RAW_METHOD_DUMP(OS, restrictedType);
+  RAW_METHOD_DUMP(OS, isReturnValue);
+  RAW_METHOD_DUMP(OS, isSafeBuffers);
+  RAW_METHOD_DUMP(OS, scoped);
+  RAW_METHOD_DUMP(OS, isSdl);
+  RAW_METHOD_DUMP(OS, isSingleInheritance);
+  RAW_METHOD_DUMP(OS, isSplitted);
+  RAW_METHOD_DUMP(OS, isStatic);
+  RAW_METHOD_DUMP(OS, isStripped);
+  RAW_METHOD_DUMP(OS, unalignedType);
+  RAW_METHOD_DUMP(OS, notReached);
+  RAW_METHOD_DUMP(OS, isValueUdt);
+  RAW_METHOD_DUMP(OS, virtual);
+  RAW_METHOD_DUMP(OS, virtualBaseClass);
+  RAW_METHOD_DUMP(OS, isVirtualInheritance);
+  RAW_METHOD_DUMP(OS, volatileType);
+  RAW_METHOD_DUMP(OS, wasInlined);
+  RAW_METHOD_DUMP(OS, unused);
+  RAW_METHOD_DUMP(OS, value);
 }
 
 std::unique_ptr<IPDBEnumSymbols>
@@ -414,9 +440,8 @@ DIARawSymbol::findChildrenByAddr(PDB_SymType Type, StringRef Name,
   wchar_t *Name16Str = reinterpret_cast<wchar_t *>(Name16.data());
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
-  if (S_OK !=
-      Symbol->findChildrenExByAddr(EnumVal, Name16Str, CompareFlags, Section,
-                                   Offset, &DiaEnumerator))
+  if (S_OK != Symbol->findChildrenExByAddr(EnumVal, Name16Str, CompareFlags,
+                                           Section, Offset, &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
@@ -434,9 +459,8 @@ DIARawSymbol::findChildrenByVA(PDB_SymType Type, StringRef Name,
   wchar_t *Name16Str = reinterpret_cast<wchar_t *>(Name16.data());
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
-  if (S_OK !=
-      Symbol->findChildrenExByVA(EnumVal, Name16Str, CompareFlags, VA,
-                                  &DiaEnumerator))
+  if (S_OK != Symbol->findChildrenExByVA(EnumVal, Name16Str, CompareFlags, VA,
+                                         &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
@@ -453,9 +477,8 @@ DIARawSymbol::findChildrenByRVA(PDB_SymType Type, StringRef Name,
   wchar_t *Name16Str = reinterpret_cast<wchar_t *>(Name16.data());
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
-  if (S_OK !=
-      Symbol->findChildrenExByRVA(EnumVal, Name16Str, CompareFlags, RVA,
-                                  &DiaEnumerator))
+  if (S_OK != Symbol->findChildrenExByRVA(EnumVal, Name16Str, CompareFlags, RVA,
+                                          &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
@@ -500,7 +523,8 @@ std::unique_ptr<IPDBEnumLineNumbers>
 DIARawSymbol::findInlineeLinesByAddr(uint32_t Section, uint32_t Offset,
                                      uint32_t Length) const {
   CComPtr<IDiaEnumLineNumbers> DiaEnumerator;
-  if (S_OK != Symbol->findInlineeLinesByAddr(Section, Offset, Length, &DiaEnumerator))
+  if (S_OK !=
+      Symbol->findInlineeLinesByAddr(Section, Offset, Length, &DiaEnumerator))
     return nullptr;
 
   return llvm::make_unique<DIAEnumLineNumbers>(DiaEnumerator);
@@ -536,8 +560,7 @@ void DIARawSymbol::getDataBytes(llvm::SmallVector<uint8_t, 32> &bytes) const {
   Symbol->get_dataBytes(DataSize, &DataSize, bytes.data());
 }
 
-std::string
-DIARawSymbol::getUndecoratedNameEx(PDB_UndnameFlags Flags) const {
+std::string DIARawSymbol::getUndecoratedNameEx(PDB_UndnameFlags Flags) const {
   CComBSTR Result16;
   if (S_OK != Symbol->get_undecoratedNameEx((DWORD)Flags, &Result16))
     return std::string();
@@ -567,7 +590,7 @@ uint32_t DIARawSymbol::getAge() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_age);
 }
 
-uint32_t DIARawSymbol::getArrayIndexTypeId() const {
+SymIndexId DIARawSymbol::getArrayIndexTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_arrayIndexTypeId);
 }
 
@@ -586,7 +609,7 @@ uint32_t DIARawSymbol::getBaseDataSlot() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_baseDataSlot);
 }
 
-uint32_t DIARawSymbol::getBaseSymbolId() const {
+SymIndexId DIARawSymbol::getBaseSymbolId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_baseSymbolId);
 }
 
@@ -604,7 +627,7 @@ PDB_CallingConv DIARawSymbol::getCallingConvention() const {
       Symbol, &IDiaSymbol::get_callingConvention);
 }
 
-uint32_t DIARawSymbol::getClassParentId() const {
+SymIndexId DIARawSymbol::getClassParentId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_classParentId);
 }
 
@@ -631,7 +654,7 @@ PDB_Lang DIARawSymbol::getLanguage() const {
   return PrivateGetDIAValue<DWORD, PDB_Lang>(Symbol, &IDiaSymbol::get_language);
 }
 
-uint32_t DIARawSymbol::getLexicalParentId() const {
+SymIndexId DIARawSymbol::getLexicalParentId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_lexicalParentId);
 }
 
@@ -659,7 +682,7 @@ codeview::RegisterId DIARawSymbol::getLocalBasePointerRegisterId() const {
       Symbol, &IDiaSymbol::get_localBasePointerRegisterId);
 }
 
-uint32_t DIARawSymbol::getLowerBoundId() const {
+SymIndexId DIARawSymbol::getLowerBoundId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_lowerBoundId);
 }
 
@@ -700,7 +723,7 @@ uint32_t DIARawSymbol::getOemId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_oemId);
 }
 
-uint32_t DIARawSymbol::getOemSymbolId() const {
+SymIndexId DIARawSymbol::getOemSymbolId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_oemSymbolId);
 }
 
@@ -749,8 +772,7 @@ std::string DIARawSymbol::getSourceFileName() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_sourceFileName);
 }
 
-std::unique_ptr<IPDBLineNumber>
-DIARawSymbol::getSrcLineOnTypeDefn() const {
+std::unique_ptr<IPDBLineNumber> DIARawSymbol::getSrcLineOnTypeDefn() const {
   CComPtr<IDiaLineNumber> LineNumber;
   if (FAILED(Symbol->getSrcLineOnTypeDefn(&LineNumber)) || !LineNumber)
     return nullptr;
@@ -762,7 +784,7 @@ uint32_t DIARawSymbol::getStride() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_stride);
 }
 
-uint32_t DIARawSymbol::getSubTypeId() const {
+SymIndexId DIARawSymbol::getSubTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_subTypeId);
 }
 
@@ -770,7 +792,7 @@ std::string DIARawSymbol::getSymbolsFileName() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_symbolsFileName);
 }
 
-uint32_t DIARawSymbol::getSymIndexId() const {
+SymIndexId DIARawSymbol::getSymIndexId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_symIndexId);
 }
 
@@ -803,7 +825,7 @@ uint32_t DIARawSymbol::getToken() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_token);
 }
 
-uint32_t DIARawSymbol::getTypeId() const {
+SymIndexId DIARawSymbol::getTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_typeId);
 }
 
@@ -815,11 +837,11 @@ std::string DIARawSymbol::getUndecoratedName() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_undecoratedName);
 }
 
-uint32_t DIARawSymbol::getUnmodifiedTypeId() const {
+SymIndexId DIARawSymbol::getUnmodifiedTypeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_unmodifiedTypeId);
 }
 
-uint32_t DIARawSymbol::getUpperBoundId() const {
+SymIndexId DIARawSymbol::getUpperBoundId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_upperBoundId);
 }
 
@@ -840,7 +862,7 @@ uint32_t DIARawSymbol::getVirtualBaseOffset() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_virtualBaseOffset);
 }
 
-uint32_t DIARawSymbol::getVirtualTableShapeId() const {
+SymIndexId DIARawSymbol::getVirtualTableShapeId() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_virtualTableShapeId);
 }
 
@@ -852,7 +874,7 @@ DIARawSymbol::getVirtualBaseTableType() const {
 
   auto RawVT = llvm::make_unique<DIARawSymbol>(Session, TableType);
   auto Pointer =
-      llvm::make_unique<PDBSymbolTypePointer>(Session, std::move(RawVT));
+      PDBSymbol::createAs<PDBSymbolTypePointer>(Session, std::move(RawVT));
   return unique_dyn_cast<PDBSymbolTypeBuiltin>(Pointer->getPointeeType());
 }
 

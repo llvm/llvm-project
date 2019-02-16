@@ -870,13 +870,13 @@ public:
   /// Factory for NaN values.
   ///
   /// \param Negative - True iff the NaN generated should be negative.
-  /// \param type - The unspecified fill bits for creating the NaN, 0 by
+  /// \param payload - The unspecified fill bits for creating the NaN, 0 by
   /// default.  The value is truncated as necessary.
   static APFloat getNaN(const fltSemantics &Sem, bool Negative = false,
-                        unsigned type = 0) {
-    if (type) {
-      APInt fill(64, type);
-      return getQNaN(Sem, Negative, &fill);
+                        uint64_t payload = 0) {
+    if (payload) {
+      APInt intPayload(64, payload);
+      return getQNaN(Sem, Negative, &intPayload);
     } else {
       return getQNaN(Sem, Negative, nullptr);
     }
@@ -1240,6 +1240,32 @@ inline APFloat maxnum(const APFloat &A, const APFloat &B) {
     return B;
   if (B.isNaN())
     return A;
+  return (A.compare(B) == APFloat::cmpLessThan) ? B : A;
+}
+
+/// Implements IEEE 754-2018 minimum semantics. Returns the smaller of 2
+/// arguments, propagating NaNs and treating -0 as less than +0.
+LLVM_READONLY
+inline APFloat minimum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return A;
+  if (B.isNaN())
+    return B;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? A : B;
+  return (B.compare(A) == APFloat::cmpLessThan) ? B : A;
+}
+
+/// Implements IEEE 754-2018 maximum semantics. Returns the larger of 2
+/// arguments, propagating NaNs and treating -0 as less than +0.
+LLVM_READONLY
+inline APFloat maximum(const APFloat &A, const APFloat &B) {
+  if (A.isNaN())
+    return A;
+  if (B.isNaN())
+    return B;
+  if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
+    return A.isNegative() ? B : A;
   return (A.compare(B) == APFloat::cmpLessThan) ? B : A;
 }
 

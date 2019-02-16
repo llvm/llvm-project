@@ -159,11 +159,9 @@ public:
   void callbackDeleteBB(BasicBlock *DelBB,
                         std::function<void(BasicBlock *)> Callback);
 
-  /// Recalculate all available trees.
-  /// Under Lazy Strategy, available trees will only be recalculated if there
-  /// are pending updates or there is BasicBlock awaiting deletion. Returns true
-  /// if at least one tree is recalculated.
-  bool recalculate(Function &F);
+  /// Recalculate all available trees and flush all BasicBlocks
+  /// awaiting deletion immediately.
+  void recalculate(Function &F);
 
   /// Flush DomTree updates and return DomTree.
   /// It also flush out of date updates applied by all available trees

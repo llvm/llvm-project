@@ -64,6 +64,11 @@
 pushf
 popf
 
+// CHECK: encoding: [0x66,0x9c]
+// CHECK: encoding: [0x66,0x9d]
+pushfw
+popfw
+
 LBB0_3:
 // CHECK: encoding: [0xeb,A]
 	jmp	LBB0_3

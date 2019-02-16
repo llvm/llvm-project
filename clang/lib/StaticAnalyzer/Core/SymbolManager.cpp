@@ -83,10 +83,13 @@ void SymbolCast::dumpToStream(raw_ostream &os) const {
 }
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << "conj_$" << getSymbolID() << '{' << T.getAsString()
-    << ", LC" << LCtx->getID() << ", S" << S->getID(
-      LCtx->getDecl()->getASTContext()) << ", #" << Count
-    << '}';
+  os << "conj_$" << getSymbolID() << '{' << T.getAsString() << ", LC"
+     << LCtx->getID();
+  if (S)
+    os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
+  else
+    os << ", no stmt";
+  os << ", #" << Count << '}';
 }
 
 void SymbolDerived::dumpToStream(raw_ostream &os) const {
@@ -398,12 +401,11 @@ void SymbolReaper::markDependentsLive(SymbolRef sym) {
 
 void SymbolReaper::markLive(SymbolRef sym) {
   TheLiving[sym] = NotProcessed;
-  TheDead.erase(sym);
   markDependentsLive(sym);
 }
 
 void SymbolReaper::markLive(const MemRegion *region) {
-  RegionRoots.insert(region);
+  RegionRoots.insert(region->getBaseRegion());
   markElementIndicesLive(region);
 }
 
@@ -423,19 +425,15 @@ void SymbolReaper::markInUse(SymbolRef sym) {
     MetadataInUse.insert(sym);
 }
 
-bool SymbolReaper::maybeDead(SymbolRef sym) {
-  if (isLive(sym))
-    return false;
-
-  TheDead.insert(sym);
-  return true;
-}
-
 bool SymbolReaper::isLiveRegion(const MemRegion *MR) {
+  // TODO: For now, liveness of a memory region is equivalent to liveness of its
+  // base region. In fact we can do a bit better: say, if a particular FieldDecl
+  // is not used later in the path, we can diagnose a leak of a value within
+  // that field earlier than, say, the variable that contains the field dies.
+  MR = MR->getBaseRegion();
+
   if (RegionRoots.count(MR))
     return true;
-
-  MR = MR->getBaseRegion();
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(MR))
     return isLive(SR->getSymbol());

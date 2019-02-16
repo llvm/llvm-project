@@ -254,7 +254,8 @@ public:
 
 private:
   void destroyValueName();
-  void doRAUW(Value *New, bool NoMetadata);
+  enum class ReplaceMetadataUses { No, Yes };
+  void doRAUW(Value *New, ReplaceMetadataUses);
   void setNameImpl(const Twine &Name);
 
 public:

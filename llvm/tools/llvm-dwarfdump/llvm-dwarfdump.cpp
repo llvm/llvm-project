@@ -156,7 +156,7 @@ static list<std::string> Name(
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for -name"), aliasopt(Name));
 static opt<unsigned long long> Lookup("lookup",
-           desc("Lookup <address> in the debug information and print out any"
+           desc("Lookup <address> in the debug information and print out any "
                 "available file, function, block and line table details."),
            value_desc("address"), cat(DwarfDumpCategory));
 static opt<std::string>
@@ -226,7 +226,7 @@ static alias VerboseAlias("v", desc("Alias for -verbose."), aliasopt(Verbose),
 static void error(StringRef Prefix, std::error_code EC) {
   if (!EC)
     return;
-  errs() << Prefix << ": " << EC.message() << "\n";
+  WithColor::error() << Prefix << ": " << EC.message() << "\n";
   exit(1);
 }
 
@@ -309,7 +309,8 @@ static bool filterByName(const StringSet<> &Names, DWARFDie Die,
 
 /// Print only DIEs that have a certain name.
 static void filterByName(const StringSet<> &Names,
-                         DWARFContext::cu_iterator_range CUs, raw_ostream &OS) {
+                         DWARFContext::unit_iterator_range CUs,
+                         raw_ostream &OS) {
   for (const auto &CU : CUs)
     for (const auto &Entry : CU->dies()) {
       DWARFDie Die = {CU.get(), &Entry};
@@ -319,7 +320,6 @@ static void filterByName(const StringSet<> &Names,
       if (const char *Name = Die.getName(DINameKind::LinkageName))
         filterByName(Names, Die, Name, OS);
     }
-
 }
 
 static void getDies(DWARFContext &DICtx, const AppleAcceleratorTable &Accel,
@@ -371,7 +371,7 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
     getDies(DICtx, DICtx.getAppleNamespaces(), Name, Dies);
     getDies(DICtx, DICtx.getDebugNames(), Name, Dies);
   }
-  llvm::sort(Dies.begin(), Dies.end());
+  llvm::sort(Dies);
   Dies.erase(std::unique(Dies.begin(), Dies.end()), Dies.end());
 
   for (DWARFDie Die : Dies)
@@ -422,8 +422,8 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
     for (auto name : Name)
       Names.insert((IgnoreCase && !UseRegex) ? StringRef(name).lower() : name);
 
-    filterByName(Names, DICtx.compile_units(), OS);
-    filterByName(Names, DICtx.dwo_compile_units(), OS);
+    filterByName(Names, DICtx.normal_units(), OS);
+    filterByName(Names, DICtx.dwo_units(), OS);
     return true;
   }
 
@@ -571,6 +571,14 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  // FIXME: Audit interactions between these two options and make them
+  //        compatible.
+  if (Diff && Verbose) {
+    WithColor::error() << "incompatible arguments: specifying both -diff and "
+                          "-verbose is currently not supported";
+    return 0;
+  }
+
   std::unique_ptr<ToolOutputFile> OutputFile;
   if (!OutputFilename.empty()) {
     std::error_code EC;
@@ -624,7 +632,7 @@ int main(int argc, char **argv) {
 
   if (Verify) {
     // If we encountered errors during verify, exit with a non-zero exit status.
-    if (!std::all_of(Objects.begin(), Objects.end(), [&](std::string Object) {
+    if (!all_of(Objects, [&](std::string Object) {
           return handleFile(Object, verifyObjectFile, OS);
         }))
       exit(1);

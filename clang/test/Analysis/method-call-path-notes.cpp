@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file  %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/method-call-path-notes.cpp.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/method-call-path-notes.cpp.plist -
 
 // Test warning about null or uninitialized pointer values used as instance member
 // calls.

@@ -57,18 +57,18 @@ bb11:                                             ; preds = %bb9
 
 ; CHECK-LABEL: {{^}}partially_undef_copy:
 ; CHECK: v_mov_b32_e32 v5, 5
-; CHECK: v_mov_b32_e32 v6, 6
+; CHECK-DAG: v_mov_b32_e32 v6, 6
 
-; CHECK: v_mov_b32_e32 v[[OUTPUT_LO:[0-9]+]], v5
+; CHECK-DAG: v_mov_b32_e32 v[[OUTPUT_LO:[0-9]+]], v5
 
 ; Undef copy
-; CHECK: v_mov_b32_e32 v1, v6
+; CHECK-DAG: v_mov_b32_e32 v1, v6
 
 ; undef copy
-; CHECK: v_mov_b32_e32 v2, v7
+; CHECK-DAG: v_mov_b32_e32 v2, v7
 
-; CHECK: v_mov_b32_e32 v[[OUTPUT_HI:[0-9]+]], v8
-; CHECK: v_mov_b32_e32 v[[OUTPUT_LO]], v6
+; CHECK-DAG: v_mov_b32_e32 v[[OUTPUT_HI:[0-9]+]], v8
+; CHECK-DAG: v_mov_b32_e32 v[[OUTPUT_LO]], v6
 
 ; CHECK: buffer_store_dwordx4 v{{\[}}[[OUTPUT_LO]]:[[OUTPUT_HI]]{{\]}}
 define amdgpu_kernel void @partially_undef_copy() #0 {

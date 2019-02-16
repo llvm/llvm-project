@@ -487,7 +487,7 @@ void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
   MDNode *BranchWeights =
       MDBuilder(CI->getContext()).createBranchWeights(1, 2000);
 
-  TerminatorInst *NewInst =
+  Instruction *NewInst =
       SplitBlockAndInsertIfThen(Cond, CI, false, BranchWeights, DT);
   BasicBlock *CallBB = NewInst->getParent();
   CallBB->setName("cdce.call");

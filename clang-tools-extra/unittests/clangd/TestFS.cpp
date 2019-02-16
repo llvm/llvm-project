@@ -8,21 +8,20 @@
 //===----------------------------------------------------------------------===//
 #include "TestFS.h"
 #include "URI.h"
-#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
-#include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
 using namespace llvm;
 
 IntrusiveRefCntPtr<vfs::FileSystem>
-buildTestFS(llvm::StringMap<std::string> const &Files,
-            llvm::StringMap<time_t> const &Timestamps) {
+buildTestFS(StringMap<std::string> const &Files,
+            StringMap<time_t> const &Timestamps) {
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
       new vfs::InMemoryFileSystem);
+  MemFS->setCurrentWorkingDirectory(testRoot());
   for (auto &FileAndContents : Files) {
     StringRef File = FileAndContents.first();
     MemFS->addFile(
@@ -32,22 +31,39 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
   return MemFS;
 }
 
-MockCompilationDatabase::MockCompilationDatabase(bool UseRelPaths)
-    : ExtraClangFlags({"-ffreestanding"}), UseRelPaths(UseRelPaths) {
+MockCompilationDatabase::MockCompilationDatabase(StringRef Directory,
+                                                 StringRef RelPathPrefix)
+    : ExtraClangFlags({"-ffreestanding"}), Directory(Directory),
+      RelPathPrefix(RelPathPrefix) {
   // -ffreestanding avoids implicit stdc-predef.h.
 }
 
 Optional<tooling::CompileCommand>
-MockCompilationDatabase::getCompileCommand(PathRef File) const {
+MockCompilationDatabase::getCompileCommand(PathRef File,
+                                           ProjectInfo *Project) const {
   if (ExtraClangFlags.empty())
     return None;
 
-  auto CommandLine = ExtraClangFlags;
   auto FileName = sys::path::filename(File);
+
+  // Build the compile command.
+  auto CommandLine = ExtraClangFlags;
   CommandLine.insert(CommandLine.begin(), "clang");
-  CommandLine.insert(CommandLine.end(), UseRelPaths ? FileName : File);
-  return {tooling::CompileCommand(sys::path::parent_path(File), FileName,
-                                  std::move(CommandLine), "")};
+  if (RelPathPrefix.empty()) {
+    // Use the absolute path in the compile command.
+    CommandLine.push_back(File);
+  } else {
+    // Build a relative path using RelPathPrefix.
+    SmallString<32> RelativeFilePath(RelPathPrefix);
+    sys::path::append(RelativeFilePath, FileName);
+    CommandLine.push_back(RelativeFilePath.str());
+  }
+
+  if (Project)
+    Project->SourceRoot = Directory;
+  return {tooling::CompileCommand(
+      Directory != StringRef() ? Directory : sys::path::parent_path(File),
+      FileName, std::move(CommandLine), "")};
 }
 
 const char *testRoot() {
@@ -75,29 +91,29 @@ class TestScheme : public URIScheme {
 public:
   static const char *Scheme;
 
-  llvm::Expected<std::string>
-  getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
-                  llvm::StringRef HintPath) const override {
-    assert(HintPath.startswith(testRoot()));
+  Expected<std::string> getAbsolutePath(StringRef /*Authority*/, StringRef Body,
+                                        StringRef HintPath) const override {
+    if (!HintPath.startswith(testRoot()))
+      return make_error<StringError>(
+          "Hint path doesn't start with test root: " + HintPath,
+          inconvertibleErrorCode());
     if (!Body.consume_front("/"))
-      return llvm::make_error<llvm::StringError>(
+      return make_error<StringError>(
           "Body of an unittest: URI must start with '/'",
-          llvm::inconvertibleErrorCode());
-    llvm::SmallString<16> Path(Body.begin(), Body.end());
-    llvm::sys::path::native(Path);
+          inconvertibleErrorCode());
+    SmallString<16> Path(Body.begin(), Body.end());
+    sys::path::native(Path);
     return testPath(Path);
   }
 
-  llvm::Expected<URI>
-  uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
-    llvm::StringRef Body = AbsolutePath;
+  Expected<URI> uriFromAbsolutePath(StringRef AbsolutePath) const override {
+    StringRef Body = AbsolutePath;
     if (!Body.consume_front(testRoot()))
-      return llvm::make_error<llvm::StringError>(
-          AbsolutePath + "does not start with " + testRoot(),
-          llvm::inconvertibleErrorCode());
+      return make_error<StringError>(AbsolutePath + "does not start with " +
+                                         testRoot(),
+                                     inconvertibleErrorCode());
 
-    return URI(Scheme, /*Authority=*/"",
-               llvm::sys::path::convert_to_slash(Body));
+    return URI(Scheme, /*Authority=*/"", sys::path::convert_to_slash(Body));
   }
 };
 

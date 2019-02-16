@@ -138,7 +138,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       } else
         return ELF::R_AARCH64_PREL64;
     case AArch64::fixup_aarch64_pcrel_adr_imm21:
-      assert(SymLoc == AArch64MCExpr::VK_NONE && "unexpected ADR relocation");
+      if (SymLoc != AArch64MCExpr::VK_ABS)
+        Ctx.reportError(Fixup.getLoc(),
+                        "invalid symbol kind for ADR relocation");
       return R_CLS(ADR_PREL_LO21);
     case AArch64::fixup_aarch64_pcrel_adrp_imm21:
       if (SymLoc == AArch64MCExpr::VK_ABS && !IsNC)
@@ -169,6 +171,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case AArch64::fixup_aarch64_ldr_pcrel_imm19:
       if (SymLoc == AArch64MCExpr::VK_GOTTPREL)
         return R_CLS(TLSIE_LD_GOTTPREL_PREL19);
+      if (SymLoc == AArch64MCExpr::VK_GOT)
+        return R_CLS(GOT_LD_PREL19);
       return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
       return R_CLS(TSTBR14);

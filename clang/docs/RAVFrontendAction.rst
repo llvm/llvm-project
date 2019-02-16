@@ -128,7 +128,7 @@ locations:
         if (Declaration->getQualifiedNameAsString() == "n::m::C") {
           // getFullLoc uses the ASTContext's SourceManager to resolve the source
           // location and break it up into its line and column parts.
-          FullSourceLoc FullLocation = Context->getFullLoc(Declaration->getLocStart());
+          FullSourceLoc FullLocation = Context->getFullLoc(Declaration->getBeginLoc());
           if (FullLocation.isValid())
             llvm::outs() << "Found declaration at "
                          << FullLocation.getSpellingLineNumber() << ":"
@@ -160,7 +160,7 @@ Now we can combine all of the above into a small example program:
 
         bool VisitCXXRecordDecl(CXXRecordDecl *Declaration) {
           if (Declaration->getQualifiedNameAsString() == "n::m::C") {
-            FullSourceLoc FullLocation = Context->getFullLoc(Declaration->getLocStart());
+            FullSourceLoc FullLocation = Context->getFullLoc(Declaration->getBeginLoc());
             if (FullLocation.isValid())
               llvm::outs() << "Found declaration at "
                            << FullLocation.getSpellingLineNumber() << ":"

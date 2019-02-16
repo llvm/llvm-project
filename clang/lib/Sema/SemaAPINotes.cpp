@@ -72,10 +72,10 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
 
   // Check the nullability specifier on this type.
   QualType origType = type;
-  S.checkNullabilityTypeSpecifier(type, nullability, decl->getLocation(),
-                                  /*isContextSensitive=*/false,
-                                  isa<ParmVarDecl>(decl), /*implicit=*/true,
-                                  /*overrideExisting=*/true);
+  S.checkImplicitNullabilityTypeSpecifier(type, nullability,
+                                          decl->getLocation(),
+                                          isa<ParmVarDecl>(decl),
+                                          /*overrideExisting=*/true);
   if (type.getTypePtr() == origType.getTypePtr())
     return;
 
@@ -215,7 +215,8 @@ static void handleAPINotedRetainCountAttribute(Sema &S, Decl *D,
       return isa<CFReturnsRetainedAttr>(next) ||
              isa<CFReturnsNotRetainedAttr>(next) ||
              isa<NSReturnsRetainedAttr>(next) ||
-             isa<NSReturnsNotRetainedAttr>(next);
+             isa<NSReturnsNotRetainedAttr>(next) ||
+             isa<CFAuditedTransferAttr>(next);
     });
   });
 }
@@ -227,8 +228,13 @@ static void handleAPINotedRetainCountConvention(
     return;
   switch (convention.getValue()) {
   case api_notes::RetainCountConventionKind::None:
-    handleAPINotedRetainCountAttribute(S, D, /*shouldAddAttribute*/false,
-                                       metadata);
+    if (isa<FunctionDecl>(D)) {
+      handleAPINotedRetainCountAttribute<CFUnknownTransferAttr>(
+          S, D, /*shouldAddAttribute*/true, metadata);
+    } else {
+      handleAPINotedRetainCountAttribute(S, D, /*shouldAddAttribute*/false,
+                                         metadata);
+    }
     break;
   case api_notes::RetainCountConventionKind::CFReturnsRetained:
     handleAPINotedRetainCountAttribute<CFReturnsRetainedAttr>(
@@ -274,6 +280,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                                                          info.UnavailableMsg),
                                               /*Strict=*/false,
                                               /*Replacement=*/StringRef(),
+                                              /*Priority=*/Sema::AP_Explicit,
                                               /*SpellingIndex*/0);
     },
     [](const Decl *decl) {
@@ -380,7 +387,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(var)) {
           type = S.adjustParameterTypeForObjCAutoRefCount(type,
-                                                          D->getLocation());
+                                                          D->getLocation(),
+                                                          typeInfo);
           type = S.Context.getAdjustedParameterType(type);
         }
 

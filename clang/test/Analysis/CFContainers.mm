@@ -1,4 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=osx.coreFoundation.containers.PointerSizedValues,osx.coreFoundation.containers.OutOfBounds -analyzer-store=region -triple x86_64-apple-darwin -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin -analyzer-output=text\
+// RUN: -analyzer-checker=osx.coreFoundation.containers.PointerSizedValues\
+// RUN: -analyzer-checker=osx.coreFoundation.containers.OutOfBounds\
+// RUN: -verify %s
 
 typedef const struct __CFAllocator * CFAllocatorRef;
 typedef const struct __CFString * CFStringRef;
@@ -94,17 +97,21 @@ CFSetRef CFSetCreate(CFAllocatorRef allocator, const void **values, CFIndex numV
 #define CFSTR(cStr)  ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
 #define NULL __null
 
-// Done with the headers. 
+// Done with the headers.
 // Test alpha.osx.cocoa.ContainerAPI checker.
 void testContainers(int **xNoWarn, CFIndex count) {
   int x[] = { 1, 2, 3 };
-  CFArrayRef foo = CFArrayCreate(kCFAllocatorDefault, (const void **) x, sizeof(x) / sizeof(x[0]), 0);// expected-warning {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
+  CFArrayRef foo = CFArrayCreate(kCFAllocatorDefault, (const void **) x, sizeof(x) / sizeof(x[0]), 0);
+  // expected-warning@-1 {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
+  // expected-note@-2    {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
 
   CFArrayRef fooNoWarn = CFArrayCreate(kCFAllocatorDefault, (const void **) xNoWarn, sizeof(xNoWarn) / sizeof(xNoWarn[0]), 0); // no warning
   CFArrayRef fooNoWarn2 = CFArrayCreate(kCFAllocatorDefault, 0, sizeof(xNoWarn) / sizeof(xNoWarn[0]), 0);// no warning, passing in 0
   CFArrayRef fooNoWarn3 = CFArrayCreate(kCFAllocatorDefault, NULL, sizeof(xNoWarn) / sizeof(xNoWarn[0]), 0);// no warning, passing in NULL
 
-  CFSetRef set = CFSetCreate(NULL, (const void **)x, 3, &kCFTypeSetCallBacks); // expected-warning {{The second argument to 'CFSetCreate' must be a C array of pointer-sized values}}
+  CFSetRef set = CFSetCreate(NULL, (const void **)x, 3, &kCFTypeSetCallBacks);
+  // expected-warning@-1 {{The second argument to 'CFSetCreate' must be a C array of pointer-sized values}}
+  // expected-note@-2    {{The second argument to 'CFSetCreate' must be a C array of pointer-sized values}}
   CFArrayRef* pairs = new CFArrayRef[count];
   CFSetRef fSet = CFSetCreate(kCFAllocatorDefault, (const void**) pairs, count - 1, &kCFTypeSetCallBacks);// no warning
 }
@@ -126,8 +133,13 @@ void CreateDict(int *elems) {
   const CFDictionaryKeyCallBacks keyCB = kCFCopyStringDictionaryKeyCallBacks;
   const CFDictionaryValueCallBacks valCB = kCFTypeDictionaryValueCallBacks;
   CFDictionaryRef dict1 = CFDictionaryCreate(kCFAllocatorDefault, (const void**)keys, (const void**)values, numValues, &keyCB, &valCB); // no warning
-  CFDictionaryRef dict2 = CFDictionaryCreate(kCFAllocatorDefault, (const void**)elems[0], (const void**)values, numValues, &keyCB, &valCB); //expected-warning {{The second argument to 'CFDictionaryCreate' must be a C array of}} expected-warning {{cast to 'const void **' from smaller integer type 'int'}}
-  CFDictionaryRef dict3 = CFDictionaryCreate(kCFAllocatorDefault, (const void**)keys, (const void**)elems, numValues, &keyCB, &valCB); // expected-warning {{The third argument to 'CFDictionaryCreate' must be a C array of pointer-sized values}}
+  CFDictionaryRef dict2 = CFDictionaryCreate(kCFAllocatorDefault, (const void**)elems[0], (const void**)values, numValues, &keyCB, &valCB);
+  // expected-warning@-1 {{The second argument to 'CFDictionaryCreate' must be a C array of}}
+  // expected-note@-2    {{The second argument to 'CFDictionaryCreate' must be a C array of}}
+  // expected-warning@-3{{cast to 'const void **' from smaller integer type 'int'}}
+  CFDictionaryRef dict3 = CFDictionaryCreate(kCFAllocatorDefault, (const void**)keys, (const void**)elems, numValues, &keyCB, &valCB);
+  // expected-warning@-1 {{The third argument to 'CFDictionaryCreate' must be a C array of pointer-sized values}}
+  // expected-note@-2    {{The third argument to 'CFDictionaryCreate' must be a C array of pointer-sized values}}
 }
 
 void OutOfBoundsSymbolicOffByOne(const void ** input, CFIndex S) {
@@ -136,6 +148,7 @@ void OutOfBoundsSymbolicOffByOne(const void ** input, CFIndex S) {
   const void *s1 = CFArrayGetValueAtIndex(array, 0);   // no warning
   const void *s2 = CFArrayGetValueAtIndex(array, S-1); // no warning
   const void *s3 = CFArrayGetValueAtIndex(array, S);   // expected-warning {{Index is out of bounds}}
+                                                       // expected-note@-1 {{Index is out of bounds}}
 }
 
 void OutOfBoundsConst(const void ** input, CFIndex S) {
@@ -144,6 +157,7 @@ void OutOfBoundsConst(const void ** input, CFIndex S) {
   const void *s1 = CFArrayGetValueAtIndex(array, 0); // no warning
   const void *s2 = CFArrayGetValueAtIndex(array, 2); // no warning
   const void *s3 = CFArrayGetValueAtIndex(array, 5); // expected-warning {{Index is out of bounds}}
+                                                     // expected-note@-1 {{Index is out of bounds}}
   
   // TODO: The solver is probably not strong enough here.
   CFIndex sIndex;
@@ -157,13 +171,16 @@ void OutOfBoundsZiro(const void ** input, CFIndex S) {
   // The API allows to set the size to 0. Check that we don't undeflow when the size is 0.
   array = CFArrayCreate(kCFAllocatorDefault, 0, 0, 0);
   const void *s1 = CFArrayGetValueAtIndex(array, 0); // expected-warning {{Index is out of bounds}}
+                                                     // expected-note@-1 {{Index is out of bounds}}
 }
 
 void TestGetCount(CFArrayRef A, CFIndex sIndex) {
-  CFIndex sCount = CFArrayGetCount(A);
-  if (sCount > sIndex)
+  CFIndex sCount = CFArrayGetCount(A); // expected-note{{'sCount' initialized here}}
+  if (sCount > sIndex) // expected-note{{Assuming 'sCount' is <= 'sIndex'}}
+                       // expected-note@-1{{Taking false branch}}
     const void *s1 = CFArrayGetValueAtIndex(A, sIndex);
   const void *s2 = CFArrayGetValueAtIndex(A, sCount);// expected-warning {{Index is out of bounds}}
+                                                     // expected-note@-1 {{Index is out of bounds}}
 }
 
 typedef void* XX[3];
@@ -179,10 +196,13 @@ void TestPointerToArray(int *elems, void *p1, void *p2, void *p3, unsigned count
   CFArrayCreate(0, (const void **) &fn, count, 0); // false negative
   CFArrayCreate(0, (const void **) fn, count, 0); // no warning
   CFArrayCreate(0, (const void **) cp, count, 0); // expected-warning {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
+                                                  // expected-note@-1 {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
 
   char cc[] = { 0, 2, 3 };
   CFArrayCreate(0, (const void **) &cc, count, 0); // expected-warning {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
+                                                   // expected-note@-1 {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
   CFArrayCreate(0, (const void **) cc, count, 0); // expected-warning {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
+                                                  // expected-note@-1 {{The second argument to 'CFArrayCreate' must be a C array of pointer-sized}}
 }
 
 void TestUndef(CFArrayRef A, CFIndex sIndex, void* x[]) {
@@ -217,10 +237,11 @@ void TestCFMutableArrayRefEscapeViaMutableArgument(CFMutableArrayRef a) {
 }
 
 void TestCFMutableArrayRefEscapeViaImmutableArgument(CFMutableArrayRef a) {
-  CFIndex aLen = CFArrayGetCount(a);
+  CFIndex aLen = CFArrayGetCount(a); // expected-note{{'aLen' initialized here}}
   ArrayRefEscape(a);
 
   // ArrayRefEscape is declared to take a CFArrayRef (i.e, an immutable array)
   // so we assume it does not change the length of a.
   CFArrayGetValueAtIndex(a, aLen); // expected-warning {{Index is out of bounds}}
+                                   // expected-note@-1 {{Index is out of bounds}}
 }

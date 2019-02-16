@@ -131,6 +131,7 @@ public:
   bool TraverseStmt(Stmt *S) { return true; }
 
   bool shouldWalkTypesOfTypeLocs() const { return false; }
+  bool shouldVisitTemplateInstantiations() const { return true; }
 
 private:
   /// Add the given declaration to the call graph.

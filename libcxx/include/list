@@ -169,6 +169,11 @@ template <class T, class Alloc>
     void swap(list<T,Alloc>& x, list<T,Alloc>& y)
          noexcept(noexcept(x.swap(y)));
 
+template <class T, class Allocator, class U>
+    void erase(list<T, Allocator>& c, const U& value);       // C++20
+template <class T, class Allocator, class Predicate>
+    void erase_if(list<T, Allocator>& c, Predicate pred);    // C++20
+
 }  // std
 
 */
@@ -181,6 +186,7 @@ template <class T, class Alloc>
 #include <iterator>
 #include <algorithm>
 #include <type_traits>
+#include <version>
 
 #include <__debug>
 
@@ -1169,7 +1175,7 @@ list<_Tp, _Alloc>::__link_nodes_at_front(__link_pointer __f, __link_pointer __l)
     base::__end_.__next_ = __f;
 }
 
-// Link in nodes [__f, __l] at the front of the list
+// Link in nodes [__f, __l] at the back of the list
 template <class _Tp, class _Alloc>
 inline
 void
@@ -2208,7 +2214,7 @@ template <class _Comp>
 void
 list<_Tp, _Alloc>::merge(list& __c, _Comp __comp)
 {
-    if (this != &__c)
+    if (this != _VSTD::addressof(__c))
     {
         iterator __f1 = begin();
         iterator __e1 = end();
@@ -2448,6 +2454,18 @@ swap(list<_Tp, _Alloc>& __x, list<_Tp, _Alloc>& __y)
 {
     __x.swap(__y);
 }
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(list<_Tp, _Allocator>& __c, _Predicate __pred)
+{ __c.remove_if(__pred); }
+
+template <class _Tp, class _Allocator, class _Up>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase(list<_Tp, _Allocator>& __c, const _Up& __v)
+{ _VSTD::erase_if(__c, [&](auto& __elem) { return __elem == __v; }); }
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

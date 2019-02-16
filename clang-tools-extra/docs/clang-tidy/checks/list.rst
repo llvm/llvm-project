@@ -4,7 +4,18 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   abseil-duration-comparison
+   abseil-duration-division
+   abseil-duration-factory-float
+   abseil-duration-factory-scale
+   abseil-duration-subtraction
+   abseil-faster-strsplit-delimiter
+   abseil-no-internal-dependencies
+   abseil-no-namespace
+   abseil-redundant-strcat-calls
    abseil-string-find-startswith
+   abseil-str-cat-append
+   abseil-upgrade-duration-conversions
    android-cloexec-accept
    android-cloexec-accept4
    android-cloexec-creat
@@ -52,6 +63,7 @@ Clang-Tidy Checks
    bugprone-swapped-arguments
    bugprone-terminating-continue
    bugprone-throw-keyword-missing
+   bugprone-too-small-loop-variable
    bugprone-undefined-memory-manipulation
    bugprone-undelegated-constructor
    bugprone-unused-raii
@@ -59,6 +71,7 @@ Clang-Tidy Checks
    bugprone-use-after-move
    bugprone-virtual-near-miss
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
+   cert-dcl16-c (redirects to readability-uppercase-literal-suffix) <cert-dcl16-c>
    cert-dcl21-cpp
    cert-dcl50-cpp
    cert-dcl54-cpp (redirects to misc-new-delete-overloads) <cert-dcl54-cpp>
@@ -79,10 +92,14 @@ Clang-Tidy Checks
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-avoid-goto
+   cppcoreguidelines-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <cppcoreguidelines-avoid-c-arrays>
+   cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-interfaces-global-init
+   cppcoreguidelines-macro-usage
    cppcoreguidelines-narrowing-conversions
    cppcoreguidelines-no-malloc
+   cppcoreguidelines-non-private-member-variables-in-classes (redirects to misc-non-private-member-variables-in-classes) <cppcoreguidelines-non-private-member-variables-in-classes>
    cppcoreguidelines-owning-memory
    cppcoreguidelines-pro-bounds-array-to-pointer-decay
    cppcoreguidelines-pro-bounds-constant-array-index
@@ -111,6 +128,7 @@ Clang-Tidy Checks
    google-explicit-constructor
    google-global-names-in-headers
    google-objc-avoid-throwing-exception
+   google-objc-function-naming
    google-objc-global-variable-declaration
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>
    google-readability-casting
@@ -120,6 +138,7 @@ Clang-Tidy Checks
    google-runtime-int
    google-runtime-operator
    google-runtime-references
+   hicpp-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <hicpp-avoid-c-arrays>
    hicpp-avoid-goto
    hicpp-braces-around-statements (redirects to readability-braces-around-statements) <hicpp-braces-around-statements>
    hicpp-deprecated-headers (redirects to modernize-deprecated-headers) <hicpp-deprecated-headers>
@@ -148,6 +167,7 @@ Clang-Tidy Checks
    hicpp-use-nullptr (redirects to modernize-use-nullptr) <hicpp-use-nullptr>
    hicpp-use-override (redirects to modernize-use-override) <hicpp-use-override>
    hicpp-vararg (redirects to cppcoreguidelines-pro-type-vararg) <hicpp-vararg>
+   hicpp-uppercase-literal-suffix (redirects to readability-uppercase-literal-suffix) <hicpp-uppercase-literal-suffix>
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
@@ -156,6 +176,7 @@ Clang-Tidy Checks
    misc-misplaced-const
    misc-new-delete-overloads
    misc-non-copyable-objects
+   misc-non-private-member-variables-in-classes
    misc-redundant-expression
    misc-static-assert
    misc-throw-by-value-catch-by-reference
@@ -165,7 +186,10 @@ Clang-Tidy Checks
    misc-unused-parameters
    misc-unused-using-decls
    modernize-avoid-bind
+   modernize-avoid-c-arrays
+   modernize-concat-nested-namespaces
    modernize-deprecated-headers
+   modernize-deprecated-ios-base-aliases
    modernize-loop-convert
    modernize-make-shared
    modernize-make-unique
@@ -210,6 +234,7 @@ Clang-Tidy Checks
    portability-simd-intrinsics
    readability-avoid-const-params-in-decls
    readability-braces-around-statements
+   readability-const-return-type
    readability-container-size-empty
    readability-delete-null-pointer
    readability-deleted-default
@@ -218,6 +243,8 @@ Clang-Tidy Checks
    readability-identifier-naming
    readability-implicit-bool-conversion
    readability-inconsistent-declaration-parameter-name
+   readability-isolate-declaration
+   readability-magic-numbers
    readability-misleading-indentation
    readability-misplaced-array-index
    readability-named-parameter
@@ -235,4 +262,5 @@ Clang-Tidy Checks
    readability-static-definition-in-anonymous-namespace
    readability-string-compare
    readability-uniqueptr-delete-release
+   readability-uppercase-literal-suffix
    zircon-temporary-objects

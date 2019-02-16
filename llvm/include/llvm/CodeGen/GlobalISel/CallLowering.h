@@ -40,6 +40,7 @@ class Value;
 class CallLowering {
   const TargetLowering *TLI;
 
+  virtual void anchor();
 public:
   struct ArgInfo {
     unsigned Reg;
@@ -108,6 +109,9 @@ public:
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
     CCAssignFn *AssignFn;
+
+  private:
+    virtual void anchor();
   };
 
 protected:

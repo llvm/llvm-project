@@ -26,20 +26,6 @@ define i64 @stack_fold_bzhi_u64(i64 %a0, i64 %a1)   {
 }
 declare i64 @llvm.x86.bmi.bzhi.64(i64, i64)
 
-define i64 @stack_fold_mulx_u64(i64 %a0, i64 %a1, i64 *%a2)   {
-  ;CHECK-LABEL: stack_fold_mulx_u64
-  ;CHECK:       mulxq {{-?[0-9]*}}(%rsp), %rax, %rcx {{.*#+}} 8-byte Folded Reload
-  %1 = tail call i64 asm sideeffect "nop", "=x,~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-  %2 = zext i64 %a0 to i128
-  %3 = zext i64 %a1 to i128
-  %4 = mul i128 %2, %3
-  %5 = lshr i128 %4, 64
-  %6 = trunc i128 %4 to i64
-  %7 = trunc i128 %5 to i64
-  store i64 %7, i64 *%a2
-  ret i64 %6
-}
-
 define i32 @stack_fold_pdep_u32(i32 %a0, i32 %a1)   {
   ;CHECK-LABEL: stack_fold_pdep_u32
   ;CHECK:       pdepl {{-?[0-9]*}}(%rsp), %eax, %eax {{.*#+}} 4-byte Folded Reload

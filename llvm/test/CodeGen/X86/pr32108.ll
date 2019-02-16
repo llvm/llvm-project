@@ -4,7 +4,6 @@
 define void @pr32108() {
 ; CHECK-LABEL: pr32108:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %CF244
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

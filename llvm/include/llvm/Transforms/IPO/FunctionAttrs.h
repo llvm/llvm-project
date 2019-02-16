@@ -32,7 +32,8 @@ class Pass;
 enum MemoryAccessKind {
   MAK_ReadNone = 0,
   MAK_ReadOnly = 1,
-  MAK_MayWrite = 2
+  MAK_MayWrite = 2,
+  MAK_WriteOnly = 3
 };
 
 /// Returns the memory access properties of this copy of the function.

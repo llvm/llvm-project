@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines.h"
+#include "llvm-c/Transforms/Coroutines.h"
 #include "CoroInstr.h"
 #include "CoroInternal.h"
 #include "llvm/ADT/SmallVector.h"
@@ -618,4 +619,20 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
   checkWFRetconPrototype(this, getArgOperand(PrototypeArg));
   checkWFAlloc(this, getArgOperand(AllocArg));
   checkWFDealloc(this, getArgOperand(DeallocArg));
+}
+
+void LLVMAddCoroEarlyPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroEarlyPass());
+}
+
+void LLVMAddCoroSplitPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroSplitPass());
+}
+
+void LLVMAddCoroElidePass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroElidePass());
+}
+
+void LLVMAddCoroCleanupPass(LLVMPassManagerRef PM) {
+  unwrap(PM)->add(createCoroCleanupPass());
 }

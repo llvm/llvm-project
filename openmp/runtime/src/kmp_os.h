@@ -86,9 +86,12 @@
    128-bit extended precision type yet */
 typedef long double _Quad;
 #elif KMP_COMPILER_GCC
+/* GCC on NetBSD lacks __multc3/__divtc3 builtins needed for quad */
+#if !KMP_OS_NETBSD
 typedef __float128 _Quad;
 #undef KMP_HAVE_QUAD
 #define KMP_HAVE_QUAD 1
+#endif
 #elif KMP_COMPILER_MSVC
 typedef long double _Quad;
 #endif
@@ -100,7 +103,9 @@ typedef long double _Quad;
 #endif
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
+#define KMP_USE_X87CONTROL 0
 #if KMP_OS_WINDOWS
+#define KMP_END_OF_LINE "\r\n"
 typedef char kmp_int8;
 typedef unsigned char kmp_uint8;
 typedef short kmp_int16;
@@ -122,6 +127,10 @@ typedef struct kmp_struct64 kmp_int64;
 typedef struct kmp_struct64 kmp_uint64;
 /* Not sure what to use for KMP_[U]INT64_SPEC here */
 #endif
+#if KMP_ARCH_X86 && KMP_MSVC_COMPAT
+#undef KMP_USE_X87CONTROL
+#define KMP_USE_X87CONTROL 1
+#endif
 #if KMP_ARCH_X86_64
 #define KMP_INTPTR 1
 typedef __int64 kmp_intptr_t;
@@ -132,6 +141,7 @@ typedef unsigned __int64 kmp_uintptr_t;
 #endif /* KMP_OS_WINDOWS */
 
 #if KMP_OS_UNIX
+#define KMP_END_OF_LINE "\n"
 typedef char kmp_int8;
 typedef unsigned char kmp_uint8;
 typedef short kmp_int16;
@@ -246,7 +256,7 @@ template <> struct traits_t<unsigned long long> {
 
 #define KMP_EXPORT extern /* export declaration in guide libraries */
 
-#if __GNUC__ >= 4
+#if __GNUC__ >= 4 && !defined(__MINGW32__)
 #define __forceinline __inline
 #endif
 
@@ -296,7 +306,7 @@ extern "C" {
 #define KMP_NORETURN __attribute__((noreturn))
 #endif
 
-#if KMP_OS_WINDOWS
+#if KMP_OS_WINDOWS && KMP_MSVC_COMPAT
 #define KMP_ALIGN(bytes) __declspec(align(bytes))
 #define KMP_THREAD_LOCAL __declspec(thread)
 #define KMP_ALIAS /* Nothing */
@@ -356,10 +366,12 @@ enum kmp_mem_fence_type {
 
 #if KMP_ASM_INTRINS && KMP_OS_WINDOWS
 
+#if KMP_MSVC_COMPAT && !KMP_COMPILER_CLANG
 #pragma intrinsic(InterlockedExchangeAdd)
 #pragma intrinsic(InterlockedCompareExchange)
 #pragma intrinsic(InterlockedExchange)
 #pragma intrinsic(InterlockedExchange64)
+#endif
 
 // Using InterlockedIncrement / InterlockedDecrement causes a library loading
 // ordering problem, so we use InterlockedExchangeAdd instead.

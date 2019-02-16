@@ -3,8 +3,8 @@
 // CHECK: @llvm.global_ctors = appending global [5 x { i32, void ()*, i8* }] [
 // CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__Eselectany1@@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?selectany1@@3US@@A", i32 0, i32 0) },
 // CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__Eselectany2@@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?selectany2@@3US@@A", i32 0, i32 0) },
-// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__Es@?$ExportedTemplate@H@@2US@@A@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?s@?$ExportedTemplate@H@@2US@@A", i32 0, i32 0) },
-// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__Efoo@?$B@H@@2VA@@A@YAXXZ", i8* bitcast (%class.A* @"?foo@?$B@H@@2VA@@A" to i8*) },
+// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__E?s@?$ExportedTemplate@H@@2US@@A@@YAXXZ", i8* getelementptr inbounds (%struct.S, %struct.S* @"?s@?$ExportedTemplate@H@@2US@@A", i32 0, i32 0) },
+// CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @"??__E?foo@?$B@H@@2VA@@A@@YAXXZ", i8* bitcast (%class.A* @"?foo@?$B@H@@2VA@@A" to i8*) },
 // CHECK: { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_microsoft_abi_static_initializers.cpp, i8* null }
 // CHECK: ]
 
@@ -231,18 +231,18 @@ void force_usage() {
   DynamicDLLImportInitVSMangling::switch_test3();
 }
 
-// CHECK: define linkonce_odr dso_local void @"??__Efoo@?$B@H@@2VA@@A@YAXXZ"() {{.*}} comdat
+// CHECK: define linkonce_odr dso_local void @"??__E?foo@?$B@H@@2VA@@A@@YAXXZ"() {{.*}} comdat
 // CHECK-NOT: and
 // CHECK-NOT: ?_Bfoo@
 // CHECK: call x86_thiscallcc %class.A* @"??0A@@QAE@XZ"
-// CHECK: call i32 @atexit(void ()* @"??__Ffoo@?$B@H@@2VA@@A@YAXXZ")
+// CHECK: call i32 @atexit(void ()* @"??__F?foo@?$B@H@@2VA@@A@@YAXXZ")
 // CHECK: ret void
 
 // CHECK: define linkonce_odr dso_local x86_thiscallcc %class.A* @"??0A@@QAE@XZ"({{.*}}) {{.*}} comdat
 
 // CHECK: define linkonce_odr dso_local x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}}) {{.*}} comdat
 
-// CHECK: define internal void @"??__Ffoo@?$B@H@@2VA@@A@YAXXZ"
+// CHECK: define internal void @"??__F?foo@?$B@H@@2VA@@A@@YAXXZ"
 // CHECK: call x86_thiscallcc void @"??1A@@QAE@XZ"{{.*}}foo
 // CHECK: ret void
 

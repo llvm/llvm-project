@@ -101,7 +101,7 @@ TEST(Disassembler, WebAssemblyTest) {
   InstSize = LLVMDisasmInstruction(DCR, BytesP, NumBytes, PC, OutString,
                                    OutStringSize);
   EXPECT_EQ(InstSize, 3U);
-  EXPECT_EQ(StringRef(OutString), "\ti64.load32_u\t16, :p2align=1");
+  EXPECT_EQ(StringRef(OutString), "\ti64.load32_u\t16:p2align=1");
 
   LLVMDisasmDispose(DCR);
 }

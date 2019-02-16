@@ -8,8 +8,7 @@
 ; RUN: llvm-dwarfdump -v %t.dwo | FileCheck %s
 
 ; Currently the no-source-location type comes out first.
-; FIXME: V5 wants type units in .debug_info.dwo not .debug_types.dwo.
-; CHECK: .debug_types.dwo contents:
+; CHECK: .debug_info.dwo contents:
 ; CHECK: 0x00000000: Type Unit: {{.*}} name = 'S'
 ; CHECK-SAME: (next unit at [[TU2:0x[0-9a-f]+]])
 ; CHECK: DW_TAG_type_unit

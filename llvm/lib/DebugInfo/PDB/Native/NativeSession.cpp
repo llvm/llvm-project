@@ -11,16 +11,16 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
-#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
-#include "llvm/DebugInfo/PDB/Native/NativeBuiltinSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
-#include "llvm/DebugInfo/PDB/Native/NativeEnumSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
+#include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
@@ -40,31 +40,19 @@ using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-namespace {
-// Maps codeview::SimpleTypeKind of a built-in type to the parameters necessary
-// to instantiate a NativeBuiltinSymbol for that type.
-static const struct BuiltinTypeEntry {
-  codeview::SimpleTypeKind Kind;
-  PDB_BuiltinType Type;
-  uint32_t Size;
-} BuiltinTypes[] = {
-    {codeview::SimpleTypeKind::Int32, PDB_BuiltinType::Int, 4},
-    {codeview::SimpleTypeKind::UInt32, PDB_BuiltinType::UInt, 4},
-    {codeview::SimpleTypeKind::UInt32Long, PDB_BuiltinType::UInt, 4},
-    {codeview::SimpleTypeKind::UInt64Quad, PDB_BuiltinType::UInt, 8},
-    {codeview::SimpleTypeKind::NarrowCharacter, PDB_BuiltinType::Char, 1},
-    {codeview::SimpleTypeKind::SignedCharacter, PDB_BuiltinType::Char, 1},
-    {codeview::SimpleTypeKind::UnsignedCharacter, PDB_BuiltinType::UInt, 1},
-    {codeview::SimpleTypeKind::UInt16Short, PDB_BuiltinType::UInt, 2},
-    {codeview::SimpleTypeKind::Boolean8, PDB_BuiltinType::Bool, 1}
-    // This table can be grown as necessary, but these are the only types we've
-    // needed so far.
-};
-} // namespace
+static DbiStream *getDbiStreamPtr(PDBFile &File) {
+  Expected<DbiStream &> DbiS = File.getPDBDbiStream();
+  if (DbiS)
+    return &DbiS.get();
+
+  consumeError(DbiS.takeError());
+  return nullptr;
+}
 
 NativeSession::NativeSession(std::unique_ptr<PDBFile> PdbFile,
                              std::unique_ptr<BumpPtrAllocator> Allocator)
-    : Pdb(std::move(PdbFile)), Allocator(std::move(Allocator)) {}
+    : Pdb(std::move(PdbFile)), Allocator(std::move(Allocator)),
+      Cache(*this, getDbiStreamPtr(*Pdb)) {}
 
 NativeSession::~NativeSession() = default;
 
@@ -92,97 +80,17 @@ Error NativeSession::createFromExe(StringRef Path,
   return make_error<RawError>(raw_error_code::feature_unsupported);
 }
 
-std::unique_ptr<PDBSymbolCompiland>
-NativeSession::createCompilandSymbol(DbiModuleDescriptor MI) {
-  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
-  SymbolCache.push_back(
-      llvm::make_unique<NativeCompilandSymbol>(*this, Id, MI));
-  return llvm::make_unique<PDBSymbolCompiland>(
-      *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
-}
-
-std::unique_ptr<PDBSymbolTypeEnum>
-NativeSession::createEnumSymbol(codeview::TypeIndex Index) {
-  const auto Id = findSymbolByTypeIndex(Index);
-  return llvm::make_unique<PDBSymbolTypeEnum>(
-      *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
-}
-
-std::unique_ptr<IPDBEnumSymbols>
-NativeSession::createTypeEnumerator(codeview::TypeLeafKind Kind) {
-  auto Tpi = Pdb->getPDBTpiStream();
-  if (!Tpi) {
-    consumeError(Tpi.takeError());
-    return nullptr;
-  }
-  auto &Types = Tpi->typeCollection();
-  return std::unique_ptr<IPDBEnumSymbols>(
-      new NativeEnumTypes(*this, Types, codeview::LF_ENUM));
-}
-
-SymIndexId NativeSession::findSymbolByTypeIndex(codeview::TypeIndex Index) {
-  // First see if it's already in our cache.
-  const auto Entry = TypeIndexToSymbolId.find(Index);
-  if (Entry != TypeIndexToSymbolId.end())
-    return Entry->second;
-
-  // Symbols for built-in types are created on the fly.
-  if (Index.isSimple()) {
-    // FIXME:  We will eventually need to handle pointers to other simple types,
-    // which are still simple types in the world of CodeView TypeIndexes.
-    if (Index.getSimpleMode() != codeview::SimpleTypeMode::Direct)
-      return 0;
-    const auto Kind = Index.getSimpleKind();
-    const auto It =
-        std::find_if(std::begin(BuiltinTypes), std::end(BuiltinTypes),
-                     [Kind](const BuiltinTypeEntry &Builtin) {
-                       return Builtin.Kind == Kind;
-                     });
-    if (It == std::end(BuiltinTypes))
-      return 0;
-    SymIndexId Id = SymbolCache.size();
-    SymbolCache.emplace_back(
-        llvm::make_unique<NativeBuiltinSymbol>(*this, Id, It->Type, It->Size));
-    TypeIndexToSymbolId[Index] = Id;
-    return Id;
-  }
-
-  // We need to instantiate and cache the desired type symbol.
-  auto Tpi = Pdb->getPDBTpiStream();
-  if (!Tpi) {
-    consumeError(Tpi.takeError());
-    return 0;
-  }
-  auto &Types = Tpi->typeCollection();
-  const auto &I = Types.getType(Index);
-  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
-  // TODO(amccarth):  Make this handle all types, not just LF_ENUMs.
-  assert(I.kind() == codeview::LF_ENUM);
-  SymbolCache.emplace_back(llvm::make_unique<NativeEnumSymbol>(*this, Id, I));
-  TypeIndexToSymbolId[Index] = Id;
-  return Id;
-}
-
 uint64_t NativeSession::getLoadAddress() const { return 0; }
 
 bool NativeSession::setLoadAddress(uint64_t Address) { return false; }
 
 std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
-  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
-  SymbolCache.push_back(llvm::make_unique<NativeExeSymbol>(*this, Id));
-  auto RawSymbol = SymbolCache[Id]->clone();
-  auto PdbSymbol(PDBSymbol::create(*this, std::move(RawSymbol)));
-  std::unique_ptr<PDBSymbolExe> ExeSymbol(
-      static_cast<PDBSymbolExe *>(PdbSymbol.release()));
-  return ExeSymbol;
+  return PDBSymbol::createAs<PDBSymbolExe>(*this, getNativeGlobalScope());
 }
 
 std::unique_ptr<PDBSymbol>
-NativeSession::getSymbolById(uint32_t SymbolId) const {
-  // If the caller has a SymbolId, it'd better be in our SymbolCache.
-  return SymbolId < SymbolCache.size()
-             ? PDBSymbol::create(*this, SymbolCache[SymbolId]->clone())
-             : nullptr;
+NativeSession::getSymbolById(SymIndexId SymbolId) const {
+  return Cache.getSymbolById(SymbolId);
 }
 
 bool NativeSession::addressForVA(uint64_t VA, uint32_t &Section,
@@ -290,4 +198,20 @@ NativeSession::getInjectedSources() const {
 std::unique_ptr<IPDBEnumSectionContribs>
 NativeSession::getSectionContribs() const {
   return nullptr;
+}
+
+std::unique_ptr<IPDBEnumFrameData>
+NativeSession::getFrameData() const {
+  return nullptr;
+}
+
+void NativeSession::initializeExeSymbol() {
+  if (ExeSymbol == 0)
+    ExeSymbol = Cache.createSymbol<NativeExeSymbol>();
+}
+
+NativeExeSymbol &NativeSession::getNativeGlobalScope() const {
+  const_cast<NativeSession &>(*this).initializeExeSymbol();
+
+  return Cache.getNativeSymbolById<NativeExeSymbol>(ExeSymbol);
 }

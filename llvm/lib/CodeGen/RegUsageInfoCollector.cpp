@@ -81,7 +81,7 @@ FunctionPass *llvm::createRegUsageInfoCollector() {
 bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const TargetMachine &TM = MF.getTarget();
+  const LLVMTargetMachine &TM = MF.getTarget();
 
   LLVM_DEBUG(dbgs() << " -------------------- " << getPassName()
                     << " -------------------- \n");
@@ -166,28 +166,27 @@ computeCalleeSavedRegs(BitVector &SavedRegs, MachineFunction &MF) {
   }
 
   // Insert any register fully saved via subregisters.
-  for (unsigned PReg = 1, PRegE = TRI.getNumRegs(); PReg < PRegE; ++PReg) {
-    if (SavedRegs.test(PReg))
-      continue;
+  for (const TargetRegisterClass *RC : TRI.regclasses()) {
+    if (!RC->CoveredBySubRegs)
+       continue;
 
-    // Check if PReg is fully covered by its subregs.
-    bool CoveredBySubRegs = false;
-    for (const TargetRegisterClass *RC : TRI.regclasses())
-      if (RC->CoveredBySubRegs && RC->contains(PReg)) {
-        CoveredBySubRegs = true;
-        break;
-      }
-    if (!CoveredBySubRegs)
-      continue;
+    for (unsigned PReg = 1, PRegE = TRI.getNumRegs(); PReg < PRegE; ++PReg) {
+      if (SavedRegs.test(PReg))
+        continue;
 
-    // Add PReg to SavedRegs if all subregs are saved.
-    bool AllSubRegsSaved = true;
-    for (MCSubRegIterator SR(PReg, &TRI, false); SR.isValid(); ++SR)
-      if (!SavedRegs.test(*SR)) {
-        AllSubRegsSaved = false;
-        break;
-      }
-    if (AllSubRegsSaved)
-      SavedRegs.set(PReg);
+      // Check if PReg is fully covered by its subregs.
+      if (!RC->contains(PReg))
+        continue;
+
+      // Add PReg to SavedRegs if all subregs are saved.
+      bool AllSubRegsSaved = true;
+      for (MCSubRegIterator SR(PReg, &TRI, false); SR.isValid(); ++SR)
+        if (!SavedRegs.test(*SR)) {
+          AllSubRegsSaved = false;
+          break;
+        }
+      if (AllSubRegsSaved)
+        SavedRegs.set(PReg);
+    }
   }
 }

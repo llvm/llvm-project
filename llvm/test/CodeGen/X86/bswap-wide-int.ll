@@ -25,14 +25,14 @@ define i64 @bswap_i64(i64 %a0) nounwind {
 ;
 ; X64-LABEL: bswap_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    bswapq %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    bswapq %rax
 ; X64-NEXT:    retq
 ;
 ; X64-MOVBE-LABEL: bswap_i64:
 ; X64-MOVBE:       # %bb.0:
-; X64-MOVBE-NEXT:    bswapq %rdi
 ; X64-MOVBE-NEXT:    movq %rdi, %rax
+; X64-MOVBE-NEXT:    bswapq %rax
 ; X64-MOVBE-NEXT:    retq
   %1 = call i64 @llvm.bswap.i64(i64 %a0)
   ret i64 %1
@@ -79,17 +79,17 @@ define i128 @bswap_i128(i128 %a0) nounwind {
 ;
 ; X64-LABEL: bswap_i128:
 ; X64:       # %bb.0:
-; X64-NEXT:    bswapq %rsi
-; X64-NEXT:    bswapq %rdi
 ; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    bswapq %rax
+; X64-NEXT:    bswapq %rdi
 ; X64-NEXT:    movq %rdi, %rdx
 ; X64-NEXT:    retq
 ;
 ; X64-MOVBE-LABEL: bswap_i128:
 ; X64-MOVBE:       # %bb.0:
-; X64-MOVBE-NEXT:    bswapq %rsi
-; X64-MOVBE-NEXT:    bswapq %rdi
 ; X64-MOVBE-NEXT:    movq %rsi, %rax
+; X64-MOVBE-NEXT:    bswapq %rax
+; X64-MOVBE-NEXT:    bswapq %rdi
 ; X64-MOVBE-NEXT:    movq %rdi, %rdx
 ; X64-MOVBE-NEXT:    retq
   %1 = call i128 @llvm.bswap.i128(i128 %a0)
@@ -149,6 +149,7 @@ define i256 @bswap_i256(i256 %a0) nounwind {
 ;
 ; X64-LABEL: bswap_i256:
 ; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    bswapq %r8
 ; X64-NEXT:    bswapq %rcx
 ; X64-NEXT:    bswapq %rdx
@@ -157,16 +158,15 @@ define i256 @bswap_i256(i256 %a0) nounwind {
 ; X64-NEXT:    movq %rdx, 16(%rdi)
 ; X64-NEXT:    movq %rcx, 8(%rdi)
 ; X64-NEXT:    movq %r8, (%rdi)
-; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 ;
 ; X64-MOVBE-LABEL: bswap_i256:
 ; X64-MOVBE:       # %bb.0:
+; X64-MOVBE-NEXT:    movq %rdi, %rax
 ; X64-MOVBE-NEXT:    movbeq %rsi, 24(%rdi)
 ; X64-MOVBE-NEXT:    movbeq %rdx, 16(%rdi)
 ; X64-MOVBE-NEXT:    movbeq %rcx, 8(%rdi)
 ; X64-MOVBE-NEXT:    movbeq %r8, (%rdi)
-; X64-MOVBE-NEXT:    movq %rdi, %rax
 ; X64-MOVBE-NEXT:    retq
   %1 = call i256 @llvm.bswap.i256(i256 %a0)
   ret i256 %1

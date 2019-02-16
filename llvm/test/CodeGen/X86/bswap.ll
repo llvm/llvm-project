@@ -5,9 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=CHECK64
 
 declare i16 @llvm.bswap.i16(i16)
-
 declare i32 @llvm.bswap.i32(i32)
-
 declare i64 @llvm.bswap.i64(i64)
 
 define i16 @W(i16 %A) {
@@ -19,8 +17,9 @@ define i16 @W(i16 %A) {
 ;
 ; CHECK64-LABEL: W:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    rolw $8, %di
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    rolw $8, %ax
+; CHECK64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK64-NEXT:    retq
         %Z = call i16 @llvm.bswap.i16( i16 %A )         ; <i16> [#uses=1]
         ret i16 %Z
@@ -35,8 +34,8 @@ define i32 @X(i32 %A) {
 ;
 ; CHECK64-LABEL: X:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    bswapl %edi
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
 ; CHECK64-NEXT:    retq
         %Z = call i32 @llvm.bswap.i32( i32 %A )         ; <i32> [#uses=1]
         ret i32 %Z
@@ -53,30 +52,68 @@ define i64 @Y(i64 %A) {
 ;
 ; CHECK64-LABEL: Y:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    bswapq %rdi
 ; CHECK64-NEXT:    movq %rdi, %rax
+; CHECK64-NEXT:    bswapq %rax
 ; CHECK64-NEXT:    retq
         %Z = call i64 @llvm.bswap.i64( i64 %A )         ; <i64> [#uses=1]
         ret i64 %Z
 }
 
+; This isn't really a bswap test, but the potential probem is
+; easier to see with bswap vs. other ops. The transform in
+; question starts with a bitwise logic op and tries to hoist
+; those ahead of other ops. But that's not generally profitable
+; when the other ops have other uses (and it might not be safe
+; either due to unconstrained instruction count growth).
+
+define i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
+; CHECK-LABEL: bswap_multiuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    bswapl %esi
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %esi, (%edx)
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: bswap_multiuse:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl %esi, %eax
+; CHECK64-NEXT:    bswapl %edi
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    movl %edi, (%rdx)
+; CHECK64-NEXT:    movl %eax, (%rcx)
+; CHECK64-NEXT:    orl %edi, %eax
+; CHECK64-NEXT:    retq
+  %xt = call i32 @llvm.bswap.i32(i32 %x)
+  %yt = call i32 @llvm.bswap.i32(i32 %y)
+  store i32 %xt, i32* %p1
+  store i32 %yt, i32* %p2
+  %r = or i32 %xt, %yt
+  ret i32 %r
+}
+
 ; rdar://9164521
 define i32 @test1(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test1:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    shrl $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test1:
-; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    shrl $16, %edi
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    shrl $16, %eax
 ; CHECK64-NEXT:    retq
-entry:
-
   %and = lshr i32 %a, 8
   %shr3 = and i32 %and, 255
   %and2 = shl i32 %a, 8
@@ -87,20 +124,18 @@ entry:
 
 define i32 @test2(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test2:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    sarl $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test2:
-; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    sarl $16, %edi
+; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    sarl $16, %eax
 ; CHECK64-NEXT:    retq
-entry:
-
   %and = lshr i32 %a, 8
   %shr4 = and i32 %and, 255
   %and2 = shl i32 %a, 8
@@ -205,3 +240,153 @@ define i64 @finally_useful_bswap() {
   ret i64 %swapped
 }
 
+; Make sure we don't assert during type legalization promoting a large
+; bswap due to the need for a large shift that won't fit in the i8 returned
+; from getShiftAmountTy.
+define i528 @large_promotion(i528 %A) nounwind {
+; CHECK-LABEL: large_promotion:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    subl $44, %esp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %edx
+; CHECK-NEXT:    shrdl $16, %edx, %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %esi
+; CHECK-NEXT:    shrdl $16, %esi, %edx
+; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %edi
+; CHECK-NEXT:    shrdl $16, %edi, %esi
+; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %ebx
+; CHECK-NEXT:    shrdl $16, %ebx, %edi
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    bswapl %ebp
+; CHECK-NEXT:    shrdl $16, %ebp, %ebx
+; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %ebp
+; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    shrdl $16, %eax, %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    shrdl $16, %eax, %ecx
+; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK-NEXT:    bswapl %ebp
+; CHECK-NEXT:    shrdl $16, %ebp, %eax
+; CHECK-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; CHECK-NEXT:    bswapl %ebx
+; CHECK-NEXT:    shrdl $16, %ebx, %ebp
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    bswapl %esi
+; CHECK-NEXT:    shrdl $16, %esi, %ebx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    bswapl %edx
+; CHECK-NEXT:    shrdl $16, %edx, %esi
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; CHECK-NEXT:    bswapl %edi
+; CHECK-NEXT:    shrdl $16, %edi, %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %ecx, 60(%eax)
+; CHECK-NEXT:    movl %edx, 56(%eax)
+; CHECK-NEXT:    movl %esi, 52(%eax)
+; CHECK-NEXT:    movl %ebx, 48(%eax)
+; CHECK-NEXT:    movl %ebp, 44(%eax)
+; CHECK-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 40(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 36(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 32(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 28(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 24(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 20(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 16(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 12(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 8(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, 4(%eax)
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 64(%eax)
+; CHECK-NEXT:    addl $44, %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    retl $4
+;
+; CHECK64-LABEL: large_promotion:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    pushq %rbx
+; CHECK64-NEXT:    movq %rdi, %rax
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; CHECK64-NEXT:    bswapq %r10
+; CHECK64-NEXT:    bswapq %rdi
+; CHECK64-NEXT:    shrdq $48, %rdi, %r10
+; CHECK64-NEXT:    bswapq %r11
+; CHECK64-NEXT:    shrdq $48, %r11, %rdi
+; CHECK64-NEXT:    bswapq %rbx
+; CHECK64-NEXT:    shrdq $48, %rbx, %r11
+; CHECK64-NEXT:    bswapq %r9
+; CHECK64-NEXT:    shrdq $48, %r9, %rbx
+; CHECK64-NEXT:    bswapq %r8
+; CHECK64-NEXT:    shrdq $48, %r8, %r9
+; CHECK64-NEXT:    bswapq %rcx
+; CHECK64-NEXT:    shrdq $48, %rcx, %r8
+; CHECK64-NEXT:    bswapq %rdx
+; CHECK64-NEXT:    shrdq $48, %rdx, %rcx
+; CHECK64-NEXT:    bswapq %rsi
+; CHECK64-NEXT:    shrdq $48, %rsi, %rdx
+; CHECK64-NEXT:    shrq $48, %rsi
+; CHECK64-NEXT:    movq %rdx, 56(%rax)
+; CHECK64-NEXT:    movq %rcx, 48(%rax)
+; CHECK64-NEXT:    movq %r8, 40(%rax)
+; CHECK64-NEXT:    movq %r9, 32(%rax)
+; CHECK64-NEXT:    movq %rbx, 24(%rax)
+; CHECK64-NEXT:    movq %r11, 16(%rax)
+; CHECK64-NEXT:    movq %rdi, 8(%rax)
+; CHECK64-NEXT:    movq %r10, (%rax)
+; CHECK64-NEXT:    movw %si, 64(%rax)
+; CHECK64-NEXT:    popq %rbx
+; CHECK64-NEXT:    retq
+  %Z = call i528 @llvm.bswap.i528(i528 %A)
+  ret i528 %Z
+}
+declare i528 @llvm.bswap.i528(i528)

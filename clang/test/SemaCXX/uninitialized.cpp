@@ -884,8 +884,10 @@ namespace lambdas {
     int x;
   };
   A a0([] { return a0.x; }); // ok
-  void f() { 
-    A a1([=] { return a1.x; }); // expected-warning{{variable 'a1' is uninitialized when used within its own initialization}}
+  void f() {
+    A a1([=] { // expected-warning{{variable 'a1' is uninitialized when used within its own initialization}}
+      return a1.x;
+    });
     A a2([&] { return a2.x; }); // ok
   }
 }

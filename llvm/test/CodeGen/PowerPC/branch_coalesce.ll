@@ -13,10 +13,8 @@ define double @testBranchCoal(double %a, double %b, double %c, i32 %x) {
 ; CHECK-DAG: addis [[LD2REG:[0-9]+]], 2, .LCPI0_1@toc@ha
 ; CHECK-DAG: xxlxor 2, 2, 2
 ; CHECK-NOT: beq
-; CHECK-DAG: addi [[LD1BASE:[0-9]+]], [[LD1REG]]
-; CHECK-DAG: addi [[LD2BASE:[0-9]+]], [[LD2REG]]
-; CHECK-DAG: lfdx 1, 0, [[LD1BASE]]
-; CHECK-DAG: lfdx 3, 0, [[LD2BASE]]
+; CHECK-DAG: lfd 1, .LCPI0_0@toc@l([[LD1REG]])
+; CHECK-DAG: lfd 3, .LCPI0_1@toc@l([[LD2REG]])
 ; CHECK: .LBB[[LAB1]]
 ; CHECK: xsadddp 0, 1, 2
 ; CHECK: xsadddp 1, 0, 3
@@ -32,16 +30,14 @@ define double @testBranchCoal(double %a, double %b, double %c, i32 %x) {
 ; CHECK-NOCOALESCE-NEXT:    beq 0, .LBB0_4
 ; CHECK-NOCOALESCE-NEXT:  .LBB0_3: # %entry
 ; CHECK-NOCOALESCE-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; CHECK-NOCOALESCE-NEXT:    addi 3, 3, .LCPI0_1@toc@l
-; CHECK-NOCOALESCE-NEXT:    lfdx 3, 0, 3
+; CHECK-NOCOALESCE-NEXT:    lfd 3, .LCPI0_1@toc@l(3)
 ; CHECK-NOCOALESCE-NEXT:  .LBB0_4: # %entry
 ; CHECK-NOCOALESCE-NEXT:    xsadddp 0, 1, 2
 ; CHECK-NOCOALESCE-NEXT:    xsadddp 1, 0, 3
 ; CHECK-NOCOALESCE-NEXT:    blr
 ; CHECK-NOCOALESCE-NEXT:  .LBB0_5: # %entry
 ; CHECK-NOCOALESCE-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-NOCOALESCE-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-NOCOALESCE-NEXT:    lfdx 1, 0, 3
+; CHECK-NOCOALESCE-NEXT:    lfd 1, .LCPI0_0@toc@l(3)
 ; CHECK-NOCOALESCE-NEXT:    beq 0, .LBB0_2
 ; CHECK-NOCOALESCE-NEXT:  .LBB0_6: # %entry
 ; CHECK-NOCOALESCE-NEXT:    xxlxor 2, 2, 2

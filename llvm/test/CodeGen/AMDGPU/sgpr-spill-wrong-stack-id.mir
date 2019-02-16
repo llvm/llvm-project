@@ -75,23 +75,22 @@
 name:            sgpr_spill_wrong_stack_id
 tracksRegLiveness: true
 frameInfo:
-  adjustsStack:    false
   hasCalls:        true
 body:             |
-  bb.0.bb:
-    %8:sreg_32_xm0 = COPY $sgpr5
-    %4:vreg_64 = IMPLICIT_DEF
-    %3:vgpr_32 = FLAT_LOAD_DWORD %4, 0, 0, 0, implicit $exec, implicit $flat_scr
-    %5:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @func + 4, target-flags(amdgpu-rel32-hi) @func + 4, implicit-def dead $scc
+  bb.0:
+    %0:sreg_32_xm0 = COPY $sgpr5
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:vgpr_32 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit $exec, implicit $flat_scr
+    %3:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @func + 4, target-flags(amdgpu-rel32-hi) @func + 4, implicit-def dead $scc
     ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr5
-    dead $sgpr30_sgpr31 = SI_CALL %5, @func, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit undef $vgpr0
-    $sgpr5 = COPY %8
-    %12:sreg_32_xm0 = COPY $sgpr5
+    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit undef $vgpr0
+    $sgpr5 = COPY %0
+    %4:sreg_32_xm0 = COPY $sgpr5
     ADJCALLSTACKDOWN 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr5
     ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr5
-    $vgpr0 = COPY %3
-    dead $sgpr30_sgpr31 = SI_CALL %5, @func, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit killed $vgpr0
-    $sgpr5 = COPY %12
+    $vgpr0 = COPY %2
+    dead $sgpr30_sgpr31 = SI_CALL %3, @func, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit killed $vgpr0
+    $sgpr5 = COPY %4
     ADJCALLSTACKDOWN 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr5
 
 ...

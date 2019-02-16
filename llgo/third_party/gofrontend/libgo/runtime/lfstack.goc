@@ -1,0 +1,95 @@
+// Copyright 2012 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Lock-free stack.
+
+package runtime
+#include "runtime.h"
+#include "arch.h"
+
+#if __SIZEOF_POINTER__ == 8
+// SPARC64 and Solaris on AMD64 uses all 64 bits of virtual addresses.
+// Use low-order three bits as ABA counter.
+// http://docs.oracle.com/cd/E19120-01/open.solaris/816-5138/6mba6ua5p/index.html
+# if defined(__sparc__) || (defined(__sun__) && defined(__amd64__))
+static inline uint64 lfPack(LFNode *node, uintptr cnt) {
+	return ((uint64)(node)) | ((cnt)&7);
+}
+static inline LFNode* lfUnpack(uint64 val) {
+	return (LFNode*)(val&~7);
+}
+# else
+#  if defined(__aarch64__)
+// Depending on the kernel options, pointers on arm64 can have up to 48 significant
+// bits (see https://www.kernel.org/doc/Documentation/arm64/memory.txt).
+#   define PTR_BITS 48
+#  else
+// Amd64 uses 48-bit virtual addresses, 47-th bit is used as kernel/user flag.
+// So we use 17msb of pointers as ABA counter.
+#   define PTR_BITS 47
+#  endif
+# define CNT_BITS (64 - PTR_BITS + 3)
+static inline uint64 lfPack(LFNode *node, uintptr cnt) {
+	return ((uint64)(node)<<(64-PTR_BITS)) | (cnt&(((1<<CNT_BITS)-1)));
+}
+static inline LFNode* lfUnpack(uint64 val) {
+	return (LFNode*)((val >> CNT_BITS) << 3);
+}
+# endif
+#else
+static inline uint64 lfPack(LFNode *node, uintptr cnt) {
+	return ((uint64)(uintptr)(node)<<32) | cnt;
+}
+static inline LFNode* lfUnpack(uint64 val) {
+	return (LFNode*)(uintptr)(val >> 32);
+}
+#endif
+
+void
+runtime_lfstackpush(uint64 *head, LFNode *node)
+{
+	uint64 old, new;
+
+	if(node != lfUnpack(lfPack(node, 0))) {
+		runtime_printf("p=%p\n", node);
+		runtime_throw("runtime_lfstackpush: invalid pointer");
+	}
+
+	node->pushcnt++;
+	new = lfPack(node, node->pushcnt);
+	for(;;) {
+		old = runtime_atomicload64(head);
+		node->next = lfUnpack(old);
+		if(runtime_cas64(head, old, new))
+			break;
+	}
+}
+
+LFNode*
+runtime_lfstackpop(uint64 *head)
+{
+	LFNode *node, *node2;
+	uint64 old, new;
+
+	for(;;) {
+		old = runtime_atomicload64(head);
+		if(old == 0)
+			return nil;
+		node = lfUnpack(old);
+		node2 = runtime_atomicloadp(&node->next);
+		new = 0;
+		if(node2 != nil)
+			new = lfPack(node2, node2->pushcnt);
+		if(runtime_cas64(head, old, new))
+			return node;
+	}
+}
+
+func lfstackpush_go(head *uint64, node *LFNode) {
+	runtime_lfstackpush(head, node);
+}
+
+func lfstackpop_go(head *uint64) (node *LFNode) {
+	node = runtime_lfstackpop(head);
+}

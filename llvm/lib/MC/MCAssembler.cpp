@@ -111,6 +111,7 @@ void MCAssembler::reset() {
   ELFHeaderEFlags = 0;
   LOHContainer.reset();
   VersionInfo.Major = 0;
+  VersionInfo.SDKVersion = VersionTuple();
 
   // reset objects owned by us
   if (getBackendPtr())

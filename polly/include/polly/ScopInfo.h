@@ -2295,7 +2295,7 @@ private:
   void removeFromStmtMap(ScopStmt &Stmt);
 
   /// Removes all statements where the entry block of the statement does not
-  /// have a corresponding domain in the domain map.
+  /// have a corresponding domain in the domain map (or it is empty).
   void removeStmtNotInDomainMap();
 
   /// Mark arrays that have memory accesses with FortranArrayDescriptor.

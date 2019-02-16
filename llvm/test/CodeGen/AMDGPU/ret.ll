@@ -17,14 +17,13 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}vgpr_literal:
-; GCN: v_mov_b32_e32 v4, v0
-; GCN: exp mrt0 v4, v4, v4, v4 done vm
+; GCN: exp mrt0 v0, v0, v0, v0 done vm
 
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: v_mov_b32_e32 v1, 2.0
 ; GCN-DAG: v_mov_b32_e32 v2, 4.0
 ; GCN-DAG: v_mov_b32_e32 v3, -1.0
-; GCN: s_waitcnt expcnt(0)
+; GCN-DAG: s_waitcnt expcnt(0)
 ; GCN-NOT: s_endpgm
 define amdgpu_vs { float, float, float, float } @vgpr_literal([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
@@ -226,15 +225,14 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}structure_literal:
-; GCN: v_mov_b32_e32 v3, v0
-; GCN: exp mrt0 v3, v3, v3, v3 done vm
+; GCN: exp mrt0 v0, v0, v0, v0 done vm
 
 ; GCN-DAG: v_mov_b32_e32 v0, 1.0
 ; GCN-DAG: s_mov_b32 s0, 2
 ; GCN-DAG: s_mov_b32 s1, 3
 ; GCN-DAG: v_mov_b32_e32 v1, 2.0
 ; GCN-DAG: v_mov_b32_e32 v2, 4.0
-; GCN: s_waitcnt expcnt(0)
+; GCN-DAG: s_waitcnt expcnt(0)
 define amdgpu_vs { { float, i32 }, { i32, <2 x float> } } @structure_literal([9 x <16 x i8>] addrspace(4)* byval %arg, i32 inreg %arg1, i32 inreg %arg2, float %arg3) #0 {
 bb:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg3, float %arg3, float %arg3, float %arg3, i1 true, i1 true) #0

@@ -138,4 +138,4 @@ declare void @bees.a() nounwind
 declare void @bees.b() nounwind
 
 ; CHECK: attributes [[$NUW]] = { nounwind }
-; CHECK: attributes #1 = { noreturn nounwind }
+; CHECK: attributes #1 = { cold noreturn nounwind }

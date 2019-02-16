@@ -27,14 +27,26 @@ const char *const WebAssembly::PersonalityWrapperFn =
 
 bool WebAssembly::isArgument(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case WebAssembly::ARGUMENT_I32:
-  case WebAssembly::ARGUMENT_I64:
-  case WebAssembly::ARGUMENT_F32:
-  case WebAssembly::ARGUMENT_F64:
+  case WebAssembly::ARGUMENT_i32:
+  case WebAssembly::ARGUMENT_i32_S:
+  case WebAssembly::ARGUMENT_i64:
+  case WebAssembly::ARGUMENT_i64_S:
+  case WebAssembly::ARGUMENT_f32:
+  case WebAssembly::ARGUMENT_f32_S:
+  case WebAssembly::ARGUMENT_f64:
+  case WebAssembly::ARGUMENT_f64_S:
   case WebAssembly::ARGUMENT_v16i8:
+  case WebAssembly::ARGUMENT_v16i8_S:
   case WebAssembly::ARGUMENT_v8i16:
+  case WebAssembly::ARGUMENT_v8i16_S:
   case WebAssembly::ARGUMENT_v4i32:
+  case WebAssembly::ARGUMENT_v4i32_S:
+  case WebAssembly::ARGUMENT_v2i64:
+  case WebAssembly::ARGUMENT_v2i64_S:
   case WebAssembly::ARGUMENT_v4f32:
+  case WebAssembly::ARGUMENT_v4f32_S:
+  case WebAssembly::ARGUMENT_v2f64:
+  case WebAssembly::ARGUMENT_v2f64_S:
     return true;
   default:
     return false;
@@ -44,9 +56,15 @@ bool WebAssembly::isArgument(const MachineInstr &MI) {
 bool WebAssembly::isCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::COPY_I32:
+  case WebAssembly::COPY_I32_S:
   case WebAssembly::COPY_I64:
+  case WebAssembly::COPY_I64_S:
   case WebAssembly::COPY_F32:
+  case WebAssembly::COPY_F32_S:
   case WebAssembly::COPY_F64:
+  case WebAssembly::COPY_F64_S:
+  case WebAssembly::COPY_V128:
+  case WebAssembly::COPY_V128_S:
     return true;
   default:
     return false;
@@ -56,9 +74,15 @@ bool WebAssembly::isCopy(const MachineInstr &MI) {
 bool WebAssembly::isTee(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::TEE_I32:
+  case WebAssembly::TEE_I32_S:
   case WebAssembly::TEE_I64:
+  case WebAssembly::TEE_I64_S:
   case WebAssembly::TEE_F32:
+  case WebAssembly::TEE_F32_S:
   case WebAssembly::TEE_F64:
+  case WebAssembly::TEE_F64_S:
+  case WebAssembly::TEE_V128:
+  case WebAssembly::TEE_V128_S:
     return true;
   default:
     return false;
@@ -81,15 +105,29 @@ bool WebAssembly::isChild(const MachineInstr &MI,
 bool WebAssembly::isCallDirect(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::CALL_VOID:
+  case WebAssembly::CALL_VOID_S:
   case WebAssembly::CALL_I32:
+  case WebAssembly::CALL_I32_S:
   case WebAssembly::CALL_I64:
+  case WebAssembly::CALL_I64_S:
   case WebAssembly::CALL_F32:
+  case WebAssembly::CALL_F32_S:
   case WebAssembly::CALL_F64:
+  case WebAssembly::CALL_F64_S:
   case WebAssembly::CALL_v16i8:
+  case WebAssembly::CALL_v16i8_S:
   case WebAssembly::CALL_v8i16:
+  case WebAssembly::CALL_v8i16_S:
   case WebAssembly::CALL_v4i32:
+  case WebAssembly::CALL_v4i32_S:
+  case WebAssembly::CALL_v2i64:
+  case WebAssembly::CALL_v2i64_S:
   case WebAssembly::CALL_v4f32:
+  case WebAssembly::CALL_v4f32_S:
+  case WebAssembly::CALL_v2f64:
+  case WebAssembly::CALL_v2f64_S:
   case WebAssembly::CALL_EXCEPT_REF:
+  case WebAssembly::CALL_EXCEPT_REF_S:
     return true;
   default:
     return false;
@@ -99,15 +137,29 @@ bool WebAssembly::isCallDirect(const MachineInstr &MI) {
 bool WebAssembly::isCallIndirect(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::CALL_INDIRECT_VOID:
+  case WebAssembly::CALL_INDIRECT_VOID_S:
   case WebAssembly::CALL_INDIRECT_I32:
+  case WebAssembly::CALL_INDIRECT_I32_S:
   case WebAssembly::CALL_INDIRECT_I64:
+  case WebAssembly::CALL_INDIRECT_I64_S:
   case WebAssembly::CALL_INDIRECT_F32:
+  case WebAssembly::CALL_INDIRECT_F32_S:
   case WebAssembly::CALL_INDIRECT_F64:
+  case WebAssembly::CALL_INDIRECT_F64_S:
   case WebAssembly::CALL_INDIRECT_v16i8:
+  case WebAssembly::CALL_INDIRECT_v16i8_S:
   case WebAssembly::CALL_INDIRECT_v8i16:
+  case WebAssembly::CALL_INDIRECT_v8i16_S:
   case WebAssembly::CALL_INDIRECT_v4i32:
+  case WebAssembly::CALL_INDIRECT_v4i32_S:
+  case WebAssembly::CALL_INDIRECT_v2i64:
+  case WebAssembly::CALL_INDIRECT_v2i64_S:
   case WebAssembly::CALL_INDIRECT_v4f32:
+  case WebAssembly::CALL_INDIRECT_v4f32_S:
+  case WebAssembly::CALL_INDIRECT_v2f64:
+  case WebAssembly::CALL_INDIRECT_v2f64_S:
   case WebAssembly::CALL_INDIRECT_EXCEPT_REF:
+  case WebAssembly::CALL_INDIRECT_EXCEPT_REF_S:
     return true;
   default:
     return false;
@@ -117,18 +169,54 @@ bool WebAssembly::isCallIndirect(const MachineInstr &MI) {
 unsigned WebAssembly::getCalleeOpNo(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::CALL_VOID:
+  case WebAssembly::CALL_VOID_S:
   case WebAssembly::CALL_INDIRECT_VOID:
+  case WebAssembly::CALL_INDIRECT_VOID_S:
     return 0;
   case WebAssembly::CALL_I32:
+  case WebAssembly::CALL_I32_S:
   case WebAssembly::CALL_I64:
+  case WebAssembly::CALL_I64_S:
   case WebAssembly::CALL_F32:
+  case WebAssembly::CALL_F32_S:
   case WebAssembly::CALL_F64:
+  case WebAssembly::CALL_F64_S:
+  case WebAssembly::CALL_v16i8:
+  case WebAssembly::CALL_v16i8_S:
+  case WebAssembly::CALL_v8i16:
+  case WebAssembly::CALL_v8i16_S:
+  case WebAssembly::CALL_v4i32:
+  case WebAssembly::CALL_v4i32_S:
+  case WebAssembly::CALL_v2i64:
+  case WebAssembly::CALL_v2i64_S:
+  case WebAssembly::CALL_v4f32:
+  case WebAssembly::CALL_v4f32_S:
+  case WebAssembly::CALL_v2f64:
+  case WebAssembly::CALL_v2f64_S:
   case WebAssembly::CALL_EXCEPT_REF:
+  case WebAssembly::CALL_EXCEPT_REF_S:
   case WebAssembly::CALL_INDIRECT_I32:
+  case WebAssembly::CALL_INDIRECT_I32_S:
   case WebAssembly::CALL_INDIRECT_I64:
+  case WebAssembly::CALL_INDIRECT_I64_S:
   case WebAssembly::CALL_INDIRECT_F32:
+  case WebAssembly::CALL_INDIRECT_F32_S:
   case WebAssembly::CALL_INDIRECT_F64:
+  case WebAssembly::CALL_INDIRECT_F64_S:
+  case WebAssembly::CALL_INDIRECT_v16i8:
+  case WebAssembly::CALL_INDIRECT_v16i8_S:
+  case WebAssembly::CALL_INDIRECT_v8i16:
+  case WebAssembly::CALL_INDIRECT_v8i16_S:
+  case WebAssembly::CALL_INDIRECT_v4i32:
+  case WebAssembly::CALL_INDIRECT_v4i32_S:
+  case WebAssembly::CALL_INDIRECT_v2i64:
+  case WebAssembly::CALL_INDIRECT_v2i64_S:
+  case WebAssembly::CALL_INDIRECT_v4f32:
+  case WebAssembly::CALL_INDIRECT_v4f32_S:
+  case WebAssembly::CALL_INDIRECT_v2f64:
+  case WebAssembly::CALL_INDIRECT_v2f64_S:
   case WebAssembly::CALL_INDIRECT_EXCEPT_REF:
+  case WebAssembly::CALL_INDIRECT_EXCEPT_REF_S:
     return 1;
   default:
     llvm_unreachable("Not a call instruction");
@@ -138,11 +226,17 @@ unsigned WebAssembly::getCalleeOpNo(const MachineInstr &MI) {
 bool WebAssembly::isMarker(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::BLOCK:
+  case WebAssembly::BLOCK_S:
   case WebAssembly::END_BLOCK:
+  case WebAssembly::END_BLOCK_S:
   case WebAssembly::LOOP:
+  case WebAssembly::LOOP_S:
   case WebAssembly::END_LOOP:
+  case WebAssembly::END_LOOP_S:
   case WebAssembly::TRY:
+  case WebAssembly::TRY_S:
   case WebAssembly::END_TRY:
+  case WebAssembly::END_TRY_S:
     return true;
   default:
     return false;
@@ -152,7 +246,9 @@ bool WebAssembly::isMarker(const MachineInstr &MI) {
 bool WebAssembly::isThrow(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::THROW_I32:
+  case WebAssembly::THROW_I32_S:
   case WebAssembly::THROW_I64:
+  case WebAssembly::THROW_I64_S:
     return true;
   default:
     return false;
@@ -162,7 +258,9 @@ bool WebAssembly::isThrow(const MachineInstr &MI) {
 bool WebAssembly::isRethrow(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::RETHROW:
+  case WebAssembly::RETHROW_S:
   case WebAssembly::RETHROW_TO_CALLER:
+  case WebAssembly::RETHROW_TO_CALLER_S:
     return true;
   default:
     return false;
@@ -172,8 +270,11 @@ bool WebAssembly::isRethrow(const MachineInstr &MI) {
 bool WebAssembly::isCatch(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::CATCH_I32:
+  case WebAssembly::CATCH_I32_S:
   case WebAssembly::CATCH_I64:
+  case WebAssembly::CATCH_I64_S:
   case WebAssembly::CATCH_ALL:
+  case WebAssembly::CATCH_ALL_S:
     return true;
   default:
     return false;
@@ -183,8 +284,11 @@ bool WebAssembly::isCatch(const MachineInstr &MI) {
 bool WebAssembly::mayThrow(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::THROW_I32:
+  case WebAssembly::THROW_I32_S:
   case WebAssembly::THROW_I64:
+  case WebAssembly::THROW_I64_S:
   case WebAssembly::RETHROW:
+  case WebAssembly::RETHROW_S:
     return true;
   }
   if (isCallIndirect(MI))
@@ -212,7 +316,9 @@ bool WebAssembly::isCatchTerminatePad(const MachineBasicBlock &MBB) {
   bool SeenCatch = false;
   for (auto &MI : MBB) {
     if (MI.getOpcode() == WebAssembly::CATCH_I32 ||
-        MI.getOpcode() == WebAssembly::CATCH_I64)
+        MI.getOpcode() == WebAssembly::CATCH_I64 ||
+        MI.getOpcode() == WebAssembly::CATCH_I32_S ||
+        MI.getOpcode() == WebAssembly::CATCH_I64_S)
       SeenCatch = true;
     if (SeenCatch && MI.isCall()) {
       const MachineOperand &CalleeOp = MI.getOperand(getCalleeOpNo(MI));
@@ -229,7 +335,8 @@ bool WebAssembly::isCatchAllTerminatePad(const MachineBasicBlock &MBB) {
     return false;
   bool SeenCatchAll = false;
   for (auto &MI : MBB) {
-    if (MI.getOpcode() == WebAssembly::CATCH_ALL)
+    if (MI.getOpcode() == WebAssembly::CATCH_ALL ||
+        MI.getOpcode() == WebAssembly::CATCH_ALL_S)
       SeenCatchAll = true;
     if (SeenCatchAll && MI.isCall()) {
       const MachineOperand &CalleeOp = MI.getOperand(getCalleeOpNo(MI));

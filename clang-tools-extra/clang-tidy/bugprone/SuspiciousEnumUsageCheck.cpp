@@ -119,30 +119,30 @@ void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
   const auto enumExpr = [](StringRef RefName, StringRef DeclName) {
-    return allOf(ignoringImpCasts(expr().bind(RefName)),
-                 ignoringImpCasts(hasType(enumDecl().bind(DeclName))));
+    return expr(ignoringImpCasts(expr().bind(RefName)),
+                ignoringImpCasts(hasType(enumDecl().bind(DeclName))));
   };
 
   Finder->addMatcher(
       binaryOperator(hasOperatorName("|"), hasLHS(enumExpr("", "enumDecl")),
-                     hasRHS(allOf(enumExpr("", "otherEnumDecl"),
-                                  ignoringImpCasts(hasType(enumDecl(
-                                      unless(equalsBoundNode("enumDecl"))))))))
+                     hasRHS(expr(enumExpr("", "otherEnumDecl"),
+                                 ignoringImpCasts(hasType(enumDecl(
+                                     unless(equalsBoundNode("enumDecl"))))))))
           .bind("diffEnumOp"),
       this);
 
   Finder->addMatcher(
       binaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("|")),
                      hasLHS(enumExpr("lhsExpr", "enumDecl")),
-                     hasRHS(allOf(enumExpr("rhsExpr", ""),
-                                  ignoringImpCasts(hasType(enumDecl(
-                                      equalsBoundNode("enumDecl"))))))),
+                     hasRHS(expr(enumExpr("rhsExpr", ""),
+                                 ignoringImpCasts(hasType(
+                                     enumDecl(equalsBoundNode("enumDecl"))))))),
       this);
 
   Finder->addMatcher(
       binaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("|")),
                      hasEitherOperand(
-                         allOf(hasType(isInteger()), unless(enumExpr("", "")))),
+                         expr(hasType(isInteger()), unless(enumExpr("", "")))),
                      hasEitherOperand(enumExpr("enumExpr", "enumDecl"))),
       this);
 

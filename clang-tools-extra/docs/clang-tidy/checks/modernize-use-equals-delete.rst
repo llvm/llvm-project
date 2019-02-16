@@ -23,3 +23,8 @@ all other member functions implemented.
     A& operator=(const A&) = delete;
   };
 
+
+.. option:: IgnoreMacros
+
+   If this option is set to non-zero (default is `1`), the check will not warn
+   about functions declared inside macros.

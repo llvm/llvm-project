@@ -260,8 +260,14 @@ bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,
 bool SafeStack::IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
                                    const Value *AllocaPtr,
                                    uint64_t AllocaSize) {
-  // All MemIntrinsics have destination address in Arg0 and size in Arg2.
-  if (MI->getRawDest() != U) return true;
+  if (auto MTI = dyn_cast<MemTransferInst>(MI)) {
+    if (MTI->getRawSource() != U && MTI->getRawDest() != U)
+      return true;
+  } else {
+    if (MI->getRawDest() != U)
+      return true;
+  }
+
   const auto *Len = dyn_cast<ConstantInt>(MI->getLength());
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
   if (!Len) return false;
@@ -318,11 +324,8 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
       case Instruction::Invoke: {
         ImmutableCallSite CS(I);
 
-        if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-          if (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-              II->getIntrinsicID() == Intrinsic::lifetime_end)
-            continue;
-        }
+        if (I->isLifetimeStartOrEnd())
+          continue;
 
         if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
           if (!IsMemIntrinsicSafe(MI, UI, AllocaPtr, AllocaSize)) {
@@ -775,6 +778,10 @@ bool SafeStack::run() {
     ++NumUnsafeStackRestorePointsFunctions;
 
   IRBuilder<> IRB(&F.front(), F.begin()->getFirstInsertionPt());
+  // Calls must always have a debug location, or else inlining breaks. So
+  // we explicitly set a artificial debug location here.
+  if (DISubprogram *SP = F.getSubprogram())
+    IRB.SetCurrentDebugLocation(DebugLoc::get(SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
     Value *Fn = F.getParent()->getOrInsertFunction(
         "__safestack_pointer_address", StackPtrTy->getPointerTo(0));

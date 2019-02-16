@@ -1,0 +1,7 @@
+# RUN:     llvm-mc -triple=aarch64 -mattr=+mte   -disassemble < %s 2>&1 | FileCheck %s
+
+# ldgv x1, [x1]!
+[0x21,0x00,0xe0,0xd9]
+
+# CHECK:      warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0x21,0x00,0xe0,0xd9]

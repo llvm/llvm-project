@@ -112,8 +112,8 @@ void install_out_of_memory_new_handler();
 /// in the unwind chain.
 ///
 /// If no error handler is installed (default), then a bad_alloc exception
-/// is thrown, if LLVM is compiled with exception support, otherwise an assertion
-/// is called.
+/// is thrown, if LLVM is compiled with exception support, otherwise an
+/// assertion is called.
 void report_bad_alloc_error(const char *Reason, bool GenCrashDiag = true);
 
 /// This function calls abort(), and prints the optional message to stderr.

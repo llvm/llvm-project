@@ -81,6 +81,7 @@ struct AP64 {
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags =
       SizeClassAllocator64FlagMasks::kRandomShuffleChunks;
+  using AddressSpaceView = LocalAddressSpaceView;
 };
 typedef SizeClassAllocator64<AP64> PrimaryT;
 #else
@@ -96,7 +97,8 @@ struct AP32 {
   static const uptr kMetadataSize = 0;
   typedef __scudo::SizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = RegionSizeLog;
-  typedef __scudo::ByteMap ByteMap;
+  using AddressSpaceView = LocalAddressSpaceView;
+  using ByteMap = __scudo::ByteMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags =
       SizeClassAllocator32FlagMasks::kRandomShuffleChunks |

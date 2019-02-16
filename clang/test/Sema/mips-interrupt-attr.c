@@ -19,11 +19,11 @@ __attribute__((interrupt(""))) void food() {}
 
 __attribute__((interrupt)) int foob() {return 0;} // expected-warning {{MIPS 'interrupt' attribute only applies to functions that have a 'void' return type}}
 __attribute__((interrupt())) void fooc(int a) {} // expected-warning {{MIPS 'interrupt' attribute only applies to functions that have no parameters}}
-__attribute__((interrupt,mips16)) void fooe() {} // expected-error {{'interrupt' and 'mips16' attributes are not compatible}} \
+__attribute__((interrupt,mips16)) void fooe() {} // expected-error {{'mips16' and 'interrupt' attributes are not compatible}} \
                                                  // expected-note {{conflicting attribute is here}}
-__attribute__((mips16,interrupt)) void foof() {} // expected-error {{'mips16' and 'interrupt' attributes are not compatible}} \
+__attribute__((mips16,interrupt)) void foof() {} // expected-error {{'interrupt' and 'mips16' attributes are not compatible}} \
                                                  // expected-note {{conflicting attribute is here}}
-__attribute__((interrupt)) __attribute__ ((mips16)) void foo10() {} // expected-error {{'interrupt' and 'mips16' attributes are not compatible}} \
+__attribute__((interrupt)) __attribute__ ((mips16)) void foo10() {} // expected-error {{'mips16' and 'interrupt' attributes are not compatible}} \
                                                                     // expected-note {{conflicting attribute is here}}
-__attribute__((mips16)) __attribute ((interrupt)) void foo11() {} // expected-error {{'mips16' and 'interrupt' attributes are not compatible}} \
+__attribute__((mips16)) __attribute ((interrupt)) void foo11() {} // expected-error {{'interrupt' and 'mips16' attributes are not compatible}} \
                                                                   // expected-note {{conflicting attribute is here}}

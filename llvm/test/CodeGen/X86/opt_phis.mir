@@ -27,7 +27,7 @@ body:             |
 
   bb.1:
     %1:gr32 = PHI %0, %bb.0, %2, %bb.1
-    DBG_VALUE debug-use %1, debug-use _, !7, !DIExpression(), debug-location !6
+    DBG_VALUE %1, _, !7, !DIExpression(), debug-location !6
     %2:gr32 = IMPLICIT_DEF
     JMP_1 %bb.1
 ...

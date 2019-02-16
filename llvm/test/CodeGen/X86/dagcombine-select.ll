@@ -194,10 +194,11 @@ define i32 @sel_constants_shl_constant(i1 %cond) {
 define i32 @shl_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: shl_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    xorb $3, %dil
-; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
@@ -208,10 +209,11 @@ define i32 @shl_constant_sel_constants(i1 %cond) {
 define i32 @lshr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: lshr_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    xorb $3, %dil
-; CHECK-NEXT:    movl $64, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $64, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
@@ -222,10 +224,11 @@ define i32 @lshr_constant_sel_constants(i1 %cond) {
 define i32 @ashr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: ashr_constant_sel_constants:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    xorb $3, %dil
-; CHECK-NEXT:    movl $128, %eax
 ; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    xorb $3, %cl
+; CHECK-NEXT:    movl $128, %eax
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
@@ -376,5 +379,54 @@ define i32 @cttz_32_ne_select(i32 %v) nounwind {
   %tobool = icmp ne i32 %v, 0
   %.op = add nuw nsw i32 %cnt, 6
   %add = select i1 %tobool, i32 %.op, i32 5
+  ret i32 %add
+}
+
+; This matches the pattern emitted for __builtin_ffs
+define i32 @cttz_32_eq_select_ffs(i32 %v) nounwind {
+; NOBMI-LABEL: cttz_32_eq_select_ffs:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    bsfl %edi, %ecx
+; NOBMI-NEXT:    movl $-1, %eax
+; NOBMI-NEXT:    cmovnel %ecx, %eax
+; NOBMI-NEXT:    incl %eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: cttz_32_eq_select_ffs:
+; BMI:       # %bb.0:
+; BMI-NEXT:    tzcntl %edi, %ecx
+; BMI-NEXT:    movl $-1, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
+; BMI-NEXT:    incl %eax
+; BMI-NEXT:    retq
+
+  %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
+  %tobool = icmp eq i32 %v, 0
+  %.op = add nuw nsw i32 %cnt, 1
+  %add = select i1 %tobool, i32 0, i32 %.op
+  ret i32 %add
+}
+
+define i32 @cttz_32_ne_select_ffs(i32 %v) nounwind {
+; NOBMI-LABEL: cttz_32_ne_select_ffs:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    bsfl %edi, %ecx
+; NOBMI-NEXT:    movl $-1, %eax
+; NOBMI-NEXT:    cmovnel %ecx, %eax
+; NOBMI-NEXT:    incl %eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: cttz_32_ne_select_ffs:
+; BMI:       # %bb.0:
+; BMI-NEXT:    tzcntl %edi, %ecx
+; BMI-NEXT:    movl $-1, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
+; BMI-NEXT:    incl %eax
+; BMI-NEXT:    retq
+
+  %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
+  %tobool = icmp ne i32 %v, 0
+  %.op = add nuw nsw i32 %cnt, 1
+  %add = select i1 %tobool, i32 %.op, i32 0
   ret i32 %add
 }

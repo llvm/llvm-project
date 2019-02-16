@@ -1184,10 +1184,13 @@ void strsep_changes_input_string() {
 }
 
 //===----------------------------------------------------------------------===
-// memset()
+// memset() / explicit_bzero() / bzero()
 //===----------------------------------------------------------------------===
 
 void *memset(void *dest, int ch, size_t count);
+
+void bzero(void *dst, size_t count);
+void explicit_bzero(void *dest, size_t count);
 
 void *malloc(size_t size);
 void free(void *);
@@ -1381,6 +1384,57 @@ void memset26_upper_UCHAR_MAX() {
 
   clang_analyzer_eval(strlen(array) == 0); // expected-warning{{TRUE}}
   clang_analyzer_eval(array[4] == 0); // expected-warning{{TRUE}}
+}
+
+void bzero1_null() {
+  char *a = NULL;
+
+  bzero(a, 10); // expected-warning{{Null pointer argument in call to memory clearance function}}
+}
+
+void bzero2_char_array_null() {
+  char str[] = "abcd";
+  clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
+  bzero(str, 2);
+  clang_analyzer_eval(strlen(str) == 0); // expected-warning{{TRUE}}
+}
+
+void bzero3_char_ptr_null() {
+  char *str = "abcd";
+  clang_analyzer_eval(strlen(str) == 4); // expected-warning{{TRUE}}
+  bzero(str + 2, 2);
+  clang_analyzer_eval(strlen(str) == 0); // expected-warning{{FALSE}}
+}
+
+void explicit_bzero1_null() {
+  char *a = NULL;
+
+  explicit_bzero(a, 10); // expected-warning{{Null pointer argument in call to memory clearance function}}
+}
+
+void explicit_bzero2_clear_mypassword() {
+  char passwd[7] = "passwd";
+
+  explicit_bzero(passwd, sizeof(passwd)); // no-warning
+
+  clang_analyzer_eval(strlen(passwd) == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(passwd[0] == '\0'); // expected-warning{{TRUE}}
+}
+
+void explicit_bzero3_out_ofbound() {
+  char *privkey = (char *)malloc(7);
+  const char newprivkey[10] = "mysafekey";
+
+  strcpy(privkey, "random");
+  explicit_bzero(privkey, sizeof(newprivkey));
+#ifndef SUPPRESS_OUT_OF_BOUND
+  // expected-warning@-2 {{Memory clearance function accesses out-of-bound array element}}
+#endif
+  clang_analyzer_eval(privkey[0] == '\0');
+#ifdef SUPPRESS_OUT_OF_BOUND
+  // expected-warning@-2 {{UNKNOWN}}
+#endif
+  free(privkey);
 }
 
 //===----------------------------------------------------------------------===

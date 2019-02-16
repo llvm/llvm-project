@@ -1,5 +1,7 @@
 // RUN: %clang_esan_wset -O0 %s -o %t 2>&1
 // RUN: %run %t 2>&1 | FileCheck %s
+// Stucks at init and no clone feature equivalent.
+// UNSUPPORTED: freebsd
 
 #include <assert.h>
 #include <setjmp.h>

@@ -49,9 +49,9 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 }
 
 ; GCN-LABEL: {{^}}v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack:
-; GFX9: v_mov_b32_e32 v3, 0
-; GFX9-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2
-; GFX9-NEXT: v_mov_b32_e32 v0, v3
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX9-NEXT: v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT: s_setpc_b64
 define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack(half %src0, half %src1, half %src2) #0 {
   %src0.ext = fpext half %src0 to float
@@ -66,9 +66,9 @@ define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack(half %src0, half %src1, ha
 }
 
 ; GCN-LABEL: {{^}}v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext:
-; GFX9: v_mov_b32_e32 v3, 0
-; GFX9-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2
-; GFX9-NEXT: v_mov_b32_e32 v0, v3
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX9-NEXT: v_lshlrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT: s_setpc_b64
 define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext(half %src0, half %src1, half %src2) #0 {
   %src0.ext = fpext half %src0 to float
@@ -83,8 +83,10 @@ define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext(half %src0, half %src
 }
 
 ; GCN-LABEL: {{^}}v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
-; GFX9: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp{{$}}
-; GFX9: v_cvt_f16_f32_e32 v0, v0
+; GCN: s_waitcnt
+; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp{{$}}
+; GFX9-NEXT: v_cvt_f16_f32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; GFX9-NEXT: s_setpc_b64
 define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %src0, half %src1, half %src2) #0 {
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float

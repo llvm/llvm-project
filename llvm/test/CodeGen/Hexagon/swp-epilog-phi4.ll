@@ -8,16 +8,16 @@
 ; CHECK-NOT: r{{[0-9]+}} = r{{[0-9]+}}
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i32* %a1, [1000 x i32]* %a2) #0 {
+define void @f0(i32 %a0, i32* %a1, [1000 x i32]* %a2, i32* %a3, i32* %a4) #0 {
 b0:
-  br i1 undef, label %b1, label %b3
+  br label %b1
 
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i32 [ %v8, %b1 ], [ 1, %b0 ]
-  %v1 = load i32, i32* null, align 4, !tbaa !0
+  %v1 = load i32, i32* %a3, align 4, !tbaa !0
   %v2 = getelementptr inbounds i32, i32* %a1, i32 %v0
   %v3 = load i32, i32* %v2, align 4, !tbaa !0
-  %v4 = load i32, i32* undef, align 4, !tbaa !0
+  %v4 = load i32, i32* %a4, align 4, !tbaa !0
   %v5 = mul nsw i32 %v4, %v3
   %v6 = add nsw i32 %v5, %v1
   %v7 = getelementptr inbounds [1000 x i32], [1000 x i32]* %a2, i32 %v0, i32 0
@@ -26,10 +26,7 @@ b1:                                               ; preds = %b1, %b0
   %v9 = icmp eq i32 %v8, %a0
   br i1 %v9, label %b2, label %b1
 
-b2:                                               ; preds = %b1
-  unreachable
-
-b3:                                               ; preds = %b0
+b2:                                               ; preds = %b0
   ret void
 }
 

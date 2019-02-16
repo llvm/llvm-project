@@ -574,8 +574,8 @@ define <16 x i8> @combine_unpckl_arg0_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @combine_unpckl_arg1_pshufb(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_unpckl_arg1_pshufb:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[0],zero,zero,zero,xmm1[0],zero,zero,zero,xmm1[0],zero,zero,zero
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero,xmm0[0],zero,zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_unpckl_arg1_pshufb:
@@ -665,6 +665,71 @@ define <16 x i8> @shuffle_combine_packuswb_pshufb(<8 x i16> %a0, <8 x i16> %a1) 
   ret <16 x i8> %4
 }
 declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>) nounwind readnone
+
+define <16 x i8> @combine_pshufb_pshufb_or_as_blend(<16 x i8> %a0, <16 x i8> %a1) {
+; SSSE3-LABEL: combine_pshufb_pshufb_or_as_blend:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSSE3-NEXT:    movapd %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: combine_pshufb_pshufb_or_as_blend:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_pshufb_or_as_blend:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a1, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
+  %3 = or <16 x i8> %1, %2
+  ret <16 x i8> %3
+}
+
+define <16 x i8> @combine_pshufb_pshufb_or_as_unpcklbw(<16 x i8> %a0, <16 x i8> %a1) {
+; SSE-LABEL: combine_pshufb_pshufb_or_as_unpcklbw:
+; SSE:       # %bb.0:
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pshufb_pshufb_or_as_unpcklbw:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 -1, i8 1, i8 -1, i8 2, i8 -1, i8 3, i8 -1, i8 4, i8 -1, i8 5, i8 -1, i8 6, i8 -1, i8 7, i8 -1>)
+  %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a1, <16 x i8> <i8 -1, i8 0, i8 -1, i8 1, i8 -1, i8 2, i8 -1, i8 3, i8 -1, i8 4, i8 -1, i8 5, i8 -1, i8 6, i8 -1, i8 7>)
+  %3 = or <16 x i8> %1, %2
+  ret <16 x i8> %3
+}
+
+define <16 x i8> @combine_pshufb_pshufb_or_pshufb(<16 x i8> %a0) {
+; SSE-LABEL: combine_pshufb_pshufb_or_pshufb:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_pshufb_pshufb_or_pshufb:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_pshufb_pshufb_or_pshufb:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_pshufb_pshufb_or_pshufb:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+  %1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3>)
+  %3 = or <16 x i8> %1, %2
+  %4 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %3, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>)
+  ret <16 x i8> %4
+}
 
 define <16 x i8> @constant_fold_pshufb() {
 ; SSE-LABEL: constant_fold_pshufb:

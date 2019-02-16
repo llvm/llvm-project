@@ -132,6 +132,8 @@ int main() {
   R(extract_return_addr, (&N));
   P(signbit, (1.0));
 
+  R(launder, (&N));
+
   return 0;
 }
 
@@ -396,6 +398,15 @@ long long test_builtin_readcyclecounter() {
   return __builtin_readcyclecounter();
 }
 
+/// __builtin_launder should be a NOP in C since there are no vtables.
+// CHECK-LABEL: define void @test_builtin_launder
+void test_builtin_launder(int *p) {
+  // CHECK: [[TMP:%.*]] = load i32*,
+  // CHECK-NOT: @llvm.launder
+  // CHECK: store i32* [[TMP]],
+  int *d = __builtin_launder(p);
+}
+
 // Behavior of __builtin_os_log differs between platforms, so only test on X86
 #ifdef __x86_64__
 
@@ -440,10 +451,36 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: call void @__os_log_helper_1_2_1_8_34(
   __builtin_os_log_format(buf, "%{ xyz, public }s", "abc");
 
-  // The last privacy annotation in the string wins.
+  // CHECK: call void @__os_log_helper_1_3_1_8_33(
+  __builtin_os_log_format(buf, "%{ xyz, private }s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_3_1_8_37(
+  __builtin_os_log_format(buf, "%{ xyz, sensitive }s", "abc");
+
+  // The strictest privacy annotation in the string wins.
 
   // CHECK: call void @__os_log_helper_1_3_1_8_33(
   __builtin_os_log_format(buf, "%{ private, public, private, public}s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_3_1_8_37(
+  __builtin_os_log_format(buf, "%{ private, sensitive, private, public}s",
+                          "abc");
+
+  // CHECK: store volatile i32 22, i32* %[[LEN]], align 4
+  len = __builtin_os_log_format_buffer_size("%{mask.xyz}s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_2_2_8_112_8_34(i8* {{.*}}, i64 8026488
+  __builtin_os_log_format(buf, "%{mask.xyz, public}s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_3_2_8_112_4_1(i8* {{.*}}, i64 8026488
+  __builtin_os_log_format(buf, "%{ mask.xyz, private }d", 11);
+
+  // Mask type is silently ignored.
+  // CHECK: call void @__os_log_helper_1_2_1_8_32(
+  __builtin_os_log_format(buf, "%{ mask. xyz }s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_2_1_8_32(
+  __builtin_os_log_format(buf, "%{ mask.xy z }s", "abc");
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49
@@ -729,25 +766,28 @@ void test_builtin_os_log_merge_helper1(void *buf, unsigned u, long long ll) {
 
 // CHECK-LABEL: define void @test_builtin_os_log_errno
 void test_builtin_os_log_errno() {
-  // CHECK: %[[VLA:.*]] = alloca i8, i64 4, align 16
-  // CHECK: call void @__os_log_helper_16_2_1_0_96(i8* %[[VLA]])
+  // CHECK-NOT: @stacksave
+  // CHECK: %[[BUF:.*]] = alloca [4 x i8], align 1
+  // CHECK: %[[DECAY:.*]] = getelementptr inbounds [4 x i8], [4 x i8]* %[[BUF]], i32 0, i32 0
+  // CHECK: call void @__os_log_helper_1_2_1_0_96(i8* %[[DECAY]])
+  // CHECK-NOT: @stackrestore
 
   char buf[__builtin_os_log_format_buffer_size("%m")];
   __builtin_os_log_format(buf, "%m");
 }
 
-// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_16_2_1_0_96
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_1_0_96
 // CHECK: (i8* %[[BUFFER:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
 // CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
 // CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
-// CHECK: store i8 2, i8* %[[SUMMARY]], align 16
+// CHECK: store i8 2, i8* %[[SUMMARY]], align 1
 // CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
 // CHECK: store i8 1, i8* %[[NUMARGS]], align 1
 // CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
-// CHECK: store i8 96, i8* %[[ARGDESCRIPTOR]], align 2
+// CHECK: store i8 96, i8* %[[ARGDESCRIPTOR]], align 1
 // CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
 // CHECK: store i8 0, i8* %[[ARGSIZE]], align 1
 // CHECK-NEXT: ret void

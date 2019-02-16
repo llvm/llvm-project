@@ -13,6 +13,7 @@
 
 #include "AArch64TargetStreamer.h"
 #include "llvm/MC/ConstantPools.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -52,3 +53,17 @@ void AArch64TargetStreamer::emitInst(uint32_t Inst) {
 
   getStreamer().EmitBytes(StringRef(Buffer, 4));
 }
+
+namespace llvm {
+
+MCTargetStreamer *
+createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  const Triple &TT = STI.getTargetTriple();
+  if (TT.isOSBinFormatELF())
+    return new AArch64TargetELFStreamer(S);
+  if (TT.isOSBinFormatCOFF())
+    return new AArch64TargetWinCOFFStreamer(S);
+  return nullptr;
+}
+
+} // end namespace llvm

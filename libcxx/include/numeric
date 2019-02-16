@@ -104,15 +104,15 @@ template<class InputIterator, class OutputIterator, class T,
 
 template<class InputIterator, class OutputIterator,
          class BinaryOperation, class UnaryOperation>
-	OutputIterator
-	transform_inclusive_scan(InputIterator first, InputIterator last,
+    OutputIterator
+    transform_inclusive_scan(InputIterator first, InputIterator last,
                              OutputIterator result,
                              BinaryOperation binary_op, UnaryOperation unary_op);  // C++17
 
 template<class InputIterator, class OutputIterator,
          class BinaryOperation, class UnaryOperation, class T>
-	OutputIterator
-	transform_inclusive_scan(InputIterator first, InputIterator last,
+    OutputIterator
+    transform_inclusive_scan(InputIterator first, InputIterator last,
                              OutputIterator result,
                              BinaryOperation binary_op, UnaryOperation unary_op,
                              T init);  // C++17
@@ -142,6 +142,7 @@ template <class M, class N>
 #include <iterator>
 #include <limits> // for numeric_limits
 #include <functional>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

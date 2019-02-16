@@ -51,12 +51,6 @@ helps when multiple instances of the same character occur on a line. (We'll
 revisit this more in following examples.)</p>
 
 <pre>
-  $ <span class="cmd">gcc-4.9 -fsyntax-only -Wformat format-strings.c</span>
-  format-strings.c: In function 'void f()':
-  format-strings.c:91:16: warning: field precision specifier '.*' expects a matching 'int' argument [-Wformat=]
-     printf("%.*d");
-                  ^
-  format-strings.c:91:16: warning: format '%d' expects a matching 'int' argument [-Wformat=]
   $ <span class="cmd">clang -fsyntax-only format-strings.c</span>
   <span class="loc">format-strings.c:91:13:</span> <span class="warn">warning:</span> <span class="msg">'.*' specified field precision is missing a matching 'int' argument</span>
   <span class="snip" >  printf("%.*d");</span>
@@ -250,7 +244,7 @@ Default: template diff with type elision
 <span class="loc">t.cc:4:5:</span> <span class="note">note:</span> candidate function not viable: no known conversion for 1st argument;
   vector&lt;
     map&lt;
-      [...], 
+      [...],
       [<span class="template-highlight">float</span> != <span class="template-highlight">double</span>]&gt;&gt;
 </pre>
 -fdiagnostics-show-template-tree -fno-elide-type: template tree printing with no elision
@@ -258,7 +252,7 @@ Default: template diff with type elision
 <span class="loc">t.cc:4:5:</span> <span class="note">note:</span> candidate function not viable: no known conversion for 1st argument;
   vector&lt;
     map&lt;
-      int, 
+      int,
       [<span class="template-highlight">float</span> != <span class="template-highlight">double</span>]&gt;&gt;
 </pre>
 
@@ -298,7 +292,7 @@ implements the "wwopen" class of APIs):</p>
 </pre>
 
 <p>In practice, we've found that Clang's treatment of macros is actually more useful in multiply nested
-macros that in simple ones.</p>
+macros than in simple ones.</p>
 
 <h2>Quality of Implementation and Attention to Detail</h2>
 

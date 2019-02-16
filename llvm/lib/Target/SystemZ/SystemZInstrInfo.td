@@ -756,16 +756,15 @@ def STMH : StoreMultipleRSY<"stmh", 0xEB26, GRH32>;
 def LRVR  : UnaryRRE<"lrvr",  0xB91F, bswap, GR32, GR32>;
 def LRVGR : UnaryRRE<"lrvgr", 0xB90F, bswap, GR64, GR64>;
 
-// Byte-swapping loads.  Unlike normal loads, these instructions are
-// allowed to access storage more than once.
-def LRVH : UnaryRXY<"lrvh", 0xE31F, z_lrvh, GR32, 2>;
-def LRV  : UnaryRXY<"lrv",  0xE31E, z_lrv,  GR32, 4>;
-def LRVG : UnaryRXY<"lrvg", 0xE30F, z_lrvg, GR64, 8>;
+// Byte-swapping loads.
+def LRVH : UnaryRXY<"lrvh", 0xE31F, z_loadbswap16, GR32, 2>;
+def LRV  : UnaryRXY<"lrv",  0xE31E, z_loadbswap32, GR32, 4>;
+def LRVG : UnaryRXY<"lrvg", 0xE30F, z_loadbswap64, GR64, 8>;
 
-// Likewise byte-swapping stores.
-def STRVH : StoreRXY<"strvh", 0xE33F, z_strvh, GR32, 2>;
-def STRV  : StoreRXY<"strv",  0xE33E, z_strv,  GR32, 4>;
-def STRVG : StoreRXY<"strvg", 0xE32F, z_strvg, GR64, 8>;
+// Byte-swapping stores.
+def STRVH : StoreRXY<"strvh", 0xE33F, z_storebswap16, GR32, 2>;
+def STRV  : StoreRXY<"strv",  0xE33E, z_storebswap32, GR32, 4>;
+def STRVG : StoreRXY<"strvg", 0xE32F, z_storebswap64, GR64, 8>;
 
 // Byte-swapping memory-to-memory moves.
 let mayLoad = 1, mayStore = 1 in

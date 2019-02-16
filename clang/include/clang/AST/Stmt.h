@@ -89,6 +89,8 @@ protected:
     llvm_unreachable("Stmts cannot be released with regular 'delete'.");
   }
 
+  //===--- Statement bitfields classes ---===//
+
   class StmtBitfields {
     friend class Stmt;
 
@@ -97,21 +99,185 @@ protected:
   };
   enum { NumStmtBits = 8 };
 
+  class NullStmtBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class NullStmt;
+
+    unsigned : NumStmtBits;
+
+    /// True if the null statement was preceded by an empty macro, e.g:
+    /// @code
+    ///   #define CALL(x)
+    ///   CALL(0);
+    /// @endcode
+    unsigned HasLeadingEmptyMacro : 1;
+
+    /// The location of the semi-colon.
+    SourceLocation SemiLoc;
+  };
+
   class CompoundStmtBitfields {
+    friend class ASTStmtReader;
     friend class CompoundStmt;
 
     unsigned : NumStmtBits;
 
     unsigned NumStmts : 32 - NumStmtBits;
+
+    /// The location of the opening "{".
+    SourceLocation LBraceLoc;
+  };
+
+  class LabelStmtBitfields {
+    friend class LabelStmt;
+
+    unsigned : NumStmtBits;
+
+    SourceLocation IdentLoc;
+  };
+
+  class AttributedStmtBitfields {
+    friend class ASTStmtReader;
+    friend class AttributedStmt;
+
+    unsigned : NumStmtBits;
+
+    /// Number of attributes.
+    unsigned NumAttrs : 32 - NumStmtBits;
+
+    /// The location of the attribute.
+    SourceLocation AttrLoc;
   };
 
   class IfStmtBitfields {
+    friend class ASTStmtReader;
     friend class IfStmt;
 
     unsigned : NumStmtBits;
 
+    /// True if this if statement is a constexpr if.
     unsigned IsConstexpr : 1;
+
+    /// True if this if statement has storage for an else statement.
+    unsigned HasElse : 1;
+
+    /// True if this if statement has storage for a variable declaration.
+    unsigned HasVar : 1;
+
+    /// True if this if statement has storage for an init statement.
+    unsigned HasInit : 1;
+
+    /// The location of the "if".
+    SourceLocation IfLoc;
   };
+
+  class SwitchStmtBitfields {
+    friend class SwitchStmt;
+
+    unsigned : NumStmtBits;
+
+    /// True if the SwitchStmt has storage for an init statement.
+    unsigned HasInit : 1;
+
+    /// True if the SwitchStmt has storage for a condition variable.
+    unsigned HasVar : 1;
+
+    /// If the SwitchStmt is a switch on an enum value, records whether all
+    /// the enum values were covered by CaseStmts.  The coverage information
+    /// value is meant to be a hint for possible clients.
+    unsigned AllEnumCasesCovered : 1;
+
+    /// The location of the "switch".
+    SourceLocation SwitchLoc;
+  };
+
+  class WhileStmtBitfields {
+    friend class ASTStmtReader;
+    friend class WhileStmt;
+
+    unsigned : NumStmtBits;
+
+    /// True if the WhileStmt has storage for a condition variable.
+    unsigned HasVar : 1;
+
+    /// The location of the "while".
+    SourceLocation WhileLoc;
+  };
+
+  class DoStmtBitfields {
+    friend class DoStmt;
+
+    unsigned : NumStmtBits;
+
+    /// The location of the "do".
+    SourceLocation DoLoc;
+  };
+
+  class ForStmtBitfields {
+    friend class ForStmt;
+
+    unsigned : NumStmtBits;
+
+    /// The location of the "for".
+    SourceLocation ForLoc;
+  };
+
+  class GotoStmtBitfields {
+    friend class GotoStmt;
+    friend class IndirectGotoStmt;
+
+    unsigned : NumStmtBits;
+
+    /// The location of the "goto".
+    SourceLocation GotoLoc;
+  };
+
+  class ContinueStmtBitfields {
+    friend class ContinueStmt;
+
+    unsigned : NumStmtBits;
+
+    /// The location of the "continue".
+    SourceLocation ContinueLoc;
+  };
+
+  class BreakStmtBitfields {
+    friend class BreakStmt;
+
+    unsigned : NumStmtBits;
+
+    /// The location of the "break".
+    SourceLocation BreakLoc;
+  };
+
+  class ReturnStmtBitfields {
+    friend class ReturnStmt;
+
+    unsigned : NumStmtBits;
+
+    /// True if this ReturnStmt has storage for an NRVO candidate.
+    unsigned HasNRVOCandidate : 1;
+
+    /// The location of the "return".
+    SourceLocation RetLoc;
+  };
+
+  class SwitchCaseBitfields {
+    friend class SwitchCase;
+    friend class CaseStmt;
+
+    unsigned : NumStmtBits;
+
+    /// Used by CaseStmt to store whether it is a case statement
+    /// of the form case LHS ... RHS (a GNU extension).
+    unsigned CaseStmtIsGNURange : 1;
+
+    /// The location of the "case" or "default" keyword.
+    SourceLocation KeywordLoc;
+  };
+
+  //===--- Expression bitfields classes ---===//
 
   class ExprBitfields {
     friend class ASTStmtReader; // deserialization
@@ -146,14 +312,40 @@ protected:
     unsigned InstantiationDependent : 1;
     unsigned ContainsUnexpandedParameterPack : 1;
   };
-  enum { NumExprBits = 17 };
+  enum { NumExprBits = NumStmtBits + 9 };
 
-  class CharacterLiteralBitfields {
-    friend class CharacterLiteral;
+  class PredefinedExprBitfields {
+    friend class ASTStmtReader;
+    friend class PredefinedExpr;
 
     unsigned : NumExprBits;
 
-    unsigned Kind : 3;
+    /// The kind of this PredefinedExpr. One of the enumeration values
+    /// in PredefinedExpr::IdentKind.
+    unsigned Kind : 4;
+
+    /// True if this PredefinedExpr has a trailing "StringLiteral *"
+    /// for the predefined identifier.
+    unsigned HasFunctionName : 1;
+
+    /// The location of this PredefinedExpr.
+    SourceLocation Loc;
+  };
+
+  class DeclRefExprBitfields {
+    friend class ASTStmtReader; // deserialization
+    friend class DeclRefExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned HasQualifier : 1;
+    unsigned HasTemplateKWAndArgsInfo : 1;
+    unsigned HasFoundDecl : 1;
+    unsigned HadMultipleCandidates : 1;
+    unsigned RefersToEnclosingVariableOrCapture : 1;
+
+    /// The location of the declaration name itself.
+    SourceLocation Loc;
   };
 
   enum APFloatSemantics {
@@ -174,26 +366,111 @@ protected:
     unsigned IsExact : 1;
   };
 
+  class StringLiteralBitfields {
+    friend class ASTStmtReader;
+    friend class StringLiteral;
+
+    unsigned : NumExprBits;
+
+    /// The kind of this string literal.
+    /// One of the enumeration values of StringLiteral::StringKind.
+    unsigned Kind : 3;
+
+    /// The width of a single character in bytes. Only values of 1, 2,
+    /// and 4 bytes are supported. StringLiteral::mapCharByteWidth maps
+    /// the target + string kind to the appropriate CharByteWidth.
+    unsigned CharByteWidth : 3;
+
+    unsigned IsPascal : 1;
+
+    /// The number of concatenated token this string is made of.
+    /// This is the number of trailing SourceLocation.
+    unsigned NumConcatenated;
+  };
+
+  class CharacterLiteralBitfields {
+    friend class CharacterLiteral;
+
+    unsigned : NumExprBits;
+
+    unsigned Kind : 3;
+  };
+
+  class UnaryOperatorBitfields {
+    friend class UnaryOperator;
+
+    unsigned : NumExprBits;
+
+    unsigned Opc : 5;
+    unsigned CanOverflow : 1;
+
+    SourceLocation Loc;
+  };
+
   class UnaryExprOrTypeTraitExprBitfields {
     friend class UnaryExprOrTypeTraitExpr;
 
     unsigned : NumExprBits;
 
-    unsigned Kind : 2;
+    unsigned Kind : 3;
     unsigned IsType : 1; // true if operand is a type, false if an expression.
   };
 
-  class DeclRefExprBitfields {
-    friend class ASTStmtReader; // deserialization
-    friend class DeclRefExpr;
+  class ArraySubscriptExprBitfields {
+    friend class ArraySubscriptExpr;
 
     unsigned : NumExprBits;
 
-    unsigned HasQualifier : 1;
+    SourceLocation RBracketLoc;
+  };
+
+  class CallExprBitfields {
+    friend class CallExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned NumPreArgs : 1;
+
+    /// True if the callee of the call expression was found using ADL.
+    unsigned UsesADL : 1;
+
+    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
+    unsigned : 24 - 2 - NumExprBits;
+
+    /// The offset in bytes from the this pointer to the start of the
+    /// trailing objects belonging to CallExpr. Intentionally byte sized
+    /// for faster access.
+    unsigned OffsetToTrailingObjects : 8;
+  };
+  enum { NumCallExprBits = 32 };
+
+  class MemberExprBitfields {
+    friend class MemberExpr;
+
+    unsigned : NumExprBits;
+
+    /// IsArrow - True if this is "X->F", false if this is "X.F".
+    unsigned IsArrow : 1;
+
+    /// True if this member expression used a nested-name-specifier to
+    /// refer to the member, e.g., "x->Base::f", or found its member via
+    /// a using declaration.  When true, a MemberExprNameQualifier
+    /// structure is allocated immediately after the MemberExpr.
+    unsigned HasQualifierOrFoundDecl : 1;
+
+    /// True if this member expression specified a template keyword
+    /// and/or a template argument list explicitly, e.g., x->f<int>,
+    /// x->template f, x->template f<int>.
+    /// When true, an ASTTemplateKWAndArgsInfo structure and its
+    /// TemplateArguments (if any) are present.
     unsigned HasTemplateKWAndArgsInfo : 1;
-    unsigned HasFoundDecl : 1;
+
+    /// True if this member expression refers to a method that
+    /// was resolved from an overloaded set having size greater than 1.
     unsigned HadMultipleCandidates : 1;
-    unsigned RefersToEnclosingVariableOrCapture : 1;
+
+    /// This is the location of the -> or . in the expression.
+    SourceLocation OperatorLoc;
   };
 
   class CastExprBitfields {
@@ -207,24 +484,38 @@ protected:
     unsigned BasePathIsEmpty : 1;
   };
 
-  class CallExprBitfields {
-    friend class CallExpr;
+  class BinaryOperatorBitfields {
+    friend class BinaryOperator;
 
     unsigned : NumExprBits;
 
-    unsigned NumPreArgs : 1;
+    unsigned Opc : 6;
+
+    /// This is only meaningful for operations on floating point
+    /// types and 0 otherwise.
+    unsigned FPFeatures : 3;
+
+    SourceLocation OpLoc;
   };
 
-  class ExprWithCleanupsBitfields {
-    friend class ASTStmtReader; // deserialization
-    friend class ExprWithCleanups;
+  class InitListExprBitfields {
+    friend class InitListExpr;
 
     unsigned : NumExprBits;
 
-    // When false, it must not have side effects.
-    unsigned CleanupsHaveSideEffects : 1;
+    /// Whether this initializer list originally had a GNU array-range
+    /// designator in it. This is a temporary marker used by CodeGen.
+    unsigned HadArrayRangeDesignator : 1;
+  };
 
-    unsigned NumObjects : 32 - 1 - NumExprBits;
+  class ParenListExprBitfields {
+    friend class ASTStmtReader;
+    friend class ParenListExpr;
+
+    unsigned : NumExprBits;
+
+    /// The number of expressions in the paren list.
+    unsigned NumExprs;
   };
 
   class PseudoObjectExprBitfields {
@@ -239,32 +530,111 @@ protected:
     unsigned ResultIndex : 32 - 8 - NumExprBits;
   };
 
-  class OpaqueValueExprBitfields {
-    friend class OpaqueValueExpr;
+  //===--- C++ Expression bitfields classes ---===//
 
-    unsigned : NumExprBits;
+  class CXXOperatorCallExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXOperatorCallExpr;
 
-    /// The OVE is a unique semantic reference to its source expressio if this
-    /// bit is set to true.
-    unsigned IsUnique : 1;
+    unsigned : NumCallExprBits;
+
+    /// The kind of this overloaded operator. One of the enumerator
+    /// value of OverloadedOperatorKind.
+    unsigned OperatorKind : 6;
+
+    // Only meaningful for floating point types.
+    unsigned FPFeatures : 3;
   };
 
-  class ObjCIndirectCopyRestoreExprBitfields {
-    friend class ObjCIndirectCopyRestoreExpr;
+  class CXXBoolLiteralExprBitfields {
+    friend class CXXBoolLiteralExpr;
 
     unsigned : NumExprBits;
 
-    unsigned ShouldCopy : 1;
+    /// The value of the boolean literal.
+    unsigned Value : 1;
+
+    /// The location of the boolean literal.
+    SourceLocation Loc;
   };
 
-  class InitListExprBitfields {
-    friend class InitListExpr;
+  class CXXNullPtrLiteralExprBitfields {
+    friend class CXXNullPtrLiteralExpr;
 
     unsigned : NumExprBits;
 
-    /// Whether this initializer list originally had a GNU array-range
-    /// designator in it. This is a temporary marker used by CodeGen.
-    unsigned HadArrayRangeDesignator : 1;
+    /// The location of the null pointer literal.
+    SourceLocation Loc;
+  };
+
+  class CXXThisExprBitfields {
+    friend class CXXThisExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether this is an implicit "this".
+    unsigned IsImplicit : 1;
+
+    /// The location of the "this".
+    SourceLocation Loc;
+  };
+
+  class CXXThrowExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXThrowExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether the thrown variable (if any) is in scope.
+    unsigned IsThrownVariableInScope : 1;
+
+    /// The location of the "throw".
+    SourceLocation ThrowLoc;
+  };
+
+  class CXXDefaultArgExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDefaultArgExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location where the default argument expression was used.
+    SourceLocation Loc;
+  };
+
+  class CXXDefaultInitExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDefaultInitExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location where the default initializer expression was used.
+    SourceLocation Loc;
+  };
+
+  class CXXDeleteExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDeleteExpr;
+
+    unsigned : NumExprBits;
+
+    /// Is this a forced global delete, i.e. "::delete"?
+    unsigned GlobalDelete : 1;
+
+    /// Is this the array form of delete, i.e. "delete[]"?
+    unsigned ArrayForm : 1;
+
+    /// ArrayFormAsWritten can be different from ArrayForm if 'delete' is
+    /// applied to pointer-to-array type (ArrayFormAsWritten will be false
+    /// while ArrayForm will be true).
+    unsigned ArrayFormAsWritten : 1;
+
+    /// Does the usual deallocation function for the element type require
+    /// a size_t argument?
+    unsigned UsualArrayDeleteWantsSize : 1;
+
+    /// Location of the expression.
+    SourceLocation Loc;
   };
 
   class TypeTraitExprBitfields {
@@ -285,6 +655,36 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class CXXConstructExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXConstructExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned Elidable : 1;
+    unsigned HadMultipleCandidates : 1;
+    unsigned ListInitialization : 1;
+    unsigned StdInitListInitialization : 1;
+    unsigned ZeroInitialization : 1;
+    unsigned ConstructionKind : 3;
+
+    SourceLocation Loc;
+  };
+
+  class ExprWithCleanupsBitfields {
+    friend class ASTStmtReader; // deserialization
+    friend class ExprWithCleanups;
+
+    unsigned : NumExprBits;
+
+    // When false, it must not have side effects.
+    unsigned CleanupsHaveSideEffects : 1;
+
+    unsigned NumObjects : 32 - 1 - NumExprBits;
+  };
+
+  //===--- C++ Coroutines TS bitfields classes ---===//
+
   class CoawaitExprBitfields {
     friend class CoawaitExpr;
 
@@ -293,24 +693,86 @@ protected:
     unsigned IsImplicit : 1;
   };
 
+  //===--- Obj-C Expression bitfields classes ---===//
+
+  class ObjCIndirectCopyRestoreExprBitfields {
+    friend class ObjCIndirectCopyRestoreExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned ShouldCopy : 1;
+  };
+
+  //===--- Clang Extensions bitfields classes ---===//
+
+  class OpaqueValueExprBitfields {
+    friend class OpaqueValueExpr;
+
+    unsigned : NumExprBits;
+
+    /// The OVE is a unique semantic reference to its source expressio if this
+    /// bit is set to true.
+    unsigned IsUnique : 1;
+  };
+
   union {
+    // Same order as in StmtNodes.td.
+    // Statements
     StmtBitfields StmtBits;
+    NullStmtBitfields NullStmtBits;
     CompoundStmtBitfields CompoundStmtBits;
+    LabelStmtBitfields LabelStmtBits;
+    AttributedStmtBitfields AttributedStmtBits;
     IfStmtBitfields IfStmtBits;
+    SwitchStmtBitfields SwitchStmtBits;
+    WhileStmtBitfields WhileStmtBits;
+    DoStmtBitfields DoStmtBits;
+    ForStmtBitfields ForStmtBits;
+    GotoStmtBitfields GotoStmtBits;
+    ContinueStmtBitfields ContinueStmtBits;
+    BreakStmtBitfields BreakStmtBits;
+    ReturnStmtBitfields ReturnStmtBits;
+    SwitchCaseBitfields SwitchCaseBits;
+
+    // Expressions
     ExprBitfields ExprBits;
-    CharacterLiteralBitfields CharacterLiteralBits;
-    FloatingLiteralBitfields FloatingLiteralBits;
-    UnaryExprOrTypeTraitExprBitfields UnaryExprOrTypeTraitExprBits;
+    PredefinedExprBitfields PredefinedExprBits;
     DeclRefExprBitfields DeclRefExprBits;
-    CastExprBitfields CastExprBits;
+    FloatingLiteralBitfields FloatingLiteralBits;
+    StringLiteralBitfields StringLiteralBits;
+    CharacterLiteralBitfields CharacterLiteralBits;
+    UnaryOperatorBitfields UnaryOperatorBits;
+    UnaryExprOrTypeTraitExprBitfields UnaryExprOrTypeTraitExprBits;
+    ArraySubscriptExprBitfields ArraySubscriptExprBits;
     CallExprBitfields CallExprBits;
-    ExprWithCleanupsBitfields ExprWithCleanupsBits;
-    PseudoObjectExprBitfields PseudoObjectExprBits;
-    OpaqueValueExprBitfields OpaqueValueExprBits;
-    ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
+    MemberExprBitfields MemberExprBits;
+    CastExprBitfields CastExprBits;
+    BinaryOperatorBitfields BinaryOperatorBits;
     InitListExprBitfields InitListExprBits;
+    ParenListExprBitfields ParenListExprBits;
+    PseudoObjectExprBitfields PseudoObjectExprBits;
+
+    // C++ Expressions
+    CXXOperatorCallExprBitfields CXXOperatorCallExprBits;
+    CXXBoolLiteralExprBitfields CXXBoolLiteralExprBits;
+    CXXNullPtrLiteralExprBitfields CXXNullPtrLiteralExprBits;
+    CXXThisExprBitfields CXXThisExprBits;
+    CXXThrowExprBitfields CXXThrowExprBits;
+    CXXDefaultArgExprBitfields CXXDefaultArgExprBits;
+    CXXDefaultInitExprBitfields CXXDefaultInitExprBits;
+    CXXDeleteExprBitfields CXXDeleteExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
+    CXXConstructExprBitfields CXXConstructExprBits;
+    ExprWithCleanupsBitfields ExprWithCleanupsBits;
+
+    // C++ Coroutines TS expressions
     CoawaitExprBitfields CoawaitBits;
+
+    // Obj-C Expressions
+    ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
+
+    // Clang Extensions
+    OpaqueValueExprBitfields OpaqueValueExprBits;
   };
 
 public:
@@ -380,7 +842,7 @@ protected:
 
 public:
   Stmt(StmtClass SC) {
-    static_assert(sizeof(*this) == sizeof(void *),
+    static_assert(sizeof(*this) <= 8,
                   "changing bitfields changed sizeof(Stmt)");
     static_assert(sizeof(*this) % alignof(void *) == 0,
                   "Insufficient alignment!");
@@ -398,8 +860,8 @@ public:
   /// value objects created/interpreted by SourceManager. We assume AST
   /// clients will have a pointer to the respective SourceManager.
   SourceRange getSourceRange() const LLVM_READONLY;
-  SourceLocation getLocStart() const LLVM_READONLY;
-  SourceLocation getLocEnd() const LLVM_READONLY;
+  SourceLocation getBeginLoc() const LLVM_READONLY;
+  SourceLocation getEndLoc() const LLVM_READONLY;
 
   // global temp stats (until we have a per-module visitor)
   static void addStmtClass(const StmtClass s);
@@ -515,9 +977,7 @@ public:
 
   /// isSingleDecl - This method returns true if this DeclStmt refers
   /// to a single Decl.
-  bool isSingleDecl() const {
-    return DG.isSingleDecl();
-  }
+  bool isSingleDecl() const { return DG.isSingleDecl(); }
 
   const Decl *getSingleDecl() const { return DG.getSingleDecl(); }
   Decl *getSingleDecl() { return DG.getSingleDecl(); }
@@ -526,13 +986,11 @@ public:
   DeclGroupRef getDeclGroup() { return DG; }
   void setDeclGroup(DeclGroupRef DGR) { DG = DGR; }
 
-  SourceLocation getStartLoc() const { return StartLoc; }
   void setStartLoc(SourceLocation L) { StartLoc = L; }
   SourceLocation getEndLoc() const { return EndLoc; }
   void setEndLoc(SourceLocation L) { EndLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return StartLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return EndLoc; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return StartLoc; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == DeclStmtClass;
@@ -574,33 +1032,25 @@ public:
 /// NullStmt - This is the null statement ";": C99 6.8.3p3.
 ///
 class NullStmt : public Stmt {
-  SourceLocation SemiLoc;
-
-  /// True if the null statement was preceded by an empty macro, e.g:
-  /// @code
-  ///   #define CALL(x)
-  ///   CALL(0);
-  /// @endcode
-  bool HasLeadingEmptyMacro = false;
-
 public:
-  friend class ASTStmtReader;
-  friend class ASTStmtWriter;
-
   NullStmt(SourceLocation L, bool hasLeadingEmptyMacro = false)
-      : Stmt(NullStmtClass), SemiLoc(L),
-        HasLeadingEmptyMacro(hasLeadingEmptyMacro) {}
+      : Stmt(NullStmtClass) {
+    NullStmtBits.HasLeadingEmptyMacro = hasLeadingEmptyMacro;
+    setSemiLoc(L);
+  }
 
   /// Build an empty null statement.
   explicit NullStmt(EmptyShell Empty) : Stmt(NullStmtClass, Empty) {}
 
-  SourceLocation getSemiLoc() const { return SemiLoc; }
-  void setSemiLoc(SourceLocation L) { SemiLoc = L; }
+  SourceLocation getSemiLoc() const { return NullStmtBits.SemiLoc; }
+  void setSemiLoc(SourceLocation L) { NullStmtBits.SemiLoc = L; }
 
-  bool hasLeadingEmptyMacro() const { return HasLeadingEmptyMacro; }
+  bool hasLeadingEmptyMacro() const {
+    return NullStmtBits.HasLeadingEmptyMacro;
+  }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return SemiLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return SemiLoc; }
+  SourceLocation getBeginLoc() const { return getSemiLoc(); }
+  SourceLocation getEndLoc() const { return getSemiLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == NullStmtClass;
@@ -617,7 +1067,8 @@ class CompoundStmt final : public Stmt,
   friend class ASTStmtReader;
   friend TrailingObjects;
 
-  SourceLocation LBraceLoc, RBraceLoc;
+  /// The location of the closing "}". LBraceLoc is stored in CompoundStmtBits.
+  SourceLocation RBraceLoc;
 
   CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB, SourceLocation RB);
   explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty) {}
@@ -630,8 +1081,9 @@ public:
 
   // Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc) {
+      : Stmt(CompoundStmtClass), RBraceLoc(Loc) {
     CompoundStmtBits.NumStmts = 0;
+    CompoundStmtBits.LBraceLoc = Loc;
   }
 
   // Build an empty compound statement.
@@ -657,7 +1109,7 @@ public:
     body_begin()[size() - 1] = S;
   }
 
-  using const_body_iterator = Stmt* const *;
+  using const_body_iterator = Stmt *const *;
   using body_const_range = llvm::iterator_range<const_body_iterator>;
 
   body_const_range body() const {
@@ -699,10 +1151,10 @@ public:
     return const_reverse_body_iterator(body_begin());
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return LBraceLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return RBraceLoc; }
+  SourceLocation getBeginLoc() const { return CompoundStmtBits.LBraceLoc; }
+  SourceLocation getEndLoc() const { return RBraceLoc; }
 
-  SourceLocation getLBracLoc() const { return LBraceLoc; }
+  SourceLocation getLBracLoc() const { return CompoundStmtBits.LBraceLoc; }
   SourceLocation getRBracLoc() const { return RBraceLoc; }
 
   static bool classof(const Stmt *T) {
@@ -720,36 +1172,40 @@ public:
 // SwitchCase is the base class for CaseStmt and DefaultStmt,
 class SwitchCase : public Stmt {
 protected:
-  // A pointer to the following CaseStmt or DefaultStmt class,
-  // used by SwitchStmt.
-  SwitchCase *NextSwitchCase = nullptr;
-  SourceLocation KeywordLoc;
+  /// The location of the ":".
   SourceLocation ColonLoc;
 
+  // The location of the "case" or "default" keyword. Stored in SwitchCaseBits.
+  // SourceLocation KeywordLoc;
+
+  /// A pointer to the following CaseStmt or DefaultStmt class,
+  /// used by SwitchStmt.
+  SwitchCase *NextSwitchCase = nullptr;
+
   SwitchCase(StmtClass SC, SourceLocation KWLoc, SourceLocation ColonLoc)
-      : Stmt(SC), KeywordLoc(KWLoc), ColonLoc(ColonLoc) {}
+      : Stmt(SC), ColonLoc(ColonLoc) {
+    setKeywordLoc(KWLoc);
+  }
 
   SwitchCase(StmtClass SC, EmptyShell) : Stmt(SC) {}
 
 public:
   const SwitchCase *getNextSwitchCase() const { return NextSwitchCase; }
-
   SwitchCase *getNextSwitchCase() { return NextSwitchCase; }
-
   void setNextSwitchCase(SwitchCase *SC) { NextSwitchCase = SC; }
 
-  SourceLocation getKeywordLoc() const { return KeywordLoc; }
-  void setKeywordLoc(SourceLocation L) { KeywordLoc = L; }
+  SourceLocation getKeywordLoc() const { return SwitchCaseBits.KeywordLoc; }
+  void setKeywordLoc(SourceLocation L) { SwitchCaseBits.KeywordLoc = L; }
   SourceLocation getColonLoc() const { return ColonLoc; }
   void setColonLoc(SourceLocation L) { ColonLoc = L; }
 
-  Stmt *getSubStmt();
+  inline Stmt *getSubStmt();
   const Stmt *getSubStmt() const {
-    return const_cast<SwitchCase*>(this)->getSubStmt();
+    return const_cast<SwitchCase *>(this)->getSubStmt();
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return KeywordLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY;
+  SourceLocation getBeginLoc() const { return getKeywordLoc(); }
+  inline SourceLocation getEndLoc() const LLVM_READONLY;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CaseStmtClass ||
@@ -757,59 +1213,144 @@ public:
   }
 };
 
-class CaseStmt : public SwitchCase {
-  SourceLocation EllipsisLoc;
-  enum { LHS, RHS, SUBSTMT, END_EXPR };
-  Stmt* SubExprs[END_EXPR];  // The expression for the RHS is Non-null for
-                             // GNU "case 1 ... 4" extension
+/// CaseStmt - Represent a case statement. It can optionally be a GNU case
+/// statement of the form LHS ... RHS representing a range of cases.
+class CaseStmt final
+    : public SwitchCase,
+      private llvm::TrailingObjects<CaseStmt, Stmt *, SourceLocation> {
+  friend TrailingObjects;
 
-public:
+  // CaseStmt is followed by several trailing objects, some of which optional.
+  // Note that it would be more convenient to put the optional trailing objects
+  // at the end but this would impact children().
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the LHS of the case statement. Always present.
+  //
+  // * A "Stmt *" for the RHS of the case statement. This is a GNU extension
+  //   which allow ranges in cases statement of the form LHS ... RHS.
+  //   Present if and only if caseStmtIsGNURange() is true.
+  //
+  // * A "Stmt *" for the substatement of the case statement. Always present.
+  //
+  // * A SourceLocation for the location of the ... if this is a case statement
+  //   with a range. Present if and only if caseStmtIsGNURange() is true.
+  enum { LhsOffset = 0, SubStmtOffsetFromRhs = 1 };
+  enum { NumMandatoryStmtPtr = 2 };
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + caseStmtIsGNURange();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
+    return caseStmtIsGNURange();
+  }
+
+  unsigned lhsOffset() const { return LhsOffset; }
+  unsigned rhsOffset() const { return LhsOffset + caseStmtIsGNURange(); }
+  unsigned subStmtOffset() const { return rhsOffset() + SubStmtOffsetFromRhs; }
+
+  /// Build a case statement assuming that the storage for the
+  /// trailing objects has been properly allocated.
   CaseStmt(Expr *lhs, Expr *rhs, SourceLocation caseLoc,
            SourceLocation ellipsisLoc, SourceLocation colonLoc)
-    : SwitchCase(CaseStmtClass, caseLoc, colonLoc) {
-    SubExprs[SUBSTMT] = nullptr;
-    SubExprs[LHS] = reinterpret_cast<Stmt*>(lhs);
-    SubExprs[RHS] = reinterpret_cast<Stmt*>(rhs);
-    EllipsisLoc = ellipsisLoc;
+      : SwitchCase(CaseStmtClass, caseLoc, colonLoc) {
+    // Handle GNU case statements of the form LHS ... RHS.
+    bool IsGNURange = rhs != nullptr;
+    SwitchCaseBits.CaseStmtIsGNURange = IsGNURange;
+    setLHS(lhs);
+    setSubStmt(nullptr);
+    if (IsGNURange) {
+      setRHS(rhs);
+      setEllipsisLoc(ellipsisLoc);
+    }
   }
 
   /// Build an empty switch case statement.
-  explicit CaseStmt(EmptyShell Empty) : SwitchCase(CaseStmtClass, Empty) {}
+  explicit CaseStmt(EmptyShell Empty, bool CaseStmtIsGNURange)
+      : SwitchCase(CaseStmtClass, Empty) {
+    SwitchCaseBits.CaseStmtIsGNURange = CaseStmtIsGNURange;
+  }
 
-  SourceLocation getCaseLoc() const { return KeywordLoc; }
-  void setCaseLoc(SourceLocation L) { KeywordLoc = L; }
-  SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
-  void setEllipsisLoc(SourceLocation L) { EllipsisLoc = L; }
-  SourceLocation getColonLoc() const { return ColonLoc; }
-  void setColonLoc(SourceLocation L) { ColonLoc = L; }
+public:
+  /// Build a case statement.
+  static CaseStmt *Create(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
+                          SourceLocation caseLoc, SourceLocation ellipsisLoc,
+                          SourceLocation colonLoc);
 
-  Expr *getLHS() { return reinterpret_cast<Expr*>(SubExprs[LHS]); }
-  Expr *getRHS() { return reinterpret_cast<Expr*>(SubExprs[RHS]); }
-  Stmt *getSubStmt() { return SubExprs[SUBSTMT]; }
+  /// Build an empty case statement.
+  static CaseStmt *CreateEmpty(const ASTContext &Ctx, bool CaseStmtIsGNURange);
+
+  /// True if this case statement is of the form case LHS ... RHS, which
+  /// is a GNU extension. In this case the RHS can be obtained with getRHS()
+  /// and the location of the ellipsis can be obtained with getEllipsisLoc().
+  bool caseStmtIsGNURange() const { return SwitchCaseBits.CaseStmtIsGNURange; }
+
+  SourceLocation getCaseLoc() const { return getKeywordLoc(); }
+  void setCaseLoc(SourceLocation L) { setKeywordLoc(L); }
+
+  /// Get the location of the ... in a case statement of the form LHS ... RHS.
+  SourceLocation getEllipsisLoc() const {
+    return caseStmtIsGNURange() ? *getTrailingObjects<SourceLocation>()
+                                : SourceLocation();
+  }
+
+  /// Set the location of the ... in a case statement of the form LHS ... RHS.
+  /// Assert that this case statement is of this form.
+  void setEllipsisLoc(SourceLocation L) {
+    assert(
+        caseStmtIsGNURange() &&
+        "setEllipsisLoc but this is not a case stmt of the form LHS ... RHS!");
+    *getTrailingObjects<SourceLocation>() = L;
+  }
+
+  Expr *getLHS() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[lhsOffset()]);
+  }
 
   const Expr *getLHS() const {
-    return reinterpret_cast<const Expr*>(SubExprs[LHS]);
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[lhsOffset()]);
+  }
+
+  void setLHS(Expr *Val) {
+    getTrailingObjects<Stmt *>()[lhsOffset()] = reinterpret_cast<Stmt *>(Val);
+  }
+
+  Expr *getRHS() {
+    return caseStmtIsGNURange() ? reinterpret_cast<Expr *>(
+                                      getTrailingObjects<Stmt *>()[rhsOffset()])
+                                : nullptr;
   }
 
   const Expr *getRHS() const {
-    return reinterpret_cast<const Expr*>(SubExprs[RHS]);
+    return caseStmtIsGNURange() ? reinterpret_cast<Expr *>(
+                                      getTrailingObjects<Stmt *>()[rhsOffset()])
+                                : nullptr;
   }
 
-  const Stmt *getSubStmt() const { return SubExprs[SUBSTMT]; }
+  void setRHS(Expr *Val) {
+    assert(caseStmtIsGNURange() &&
+           "setRHS but this is not a case stmt of the form LHS ... RHS!");
+    getTrailingObjects<Stmt *>()[rhsOffset()] = reinterpret_cast<Stmt *>(Val);
+  }
 
-  void setSubStmt(Stmt *S) { SubExprs[SUBSTMT] = S; }
-  void setLHS(Expr *Val) { SubExprs[LHS] = reinterpret_cast<Stmt*>(Val); }
-  void setRHS(Expr *Val) { SubExprs[RHS] = reinterpret_cast<Stmt*>(Val); }
+  Stmt *getSubStmt() { return getTrailingObjects<Stmt *>()[subStmtOffset()]; }
+  const Stmt *getSubStmt() const {
+    return getTrailingObjects<Stmt *>()[subStmtOffset()];
+  }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return KeywordLoc; }
+  void setSubStmt(Stmt *S) {
+    getTrailingObjects<Stmt *>()[subStmtOffset()] = S;
+  }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
+  SourceLocation getBeginLoc() const { return getKeywordLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
     // Handle deeply nested case statements with iteration instead of recursion.
     const CaseStmt *CS = this;
     while (const auto *CS2 = dyn_cast<CaseStmt>(CS->getSubStmt()))
       CS = CS2;
 
-    return CS->getSubStmt()->getLocEnd();
+    return CS->getSubStmt()->getEndLoc();
   }
 
   static bool classof(const Stmt *T) {
@@ -818,16 +1359,18 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[END_EXPR]);
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
   }
 };
 
 class DefaultStmt : public SwitchCase {
-  Stmt* SubStmt;
+  Stmt *SubStmt;
 
 public:
-  DefaultStmt(SourceLocation DL, SourceLocation CL, Stmt *substmt) :
-    SwitchCase(DefaultStmtClass, DL, CL), SubStmt(substmt) {}
+  DefaultStmt(SourceLocation DL, SourceLocation CL, Stmt *substmt)
+      : SwitchCase(DefaultStmtClass, DL, CL), SubStmt(substmt) {}
 
   /// Build an empty default statement.
   explicit DefaultStmt(EmptyShell Empty)
@@ -837,59 +1380,70 @@ public:
   const Stmt *getSubStmt() const { return SubStmt; }
   void setSubStmt(Stmt *S) { SubStmt = S; }
 
-  SourceLocation getDefaultLoc() const { return KeywordLoc; }
-  void setDefaultLoc(SourceLocation L) { KeywordLoc = L; }
-  SourceLocation getColonLoc() const { return ColonLoc; }
-  void setColonLoc(SourceLocation L) { ColonLoc = L; }
+  SourceLocation getDefaultLoc() const { return getKeywordLoc(); }
+  void setDefaultLoc(SourceLocation L) { setKeywordLoc(L); }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return KeywordLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return SubStmt->getLocEnd();}
+  SourceLocation getBeginLoc() const { return getKeywordLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return SubStmt->getEndLoc();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == DefaultStmtClass;
   }
 
   // Iterators
-  child_range children() { return child_range(&SubStmt, &SubStmt+1); }
+  child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 };
 
-inline SourceLocation SwitchCase::getLocEnd() const {
+SourceLocation SwitchCase::getEndLoc() const {
   if (const auto *CS = dyn_cast<CaseStmt>(this))
-    return CS->getLocEnd();
-  return cast<DefaultStmt>(this)->getLocEnd();
+    return CS->getEndLoc();
+  else if (const auto *DS = dyn_cast<DefaultStmt>(this))
+    return DS->getEndLoc();
+  llvm_unreachable("SwitchCase is neither a CaseStmt nor a DefaultStmt!");
+}
+
+Stmt *SwitchCase::getSubStmt() {
+  if (auto *CS = dyn_cast<CaseStmt>(this))
+    return CS->getSubStmt();
+  else if (auto *DS = dyn_cast<DefaultStmt>(this))
+    return DS->getSubStmt();
+  llvm_unreachable("SwitchCase is neither a CaseStmt nor a DefaultStmt!");
 }
 
 /// LabelStmt - Represents a label, which has a substatement.  For example:
 ///    foo: return;
 class LabelStmt : public Stmt {
-  SourceLocation IdentLoc;
   LabelDecl *TheDecl;
   Stmt *SubStmt;
 
 public:
+  /// Build a label statement.
   LabelStmt(SourceLocation IL, LabelDecl *D, Stmt *substmt)
-      : Stmt(LabelStmtClass), IdentLoc(IL), TheDecl(D), SubStmt(substmt) {
-    static_assert(sizeof(LabelStmt) ==
-                      2 * sizeof(SourceLocation) + 2 * sizeof(void *),
-                  "LabelStmt too big");
+      : Stmt(LabelStmtClass), TheDecl(D), SubStmt(substmt) {
+    setIdentLoc(IL);
   }
 
-  // Build an empty label statement.
+  /// Build an empty label statement.
   explicit LabelStmt(EmptyShell Empty) : Stmt(LabelStmtClass, Empty) {}
 
-  SourceLocation getIdentLoc() const { return IdentLoc; }
+  SourceLocation getIdentLoc() const { return LabelStmtBits.IdentLoc; }
+  void setIdentLoc(SourceLocation L) { LabelStmtBits.IdentLoc = L; }
+
   LabelDecl *getDecl() const { return TheDecl; }
   void setDecl(LabelDecl *D) { TheDecl = D; }
+
   const char *getName() const;
   Stmt *getSubStmt() { return SubStmt; }
+
   const Stmt *getSubStmt() const { return SubStmt; }
-  void setIdentLoc(SourceLocation L) { IdentLoc = L; }
   void setSubStmt(Stmt *SS) { SubStmt = SS; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return IdentLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return SubStmt->getLocEnd();}
+  SourceLocation getBeginLoc() const { return getIdentLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return SubStmt->getEndLoc();}
 
-  child_range children() { return child_range(&SubStmt, &SubStmt+1); }
+  child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == LabelStmtClass;
@@ -907,17 +1461,19 @@ class AttributedStmt final
   friend TrailingObjects;
 
   Stmt *SubStmt;
-  SourceLocation AttrLoc;
-  unsigned NumAttrs;
 
-  AttributedStmt(SourceLocation Loc, ArrayRef<const Attr*> Attrs, Stmt *SubStmt)
-    : Stmt(AttributedStmtClass), SubStmt(SubStmt), AttrLoc(Loc),
-      NumAttrs(Attrs.size()) {
+  AttributedStmt(SourceLocation Loc, ArrayRef<const Attr *> Attrs,
+                 Stmt *SubStmt)
+      : Stmt(AttributedStmtClass), SubStmt(SubStmt) {
+    AttributedStmtBits.NumAttrs = Attrs.size();
+    AttributedStmtBits.AttrLoc = Loc;
     std::copy(Attrs.begin(), Attrs.end(), getAttrArrayPtr());
   }
 
   explicit AttributedStmt(EmptyShell Empty, unsigned NumAttrs)
-      : Stmt(AttributedStmtClass, Empty), NumAttrs(NumAttrs) {
+      : Stmt(AttributedStmtClass, Empty) {
+    AttributedStmtBits.NumAttrs = NumAttrs;
+    AttributedStmtBits.AttrLoc = SourceLocation{};
     std::fill_n(getAttrArrayPtr(), NumAttrs, nullptr);
   }
 
@@ -928,21 +1484,21 @@ class AttributedStmt final
 
 public:
   static AttributedStmt *Create(const ASTContext &C, SourceLocation Loc,
-                                ArrayRef<const Attr*> Attrs, Stmt *SubStmt);
+                                ArrayRef<const Attr *> Attrs, Stmt *SubStmt);
 
   // Build an empty attributed statement.
   static AttributedStmt *CreateEmpty(const ASTContext &C, unsigned NumAttrs);
 
-  SourceLocation getAttrLoc() const { return AttrLoc; }
-  ArrayRef<const Attr*> getAttrs() const {
-    return llvm::makeArrayRef(getAttrArrayPtr(), NumAttrs);
+  SourceLocation getAttrLoc() const { return AttributedStmtBits.AttrLoc; }
+  ArrayRef<const Attr *> getAttrs() const {
+    return llvm::makeArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
   }
 
   Stmt *getSubStmt() { return SubStmt; }
   const Stmt *getSubStmt() const { return SubStmt; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return AttrLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return SubStmt->getLocEnd();}
+  SourceLocation getBeginLoc() const { return getAttrLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return SubStmt->getEndLoc();}
 
   child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 
@@ -952,21 +1508,117 @@ public:
 };
 
 /// IfStmt - This represents an if/then/else.
-class IfStmt : public Stmt {
-  enum { INIT, VAR, COND, THEN, ELSE, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+class IfStmt final
+    : public Stmt,
+      private llvm::TrailingObjects<IfStmt, Stmt *, SourceLocation> {
+  friend TrailingObjects;
 
-  SourceLocation IfLoc;
-  SourceLocation ElseLoc;
+  // IfStmt is followed by several trailing objects, some of which optional.
+  // Note that it would be more convenient to put the optional trailing
+  // objects at then end but this would change the order of the children.
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the init statement.
+  //    Present if and only if hasInitStorage().
+  //
+  // * A "Stmt *" for the condition variable.
+  //    Present if and only if hasVarStorage(). This is in fact a "DeclStmt *".
+  //
+  // * A "Stmt *" for the condition.
+  //    Always present. This is in fact a "Expr *".
+  //
+  // * A "Stmt *" for the then statement.
+  //    Always present.
+  //
+  // * A "Stmt *" for the else statement.
+  //    Present if and only if hasElseStorage().
+  //
+  // * A "SourceLocation" for the location of the "else".
+  //    Present if and only if hasElseStorage().
+  enum { InitOffset = 0, ThenOffsetFromCond = 1, ElseOffsetFromCond = 2 };
+  enum { NumMandatoryStmtPtr = 2 };
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + hasElseStorage() + hasVarStorage() +
+           hasInitStorage();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
+    return hasElseStorage();
+  }
+
+  unsigned initOffset() const { return InitOffset; }
+  unsigned varOffset() const { return InitOffset + hasInitStorage(); }
+  unsigned condOffset() const {
+    return InitOffset + hasInitStorage() + hasVarStorage();
+  }
+  unsigned thenOffset() const { return condOffset() + ThenOffsetFromCond; }
+  unsigned elseOffset() const { return condOffset() + ElseOffsetFromCond; }
+
+  /// Build an if/then/else statement.
+  IfStmt(const ASTContext &Ctx, SourceLocation IL, bool IsConstexpr, Stmt *Init,
+         VarDecl *Var, Expr *Cond, Stmt *Then, SourceLocation EL, Stmt *Else);
+
+  /// Build an empty if/then/else statement.
+  explicit IfStmt(EmptyShell Empty, bool HasElse, bool HasVar, bool HasInit);
 
 public:
-  IfStmt(const ASTContext &C, SourceLocation IL,
-         bool IsConstexpr, Stmt *init, VarDecl *var, Expr *cond,
-         Stmt *then, SourceLocation EL = SourceLocation(),
-         Stmt *elsev = nullptr);
+  /// Create an IfStmt.
+  static IfStmt *Create(const ASTContext &Ctx, SourceLocation IL,
+                        bool IsConstexpr, Stmt *Init, VarDecl *Var, Expr *Cond,
+                        Stmt *Then, SourceLocation EL = SourceLocation(),
+                        Stmt *Else = nullptr);
 
-  /// Build an empty if/then/else statement
-  explicit IfStmt(EmptyShell Empty) : Stmt(IfStmtClass, Empty) {}
+  /// Create an empty IfStmt optionally with storage for an else statement,
+  /// condition variable and init expression.
+  static IfStmt *CreateEmpty(const ASTContext &Ctx, bool HasElse, bool HasVar,
+                             bool HasInit);
+
+  /// True if this IfStmt has the storage for an init statement.
+  bool hasInitStorage() const { return IfStmtBits.HasInit; }
+
+  /// True if this IfStmt has storage for a variable declaration.
+  bool hasVarStorage() const { return IfStmtBits.HasVar; }
+
+  /// True if this IfStmt has storage for an else statement.
+  bool hasElseStorage() const { return IfStmtBits.HasElse; }
+
+  Expr *getCond() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  const Expr *getCond() const {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  void setCond(Expr *Cond) {
+    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+  }
+
+  Stmt *getThen() { return getTrailingObjects<Stmt *>()[thenOffset()]; }
+  const Stmt *getThen() const {
+    return getTrailingObjects<Stmt *>()[thenOffset()];
+  }
+
+  void setThen(Stmt *Then) {
+    getTrailingObjects<Stmt *>()[thenOffset()] = Then;
+  }
+
+  Stmt *getElse() {
+    return hasElseStorage() ? getTrailingObjects<Stmt *>()[elseOffset()]
+                            : nullptr;
+  }
+
+  const Stmt *getElse() const {
+    return hasElseStorage() ? getTrailingObjects<Stmt *>()[elseOffset()]
+                            : nullptr;
+  }
+
+  void setElse(Stmt *Else) {
+    assert(hasElseStorage() &&
+           "This if statement has no storage for an else statement!");
+    getTrailingObjects<Stmt *>()[elseOffset()] = Else;
+  }
 
   /// Retrieve the variable declared in this "if" statement, if any.
   ///
@@ -976,52 +1628,77 @@ public:
   ///   printf("x is %d", x);
   /// }
   /// \endcode
-  VarDecl *getConditionVariable() const;
-  void setConditionVariable(const ASTContext &C, VarDecl *V);
+  VarDecl *getConditionVariable();
+  const VarDecl *getConditionVariable() const {
+    return const_cast<IfStmt *>(this)->getConditionVariable();
+  }
+
+  /// Set the condition variable for this if statement.
+  /// The if statement must have storage for the condition variable.
+  void setConditionVariable(const ASTContext &Ctx, VarDecl *V);
 
   /// If this IfStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
-  const DeclStmt *getConditionVariableDeclStmt() const {
-    return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
+  DeclStmt *getConditionVariableDeclStmt() {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
   }
 
-  Stmt *getInit() { return SubExprs[INIT]; }
-  const Stmt *getInit() const { return SubExprs[INIT]; }
-  void setInit(Stmt *S) { SubExprs[INIT] = S; }
-  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
-  const Stmt *getThen() const { return SubExprs[THEN]; }
-  void setThen(Stmt *S) { SubExprs[THEN] = S; }
-  const Stmt *getElse() const { return SubExprs[ELSE]; }
-  void setElse(Stmt *S) { SubExprs[ELSE] = S; }
+  const DeclStmt *getConditionVariableDeclStmt() const {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
+  }
 
-  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
-  Stmt *getThen() { return SubExprs[THEN]; }
-  Stmt *getElse() { return SubExprs[ELSE]; }
+  Stmt *getInit() {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
 
-  SourceLocation getIfLoc() const { return IfLoc; }
-  void setIfLoc(SourceLocation L) { IfLoc = L; }
-  SourceLocation getElseLoc() const { return ElseLoc; }
-  void setElseLoc(SourceLocation L) { ElseLoc = L; }
+  const Stmt *getInit() const {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
+
+  void setInit(Stmt *Init) {
+    assert(hasInitStorage() &&
+           "This if statement has no storage for an init statement!");
+    getTrailingObjects<Stmt *>()[initOffset()] = Init;
+  }
+
+  SourceLocation getIfLoc() const { return IfStmtBits.IfLoc; }
+  void setIfLoc(SourceLocation IfLoc) { IfStmtBits.IfLoc = IfLoc; }
+
+  SourceLocation getElseLoc() const {
+    return hasElseStorage() ? *getTrailingObjects<SourceLocation>()
+                            : SourceLocation();
+  }
+
+  void setElseLoc(SourceLocation ElseLoc) {
+    assert(hasElseStorage() &&
+           "This if statement has no storage for an else statement!");
+    *getTrailingObjects<SourceLocation>() = ElseLoc;
+  }
 
   bool isConstexpr() const { return IfStmtBits.IsConstexpr; }
   void setConstexpr(bool C) { IfStmtBits.IsConstexpr = C; }
 
   bool isObjCAvailabilityCheck() const;
 
-  SourceLocation getLocStart() const LLVM_READONLY { return IfLoc; }
-
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    if (SubExprs[ELSE])
-      return SubExprs[ELSE]->getLocEnd();
-    else
-      return SubExprs[THEN]->getLocEnd();
+  SourceLocation getBeginLoc() const { return getIfLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    if (getElse())
+      return getElse()->getEndLoc();
+    return getThen()->getEndLoc();
   }
 
   // Iterators over subexpressions.  The iterators will include iterating
   // over the initialization expression referenced by the condition variable.
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
   }
 
   static bool classof(const Stmt *T) {
@@ -1030,22 +1707,102 @@ public:
 };
 
 /// SwitchStmt - This represents a 'switch' stmt.
-class SwitchStmt : public Stmt {
-  SourceLocation SwitchLoc;
-  enum { INIT, VAR, COND, BODY, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+class SwitchStmt final : public Stmt,
+                         private llvm::TrailingObjects<SwitchStmt, Stmt *> {
+  friend TrailingObjects;
 
-  // This points to a linked list of case and default statements and, if the
-  // SwitchStmt is a switch on an enum value, records whether all the enum
-  // values were covered by CaseStmts.  The coverage information value is meant
-  // to be a hint for possible clients.
-  llvm::PointerIntPair<SwitchCase *, 1, bool> FirstCase;
+  /// Points to a linked list of case and default statements.
+  SwitchCase *FirstCase;
 
-public:
-  SwitchStmt(const ASTContext &C, Stmt *Init, VarDecl *Var, Expr *cond);
+  // SwitchStmt is followed by several trailing objects,
+  // some of which optional. Note that it would be more convenient to
+  // put the optional trailing objects at the end but this would change
+  // the order in children().
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the init statement.
+  //    Present if and only if hasInitStorage().
+  //
+  // * A "Stmt *" for the condition variable.
+  //    Present if and only if hasVarStorage(). This is in fact a "DeclStmt *".
+  //
+  // * A "Stmt *" for the condition.
+  //    Always present. This is in fact an "Expr *".
+  //
+  // * A "Stmt *" for the body.
+  //    Always present.
+  enum { InitOffset = 0, BodyOffsetFromCond = 1 };
+  enum { NumMandatoryStmtPtr = 2 };
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + hasInitStorage() + hasVarStorage();
+  }
+
+  unsigned initOffset() const { return InitOffset; }
+  unsigned varOffset() const { return InitOffset + hasInitStorage(); }
+  unsigned condOffset() const {
+    return InitOffset + hasInitStorage() + hasVarStorage();
+  }
+  unsigned bodyOffset() const { return condOffset() + BodyOffsetFromCond; }
+
+  /// Build a switch statement.
+  SwitchStmt(const ASTContext &Ctx, Stmt *Init, VarDecl *Var, Expr *Cond);
 
   /// Build a empty switch statement.
-  explicit SwitchStmt(EmptyShell Empty) : Stmt(SwitchStmtClass, Empty) {}
+  explicit SwitchStmt(EmptyShell Empty, bool HasInit, bool HasVar);
+
+public:
+  /// Create a switch statement.
+  static SwitchStmt *Create(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,
+                            Expr *Cond);
+
+  /// Create an empty switch statement optionally with storage for
+  /// an init expression and a condition variable.
+  static SwitchStmt *CreateEmpty(const ASTContext &Ctx, bool HasInit,
+                                 bool HasVar);
+
+  /// True if this SwitchStmt has storage for an init statement.
+  bool hasInitStorage() const { return SwitchStmtBits.HasInit; }
+
+  /// True if this SwitchStmt has storage for a condition variable.
+  bool hasVarStorage() const { return SwitchStmtBits.HasVar; }
+
+  Expr *getCond() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  const Expr *getCond() const {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  void setCond(Expr *Cond) {
+    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+  }
+
+  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
+  const Stmt *getBody() const {
+    return getTrailingObjects<Stmt *>()[bodyOffset()];
+  }
+
+  void setBody(Stmt *Body) {
+    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
+  }
+
+  Stmt *getInit() {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
+
+  const Stmt *getInit() const {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
+
+  void setInit(Stmt *Init) {
+    assert(hasInitStorage() &&
+           "This switch statement has no storage for an init statement!");
+    getTrailingObjects<Stmt *>()[initOffset()] = Init;
+  }
 
   /// Retrieve the variable declared in this "switch" statement, if any.
   ///
@@ -1056,63 +1813,69 @@ public:
   ///   // ...
   /// }
   /// \endcode
-  VarDecl *getConditionVariable() const;
-  void setConditionVariable(const ASTContext &C, VarDecl *V);
+  VarDecl *getConditionVariable();
+  const VarDecl *getConditionVariable() const {
+    return const_cast<SwitchStmt *>(this)->getConditionVariable();
+  }
+
+  /// Set the condition variable in this switch statement.
+  /// The switch statement must have storage for it.
+  void setConditionVariable(const ASTContext &Ctx, VarDecl *VD);
 
   /// If this SwitchStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
-  const DeclStmt *getConditionVariableDeclStmt() const {
-    return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
+  DeclStmt *getConditionVariableDeclStmt() {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
   }
 
-  Stmt *getInit() { return SubExprs[INIT]; }
-  const Stmt *getInit() const { return SubExprs[INIT]; }
-  void setInit(Stmt *S) { SubExprs[INIT] = S; }
-  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  const Stmt *getBody() const { return SubExprs[BODY]; }
-  const SwitchCase *getSwitchCaseList() const { return FirstCase.getPointer(); }
+  const DeclStmt *getConditionVariableDeclStmt() const {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
+  }
 
-  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
-  Stmt *getBody() { return SubExprs[BODY]; }
-  void setBody(Stmt *S) { SubExprs[BODY] = S; }
-  SwitchCase *getSwitchCaseList() { return FirstCase.getPointer(); }
+  SwitchCase *getSwitchCaseList() { return FirstCase; }
+  const SwitchCase *getSwitchCaseList() const { return FirstCase; }
+  void setSwitchCaseList(SwitchCase *SC) { FirstCase = SC; }
 
-  /// Set the case list for this switch statement.
-  void setSwitchCaseList(SwitchCase *SC) { FirstCase.setPointer(SC); }
-
-  SourceLocation getSwitchLoc() const { return SwitchLoc; }
-  void setSwitchLoc(SourceLocation L) { SwitchLoc = L; }
+  SourceLocation getSwitchLoc() const { return SwitchStmtBits.SwitchLoc; }
+  void setSwitchLoc(SourceLocation L) { SwitchStmtBits.SwitchLoc = L; }
 
   void setBody(Stmt *S, SourceLocation SL) {
-    SubExprs[BODY] = S;
-    SwitchLoc = SL;
+    setBody(S);
+    setSwitchLoc(SL);
   }
 
   void addSwitchCase(SwitchCase *SC) {
-    assert(!SC->getNextSwitchCase()
-           && "case/default already added to a switch");
-    SC->setNextSwitchCase(FirstCase.getPointer());
-    FirstCase.setPointer(SC);
+    assert(!SC->getNextSwitchCase() &&
+           "case/default already added to a switch");
+    SC->setNextSwitchCase(FirstCase);
+    FirstCase = SC;
   }
 
   /// Set a flag in the SwitchStmt indicating that if the 'switch (X)' is a
   /// switch over an enum value then all cases have been explicitly covered.
-  void setAllEnumCasesCovered() { FirstCase.setInt(true); }
+  void setAllEnumCasesCovered() { SwitchStmtBits.AllEnumCasesCovered = true; }
 
   /// Returns true if the SwitchStmt is a switch of an enum value and all cases
   /// have been explicitly covered.
-  bool isAllEnumCasesCovered() const { return FirstCase.getInt(); }
+  bool isAllEnumCasesCovered() const {
+    return SwitchStmtBits.AllEnumCasesCovered;
+  }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return SwitchLoc; }
-
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return SubExprs[BODY] ? SubExprs[BODY]->getLocEnd() : SubExprs[COND]->getLocEnd();
+  SourceLocation getBeginLoc() const { return getSwitchLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getBody() ? getBody()->getEndLoc()
+                     : reinterpret_cast<const Stmt *>(getCond())->getEndLoc();
   }
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
   }
 
   static bool classof(const Stmt *T) {
@@ -1121,17 +1884,75 @@ public:
 };
 
 /// WhileStmt - This represents a 'while' stmt.
-class WhileStmt : public Stmt {
-  SourceLocation WhileLoc;
-  enum { VAR, COND, BODY, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+class WhileStmt final : public Stmt,
+                        private llvm::TrailingObjects<WhileStmt, Stmt *> {
+  friend TrailingObjects;
 
-public:
-  WhileStmt(const ASTContext &C, VarDecl *Var, Expr *cond, Stmt *body,
+  // WhileStmt is followed by several trailing objects,
+  // some of which optional. Note that it would be more
+  // convenient to put the optional trailing object at the end
+  // but this would affect children().
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the condition variable.
+  //    Present if and only if hasVarStorage(). This is in fact a "DeclStmt *".
+  //
+  // * A "Stmt *" for the condition.
+  //    Always present. This is in fact an "Expr *".
+  //
+  // * A "Stmt *" for the body.
+  //    Always present.
+  //
+  enum { VarOffset = 0, BodyOffsetFromCond = 1 };
+  enum { NumMandatoryStmtPtr = 2 };
+
+  unsigned varOffset() const { return VarOffset; }
+  unsigned condOffset() const { return VarOffset + hasVarStorage(); }
+  unsigned bodyOffset() const { return condOffset() + BodyOffsetFromCond; }
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + hasVarStorage();
+  }
+
+  /// Build a while statement.
+  WhileStmt(const ASTContext &Ctx, VarDecl *Var, Expr *Cond, Stmt *Body,
             SourceLocation WL);
 
   /// Build an empty while statement.
-  explicit WhileStmt(EmptyShell Empty) : Stmt(WhileStmtClass, Empty) {}
+  explicit WhileStmt(EmptyShell Empty, bool HasVar);
+
+public:
+  /// Create a while statement.
+  static WhileStmt *Create(const ASTContext &Ctx, VarDecl *Var, Expr *Cond,
+                           Stmt *Body, SourceLocation WL);
+
+  /// Create an empty while statement optionally with storage for
+  /// a condition variable.
+  static WhileStmt *CreateEmpty(const ASTContext &Ctx, bool HasVar);
+
+  /// True if this WhileStmt has storage for a condition variable.
+  bool hasVarStorage() const { return WhileStmtBits.HasVar; }
+
+  Expr *getCond() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  const Expr *getCond() const {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  void setCond(Expr *Cond) {
+    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+  }
+
+  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
+  const Stmt *getBody() const {
+    return getTrailingObjects<Stmt *>()[bodyOffset()];
+  }
+
+  void setBody(Stmt *Body) {
+    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
+  }
 
   /// Retrieve the variable declared in this "while" statement, if any.
   ///
@@ -1141,29 +1962,35 @@ public:
   ///   // ...
   /// }
   /// \endcode
-  VarDecl *getConditionVariable() const;
-  void setConditionVariable(const ASTContext &C, VarDecl *V);
+  VarDecl *getConditionVariable();
+  const VarDecl *getConditionVariable() const {
+    return const_cast<WhileStmt *>(this)->getConditionVariable();
+  }
+
+  /// Set the condition variable of this while statement.
+  /// The while statement must have storage for it.
+  void setConditionVariable(const ASTContext &Ctx, VarDecl *V);
 
   /// If this WhileStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
-  const DeclStmt *getConditionVariableDeclStmt() const {
-    return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
+  DeclStmt *getConditionVariableDeclStmt() {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
   }
 
-  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
-  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt*>(E); }
-  Stmt *getBody() { return SubExprs[BODY]; }
-  const Stmt *getBody() const { return SubExprs[BODY]; }
-  void setBody(Stmt *S) { SubExprs[BODY] = S; }
+  const DeclStmt *getConditionVariableDeclStmt() const {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
+  }
 
-  SourceLocation getWhileLoc() const { return WhileLoc; }
-  void setWhileLoc(SourceLocation L) { WhileLoc = L; }
+  SourceLocation getWhileLoc() const { return WhileStmtBits.WhileLoc; }
+  void setWhileLoc(SourceLocation L) { WhileStmtBits.WhileLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return WhileLoc; }
-
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return SubExprs[BODY]->getLocEnd();
+  SourceLocation getBeginLoc() const { return getWhileLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getBody()->getEndLoc();
   }
 
   static bool classof(const Stmt *T) {
@@ -1172,46 +1999,51 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
   }
 };
 
 /// DoStmt - This represents a 'do/while' stmt.
 class DoStmt : public Stmt {
-  SourceLocation DoLoc;
   enum { BODY, COND, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+  Stmt *SubExprs[END_EXPR];
   SourceLocation WhileLoc;
-  SourceLocation RParenLoc;  // Location of final ')' in do stmt condition.
+  SourceLocation RParenLoc; // Location of final ')' in do stmt condition.
 
 public:
-  DoStmt(Stmt *body, Expr *cond, SourceLocation DL, SourceLocation WL,
+  DoStmt(Stmt *Body, Expr *Cond, SourceLocation DL, SourceLocation WL,
          SourceLocation RP)
-    : Stmt(DoStmtClass), DoLoc(DL), WhileLoc(WL), RParenLoc(RP) {
-    SubExprs[COND] = reinterpret_cast<Stmt*>(cond);
-    SubExprs[BODY] = body;
+      : Stmt(DoStmtClass), WhileLoc(WL), RParenLoc(RP) {
+    setCond(Cond);
+    setBody(Body);
+    setDoLoc(DL);
   }
 
   /// Build an empty do-while statement.
   explicit DoStmt(EmptyShell Empty) : Stmt(DoStmtClass, Empty) {}
 
-  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
-  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt*>(E); }
+  Expr *getCond() { return reinterpret_cast<Expr *>(SubExprs[COND]); }
+  const Expr *getCond() const {
+    return reinterpret_cast<Expr *>(SubExprs[COND]);
+  }
+
+  void setCond(Expr *Cond) { SubExprs[COND] = reinterpret_cast<Stmt *>(Cond); }
+
   Stmt *getBody() { return SubExprs[BODY]; }
   const Stmt *getBody() const { return SubExprs[BODY]; }
-  void setBody(Stmt *S) { SubExprs[BODY] = S; }
+  void setBody(Stmt *Body) { SubExprs[BODY] = Body; }
 
-  SourceLocation getDoLoc() const { return DoLoc; }
-  void setDoLoc(SourceLocation L) { DoLoc = L; }
+  SourceLocation getDoLoc() const { return DoStmtBits.DoLoc; }
+  void setDoLoc(SourceLocation L) { DoStmtBits.DoLoc = L; }
   SourceLocation getWhileLoc() const { return WhileLoc; }
   void setWhileLoc(SourceLocation L) { WhileLoc = L; }
-
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return DoLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return RParenLoc; }
+  SourceLocation getBeginLoc() const { return getDoLoc(); }
+  SourceLocation getEndLoc() const { return getRParenLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == DoStmtClass;
@@ -1219,7 +2051,7 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+    return child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
   }
 };
 
@@ -1227,7 +2059,6 @@ public:
 /// the init/cond/inc parts of the ForStmt will be null if they were not
 /// specified in the source.
 class ForStmt : public Stmt {
-  SourceLocation ForLoc;
   enum { INIT, CONDVAR, COND, INC, BODY, END_EXPR };
   Stmt* SubExprs[END_EXPR]; // SubExprs[INIT] is an expression or declstmt.
   SourceLocation LParenLoc, RParenLoc;
@@ -1273,18 +2104,15 @@ public:
   void setInc(Expr *E) { SubExprs[INC] = reinterpret_cast<Stmt*>(E); }
   void setBody(Stmt *S) { SubExprs[BODY] = S; }
 
-  SourceLocation getForLoc() const { return ForLoc; }
-  void setForLoc(SourceLocation L) { ForLoc = L; }
+  SourceLocation getForLoc() const { return ForStmtBits.ForLoc; }
+  void setForLoc(SourceLocation L) { ForStmtBits.ForLoc = L; }
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return ForLoc; }
-
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return SubExprs[BODY]->getLocEnd();
-  }
+  SourceLocation getBeginLoc() const { return getForLoc(); }
+  SourceLocation getEndLoc() const { return getBody()->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ForStmtClass;
@@ -1299,12 +2127,13 @@ public:
 /// GotoStmt - This represents a direct goto.
 class GotoStmt : public Stmt {
   LabelDecl *Label;
-  SourceLocation GotoLoc;
   SourceLocation LabelLoc;
 
 public:
   GotoStmt(LabelDecl *label, SourceLocation GL, SourceLocation LL)
-      : Stmt(GotoStmtClass), Label(label), GotoLoc(GL), LabelLoc(LL) {}
+      : Stmt(GotoStmtClass), Label(label), LabelLoc(LL) {
+    setGotoLoc(GL);
+  }
 
   /// Build an empty goto statement.
   explicit GotoStmt(EmptyShell Empty) : Stmt(GotoStmtClass, Empty) {}
@@ -1312,13 +2141,13 @@ public:
   LabelDecl *getLabel() const { return Label; }
   void setLabel(LabelDecl *D) { Label = D; }
 
-  SourceLocation getGotoLoc() const { return GotoLoc; }
-  void setGotoLoc(SourceLocation L) { GotoLoc = L; }
+  SourceLocation getGotoLoc() const { return GotoStmtBits.GotoLoc; }
+  void setGotoLoc(SourceLocation L) { GotoStmtBits.GotoLoc = L; }
   SourceLocation getLabelLoc() const { return LabelLoc; }
   void setLabelLoc(SourceLocation L) { LabelLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return GotoLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return LabelLoc; }
+  SourceLocation getBeginLoc() const { return getGotoLoc(); }
+  SourceLocation getEndLoc() const { return getLabelLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == GotoStmtClass;
@@ -1332,62 +2161,64 @@ public:
 
 /// IndirectGotoStmt - This represents an indirect goto.
 class IndirectGotoStmt : public Stmt {
-  SourceLocation GotoLoc;
   SourceLocation StarLoc;
   Stmt *Target;
 
 public:
-  IndirectGotoStmt(SourceLocation gotoLoc, SourceLocation starLoc,
-                   Expr *target)
-    : Stmt(IndirectGotoStmtClass), GotoLoc(gotoLoc), StarLoc(starLoc),
-      Target((Stmt*)target) {}
+  IndirectGotoStmt(SourceLocation gotoLoc, SourceLocation starLoc, Expr *target)
+      : Stmt(IndirectGotoStmtClass), StarLoc(starLoc) {
+    setTarget(target);
+    setGotoLoc(gotoLoc);
+  }
 
   /// Build an empty indirect goto statement.
   explicit IndirectGotoStmt(EmptyShell Empty)
       : Stmt(IndirectGotoStmtClass, Empty) {}
 
-  void setGotoLoc(SourceLocation L) { GotoLoc = L; }
-  SourceLocation getGotoLoc() const { return GotoLoc; }
+  void setGotoLoc(SourceLocation L) { GotoStmtBits.GotoLoc = L; }
+  SourceLocation getGotoLoc() const { return GotoStmtBits.GotoLoc; }
   void setStarLoc(SourceLocation L) { StarLoc = L; }
   SourceLocation getStarLoc() const { return StarLoc; }
 
-  Expr *getTarget() { return reinterpret_cast<Expr*>(Target); }
-  const Expr *getTarget() const {return reinterpret_cast<const Expr*>(Target);}
-  void setTarget(Expr *E) { Target = reinterpret_cast<Stmt*>(E); }
+  Expr *getTarget() { return reinterpret_cast<Expr *>(Target); }
+  const Expr *getTarget() const {
+    return reinterpret_cast<const Expr *>(Target);
+  }
+  void setTarget(Expr *E) { Target = reinterpret_cast<Stmt *>(E); }
 
   /// getConstantTarget - Returns the fixed target of this indirect
   /// goto, if one exists.
   LabelDecl *getConstantTarget();
   const LabelDecl *getConstantTarget() const {
-    return const_cast<IndirectGotoStmt*>(this)->getConstantTarget();
+    return const_cast<IndirectGotoStmt *>(this)->getConstantTarget();
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return GotoLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return Target->getLocEnd(); }
+  SourceLocation getBeginLoc() const { return getGotoLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Target->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == IndirectGotoStmtClass;
   }
 
   // Iterators
-  child_range children() { return child_range(&Target, &Target+1); }
+  child_range children() { return child_range(&Target, &Target + 1); }
 };
 
 /// ContinueStmt - This represents a continue.
 class ContinueStmt : public Stmt {
-  SourceLocation ContinueLoc;
-
 public:
-  ContinueStmt(SourceLocation CL) : Stmt(ContinueStmtClass), ContinueLoc(CL) {}
+  ContinueStmt(SourceLocation CL) : Stmt(ContinueStmtClass) {
+    setContinueLoc(CL);
+  }
 
   /// Build an empty continue statement.
   explicit ContinueStmt(EmptyShell Empty) : Stmt(ContinueStmtClass, Empty) {}
 
-  SourceLocation getContinueLoc() const { return ContinueLoc; }
-  void setContinueLoc(SourceLocation L) { ContinueLoc = L; }
+  SourceLocation getContinueLoc() const { return ContinueStmtBits.ContinueLoc; }
+  void setContinueLoc(SourceLocation L) { ContinueStmtBits.ContinueLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return ContinueLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return ContinueLoc; }
+  SourceLocation getBeginLoc() const { return getContinueLoc(); }
+  SourceLocation getEndLoc() const { return getContinueLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ContinueStmtClass;
@@ -1401,22 +2232,19 @@ public:
 
 /// BreakStmt - This represents a break.
 class BreakStmt : public Stmt {
-  SourceLocation BreakLoc;
-
 public:
-  BreakStmt(SourceLocation BL) : Stmt(BreakStmtClass), BreakLoc(BL) {
-    static_assert(sizeof(BreakStmt) == 2 * sizeof(SourceLocation),
-                  "BreakStmt too large");
+  BreakStmt(SourceLocation BL) : Stmt(BreakStmtClass) {
+    setBreakLoc(BL);
   }
 
   /// Build an empty break statement.
   explicit BreakStmt(EmptyShell Empty) : Stmt(BreakStmtClass, Empty) {}
 
-  SourceLocation getBreakLoc() const { return BreakLoc; }
-  void setBreakLoc(SourceLocation L) { BreakLoc = L; }
+  SourceLocation getBreakLoc() const { return BreakStmtBits.BreakLoc; }
+  void setBreakLoc(SourceLocation L) { BreakStmtBits.BreakLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return BreakLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return BreakLoc; }
+  SourceLocation getBeginLoc() const { return getBreakLoc(); }
+  SourceLocation getEndLoc() const { return getBreakLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BreakStmtClass;
@@ -1436,40 +2264,68 @@ public:
 /// return a value, and it allows returning a value in functions declared to
 /// return void.  We explicitly model this in the AST, which means you can't
 /// depend on the return type of the function and the presence of an argument.
-class ReturnStmt : public Stmt {
-  SourceLocation RetLoc;
+class ReturnStmt final
+    : public Stmt,
+      private llvm::TrailingObjects<ReturnStmt, const VarDecl *> {
+  friend TrailingObjects;
+
+  /// The return expression.
   Stmt *RetExpr;
-  const VarDecl *NRVOCandidate;
+
+  // ReturnStmt is followed optionally by a trailing "const VarDecl *"
+  // for the NRVO candidate. Present if and only if hasNRVOCandidate().
+
+  /// True if this ReturnStmt has storage for an NRVO candidate.
+  bool hasNRVOCandidate() const { return ReturnStmtBits.HasNRVOCandidate; }
+
+  unsigned numTrailingObjects(OverloadToken<const VarDecl *>) const {
+    return hasNRVOCandidate();
+  }
+
+  /// Build a return statement.
+  ReturnStmt(SourceLocation RL, Expr *E, const VarDecl *NRVOCandidate);
+
+  /// Build an empty return statement.
+  explicit ReturnStmt(EmptyShell Empty, bool HasNRVOCandidate);
 
 public:
-  explicit ReturnStmt(SourceLocation RL) : ReturnStmt(RL, nullptr, nullptr) {}
+  /// Create a return statement.
+  static ReturnStmt *Create(const ASTContext &Ctx, SourceLocation RL, Expr *E,
+                            const VarDecl *NRVOCandidate);
 
-  ReturnStmt(SourceLocation RL, Expr *E, const VarDecl *NRVOCandidate)
-      : Stmt(ReturnStmtClass), RetLoc(RL), RetExpr((Stmt *)E),
-        NRVOCandidate(NRVOCandidate) {}
+  /// Create an empty return statement, optionally with
+  /// storage for an NRVO candidate.
+  static ReturnStmt *CreateEmpty(const ASTContext &Ctx, bool HasNRVOCandidate);
 
-  /// Build an empty return expression.
-  explicit ReturnStmt(EmptyShell Empty) : Stmt(ReturnStmtClass, Empty) {}
-
-  const Expr *getRetValue() const;
-  Expr *getRetValue();
-  void setRetValue(Expr *E) { RetExpr = reinterpret_cast<Stmt*>(E); }
-
-  SourceLocation getReturnLoc() const { return RetLoc; }
-  void setReturnLoc(SourceLocation L) { RetLoc = L; }
+  Expr *getRetValue() { return reinterpret_cast<Expr *>(RetExpr); }
+  const Expr *getRetValue() const { return reinterpret_cast<Expr *>(RetExpr); }
+  void setRetValue(Expr *E) { RetExpr = reinterpret_cast<Stmt *>(E); }
 
   /// Retrieve the variable that might be used for the named return
   /// value optimization.
   ///
   /// The optimization itself can only be performed if the variable is
   /// also marked as an NRVO object.
-  const VarDecl *getNRVOCandidate() const { return NRVOCandidate; }
-  void setNRVOCandidate(const VarDecl *Var) { NRVOCandidate = Var; }
+  const VarDecl *getNRVOCandidate() const {
+    return hasNRVOCandidate() ? *getTrailingObjects<const VarDecl *>()
+                              : nullptr;
+  }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return RetLoc; }
+  /// Set the variable that might be used for the named return value
+  /// optimization. The return statement must have storage for it,
+  /// which is the case if and only if hasNRVOCandidate() is true.
+  void setNRVOCandidate(const VarDecl *Var) {
+    assert(hasNRVOCandidate() &&
+           "This return statement has no storage for an NRVO candidate!");
+    *getTrailingObjects<const VarDecl *>() = Var;
+  }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return RetExpr ? RetExpr->getLocEnd() : RetLoc;
+  SourceLocation getReturnLoc() const { return ReturnStmtBits.RetLoc; }
+  void setReturnLoc(SourceLocation L) { ReturnStmtBits.RetLoc = L; }
+
+  SourceLocation getBeginLoc() const { return getReturnLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return RetExpr ? RetExpr->getEndLoc() : getReturnLoc();
   }
 
   static bool classof(const Stmt *T) {
@@ -1478,7 +2334,8 @@ public:
 
   // Iterators
   child_range children() {
-    if (RetExpr) return child_range(&RetExpr, &RetExpr+1);
+    if (RetExpr)
+      return child_range(&RetExpr, &RetExpr + 1);
     return child_range(child_iterator(), child_iterator());
   }
 };
@@ -1523,8 +2380,8 @@ public:
   bool isVolatile() const { return IsVolatile; }
   void setVolatile(bool V) { IsVolatile = V; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return {}; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return {}; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return {}; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return {}; }
 
   //===--- Asm String Analysis ---===//
 
@@ -1805,8 +2662,8 @@ public:
     return Clobbers[i];
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return AsmLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return RParenLoc; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return AsmLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == GCCAsmStmtClass;
@@ -1903,8 +2760,7 @@ private:
                   ArrayRef<Expr*> Exprs, ArrayRef<StringRef> Clobbers);
 
 public:
-  SourceLocation getLocStart() const LLVM_READONLY { return AsmLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return EndLoc; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return AsmLoc; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == MSAsmStmtClass;
@@ -1933,11 +2789,10 @@ public:
                                Expr *FilterExpr,
                                Stmt *Block);
 
-  SourceLocation getLocStart() const LLVM_READONLY { return getExceptLoc(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return getExceptLoc(); }
 
   SourceLocation getExceptLoc() const { return Loc; }
-  SourceLocation getEndLoc() const { return getBlock()->getLocEnd(); }
+  SourceLocation getEndLoc() const { return getBlock()->getEndLoc(); }
 
   Expr *getFilterExpr() const {
     return reinterpret_cast<Expr*>(Children[FILTER_EXPR]);
@@ -1971,11 +2826,10 @@ public:
                                 SourceLocation FinallyLoc,
                                 Stmt *Block);
 
-  SourceLocation getLocStart() const LLVM_READONLY { return getFinallyLoc(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return getFinallyLoc(); }
 
   SourceLocation getFinallyLoc() const { return Loc; }
-  SourceLocation getEndLoc() const { return Block->getLocEnd(); }
+  SourceLocation getEndLoc() const { return Block->getEndLoc(); }
 
   CompoundStmt *getBlock() const { return cast<CompoundStmt>(Block); }
 
@@ -2010,11 +2864,10 @@ public:
                             SourceLocation TryLoc, Stmt *TryBlock,
                             Stmt *Handler);
 
-  SourceLocation getLocStart() const LLVM_READONLY { return getTryLoc(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return getTryLoc(); }
 
   SourceLocation getTryLoc() const { return TryLoc; }
-  SourceLocation getEndLoc() const { return Children[HANDLER]->getLocEnd(); }
+  SourceLocation getEndLoc() const { return Children[HANDLER]->getEndLoc(); }
 
   bool getIsCXXTry() const { return IsCXXTry; }
 
@@ -2051,8 +2904,8 @@ public:
   SourceLocation getLeaveLoc() const { return LeaveLoc; }
   void setLeaveLoc(SourceLocation L) { LeaveLoc = L; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return LeaveLoc; }
-  SourceLocation getLocEnd() const LLVM_READONLY { return LeaveLoc; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LeaveLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return LeaveLoc; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == SEHLeaveStmtClass;
@@ -2265,12 +3118,12 @@ public:
     return capture_init_begin() + NumCaptures;
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY {
-    return getCapturedStmt()->getLocStart();
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getCapturedStmt()->getBeginLoc();
   }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
-    return getCapturedStmt()->getLocEnd();
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getCapturedStmt()->getEndLoc();
   }
 
   SourceRange getSourceRange() const LLVM_READONLY {

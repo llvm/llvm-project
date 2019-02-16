@@ -502,7 +502,7 @@ get_thrown_object_ptr(_Unwind_Exception* unwind_exception)
     // Even for foreign exceptions, the exception object is *probably* at unwind_exception + 1
     //    Regardless, this library is prohibited from touching a foreign exception
     void* adjustedPtr = unwind_exception + 1;
-    if (unwind_exception->exception_class == kOurDependentExceptionClass)
+    if (__getExceptionClass(unwind_exception) == kOurDependentExceptionClass)
         adjustedPtr = ((__cxa_dependent_exception*)adjustedPtr - 1)->primaryException;
     return adjustedPtr;
 }
@@ -1038,7 +1038,7 @@ __gxx_personality_v0
 }
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
-extern "C" EXCEPTION_DISPOSITION
+extern "C" _LIBCXXABI_FUNC_VIS EXCEPTION_DISPOSITION
 __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
                        PCONTEXT ms_orig_context, PDISPATCHER_CONTEXT ms_disp)
 {
@@ -1098,8 +1098,7 @@ __gxx_personality_v0(_Unwind_State state,
     if (unwind_exception == 0 || context == 0)
         return _URC_FATAL_PHASE1_ERROR;
 
-    bool native_exception = (unwind_exception->exception_class & get_vendor_and_language) ==
-                            (kOurExceptionClass & get_vendor_and_language);
+    bool native_exception = __isOurExceptionClass(unwind_exception);
 
 #if !defined(LIBCXXABI_USE_LLVM_UNWINDER)
     // Copy the address of _Unwind_Control_Block to r12 so that
@@ -1203,9 +1202,7 @@ __cxa_call_unexpected(void* arg)
     if (unwind_exception == 0)
         call_terminate(false, unwind_exception);
     __cxa_begin_catch(unwind_exception);
-    bool native_old_exception =
-        (unwind_exception->exception_class & get_vendor_and_language) ==
-        (kOurExceptionClass                & get_vendor_and_language);
+    bool native_old_exception = __isOurExceptionClass(unwind_exception);
     std::unexpected_handler u_handler;
     std::terminate_handler t_handler;
     __cxa_exception* old_exception_header = 0;
@@ -1267,16 +1264,14 @@ __cxa_call_unexpected(void* arg)
             if (new_exception_header == 0)
                 // This shouldn't be able to happen!
                 std::__terminate(t_handler);
-            bool native_new_exception =
-                (new_exception_header->unwindHeader.exception_class & get_vendor_and_language) ==
-                                                (kOurExceptionClass & get_vendor_and_language);
+            bool native_new_exception = __isOurExceptionClass(&new_exception_header->unwindHeader);
             void* adjustedPtr;
             if (native_new_exception && (new_exception_header != old_exception_header))
             {
                 const __shim_type_info* excpType =
                     static_cast<const __shim_type_info*>(new_exception_header->exceptionType);
                 adjustedPtr =
-                    new_exception_header->unwindHeader.exception_class == kOurDependentExceptionClass ?
+                    __getExceptionClass(&new_exception_header->unwindHeader) == kOurDependentExceptionClass ?
                         ((__cxa_dependent_exception*)new_exception_header)->primaryException :
                         new_exception_header + 1;
                 if (!exception_spec_can_catch(ttypeIndex, classInfo, ttypeEncoding,

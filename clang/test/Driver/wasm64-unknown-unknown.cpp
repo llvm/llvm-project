@@ -29,7 +29,7 @@ int align_l = __alignof(long);
 int align_ll = __alignof(long long);
 
 // CHECK: @align_p = hidden global i32 8
-int align_p = __alignof(void*);
+int align_p = __alignof(void *);
 
 // CHECK: @align_f = hidden global i32 4
 int align_f = __alignof(float);
@@ -99,17 +99,20 @@ double check_double() { return 0; }
 
 // CHECK: fp128 @check_longdouble()
 long double check_longdouble() { return 0; }
-
 }
 
-template<int> void Switch();
-template<> void Switch<4>();
-template<> void Switch<8>();
-template<> void Switch<16>();
+template <int>
+void Switch();
+template <>
+void Switch<4>();
+template <>
+void Switch<8>();
+template <>
+void Switch<16>();
 
 void check_pointer_size() {
   // CHECK: SwitchILi8
-  Switch<sizeof(void*)>();
+  Switch<sizeof(void *)>();
 
   // CHECK: SwitchILi8
   Switch<sizeof(long long)>();

@@ -88,7 +88,6 @@ int main()
     {
         // Test that the allocator's construct method is being used to
         // construct the new elements and that it's called exactly N times.
-        typedef int T;
         typedef std::forward_list<int, ContainerTestAllocator<int, int>> Container;
         ConstructController* cc = getConstructController();
         cc->reset();

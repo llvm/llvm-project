@@ -44,6 +44,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -63,22 +65,69 @@ using namespace llvm;
 #define DEBUG_TYPE "guard-widening"
 
 STATISTIC(GuardsEliminated, "Number of eliminated guards");
+STATISTIC(CondBranchEliminated, "Number of eliminated conditional branches");
+
+static cl::opt<bool> WidenFrequentBranches(
+    "guard-widening-widen-frequent-branches", cl::Hidden,
+    cl::desc("Widen conditions of explicit branches into dominating guards in "
+             "case if their taken frequency exceeds threshold set by "
+             "guard-widening-frequent-branch-threshold option"),
+    cl::init(false));
+
+static cl::opt<unsigned> FrequentBranchThreshold(
+    "guard-widening-frequent-branch-threshold", cl::Hidden,
+    cl::desc("When WidenFrequentBranches is set to true, this option is used "
+             "to determine which branches are frequently taken. The criteria "
+             "that a branch is taken more often than "
+             "((FrequentBranchThreshold - 1) / FrequentBranchThreshold), then "
+             "it is considered frequently taken"),
+    cl::init(1000));
+
 
 namespace {
+
+// Get the condition of \p I. It can either be a guard or a conditional branch.
+static Value *getCondition(Instruction *I) {
+  if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
+    assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
+           "Bad guard intrinsic?");
+    return GI->getArgOperand(0);
+  }
+  return cast<BranchInst>(I)->getCondition();
+}
+
+// Set the condition for \p I to \p NewCond. \p I can either be a guard or a
+// conditional branch.
+static void setCondition(Instruction *I, Value *NewCond) {
+  if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
+    assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
+           "Bad guard intrinsic?");
+    GI->setArgOperand(0, NewCond);
+    return;
+  }
+  cast<BranchInst>(I)->setCondition(NewCond);
+}
+
+// Eliminates the guard instruction properly.
+static void eliminateGuard(Instruction *GuardInst) {
+  GuardInst->eraseFromParent();
+  ++GuardsEliminated;
+}
 
 class GuardWideningImpl {
   DominatorTree &DT;
   PostDominatorTree *PDT;
   LoopInfo &LI;
+  BranchProbabilityInfo *BPI;
 
   /// Together, these describe the region of interest.  This might be all of
   /// the blocks within a function, or only a given loop's blocks and preheader.
   DomTreeNode *Root;
   std::function<bool(BasicBlock*)> BlockFilter;
 
-  /// The set of guards whose conditions have been widened into dominating
-  /// guards.
-  SmallVector<Instruction *, 16> EliminatedGuards;
+  /// The set of guards and conditional branches whose conditions have been
+  /// widened into dominating guards.
+  SmallVector<Instruction *, 16> EliminatedGuardsAndBranches;
 
   /// The set of guards which have been widened to include conditions to other
   /// guards.
@@ -91,19 +140,7 @@ class GuardWideningImpl {
   bool eliminateGuardViaWidening(
       Instruction *Guard, const df_iterator<DomTreeNode *> &DFSI,
       const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
-          GuardsPerBlock);
-
-  // Get the condition from \p GuardInst.
-  Value *getGuardCondition(Instruction *GuardInst);
-
-  // Set the condition for \p GuardInst.
-  void setGuardCondition(Instruction *GuardInst, Value *NewCond);
-
-  // Whether or not the particular instruction is a guard.
-  bool isGuard(const Instruction *I);
-
-  // Eliminates the guard instruction properly.
-  void eliminateGuard(Instruction *GuardInst);
+          GuardsPerBlock, bool InvertCondition = false);
 
   /// Used to keep track of which widening potential is more effective.
   enum WideningScore {
@@ -127,11 +164,13 @@ class GuardWideningImpl {
 
   /// Compute the score for widening the condition in \p DominatedGuard
   /// (contained in \p DominatedGuardLoop) into \p DominatingGuard (contained in
-  /// \p DominatingGuardLoop).
+  /// \p DominatingGuardLoop). If \p InvertCond is set, then we widen the
+  /// inverted condition of the dominating guard.
   WideningScore computeWideningScore(Instruction *DominatedGuard,
                                      Loop *DominatedGuardLoop,
                                      Instruction *DominatingGuard,
-                                     Loop *DominatingGuardLoop);
+                                     Loop *DominatingGuardLoop,
+                                     bool InvertCond);
 
   /// Helper to check if \p V can be hoisted to \p InsertPos.
   bool isAvailableAt(Value *V, Instruction *InsertPos) {
@@ -147,13 +186,14 @@ class GuardWideningImpl {
   void makeAvailableAt(Value *V, Instruction *InsertPos);
 
   /// Common helper used by \c widenGuard and \c isWideningCondProfitable.  Try
-  /// to generate an expression computing the logical AND of \p Cond0 and \p
-  /// Cond1.  Return true if the expression computing the AND is only as
+  /// to generate an expression computing the logical AND of \p Cond0 and (\p
+  /// Cond1 XOR \p InvertCondition).
+  /// Return true if the expression computing the AND is only as
   /// expensive as computing one of the two. If \p InsertPt is true then
   /// actually generate the resulting expression, make it available at \p
   /// InsertPt and return it in \p Result (else no change to the IR is made).
   bool widenCondCommon(Value *Cond0, Value *Cond1, Instruction *InsertPt,
-                       Value *&Result);
+                       Value *&Result, bool InvertCondition);
 
   /// Represents a range check of the form \c Base + \c Offset u< \c Length,
   /// with the constraint that \c Length is not negative.  \c CheckInst is the
@@ -214,25 +254,31 @@ class GuardWideningImpl {
 
   /// Can we compute the logical AND of \p Cond0 and \p Cond1 for the price of
   /// computing only one of the two expressions?
-  bool isWideningCondProfitable(Value *Cond0, Value *Cond1) {
+  bool isWideningCondProfitable(Value *Cond0, Value *Cond1, bool InvertCond) {
     Value *ResultUnused;
-    return widenCondCommon(Cond0, Cond1, /*InsertPt=*/nullptr, ResultUnused);
+    return widenCondCommon(Cond0, Cond1, /*InsertPt=*/nullptr, ResultUnused,
+                           InvertCond);
   }
 
-  /// Widen \p ToWiden to fail if \p NewCondition is false (in addition to
-  /// whatever it is already checking).
-  void widenGuard(Instruction *ToWiden, Value *NewCondition) {
+  /// If \p InvertCondition is false, Widen \p ToWiden to fail if
+  /// \p NewCondition is false, otherwise make it fail if \p NewCondition is
+  /// true (in addition to whatever it is already checking).
+  void widenGuard(Instruction *ToWiden, Value *NewCondition,
+                  bool InvertCondition) {
     Value *Result;
-    widenCondCommon(ToWiden->getOperand(0), NewCondition, ToWiden, Result);
-    setGuardCondition(ToWiden, Result);
+    widenCondCommon(ToWiden->getOperand(0), NewCondition, ToWiden, Result,
+                    InvertCondition);
+    setCondition(ToWiden, Result);
   }
 
 public:
 
   explicit GuardWideningImpl(DominatorTree &DT, PostDominatorTree *PDT,
-                             LoopInfo &LI, DomTreeNode *Root,
+                             LoopInfo &LI, BranchProbabilityInfo *BPI,
+                             DomTreeNode *Root,
                              std::function<bool(BasicBlock*)> BlockFilter)
-    : DT(DT), PDT(PDT), LI(LI), Root(Root), BlockFilter(BlockFilter) {}
+    : DT(DT), PDT(PDT), LI(LI), BPI(BPI), Root(Root), BlockFilter(BlockFilter)
+        {}
 
   /// The entry point for this pass.
   bool run();
@@ -242,6 +288,12 @@ public:
 bool GuardWideningImpl::run() {
   DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> GuardsInBlock;
   bool Changed = false;
+  Optional<BranchProbability> LikelyTaken = None;
+  if (WidenFrequentBranches && BPI) {
+    unsigned Threshold = FrequentBranchThreshold;
+    assert(Threshold > 0 && "Zero threshold makes no sense!");
+    LikelyTaken = BranchProbability(Threshold - 1, Threshold);
+  }
 
   for (auto DFI = df_begin(Root), DFE = df_end(Root);
        DFI != DFE; ++DFI) {
@@ -257,12 +309,31 @@ bool GuardWideningImpl::run() {
 
     for (auto *II : CurrentList)
       Changed |= eliminateGuardViaWidening(II, DFI, GuardsInBlock);
+    if (WidenFrequentBranches && BPI)
+      if (auto *BI = dyn_cast<BranchInst>(BB->getTerminator()))
+        if (BI->isConditional()) {
+          // If one of branches of a conditional is likely taken, try to
+          // eliminate it.
+          if (BPI->getEdgeProbability(BB, 0U) >= *LikelyTaken)
+            Changed |= eliminateGuardViaWidening(BI, DFI, GuardsInBlock);
+          else if (BPI->getEdgeProbability(BB, 1U) >= *LikelyTaken)
+            Changed |= eliminateGuardViaWidening(BI, DFI, GuardsInBlock,
+                                                 /*InvertCondition*/true);
+        }
   }
 
-  assert(EliminatedGuards.empty() || Changed);
-  for (auto *II : EliminatedGuards)
-    if (!WidenedGuards.count(II))
-      eliminateGuard(II);
+  assert(EliminatedGuardsAndBranches.empty() || Changed);
+  for (auto *I : EliminatedGuardsAndBranches)
+    if (!WidenedGuards.count(I)) {
+      assert(isa<ConstantInt>(getCondition(I)) && "Should be!");
+      if (isGuard(I))
+        eliminateGuard(I);
+      else {
+        assert(isa<BranchInst>(I) &&
+               "Eliminated something other than guard or branch?");
+        ++CondBranchEliminated;
+      }
+    }
 
   return Changed;
 }
@@ -270,7 +341,13 @@ bool GuardWideningImpl::run() {
 bool GuardWideningImpl::eliminateGuardViaWidening(
     Instruction *GuardInst, const df_iterator<DomTreeNode *> &DFSI,
     const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
-        GuardsInBlock) {
+        GuardsInBlock, bool InvertCondition) {
+  // Ignore trivial true or false conditions. These instructions will be
+  // trivially eliminated by any cleanup pass. Do not erase them because other
+  // guards can possibly be widened into them.
+  if (isa<ConstantInt>(getCondition(GuardInst)))
+    return false;
+
   Instruction *BestSoFar = nullptr;
   auto BestScoreSoFar = WS_IllegalOrNegative;
   auto *GuardInstLoop = LI.getLoopFor(GuardInst->getParent());
@@ -304,7 +381,7 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
 
     assert((i == (e - 1)) == (GuardInst->getParent() == CurBB) && "Bad DFS?");
 
-    if (i == (e - 1)) {
+    if (i == (e - 1) && CurBB->getTerminator() != GuardInst) {
       // Corner case: make sure we're only looking at guards strictly dominating
       // GuardInst when visiting GuardInst->getParent().
       auto NewEnd = std::find(I, E, GuardInst);
@@ -314,9 +391,10 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
 
     for (auto *Candidate : make_range(I, E)) {
       auto Score =
-          computeWideningScore(GuardInst, GuardInstLoop, Candidate, CurLoop);
-      LLVM_DEBUG(dbgs() << "Score between " << *getGuardCondition(GuardInst)
-                        << " and " << *getGuardCondition(Candidate) << " is "
+          computeWideningScore(GuardInst, GuardInstLoop, Candidate, CurLoop,
+                               InvertCondition);
+      LLVM_DEBUG(dbgs() << "Score between " << *getCondition(GuardInst)
+                        << " and " << *getCondition(Candidate) << " is "
                         << scoreTypeToString(Score) << "\n");
       if (Score > BestScoreSoFar) {
         BestScoreSoFar = Score;
@@ -336,41 +414,19 @@ bool GuardWideningImpl::eliminateGuardViaWidening(
   LLVM_DEBUG(dbgs() << "Widening " << *GuardInst << " into " << *BestSoFar
                     << " with score " << scoreTypeToString(BestScoreSoFar)
                     << "\n");
-  widenGuard(BestSoFar, getGuardCondition(GuardInst));
-  setGuardCondition(GuardInst, ConstantInt::getTrue(GuardInst->getContext()));
-  EliminatedGuards.push_back(GuardInst);
+  widenGuard(BestSoFar, getCondition(GuardInst), InvertCondition);
+  auto NewGuardCondition = InvertCondition
+                               ? ConstantInt::getFalse(GuardInst->getContext())
+                               : ConstantInt::getTrue(GuardInst->getContext());
+  setCondition(GuardInst, NewGuardCondition);
+  EliminatedGuardsAndBranches.push_back(GuardInst);
   WidenedGuards.insert(BestSoFar);
   return true;
 }
 
-Value *GuardWideningImpl::getGuardCondition(Instruction *GuardInst) {
-  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
-  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
-         "Bad guard intrinsic?");
-  return GI->getArgOperand(0);
-}
-
-void GuardWideningImpl::setGuardCondition(Instruction *GuardInst,
-                                          Value *NewCond) {
-  IntrinsicInst *GI = cast<IntrinsicInst>(GuardInst);
-  assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
-         "Bad guard intrinsic?");
-  GI->setArgOperand(0, NewCond);
-}
-
-bool GuardWideningImpl::isGuard(const Instruction* I) {
-  using namespace llvm::PatternMatch;
-  return match(I, m_Intrinsic<Intrinsic::experimental_guard>());
-}
-
-void GuardWideningImpl::eliminateGuard(Instruction *GuardInst) {
-  GuardInst->eraseFromParent();
-  ++GuardsEliminated;
-}
-
 GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
     Instruction *DominatedGuard, Loop *DominatedGuardLoop,
-    Instruction *DominatingGuard, Loop *DominatingGuardLoop) {
+    Instruction *DominatingGuard, Loop *DominatingGuardLoop, bool InvertCond) {
   bool HoistingOutOfLoop = false;
 
   if (DominatingGuardLoop != DominatedGuardLoop) {
@@ -383,7 +439,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
     HoistingOutOfLoop = true;
   }
 
-  if (!isAvailableAt(getGuardCondition(DominatedGuard), DominatingGuard))
+  if (!isAvailableAt(getCondition(DominatedGuard), DominatingGuard))
     return WS_IllegalOrNegative;
 
   // If the guard was conditional executed, it may never be reached
@@ -394,8 +450,8 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
   // here.  TODO: evaluate cost model for spurious deopt
   // NOTE: As written, this also lets us hoist right over another guard which
   // is essentially just another spelling for control flow.
-  if (isWideningCondProfitable(getGuardCondition(DominatedGuard),
-                               getGuardCondition(DominatingGuard)))
+  if (isWideningCondProfitable(getCondition(DominatedGuard),
+                               getCondition(DominatingGuard), InvertCond))
     return HoistingOutOfLoop ? WS_VeryPositive : WS_Positive;
 
   if (HoistingOutOfLoop)
@@ -416,8 +472,7 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
       return false;
     // TODO: diamond, triangle cases
     if (!PDT) return true;
-    return !PDT->dominates(DominatedGuard->getParent(),
-                           DominatingGuard->getParent());
+    return !PDT->dominates(DominatedBlock, DominatingBlock);
   };
 
   return MaybeHoistingOutOfIf() ? WS_IllegalOrNegative : WS_Neutral;
@@ -459,7 +514,8 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) {
 }
 
 bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
-                                        Instruction *InsertPt, Value *&Result) {
+                                        Instruction *InsertPt, Value *&Result,
+                                        bool InvertCondition) {
   using namespace llvm::PatternMatch;
 
   {
@@ -469,6 +525,8 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
     ICmpInst::Predicate Pred0, Pred1;
     if (match(Cond0, m_ICmp(Pred0, m_Value(LHS), m_ConstantInt(RHS0))) &&
         match(Cond1, m_ICmp(Pred1, m_Specific(LHS), m_ConstantInt(RHS1)))) {
+      if (InvertCondition)
+        Pred1 = ICmpInst::getInversePredicate(Pred1);
 
       ConstantRange CR0 =
           ConstantRange::makeExactICmpRegion(Pred0, RHS0->getValue());
@@ -502,7 +560,9 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
 
   {
     SmallVector<GuardWideningImpl::RangeCheck, 4> Checks, CombinedChecks;
-    if (parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
+    // TODO: Support InvertCondition case?
+    if (!InvertCondition &&
+        parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
         combineRangeChecks(Checks, CombinedChecks)) {
       if (InsertPt) {
         Result = nullptr;
@@ -526,7 +586,8 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
   if (InsertPt) {
     makeAvailableAt(Cond0, InsertPt);
     makeAvailableAt(Cond1, InsertPt);
-
+    if (InvertCondition)
+      Cond1 = BinaryOperator::CreateNot(Cond1, "inverted", InsertPt);
     Result = BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
   }
 
@@ -636,9 +697,8 @@ bool GuardWideningImpl::combineRangeChecks(
     // CurrentChecks.size() will typically be 3 here, but so far there has been
     // no need to hard-code that fact.
 
-    llvm::sort(CurrentChecks.begin(), CurrentChecks.end(),
-               [&](const GuardWideningImpl::RangeCheck &LHS,
-                   const GuardWideningImpl::RangeCheck &RHS) {
+    llvm::sort(CurrentChecks, [&](const GuardWideningImpl::RangeCheck &LHS,
+                                  const GuardWideningImpl::RangeCheck &RHS) {
       return LHS.getOffsetValue().slt(RHS.getOffsetValue());
     });
 
@@ -728,7 +788,10 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
-  if (!GuardWideningImpl(DT, &PDT, LI, DT.getRootNode(),
+  BranchProbabilityInfo *BPI = nullptr;
+  if (WidenFrequentBranches)
+    BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
+  if (!GuardWideningImpl(DT, &PDT, LI, BPI, DT.getRootNode(),
                          [](BasicBlock*) { return true; } ).run())
     return PreservedAnalyses::all();
 
@@ -751,7 +814,10 @@ struct GuardWideningLegacyPass : public FunctionPass {
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    return GuardWideningImpl(DT, &PDT, LI, DT.getRootNode(),
+    BranchProbabilityInfo *BPI = nullptr;
+    if (WidenFrequentBranches)
+      BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+    return GuardWideningImpl(DT, &PDT, LI, BPI, DT.getRootNode(),
                          [](BasicBlock*) { return true; } ).run();
   }
 
@@ -760,6 +826,8 @@ struct GuardWideningLegacyPass : public FunctionPass {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
+    if (WidenFrequentBranches)
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
   }
 };
 
@@ -785,11 +853,16 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
     auto BlockFilter = [&](BasicBlock *BB) {
       return BB == RootBB || L->contains(BB);
     };
-    return GuardWideningImpl(DT, PDT, LI,
+    BranchProbabilityInfo *BPI = nullptr;
+    if (WidenFrequentBranches)
+      BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+    return GuardWideningImpl(DT, PDT, LI, BPI,
                              DT.getNode(RootBB), BlockFilter).run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    if (WidenFrequentBranches)
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.setPreservesCFG();
     getLoopAnalysisUsage(AU);
     AU.addPreserved<PostDominatorTreeWrapperPass>();
@@ -805,6 +878,8 @@ INITIALIZE_PASS_BEGIN(GuardWideningLegacyPass, "guard-widening", "Widen guards",
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+if (WidenFrequentBranches)
+  INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_END(GuardWideningLegacyPass, "guard-widening", "Widen guards",
                     false, false)
 
@@ -814,6 +889,8 @@ INITIALIZE_PASS_BEGIN(LoopGuardWideningLegacyPass, "loop-guard-widening",
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+if (WidenFrequentBranches)
+  INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_END(LoopGuardWideningLegacyPass, "loop-guard-widening",
                     "Widen guards (within a single loop, as a loop pass)",
                     false, false)

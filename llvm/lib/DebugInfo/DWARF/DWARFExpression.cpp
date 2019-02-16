@@ -94,6 +94,7 @@ static DescVector getDescriptions() {
       Desc(Op::Dwarf3, Op::SizeLEB, Op::SizeBlock);
   Descriptions[DW_OP_stack_value] = Desc(Op::Dwarf3);
   Descriptions[DW_OP_GNU_push_tls_address] = Desc(Op::Dwarf3);
+  Descriptions[DW_OP_addrx] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   return Descriptions;

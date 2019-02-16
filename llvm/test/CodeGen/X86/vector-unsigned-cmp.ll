@@ -13,7 +13,7 @@ define <2 x i1> @ugt_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrlq $1, %xmm0
 ; SSE-NEXT:    psrlq $1, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE-NEXT:    pxor %xmm2, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
@@ -43,7 +43,7 @@ define <2 x i1> @ult_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrlq $1, %xmm0
 ; SSE-NEXT:    psrlq $1, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    pxor %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
@@ -73,7 +73,7 @@ define <2 x i1> @uge_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrlq $1, %xmm0
 ; SSE-NEXT:    psrlq $1, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    pxor %xmm2, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
@@ -107,7 +107,7 @@ define <2 x i1> @ule_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrlq $1, %xmm0
 ; SSE-NEXT:    psrlq $1, %xmm1
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,0,2147483648,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648]
 ; SSE-NEXT:    pxor %xmm2, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, %xmm2

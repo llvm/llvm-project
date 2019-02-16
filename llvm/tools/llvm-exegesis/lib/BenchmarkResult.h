@@ -16,6 +16,8 @@
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRESULT_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRESULT_H
 
+#include "BenchmarkCode.h"
+#include "LlvmState.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
@@ -26,22 +28,31 @@
 #include <unordered_map>
 #include <vector>
 
+namespace llvm {
 namespace exegesis {
-
-struct BenchmarkResultContext; // Forward declaration.
 
 struct InstructionBenchmarkKey {
   // The LLVM opcode name.
   std::vector<llvm::MCInst> Instructions;
+  // The initial values of the registers.
+  std::vector<RegisterValue> RegisterInitialValues;
   // An opaque configuration, that can be used to separate several benchmarks of
   // the same instruction under different configurations.
   std::string Config;
 };
 
 struct BenchmarkMeasure {
+  // A helper to create an unscaled BenchmarkMeasure.
+  static BenchmarkMeasure Create(std::string Key, double Value) {
+    return {Key, Value, Value};
+  }
   std::string Key;
-  double Value;
-  std::string DebugString;
+  // This is the per-instruction value, i.e. measured quantity scaled per
+  // instruction.
+  double PerInstructionValue;
+  // This is the per-snippet value, i.e. measured quantity for one repetition of
+  // the whole snippet.
+  double PerSnippetValue;
 };
 
 // The result of an instruction benchmark.
@@ -62,26 +73,24 @@ struct InstructionBenchmark {
 
   // Read functions.
   static llvm::Expected<InstructionBenchmark>
-  readYaml(const BenchmarkResultContext &Context, llvm::StringRef Filename);
+  readYaml(const LLVMState &State, llvm::StringRef Filename);
 
   static llvm::Expected<std::vector<InstructionBenchmark>>
-  readYamls(const BenchmarkResultContext &Context, llvm::StringRef Filename);
+  readYamls(const LLVMState &State, llvm::StringRef Filename);
 
-  void readYamlFrom(const BenchmarkResultContext &Context,
-                    llvm::StringRef InputContent);
+  void readYamlFrom(const LLVMState &State, llvm::StringRef InputContent);
 
   // Write functions, non-const because of YAML traits.
-  void writeYamlTo(const BenchmarkResultContext &Context, llvm::raw_ostream &S);
+  void writeYamlTo(const LLVMState &State, llvm::raw_ostream &S);
 
-  llvm::Error writeYaml(const BenchmarkResultContext &Context,
-                        const llvm::StringRef Filename);
+  llvm::Error writeYaml(const LLVMState &State, const llvm::StringRef Filename);
 };
 
 //------------------------------------------------------------------------------
 // Utilities to work with Benchmark measures.
 
 // A class that measures stats over benchmark measures.
-class BenchmarkMeasureStats {
+class PerInstructionStats {
 public:
   void push(const BenchmarkMeasure &BM);
 
@@ -102,38 +111,7 @@ private:
   double MinValue = std::numeric_limits<double>::max();
 };
 
-// This context is used when de/serializing InstructionBenchmark to guarantee
-// that Registers and Instructions are human readable and preserved accross
-// different versions of LLVM.
-struct BenchmarkResultContext {
-  BenchmarkResultContext() = default;
-  BenchmarkResultContext(BenchmarkResultContext &&) = default;
-  BenchmarkResultContext &operator=(BenchmarkResultContext &&) = default;
-  BenchmarkResultContext(const BenchmarkResultContext &) = delete;
-  BenchmarkResultContext &operator=(const BenchmarkResultContext &) = delete;
-
-  // Populate Registers and Instruction mapping.
-  void addRegEntry(unsigned RegNo, llvm::StringRef Name);
-  void addInstrEntry(unsigned Opcode, llvm::StringRef Name);
-
-  // Register accessors.
-  llvm::StringRef getRegName(unsigned RegNo) const;
-  unsigned getRegNo(llvm::StringRef Name) const; // 0 is not found.
-
-  // Instruction accessors.
-  llvm::StringRef getInstrName(unsigned Opcode) const;
-  unsigned getInstrOpcode(llvm::StringRef Name) const; // 0 is not found.
-
-private:
-  // Ideally we would like to use MCRegisterInfo and MCInstrInfo but doing so
-  // would make testing harder, instead we create a mapping that we can easily
-  // populate.
-  std::unordered_map<unsigned, llvm::StringRef> InstrOpcodeToName;
-  std::unordered_map<unsigned, llvm::StringRef> RegNoToName;
-  llvm::StringMap<unsigned> InstrNameToOpcode;
-  llvm::StringMap<unsigned> RegNameToNo;
-};
-
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_BENCHMARKRESULT_H

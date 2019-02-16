@@ -1,19 +1,22 @@
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -pass-remarks=machine-outliner -pass-remarks-missed=machine-outliner -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: <unknown>:0:0:
 ; CHECK-SAME: Did not outline 2 instructions from 2 locations.
-; CHECK-SAME: Bytes from outlining all occurrences (36) >=
+; CHECK-SAME: Bytes from outlining all occurrences (16) >=
 ; CHECK-SAME: Unoutlined instruction bytes (16)
 ; CHECK-SAME: (Also found at: <UNKNOWN LOCATION>)
-; CHECK: remark: <unknown>:0:0: Saved 20 bytes by outlining 12 instructions
+; CHECK: remark: <unknown>:0:0: Saved 48 bytes by outlining 14 instructions
 ; CHECK-SAME: from 2 locations. (Found at: <UNKNOWN LOCATION>,
 ; CHECK-SAME: <UNKNOWN LOCATION>)
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -o /dev/null -pass-remarks-missed=machine-outliner -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
+
+; For the YAML case, the function we pick depends on the order of the candidate
+; list.
 ; YAML: --- !Missed
 ; YAML-NEXT: Pass:            machine-outliner
 ; YAML-NEXT: Name:            NotOutliningCheaper
-; YAML-NEXT: Function:        dog
-; YAML-NEXT: Args:            
+; YAML-NEXT: Function:
+; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Did not outline '
 ; YAML-NEXT:   - Length:          '2'
 ; YAML-NEXT:   - String:          ' instructions'
@@ -21,7 +24,7 @@
 ; YAML-NEXT:   - NumOccurrences:  '2'
 ; YAML-NEXT:   - String:          ' locations.'
 ; YAML-NEXT:   - String:          ' Bytes from outlining all occurrences ('
-; YAML-NEXT:   - OutliningCost:   '36'
+; YAML-NEXT:   - OutliningCost:   '16'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT:   - String:          ' >= Unoutlined instruction bytes ('
 ; YAML-NEXT:   - NotOutliningCost: '16'
@@ -33,12 +36,12 @@
 ; YAML-NEXT: Pass:            machine-outliner
 ; YAML-NEXT: Name:            OutlinedFunction
 ; YAML-NEXT: Function:        OUTLINED_FUNCTION_0
-; YAML-NEXT: Args:            
+; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Saved '
-; YAML-NEXT:   - OutliningBenefit: '20'
+; YAML-NEXT:   - OutliningBenefit: '48'
 ; YAML-NEXT:   - String:          ' bytes by '
 ; YAML-NEXT:   - String:          'outlining '
-; YAML-NEXT:   - Length:          '12'
+; YAML-NEXT:   - Length:          '14'
 ; YAML-NEXT:   - String:          ' instructions '
 ; YAML-NEXT:   - String:          'from '
 ; YAML-NEXT:   - NumOccurrences:  '2'

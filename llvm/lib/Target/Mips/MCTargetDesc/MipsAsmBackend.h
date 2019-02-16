@@ -25,6 +25,7 @@ class MCAssembler;
 struct MCFixupKindInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
+class MCSymbolELF;
 class Target;
 
 class MipsAsmBackend : public MCAsmBackend {
@@ -90,6 +91,7 @@ public:
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;
 
+  bool isMicroMips(const MCSymbol *Sym) const override;
 }; // class MipsAsmBackend
 
 } // namespace

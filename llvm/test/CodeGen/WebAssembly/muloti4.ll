@@ -1,4 +1,4 @@
-; RUN: llc -asm-verbose=false < %s | FileCheck %s
+; RUN: llc -asm-verbose=false < %s -wasm-keep-registers | FileCheck %s
 
 ; Test that 128-bit smul.with.overflow assembles as expected.
 

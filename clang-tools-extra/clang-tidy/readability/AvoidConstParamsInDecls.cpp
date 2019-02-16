@@ -22,8 +22,8 @@ namespace {
 
 SourceRange getTypeRange(const ParmVarDecl &Param) {
   if (Param.getIdentifier() != nullptr)
-    return SourceRange(Param.getLocStart(),
-                       Param.getLocEnd().getLocWithOffset(-1));
+    return SourceRange(Param.getBeginLoc(),
+                       Param.getEndLoc().getLocWithOffset(-1));
   return Param.getSourceRange();
 }
 
@@ -82,7 +82,7 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
   if (!Param->getType().isLocalConstQualified())
     return;
 
-  auto Diag = diag(Param->getLocStart(),
+  auto Diag = diag(Param->getBeginLoc(),
                    "parameter %0 is const-qualified in the function "
                    "declaration; const-qualification of parameters only has an "
                    "effect in function definitions");
@@ -97,7 +97,7 @@ void AvoidConstParamsInDecls::check(const MatchFinder::MatchResult &Result) {
     Diag << Param;
   }
 
-  if (Param->getLocStart().isMacroID() != Param->getLocEnd().isMacroID()) {
+  if (Param->getBeginLoc().isMacroID() != Param->getEndLoc().isMacroID()) {
     // Do not offer a suggestion if the part of the variable declaration comes
     // from a macro.
     return;

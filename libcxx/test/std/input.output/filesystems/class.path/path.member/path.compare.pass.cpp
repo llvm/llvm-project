@@ -65,6 +65,8 @@ const PathCompareTest CompareTestCases[] =
     {"//foo//bar///baz////", "//foo/bar/baz/", 0}, // duplicate separators
     {"///foo/bar", "/foo/bar", 0}, // "///" is not a root directory
     {"/foo/bar/", "/foo/bar", 1}, // trailing separator
+    {"foo", "/foo", -1}, // if !this->has_root_directory() and p.has_root_directory(), a value less than 0.
+    {"/foo", "foo", 1}, //  if this->has_root_directory() and !p.has_root_directory(), a value greater than 0.
     {"//" LONGA "////" LONGB "/" LONGC "///" LONGD, "//" LONGA "/" LONGB "/" LONGC "/" LONGD, 0},
     { LONGA "/" LONGB "/" LONGC, LONGA "/" LONGB "/" LONGB, 1}
 
@@ -79,7 +81,7 @@ static inline int normalize_ret(int ret)
   return ret < 0 ? -1 : (ret > 0 ? 1 : 0);
 }
 
-int main()
+void test_compare_basic()
 {
   using namespace fs;
   for (auto const & TC : CompareTestCases) {
@@ -135,4 +137,55 @@ int main()
       ASSERT_NOEXCEPT(hash_value(p1));
     }
   }
+}
+
+int CompareElements(std::vector<std::string> const& LHS, std::vector<std::string> const& RHS) {
+  bool IsLess = std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
+  if (IsLess)
+    return -1;
+
+  bool IsGreater = std::lexicographical_compare(RHS.begin(), RHS.end(), LHS.begin(), LHS.end());
+  if (IsGreater)
+    return 1;
+
+  return 0;
+}
+
+void test_compare_elements() {
+  struct {
+    std::vector<std::string> LHSElements;
+    std::vector<std::string> RHSElements;
+    int Expect;
+  } TestCases[] = {
+      {{"a"}, {"a"}, 0},
+      {{"a"}, {"b"}, -1},
+      {{"b"}, {"a"}, 1},
+      {{"a", "b", "c"}, {"a", "b", "c"}, 0},
+      {{"a", "b", "c"}, {"a", "b", "d"}, -1},
+      {{"a", "b", "d"}, {"a", "b", "c"}, 1},
+      {{"a", "b"}, {"a", "b", "c"}, -1},
+      {{"a", "b", "c"}, {"a", "b"}, 1},
+
+  };
+
+  auto BuildPath = [](std::vector<std::string> const& Elems) {
+    fs::path p;
+    for (auto &E : Elems)
+      p /= E;
+    return p;
+  };
+
+  for (auto &TC : TestCases) {
+    fs::path LHS = BuildPath(TC.LHSElements);
+    fs::path RHS = BuildPath(TC.RHSElements);
+    const int ExpectCmp = CompareElements(TC.LHSElements, TC.RHSElements);
+    assert(ExpectCmp == TC.Expect);
+    const int GotCmp = normalize_ret(LHS.compare(RHS));
+    assert(GotCmp == TC.Expect);
+  }
+}
+
+int main() {
+  test_compare_basic();
+  test_compare_elements();
 }

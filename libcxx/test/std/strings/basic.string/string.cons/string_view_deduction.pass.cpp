@@ -72,6 +72,18 @@ int main()
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
     }
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    {
+    std::u8string_view sv = u8"12345678901234";
+    std::basic_string s1{sv, min_allocator<char8_t>{}};
+    using S = decltype(s1); // what type did we get?
+    static_assert(std::is_same_v<S::value_type,                      char8_t>,  "");
+    static_assert(std::is_same_v<S::traits_type,    std::char_traits<char8_t>>, "");
+    static_assert(std::is_same_v<S::allocator_type,    min_allocator<char8_t>>, "");
+    assert(s1.size() == sv.size());
+    assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
+    }
+#endif
     {
     std::u16string_view sv = u"12345678901234";
     std::basic_string s1{sv, min_allocator<char16_t>{}};

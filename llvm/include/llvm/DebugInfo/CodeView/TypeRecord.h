@@ -95,6 +95,11 @@ struct MemberAttributes {
     return MP == MethodKind::IntroducingVirtual ||
            MP == MethodKind::PureIntroducingVirtual;
   }
+
+  /// Is this method static.
+  bool isStatic() const {
+    return getMethodKind() == MethodKind::Static;
+  }
 };
 
 // Does not correspond to any tag, this is the tail of an LF_POINTER record
@@ -264,14 +269,18 @@ public:
 // LF_POINTER
 class PointerRecord : public TypeRecord {
 public:
+  // ---------------------------XXXXX
   static const uint32_t PointerKindShift = 0;
   static const uint32_t PointerKindMask = 0x1F;
 
+  // ------------------------XXX-----
   static const uint32_t PointerModeShift = 5;
   static const uint32_t PointerModeMask = 0x07;
 
-  static const uint32_t PointerOptionMask = 0xFF;
+  // ----------XXX------XXXXX--------
+  static const uint32_t PointerOptionMask = 0x381f00;
 
+  // -------------XXXXXX------------
   static const uint32_t PointerSizeShift = 13;
   static const uint32_t PointerSizeMask = 0xFF;
 
@@ -305,7 +314,7 @@ public:
   }
 
   PointerOptions getOptions() const {
-    return static_cast<PointerOptions>(Attrs);
+    return static_cast<PointerOptions>(Attrs & PointerOptionMask);
   }
 
   uint8_t getSize() const {
@@ -332,6 +341,14 @@ public:
 
   bool isRestrict() const {
     return !!(Attrs & uint32_t(PointerOptions::Restrict));
+  }
+
+  bool isLValueReferenceThisPtr() const {
+    return !!(Attrs & uint32_t(PointerOptions::LValueRefThisPointer));
+  }
+
+  bool isRValueReferenceThisPtr() const {
+    return !!(Attrs & uint32_t(PointerOptions::RValueRefThisPointer));
   }
 
   TypeIndex ReferentType;
@@ -427,6 +444,14 @@ public:
 
   bool isForwardRef() const {
     return (Options & ClassOptions::ForwardReference) != ClassOptions::None;
+  }
+
+  bool containsNestedClass() const {
+    return (Options & ClassOptions::ContainsNestedClass) != ClassOptions::None;
+  }
+
+  bool isScoped() const {
+    return (Options & ClassOptions::Scoped) != ClassOptions::None;
   }
 
   uint16_t getMemberCount() const { return MemberCount; }
@@ -655,7 +680,17 @@ public:
 
   ArrayRef<TypeIndex> getArgs() const { return ArgIndices; }
 
-  SmallVector<TypeIndex, 4> ArgIndices;
+  /// Indices of known build info arguments.
+  enum BuildInfoArg {
+    CurrentDirectory, ///< Absolute CWD path
+    BuildTool,        ///< Absolute compiler path
+    SourceFile,       ///< Path to main source file, relative or absolute
+    TypeServerPDB,    ///< Absolute path of type server PDB (/Fd)
+    CommandLine,      ///< Full canonical command line (maybe -cc1)
+    MaxArgs
+  };
+
+  SmallVector<TypeIndex, MaxArgs> ArgIndices;
 };
 
 // LF_VFTABLE
@@ -923,6 +958,7 @@ public:
 
   uint32_t Signature;
 };
+
 } // end namespace codeview
 } // end namespace llvm
 

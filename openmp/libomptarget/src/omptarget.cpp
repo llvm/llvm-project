@@ -25,6 +25,8 @@
 int DebugLevel = 0;
 #endif // OMPTARGET_DEBUG
 
+
+
 /* All begin addresses for partially mapped structs must be 8-aligned in order
  * to ensure proper alignment of members. E.g.
  *
@@ -212,7 +214,6 @@ static int32_t member_of(int64_t type) {
 int target_data_begin(DeviceTy &Device, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types) {
   // process each input.
-  int rc = OFFLOAD_SUCCESS;
   for (int32_t i = 0; i < arg_num; ++i) {
     // Ignore private variables and arrays - there is no mapping for them.
     if ((arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) ||
@@ -257,6 +258,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
       if (!Pointer_TgtPtrBegin) {
         DP("Call to getOrAllocTgtPtr returned null pointer (device failure or "
             "illegal mapping).\n");
+        return OFFLOAD_FAIL;
       }
       DP("There are %zu bytes allocated at target address " DPxMOD " - is%s new"
           "\n", sizeof(void *), DPxPTR(Pointer_TgtPtrBegin),
@@ -306,7 +308,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
         int rt = Device.data_submit(TgtPtrBegin, HstPtrBegin, data_size);
         if (rt != OFFLOAD_SUCCESS) {
           DP("Copying data to device failed.\n");
-          rc = OFFLOAD_FAIL;
+          return OFFLOAD_FAIL;
         }
       }
     }
@@ -320,7 +322,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
           sizeof(void *));
       if (rt != OFFLOAD_SUCCESS) {
         DP("Copying data to device failed.\n");
-        rc = OFFLOAD_FAIL;
+        return OFFLOAD_FAIL;
       }
       // create shadow pointers for this entry
       Device.ShadowMtx.lock();
@@ -330,13 +332,12 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
     }
   }
 
-  return rc;
+  return OFFLOAD_SUCCESS;
 }
 
 /// Internal function to undo the mapping and retrieve the data from the device.
 int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
     void **args, int64_t *arg_sizes, int64_t *arg_types) {
-  int rc = OFFLOAD_SUCCESS;
   // process each input.
   for (int32_t i = arg_num - 1; i >= 0; --i) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -404,7 +405,7 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
           int rt = Device.data_retrieve(HstPtrBegin, TgtPtrBegin, data_size);
           if (rt != OFFLOAD_SUCCESS) {
             DP("Copying data from device failed.\n");
-            rc = OFFLOAD_FAIL;
+            return OFFLOAD_FAIL;
           }
         }
       }
@@ -417,13 +418,15 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
       uintptr_t ub = (uintptr_t) HstPtrBegin + data_size;
       Device.ShadowMtx.lock();
       for (ShadowPtrListTy::iterator it = Device.ShadowPtrMap.begin();
-          it != Device.ShadowPtrMap.end(); ++it) {
+           it != Device.ShadowPtrMap.end();) {
         void **ShadowHstPtrAddr = (void**) it->first;
 
         // An STL map is sorted on its keys; use this property
         // to quickly determine when to break out of the loop.
-        if ((uintptr_t) ShadowHstPtrAddr < lb)
+        if ((uintptr_t) ShadowHstPtrAddr < lb) {
+          ++it;
           continue;
+        }
         if ((uintptr_t) ShadowHstPtrAddr >= ub)
           break;
 
@@ -437,7 +440,9 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
         // If the struct is to be deallocated, remove the shadow entry.
         if (DelEntry) {
           DP("Removing shadow pointer " DPxMOD "\n", DPxPTR(ShadowHstPtrAddr));
-          Device.ShadowPtrMap.erase(it);
+          it = Device.ShadowPtrMap.erase(it);
+        } else {
+          ++it;
         }
       }
       Device.ShadowMtx.unlock();
@@ -447,17 +452,17 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
         int rt = Device.deallocTgtPtr(HstPtrBegin, data_size, ForceDelete);
         if (rt != OFFLOAD_SUCCESS) {
           DP("Deallocating data from device failed.\n");
-          rc = OFFLOAD_FAIL;
+          return OFFLOAD_FAIL;
         }
       }
     }
   }
 
-  return rc;
+  return OFFLOAD_SUCCESS;
 }
 
 /// Internal function to pass data to/from the target.
-void target_data_update(DeviceTy &Device, int32_t arg_num,
+int target_data_update(DeviceTy &Device, int32_t arg_num,
     void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types) {
   // process each input.
   for (int32_t i = 0; i < arg_num; ++i) {
@@ -470,11 +475,19 @@ void target_data_update(DeviceTy &Device, int32_t arg_num,
     bool IsLast;
     void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, MapSize, IsLast,
         false);
+    if (!TgtPtrBegin) {
+      DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
+      continue;
+    }
 
     if (arg_types[i] & OMP_TGT_MAPTYPE_FROM) {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
           arg_sizes[i], DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-      Device.data_retrieve(HstPtrBegin, TgtPtrBegin, MapSize);
+      int rt = Device.data_retrieve(HstPtrBegin, TgtPtrBegin, MapSize);
+      if (rt != OFFLOAD_SUCCESS) {
+        DP("Copying data from device failed.\n");
+        return OFFLOAD_FAIL;
+      }
 
       uintptr_t lb = (uintptr_t) HstPtrBegin;
       uintptr_t ub = (uintptr_t) HstPtrBegin + MapSize;
@@ -497,8 +510,11 @@ void target_data_update(DeviceTy &Device, int32_t arg_num,
     if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
       DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
           arg_sizes[i], DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBegin));
-      Device.data_submit(TgtPtrBegin, HstPtrBegin, MapSize);
-
+      int rt = Device.data_submit(TgtPtrBegin, HstPtrBegin, MapSize);
+      if (rt != OFFLOAD_SUCCESS) {
+        DP("Copying data to device failed.\n");
+        return OFFLOAD_FAIL;
+      }
       uintptr_t lb = (uintptr_t) HstPtrBegin;
       uintptr_t ub = (uintptr_t) HstPtrBegin + MapSize;
       Device.ShadowMtx.lock();
@@ -512,12 +528,25 @@ void target_data_update(DeviceTy &Device, int32_t arg_num,
         DP("Restoring original target pointer value " DPxMOD " for target "
             "pointer " DPxMOD "\n", DPxPTR(it->second.TgtPtrVal),
             DPxPTR(it->second.TgtPtrAddr));
-        Device.data_submit(it->second.TgtPtrAddr,
+        rt = Device.data_submit(it->second.TgtPtrAddr,
             &it->second.TgtPtrVal, sizeof(void *));
+        if (rt != OFFLOAD_SUCCESS) {
+          DP("Copying data to device failed.\n");
+          Device.ShadowMtx.unlock();
+          return OFFLOAD_FAIL;
+        }
       }
       Device.ShadowMtx.unlock();
     }
   }
+  return OFFLOAD_SUCCESS;
+}
+
+static const unsigned LambdaMapping = OMP_TGT_MAPTYPE_PTR_AND_OBJ |
+                                      OMP_TGT_MAPTYPE_LITERAL |
+                                      OMP_TGT_MAPTYPE_IMPLICIT;
+static bool isLambdaMapping(int64_t Mapping) {
+  return (Mapping & LambdaMapping) == LambdaMapping;
 }
 
 /// performs the same actions as data_begin in case arg_num is
@@ -585,12 +614,8 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
   // Move data to device.
   int rc = target_data_begin(Device, arg_num, args_base, args, arg_sizes,
       arg_types);
-
   if (rc != OFFLOAD_SUCCESS) {
-    DP("Call to target_data_begin failed, skipping target execution.\n");
-    // Call target_data_end to dealloc whatever target_data_begin allocated
-    // and return OFFLOAD_FAIL.
-    target_data_end(Device, arg_num, args_base, args, arg_sizes, arg_types);
+    DP("Call to target_data_begin failed, abort target.\n");
     return OFFLOAD_FAIL;
   }
 
@@ -599,10 +624,45 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
   // List of (first-)private arrays allocated for this target region
   std::vector<void *> fpArrays;
+  std::vector<int> tgtArgsPositions(arg_num, -1);
 
   for (int32_t i = 0; i < arg_num; ++i) {
     if (!(arg_types[i] & OMP_TGT_MAPTYPE_TARGET_PARAM)) {
       // This is not a target parameter, do not push it into tgt_args.
+      // Check for lambda mapping.
+      if (isLambdaMapping(arg_types[i])) {
+        assert((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
+               "PTR_AND_OBJ must be also MEMBER_OF.");
+        unsigned idx = member_of(arg_types[i]);
+        int tgtIdx = tgtArgsPositions[idx];
+        assert(tgtIdx != -1 && "Base address must be translated already.");
+        // The parent lambda must be processed already and it must be the last
+        // in tgt_args and tgt_offsets arrays.
+        void *HstPtrVal = args[i];
+        void *HstPtrBegin = args_base[i];
+        void *HstPtrBase = args[idx];
+        bool IsLast; // unused.
+        void *TgtPtrBase =
+            (void *)((intptr_t)tgt_args[tgtIdx] + tgt_offsets[tgtIdx]);
+        DP("Parent lambda base " DPxMOD "\n", DPxPTR(TgtPtrBase));
+        uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
+        void *TgtPtrBegin = (void *)((uintptr_t)TgtPtrBase + Delta);
+        void *Pointer_TgtPtrBegin =
+            Device.getTgtPtrBegin(HstPtrVal, arg_sizes[i], IsLast, false);
+        if (!Pointer_TgtPtrBegin) {
+          DP("No lambda captured variable mapped (" DPxMOD ") - ignored\n",
+             DPxPTR(HstPtrVal));
+          continue;
+        }
+        DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
+           DPxPTR(Pointer_TgtPtrBegin), DPxPTR(TgtPtrBegin));
+        int rt = Device.data_submit(TgtPtrBegin, &Pointer_TgtPtrBegin,
+                                    sizeof(void *));
+        if (rt != OFFLOAD_SUCCESS) {
+          DP("Copying data to device failed.\n");
+          return OFFLOAD_FAIL;
+        }
+      }
       continue;
     }
     void *HstPtrBegin = args[i];
@@ -620,30 +680,28 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
       TgtPtrBegin = Device.RTL->data_alloc(Device.RTLDeviceID,
           arg_sizes[i], HstPtrBegin);
       if (!TgtPtrBegin) {
-        DP ("Data allocation for %sprivate array " DPxMOD " failed\n",
+        DP ("Data allocation for %sprivate array " DPxMOD " failed, "
+            "abort target.\n",
             (arg_types[i] & OMP_TGT_MAPTYPE_TO ? "first-" : ""),
             DPxPTR(HstPtrBegin));
-        rc = OFFLOAD_FAIL;
-        break;
-      } else {
-        fpArrays.push_back(TgtPtrBegin);
-        TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
+        return OFFLOAD_FAIL;
+      }
+      fpArrays.push_back(TgtPtrBegin);
+      TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
 #ifdef OMPTARGET_DEBUG
-        void *TgtPtrBase = (void *)((intptr_t)TgtPtrBegin + TgtBaseOffset);
-        DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD " for "
-            "%sprivate array " DPxMOD " - pushing target argument " DPxMOD "\n",
-            arg_sizes[i], DPxPTR(TgtPtrBegin),
-            (arg_types[i] & OMP_TGT_MAPTYPE_TO ? "first-" : ""),
-            DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBase));
+      void *TgtPtrBase = (void *)((intptr_t)TgtPtrBegin + TgtBaseOffset);
+      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD " for "
+          "%sprivate array " DPxMOD " - pushing target argument " DPxMOD "\n",
+          arg_sizes[i], DPxPTR(TgtPtrBegin),
+          (arg_types[i] & OMP_TGT_MAPTYPE_TO ? "first-" : ""),
+          DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBase));
 #endif
-        // If first-private, copy data from host
-        if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
-          int rt = Device.data_submit(TgtPtrBegin, HstPtrBegin, arg_sizes[i]);
-          if (rt != OFFLOAD_SUCCESS) {
-            DP ("Copying data to device failed.\n");
-            rc = OFFLOAD_FAIL;
-            break;
-          }
+      // If first-private, copy data from host
+      if (arg_types[i] & OMP_TGT_MAPTYPE_TO) {
+        int rt = Device.data_submit(TgtPtrBegin, HstPtrBegin, arg_sizes[i]);
+        if (rt != OFFLOAD_SUCCESS) {
+          DP ("Copying data to device failed, failed.\n");
+          return OFFLOAD_FAIL;
         }
       }
     } else if (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
@@ -663,6 +721,7 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
           DPxPTR(TgtPtrBase), DPxPTR(HstPtrBegin));
 #endif
     }
+    tgtArgsPositions[i] = tgt_args.size();
     tgt_args.push_back(TgtPtrBegin);
     tgt_offsets.push_back(TgtBaseOffset);
   }
@@ -675,21 +734,20 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
   Device.loopTripCnt = 0;
 
   // Launch device execution.
-  if (rc == OFFLOAD_SUCCESS) {
-    DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-        TargetTable->EntriesBegin[TM->Index].name,
-        DPxPTR(TargetTable->EntriesBegin[TM->Index].addr), TM->Index);
-    if (IsTeamConstruct) {
-      rc = Device.run_team_region(TargetTable->EntriesBegin[TM->Index].addr,
-          &tgt_args[0], &tgt_offsets[0], tgt_args.size(), team_num,
-          thread_limit, ltc);
-    } else {
-      rc = Device.run_region(TargetTable->EntriesBegin[TM->Index].addr,
-          &tgt_args[0], &tgt_offsets[0], tgt_args.size());
-    }
+  DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
+      TargetTable->EntriesBegin[TM->Index].name,
+      DPxPTR(TargetTable->EntriesBegin[TM->Index].addr), TM->Index);
+  if (IsTeamConstruct) {
+    rc = Device.run_team_region(TargetTable->EntriesBegin[TM->Index].addr,
+        &tgt_args[0], &tgt_offsets[0], tgt_args.size(), team_num,
+        thread_limit, ltc);
   } else {
-    DP("Errors occurred while obtaining target arguments, skipping kernel "
-        "execution\n");
+    rc = Device.run_region(TargetTable->EntriesBegin[TM->Index].addr,
+        &tgt_args[0], &tgt_offsets[0], tgt_args.size());
+  }
+  if (rc != OFFLOAD_SUCCESS) {
+    DP ("Executing target region abort target.\n");
+    return OFFLOAD_FAIL;
   }
 
   // Deallocate (first-)private arrays
@@ -697,18 +755,17 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
     int rt = Device.RTL->data_delete(Device.RTLDeviceID, it);
     if (rt != OFFLOAD_SUCCESS) {
       DP("Deallocation of (first-)private arrays failed.\n");
-      rc = OFFLOAD_FAIL;
+      return OFFLOAD_FAIL;
     }
   }
 
   // Move data from device.
   int rt = target_data_end(Device, arg_num, args_base, args, arg_sizes,
       arg_types);
-
   if (rt != OFFLOAD_SUCCESS) {
-    DP("Call to target_data_end failed.\n");
-    rc = OFFLOAD_FAIL;
+    DP("Call to target_data_end failed, abort targe.\n");
+    return OFFLOAD_FAIL;
   }
 
-  return rc;
+  return OFFLOAD_SUCCESS;
 }

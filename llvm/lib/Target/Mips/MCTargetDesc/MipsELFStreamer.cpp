@@ -15,6 +15,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -51,6 +52,22 @@ void MipsELFStreamer::EmitInstruction(const MCInst &Inst,
   }
 
   createPendingLabelRelocs();
+}
+
+void MipsELFStreamer::EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
+  Frame.Begin = getContext().createTempSymbol();
+  MCELFStreamer::EmitLabel(Frame.Begin);
+}
+
+MCSymbol *MipsELFStreamer::EmitCFILabel() {
+  MCSymbol *Label = getContext().createTempSymbol("cfi", true);
+  MCELFStreamer::EmitLabel(Label);
+  return Label;
+}
+
+void MipsELFStreamer::EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
+  Frame.End = getContext().createTempSymbol();
+  MCELFStreamer::EmitLabel(Frame.End);
 }
 
 void MipsELFStreamer::createPendingLabelRelocs() {

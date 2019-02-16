@@ -989,6 +989,7 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
     if (F->isDSOLocal()) {
       Function *RealF = Function::Create(F->getFunctionType(),
                                          GlobalValue::ExternalLinkage,
+                                         F->getAddressSpace(),
                                          Name + ".cfi", &M);
       RealF->setVisibility(GlobalVariable::HiddenVisibility);
       replaceDirectCalls(F, RealF);
@@ -1000,13 +1001,13 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
   if (F->isDeclarationForLinker() && !isDefinition) {
     // Declaration of an external function.
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
-                             Name + ".cfi_jt", &M);
+                             F->getAddressSpace(), Name + ".cfi_jt", &M);
     FDecl->setVisibility(GlobalValue::HiddenVisibility);
   } else if (isDefinition) {
     F->setName(Name + ".cfi");
     F->setLinkage(GlobalValue::ExternalLinkage);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
-                             Name, &M);
+                             F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
     Visibility = GlobalValue::HiddenVisibility;
 
@@ -1016,7 +1017,8 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
         Function *AliasDecl = Function::Create(
-            F->getFunctionType(), GlobalValue::ExternalLinkage, "", &M);
+            F->getFunctionType(), GlobalValue::ExternalLinkage,
+            F->getAddressSpace(), "", &M);
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
         ToErase.push_back(A);
@@ -1191,7 +1193,9 @@ void LowerTypeTestsModule::moveInitializerToModuleConstructor(
     WeakInitializerFn = Function::Create(
         FunctionType::get(Type::getVoidTy(M.getContext()),
                           /* IsVarArg */ false),
-        GlobalValue::InternalLinkage, "__cfi_global_var_init", &M);
+        GlobalValue::InternalLinkage,
+        M.getDataLayout().getProgramAddressSpace(),
+        "__cfi_global_var_init", &M);
     BasicBlock *BB =
         BasicBlock::Create(M.getContext(), "entry", WeakInitializerFn);
     ReturnInst::Create(M.getContext(), BB);
@@ -1234,7 +1238,8 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // placeholder first.
   Function *PlaceholderFn =
       Function::Create(cast<FunctionType>(F->getValueType()),
-                       GlobalValue::ExternalWeakLinkage, "", &M);
+                       GlobalValue::ExternalWeakLinkage,
+                       F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsDefinition);
 
   Constant *Target = ConstantExpr::getSelect(
@@ -1424,7 +1429,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
   Function *JumpTableFn =
       Function::Create(FunctionType::get(Type::getVoidTy(M.getContext()),
                                          /* IsVarArg */ false),
-                       GlobalValue::PrivateLinkage, ".cfi.jumptable", &M);
+                       GlobalValue::PrivateLinkage,
+                       M.getDataLayout().getProgramAddressSpace(),
+                       ".cfi.jumptable", &M);
   ArrayType *JumpTableType =
       ArrayType::get(getJumpTableEntryType(), Functions.size());
   auto JumpTable =
@@ -1813,7 +1820,8 @@ bool LowerTypeTestsModule::lower() {
         if (!F)
           F = Function::Create(
               FunctionType::get(Type::getVoidTy(M.getContext()), false),
-              GlobalVariable::ExternalLinkage, FunctionName, &M);
+              GlobalVariable::ExternalLinkage,
+              M.getDataLayout().getProgramAddressSpace(), FunctionName, &M);
 
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
@@ -1997,7 +2005,7 @@ bool LowerTypeTestsModule::lower() {
     }
     Sets.emplace_back(I, MaxUniqueId);
   }
-  llvm::sort(Sets.begin(), Sets.end(),
+  llvm::sort(Sets,
              [](const std::pair<GlobalClassesTy::iterator, unsigned> &S1,
                 const std::pair<GlobalClassesTy::iterator, unsigned> &S2) {
                return S1.second < S2.second;
@@ -2022,12 +2030,12 @@ bool LowerTypeTestsModule::lower() {
 
     // Order type identifiers by unique ID for determinism. This ordering is
     // stable as there is a one-to-one mapping between metadata and unique IDs.
-    llvm::sort(TypeIds.begin(), TypeIds.end(), [&](Metadata *M1, Metadata *M2) {
+    llvm::sort(TypeIds, [&](Metadata *M1, Metadata *M2) {
       return TypeIdInfo[M1].UniqueId < TypeIdInfo[M2].UniqueId;
     });
 
     // Same for the branch funnels.
-    llvm::sort(ICallBranchFunnels.begin(), ICallBranchFunnels.end(),
+    llvm::sort(ICallBranchFunnels,
                [&](ICallBranchFunnel *F1, ICallBranchFunnel *F2) {
                  return F1->UniqueId < F2->UniqueId;
                });

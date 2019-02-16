@@ -337,6 +337,10 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackOffset, true));
   }
 
+  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  if (Subtarget.hasCustomCallingConv())
+    Subtarget.getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
+
   // Move back to the end of the basic block.
   MIRBuilder.setMBB(MBB);
 
@@ -377,8 +381,14 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIB.add(Callee);
 
   // Tell the call which registers are clobbered.
-  auto TRI = MF.getSubtarget().getRegisterInfo();
-  MIB.addRegMask(TRI->getCallPreservedMask(MF, F.getCallingConv()));
+  auto TRI = MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, F.getCallingConv());
+  if (MF.getSubtarget<AArch64Subtarget>().hasCustomCallingConv())
+    TRI->UpdateCustomCallPreservedMask(MF, &Mask);
+  MIB.addRegMask(Mask);
+
+  if (TRI->isAnyArgRegReserved(MF))
+    TRI->emitReservedArgRegCallError(MF);
 
   // Do the actual argument marshalling.
   SmallVector<unsigned, 8> PhysRegs;

@@ -479,7 +479,7 @@ void Sema::buildLambdaScope(LambdaScopeInfo *LSI,
 
     if (!LSI->ReturnType->isDependentType() &&
         !LSI->ReturnType->isVoidType()) {
-      if (RequireCompleteType(CallOperator->getLocStart(), LSI->ReturnType,
+      if (RequireCompleteType(CallOperator->getBeginLoc(), LSI->ReturnType,
                               diag::err_lambda_incomplete_result)) {
         // Do nothing.
       }
@@ -493,7 +493,9 @@ void Sema::finishLambdaExplicitCaptures(LambdaScopeInfo *LSI) {
   LSI->finishedExplicitCaptures();
 }
 
-void Sema::addLambdaParameters(CXXMethodDecl *CallOperator, Scope *CurScope) {
+void Sema::addLambdaParameters(
+    ArrayRef<LambdaIntroducer::LambdaCapture> Captures,
+    CXXMethodDecl *CallOperator, Scope *CurScope) {
   // Introduce our parameters into the function scope
   for (unsigned p = 0, NumParams = CallOperator->getNumParams();
        p < NumParams; ++p) {
@@ -501,7 +503,19 @@ void Sema::addLambdaParameters(CXXMethodDecl *CallOperator, Scope *CurScope) {
 
     // If this has an identifier, add it to the scope stack.
     if (CurScope && Param->getIdentifier()) {
-      CheckShadow(CurScope, Param);
+      bool Error = false;
+      // Resolution of CWG 2211 in C++17 renders shadowing ill-formed, but we
+      // retroactively apply it.
+      for (const auto &Capture : Captures) {
+        if (Capture.Id == Param->getIdentifier()) {
+          Error = true;
+          Diag(Param->getLocation(), diag::err_parameter_shadow_capture);
+          Diag(Capture.Loc, diag::note_var_explicitly_captured_here)
+              << Capture.Id << true;
+        }
+      }
+      if (!Error)
+        CheckShadow(CurScope, Param);
 
       PushOnScopeChains(Param, CurScope);
     }
@@ -720,10 +734,9 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
 
     // FIXME: This is a poor diagnostic for ReturnStmts without expressions.
     // TODO: It's possible that the *first* return is the divergent one.
-    Diag(RS->getLocStart(),
+    Diag(RS->getBeginLoc(),
          diag::err_typecheck_missing_return_type_incompatible)
-      << ReturnType << CSI.ReturnType
-      << isa<LambdaScopeInfo>(CSI);
+        << ReturnType << CSI.ReturnType << isa<LambdaScopeInfo>(CSI);
     // Continue iterating so that we keep emitting diagnostics.
   }
 }
@@ -762,9 +775,9 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
   InitializationKind Kind =
       IsDirectInit
           ? (CXXDirectInit ? InitializationKind::CreateDirect(
-                                 Loc, Init->getLocStart(), Init->getLocEnd())
+                                 Loc, Init->getBeginLoc(), Init->getEndLoc())
                            : InitializationKind::CreateDirectList(Loc))
-          : InitializationKind::CreateCopy(Loc, Init->getLocStart());
+          : InitializationKind::CreateCopy(Loc, Init->getBeginLoc());
 
   MultiExprArg Args = Init;
   if (CXXDirectInit)
@@ -774,16 +787,6 @@ QualType Sema::buildLambdaInitCaptureInitialization(SourceLocation Loc,
   InitializationSequence InitSeq(*this, Entity, Kind, Args);
   ExprResult Result = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
 
-  if (Result.isInvalid())
-    return QualType();
-  Init = Result.getAs<Expr>();
-
-  // The init-capture initialization is a full-expression that must be
-  // processed as one before we enter the declcontext of the lambda's
-  // call-operator.
-  Result = ActOnFinishFullExpr(Init, Loc, /*DiscardedValue*/ false,
-                               /*IsConstexpr*/ false,
-                               /*IsLambdaInitCaptureInitializer*/ true);
   if (Result.isInvalid())
     return QualType();
 
@@ -856,7 +859,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     FunctionProtoType::ExtProtoInfo EPI(Context.getDefaultCallingConvention(
         /*IsVariadic=*/false, /*IsCXXMethod=*/true));
     EPI.HasTrailingReturn = true;
-    EPI.TypeQuals |= DeclSpec::TQ_const;
+    EPI.TypeQuals.addConst();
     // C++1y [expr.prim.lambda]:
     //   The lambda return type is 'auto', which is replaced by the
     //   trailing-return type if provided and/or deduced from 'return'
@@ -1153,7 +1156,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   LSI->ContainsUnexpandedParameterPack = ContainsUnexpandedParameterPack;
 
   // Add lambda parameters into scope.
-  addLambdaParameters(Method, CurScope);
+  addLambdaParameters(Intro.Captures, Method, CurScope);
 
   // Enter a new evaluation context to insulate the lambda from any
   // cleanups from the enclosing full-expression.
@@ -1195,7 +1198,7 @@ QualType Sema::getLambdaConversionFunctionResultType(
   CallingConv CC = Context.getDefaultCallingConvention(
       CallOpProto->isVariadic(), /*IsCXXMethod=*/false);
   InvokerExtInfo.ExtInfo = InvokerExtInfo.ExtInfo.withCallingConv(CC);
-  InvokerExtInfo.TypeQuals = 0;
+  InvokerExtInfo.TypeQuals = Qualifiers();
   assert(InvokerExtInfo.RefQualifier == RQ_None &&
       "Lambda's call operator should not have a reference qualifier");
   return Context.getFunctionType(CallOpProto->getReturnType(),
@@ -1226,7 +1229,8 @@ static void addFunctionPointerConversion(Sema &S,
       S.Context.getDefaultCallingConvention(
       /*IsVariadic=*/false, /*IsCXXMethod=*/true));
   // The conversion function is always const.
-  ConvExtInfo.TypeQuals = Qualifiers::Const;
+  ConvExtInfo.TypeQuals = Qualifiers();
+  ConvExtInfo.TypeQuals.addConst();
   QualType ConvTy =
       S.Context.getFunctionType(PtrToFunctionTy, None, ConvExtInfo);
 
@@ -1286,29 +1290,23 @@ static void addFunctionPointerConversion(Sema &S,
   for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I) {
     ParmVarDecl *From = CallOperator->getParamDecl(I);
 
-    InvokerParams.push_back(ParmVarDecl::Create(S.Context,
-           // Temporarily add to the TU. This is set to the invoker below.
-                                             S.Context.getTranslationUnitDecl(),
-                                             From->getLocStart(),
-                                             From->getLocation(),
-                                             From->getIdentifier(),
-                                             From->getType(),
-                                             From->getTypeSourceInfo(),
-                                             From->getStorageClass(),
-                                             /*DefaultArg=*/nullptr));
+    InvokerParams.push_back(ParmVarDecl::Create(
+        S.Context,
+        // Temporarily add to the TU. This is set to the invoker below.
+        S.Context.getTranslationUnitDecl(), From->getBeginLoc(),
+        From->getLocation(), From->getIdentifier(), From->getType(),
+        From->getTypeSourceInfo(), From->getStorageClass(),
+        /*DefaultArg=*/nullptr));
     CallOpConvTL.setParam(I, From);
     CallOpConvNameTL.setParam(I, From);
   }
 
-  CXXConversionDecl *Conversion
-    = CXXConversionDecl::Create(S.Context, Class, Loc,
-                                DeclarationNameInfo(ConversionName,
-                                  Loc, ConvNameLoc),
-                                ConvTy,
-                                ConvTSI,
-                                /*isInline=*/true, /*isExplicit=*/false,
-                                /*isConstexpr=*/S.getLangOpts().CPlusPlus17,
-                                CallOperator->getBody()->getLocEnd());
+  CXXConversionDecl *Conversion = CXXConversionDecl::Create(
+      S.Context, Class, Loc,
+      DeclarationNameInfo(ConversionName, Loc, ConvNameLoc), ConvTy, ConvTSI,
+      /*isInline=*/true, /*isExplicit=*/false,
+      /*isConstexpr=*/S.getLangOpts().CPlusPlus17,
+      CallOperator->getBody()->getEndLoc());
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);
 
@@ -1343,14 +1341,11 @@ static void addFunctionPointerConversion(Sema &S,
   // trailing return type of the invoker would require a visitor to rebuild
   // the trailing return type and adjusting all back DeclRefExpr's to refer
   // to the new static invoker parameters - not the call operator's.
-  CXXMethodDecl *Invoke
-    = CXXMethodDecl::Create(S.Context, Class, Loc,
-                            DeclarationNameInfo(InvokerName, Loc),
-                            InvokerFunctionTy,
-                            CallOperator->getTypeSourceInfo(),
-                            SC_Static, /*IsInline=*/true,
-                            /*IsConstexpr=*/false,
-                            CallOperator->getBody()->getLocEnd());
+  CXXMethodDecl *Invoke = CXXMethodDecl::Create(
+      S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
+      InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
+      /*IsInline=*/true,
+      /*IsConstexpr=*/false, CallOperator->getBody()->getEndLoc());
   for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
     InvokerParams[I]->setOwningFunction(Invoke);
   Invoke->setParams(InvokerParams);
@@ -1383,7 +1378,8 @@ static void addBlockPointerConversion(Sema &S,
   FunctionProtoType::ExtProtoInfo ConversionEPI(
       S.Context.getDefaultCallingConvention(
           /*IsVariadic=*/false, /*IsCXXMethod=*/true));
-  ConversionEPI.TypeQuals = Qualifiers::Const;
+  ConversionEPI.TypeQuals = Qualifiers();
+  ConversionEPI.TypeQuals.addConst();
   QualType ConvTy = S.Context.getFunctionType(BlockPtrTy, None, ConversionEPI);
 
   SourceLocation Loc = IntroducerRange.getBegin();
@@ -1392,26 +1388,24 @@ static void addBlockPointerConversion(Sema &S,
         S.Context.getCanonicalType(BlockPtrTy));
   DeclarationNameLoc NameLoc;
   NameLoc.NamedType.TInfo = S.Context.getTrivialTypeSourceInfo(BlockPtrTy, Loc);
-  CXXConversionDecl *Conversion
-    = CXXConversionDecl::Create(S.Context, Class, Loc,
-                                DeclarationNameInfo(Name, Loc, NameLoc),
-                                ConvTy,
-                                S.Context.getTrivialTypeSourceInfo(ConvTy, Loc),
-                                /*isInline=*/true, /*isExplicit=*/false,
-                                /*isConstexpr=*/false,
-                                CallOperator->getBody()->getLocEnd());
+  CXXConversionDecl *Conversion = CXXConversionDecl::Create(
+      S.Context, Class, Loc, DeclarationNameInfo(Name, Loc, NameLoc), ConvTy,
+      S.Context.getTrivialTypeSourceInfo(ConvTy, Loc),
+      /*isInline=*/true, /*isExplicit=*/false,
+      /*isConstexpr=*/false, CallOperator->getBody()->getEndLoc());
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);
   Class->addDecl(Conversion);
 }
 
-static ExprResult performLambdaVarCaptureInitialization(Sema &S,
-                                                        const Capture &Capture,
-                                                        FieldDecl *Field) {
+static ExprResult performLambdaVarCaptureInitialization(
+    Sema &S, const Capture &Capture, FieldDecl *Field,
+    SourceLocation ImplicitCaptureLoc, bool IsImplicitCapture) {
   assert(Capture.isVariableCapture() && "not a variable capture");
 
   auto *Var = Capture.getVariable();
-  SourceLocation Loc = Capture.getLocation();
+  SourceLocation Loc =
+      IsImplicitCapture ? ImplicitCaptureLoc : Capture.getLocation();
 
   // C++11 [expr.prim.lambda]p21:
   //   When the lambda-expression is evaluated, the entities that
@@ -1442,7 +1436,7 @@ ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
                                  Scope *CurScope) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
-  return BuildLambdaExpr(StartLoc, Body->getLocEnd(), &LSI);
+  return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
 }
 
 static LambdaCaptureDefault
@@ -1620,8 +1614,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                        Var, From.getEllipsisLoc()));
       Expr *Init = From.getInitExpr();
       if (!Init) {
-        auto InitResult =
-            performLambdaVarCaptureInitialization(*this, From, *CurField);
+        auto InitResult = performLambdaVarCaptureInitialization(
+            *this, From, *CurField, CaptureDefaultLoc, IsImplicit);
         if (InitResult.isInvalid())
           return ExprError();
         Init = InitResult.get();
@@ -1644,7 +1638,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     //   same parameter and return types as the closure type's function call
     //   operator.
     // FIXME: Fix generic lambda to block conversions.
-    if (getLangOpts().Blocks && getLangOpts().ObjC1 && !IsGenericLambda)
+    if (getLangOpts().Blocks && getLangOpts().ObjC && !IsGenericLambda)
       addBlockPointerConversion(*this, IntroducerRange, Class, CallOperator);
 
     // Finalize the lambda class.
@@ -1747,14 +1741,11 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   SmallVector<ParmVarDecl *, 4> BlockParams;
   for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I) {
     ParmVarDecl *From = CallOperator->getParamDecl(I);
-    BlockParams.push_back(ParmVarDecl::Create(Context, Block,
-                                              From->getLocStart(),
-                                              From->getLocation(),
-                                              From->getIdentifier(),
-                                              From->getType(),
-                                              From->getTypeSourceInfo(),
-                                              From->getStorageClass(),
-                                              /*DefaultArg=*/nullptr));
+    BlockParams.push_back(ParmVarDecl::Create(
+        Context, Block, From->getBeginLoc(), From->getLocation(),
+        From->getIdentifier(), From->getType(), From->getTypeSourceInfo(),
+        From->getStorageClass(),
+        /*DefaultArg=*/nullptr));
   }
   Block->setParams(BlockParams);
 

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="llvm.d29c51f0-961f-4e20-aad6-356af569907f" Version="1.0" Language="en-US" Publisher="The LLVM Foundation" />
+        <Identity Id="llvm.d29c51f0-961f-4e20-aad6-356af569907f" Version="1.0.340780" Language="en-US" Publisher="LLVM Extensions" />
         <DisplayName>LLVM Compiler Toolchain</DisplayName>
         <Description xml:space="preserve">Allows the LLVM Compiler Toolchain (installed separately) to be used from within Visual Studio to build C/C++ Projects.</Description>
         <License>license.txt</License>
     </Metadata>
     <Installation AllUsers="true">
-        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[14.0,16.0)" />
-        <InstallationTarget Version="[14.0,16.0)" Id="Microsoft.VisualStudio.Pro" />
-        <InstallationTarget Version="[14.0,16.0)" Id="Microsoft.VisualStudio.Enterprise" />
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[15.0,16.0)" />
+        <InstallationTarget Version="[15.0,16.0)" Id="Microsoft.VisualStudio.Pro" />
+        <InstallationTarget Version="[15.0,16.0)" Id="Microsoft.VisualStudio.Enterprise" />
     </Installation>
     <Dependencies>
         <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />

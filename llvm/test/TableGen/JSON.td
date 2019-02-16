@@ -1,4 +1,4 @@
-// RUN: llvm-tblgen -dump-json %s | '%python' %S/JSON-check.py %s
+// RUN: llvm-tblgen -dump-json %s | %python %S/JSON-check.py %s
 
 // CHECK: data['!tablegen_json_version'] == 1
 
