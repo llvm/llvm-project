@@ -98,6 +98,10 @@ Improvements to clang-tidy
   `CommentUserDefiniedLiterals`, `CommentStringLiterals`,
   `CommentCharacterLiterals` & `CommentNullPtrs` options.
 
+- The `Acronyms` and `IncludeDefaultAcronyms` options for the
+  :doc:`objc-property-declaration <clang-tidy/checks/objc-property-declaration>`
+  check have been removed.
+
 Improvements to include-fixer
 -----------------------------
 

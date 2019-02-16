@@ -491,16 +491,15 @@ TEST(MatcherCXXMemberCallExpr, On) {
   EXPECT_TRUE(matches(Snippet2, MatchesX));
 
   // Parens are ignored.
+  auto Snippet3 = R"cc(
+    struct Y {
+      void m();
+    };
+    Y g();
+    void z(Y y) { (g()).m(); }
+  )cc";
   auto MatchesCall = cxxMemberCallExpr(on(callExpr()));
-  EXPECT_TRUE(matches(
-      R"cc(
-        struct Y {
-          void m();
-        };
-        Y g();
-        void z(Y y) { (g()).m(); }
-      )cc",
-      MatchesCall));
+  EXPECT_TRUE(matches(Snippet3, MatchesCall));
 }
 
 TEST(MatcherCXXMemberCallExpr, OnImplicitObjectArgument) {
@@ -527,16 +526,15 @@ TEST(MatcherCXXMemberCallExpr, OnImplicitObjectArgument) {
   EXPECT_TRUE(notMatches(Snippet2, MatchesX));
 
   // Parens are not ignored.
+  auto Snippet3 = R"cc(
+    struct Y {
+      void m();
+    };
+    Y g();
+    void z(Y y) { (g()).m(); }
+  )cc";
   auto MatchesCall = cxxMemberCallExpr(onImplicitObjectArgument(callExpr()));
-  EXPECT_TRUE(notMatches(
-      R"cc(
-        struct Y {
-          void m();
-        };
-        Y g();
-        void z(Y y) { (g()).m(); }
-      )cc",
-      MatchesCall));
+  EXPECT_TRUE(notMatches(Snippet3, MatchesCall));
 }
 
 TEST(Matcher, HasObjectExpr) {
