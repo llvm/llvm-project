@@ -12,7 +12,7 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-8, %esp
-; CHECK-NEXT:    subl $32, %esp
+; CHECK-NEXT:    subl $40, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %ebx
 ; CHECK-NEXT:    movl 8(%ebx), %esi
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -52,9 +52,9 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    fmuls {{\.LCPI.*}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movw $3199, {{[0-9]+}}(%esp) # imm = 0xC7F
-; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movb $1, 36(%ebx)
@@ -63,15 +63,15 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    fldl 28(%ebx)
 ; CHECK-NEXT:    fmuls {{\.LCPI.*}}
-; CHECK-NEXT:    fnstcw (%esp)
-; CHECK-NEXT:    movzwl (%esp), %eax
-; CHECK-NEXT:    movw $3199, (%esp) # imm = 0xC7F
-; CHECK-NEXT:    fldcw (%esp)
-; CHECK-NEXT:    movw %ax, (%esp)
+; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
+; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fldcw (%esp)
+; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx

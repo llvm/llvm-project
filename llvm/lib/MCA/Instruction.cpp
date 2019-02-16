@@ -127,7 +127,8 @@ void Instruction::dispatch(unsigned RCUToken) {
   RCUTokenID = RCUToken;
 
   // Check if input operands are already available.
-  update();
+  if (updateDispatched())
+    updatePending();
 }
 
 void Instruction::execute() {

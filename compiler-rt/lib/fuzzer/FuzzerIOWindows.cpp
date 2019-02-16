@@ -141,7 +141,7 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
 }
 
 
-void IterateDirRecurisve(const std::string &Dir,
+void IterateDirRecursive(const std::string &Dir,
                          void (*DirPreCallback)(const std::string &Dir),
                          void (*DirPostCallback)(const std::string &Dir),
                          void (*FileCallback)(const std::string &Dir)) {

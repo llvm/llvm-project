@@ -4239,7 +4239,8 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 /// FIXME: This should be turned into a TSFlags.
 ///
 static bool hasPartialRegUpdate(unsigned Opcode,
-                                const X86Subtarget &Subtarget) {
+                                const X86Subtarget &Subtarget,
+                                bool ForLoadFold = false) {
   switch (Opcode) {
   case X86::CVTSI2SSrr:
   case X86::CVTSI2SSrm:
@@ -4249,6 +4250,9 @@ static bool hasPartialRegUpdate(unsigned Opcode,
   case X86::CVTSI2SDrm:
   case X86::CVTSI642SDrr:
   case X86::CVTSI642SDrm:
+    // Load folding won't effect the undef register update since the input is
+    // a GPR.
+    return !ForLoadFold;
   case X86::CVTSD2SSrr:
   case X86::CVTSD2SSrm:
   case X86::CVTSS2SDrr:
@@ -4325,7 +4329,7 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
 
 // Return true for any instruction the copies the high bits of the first source
 // operand into the unused high bits of the destination operand.
-static bool hasUndefRegUpdate(unsigned Opcode) {
+static bool hasUndefRegUpdate(unsigned Opcode, bool ForLoadFold = false) {
   switch (Opcode) {
   case X86::VCVTSI2SSrr:
   case X86::VCVTSI2SSrm:
@@ -4343,38 +4347,6 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTSI642SDrm:
   case X86::VCVTSI642SDrr_Int:
   case X86::VCVTSI642SDrm_Int:
-  case X86::VCVTSD2SSrr:
-  case X86::VCVTSD2SSrm:
-  case X86::VCVTSD2SSrr_Int:
-  case X86::VCVTSD2SSrm_Int:
-  case X86::VCVTSS2SDrr:
-  case X86::VCVTSS2SDrm:
-  case X86::VCVTSS2SDrr_Int:
-  case X86::VCVTSS2SDrm_Int:
-  case X86::VRCPSSr:
-  case X86::VRCPSSr_Int:
-  case X86::VRCPSSm:
-  case X86::VRCPSSm_Int:
-  case X86::VROUNDSDr:
-  case X86::VROUNDSDm:
-  case X86::VROUNDSDr_Int:
-  case X86::VROUNDSDm_Int:
-  case X86::VROUNDSSr:
-  case X86::VROUNDSSm:
-  case X86::VROUNDSSr_Int:
-  case X86::VROUNDSSm_Int:
-  case X86::VRSQRTSSr:
-  case X86::VRSQRTSSr_Int:
-  case X86::VRSQRTSSm:
-  case X86::VRSQRTSSm_Int:
-  case X86::VSQRTSSr:
-  case X86::VSQRTSSr_Int:
-  case X86::VSQRTSSm:
-  case X86::VSQRTSSm_Int:
-  case X86::VSQRTSDr:
-  case X86::VSQRTSDr_Int:
-  case X86::VSQRTSDm:
-  case X86::VSQRTSDm_Int:
   // AVX-512
   case X86::VCVTSI2SSZrr:
   case X86::VCVTSI2SSZrm:
@@ -4415,6 +4387,42 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTUSI642SDZrr_Int:
   case X86::VCVTUSI642SDZrrb_Int:
   case X86::VCVTUSI642SDZrm_Int:
+    // Load folding won't effect the undef register update since the input is
+    // a GPR.
+    return !ForLoadFold;
+  case X86::VCVTSD2SSrr:
+  case X86::VCVTSD2SSrm:
+  case X86::VCVTSD2SSrr_Int:
+  case X86::VCVTSD2SSrm_Int:
+  case X86::VCVTSS2SDrr:
+  case X86::VCVTSS2SDrm:
+  case X86::VCVTSS2SDrr_Int:
+  case X86::VCVTSS2SDrm_Int:
+  case X86::VRCPSSr:
+  case X86::VRCPSSr_Int:
+  case X86::VRCPSSm:
+  case X86::VRCPSSm_Int:
+  case X86::VROUNDSDr:
+  case X86::VROUNDSDm:
+  case X86::VROUNDSDr_Int:
+  case X86::VROUNDSDm_Int:
+  case X86::VROUNDSSr:
+  case X86::VROUNDSSm:
+  case X86::VROUNDSSr_Int:
+  case X86::VROUNDSSm_Int:
+  case X86::VRSQRTSSr:
+  case X86::VRSQRTSSr_Int:
+  case X86::VRSQRTSSm:
+  case X86::VRSQRTSSm_Int:
+  case X86::VSQRTSSr:
+  case X86::VSQRTSSr_Int:
+  case X86::VSQRTSSm:
+  case X86::VSQRTSSm_Int:
+  case X86::VSQRTSDr:
+  case X86::VSQRTSDr_Int:
+  case X86::VSQRTSDm:
+  case X86::VSQRTSDm_Int:
+  // AVX-512
   case X86::VCVTSD2SSZrr:
   case X86::VCVTSD2SSZrr_Int:
   case X86::VCVTSD2SSZrrb_Int:
@@ -4735,8 +4743,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
   return nullptr;
 }
 
-static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF, MachineInstr &MI) {
-  if (MF.getFunction().optForSize() || !hasUndefRegUpdate(MI.getOpcode()) ||
+static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF,
+                                               MachineInstr &MI) {
+  if (!hasUndefRegUpdate(MI.getOpcode(), /*ForLoadFold*/true) ||
       !MI.getOperand(1).isReg())
     return false;
 
@@ -4772,7 +4781,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
@@ -4940,7 +4949,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
@@ -5140,7 +5149,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 

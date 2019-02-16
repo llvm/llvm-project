@@ -65,7 +65,7 @@ void RmDirRecursive(const std::string &Dir);
 // Iterate files and dirs inside Dir, recursively.
 // Call DirPreCallback/DirPostCallback on dirs before/after
 // calling FileCallback on files.
-void IterateDirRecurisve(const std::string &Dir,
+void IterateDirRecursive(const std::string &Dir,
                          void (*DirPreCallback)(const std::string &Dir),
                          void (*DirPostCallback)(const std::string &Dir),
                          void (*FileCallback)(const std::string &Dir));
