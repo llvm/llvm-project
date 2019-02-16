@@ -19,6 +19,7 @@
 #include <atomic>
 #include <chrono>
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <sstream>
@@ -67,6 +68,12 @@ struct FuzzJob {
 
   // Fuzzing Outputs.
   int ExitCode;
+
+  ~FuzzJob() {
+    RemoveFile(CFPath);
+    RemoveFile(LogPath);
+    RmDirRecursive(CorpusDir);
+  }
 };
 
 struct GlobalEnv {
@@ -141,14 +148,12 @@ struct GlobalEnv {
     Set<uint32_t> NewFeatures, NewCov;
     CrashResistantMerge(Args, {}, TempFiles, &FilesToAdd, Features,
                         &NewFeatures, Cov, &NewCov, Job->CFPath, false);
-    RemoveFile(Job->CFPath);
     for (auto &Path : FilesToAdd) {
       auto U = FileToVector(Path);
       auto NewPath = DirPlusFile(MainCorpusDir, Hash(U));
       WriteToFile(U, NewPath);
       Files.push_back(NewPath);
     }
-    RmDirRecursive(Job->CorpusDir);
     Features.insert(NewFeatures.begin(), NewFeatures.end());
     Cov.insert(NewCov.begin(), NewCov.end());
     for (auto Idx : NewCov)
@@ -246,7 +251,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   }
 
   while (true) {
-    auto Job = MergeQ.Pop();
+    std::unique_ptr<FuzzJob> Job(MergeQ.Pop());
     if (!Job) {
       if (Stop)
         break;
@@ -254,16 +259,19 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
       continue;
     }
     ExitCode = Job->ExitCode;
-    if (ExitCode != Options.InterruptExitCode)
-      Env.RunOneMergeJob(Job);
+    if (ExitCode == Options.InterruptExitCode) {
+      Printf("==%lu== libFuzzer: a child was interrupted; exiting\n", GetPid());
+      Stop = true;
+      break;
+    }
+
+    Env.RunOneMergeJob(Job.get());
 
     // Continue if our crash is one of the ignorred ones.
     if (Options.IgnoreTimeouts && ExitCode == Options.TimeoutExitCode)
       Env.NumTimeouts++;
     else if (Options.IgnoreOOMs && ExitCode == Options.OOMExitCode)
       Env.NumOOMs++;
-    else if (ExitCode == Options.InterruptExitCode)
-      Stop = true;
     else if (ExitCode != 0) {
       Env.NumCrashes++;
       if (Options.IgnoreCrashes) {
@@ -279,8 +287,6 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
         Stop = true;
       }
     }
-    RemoveFile(Job->LogPath);
-    delete Job;
 
     // Stop if we are over the time budget.
     // This is not precise, since other threads are still running
@@ -298,10 +304,12 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   }
   Stop = true;
 
+  // The workers have already finished doing useful work, or
+  // we were interrupted. Either way, cleanup up now.
+  RmDirRecursive(Env.TempDir);
+
   for (auto &T : Threads)
     T.join();
-
-  RmDirRecursive(Env.TempDir);
 
   // Use the exit code from the last child process.
   Printf("INFO: exiting: %d time: %zds\n", ExitCode,

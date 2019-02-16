@@ -1,0 +1,15 @@
+# Check that libFuzzer honors SIGUSR1/SIGUSR2
+# FIXME: Disabled on Windows for now because of reliance on posix only features
+# (eg: export, "&", pkill).
+UNSUPPORTED: darwin, windows
+RUN: rm -rf %t
+RUN: mkdir -p %t
+RUN: %cpp_compiler %S/ShallowOOMDeepCrash.cpp -o %t/ForkSIGUSR
+
+RUN: %run %t/ForkSIGUSR -fork=3 -rss_limit_mb=128 -ignore_crashes=1 2>  %t/log & export PID=$!
+RUN: sleep 3
+RUN: pkill -SIGUSR2 -f %t/ForkSIGUSR
+RUN: sleep 3
+RUN: cat %t/log | FileCheck %s
+
+CHECK: libFuzzer: {{.*}}exiting
