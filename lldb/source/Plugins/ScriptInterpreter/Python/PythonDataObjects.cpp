@@ -77,6 +77,8 @@ PyObjectType PythonObject::GetObjectType() const {
 #endif
   if (PythonByteArray::Check(m_py_obj))
     return PyObjectType::ByteArray;
+  if (PythonBoolean::Check(m_py_obj))
+    return PyObjectType::Boolean;
   if (PythonInteger::Check(m_py_obj))
     return PyObjectType::Integer;
   if (PythonFile::Check(m_py_obj))
@@ -178,6 +180,9 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   case PyObjectType::Dictionary:
     return PythonDictionary(PyRefType::Borrowed, m_py_obj)
         .CreateStructuredDictionary();
+  case PyObjectType::Boolean:
+    return PythonBoolean(PyRefType::Borrowed, m_py_obj)
+        .CreateStructuredBoolean();
   case PyObjectType::Integer:
     return PythonInteger(PyRefType::Borrowed, m_py_obj)
         .CreateStructuredInteger();
@@ -522,6 +527,55 @@ void PythonInteger::SetInteger(int64_t value) {
 StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
   StructuredData::IntegerSP result(new StructuredData::Integer);
   result->SetValue(GetInteger());
+  return result;
+}
+
+//----------------------------------------------------------------------
+// PythonBoolean
+//----------------------------------------------------------------------
+
+PythonBoolean::PythonBoolean(PyRefType type, PyObject *py_obj)
+    : PythonObject() {
+  Reset(type, py_obj); // Use "Reset()" to ensure that py_obj is a boolean type
+}
+
+PythonBoolean::PythonBoolean(const PythonBoolean &object)
+    : PythonObject(object) {}
+
+PythonBoolean::PythonBoolean(bool value) {
+  SetValue(value);
+}
+
+bool PythonBoolean::Check(PyObject *py_obj) {
+  return py_obj ? PyBool_Check(py_obj) : false;
+}
+
+void PythonBoolean::Reset(PyRefType type, PyObject *py_obj) {
+  // Grab the desired reference type so that if we end up rejecting `py_obj` it
+  // still gets decremented if necessary.
+  PythonObject result(type, py_obj);
+
+  if (!PythonBoolean::Check(py_obj)) {
+    PythonObject::Reset();
+    return;
+  }
+
+  // Calling PythonObject::Reset(const PythonObject&) will lead to stack
+  // overflow since it calls back into the virtual implementation.
+  PythonObject::Reset(PyRefType::Borrowed, result.get());
+}
+
+bool PythonBoolean::GetValue() const {
+  return m_py_obj ? PyObject_IsTrue(m_py_obj) : false;
+}
+
+void PythonBoolean::SetValue(bool value) {
+  PythonObject::Reset(PyRefType::Owned, PyBool_FromLong(value));
+}
+
+StructuredData::BooleanSP PythonBoolean::CreateStructuredBoolean() const {
+  StructuredData::BooleanSP result(new StructuredData::Boolean);
+  result->SetValue(GetValue());
   return result;
 }
 

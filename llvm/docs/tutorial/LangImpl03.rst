@@ -275,7 +275,7 @@ with:
         FunctionType::get(Type::getDoubleTy(TheContext), Doubles, false);
 
       Function *F =
-        Function::Create(FT, Function::ExternalLinkage, Name, TheModule);
+        Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
 
 This code packs a lot of power into a few lines. Note first that this
 function returns a "Function\*" instead of a "Value\*". Because a
