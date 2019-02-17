@@ -1,8 +1,8 @@
 // Test that verifies TSan runtime doesn't contain compiler-emitted
-// memcpy/memmove calls. It builds the binary with TSan and passes it to
-// check_memcpy.sh script.
+// memcpy/memmove calls. It builds the binary with TSan and check's
+// its objdump.
 
-// RUN: %clangxx_tsan -O1 %s -o %t
+// RUN: %clang_tsan -O1 %s -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
 
 // REQUIRES: compiler-rt-optimized
