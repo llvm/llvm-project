@@ -794,7 +794,7 @@ public:
   /// IgnoreParens() + IgnoreImpCasts() until reaching a fixed point. However
   /// this is currently not the case. Instead IgnoreParenImpCasts() skips:
   /// * What IgnoreParens() skips
-  /// * ImplicitCastExpr
+  /// * What IgnoreImpCasts() skips
   /// * MaterializeTemporaryExpr
   /// * SubstNonTypeTemplateParmExpr
   Expr *IgnoreParenImpCasts() LLVM_READONLY;
