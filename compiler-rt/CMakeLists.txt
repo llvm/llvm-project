@@ -484,6 +484,15 @@ if(COMPILER_RT_USE_LIBCXX)
       break()
     endif()
   endforeach()
+  foreach(path IN ITEMS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi
+                        ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi
+                        ${LLVM_MAIN_SRC_DIR}/../libcxxabi
+                        ${LLVM_EXTERNAL_LIBCXXABI_SOURCE_DIR})
+    if(IS_DIRECTORY ${path})
+      set(COMPILER_RT_LIBCXXABI_PATH ${path})
+      break()
+    endif()
+  endforeach()
 endif()
 
 set(COMPILER_RT_LLD_PATH ${LLVM_MAIN_SRC_DIR}/tools/lld)

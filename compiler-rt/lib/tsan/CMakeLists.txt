@@ -236,6 +236,7 @@ endif()
 
 # Build libcxx instrumented with TSan.
 if(COMPILER_RT_LIBCXX_PATH AND
+   COMPILER_RT_LIBCXXABI_PATH AND
    COMPILER_RT_TEST_COMPILER_ID STREQUAL "Clang" AND
    NOT ANDROID)
   set(libcxx_tsan_deps)

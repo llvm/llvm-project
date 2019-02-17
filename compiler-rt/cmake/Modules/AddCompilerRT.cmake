@@ -509,6 +509,9 @@ macro(add_custom_libcxx name prefix)
   if(NOT COMPILER_RT_LIBCXX_PATH)
     message(FATAL_ERROR "libcxx not found!")
   endif()
+  if(NOT COMPILER_RT_LIBCXXABI_PATH)
+    message(FATAL_ERROR "libcxxabi not found!")
+  endif()
 
   cmake_parse_arguments(LIBCXX "USE_TOOLCHAIN" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
 
@@ -584,7 +587,7 @@ macro(add_custom_libcxx name prefix)
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
     PREFIX ${prefix}
-    SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
+    SOURCE_DIR ${COMPILER_RT_SOURCE_DIR}/cmake/Modules/CustomLibcxx
     STAMP_DIR ${STAMP_DIR}
     BINARY_DIR ${BINARY_DIR}
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
@@ -595,7 +598,8 @@ macro(add_custom_libcxx name prefix)
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_BINARY_DIR=${prefix}
                -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib
-               -DLIBCXX_STANDALONE_BUILD=ON
+               -DCOMPILER_RT_LIBCXX_PATH=${COMPILER_RT_LIBCXX_PATH}
+               -DCOMPILER_RT_LIBCXXABI_PATH=${COMPILER_RT_LIBCXXABI_PATH}
                ${LIBCXX_CMAKE_ARGS}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build

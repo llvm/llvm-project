@@ -518,7 +518,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_fsplit_stack))
         CmdArgs.push_back("--wrap=pthread_create");
 
-      CmdArgs.push_back("-lc");
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
 
       // Add IAMCU specific libs, if needed.
       if (IsIAMCU)
