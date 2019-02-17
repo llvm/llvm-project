@@ -1262,7 +1262,7 @@ func (v Value) Indices() []uint32 {
 	num := C.LLVMGetNumIndices(v.C)
 	indicesPtr := C.LLVMGetIndices(v.C)
 	// https://github.com/golang/go/wiki/cgo#turning-c-arrays-into-go-slices
-	rawIndices := (*[1 << 30]C.uint)(unsafe.Pointer(indicesPtr))[:num:num]
+	rawIndices := (*[1 << 20]C.uint)(unsafe.Pointer(indicesPtr))[:num:num]
 	indices := make([]uint32, num)
 	for i := range indices {
 		indices[i] = uint32(rawIndices[i])
