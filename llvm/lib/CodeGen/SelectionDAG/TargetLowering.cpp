@@ -120,7 +120,8 @@ std::pair<SDValue, SDValue>
 TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
                             ArrayRef<SDValue> Ops, bool isSigned,
                             const SDLoc &dl, bool doesNotReturn,
-                            bool isReturnValueUsed) const {
+                            bool isReturnValueUsed,
+                            bool isPostTypeLegalization) const {
   TargetLowering::ArgListTy Args;
   Args.reserve(Ops.size());
 
@@ -146,6 +147,7 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
       .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
       .setNoReturn(doesNotReturn)
       .setDiscardResult(!isReturnValueUsed)
+      .setIsPostTypeLegalization(isPostTypeLegalization)
       .setSExtResult(signExtend)
       .setZExtResult(!signExtend);
   return LowerCallTo(CLI);
@@ -5518,4 +5520,122 @@ TargetLowering::expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const {
   EVT ShiftTy = getShiftAmountTy(VT, DAG.getDataLayout());
   return DAG.getNode(ISD::FSHR, dl, VT, Hi, Lo,
                      DAG.getConstant(Scale, dl, ShiftTy));
+}
+
+std::pair<SDValue, SDValue> TargetLowering::expandMULO(
+    SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  EVT WideVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits() * 2);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  SDValue BottomHalf;
+  SDValue TopHalf;
+  static const unsigned Ops[2][3] =
+      { { ISD::MULHU, ISD::UMUL_LOHI, ISD::ZERO_EXTEND },
+        { ISD::MULHS, ISD::SMUL_LOHI, ISD::SIGN_EXTEND }};
+  bool isSigned = Node->getOpcode() == ISD::SMULO;
+  if (isOperationLegalOrCustom(Ops[isSigned][0], VT)) {
+    BottomHalf = DAG.getNode(ISD::MUL, dl, VT, LHS, RHS);
+    TopHalf = DAG.getNode(Ops[isSigned][0], dl, VT, LHS, RHS);
+  } else if (isOperationLegalOrCustom(Ops[isSigned][1], VT)) {
+    BottomHalf = DAG.getNode(Ops[isSigned][1], dl, DAG.getVTList(VT, VT), LHS,
+                             RHS);
+    TopHalf = BottomHalf.getValue(1);
+  } else if (isTypeLegal(WideVT)) {
+    LHS = DAG.getNode(Ops[isSigned][2], dl, WideVT, LHS);
+    RHS = DAG.getNode(Ops[isSigned][2], dl, WideVT, RHS);
+    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT, LHS, RHS);
+    BottomHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT, Mul,
+                             DAG.getIntPtrConstant(0, dl));
+    TopHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT, Mul,
+                          DAG.getIntPtrConstant(1, dl));
+  } else {
+    // We can fall back to a libcall with an illegal type for the MUL if we
+    // have a libcall big enough.
+    // Also, we can fall back to a division in some cases, but that's a big
+    // performance hit in the general case.
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (WideVT == MVT::i16)
+      LC = RTLIB::MUL_I16;
+    else if (WideVT == MVT::i32)
+      LC = RTLIB::MUL_I32;
+    else if (WideVT == MVT::i64)
+      LC = RTLIB::MUL_I64;
+    else if (WideVT == MVT::i128)
+      LC = RTLIB::MUL_I128;
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Cannot expand this operation!");
+
+    SDValue HiLHS;
+    SDValue HiRHS;
+    if (isSigned) {
+      // The high part is obtained by SRA'ing all but one of the bits of low
+      // part.
+      unsigned LoSize = VT.getSizeInBits();
+      HiLHS =
+          DAG.getNode(ISD::SRA, dl, VT, LHS,
+                      DAG.getConstant(LoSize - 1, dl,
+                                      getPointerTy(DAG.getDataLayout())));
+      HiRHS =
+          DAG.getNode(ISD::SRA, dl, VT, RHS,
+                      DAG.getConstant(LoSize - 1, dl,
+                                      getPointerTy(DAG.getDataLayout())));
+    } else {
+        HiLHS = DAG.getConstant(0, dl, VT);
+        HiRHS = DAG.getConstant(0, dl, VT);
+    }
+
+    // Here we're passing the 2 arguments explicitly as 4 arguments that are
+    // pre-lowered to the correct types. This all depends upon WideVT not
+    // being a legal type for the architecture and thus has to be split to
+    // two arguments.
+    SDValue Ret;
+    if (DAG.getDataLayout().isLittleEndian()) {
+      // Halves of WideVT are packed into registers in different order
+      // depending on platform endianness. This is usually handled by
+      // the C calling convention, but we can't defer to it in
+      // the legalizer.
+      SDValue Args[] = { LHS, HiLHS, RHS, HiRHS };
+      Ret = makeLibCall(DAG, LC, WideVT, Args, isSigned, dl,
+          /* doesNotReturn */ false, /* isReturnValueUsed */ true,
+          /* isPostTypeLegalization */ true).first;
+    } else {
+      SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
+      Ret = makeLibCall(DAG, LC, WideVT, Args, isSigned, dl,
+          /* doesNotReturn */ false, /* isReturnValueUsed */ true,
+          /* isPostTypeLegalization */ true).first;
+    }
+    assert(Ret.getOpcode() == ISD::MERGE_VALUES &&
+           "Ret value is a collection of constituent nodes holding result.");
+    if (DAG.getDataLayout().isLittleEndian()) {
+      // Same as above.
+      BottomHalf = Ret.getOperand(0);
+      TopHalf = Ret.getOperand(1);
+    } else {
+      BottomHalf = Ret.getOperand(1);
+      TopHalf = Ret.getOperand(0);
+    }
+  }
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  if (isSigned) {
+    SDValue ShiftAmt = DAG.getConstant(
+        VT.getSizeInBits() - 1, dl,
+        getShiftAmountTy(BottomHalf.getValueType(), DAG.getDataLayout()));
+    SDValue Sign = DAG.getNode(ISD::SRA, dl, VT, BottomHalf, ShiftAmt);
+    TopHalf = DAG.getSetCC(dl, SetCCVT, TopHalf, Sign, ISD::SETNE);
+  } else {
+    TopHalf = DAG.getSetCC(dl, SetCCVT, TopHalf,
+                           DAG.getConstant(0, dl, VT), ISD::SETNE);
+  }
+
+  // Truncate the result if SetCC returns a larger type than needed.
+  EVT RType = Node->getValueType(1);
+  if (RType.getSizeInBits() < TopHalf.getValueSizeInBits())
+    TopHalf = DAG.getNode(ISD::TRUNCATE, dl, RType, TopHalf);
+
+  assert(RType.getSizeInBits() == TopHalf.getValueSizeInBits() &&
+         "Unexpected result type for S/UMULO legalization");
+
+  return std::make_pair(BottomHalf, TopHalf);
 }

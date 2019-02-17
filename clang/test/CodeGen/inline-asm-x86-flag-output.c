@@ -363,3 +363,14 @@ int test_ccs(long nr, volatile long *addr) {
     return 0;
   return 1;
 }
+
+_Bool check_no_clobber_conflicts() {
+  //CHECK-LABEL: @check_no_clobber_conflicts
+  //CHECK:  = tail call i8 asm "", "={@cce},~{cx},~{dirflag},~{fpsr},~{flags}"()
+  _Bool b;
+  asm(""
+      : "=@cce"(b)
+      :
+      : "cx");
+  return b;
+}

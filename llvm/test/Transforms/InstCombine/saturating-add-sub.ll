@@ -639,6 +639,70 @@ define <2 x i8> @test_vector_ssub_neg_nneg(<2 x i8> %a) {
 
 ; Raw IR tests
 
+define i32 @uadd_sat(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_sat(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %notx = xor i32 %x, -1
+  %a = add i32 %y, %x
+  %c = icmp ult i32 %notx, %y
+  %r = select i1 %c, i32 -1, i32 %a
+  ret i32 %r
+}
+
+define i32 @uadd_sat_commute_add(i32 %xp, i32 %y) {
+; CHECK-LABEL: @uadd_sat_commute_add(
+; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[XP:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %x = urem i32 42, %xp ; thwart complexity-based-canonicalization
+  %notx = xor i32 %x, -1
+  %a = add i32 %x, %y
+  %c = icmp ult i32 %notx, %y
+  %r = select i1 %c, i32 -1, i32 %a
+  ret i32 %r
+}
+
+define i32 @uadd_sat_ugt(i32 %x, i32 %yp) {
+; CHECK-LABEL: @uadd_sat_ugt(
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 [[YP:%.*]], 2442
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %y = sdiv i32 %yp, 2442 ; thwart complexity-based-canonicalization
+  %notx = xor i32 %x, -1
+  %a = add i32 %y, %x
+  %c = icmp ugt i32 %y, %notx
+  %r = select i1 %c, i32 -1, i32 %a
+  ret i32 %r
+}
+
+define i32 @uadd_sat_ugt_commute_add(i32 %xp, i32 %yp) {
+; CHECK-LABEL: @uadd_sat_ugt_commute_add(
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 [[YP:%.*]], 2442
+; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[XP:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[Y]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %y = sdiv i32 %yp, 2442 ; thwart complexity-based-canonicalization
+  %x = srem i32 42, %xp   ; thwart complexity-based-canonicalization
+  %notx = xor i32 %x, -1
+  %a = add i32 %x, %y
+  %c = icmp ugt i32 %y, %notx
+  %r = select i1 %c, i32 -1, i32 %a
+  ret i32 %r
+}
+
 define i32 @uadd_sat_constant(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_constant(
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 42
