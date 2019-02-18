@@ -180,6 +180,10 @@ public:
   llvm::ErrorOr<std::string> GetExternalPath(const llvm::Twine &path);
   llvm::ErrorOr<std::string> GetExternalPath(const FileSpec &file_spec);
 
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> GetVirtualFileSystem() {
+    return m_fs;
+  }
+
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
