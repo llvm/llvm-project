@@ -250,6 +250,10 @@ static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
   CFG *cfg = AC.getCFG();
   if (!cfg) return;
 
+  // If the exit block is unreachable, skip processing the function.
+  if (cfg->getExit().pred_empty())
+    return;
+
   // Emit diagnostic if a recursive function call is detected for all paths.
   if (checkForRecursiveFunctionCall(FD, cfg))
     S.Diag(Body->getBeginLoc(), diag::warn_infinite_recursive_function);
